@@ -7,6 +7,7 @@ import logging
 from ops.charm import CharmBase
 from ops.main import main
 from ops.model import ActiveStatus, WaitingStatus
+from ops.pebble import Layer
 
 logger = logging.getLogger(__name__)
 
@@ -27,9 +28,9 @@ class PostgresqlOperatorCharm(CharmBase):
 
         if container.can_connect():
             # Get the current config
-            services = container.get_plan().to_dict().get("services", {})
+            services = container.get_plan().services
             # Check if there are any changes to services
-            if services != layer["services"]:
+            if services != layer.services:
                 # Changes were made, add the new layer
                 container.add_layer("postgresql", layer, combine=True)
                 logging.info("Added updated layer 'postgresql' to Pebble plan")
@@ -41,9 +42,9 @@ class PostgresqlOperatorCharm(CharmBase):
         else:
             self.unit.status = WaitingStatus("waiting for Pebble in workload container")
 
-    def _postgresql_layer(self):
+    def _postgresql_layer(self) -> Layer:
         """Returns a Pebble configuration layer for PostgreSQL"""
-        return {
+        layer_config = {
             "summary": "postgresql layer",
             "description": "pebble config layer for postgresql",
             "services": {
@@ -61,6 +62,7 @@ class PostgresqlOperatorCharm(CharmBase):
                 }
             },
         }
+        return Layer(layer_config)
 
 
 if __name__ == "__main__":

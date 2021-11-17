@@ -32,13 +32,13 @@ class TestCharm(unittest.TestCase):
                 }
             },
         }
-        self.assertEqual(self.harness.charm._postgresql_layer(), expected)
+        self.assertEqual(self.harness.charm._postgresql_layer().to_dict(), expected)
         # And now test with a different value in the postgres-password config option.
         # Disable hook firing first.
         self.harness.disable_hooks()
         self.harness.update_config({"postgres-password": "SECRET_PASSWORD"})
         expected["services"]["postgresql"]["environment"]["POSTGRES_PASSWORD"] = "SECRET_PASSWORD"
-        self.assertEqual(self.harness.charm._postgresql_layer(), expected)
+        self.assertEqual(self.harness.charm._postgresql_layer().to_dict(), expected)
 
     def test_on_config_changed(self):
         plan = self.harness.get_container_pebble_plan("postgresql")
@@ -49,7 +49,7 @@ class TestCharm(unittest.TestCase):
         self.harness.update_config({"postgres-password": ""})
         plan = self.harness.get_container_pebble_plan("postgresql")
         # Get the expected layer from the postgresql_layer method (tested above)
-        expected = self.harness.charm._postgresql_layer()
+        expected = self.harness.charm._postgresql_layer().to_dict()
         expected.pop("summary", "")
         expected.pop("description", "")
         # Check the plan is as expected
