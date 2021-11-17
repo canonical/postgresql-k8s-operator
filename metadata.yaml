@@ -1,9 +1,8 @@
 # Copyright 2021 Canonical
 # See LICENSE file for licensing details.
 
-name: postgresql-k8s-operator
-display-name: |
-  PostgreSQL K8s
+name: postgresql-k8s
+display-name: PostgreSQL K8s
 description: |
   Charm to operate the PostgreSQL database on Kubernetes clusters
 summary: |
