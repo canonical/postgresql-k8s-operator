@@ -1,9 +1,0 @@
-# Copyright 2021 Canonical
-# See LICENSE file for licensing details.
-
-options:
-  postgres-password:
-    default: ""
-    description: >
-      The password to set for the postgres user.
-    type: string

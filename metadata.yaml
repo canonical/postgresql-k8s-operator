@@ -1,4 +1,4 @@
-# Copyright 2021 Canonical
+# Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
 name: postgresql-k8s
@@ -19,6 +19,7 @@ resources:
   postgresql-image:
     type: oci-image
     description: OCI image for PostgreSQL (ubuntu/postgres)
+    upstream-source: ubuntu/postgres:12-20.04_beta
 
 storage:
   pgdata:
