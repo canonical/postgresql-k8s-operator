@@ -3,6 +3,8 @@
 # See LICENSE file for licensing details.
 
 import logging
+import secrets
+import string
 
 from ops.charm import CharmBase
 from ops.framework import StoredState
