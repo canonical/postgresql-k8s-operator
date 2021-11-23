@@ -88,7 +88,7 @@ class PostgresqlOperatorCharm(CharmBase):
         }
         return Layer(layer_config)
 
-    def _new_password(self):
+    def _new_password(self) -> str:
         """Generate a random password string.
 
         Returns:
