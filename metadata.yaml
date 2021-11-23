@@ -11,8 +11,16 @@ summary: |
 containers:
   postgresql:
     resource: postgresql-image
+    mounts:
+      - storage: pgdata
+        location: /var/lib/postgresql/data/pgdata
 
 resources:
   postgresql-image:
     type: oci-image
     description: OCI image for PostgreSQL (ubuntu/postgres)
+
+storage:
+  pgdata:
+    type: filesystem
+    location: /var/lib/postgresql/data/pgdata

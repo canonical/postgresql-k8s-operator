@@ -54,6 +54,7 @@ class PostgresqlOperatorCharm(CharmBase):
                     "command": "/usr/local/bin/docker-entrypoint.sh postgres",
                     "startup": "enabled",
                     "environment": {
+                        "PGDATA": "/var/lib/postgresql/data/pgdata",
                         # We need to set either POSTGRES_HOST_AUTH_METHOD or POSTGRES_PASSWORD
                         # in order to initialize the database.
                         # Currently, this password can only be set on deploy.
