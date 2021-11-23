@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-# Copyright 2021 Canonical
+# Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
+
+"""Charmed Kubernetes Operator for the PostgreSQL database."""
 
 import logging
 import secrets
@@ -22,8 +24,12 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
+
+        self._postgresql_service = "postgresql"
+
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
 
     def _on_install(self, _):
         """Event handler for InstallEvent."""
@@ -31,35 +37,42 @@ class PostgresqlOperatorCharm(CharmBase):
         self._stored.postgres_password = self._new_password()
 
     def _on_config_changed(self, _):
-        """Handle the config-changed event"""
-        # Get the postgresql container so we can configure/manipulate it
-        container = self.unit.get_container("postgresql")
-        # Create a new config layer
+        """Handle the config-changed event."""
+        # TODO: placeholder method to implement logic specific to configuration change.
+        pass
+
+    def _on_postgresql_pebble_ready(self, _) -> None:
+        """Event handler for on PebbleReadyEvent."""
+        # TODO: move this code to an "_update_layer" method in order to also utilize it in
+        # config-changed hook.
+        # Get the postgresql container so we can configure/manipulate it.
+        container = self.unit.get_container(self._postgresql_service)
+        # Create a new config layer.
         layer = self._postgresql_layer()
 
         if container.can_connect():
-            # Get the current config
+            # Get the current config.
             services = container.get_plan().services
-            # Check if there are any changes to services
+            # Check if there are any changes to services.
             if services != layer.services:
-                # Changes were made, add the new layer
-                container.add_layer("postgresql", layer, combine=True)
+                # Changes were made, add the new layer.
+                container.add_layer(self._postgresql_service, layer, combine=True)
                 logging.info("Added updated layer 'postgresql' to Pebble plan")
-                # Restart it and report a new status to Juju
-                container.restart("postgresql")
+                # Restart it and report a new status to Juju.
+                container.restart(self._postgresql_service)
                 logging.info("Restarted postgresql service")
-            # All is well, set an ActiveStatus
+            # All is well, set an ActiveStatus.
             self.unit.status = ActiveStatus()
         else:
             self.unit.status = WaitingStatus("waiting for Pebble in workload container")
 
     def _postgresql_layer(self) -> Layer:
-        """Returns a Pebble configuration layer for PostgreSQL"""
+        """Returns a Pebble configuration layer for PostgreSQL."""
         layer_config = {
             "summary": "postgresql layer",
             "description": "pebble config layer for postgresql",
             "services": {
-                "postgresql": {
+                self._postgresql_service: {
                     "override": "replace",
                     "summary": "entrypoint of the postgresql image",
                     "command": "/usr/local/bin/docker-entrypoint.sh postgres",
