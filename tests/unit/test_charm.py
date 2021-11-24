@@ -13,6 +13,7 @@ from charm import PostgresqlOperatorCharm
 
 class TestCharm(unittest.TestCase):
     def setUp(self):
+        self._postgresql_container = "postgresql"
         self._postgresql_service = "postgresql"
 
         self.harness = Harness(PostgresqlOperatorCharm)
@@ -30,14 +31,14 @@ class TestCharm(unittest.TestCase):
 
     def test_on_postgresql_pebble_ready(self):
         # Check that the initial plan is empty.
-        plan = self.harness.get_container_pebble_plan(self._postgresql_service)
+        plan = self.harness.get_container_pebble_plan(self._postgresql_container)
         self.assertEqual(plan.to_dict(), {})
 
         # Trigger a pebble-ready hook and test the status before we can connect to the container.
         self.charm.on.install.emit()
         with patch("ops.model.Container.can_connect") as _can_connect:
             _can_connect.return_value = False
-            self.harness.container_pebble_ready(self._postgresql_service)
+            self.harness.container_pebble_ready(self._postgresql_container)
             self.assertEqual(
                 self.harness.model.unit.status,
                 WaitingStatus("waiting for Pebble in workload container"),
@@ -45,15 +46,15 @@ class TestCharm(unittest.TestCase):
 
         # Get the current and the expected layer from the pebble plan and the _postgresql_layer
         # method, respectively.
-        self.harness.container_pebble_ready(self._postgresql_service)
-        plan = self.harness.get_container_pebble_plan(self._postgresql_service)
+        self.harness.container_pebble_ready(self._postgresql_container)
+        plan = self.harness.get_container_pebble_plan(self._postgresql_container)
         expected = self.harness.charm._postgresql_layer().to_dict()
         expected.pop("summary", "")
         expected.pop("description", "")
         # Check the plan is as expected.
         self.assertEqual(plan.to_dict(), expected)
         self.assertEqual(self.harness.model.unit.status, ActiveStatus())
-        container = self.harness.model.unit.get_container(self._postgresql_service)
+        container = self.harness.model.unit.get_container(self._postgresql_container)
         self.assertEqual(container.get_service(self._postgresql_service).is_running(), True)
 
     def test_postgresql_layer(self):

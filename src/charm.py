@@ -8,7 +8,7 @@ import logging
 import secrets
 import string
 
-from ops.charm import CharmBase
+from ops.charm import CharmBase, WorkloadEvent
 from ops.framework import StoredState
 from ops.main import main
 from ops.model import ActiveStatus, WaitingStatus
@@ -41,12 +41,12 @@ class PostgresqlOperatorCharm(CharmBase):
         # TODO: placeholder method to implement logic specific to configuration change.
         pass
 
-    def _on_postgresql_pebble_ready(self, _) -> None:
+    def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
         """Event handler for on PebbleReadyEvent."""
         # TODO: move this code to an "_update_layer" method in order to also utilize it in
         # config-changed hook.
         # Get the postgresql container so we can configure/manipulate it.
-        container = self.unit.get_container(self._postgresql_service)
+        container = event.workload
         # Create a new config layer.
         layer = self._postgresql_layer()
 
