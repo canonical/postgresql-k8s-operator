@@ -48,15 +48,15 @@ class PostgresqlOperatorCharm(CharmBase):
         # Get the postgresql container so we can configure/manipulate it.
         container = event.workload
         # Create a new config layer.
-        layer = self._postgresql_layer()
+        new_layer = self._postgresql_layer()
 
         if container.can_connect():
-            # Get the current config.
-            services = container.get_plan().services
-            # Check if there are any changes to services.
-            if services != layer.services:
+            # Get the current layer.
+            current_layer = container.get_plan()
+            # Check if there are any changes to layer services.
+            if current_layer.services != new_layer.services:
                 # Changes were made, add the new layer.
-                container.add_layer(self._postgresql_service, layer, combine=True)
+                container.add_layer(self._postgresql_service, new_layer, combine=True)
                 logging.info("Added updated layer 'postgresql' to Pebble plan")
                 # Restart it and report a new status to Juju.
                 container.restart(self._postgresql_service)
