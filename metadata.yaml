@@ -21,6 +21,10 @@ resources:
     description: OCI image for PostgreSQL (ubuntu/postgres)
     upstream-source: ubuntu/postgres:12-20.04_beta
 
+peers:
+  postgresql-replicas:
+    interface: postgresql-replicas
+
 storage:
   pgdata:
     type: filesystem

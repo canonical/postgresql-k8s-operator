@@ -15,5 +15,5 @@ As this charm is not yet published, you need to follow the build and deploy inst
 You can access the database using any PostgreSQL client by connecting on the unit address and port `5432` as user `postgres` with the password shown by the command below.
 
 ```bash
-juju run --unit postgresql-k8s/0 state-get | grep "postgres_password"
+juju run-action postgresql-k8s/0 get-postgres-password --wait
 ```

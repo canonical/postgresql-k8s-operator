@@ -8,10 +8,9 @@ import logging
 import secrets
 import string
 
-from ops.charm import CharmBase, WorkloadEvent
-from ops.framework import StoredState
+from ops.charm import ActionEvent, CharmBase, WorkloadEvent
 from ops.main import main
-from ops.model import ActiveStatus, WaitingStatus
+from ops.model import ActiveStatus, Relation, WaitingStatus
 from ops.pebble import Layer
 
 logger = logging.getLogger(__name__)
@@ -20,8 +19,6 @@ logger = logging.getLogger(__name__)
 class PostgresqlOperatorCharm(CharmBase):
     """Charmed Operator for the PostgreSQL database."""
 
-    _stored = StoredState()
-
     def __init__(self, *args):
         super().__init__(*args)
 
@@ -29,17 +26,29 @@ class PostgresqlOperatorCharm(CharmBase):
 
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
+        self.framework.observe(
+            self.on.get_postgres_password_action, self._on_get_postgres_password
+        )
 
     def _on_install(self, _):
         """Event handler for InstallEvent."""
-        # TODO: change to peer/leader data bag when relations are implemented.
-        self._stored.postgres_password = self._new_password()
+        # TODO: placeholder method to implement logic specific to install event.
+        pass
 
     def _on_config_changed(self, _):
         """Handle the config-changed event."""
         # TODO: placeholder method to implement logic specific to configuration change.
         pass
+
+    def _on_leader_elected(self, _) -> None:
+        """Handle the leader-elected event."""
+        data = self._peers.data[self.app]
+        postgres_password = data.get("postgres-password", None)
+
+        if postgres_password is None:
+            self._peers.data[self.app]["postgres-password"] = self._new_password()
 
     def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
         """Event handler for on PebbleReadyEvent."""
@@ -66,6 +75,10 @@ class PostgresqlOperatorCharm(CharmBase):
         else:
             self.unit.status = WaitingStatus("waiting for Pebble in workload container")
 
+    def _on_get_postgres_password(self, event: ActionEvent) -> None:
+        """Returns the password for the postgres user as an action response."""
+        event.set_results({"postgres-password": self._get_postgres_password()})
+
     def _postgresql_layer(self) -> Layer:
         """Returns a Pebble configuration layer for PostgreSQL."""
         layer_config = {
@@ -81,7 +94,7 @@ class PostgresqlOperatorCharm(CharmBase):
                         "PGDATA": "/var/lib/postgresql/data/pgdata",
                         # We need to set either POSTGRES_HOST_AUTH_METHOD or POSTGRES_PASSWORD
                         # in order to initialize the database.
-                        "POSTGRES_PASSWORD": self._stored.postgres_password,
+                        "POSTGRES_PASSWORD": self._get_postgres_password(),
                     },
                 }
             },
@@ -97,6 +110,21 @@ class PostgresqlOperatorCharm(CharmBase):
         choices = string.ascii_letters + string.digits
         password = "".join([secrets.choice(choices) for i in range(16)])
         return password
+
+    @property
+    def _peers(self) -> Relation:
+        """Fetch the peer relation.
+
+        Returns:
+             A :class:`ops.model.Relation` object representing
+             the peer relation.
+        """
+        return self.model.get_relation("postgresql-replicas")
+
+    def _get_postgres_password(self) -> str:
+        """Get postgres user password."""
+        data = self._peers.data[self.app]
+        return data.get("postgres-password", None)
 
 
 if __name__ == "__main__":

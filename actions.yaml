@@ -1,0 +1,5 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+get-postgres-password:
+  description: Get the initial postgres user password for the database.
