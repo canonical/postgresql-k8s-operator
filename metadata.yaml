@@ -1,0 +1,31 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: postgresql-k8s
+display-name: PostgreSQL K8s
+description: |
+  Charm to operate the PostgreSQL database on Kubernetes clusters
+summary: |
+  Charm to operate the PostgreSQL database on Kubernetes clusters
+
+containers:
+  postgresql:
+    resource: postgresql-image
+    mounts:
+      - storage: pgdata
+        location: /var/lib/postgresql/data/pgdata
+
+resources:
+  postgresql-image:
+    type: oci-image
+    description: OCI image for PostgreSQL (ubuntu/postgres)
+    upstream-source: ubuntu/postgres:12-20.04_beta
+
+peers:
+  postgresql-replicas:
+    interface: postgresql-replicas
+
+storage:
+  pgdata:
+    type: filesystem
+    location: /var/lib/postgresql/data/pgdata
