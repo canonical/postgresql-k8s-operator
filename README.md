@@ -17,3 +17,11 @@ You can access the database using any PostgreSQL client by connecting on the uni
 ```bash
 juju run-action postgresql-k8s/0 get-postgres-password --wait
 ```
+
+## Get the primary unit
+
+To get the primary unit you can call the `get-primary` action in any unit.
+
+```bash
+juju run-action postgresql-k8s/0 get-primary --wait
+```
