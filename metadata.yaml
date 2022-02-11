@@ -13,13 +13,13 @@ containers:
     resource: postgresql-image
     mounts:
       - storage: pgdata
-        location: /var/lib/postgresql/data/pgdata
+        location: /var/lib/postgresql/data
 
 resources:
   postgresql-image:
     type: oci-image
     description: OCI image for PostgreSQL (ubuntu/postgres)
-    upstream-source: ubuntu/postgres:12-20.04_beta
+    upstream-source: postgresql-patroni
 
 peers:
   postgresql-replicas:
@@ -28,4 +28,4 @@ peers:
 storage:
   pgdata:
     type: filesystem
-    location: /var/lib/postgresql/data/pgdata
+    location: /var/lib/postgresql/data
