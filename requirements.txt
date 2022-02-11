@@ -1,1 +1,5 @@
-git+https://github.com/canonical/operator/#egg=ops
+jinja2==3.0.3
+lightkube==0.10.0
+ops==1.3.0
+requests==2.27.1
+tenacity==8.0.1
