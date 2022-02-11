@@ -7,13 +7,28 @@
 import logging
 import secrets
 import string
+from time import sleep
 
+from lightkube import ApiError, Client, codecs
+from lightkube.resources.core_v1 import Pod
 from ops.charm import ActionEvent, CharmBase, WorkloadEvent
 from ops.main import main
-from ops.model import ActiveStatus, Relation, WaitingStatus
+from ops.model import (
+    ActiveStatus,
+    BlockedStatus,
+    MaintenanceStatus,
+    Relation,
+    WaitingStatus,
+)
 from ops.pebble import Layer
+from tenacity import RetryError
+
+from patroni import Patroni
 
 logger = logging.getLogger(__name__)
+
+PEER = "postgresql-replicas"
+STORAGE_PATH = "/var/lib/postgresql/data"
 
 
 class PostgresqlOperatorCharm(CharmBase):
@@ -23,19 +38,30 @@ class PostgresqlOperatorCharm(CharmBase):
         super().__init__(*args)
 
         self._postgresql_service = "postgresql"
+        self._unit = self.model.unit.name
+        self._name = self.model.app.name
+        self._namespace = self.model.name
+        self._context = {"namespace": self._namespace, "app_name": self._name}
 
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
+        self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(
             self.on.get_postgres_password_action, self._on_get_postgres_password
         )
+        self.framework.observe(self.on.get_primary_action, self._on_get_primary)
+        self.framework.observe(self.on.update_status, self._on_update_status)
+        self._patroni = Patroni(self._pod_ip)
 
-    def _on_install(self, _):
+    def _on_install(self, _) -> None:
         """Event handler for InstallEvent."""
-        # TODO: placeholder method to implement logic specific to install event.
-        pass
+        # Create resources and add labels needed for replication.
+        self._create_resources()
+        self._patch_pod_labels()
+        # Creates custom postgresql.conf file.
+        self._patroni.render_postgresql_conf_file()
 
     def _on_config_changed(self, _):
         """Handle the config-changed event."""
@@ -46,12 +72,16 @@ class PostgresqlOperatorCharm(CharmBase):
         """Handle the leader-elected event."""
         data = self._peers.data[self.app]
         postgres_password = data.get("postgres-password", None)
+        replication_password = data.get("replication-password", None)
 
         if postgres_password is None:
             self._peers.data[self.app]["postgres-password"] = self._new_password()
 
+        if replication_password is None:
+            self._peers.data[self.app]["replication-password"] = self._new_password()
+
     def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
-        """Event handler for on PebbleReadyEvent."""
+        """Event handler for PostgreSQL container on PebbleReadyEvent."""
         # TODO: move this code to an "_update_layer" method in order to also utilize it in
         # config-changed hook.
         # Get the postgresql container so we can configure/manipulate it.
@@ -67,6 +97,9 @@ class PostgresqlOperatorCharm(CharmBase):
                 # Changes were made, add the new layer.
                 container.add_layer(self._postgresql_service, new_layer, combine=True)
                 logging.info("Added updated layer 'postgresql' to Pebble plan")
+                self._patroni.render_patroni_yml_file()
+                # TODO: move this file generation to on config changed hook
+                # when adding configs to this charm.
                 # Restart it and report a new status to Juju.
                 container.restart(self._postgresql_service)
                 logging.info("Restarted postgresql service")
@@ -75,26 +108,109 @@ class PostgresqlOperatorCharm(CharmBase):
         else:
             self.unit.status = WaitingStatus("waiting for Pebble in workload container")
 
+    def _on_upgrade_charm(self, _) -> None:
+        # Add labels required for replication when the pod loses them (like when it's deleted).
+        self._patch_pod_labels()
+
+    def _patch_pod_labels(self) -> None:
+        """Add labels required for replication to the current pod."""
+        try:
+            client = Client()
+            patch = {
+                "metadata": {"labels": {"application": "patroni", "cluster-name": self._namespace}}
+            }
+            client.patch(
+                Pod,
+                name=self._unit_name_to_pod_name(self._unit),
+                namespace=self._namespace,
+                obj=patch,
+            )
+        except ApiError as e:
+            logger.error("failed to patch pod")
+            self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
+
+    def _create_resources(self):
+        """Create kubernetes resources needed for Patroni."""
+        try:
+            client = Client()
+            with open("src/resources.yaml") as f:
+                for obj in codecs.load_all_yaml(f, context=self._context):
+                    client.create(obj)
+        except ApiError as e:
+            logger.error("failed to create resources")
+            self.unit.status = BlockedStatus(f"failed to create resources with error {e}")
+
     def _on_get_postgres_password(self, event: ActionEvent) -> None:
         """Returns the password for the postgres user as an action response."""
         event.set_results({"postgres-password": self._get_postgres_password()})
 
+    def _on_get_primary(self, event: ActionEvent) -> None:
+        """Get primary instance."""
+        try:
+            primary = self._patroni.get_primary(unit_name_pattern=True)
+            event.set_results({"primary": primary})
+        except RetryError as e:
+            logger.error(f"failed to get primary with error {e}")
+
+    def _on_update_status(self, _) -> None:
+        # Until https://github.com/canonical/pebble/issues/6 is fixed,
+        # we need to use the logic below to restart the leader
+        # and a stuck replica after a failover/switchover.
+        try:
+            state = self._patroni.get_postgresql_state()
+            if state == "restarting":
+                # Restart the stuck replica.
+                self._restart_postgresql_service(wait=False)
+            elif state == "stopping":
+                # Restart the stuck previous leader.
+                self._restart_postgresql_service()
+        except RetryError as e:
+            logger.error("failed to check PostgreSQL state")
+            self.unit.status = BlockedStatus(f"failed to check PostgreSQL state with error {e}")
+
+    def _restart_postgresql_service(self, wait=True) -> None:
+        """Restart PostgreSQL and Patroni.
+
+        Args:
+            wait: whether or not to wait 30 seconds between stop and start.
+        """
+        self.unit.status = MaintenanceStatus(f"restarting {self._postgresql_service} service")
+        container = self.unit.get_container("postgresql")
+        container.stop(self._postgresql_service)
+        # Sleep needed to make the leader release the lock in a failover/switchover.
+        if wait:
+            sleep(30)
+        container.start(self._postgresql_service)
+        self.unit.status = ActiveStatus()
+
+    @property
+    def _pod_ip(self) -> str:
+        """Current pod ip."""
+        return self.model.get_binding(PEER).network.bind_address
+
     def _postgresql_layer(self) -> Layer:
         """Returns a Pebble configuration layer for PostgreSQL."""
+        pod_name = self._unit_name_to_pod_name(self._unit)
         layer_config = {
-            "summary": "postgresql layer",
-            "description": "pebble config layer for postgresql",
+            "summary": "postgresql + patroni layer",
+            "description": "pebble config layer for postgresql + patroni",
             "services": {
                 self._postgresql_service: {
                     "override": "replace",
-                    "summary": "entrypoint of the postgresql image",
-                    "command": "/usr/local/bin/docker-entrypoint.sh postgres",
+                    "summary": "entrypoint of the postgresql + patroni image",
+                    "command": f"/usr/bin/python3 /usr/local/bin/patroni {STORAGE_PATH}/patroni.yml",
                     "startup": "enabled",
+                    "user": "postgres",
+                    "group": "postgres",
                     "environment": {
-                        "PGDATA": "/var/lib/postgresql/data/pgdata",
-                        # We need to set either POSTGRES_HOST_AUTH_METHOD or POSTGRES_PASSWORD
-                        # in order to initialize the database.
-                        "POSTGRES_PASSWORD": self._get_postgres_password(),
+                        "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: {self._name}}}",
+                        "PATRONI_KUBERNETES_NAMESPACE": self._namespace,
+                        "PATRONI_NAME": pod_name,
+                        "PATRONI_SCOPE": self._namespace,
+                        "PATRONI_REPLICATION_USERNAME": "replication",
+                        "PATRONI_REPLICATION_PASSWORD": self._get_replication_password(),
+                        "PATRONI_SUPERUSER_USERNAME": "postgres",
+                        "PATRONI_SUPERUSER_PASSWORD": self._get_postgres_password(),
                     },
                 }
             },
@@ -119,12 +235,28 @@ class PostgresqlOperatorCharm(CharmBase):
              A :class:`ops.model.Relation` object representing
              the peer relation.
         """
-        return self.model.get_relation("postgresql-replicas")
+        return self.model.get_relation(PEER)
 
     def _get_postgres_password(self) -> str:
         """Get postgres user password."""
         data = self._peers.data[self.app]
         return data.get("postgres-password", None)
+
+    def _get_replication_password(self) -> str:
+        """Get replication user password."""
+        data = self._peers.data[self.app]
+        return data.get("replication-password", None)
+
+    def _unit_name_to_pod_name(self, unit_name: str) -> str:
+        """Converts unit name to pod name.
+
+        Args:
+            unit_name: name in "postgresql-k8s/0" format.
+
+        Returns:
+            pod name in "psotgresql-k8s-0" format.
+        """
+        return unit_name.replace("/", "-")
 
 
 if __name__ == "__main__":
