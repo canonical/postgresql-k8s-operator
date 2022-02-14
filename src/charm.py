@@ -7,7 +7,6 @@
 import logging
 import secrets
 import string
-from time import sleep
 
 from lightkube import ApiError, Client, codecs
 from lightkube.resources.core_v1 import Pod
@@ -160,27 +159,21 @@ class PostgresqlOperatorCharm(CharmBase):
             state = self._patroni.get_postgresql_state()
             if state == "restarting":
                 # Restart the stuck replica.
-                self._restart_postgresql_service(wait=False)
-            elif state == "stopping":
-                # Restart the stuck previous leader.
                 self._restart_postgresql_service()
+            elif state == "stopping":
+                # Restart the stuck previous leader (forcing the immediate  failover).
+                self._patroni.change_master_start_timeout(0)
+                self._restart_postgresql_service()
+                self._patroni.change_master_start_timeout(300)
         except RetryError as e:
             logger.error("failed to check PostgreSQL state")
             self.unit.status = BlockedStatus(f"failed to check PostgreSQL state with error {e}")
 
-    def _restart_postgresql_service(self, wait=True) -> None:
-        """Restart PostgreSQL and Patroni.
-
-        Args:
-            wait: whether or not to wait 30 seconds between stop and start.
-        """
+    def _restart_postgresql_service(self) -> None:
+        """Restart PostgreSQL and Patroni."""
         self.unit.status = MaintenanceStatus(f"restarting {self._postgresql_service} service")
         container = self.unit.get_container("postgresql")
-        container.stop(self._postgresql_service)
-        # Sleep needed to make the leader release the lock in a failover/switchover.
-        if wait:
-            sleep(30)
-        container.start(self._postgresql_service)
+        container.restart(self._postgresql_service)
         self.unit.status = ActiveStatus()
 
     @property

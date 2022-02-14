@@ -13,6 +13,21 @@ class TestPatroni(unittest.TestCase):
         # Setup Patroni wrapper.
         self.patroni = Patroni("1.1.1.1")
 
+    @patch("requests.patch")
+    def test_change_master_start_timeout(self, _patch):
+        # Test with an initial timeout value.
+        self.patroni.change_master_start_timeout(0)
+        _patch.assert_called_once_with(
+            "http://1.1.1.1:8008/config", json={"master_start_timeout": 0}
+        )
+
+        # Test with another timeout value.
+        _patch.reset_mock()
+        self.patroni.change_master_start_timeout(300)
+        _patch.assert_called_once_with(
+            "http://1.1.1.1:8008/config", json={"master_start_timeout": 300}
+        )
+
     @patch("requests.get")
     def test_get_postgresql_state(self, _get):
         _get.return_value.json.return_value = {"state": "running"}
