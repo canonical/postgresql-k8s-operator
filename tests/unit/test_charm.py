@@ -3,7 +3,7 @@
 
 import re
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 from helpers import patch_network_get
 from lightkube import codecs
@@ -128,49 +128,43 @@ class TestCharm(unittest.TestCase):
         _get_primary.assert_called_once()
         mock_event.set_results.assert_not_called()
 
-    @patch("ops.model.Container.start")
-    @patch("charm.sleep")
-    @patch("ops.model.Container.stop")
-    def test_restart_postgresql_service(self, _stop, _sleep, _start):
+    @patch("ops.model.Container.restart")
+    def test_restart_postgresql_service(self, _restart):
         self.charm._restart_postgresql_service()
-        _stop.assert_called_once_with(self._postgresql_service)
-        _sleep.assert_called_once_with(30)
-        _start.assert_called_once_with(self._postgresql_service)
-        self.assertEqual(
-            self.harness.model.unit.status,
-            ActiveStatus(),
-        )
-
-    @patch("ops.model.Container.start")
-    @patch("charm.sleep")
-    @patch("ops.model.Container.stop")
-    def test_restart_postgresql_service_without_waiting(self, _stop, _sleep, _start):
-        self.charm._restart_postgresql_service(wait=False)
-        _stop.assert_called_once_with(self._postgresql_service)
-        _sleep.assert_not_called()
-        _start.assert_called_once_with(self._postgresql_service)
+        _restart.assert_called_once_with(self._postgresql_service)
         self.assertEqual(
             self.harness.model.unit.status,
             ActiveStatus(),
         )
 
     @patch("charm.PostgresqlOperatorCharm._restart_postgresql_service")
+    @patch("charm.Patroni.change_master_start_timeout")
     @patch("charm.Patroni.get_postgresql_state")
-    def test_on_update_status(self, _get_postgresql_state, _restart_postgresql_service):
+    def test_on_update_status(
+        self, _get_postgresql_state, _change_master_start_timeout, _restart_postgresql_service
+    ):
         _get_postgresql_state.side_effect = ["running", "restarting", "stopping"]
 
         # Test running status.
         self.charm.on.update_status.emit()
+        _change_master_start_timeout.assert_not_called()
         _restart_postgresql_service.assert_not_called()
 
         # Test restarting status.
         self.charm.on.update_status.emit()
-        _restart_postgresql_service.assert_called_once_with(wait=False)
+        _change_master_start_timeout.assert_not_called()
+        _restart_postgresql_service.assert_called_once()
+
+        # Create a manager mock to check the correct order of the calls.
+        manager = Mock()
+        manager.attach_mock(_change_master_start_timeout, "c")
+        manager.attach_mock(_restart_postgresql_service, "r")
 
         # Test stopping status.
         _restart_postgresql_service.reset_mock()
         self.charm.on.update_status.emit()
-        _restart_postgresql_service.assert_called_once_with()
+        expected_calls = [call.c(0), call.r(), call.c(300)]
+        self.assertEqual(manager.mock_calls, expected_calls)
 
     @patch("charm.PostgresqlOperatorCharm._restart_postgresql_service")
     @patch("charm.Patroni.get_postgresql_state")

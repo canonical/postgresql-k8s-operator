@@ -24,6 +24,17 @@ class Patroni:
     def __init__(self, pod_ip: str):
         self._pod_ip = pod_ip
 
+    def change_master_start_timeout(self, seconds: int) -> None:
+        """Change master start timeout configuration.
+
+        Args:
+            seconds: number of seconds to set in master_start_timeout configuration.
+        """
+        requests.patch(
+            f"http://{self._pod_ip}:8008/config",
+            json={"master_start_timeout": seconds},
+        )
+
     def get_primary(self, unit_name_pattern=False) -> str:
         """Get primary instance.
 
