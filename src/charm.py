@@ -208,7 +208,7 @@ class PostgresqlOperatorCharm(CharmBase):
                         "PATRONI_NAME": pod_name,
                         "PATRONI_SCOPE": self._namespace,
                         "PATRONI_REPLICATION_USERNAME": "replication",
-                        "PATRONI_REPLICATION_PASSWORD": self._get_replication_password(),
+                        "PATRONI_REPLICATION_PASSWORD": self._replication_password,
                         "PATRONI_SUPERUSER_USERNAME": "postgres",
                         "PATRONI_SUPERUSER_PASSWORD": self._get_postgres_password(),
                     },
@@ -242,7 +242,8 @@ class PostgresqlOperatorCharm(CharmBase):
         data = self._peers.data[self.app]
         return data.get("postgres-password", None)
 
-    def _get_replication_password(self) -> str:
+    @property
+    def _replication_password(self) -> str:
         """Get replication user password."""
         data = self._peers.data[self.app]
         return data.get("replication-password", None)

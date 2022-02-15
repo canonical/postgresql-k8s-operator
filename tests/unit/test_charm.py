@@ -265,7 +265,7 @@ class TestCharm(unittest.TestCase):
                         "PATRONI_NAME": "postgresql-k8s-0",
                         "PATRONI_SCOPE": self.charm._namespace,
                         "PATRONI_REPLICATION_USERNAME": "replication",
-                        "PATRONI_REPLICATION_PASSWORD": self.charm._get_replication_password(),
+                        "PATRONI_REPLICATION_PASSWORD": self.charm._replication_password,
                         "PATRONI_SUPERUSER_USERNAME": "postgres",
                         "PATRONI_SUPERUSER_PASSWORD": self.charm._get_postgres_password(),
                     },
@@ -289,17 +289,6 @@ class TestCharm(unittest.TestCase):
         # Test for a None password.
         self.harness.add_relation(self._peer_relation, self.charm.app.name)
         self.assertIsNone(self.charm._get_postgres_password())
-
-        # Then test for a non empty password after leader election and peer data set.
-        self.harness.set_leader()
-        password = self.charm._get_postgres_password()
-        self.assertIsNotNone(password)
-        self.assertNotEqual(password, "")
-
-    def test_get_replication_password(self):
-        # Test for a None password.
-        self.harness.add_relation(self._peer_relation, self.charm.app.name)
-        self.assertIsNone(self.charm._get_replication_password())
 
         # Then test for a non empty password after leader election and peer data set.
         self.harness.set_leader()
