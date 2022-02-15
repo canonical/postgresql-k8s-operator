@@ -188,7 +188,7 @@ class TestCharm(unittest.TestCase):
         # Test stopping status.
         _restart_postgresql_service.reset_mock()
         self.charm.on.update_status.emit()
-        expected_calls = [call.c(0), call.r(), call.c(300)]
+        expected_calls = [call.c(0), call.r(), call.c(None)]
         self.assertEqual(manager.mock_calls, expected_calls)
 
     @patch("charm.Patroni.get_primary")

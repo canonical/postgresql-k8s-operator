@@ -161,10 +161,12 @@ class PostgresqlOperatorCharm(CharmBase):
                 # Restart the stuck replica.
                 self._restart_postgresql_service()
             elif state == "stopping":
-                # Restart the stuck previous leader (forcing the immediate  failover).
+                # Change needed to force an immediate failover.
                 self._patroni.change_master_start_timeout(0)
+                # Restart the stuck previous leader (will trigger an immediate failover).
                 self._restart_postgresql_service()
-                self._patroni.change_master_start_timeout(300)
+                # Revert configuration to default.
+                self._patroni.change_master_start_timeout(None)
         except RetryError as e:
             logger.error("failed to check PostgreSQL state")
             self.unit.status = BlockedStatus(f"failed to check PostgreSQL state with error {e}")
