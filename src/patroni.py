@@ -15,14 +15,12 @@ from tenacity import retry, stop_after_attempt, wait_exponential
 logger = logging.getLogger(__name__)
 
 
-STORAGE_PATH = "/var/lib/postgresql/data"
-
-
 class Patroni:
     """This class handles the communication with Patroni API and configuration files."""
 
-    def __init__(self, pod_ip: str):
+    def __init__(self, pod_ip: str, storage_path: str):
         self._pod_ip = pod_ip
+        self._storage_path = storage_path
 
     def change_master_start_timeout(self, seconds: int) -> None:
         """Change master start timeout configuration.
@@ -94,8 +92,8 @@ class Patroni:
         with open("templates/patroni.yml.j2", "r") as file:
             template = Template(file.read())
         # Render the template file with the correct values.
-        rendered = template.render(pod_ip=self._pod_ip)
-        self._render_file(f"{STORAGE_PATH}/patroni.yml", rendered, 0o644)
+        rendered = template.render(pod_ip=self._pod_ip, storage_path=self._storage_path)
+        self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 
     def render_postgresql_conf_file(self) -> None:
         """Render the PostgreSQL configuration file."""
@@ -107,4 +105,4 @@ class Patroni:
         rendered = template.render(
             logging_collector="on", synchronous_commit="on", synchronous_standby_names="*"
         )
-        self._render_file(f"{STORAGE_PATH}/postgresql-k8s-operator.conf", rendered, 0o644)
+        self._render_file(f"{self._storage_path}/postgresql-k8s-operator.conf", rendered, 0o644)

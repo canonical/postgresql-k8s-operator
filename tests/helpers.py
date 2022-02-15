@@ -2,8 +2,14 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+from pathlib import Path
 from typing import Callable
 from unittest.mock import patch
+
+import yaml
+
+METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
+STORAGE_PATH = METADATA["storage"]["pgdata"]["location"]
 
 
 def patch_network_get(private_address="10.1.157.116") -> Callable:

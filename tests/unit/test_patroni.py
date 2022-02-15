@@ -5,13 +5,14 @@
 import unittest
 from unittest.mock import mock_open, patch
 
-from patroni import STORAGE_PATH, Patroni
+from patroni import Patroni
+from tests.helpers import STORAGE_PATH
 
 
 class TestPatroni(unittest.TestCase):
     def setUp(self):
         # Setup Patroni wrapper.
-        self.patroni = Patroni("1.1.1.1")
+        self.patroni = Patroni("1.1.1.1", STORAGE_PATH)
 
     @patch("requests.patch")
     def test_change_master_start_timeout(self, _patch):
