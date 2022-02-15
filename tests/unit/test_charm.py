@@ -137,18 +137,43 @@ class TestCharm(unittest.TestCase):
             ActiveStatus(),
         )
 
+    @patch("charm.Patroni.get_primary")
     @patch("charm.PostgresqlOperatorCharm._restart_postgresql_service")
     @patch("charm.Patroni.change_master_start_timeout")
     @patch("charm.Patroni.get_postgresql_state")
     def test_on_update_status(
-        self, _get_postgresql_state, _change_master_start_timeout, _restart_postgresql_service
+        self,
+        _get_postgresql_state,
+        _change_master_start_timeout,
+        _restart_postgresql_service,
+        _get_primary,
     ):
-        _get_postgresql_state.side_effect = ["running", "restarting", "stopping"]
+        _get_postgresql_state.side_effect = ["running", "running", "restarting", "stopping"]
+        _get_primary.side_effect = [
+            "postgresql-k8s/1",
+            self.charm.unit.name,
+            self.charm.unit.name,
+            self.charm.unit.name,
+        ]
 
         # Test running status.
         self.charm.on.update_status.emit()
         _change_master_start_timeout.assert_not_called()
         _restart_postgresql_service.assert_not_called()
+
+        # Check primary message not being set (current unit is not the primary).
+        _get_primary.assert_called_once()
+        self.assertNotEqual(
+            self.harness.model.unit.status,
+            ActiveStatus("Primary"),
+        )
+
+        # Test again and check primary message being set (current unit is the primary).
+        self.charm.on.update_status.emit()
+        self.assertEqual(
+            self.harness.model.unit.status,
+            ActiveStatus("Primary"),
+        )
 
         # Test restarting status.
         self.charm.on.update_status.emit()
@@ -166,10 +191,11 @@ class TestCharm(unittest.TestCase):
         expected_calls = [call.c(0), call.r(), call.c(300)]
         self.assertEqual(manager.mock_calls, expected_calls)
 
+    @patch("charm.Patroni.get_primary")
     @patch("charm.PostgresqlOperatorCharm._restart_postgresql_service")
     @patch("charm.Patroni.get_postgresql_state")
     def test_on_update_status_with_error_on_postgresql_status_check(
-        self, _get_postgresql_state, _restart_postgresql_service
+        self, _get_postgresql_state, _restart_postgresql_service, _
     ):
         _get_postgresql_state.side_effect = [RetryError("fake error")]
         self.charm.on.update_status.emit()
@@ -178,6 +204,17 @@ class TestCharm(unittest.TestCase):
             self.harness.model.unit.status,
             BlockedStatus("failed to check PostgreSQL state with error RetryError[fake error]"),
         )
+
+    @patch("charm.Patroni.get_primary")
+    @patch("charm.Patroni.get_postgresql_state")
+    def test_on_update_status_with_error_on_get_primary(self, _, _get_primary):
+        _get_primary.side_effect = [RetryError("fake error")]
+
+        with self.assertLogs("charm", "ERROR") as logs:
+            self.charm.on.update_status.emit()
+            self.assertIn(
+                "ERROR:charm:failed to get primary with error RetryError[fake error]", logs.output
+            )
 
     @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
     def test_on_upgrade_charm(self, _patch_pod_labels):
