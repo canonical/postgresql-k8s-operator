@@ -27,7 +27,6 @@ from patroni import Patroni
 logger = logging.getLogger(__name__)
 
 PEER = "postgresql-replicas"
-STORAGE_PATH = "/var/lib/postgresql/data"
 
 
 class PostgresqlOperatorCharm(CharmBase):
@@ -52,7 +51,8 @@ class PostgresqlOperatorCharm(CharmBase):
         )
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
         self.framework.observe(self.on.update_status, self._on_update_status)
-        self._patroni = Patroni(self._pod_ip)
+        self._storage_path = self.meta.storages["pgdata"].location
+        self._patroni = Patroni(self._pod_ip, self._storage_path)
 
     def _on_install(self, _) -> None:
         """Event handler for InstallEvent."""
@@ -96,9 +96,9 @@ class PostgresqlOperatorCharm(CharmBase):
                 # Changes were made, add the new layer.
                 container.add_layer(self._postgresql_service, new_layer, combine=True)
                 logging.info("Added updated layer 'postgresql' to Pebble plan")
-                self._patroni.render_patroni_yml_file()
                 # TODO: move this file generation to on config changed hook
                 # when adding configs to this charm.
+                self._patroni.render_patroni_yml_file()
                 # Restart it and report a new status to Juju.
                 container.restart(self._postgresql_service)
                 logging.info("Restarted postgresql service")
@@ -198,7 +198,7 @@ class PostgresqlOperatorCharm(CharmBase):
                 self._postgresql_service: {
                     "override": "replace",
                     "summary": "entrypoint of the postgresql + patroni image",
-                    "command": f"/usr/bin/python3 /usr/local/bin/patroni {STORAGE_PATH}/patroni.yml",
+                    "command": f"/usr/bin/python3 /usr/local/bin/patroni {self._storage_path}/patroni.yml",
                     "startup": "enabled",
                     "user": "postgres",
                     "group": "postgres",

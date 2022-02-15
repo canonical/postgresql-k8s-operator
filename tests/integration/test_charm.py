@@ -5,22 +5,20 @@
 
 import logging
 import os
-from pathlib import Path
 
 import psycopg2
 import pytest
-import yaml
 from jinja2 import Template
 from lightkube import AsyncClient
 from lightkube.resources.core_v1 import Pod
 from pytest_operator.plugin import OpsTest
 from tenacity import retry, retry_if_result, stop_after_attempt, wait_exponential
 
+from tests.helpers import METADATA, STORAGE_PATH
+
 logger = logging.getLogger(__name__)
 
-METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 APP_NAME = METADATA["name"]
-STORAGE_PATH = "/var/lib/postgresql/data"
 UNIT_IDS = [0, 1, 2]
 
 
@@ -88,7 +86,7 @@ async def test_config_files_are_correct(ops_test: OpsTest, unit_id: int):
     # Get the expected contents from files.
     with open("templates/patroni.yml.j2") as file:
         template = Template(file.read())
-    expected_patroni_yml = template.render(pod_ip=pod_ip)
+    expected_patroni_yml = template.render(pod_ip=pod_ip, storage_path=STORAGE_PATH)
     with open("tests/data/postgresql.conf") as file:
         expected_postgresql_conf = file.read()
 

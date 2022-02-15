@@ -5,7 +5,6 @@ import re
 import unittest
 from unittest.mock import Mock, call, patch
 
-from helpers import patch_network_get
 from lightkube import codecs
 from lightkube.resources.core_v1 import Pod
 from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
@@ -13,6 +12,7 @@ from ops.testing import Harness
 from tenacity import RetryError
 
 from charm import PostgresqlOperatorCharm
+from tests.helpers import patch_network_get
 
 
 class TestCharm(unittest.TestCase):
