@@ -169,6 +169,13 @@ class PostgresqlOperatorCharm(CharmBase):
             logger.error("failed to check PostgreSQL state")
             self.unit.status = BlockedStatus(f"failed to check PostgreSQL state with error {e}")
 
+        # Display an active status message if the current unit is the primary.
+        try:
+            if self._patroni.get_primary(unit_name_pattern=True) == self.unit.name:
+                self.unit.status = ActiveStatus("Primary")
+        except RetryError as e:
+            logger.error(f"failed to get primary with error {e}")
+
     def _restart_postgresql_service(self) -> None:
         """Restart PostgreSQL and Patroni."""
         self.unit.status = MaintenanceStatus(f"restarting {self._postgresql_service} service")
