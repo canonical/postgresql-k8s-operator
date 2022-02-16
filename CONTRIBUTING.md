@@ -49,11 +49,17 @@ charmcraft pack
 ### Deploy
 
 ```bash
+# Clone docker image repository
+git clone https://github.com/canonical/postgresql-patroni-container.git
+# Build docker image locally, since it's not been exported anywhere yet.
+docker build . -t postgresql-patroni
+# Import docker image into microk8s container registry
+docker save postgresql-patroni | microk8s ctr image import -
 # Create a model
 juju add-model dev
 # Enable DEBUG logging
 juju model-config logging-config="<root>=INFO;unit=DEBUG"
 # Deploy the charm
 juju deploy ./postgresql-k8s_ubuntu-20.04-amd64.charm \
-    --resource postgresql-image=ubuntu/postgres
+    --resource postgresql-image=ubuntu/postgres --trust
 ```
