@@ -119,6 +119,7 @@ async def test_cluster_is_stable_after_leader_deletion(ops_test: OpsTest) -> Non
     other_unit_id = 1 if primary.split("/")[1] == 0 else 0
     assert await get_primary(ops_test, other_unit_id) != "None"
 
+
 async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
     """Test data persists through a graceful restart."""
     primary = await get_primary(ops_test)
@@ -167,7 +168,9 @@ async def test_persist_data_through_failure(ops_test: OpsTest):
     await client.delete(Pod, name=primary.replace("/", "-"))
     logger.info("primary pod deleted")
 
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3, idle_period=30)
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3
+    )
 
     # Testing write occurred to every postgres instance by reading from them
     status = await ops_test.model.get_status()  # noqa: F821
@@ -246,7 +249,8 @@ async def pull_content_from_unit_file(unit, path: str) -> str:
     action = await unit.run(f"cat {path}")
     return action.results.get("Stdout", None)
 
-def db_connect(host:str, password:str):
+
+def db_connect(host: str, password: str):
     """Returns psycopg2 connection object linked to postgres db in the given host.
 
     Args:
