@@ -171,6 +171,7 @@ class PostgresqlOperatorCharm(CharmBase):
         except RetryError as e:
             logger.error("failed to check PostgreSQL state")
             self.unit.status = BlockedStatus(f"failed to check PostgreSQL state with error {e}")
+            return
 
         # Display an active status message if the current unit is the primary.
         try:

@@ -171,8 +171,9 @@ async def test_persist_data_through_failure(ops_test: OpsTest):
     await client.delete(Pod, name=primary.replace("/", "-"))
     logger.info("primary pod deleted")
 
+    # Wait 30 years for juju to notice one of the pods is gone and fix it
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3, idle_period=30
+        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3, idle_period=60
     )
 
     # Testing write occurred to every postgres instance by reading from them
