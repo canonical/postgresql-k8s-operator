@@ -109,9 +109,12 @@ async def test_cluster_is_stable_after_leader_deletion(ops_test: OpsTest) -> Non
     model = await ops_test.model.get_info()
     client = AsyncClient(namespace=model.name)
     await client.delete(Pod, name=primary.replace("/", "-"))
+    logger.info(f"deleted pod {primary}")
 
     # Wait and get the primary again (which can be any unit, including the previous primary).
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3
+    )
     primary = await get_primary(ops_test)
 
     # We also need to check that a replica can see the leader
@@ -169,7 +172,7 @@ async def test_persist_data_through_failure(ops_test: OpsTest):
     logger.info("primary pod deleted")
 
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3
+        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3, idle_period=30
     )
 
     # Testing write occurred to every postgres instance by reading from them

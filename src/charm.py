@@ -20,6 +20,7 @@ from ops.model import (
     WaitingStatus,
 )
 from ops.pebble import Layer
+from requests import ConnectionError
 from tenacity import RetryError
 
 from patroni import Patroni
@@ -175,7 +176,7 @@ class PostgresqlOperatorCharm(CharmBase):
         try:
             if self._patroni.get_primary(unit_name_pattern=True) == self.unit.name:
                 self.unit.status = ActiveStatus("Primary")
-        except RetryError as e:
+        except (RetryError, ConnectionError) as e:
             logger.error(f"failed to get primary with error {e}")
 
     def _restart_postgresql_service(self) -> None:
