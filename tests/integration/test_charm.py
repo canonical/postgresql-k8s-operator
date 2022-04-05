@@ -2,7 +2,6 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import asyncio
 import logging
 import os
 
@@ -38,10 +37,12 @@ async def test_build_and_deploy(ops_test: OpsTest):
     await ops_test.model.deploy(
         charm, resources=resources, application_name=APP_NAME, num_units=len(UNIT_IDS), trust=True
     )
+    # Change update status hook interval to be triggered more often
+    # (it's required to handle https://github.com/canonical/postgresql-k8s-operator/issues/3).
+    await ops_test.model.set_config({"update-status-hook-interval": "5s"})
 
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
     assert ops_test.model.applications[APP_NAME].units[0].workload_status == "active"
-
 
 
 @pytest.mark.parametrize("unit_id", UNIT_IDS)
@@ -55,26 +56,19 @@ async def test_labels_consistency_across_pods(ops_test: OpsTest, unit_id: int) -
     assert pod.metadata.labels["cluster-name"] == model.name
 
 
-
 async def test_database_is_up(ops_test: OpsTest):
-    # Retrieving the postgres user password using the action.
-    action = await ops_test.model.units.get(f"{APP_NAME}/0").run_action("get-postgres-password")
-    action = await action.wait()
-    password = action.results["postgres-password"]
+    password = await get_postgres_password(ops_test)
 
     # Testing the connection to each PostgreSQL instance.
     status = await ops_test.model.get_status()  # noqa: F821
     for unit in status["applications"][APP_NAME]["units"].values():
         host = unit["address"]
         logger.info("connecting to the database host: %s", host)
-        connection = psycopg2.connect(
-            f"dbname='postgres' user='postgres' host='{host}' password='{password}' connect_timeout=1"
-        )
+        connection = db_connect(host=host, password=password)
         assert connection.status == psycopg2.extensions.STATUS_READY
         connection.close()
 
 
-@pytest.mark.skip
 @pytest.mark.parametrize("unit_id", UNIT_IDS)
 async def test_config_files_are_correct(ops_test: OpsTest, unit_id: int):
     unit_name = f"postgresql-k8s/{unit_id}"
@@ -106,7 +100,6 @@ async def test_config_files_are_correct(ops_test: OpsTest, unit_id: int):
     assert postgresql_conf_data == expected_postgresql_conf
 
 
-@pytest.mark.skip
 async def test_cluster_is_stable_after_leader_deletion(ops_test: OpsTest) -> None:
     """Tests that the cluster maintains a primary after the primary is deleted."""
     # Find the current primary unit.
@@ -126,34 +119,21 @@ async def test_cluster_is_stable_after_leader_deletion(ops_test: OpsTest) -> Non
     other_unit_id = 1 if primary.split("/")[1] == 0 else 0
     assert await get_primary(ops_test, other_unit_id) != "None"
 
-@pytest.mark.skip
 async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
     """Test data persists through a graceful restart."""
-    primary_name = await get_primary(ops_test)
-    primary = ops_test.model.units[primary_name]
-
-    # Retrieving the postgres user password using the action.
-    action = await primary.run_action("get-postgres-password")
-    action = await action.wait()
-    password = action.results["postgres-password"]
-
+    primary = await get_primary(ops_test)
+    password = await get_postgres_password(ops_test)
     status = await ops_test.model.get_status()
-    address = status["applications"][APP_NAME].units[primary_name]["address"]
+    address = status["applications"][APP_NAME].units[primary]["address"]
 
     # Write data to primary IP.
-    logger.info(f"connecting to primary {primary_name} on {address}")
-    connection = psycopg2.connect(
-        f"dbname='postgres' user='postgres' host='{address}' password='{password}' connect_timeout=10"
-    )
-    try:
+    logger.info(f"connecting to primary {primary} on {address}")
+    with db_connect(host=address, password=password) as connection:
         connection.autocommit = True
-        with connection.cursor() as cursor:
-            cursor.execute("CREATE TABLE gracetest (testcol INT );")
-    finally:
-        if connection:
-            connection.close()
+        connection.cursor().execute("CREATE TABLE gracetest (testcol INT );")
 
     # Restart all nodes by scaling to 0, then back up
+    # These have to run sequentially for the test to be valid/stable.
     await ops_test.model.applications[APP_NAME].scale(0)
     await ops_test.model.applications[APP_NAME].scale(3)
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
@@ -163,66 +143,44 @@ async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
     for unit in status["applications"][APP_NAME]["units"].values():
         host = unit["address"]
         logger.info("connecting to the database host: %s", host)
-        connection = psycopg2.connect(
-            f"dbname='postgres' user='postgres' host='{host}' password='{password}' connect_timeout=10"
-        )
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM gracetest;")
-        connection.close()
+        with db_connect(host=host, password=password) as connection:
+            # Ensure we can read from "gracetest" table
+            connection.cursor().execute("SELECT * FROM gracetest;")
 
 
 async def test_persist_data_through_failure(ops_test: OpsTest):
     """Test data persists through a failure."""
-    primary_name = await get_primary(ops_test)
-    primary = ops_test.model.units[primary_name]
-
-    # Retrieving the postgres user password using the action.
-    action = await primary.run_action("get-postgres-password")
-    action = await action.wait()
-    password = action.results["postgres-password"]
-
+    primary = await get_primary(ops_test)
+    password = await get_postgres_password(ops_test)
     status = await ops_test.model.get_status()
-    address = status["applications"][APP_NAME].units[primary_name]["address"]
+    address = status["applications"][APP_NAME].units[primary]["address"]
 
     # Write data to primary IP.
-    logger.info(f"connecting to primary {primary_name} on {address}")
-    try:
-        connection = psycopg2.connect(
-            f"dbname='postgres' user='postgres' host='{address}' password='{password}' connect_timeout=10"
-        )
+    logger.info(f"connecting to primary {primary} on {address}")
+    with db_connect(host=address, password=password) as connection:
         connection.autocommit = True
-        with connection.cursor() as cursor:
-            cursor.execute("CREATE TABLE failtest (testcol INT );")
-    finally:
-        if connection:
-            connection.close()
+        connection.cursor().execute("CREATE TABLE failtest (testcol INT );")
 
-    # Restart badly (kill unit in microk8s)
+    # Cause a machine failure by killing a unit in k8s
     model = await ops_test.model.get_info()
     client = AsyncClient(namespace=model.name)
-    await client.delete(Pod, name=primary_name.replace("/", "-"))
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
+    await client.delete(Pod, name=primary.replace("/", "-"))
+    logger.info("primary pod deleted")
+
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3, idle_period=30)
 
     # Testing write occurred to every postgres instance by reading from them
     status = await ops_test.model.get_status()  # noqa: F821
     for unit in status["applications"][APP_NAME]["units"].values():
         host = unit["address"]
         logger.info("connecting to the database host: %s", host)
-        connection = psycopg2.connect(
-            f"dbname='postgres' user='postgres' host='{host}' password='{password}' connect_timeout=10"
-        )
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT * FROM failtest;")
-        connection.close()
+        with db_connect(host=host, password=password) as connection:
+            # Ensure we can read from "failtest" table
+            connection.cursor().execute("SELECT * FROM failtest;")
 
 
-@pytest.mark.skip
 async def test_automatic_failover_after_leader_issue(ops_test: OpsTest) -> None:
     """Tests that an automatic failover is triggered after an issue happens in the leader."""
-    # Change update status hook interval to be triggered more often
-    # (it's required to handle https://github.com/canonical/postgresql-k8s-operator/issues/3).
-    await ops_test.model.set_config({"update-status-hook-interval": "5s"})
-
     # Find the current primary unit.
     primary = await get_primary(ops_test)
 
@@ -267,6 +225,14 @@ async def get_primary(ops_test: OpsTest, unit_id=0) -> str:
     return action.results["primary"]
 
 
+async def get_postgres_password(ops_test: OpsTest):
+    """Retrieve the postgres user password using the action."""
+    unit = ops_test.model.units.get(f"{APP_NAME}/0")
+    action = await unit.run_action("get-postgres-password")
+    result = await action.wait()
+    return result.results["postgres-password"]
+
+
 async def pull_content_from_unit_file(unit, path: str) -> str:
     """Pull the content of a file from one unit.
 
@@ -279,3 +245,17 @@ async def pull_content_from_unit_file(unit, path: str) -> str:
     """
     action = await unit.run(f"cat {path}")
     return action.results.get("Stdout", None)
+
+def db_connect(host:str, password:str):
+    """Returns psycopg2 connection object linked to postgres db in the given host.
+
+    Args:
+        host: the IP of the postgres host container
+        password: postgres password
+
+    Returns:
+        psycopg2 connection object linked to postgres db, under "postgres" user.
+    """
+    return psycopg2.connect(
+        f"dbname='postgres' user='postgres' host='{host}' password='{password}' connect_timeout=10"
+    )

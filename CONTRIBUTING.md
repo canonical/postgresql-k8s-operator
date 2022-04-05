@@ -38,6 +38,12 @@ tox -e integration   # integration tests
 tox                  # runs 'lint' and 'unit' environments
 ```
 
+Before running integration tests, run this command to ensure your config is accessible by lightkube:
+
+```shell
+microk8s config > ~/.kube/config
+```
+
 ## Build charm
 
 Build the charm in this git repository using:
