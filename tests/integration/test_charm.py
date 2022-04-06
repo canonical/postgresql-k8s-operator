@@ -171,10 +171,12 @@ async def test_persist_data_through_failure(ops_test: OpsTest):
     await client.delete(Pod, name=primary.replace("/", "-"))
     logger.info("primary pod deleted")
 
-    # Wait 30 years for juju to notice one of the pods is gone and fix it
+    # Wait for juju to notice one of the pods is gone and fix it
+    logger.info("wait for juju to reset postgres container")
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3, idle_period=60
+        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3, check_freq=2, idle_period=45
     )
+    logger.info("juju has reset postgres container")
 
     # Testing write occurred to every postgres instance by reading from them
     status = await ops_test.model.get_status()  # noqa: F821
@@ -195,7 +197,9 @@ async def test_automatic_failover_after_leader_issue(ops_test: OpsTest) -> None:
     await ops_test.model.units.get(primary).run(f"rm -rf {STORAGE_PATH}/pgdata")
 
     # Wait for charm to stabilise
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3
+    )
 
     # Primary doesn't have to be different, but it does have to exist.
     assert await get_primary(ops_test) != "None"
@@ -252,6 +256,15 @@ async def pull_content_from_unit_file(unit, path: str) -> str:
     """
     action = await unit.run(f"cat {path}")
     return action.results.get("Stdout", None)
+
+
+async def wait_for_status(ops_test, status: str, wait: float):
+    status = False
+    while True:
+        for unit in ops_test.model.applications[APP_NAME].units:
+            if unit.workload_status == status:
+                pass
+        await ops_test.jasyncio.sleep(wait)
 
 
 def db_connect(host: str, password: str):
