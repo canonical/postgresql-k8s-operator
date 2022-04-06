@@ -174,7 +174,12 @@ async def test_persist_data_through_failure(ops_test: OpsTest):
     # Wait for juju to notice one of the pods is gone and fix it
     logger.info("wait for juju to reset postgres container")
     await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3, check_freq=2, idle_period=45
+        apps=[APP_NAME],
+        status="active",
+        timeout=1000,
+        wait_for_exact_units=3,
+        check_freq=2,
+        idle_period=45,
     )
     logger.info("juju has reset postgres container")
 
