@@ -221,11 +221,11 @@ async def primary_changed(ops_test: OpsTest, old_primary: str) -> bool:
     return primary != old_primary
 
 
-@retry(
-    retry=retry_if_result(lambda x: x == "None"),
-    stop=stop_after_attempt(10),
-    wait=wait_exponential(multiplier=1, min=2, max=30),
-)
+# @retry(
+#     retry=retry_if_result(lambda x: x == "None"),
+#     stop=stop_after_attempt(10),
+#     wait=wait_exponential(multiplier=1, min=2, max=30),
+# )
 async def get_primary(ops_test: OpsTest, unit_id=0) -> str:
     """Get the primary unit.
 
@@ -261,15 +261,6 @@ async def pull_content_from_unit_file(unit, path: str) -> str:
     """
     action = await unit.run(f"cat {path}")
     return action.results.get("Stdout", None)
-
-
-async def wait_for_status(ops_test, status: str, wait: float):
-    status = False
-    while True:
-        for unit in ops_test.model.applications[APP_NAME].units:
-            if unit.workload_status == status:
-                pass
-        await ops_test.jasyncio.sleep(wait)
 
 
 def db_connect(host: str, password: str):
