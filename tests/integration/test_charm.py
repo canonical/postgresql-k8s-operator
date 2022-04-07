@@ -221,11 +221,6 @@ async def primary_changed(ops_test: OpsTest, old_primary: str) -> bool:
     return primary != old_primary
 
 
-# @retry(
-#     retry=retry_if_result(lambda x: x == "None"),
-#     stop=stop_after_attempt(10),
-#     wait=wait_exponential(multiplier=1, min=2, max=30),
-# )
 async def get_primary(ops_test: OpsTest, unit_id=0) -> str:
     """Get the primary unit.
 
