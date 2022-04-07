@@ -2,7 +2,6 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-
 import logging
 import os
 
@@ -38,6 +37,9 @@ async def test_build_and_deploy(ops_test: OpsTest):
     await ops_test.model.deploy(
         charm, resources=resources, application_name=APP_NAME, num_units=len(UNIT_IDS), trust=True
     )
+    # Change update status hook interval to be triggered more often
+    # (it's required to handle https://github.com/canonical/postgresql-k8s-operator/issues/3).
+    await ops_test.model.set_config({"update-status-hook-interval": "5s"})
 
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
     assert ops_test.model.applications[APP_NAME].units[0].workload_status == "active"
@@ -55,19 +57,14 @@ async def test_labels_consistency_across_pods(ops_test: OpsTest, unit_id: int) -
 
 
 async def test_database_is_up(ops_test: OpsTest):
-    # Retrieving the postgres user password using the action.
-    action = await ops_test.model.units.get(f"{APP_NAME}/0").run_action("get-postgres-password")
-    action = await action.wait()
-    password = action.results["postgres-password"]
+    password = await get_postgres_password(ops_test)
 
     # Testing the connection to each PostgreSQL instance.
     status = await ops_test.model.get_status()  # noqa: F821
-    for _, unit in status["applications"][APP_NAME]["units"].items():
+    for unit in status["applications"][APP_NAME]["units"].values():
         host = unit["address"]
         logger.info("connecting to the database host: %s", host)
-        connection = psycopg2.connect(
-            f"dbname='postgres' user='postgres' host='{host}' password='{password}' connect_timeout=1"
-        )
+        connection = db_connect(host=host, password=password)
         assert connection.status == psycopg2.extensions.STATUS_READY
         connection.close()
 
@@ -112,31 +109,105 @@ async def test_cluster_is_stable_after_leader_deletion(ops_test: OpsTest) -> Non
     model = await ops_test.model.get_info()
     client = AsyncClient(namespace=model.name)
     await client.delete(Pod, name=primary.replace("/", "-"))
+    logger.info(f"deleted pod {primary}")
 
     # Wait and get the primary again (which can be any unit, including the previous primary).
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3
+    )
     primary = await get_primary(ops_test)
 
     # We also need to check that a replica can see the leader
     # to make sure that the cluster is stable again.
     other_unit_id = 1 if primary.split("/")[1] == 0 else 0
-    assert await get_primary(ops_test, other_unit_id) is not None
+    assert await get_primary(ops_test, other_unit_id) != "None"
+
+
+async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
+    """Test data persists through a graceful restart."""
+    primary = await get_primary(ops_test)
+    password = await get_postgres_password(ops_test)
+    status = await ops_test.model.get_status()
+    address = status["applications"][APP_NAME].units[primary]["address"]
+
+    # Write data to primary IP.
+    logger.info(f"connecting to primary {primary} on {address}")
+    with db_connect(host=address, password=password) as connection:
+        connection.autocommit = True
+        connection.cursor().execute("CREATE TABLE gracetest (testcol INT );")
+
+    # Restart all nodes by scaling to 0, then back up
+    # These have to run sequentially for the test to be valid/stable.
+    await ops_test.model.applications[APP_NAME].scale(0)
+    await ops_test.model.applications[APP_NAME].scale(3)
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
+
+    # Testing write occurred to every postgres instance by reading from them
+    status = await ops_test.model.get_status()  # noqa: F821
+    for unit in status["applications"][APP_NAME]["units"].values():
+        host = unit["address"]
+        logger.info("connecting to the database host: %s", host)
+        with db_connect(host=host, password=password) as connection:
+            # Ensure we can read from "gracetest" table
+            connection.cursor().execute("SELECT * FROM gracetest;")
+
+
+async def test_persist_data_through_failure(ops_test: OpsTest):
+    """Test data persists through a failure."""
+    primary = await get_primary(ops_test)
+    password = await get_postgres_password(ops_test)
+    status = await ops_test.model.get_status()
+    address = status["applications"][APP_NAME].units[primary]["address"]
+
+    # Write data to primary IP.
+    logger.info(f"connecting to primary {primary} on {address}")
+    with db_connect(host=address, password=password) as connection:
+        connection.autocommit = True
+        connection.cursor().execute("CREATE TABLE failtest (testcol INT );")
+
+    # Cause a machine failure by killing a unit in k8s
+    model = await ops_test.model.get_info()
+    client = AsyncClient(namespace=model.name)
+    await client.delete(Pod, name=primary.replace("/", "-"))
+    logger.info("primary pod deleted")
+
+    # Wait for juju to notice one of the pods is gone and fix it
+    logger.info("wait for juju to reset postgres container")
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME],
+        status="active",
+        timeout=1000,
+        wait_for_exact_units=3,
+        check_freq=2,
+        idle_period=45,
+    )
+    logger.info("juju has reset postgres container")
+
+    # Testing write occurred to every postgres instance by reading from them
+    status = await ops_test.model.get_status()  # noqa: F821
+    for unit in status["applications"][APP_NAME]["units"].values():
+        host = unit["address"]
+        logger.info("connecting to the database host: %s", host)
+        with db_connect(host=host, password=password) as connection:
+            # Ensure we can read from "failtest" table
+            connection.cursor().execute("SELECT * FROM failtest;")
 
 
 async def test_automatic_failover_after_leader_issue(ops_test: OpsTest) -> None:
     """Tests that an automatic failover is triggered after an issue happens in the leader."""
-    # Change update status hook interval to be triggered more often
-    # (it's required to handle https://github.com/canonical/postgresql-k8s-operator/issues/3).
-    await ops_test.model.set_config({"update-status-hook-interval": "5s"})
-
     # Find the current primary unit.
     primary = await get_primary(ops_test)
 
     # Crash PostgreSQL by removing the data directory.
     await ops_test.model.units.get(primary).run(f"rm -rf {STORAGE_PATH}/pgdata")
 
-    # Check the leader again (it should be another unit).
-    await primary_changed(ops_test, primary)
+    # Wait for charm to stabilise
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3
+    )
+
+    # Primary doesn't have to be different, but it does have to exist.
+    assert await get_primary(ops_test) != "None"
 
 
 @retry(
@@ -165,6 +236,14 @@ async def get_primary(ops_test: OpsTest, unit_id=0) -> str:
     return action.results["primary"]
 
 
+async def get_postgres_password(ops_test: OpsTest):
+    """Retrieve the postgres user password using the action."""
+    unit = ops_test.model.units.get(f"{APP_NAME}/0")
+    action = await unit.run_action("get-postgres-password")
+    result = await action.wait()
+    return result.results["postgres-password"]
+
+
 async def pull_content_from_unit_file(unit, path: str) -> str:
     """Pull the content of a file from one unit.
 
@@ -177,3 +256,18 @@ async def pull_content_from_unit_file(unit, path: str) -> str:
     """
     action = await unit.run(f"cat {path}")
     return action.results.get("Stdout", None)
+
+
+def db_connect(host: str, password: str):
+    """Returns psycopg2 connection object linked to postgres db in the given host.
+
+    Args:
+        host: the IP of the postgres host container
+        password: postgres password
+
+    Returns:
+        psycopg2 connection object linked to postgres db, under "postgres" user.
+    """
+    return psycopg2.connect(
+        f"dbname='postgres' user='postgres' host='{host}' password='{password}' connect_timeout=10"
+    )
