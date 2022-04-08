@@ -10,7 +10,8 @@ import string
 
 from lightkube import ApiError, Client, codecs
 from lightkube.resources.core_v1 import Pod
-from ops.charm import ActionEvent, CharmBase, WorkloadEvent
+from ops.charm import ActionEvent, CharmBase, CharmEvents, EventBase, RelationChangedEvent, WorkloadEvent
+from ops.framework import EventSource
 from ops.main import main
 from ops.model import (
     ActiveStatus,
@@ -30,8 +31,17 @@ logger = logging.getLogger(__name__)
 PEER = "postgresql-replicas"
 
 
+class RoleChangeEvent(EventBase):
+    """A custom event for role changes."""
+    pass
+
+class CustomEventCharmEvents(CharmEvents):
+    role_change = EventSource(RoleChangeEvent)
+
 class PostgresqlOperatorCharm(CharmBase):
     """Charmed Operator for the PostgreSQL database."""
+
+    on = CustomEventCharmEvents()
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -46,6 +56,8 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
+        self.framework.observe(self.on.postgresql_relation_changed, self._on_postgresql_relation_changed)
+        self.framework.observe(self.on.role_change, self._on_role_change)
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(
             self.on.get_postgres_password_action, self._on_get_postgres_password
@@ -107,6 +119,16 @@ class PostgresqlOperatorCharm(CharmBase):
             self.unit.status = ActiveStatus()
         else:
             self.unit.status = WaitingStatus("waiting for Pebble in workload container")
+
+    def _on_postgresql_relation_changed(self, event: RelationChangedEvent) -> None:
+        # If we're the current leader
+        if self.unit.is_leader():
+            # Set a field in the application data bucket
+            event.relation.data[self.app].update({"primary": "test"})
+            logger.info("setting relation data")
+
+    def _on_role_change(self, event: RoleChangeEvent) -> None:
+        logger.info("888888888888888888 - _on_role_change called!!!")
 
     def _on_upgrade_charm(self, _) -> None:
         # Add labels required for replication when the pod loses them (like when it's deleted).
