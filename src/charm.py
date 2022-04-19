@@ -8,10 +8,16 @@ import logging
 import secrets
 import string
 
+from charms.postgresql.v0 import postgresql_helpers
+from charms.postgresql.v0.postgresql import (
+    PostgreSQLEvents,
+    PostgreSQLProvides,
+    PostgreSQLRelationEvent,
+    ProxyAuthDetailsRequestedEvent,
+)
 from lightkube import ApiError, Client, codecs
 from lightkube.resources.core_v1 import Pod
-from ops.charm import ActionEvent, CharmBase, CharmEvents, EventBase, RelationChangedEvent, WorkloadEvent
-from ops.framework import EventSource
+from ops.charm import ActionEvent, CharmBase, WorkloadEvent
 from ops.main import main
 from ops.model import (
     ActiveStatus,
@@ -28,20 +34,24 @@ from patroni import Patroni
 
 logger = logging.getLogger(__name__)
 
+DATABASE_RELATION = "database"
 PEER = "postgresql-replicas"
 
 
-class RoleChangeEvent(EventBase):
-    """A custom event for role changes."""
-    pass
+# class RoleChangeEvent(EventBase):
+#     """A custom event for role changes."""
+#     pass
+#
+# class CustomEventCharmEvents(CharmEvents):
+#     role_change = EventSource(RoleChangeEvent)
 
-class CustomEventCharmEvents(CharmEvents):
-    role_change = EventSource(RoleChangeEvent)
 
 class PostgresqlOperatorCharm(CharmBase):
     """Charmed Operator for the PostgreSQL database."""
 
-    on = CustomEventCharmEvents()
+    # on = CustomEventCharmEvents()
+
+    on = PostgreSQLEvents()
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -51,13 +61,17 @@ class PostgresqlOperatorCharm(CharmBase):
         self._name = self.model.app.name
         self._namespace = self.model.name
         self._context = {"namespace": self._namespace, "app_name": self._name}
+        self.postgresql_provides = PostgreSQLProvides(self, "database", "proxy")
 
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
-        self.framework.observe(self.on.postgresql_relation_changed, self._on_postgresql_relation_changed)
-        self.framework.observe(self.on.role_change, self._on_role_change)
+        self.framework.observe(self.on.database_requested, self._on_relation_changed_handler)
+        self.framework.observe(
+            self.on.proxy_auth_details_requested, self._on_relation_changed_handler
+        )
+        # self.framework.observe(self.on.role_change, self._on_role_change)
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(
             self.on.get_postgres_password_action, self._on_get_postgres_password
@@ -120,15 +134,91 @@ class PostgresqlOperatorCharm(CharmBase):
         else:
             self.unit.status = WaitingStatus("waiting for Pebble in workload container")
 
-    def _on_postgresql_relation_changed(self, event: RelationChangedEvent) -> None:
-        # If we're the current leader
-        if self.unit.is_leader():
-            # Set a field in the application data bucket
-            event.relation.data[self.app].update({"primary": "test"})
-            logger.info("setting relation data")
+    def _on_relation_changed_handler(self, event: PostgreSQLRelationEvent) -> None:
+        # Only the leader should create objects in the database to avoid duplications.
+        if not self.unit.is_leader():
+            return
 
-    def _on_role_change(self, event: RoleChangeEvent) -> None:
-        logger.info("888888888888888888 - _on_role_change called!!!")
+        try:
+            primary_ready = self._patroni.is_primary_ready()
+        except RetryError as e:
+            logger.error(f"failed to get primary status with error {e}")
+            event.defer()
+            return
+
+        if not primary_ready:
+            logger.info("primary not ready yet")
+            event.defer()
+            return
+
+        connection = postgresql_helpers.connect_to_database(
+            "postgres", "postgres", self._primary_endpoint, self._get_postgres_password()
+        )
+
+        # Get the name of the database from the relation.
+        database = event.database
+        if postgresql_helpers.database_exists(connection, database):
+            # TODO: check how to handle this situation the best way.
+            logger.warning(f"database {database} already exists")
+            return
+
+        # Flag used to check if the created user needs more privileges.
+        is_proxy_relation = isinstance(event, ProxyAuthDetailsRequestedEvent)
+
+        user = postgresql_helpers.build_username(event.relation.app.name, is_proxy_relation)
+        user_password = self._new_password()
+
+        postgresql_helpers.create_user(connection, user, user_password, is_proxy_relation)
+        postgresql_helpers.create_database(connection, database, user)
+
+        connection.close()
+
+        if is_proxy_relation:
+            # Connect to the created database to create the auth_query function,
+            # enabling it to be used by the proxy application.
+            connection = postgresql_helpers.connect_to_database(
+                database, "postgres", self._primary_endpoint, self._get_postgres_password()
+            )
+
+            auth_function = postgresql_helpers.create_auth_query_function(connection)
+
+            connection.close()
+
+            self.postgresql_provides.set_proxy_auth(
+                event.relation,
+                user,
+                user_password,
+                auth_function,
+            )
+
+        self.postgresql_provides.set_endpoints(
+            event.relation,
+            postgresql_helpers.build_connection_string(
+                database, user, self._primary_endpoint, user_password
+            ),
+        )
+        self.postgresql_provides.set_read_only_endpoints(
+            event.relation,
+            [
+                postgresql_helpers.build_connection_string(
+                    database, user, self._replicas_endpoint, user_password
+                )
+            ],
+        )
+
+    @property
+    def _primary_endpoint(self) -> str:
+        """Returns the endpoint of the primary instance."""
+        return self._build_service_name("primary")
+
+    @property
+    def _replicas_endpoint(self) -> str:
+        """Returns the endpoint of the replicas instances."""
+        return self._build_service_name("replicas")
+
+    def _build_service_name(self, service: str) -> str:
+        """Build a full k8s service name based on the service name."""
+        return f"{self._name}-{service}.{self._namespace}.svc.cluster.local"
 
     def _on_upgrade_charm(self, _) -> None:
         # Add labels required for replication when the pod loses them (like when it's deleted).
@@ -153,14 +243,20 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _create_resources(self):
         """Create kubernetes resources needed for Patroni."""
+        client = Client()
         try:
-            client = Client()
             with open("src/resources.yaml") as f:
-                for obj in codecs.load_all_yaml(f, context=self._context):
-                    client.create(obj)
+                for resource in codecs.load_all_yaml(f, context=self._context):
+                    client.create(resource)
+                    logger.info(f"created {str(resource)}")
         except ApiError as e:
-            logger.error("failed to create resources")
-            self.unit.status = BlockedStatus(f"failed to create resources with error {e}")
+            if e.status.code == 409:
+                logger.info("replacing resource: %s.", str(resource.to_dict()))
+                client.replace(resource)
+            else:
+                logger.error("failed to create resource: %s.", str(resource.to_dict()))
+                self.unit.status = BlockedStatus(f"failed to create services {e}")
+                return
 
     def _on_get_postgres_password(self, event: ActionEvent) -> None:
         """Returns the password for the postgres user as an action response."""
@@ -231,6 +327,7 @@ class PostgresqlOperatorCharm(CharmBase):
                     "environment": {
                         "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: {self._name}}}",
                         "PATRONI_KUBERNETES_NAMESPACE": self._namespace,
+                        "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
                         "PATRONI_NAME": pod_name,
                         "PATRONI_SCOPE": self._namespace,
                         "PATRONI_REPLICATION_USERNAME": "replication",

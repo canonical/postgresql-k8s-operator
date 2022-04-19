@@ -1,0 +1,16 @@
+# Copyright 2022 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+# For a complete list of supported options, see:
+# https://juju.is/docs/sdk/metadata-reference
+name: postgresql-tester
+description: |
+  PostgreSQL tester.
+summary: |
+  A charm to test PostgreSQL operator and its charm library.
+
+requires:
+  database:
+    interface: postgresql-client
+  proxy:
+    interface: postgresql-proxy

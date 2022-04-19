@@ -26,6 +26,8 @@ class TestCharm(unittest.TestCase):
         self.addCleanup(self.harness.cleanup)
         self.harness.begin()
         self.charm = self.harness.charm
+        # Mock the namespace attribute to be used on service names.
+        self.charm._namespace = "dev"
         self._context = {
             "namespace": self.harness.model.name,
             "app_name": self.harness.model.app.name,
@@ -262,6 +264,7 @@ class TestCharm(unittest.TestCase):
                     "environment": {
                         "PATRONI_KUBERNETES_LABELS": "{application: patroni, cluster-name: postgresql-k8s}",
                         "PATRONI_KUBERNETES_NAMESPACE": self.charm._namespace,
+                        "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
                         "PATRONI_NAME": "postgresql-k8s-0",
                         "PATRONI_SCOPE": self.charm._namespace,
                         "PATRONI_REPLICATION_USERNAME": "replication",
@@ -295,3 +298,7 @@ class TestCharm(unittest.TestCase):
         password = self.charm._get_postgres_password()
         self.assertIsNotNone(password)
         self.assertNotEqual(password, "")
+
+    def test_build_service_name(self):
+        service = self.charm._build_service_name("test")
+        self.assertEqual(service, "postgresql-k8s-test.dev.svc.cluster.local")

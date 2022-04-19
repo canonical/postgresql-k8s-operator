@@ -19,6 +19,7 @@ class Patroni:
     """This class handles the communication with Patroni API and configuration files."""
 
     def __init__(self, pod_ip: str, storage_path: str):
+        # TODO: change pod_ip to hostname.
         self._pod_ip = pod_ip
         self._storage_path = storage_path
 
@@ -53,6 +54,16 @@ class Patroni:
                     primary = "/".join(primary.rsplit("-", 1))
                 break
         return primary
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    def is_primary_ready(self) -> bool:
+        """Check if primary is ready."""
+        # Request info from cluster endpoint (which returns all members of the cluster).
+        r = requests.get(f"http://{self._pod_ip}:8008/cluster")
+        for member in r.json()["members"]:
+            if member["role"] == "leader" and member["state"] == "running":
+                return True
+        return False
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def get_postgresql_state(self) -> str:

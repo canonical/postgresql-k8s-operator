@@ -30,6 +30,34 @@ class TestPatroni(unittest.TestCase):
         )
 
     @patch("requests.get")
+    def test_is_primary_ready(self, _get):
+        # Mock Patroni cluster API.
+        _get.return_value.json.return_value = {
+            "members": [
+                {"name": "postgresql-k8s-0", "role": "replica", "state": "running"},
+                {"name": "postgresql-k8s-1", "role": "leader", "state": "running"},
+                {"name": "postgresql-k8s-2", "role": "replica", "state": "running"},
+            ]
+        }
+
+        result = self.patroni.is_primary_ready()
+        self.assertTrue(result)
+
+    @patch("requests.get")
+    def test_is_not_primary_ready(self, _get):
+        # Mock Patroni cluster API.
+        _get.return_value.json.return_value = {
+            "members": [
+                {"name": "postgresql-k8s-0", "role": "replica", "state": "running"},
+                {"name": "postgresql-k8s-1", "role": "leader", "state": "stopped"},
+                {"name": "postgresql-k8s-2", "role": "replica", "state": "running"},
+            ]
+        }
+
+        result = self.patroni.is_primary_ready()
+        self.assertFalse(result)
+
+    @patch("requests.get")
     def test_get_postgresql_state(self, _get):
         _get.return_value.json.return_value = {"state": "running"}
         state = self.patroni.get_postgresql_state()

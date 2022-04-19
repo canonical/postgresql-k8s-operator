@@ -4,16 +4,18 @@
 
 import logging
 import os
+from subprocess import PIPE, Popen
 
 import psycopg2
 import pytest
+import yaml
 from jinja2 import Template
 from lightkube import AsyncClient
 from lightkube.resources.core_v1 import Pod
 from pytest_operator.plugin import OpsTest
 from tenacity import retry, retry_if_result, stop_after_attempt, wait_exponential
 
-from tests.helpers import METADATA, STORAGE_PATH
+from tests.helpers import METADATA, STORAGE_PATH, TESTER_APP_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -26,17 +28,23 @@ UNIT_IDS = [0, 1, 2]
     reason="skipping deploy, model expected to be provided.",
 )
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest):
+async def test_deploy(ops_test: OpsTest, postgresql_charm, postgresql_tester_charm):
     """Build the charm-under-test and deploy it.
 
     Assert on the unit status before any relations/configurations take place.
     """
-    # Build and deploy charm from local source folder.
-    charm = await ops_test.build_charm(".")
+    # Deploy both PostgreSQL and PostgreSQL test charms.
     resources = {"postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]}
     await ops_test.model.deploy(
-        charm, resources=resources, application_name=APP_NAME, num_units=len(UNIT_IDS), trust=True
+        postgresql_charm,
+        resources=resources,
+        application_name=APP_NAME,
+        num_units=len(UNIT_IDS),
+        trust=True,
     )
+
+    await ops_test.model.deploy(postgresql_tester_charm, application_name=TESTER_APP_NAME)
+
     # Change update status hook interval to be triggered more often
     # (it's required to handle https://github.com/canonical/postgresql-k8s-operator/issues/3).
     await ops_test.model.set_config({"update-status-hook-interval": "5s"})
@@ -210,6 +218,46 @@ async def test_automatic_failover_after_leader_issue(ops_test: OpsTest) -> None:
     assert await get_primary(ops_test) != "None"
 
 
+async def test_database_relation(ops_test: OpsTest) -> None:
+    # Add relation between PostgreSQL charm and the tester charm.
+    # This triggers some events related to database and user creation,
+    # and also the sharing of endpoints data.
+    await ops_test.model.add_relation(f"{APP_NAME}:database", f"{TESTER_APP_NAME}:database")
+
+    # # Wait for the process to complete.
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
+    await ops_test.model.wait_for_idle(apps=[TESTER_APP_NAME], status="active", timeout=1000)
+
+    # Define a SQL statement to run like a customer application would do.
+    table = ops_test.model.info.name.replace("-", "_")
+    statement = f"CREATE TABLE {table}(data TEXT);"
+
+    # Validate the endpoints that were shared through the relation.
+    data = get_unit_data(f"{TESTER_APP_NAME}/0")
+    assert not is_read_only_endpoint(data["endpoints"], statement)
+    assert is_read_only_endpoint(data["read-only-endpoints"], statement)
+
+
+async def test_proxy_relation(ops_test: OpsTest) -> None:
+    # Add relation between PostgreSQL charm and the tester charm.
+    # This triggers some events related to database and user creation,
+    # and also the sharing of endpoints data.
+    await ops_test.model.add_relation(f"{APP_NAME}:proxy", f"{TESTER_APP_NAME}:proxy")
+
+    # Wait for the process to complete.
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
+    await ops_test.model.wait_for_idle(apps=[TESTER_APP_NAME], status="active", timeout=1000)
+
+    # Define a SQL statement to run like a proxy application would do.
+    role = ops_test.model.info.name.replace("-", "_")
+    admin_statement = f"CREATE ROLE {role};"
+
+    # Validate the endpoints that were shared through the relation.
+    data = get_unit_data(f"{TESTER_APP_NAME}/0")
+    assert not is_read_only_endpoint(data["endpoints"], admin_statement)
+    assert is_read_only_endpoint(data["read-only-endpoints"], admin_statement)
+
+
 @retry(
     retry=retry_if_result(lambda x: not x),
     stop=stop_after_attempt(10),
@@ -271,3 +319,43 @@ def db_connect(host: str, password: str):
     return psycopg2.connect(
         f"dbname='postgres' user='postgres' host='{host}' password='{password}' connect_timeout=10"
     )
+
+
+def get_unit_data(unit_name: str) -> str:
+    """Checks if the endpoint is read/write or read-only.
+
+    Args:
+        unit_name: name of the unit to get the data from
+
+    Returns:
+        application data retrieved from the relation.
+    """
+    proc = Popen(f"juju show-unit {unit_name}".split(" "), stdout=PIPE)
+    raw_data = proc.stdout.read().decode("utf-8").strip()
+    parsed_data = yaml.safe_load(raw_data)[unit_name]["relation-info"]
+    # Get the last item in the parsed data (the most recent data that was added).
+    relation_data = parsed_data[len(parsed_data) - 1]["application-data"]
+    return relation_data
+
+
+def is_read_only_endpoint(endpoint: str, statement: str) -> bool:
+    """Checks if the endpoint is read/write or read-only.
+
+    Args:
+        endpoint: endpoint used to connect to the database
+        statement: statement to try to run in the database
+
+    Returns:
+        whether the endpoint is a read-only endpoint.
+    """
+    readonly = False
+    with psycopg2.connect(endpoint) as connection, connection.cursor() as cursor:
+        try:
+            # Try to create a table in the database. It fails if it's executed on a replica.
+            cursor.execute(statement)
+        except psycopg2.errors.ReadOnlySqlTransaction:
+            readonly = True
+        finally:
+            # Rollback the transaction to avoid duplicate role/table errors.
+            connection.rollback()
+    return readonly

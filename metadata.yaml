@@ -26,8 +26,10 @@ peers:
     interface: postgresql-replicas
 
 provides:
-  postgresql:
-    interface: postgresql
+  database:
+    interface: postgresql-client
+  proxy:
+    interface: postgresql-proxy
 
 storage:
   pgdata:

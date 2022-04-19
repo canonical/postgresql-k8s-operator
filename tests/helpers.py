@@ -10,6 +10,9 @@ import yaml
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 STORAGE_PATH = METADATA["storage"]["pgdata"]["location"]
+TESTER_APP_NAME = yaml.safe_load(
+    Path("./tests/integration/postgresql-tester/metadata.yaml").read_text()
+)["name"]
 
 
 def patch_network_get(private_address="10.1.157.116") -> Callable:
