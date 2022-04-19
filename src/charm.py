@@ -9,7 +9,8 @@ import secrets
 import string
 
 from lightkube import ApiError, Client, codecs
-from lightkube.resources.core_v1 import Pod
+from lightkube.resources.core_v1 import Endpoints, Pod, Service
+from lightkube.resources.rbac_authorization_v1 import ClusterRole, ClusterRoleBinding
 from ops.charm import ActionEvent, CharmBase, WorkloadEvent
 from ops.main import main
 from ops.model import (
@@ -46,6 +47,7 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
+        self.framework.observe(self.on.stop, self._on_stop)
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(
             self.on.get_postgres_password_action, self._on_get_postgres_password
@@ -131,14 +133,20 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _create_resources(self):
         """Create kubernetes resources needed for Patroni."""
+        client = Client()
         try:
-            client = Client()
             with open("src/resources.yaml") as f:
-                for obj in codecs.load_all_yaml(f, context=self._context):
-                    client.create(obj)
+                for resource in codecs.load_all_yaml(f, context=self._context):
+                    client.create(resource)
+                    logger.info(f"created {str(resource)}")
         except ApiError as e:
-            logger.error("failed to create resources")
-            self.unit.status = BlockedStatus(f"failed to create resources with error {e}")
+            if e.status.code == 409:
+                logger.info("replacing resource: %s.", str(resource.to_dict()))
+                client.replace(resource)
+            else:
+                logger.error("failed to create resource: %s.", str(resource.to_dict()))
+                self.unit.status = BlockedStatus(f"failed to create services {e}")
+                return
 
     def _on_get_postgres_password(self, event: ActionEvent) -> None:
         """Returns the password for the postgres user as an action response."""
@@ -151,6 +159,51 @@ class PostgresqlOperatorCharm(CharmBase):
             event.set_results({"primary": primary})
         except RetryError as e:
             logger.error(f"failed to get primary with error {e}")
+
+    def _on_stop(self, _) -> None:
+        """Handle the stop event."""
+        # Check to run the teardown actions only once.
+        if not self.unit.is_leader():
+            return
+
+        client = Client()
+        resources_to_delete = []
+
+        # Get the k8s resources created by the charm.
+        with open("src/resources.yaml") as f:
+            resources = codecs.load_all_yaml(f, context=self._context)
+            # Ignore the cluster role and its binding that were created together with the
+            # application and also the service resources, which will be retrieved in the next step.
+            resources_to_delete.extend(
+                list(
+                    filter(
+                        lambda x: not isinstance(x, (ClusterRole, ClusterRoleBinding, Service)),
+                        resources,
+                    )
+                )
+            )
+
+        # Get the k8s resources created by Patroni.
+        for kind in [Endpoints, Service]:
+            resources_to_delete.extend(
+                client.list(
+                    kind,
+                    namespace=self._namespace,
+                    labels={"app.juju.is/created-by": f"{self._name}"},
+                )
+            )
+
+        # Delete the resources.
+        for resource in resources_to_delete:
+            try:
+                client.delete(
+                    type(resource),
+                    name=resource.metadata.name,
+                    namespace=resource.metadata.namespace,
+                )
+            except ApiError:
+                # Only log a message, as the charm is being stopped.
+                logger.error(f"failed to delete resource: {resource}.")
 
     def _on_update_status(self, _) -> None:
         # Until https://github.com/canonical/pebble/issues/6 is fixed,
@@ -209,6 +262,7 @@ class PostgresqlOperatorCharm(CharmBase):
                     "environment": {
                         "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: {self._name}}}",
                         "PATRONI_KUBERNETES_NAMESPACE": self._namespace,
+                        "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
                         "PATRONI_NAME": pod_name,
                         "PATRONI_SCOPE": self._namespace,
                         "PATRONI_REPLICATION_USERNAME": "replication",
