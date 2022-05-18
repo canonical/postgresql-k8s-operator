@@ -15,6 +15,11 @@ from pytest_operator.plugin import OpsTest
 from tenacity import retry, retry_if_result, stop_after_attempt, wait_exponential
 
 from tests.helpers import METADATA, STORAGE_PATH
+from tests.integration.helpers import (
+    get_application_units,
+    get_cluster_members,
+    scale_application,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -127,6 +132,31 @@ async def test_cluster_is_stable_after_leader_deletion(ops_test: OpsTest) -> Non
     # to make sure that the cluster is stable again.
     other_unit_id = 1 if primary.split("/")[1] == 0 else 0
     assert await get_primary(ops_test, other_unit_id) != "None"
+
+
+async def test_scale_down_and_up(ops_test: OpsTest):
+    """Test data is replicated to new units after a scale up."""
+    # Ensure the initial number of units in the application.
+    initial_scale = len(UNIT_IDS)
+    await scale_application(ops_test, APP_NAME, initial_scale)
+
+    # Scale down the application.
+    await scale_application(ops_test, APP_NAME, initial_scale - 1)
+
+    # Ensure the member was correctly removed from the cluster
+    # (by comparing the cluster members and the current units).
+    primary = await get_primary(ops_test)
+    address = await get_unit_address(ops_test, primary)
+    assert get_cluster_members(address) == get_application_units(ops_test, APP_NAME)
+
+    # Scale up the application (2 more units than the current scale).
+    await scale_application(ops_test, APP_NAME, initial_scale + 1)
+
+    # Ensure the new members were added to the cluster.
+    assert get_cluster_members(address) == get_application_units(ops_test, APP_NAME)
+
+    # Scale the application to the initial scale.
+    await scale_application(ops_test, APP_NAME, initial_scale)
 
 
 async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
