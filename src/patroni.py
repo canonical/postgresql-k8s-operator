@@ -83,7 +83,7 @@ class Patroni:
         return set([member["name"] for member in r.json()["members"]])
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-    def is_all_members_ready(self) -> bool:
+    def are_all_members_ready(self) -> bool:
         """Check if all members are correctly running Patroni and PostgreSQL."""
         # Request info from cluster endpoint
         # (which returns all members of the cluster and their states).

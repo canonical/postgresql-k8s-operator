@@ -92,21 +92,33 @@ class PostgresqlOperatorCharm(CharmBase):
             self._reconfigure(event)
             return
 
-        if self._endpoint in self._endpoints:
-            # Update the list of the cluster members in the replicas to make them know each other.
-            try:
-                # Update the cluster members in this unit (updating patroni configuration).
-                self._patroni.update_cluster_members()
-                # Add the labels needed for replication in this pod.
-                self._patch_pod_labels(self._unit)
-                # Validate the status of the member before setting an ActiveStatus.
-                if not self._member_started:
-                    self.unit.status = WaitingStatus("awaiting for member to start")
-                    event.defer()
-                    return
-                self.unit.status = ActiveStatus()
-            except RetryError:
-                self.unit.status = BlockedStatus("failed to update cluster members on member")
+        # Don't update this member before it's part of the members list.
+        if self._endpoint not in self._endpoints:
+            return
+
+        # Update the list of the cluster members in the replicas to make them know each other.
+        try:
+            # Update the cluster members in this unit (updating patroni configuration).
+            self._patroni.update_cluster_members()
+        except RetryError:
+            self.unit.status = BlockedStatus("failed to update cluster members on member")
+            return
+
+        # Add the labels needed for replication in this pod.
+        try:
+            self._patch_pod_labels(self._unit)
+        except ApiError as e:
+            logger.error("failed to patch pod")
+            self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
+            return
+
+        # Validate the status of the member before setting an ActiveStatus.
+        if not self._member_started:
+            self.unit.status = WaitingStatus("awaiting for member to start")
+            event.defer()
+            return
+
+        self.unit.status = ActiveStatus()
 
     @property
     def _member_started(self) -> bool:
@@ -165,14 +177,19 @@ class PostgresqlOperatorCharm(CharmBase):
         """
         hostname = self._get_hostname_from_unit(member)
 
-        if not self._patroni.is_all_members_ready():
+        if not self._patroni.are_all_members_ready():
             logger.info("not all members are ready")
             raise NotReadyError("not all members are ready")
 
         # Add the member to the list that should be updated in each other member.
         self._add_to_endpoints(hostname)
         # Add the required labels for replication to the member pod.
-        self._patch_pod_labels(member)
+        try:
+            self._patch_pod_labels(member)
+        except ApiError as e:
+            logger.error("failed to patch pod")
+            self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
+            return
 
         # Update the list of members in this unit (updating the Patroni configuration).
         try:
@@ -216,7 +233,12 @@ class PostgresqlOperatorCharm(CharmBase):
         self._create_resources()
 
         # Patch the pod labels of this unit to enable replication later.
-        self._patch_pod_labels(self.unit.name)
+        try:
+            self._patch_pod_labels(self.unit.name)
+        except ApiError as e:
+            logger.error("failed to patch pod")
+            self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
+            return
 
         # Add this unit to the list of cluster members
         # (the cluster should start with only this member).
@@ -278,24 +300,32 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _on_upgrade_charm(self, _) -> None:
         # Add labels required for replication when the pod loses them (like when it's deleted).
-        self._patch_pod_labels(self.unit.name)
-
-    def _patch_pod_labels(self, member: str) -> None:
-        """Add labels required for replication to the current pod."""
         try:
-            client = Client()
-            patch = {
-                "metadata": {"labels": {"application": "patroni", "cluster-name": self._namespace}}
-            }
-            client.patch(
-                Pod,
-                name=self._unit_name_to_pod_name(member),
-                namespace=self._namespace,
-                obj=patch,
-            )
+            self._patch_pod_labels(self.unit.name)
         except ApiError as e:
             logger.error("failed to patch pod")
             self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
+            return
+
+    def _patch_pod_labels(self, member: str) -> None:
+        """Add labels required for replication to the current pod.
+
+        Args:
+            member: name of the unit that needs the labels
+        Raises:
+            ApiError when there is any problem communicating
+                to K8s API
+        """
+        client = Client()
+        patch = {
+            "metadata": {"labels": {"application": "patroni", "cluster-name": self._namespace}}
+        }
+        client.patch(
+            Pod,
+            name=self._unit_name_to_pod_name(member),
+            namespace=self._namespace,
+            obj=patch,
+        )
 
     def _create_resources(self):
         """Create kubernetes resources needed for Patroni."""
