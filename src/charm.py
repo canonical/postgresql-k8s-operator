@@ -64,14 +64,14 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on.update_status, self._on_update_status)
         self._storage_path = self.meta.storages["pgdata"].location
 
-    def _get_endpoints_to_remove(self):
+    def _get_endpoints_to_remove(self) -> List[str]:
         """List the endpoints that were part of the cluster but departed."""
         old = self._endpoints
         current = [self._get_hostname_from_unit(member) for member in self._hosts]
         endpoints_to_remove = list(set(old) - set(current))
         return endpoints_to_remove
 
-    def _on_peer_relation_departed(self, event: RelationDepartedEvent):
+    def _on_peer_relation_departed(self, event: RelationDepartedEvent) -> None:
         """The leader removes the departing units from the list of cluster members."""
         if not self.unit.is_leader():
             return
@@ -83,7 +83,7 @@ class PostgresqlOperatorCharm(CharmBase):
         endpoints_to_remove = self._get_endpoints_to_remove()
         self._remove_from_endpoints(endpoints_to_remove)
 
-    def _on_peer_relation_changed(self, event: RelationChangedEvent):
+    def _on_peer_relation_changed(self, event: RelationChangedEvent) -> None:
         """Reconfigure cluster members."""
         # The cluster must be initialized first in the leader unit
         # before any other member joins the cluster.
@@ -117,7 +117,7 @@ class PostgresqlOperatorCharm(CharmBase):
         # Creates custom postgresql.conf file.
         self._patroni.render_postgresql_conf_file()
 
-    def _on_config_changed(self, _):
+    def _on_config_changed(self, _) -> None:
         """Handle the config-changed event."""
         # TODO: placeholder method to implement logic specific to configuration change.
         pass
@@ -155,7 +155,7 @@ class PostgresqlOperatorCharm(CharmBase):
             logger.info("Deferring reconfigure: another member doing sync right now")
             event.defer()
 
-    def add_cluster_member(self, member: str):
+    def add_cluster_member(self, member: str) -> None:
         """Add member to the cluster if all members are already up and running.
 
         Raises:
@@ -314,7 +314,7 @@ class PostgresqlOperatorCharm(CharmBase):
             obj=patch,
         )
 
-    def _create_resources(self):
+    def _create_resources(self) -> None:
         """Create kubernetes resources needed for Patroni."""
         client = Client()
         try:
@@ -500,7 +500,7 @@ class PostgresqlOperatorCharm(CharmBase):
         """
         return unit_name.replace("/", "-")
 
-    def force_primary_change(self):
+    def force_primary_change(self) -> None:
         """Force primary changes immediately.
 
         This function is needed to handle cases related to

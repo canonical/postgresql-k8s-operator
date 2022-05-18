@@ -189,6 +189,6 @@ class Patroni:
             pass
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-    def _reload_patroni_configuration(self):
+    def _reload_patroni_configuration(self) -> None:
         """Reloads the configuration after it was updated in the file."""
         requests.post(f"http://{self._endpoint}:8008/reload")
