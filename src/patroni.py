@@ -11,7 +11,15 @@ from typing import List
 
 import requests
 from jinja2 import Template
-from tenacity import RetryError, retry, stop_after_attempt, wait_exponential
+from tenacity import (
+    RetryError,
+    Retrying,
+    retry,
+    stop_after_attempt,
+    stop_after_delay,
+    wait_exponential,
+    wait_fixed,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -82,19 +90,39 @@ class Patroni:
         r = requests.get(f"http://{self._endpoint}:8008/cluster")
         return set([member["name"] for member in r.json()["members"]])
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def are_all_members_ready(self) -> bool:
-        """Check if all members are correctly running Patroni and PostgreSQL."""
+        """Check if all members are correctly running Patroni and PostgreSQL.
+
+        Returns:
+            True if all members are ready False otherwise. Retries over a period of 10 seconds
+            3 times to allow server time to start up.
+        """
         # Request info from cluster endpoint
         # (which returns all members of the cluster and their states).
-        r = requests.get(f"http://{self._endpoint}:8008/cluster")
+        try:
+            for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(3)):
+                with attempt:
+                    r = requests.get(f"http://{self._endpoint}:8008/cluster")
+        except RetryError:
+            return False
+
         return all(member["state"] == "running" for member in r.json()["members"])
 
     @property
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def member_started(self) -> bool:
-        """Returns whether the member started Patroni and PostgreSQL."""
-        r = requests.get(f"http://{self._endpoint}:8008/health")
+        """Has the member started Patroni and PostgreSQL.
+
+        Returns:
+            True if services is ready False otherwise. Retries over a period of 60 seconds times to
+            allow server time to start up.
+        """
+        try:
+            for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+                with attempt:
+                    r = requests.get(f"http://{self._endpoint}:8008/health")
+        except RetryError:
+            return False
+
         return r.json()["state"] == "running"
 
     def _render_file(self, path: str, content: str, mode: int) -> None:

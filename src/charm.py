@@ -16,6 +16,7 @@ from ops.charm import (
     CharmBase,
     LeaderElectedEvent,
     RelationChangedEvent,
+    RelationDepartedEvent,
     WorkloadEvent,
 )
 from ops.main import main
@@ -63,20 +64,24 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on.update_status, self._on_update_status)
         self._storage_path = self.meta.storages["pgdata"].location
 
-    @property
-    def _endpoints_to_remove(self):
+    def _get_endpoints_to_remove(self):
         """List the endpoints that were part of the cluster but departed."""
         old = self._endpoints
         current = [self._get_hostname_from_unit(member) for member in self._hosts]
         endpoints_to_remove = list(set(old) - set(current))
         return endpoints_to_remove
 
-    def _on_peer_relation_departed(self, _):
+    def _on_peer_relation_departed(self, event: RelationDepartedEvent):
         """The leader removes the departing units from the list of cluster members."""
         if not self.unit.is_leader():
             return
 
-        self._remove_from_endpoints(self._endpoints_to_remove)
+        if "cluster_initialised" not in self._peers.data[self.app]:
+            event.defer()
+            return
+
+        endpoints_to_remove = self._get_endpoints_to_remove()
+        self._remove_from_endpoints(endpoints_to_remove)
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Reconfigure cluster members."""
@@ -89,46 +94,23 @@ class PostgresqlOperatorCharm(CharmBase):
         # If the leader is the one receiving the event, it adds the new members,
         # one at a time.
         if self.unit.is_leader():
-            self._reconfigure(event)
-            return
+            self._add_members(event)
 
         # Don't update this member before it's part of the members list.
         if self._endpoint not in self._endpoints:
             return
 
         # Update the list of the cluster members in the replicas to make them know each other.
-        try:
-            # Update the cluster members in this unit (updating patroni configuration).
-            self._patroni.update_cluster_members()
-        except RetryError:
-            self.unit.status = BlockedStatus("failed to update cluster members on member")
-            return
-
-        # Add the labels needed for replication in this pod.
-        try:
-            self._patch_pod_labels(self._unit)
-        except ApiError as e:
-            logger.error("failed to patch pod")
-            self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
-            return
+        # Update the cluster members in this unit (updating patroni configuration).
+        self._patroni.update_cluster_members()
 
         # Validate the status of the member before setting an ActiveStatus.
-        if not self._member_started:
+        if not self._patroni.member_started:
             self.unit.status = WaitingStatus("awaiting for member to start")
             event.defer()
             return
 
         self.unit.status = ActiveStatus()
-
-    @property
-    def _member_started(self) -> bool:
-        """Whether the member started Patroni and PostgreSQL."""
-        try:
-            if not self._patroni.member_started:
-                raise NotReadyError
-            return True
-        except (NotReadyError, RetryError):
-            return False
 
     def _on_install(self, _) -> None:
         """Event handler for InstallEvent."""
@@ -140,8 +122,15 @@ class PostgresqlOperatorCharm(CharmBase):
         # TODO: placeholder method to implement logic specific to configuration change.
         pass
 
-    def _reconfigure(self, event) -> None:
-        """Reconfigure cluster members."""
+    def _add_members(self, event) -> None:
+        """Add new cluster members.
+
+        This method is responsible for adding new members to the cluster
+        when new units are added to the application. This event is deferred if
+        one of the current units is copying data from the primary, to avoid
+        multiple units copying data at the same time, which can cause slow
+        transfer rates in these processes and overload the primary instance.
+        """
         # Only the leader can reconfigure.
         if not self.unit.is_leader():
             return
@@ -166,9 +155,6 @@ class PostgresqlOperatorCharm(CharmBase):
             logger.info("Deferring reconfigure: another member doing sync right now")
             event.defer()
 
-        # Set Active status again after all new members were added.
-        self.unit.status = ActiveStatus()
-
     def add_cluster_member(self, member: str):
         """Add member to the cluster if all members are already up and running.
 
@@ -183,19 +169,15 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Add the member to the list that should be updated in each other member.
         self._add_to_endpoints(hostname)
-        # Add the required labels for replication to the member pod.
+
+        # Add the labels needed for replication in this pod.
+        # This also enables the member as part of the cluster.
         try:
             self._patch_pod_labels(member)
         except ApiError as e:
             logger.error("failed to patch pod")
             self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
             return
-
-        # Update the list of members in this unit (updating the Patroni configuration).
-        try:
-            self._patroni.update_cluster_members()
-        except RetryError:
-            self.unit.status = BlockedStatus("failed to update cluster members on member")
 
     @property
     def _hosts(self) -> set:
@@ -232,24 +214,17 @@ class PostgresqlOperatorCharm(CharmBase):
         # Create resources and add labels needed for replication.
         self._create_resources()
 
-        # Patch the pod labels of this unit to enable replication later.
-        try:
-            self._patch_pod_labels(self.unit.name)
-        except ApiError as e:
-            logger.error("failed to patch pod")
-            self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
-            return
-
         # Add this unit to the list of cluster members
         # (the cluster should start with only this member).
         if self._endpoint not in self._endpoints:
             self._add_to_endpoints(self._endpoint)
 
         # Remove departing units when the leader changes.
-        if self._endpoints_to_remove:
-            self._remove_from_endpoints(self._endpoints_to_remove)
+        endpoints_to_remove = self._get_endpoints_to_remove()
+        if endpoints_to_remove:
+            self._remove_from_endpoints(endpoints_to_remove)
 
-        self._reconfigure(event)
+        self._add_members(event)
 
     def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
         """Event handler for PostgreSQL container on PebbleReadyEvent."""
@@ -268,6 +243,9 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Defer the initialization of the workload in the replicas
         # if the cluster hasn't been bootstrap on the primary yet.
+        # Otherwise, each unit will create a different cluster and
+        # any update in the members list on the units won't have effect
+        # on fixing that.
         if not self.unit.is_leader() and "cluster_initialised" not in self._peers.data[self.app]:
             event.defer()
             return
@@ -287,12 +265,21 @@ class PostgresqlOperatorCharm(CharmBase):
             logging.info("Restarted postgresql service")
 
         # Ensure the member is up and running before marking the cluster as initialised.
-        if not self._member_started:
+        if not self._patroni.member_started:
             self.unit.status = WaitingStatus("awaiting for cluster to start")
             event.defer()
             return
 
         if self.unit.is_leader():
+            # Add the labels needed for replication in this pod.
+            # This also enables the member as part of the cluster.
+            try:
+                self._patch_pod_labels(self._unit)
+            except ApiError as e:
+                logger.error("failed to patch pod")
+                self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
+                return
+
             self._peers.data[self.app]["cluster_initialised"] = "True"
 
         # All is well, set an ActiveStatus.
@@ -366,6 +353,7 @@ class PostgresqlOperatorCharm(CharmBase):
                 # Restart the stuck replica.
                 self._restart_postgresql_service()
             elif state == "starting" or state == "stopping":
+                # Force a primary change when the current primary is stuck.
                 self.force_primary_change()
         except RetryError as e:
             logger.error("failed to check PostgreSQL state")
@@ -516,7 +504,9 @@ class PostgresqlOperatorCharm(CharmBase):
         """Force primary changes immediately.
 
         This function is needed to handle cases related to
-        https://github.com/canonical/pebble/issues/6.
+        https://github.com/canonical/pebble/issues/6 .
+        When a fail-over is started, Patroni gets stuck on the primary
+        change because of some zombie process that are not cleaned by Pebble.
         """
         # Change needed to force an immediate failover.
         self._patroni.change_master_start_timeout(0)
