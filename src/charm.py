@@ -76,7 +76,7 @@ class PostgresqlOperatorCharm(CharmBase):
         if not self.unit.is_leader():
             return
 
-        self._update_endpoints(endpoints_to_remove=self._endpoints_to_remove)
+        self._remove_from_endpoints(self._endpoints_to_remove)
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent):
         """Reconfigure cluster members."""
@@ -100,16 +100,23 @@ class PostgresqlOperatorCharm(CharmBase):
                 # Add the labels needed for replication in this pod.
                 self._patch_pod_labels(self._unit)
                 # Validate the status of the member before setting an ActiveStatus.
-                try:
-                    if not self._patroni.member_started:
-                        raise NotReadyError
-                except (NotReadyError, RetryError):
+                if not self._member_started:
                     self.unit.status = WaitingStatus("awaiting for member to start")
                     event.defer()
                     return
                 self.unit.status = ActiveStatus()
             except RetryError:
                 self.unit.status = BlockedStatus("failed to update cluster members on member")
+
+    @property
+    def _member_started(self) -> bool:
+        """Whether the member started Patroni and PostgreSQL."""
+        try:
+            if not self._patroni.member_started:
+                raise NotReadyError
+            return True
+        except (NotReadyError, RetryError):
+            return False
 
     def _on_install(self, _) -> None:
         """Event handler for InstallEvent."""
@@ -139,12 +146,16 @@ class PostgresqlOperatorCharm(CharmBase):
                 return
 
             logger.info("Reconfiguring cluster")
+            self.unit.status = MaintenanceStatus("reconfiguring cluster")
             for member in self._hosts - self._patroni.cluster_members:
                 logger.debug("Adding %s to cluster", member)
                 self.add_cluster_member(member)
         except NotReadyError:
             logger.info("Deferring reconfigure: another member doing sync right now")
             event.defer()
+
+        # Set Active status again after all new members were added.
+        self.unit.status = ActiveStatus()
 
     def add_cluster_member(self, member: str):
         """Add member to the cluster if all members are already up and running.
@@ -159,7 +170,7 @@ class PostgresqlOperatorCharm(CharmBase):
             raise NotReadyError("not all members are ready")
 
         # Add the member to the list that should be updated in each other member.
-        self._update_endpoints(endpoint_to_add=hostname)
+        self._add_to_endpoints(hostname)
         # Add the required labels for replication to the member pod.
         self._patch_pod_labels(member)
 
@@ -210,11 +221,11 @@ class PostgresqlOperatorCharm(CharmBase):
         # Add this unit to the list of cluster members
         # (the cluster should start with only this member).
         if self._endpoint not in self._endpoints:
-            self._update_endpoints(endpoint_to_add=self._endpoint)
+            self._add_to_endpoints(self._endpoint)
 
         # Remove departing units when the leader changes.
         if self._endpoints_to_remove:
-            self._update_endpoints(endpoints_to_remove=self._endpoints_to_remove)
+            self._remove_from_endpoints(self._endpoints_to_remove)
 
         self._reconfigure(event)
 
@@ -227,7 +238,7 @@ class PostgresqlOperatorCharm(CharmBase):
         # Create a new config layer.
         new_layer = self._postgresql_layer()
 
-        # Defer the event if we pebble is not available yet.
+        # Defer the event if pebble is not available yet.
         if not container.can_connect():
             self.unit.status = WaitingStatus("waiting for Pebble in workload container")
             event.defer()
@@ -254,10 +265,7 @@ class PostgresqlOperatorCharm(CharmBase):
             logging.info("Restarted postgresql service")
 
         # Ensure the member is up and running before marking the cluster as initialised.
-        try:
-            if not self._patroni.member_started:
-                raise NotReadyError
-        except (NotReadyError, RetryError):
+        if not self._member_started:
             self.unit.status = WaitingStatus("awaiting for cluster to start")
             event.defer()
             return
@@ -281,7 +289,6 @@ class PostgresqlOperatorCharm(CharmBase):
             }
             client.patch(
                 Pod,
-                # name=self._unit_name_to_pod_name(self._unit),
                 name=self._unit_name_to_pod_name(member),
                 namespace=self._namespace,
                 obj=patch,
@@ -378,6 +385,14 @@ class PostgresqlOperatorCharm(CharmBase):
         else:
             # If the peer relations was not created yet, return only the current member hostname.
             return [self._endpoint]
+
+    def _add_to_endpoints(self, endpoint) -> None:
+        """Add one endpoint to the members list."""
+        self._update_endpoints(endpoint_to_add=endpoint)
+
+    def _remove_from_endpoints(self, endpoints: List[str]) -> None:
+        """Remove endpoints from the members list."""
+        self._update_endpoints(endpoints_to_remove=endpoints)
 
     def _update_endpoints(
         self, endpoint_to_add: str = None, endpoints_to_remove: List[str] = None

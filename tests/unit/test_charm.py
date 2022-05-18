@@ -93,7 +93,7 @@ class TestCharm(unittest.TestCase):
 
         # Get the current and the expected layer from the pebble plan and the _postgresql_layer
         # method, respectively.
-        # TODO: test also replicas.
+        # TODO: test also replicas (DPE-398).
         self.harness.set_leader()
         self.harness.container_pebble_ready(self._postgresql_container)
         plan = self.harness.get_container_pebble_plan(self._postgresql_container)
