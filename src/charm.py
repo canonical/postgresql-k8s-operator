@@ -181,6 +181,12 @@ class PostgresqlOperatorCharm(CharmBase):
 
     @property
     def _hosts(self) -> set:
+        """List of the current Juju hosts.
+
+        Returns:
+            a set containing the current Juju hosts
+                with the names in the k8s pod name format
+        """
         peers = self.model.get_relation(PEER)
         hosts = [self._unit_name_to_pod_name(self.unit.name)] + [
             self._unit_name_to_pod_name(unit.name) for unit in peers.units
@@ -220,9 +226,7 @@ class PostgresqlOperatorCharm(CharmBase):
             self._add_to_endpoints(self._endpoint)
 
         # Remove departing units when the leader changes.
-        endpoints_to_remove = self._get_endpoints_to_remove()
-        if endpoints_to_remove:
-            self._remove_from_endpoints(endpoints_to_remove)
+        self._remove_from_endpoints(self._get_endpoints_to_remove())
 
         self._add_members(event)
 
