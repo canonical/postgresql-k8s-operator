@@ -239,12 +239,6 @@ class PostgresqlOperatorCharm(CharmBase):
         # Create a new config layer.
         new_layer = self._postgresql_layer()
 
-        # Defer the event if pebble is not available yet.
-        if not container.can_connect():
-            self.unit.status = WaitingStatus("waiting for Pebble in workload container")
-            event.defer()
-            return
-
         # Defer the initialization of the workload in the replicas
         # if the cluster hasn't been bootstrap on the primary yet.
         # Otherwise, each unit will create a different cluster and

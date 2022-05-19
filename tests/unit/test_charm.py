@@ -7,7 +7,7 @@ from unittest.mock import Mock, call, patch
 
 from lightkube import codecs
 from lightkube.resources.core_v1 import Pod
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 from tenacity import RetryError
 
@@ -79,17 +79,7 @@ class TestCharm(unittest.TestCase):
         # Check that the initial plan is empty.
         plan = self.harness.get_container_pebble_plan(self._postgresql_container)
         self.assertEqual(plan.to_dict(), {})
-
-        # Trigger a pebble-ready hook and test the status before we can connect to the container.
         self.harness.add_relation(self._peer_relation, self.charm.app.name)
-        with patch("ops.model.Container.can_connect") as _can_connect:
-            _can_connect.return_value = False
-            self.harness.container_pebble_ready(self._postgresql_container)
-            self.assertEqual(
-                self.harness.model.unit.status,
-                WaitingStatus("waiting for Pebble in workload container"),
-            )
-            _render_patroni_yml_file.assert_not_called()
 
         # Get the current and the expected layer from the pebble plan and the _postgresql_layer
         # method, respectively.
