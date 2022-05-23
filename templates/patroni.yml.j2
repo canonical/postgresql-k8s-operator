@@ -10,7 +10,7 @@ bootstrap:
   - data-checksums
   pg_hba:
   - host all all 0.0.0.0/0 md5
-  - host replication replication {{ pod_ip }}/16 md5
+  - host replication replication 127.0.0.1/32 md5
 bypass_api_service: true
 log:
   dir: /var/log/postgresql

@@ -14,9 +14,7 @@ from tests.helpers import STORAGE_PATH
 class TestPatroni(unittest.TestCase):
     def setUp(self):
         # Setup Patroni wrapper.
-        self.patroni = Patroni(
-            "postgresql-k8s-0", "postgresql-k8s-0", "test-model", "1.1.1.1", STORAGE_PATH
-        )
+        self.patroni = Patroni("postgresql-k8s-0", "postgresql-k8s-0", "test-model", STORAGE_PATH)
 
     @patch("requests.patch")
     def test_change_master_start_timeout(self, _patch):
@@ -98,7 +96,6 @@ class TestPatroni(unittest.TestCase):
             endpoint=self.patroni._endpoint,
             endpoints=self.patroni._endpoints,
             namespace=self.patroni._namespace,
-            pod_ip=self.patroni._pod_ip,
             storage_path=self.patroni._storage_path,
         )
 

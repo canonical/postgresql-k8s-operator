@@ -31,13 +31,10 @@ class NotReadyError(Exception):
 class Patroni:
     """This class handles the communication with Patroni API and configuration files."""
 
-    def __init__(
-        self, endpoint: str, endpoints: List[str], namespace: str, pod_ip: str, storage_path: str
-    ):
+    def __init__(self, endpoint: str, endpoints: List[str], namespace: str, storage_path: str):
         self._endpoint = endpoint
         self._endpoints = endpoints
         self._namespace = namespace
-        self._pod_ip = pod_ip
         self._storage_path = storage_path
 
     def change_master_start_timeout(self, seconds: int) -> None:
@@ -157,7 +154,6 @@ class Patroni:
             endpoint=self._endpoint,
             endpoints=self._endpoints,
             namespace=self._namespace,
-            pod_ip=self._pod_ip,
             storage_path=self._storage_path,
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)

@@ -379,14 +379,8 @@ class PostgresqlOperatorCharm(CharmBase):
             self._endpoint,
             self._endpoints,
             self._namespace,
-            self._unit_ip,
             self._storage_path,
         )
-
-    @property
-    def _unit_ip(self) -> str:
-        """Current unit ip."""
-        return str(self.model.get_binding(PEER).network.bind_address)
 
     @property
     def _endpoint(self) -> str:
