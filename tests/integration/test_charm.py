@@ -7,13 +7,20 @@ import os
 
 import psycopg2
 import pytest
-from jinja2 import Template
+import requests
 from lightkube import AsyncClient
 from lightkube.resources.core_v1 import Pod
 from pytest_operator.plugin import OpsTest
 from tenacity import retry, retry_if_result, stop_after_attempt, wait_exponential
 
 from tests.helpers import METADATA, STORAGE_PATH
+from tests.integration.helpers import (
+    convert_records_to_dict,
+    get_application_units,
+    get_cluster_members,
+    get_unit_address,
+    scale_application,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +49,8 @@ async def test_build_and_deploy(ops_test: OpsTest):
     await ops_test.model.set_config({"update-status-hook-interval": "5s"})
 
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
-    assert ops_test.model.applications[APP_NAME].units[0].workload_status == "active"
+    for unit_id in UNIT_IDS:
+        assert ops_test.model.applications[APP_NAME].units[unit_id].workload_status == "active"
 
 
 @pytest.mark.parametrize("unit_id", UNIT_IDS)
@@ -56,48 +64,52 @@ async def test_labels_consistency_across_pods(ops_test: OpsTest, unit_id: int) -
     assert pod.metadata.labels["cluster-name"] == model.name
 
 
-async def test_database_is_up(ops_test: OpsTest):
-    password = await get_postgres_password(ops_test)
-
-    # Testing the connection to each PostgreSQL instance.
-    status = await ops_test.model.get_status()  # noqa: F821
-    for unit in status["applications"][APP_NAME]["units"].values():
-        host = unit["address"]
-        logger.info("connecting to the database host: %s", host)
-        connection = db_connect(host=host, password=password)
-        assert connection.status == psycopg2.extensions.STATUS_READY
-        connection.close()
+@pytest.mark.parametrize("unit_id", UNIT_IDS)
+async def test_database_is_up(ops_test: OpsTest, unit_id: int):
+    # Query Patroni REST API and check the status that indicates
+    # both Patroni and PostgreSQL are up and running.
+    host = await get_unit_address(ops_test, APP_NAME, f"{APP_NAME}/{unit_id}")
+    result = requests.get(f"http://{host}:8008/health")
+    assert result.status_code == 200
 
 
 @pytest.mark.parametrize("unit_id", UNIT_IDS)
-async def test_config_files_are_correct(ops_test: OpsTest, unit_id: int):
-    unit_name = f"postgresql-k8s/{unit_id}"
+async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
+    password = await get_postgres_password(ops_test)
 
-    # Retrieve the pod IP.
-    status = await ops_test.model.get_status()  # noqa: F821
-    for _, unit in status["applications"][APP_NAME]["units"].items():
-        if unit["provider-id"] == unit_name.replace("/", "-"):
-            pod_ip = unit["address"]
-            break
+    # Connect to PostgreSQL.
+    host = await get_unit_address(ops_test, APP_NAME, f"{APP_NAME}/{unit_id}")
+    logger.info("connecting to the database host: %s", host)
+    with psycopg2.connect(
+        f"dbname='postgres' user='postgres' host='{host}' password='{password}' connect_timeout=1"
+    ) as connection, connection.cursor() as cursor:
+        assert connection.status == psycopg2.extensions.STATUS_READY
 
-    # Get the expected contents from files.
-    with open("templates/patroni.yml.j2") as file:
-        template = Template(file.read())
-    expected_patroni_yml = template.render(pod_ip=pod_ip, storage_path=STORAGE_PATH)
-    with open("tests/data/postgresql.conf") as file:
-        expected_postgresql_conf = file.read()
+        # Retrieve settings from PostgreSQL pg_settings table.
+        # Here the SQL query gets a key-value pair composed by the name of the setting
+        # and its value, filtering the retrieved data to return only the settings
+        # that were set by Patroni.
+        cursor.execute(
+            """SELECT name,setting
+                FROM pg_settings
+                WHERE name IN
+                ('data_directory', 'cluster_name', 'data_checksums', 'listen_addresses');"""
+        )
+        records = cursor.fetchall()
+        settings = convert_records_to_dict(records)
 
-    unit = ops_test.model.units[unit_name]
+    # Validate each configuration set by Patroni on PostgreSQL.
+    assert settings["cluster_name"] == (await ops_test.model.get_info()).name
+    assert settings["data_directory"] == f"{STORAGE_PATH}/pgdata"
+    assert settings["data_checksums"] == "on"
+    assert settings["listen_addresses"] == "0.0.0.0"
 
-    # Check whether Patroni configuration is correctly set up.
-    patroni_yml_data = await pull_content_from_unit_file(unit, f"{STORAGE_PATH}/patroni.yml")
-    assert patroni_yml_data == expected_patroni_yml
+    # Retrieve settings from Patroni REST API.
+    result = requests.get(f"http://{host}:8008/config")
+    settings = result.json()
 
-    # Check that the PostgreSQL settings are as expected.
-    postgresql_conf_data = await pull_content_from_unit_file(
-        unit, f"{STORAGE_PATH}/postgresql-k8s-operator.conf"
-    )
-    assert postgresql_conf_data == expected_postgresql_conf
+    # Validate configuration exposed by Patroni.
+    assert settings["postgresql"]["use_pg_rewind"]
 
 
 async def test_cluster_is_stable_after_leader_deletion(ops_test: OpsTest) -> None:
@@ -123,12 +135,36 @@ async def test_cluster_is_stable_after_leader_deletion(ops_test: OpsTest) -> Non
     assert await get_primary(ops_test, other_unit_id) != "None"
 
 
+async def test_scale_down_and_up(ops_test: OpsTest):
+    """Test data is replicated to new units after a scale up."""
+    # Ensure the initial number of units in the application.
+    initial_scale = len(UNIT_IDS)
+    await scale_application(ops_test, APP_NAME, initial_scale)
+
+    # Scale down the application.
+    await scale_application(ops_test, APP_NAME, initial_scale - 1)
+
+    # Ensure the member was correctly removed from the cluster
+    # (by comparing the cluster members and the current units).
+    primary = await get_primary(ops_test)
+    address = await get_unit_address(ops_test, APP_NAME, primary)
+    assert get_cluster_members(address) == get_application_units(ops_test, APP_NAME)
+
+    # Scale up the application (2 more units than the current scale).
+    await scale_application(ops_test, APP_NAME, initial_scale + 1)
+
+    # Ensure the new members were added to the cluster.
+    assert get_cluster_members(address) == get_application_units(ops_test, APP_NAME)
+
+    # Scale the application to the initial scale.
+    await scale_application(ops_test, APP_NAME, initial_scale)
+
+
 async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
     """Test data persists through a graceful restart."""
     primary = await get_primary(ops_test)
     password = await get_postgres_password(ops_test)
-    status = await ops_test.model.get_status()
-    address = status["applications"][APP_NAME].units[primary]["address"]
+    address = await get_unit_address(ops_test, APP_NAME, primary)
 
     # Write data to primary IP.
     logger.info(f"connecting to primary {primary} on {address}")
@@ -156,8 +192,7 @@ async def test_persist_data_through_failure(ops_test: OpsTest):
     """Test data persists through a failure."""
     primary = await get_primary(ops_test)
     password = await get_postgres_password(ops_test)
-    status = await ops_test.model.get_status()
-    address = status["applications"][APP_NAME].units[primary]["address"]
+    address = await get_unit_address(ops_test, APP_NAME, primary)
 
     # Write data to primary IP.
     logger.info(f"connecting to primary {primary} on {address}")
@@ -242,20 +277,6 @@ async def get_postgres_password(ops_test: OpsTest):
     action = await unit.run_action("get-postgres-password")
     result = await action.wait()
     return result.results["postgres-password"]
-
-
-async def pull_content_from_unit_file(unit, path: str) -> str:
-    """Pull the content of a file from one unit.
-
-    Args:
-        unit: the Juju unit instance.
-        path: the path of the file to get the contents from.
-
-    Returns:
-        the entire content of the file.
-    """
-    action = await unit.run(f"cat {path}")
-    return action.results.get("Stdout", None)
 
 
 def db_connect(host: str, password: str):
