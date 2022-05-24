@@ -10,18 +10,24 @@ bootstrap:
   - data-checksums
   pg_hba:
   - host all all 0.0.0.0/0 md5
-  - host replication replication {{ pod_ip }}/16 md5
+  - host replication replication 127.0.0.1/32 md5
 bypass_api_service: true
 log:
   dir: /var/log/postgresql
 restapi:
-  connect_address: '{{ pod_ip }}:8008'
+  connect_address: '{{ endpoint }}:8008'
   listen: 0.0.0.0:8008
-pod_ip: '{{ pod_ip }}'
+pod_ip: '{{ endpoint }}'
 postgresql:
-  connect_address: '{{ pod_ip }}:5432'
+  connect_address: '{{ endpoint }}:5432'
   custom_conf: {{ storage_path }}/postgresql-k8s-operator.conf
   data_dir: {{ storage_path }}/pgdata
   listen: 0.0.0.0:5432
   pgpass: /tmp/pgpass
+  pg_hba:
+  - host all all 0.0.0.0/0 md5
+  - host replication replication 127.0.0.1/32 md5
+  {%- for endpoint in endpoints %}
+  - host replication replication {{ endpoint }}.{{ namespace }}.svc.cluster.local md5
+  {%- endfor %}
 use_endpoints: true

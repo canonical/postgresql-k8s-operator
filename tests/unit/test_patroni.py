@@ -5,6 +5,8 @@
 import unittest
 from unittest.mock import mock_open, patch
 
+from jinja2 import Template
+
 from patroni import Patroni
 from tests.helpers import STORAGE_PATH
 
@@ -12,21 +14,21 @@ from tests.helpers import STORAGE_PATH
 class TestPatroni(unittest.TestCase):
     def setUp(self):
         # Setup Patroni wrapper.
-        self.patroni = Patroni("1.1.1.1", STORAGE_PATH)
+        self.patroni = Patroni("postgresql-k8s-0", "postgresql-k8s-0", "test-model", STORAGE_PATH)
 
     @patch("requests.patch")
     def test_change_master_start_timeout(self, _patch):
         # Test with an initial timeout value.
         self.patroni.change_master_start_timeout(0)
         _patch.assert_called_once_with(
-            "http://1.1.1.1:8008/config", json={"master_start_timeout": 0}
+            "http://postgresql-k8s-0:8008/config", json={"master_start_timeout": 0}
         )
 
         # Test with another timeout value.
         _patch.reset_mock()
         self.patroni.change_master_start_timeout(300)
         _patch.assert_called_once_with(
-            "http://1.1.1.1:8008/config", json={"master_start_timeout": 300}
+            "http://postgresql-k8s-0:8008/config", json={"master_start_timeout": 300}
         )
 
     @patch("requests.get")
@@ -34,7 +36,7 @@ class TestPatroni(unittest.TestCase):
         _get.return_value.json.return_value = {"state": "running"}
         state = self.patroni.get_postgresql_state()
         self.assertEqual(state, "running")
-        _get.assert_called_once_with("http://1.1.1.1:8008/health")
+        _get.assert_called_once_with("http://postgresql-k8s-0:8008/health")
 
     @patch("requests.get")
     def test_get_primary(self, _get):
@@ -50,13 +52,13 @@ class TestPatroni(unittest.TestCase):
         # Test returning pod name.
         primary = self.patroni.get_primary()
         self.assertEqual(primary, "postgresql-k8s-1")
-        _get.assert_called_once_with("http://1.1.1.1:8008/cluster")
+        _get.assert_called_once_with("http://postgresql-k8s-0:8008/cluster")
 
         # Test returning unit name.
         _get.reset_mock()
         primary = self.patroni.get_primary(unit_name_pattern=True)
         self.assertEqual(primary, "postgresql-k8s/1")
-        _get.assert_called_once_with("http://1.1.1.1:8008/cluster")
+        _get.assert_called_once_with("http://postgresql-k8s-0:8008/cluster")
 
     @patch("os.chmod")
     @patch("os.chown")
@@ -88,8 +90,14 @@ class TestPatroni(unittest.TestCase):
     @patch("charm.Patroni._render_file")
     def test_render_patroni_yml_file(self, _render_file):
         # Get the expected content from a file.
-        with open("tests/data/patroni.yml") as file:
-            expected_content = file.read()
+        with open("templates/patroni.yml.j2") as file:
+            template = Template(file.read())
+        expected_content = template.render(
+            endpoint=self.patroni._endpoint,
+            endpoints=self.patroni._endpoints,
+            namespace=self.patroni._namespace,
+            storage_path=self.patroni._storage_path,
+        )
 
         # Setup a mock for the `open` method, set returned data to postgresql.conf template.
         with open("templates/patroni.yml.j2", "r") as f:

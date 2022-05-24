@@ -7,7 +7,7 @@ from unittest.mock import Mock, call, patch
 
 from lightkube import codecs
 from lightkube.resources.core_v1 import Pod
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
 from tenacity import RetryError
 
@@ -31,21 +31,18 @@ class TestCharm(unittest.TestCase):
             "app_name": self.harness.model.app.name,
         }
 
+    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.render_postgresql_conf_file")
-    @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
-    @patch("charm.PostgresqlOperatorCharm._create_resources")
     def test_on_install(
         self,
-        _create_resources,
-        _patch_pod_labels,
         _render_postgresql_conf_file,
     ):
         self.charm.on.install.emit()
-        _create_resources.assert_called_once()
-        _patch_pod_labels.assert_called_once()
         _render_postgresql_conf_file.assert_called_once()
 
-    def test_on_leader_elected(self):
+    @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
+    @patch("charm.PostgresqlOperatorCharm._create_resources")
+    def test_on_leader_elected(self, _, __):
         # Assert that there is no password in the peer relation.
         self.harness.add_relation(self._peer_relation, self.charm.app.name)
         self.assertIsNone(self.charm._peers.data[self.charm.app].get("postgres-password", None))
@@ -73,25 +70,21 @@ class TestCharm(unittest.TestCase):
             replication_password,
         )
 
+    @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.Patroni.member_started")
     @patch("charm.Patroni.render_patroni_yml_file")
-    def test_on_postgresql_pebble_ready(self, _render_patroni_yml_file):
+    @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
+    @patch("charm.PostgresqlOperatorCharm._create_resources")
+    def test_on_postgresql_pebble_ready(self, _, __, _render_patroni_yml_file, _member_started):
         # Check that the initial plan is empty.
         plan = self.harness.get_container_pebble_plan(self._postgresql_container)
         self.assertEqual(plan.to_dict(), {})
-
-        # Trigger a pebble-ready hook and test the status before we can connect to the container.
         self.harness.add_relation(self._peer_relation, self.charm.app.name)
-        with patch("ops.model.Container.can_connect") as _can_connect:
-            _can_connect.return_value = False
-            self.harness.container_pebble_ready(self._postgresql_container)
-            self.assertEqual(
-                self.harness.model.unit.status,
-                WaitingStatus("waiting for Pebble in workload container"),
-            )
-            _render_patroni_yml_file.assert_not_called()
 
         # Get the current and the expected layer from the pebble plan and the _postgresql_layer
         # method, respectively.
+        # TODO: test also replicas (DPE-398).
+        self.harness.set_leader()
         self.harness.container_pebble_ready(self._postgresql_container)
         plan = self.harness.get_container_pebble_plan(self._postgresql_container)
         expected = self.charm._postgresql_layer().to_dict()
@@ -112,6 +105,7 @@ class TestCharm(unittest.TestCase):
         _get_postgres_password.assert_called_once()
         mock_event.set_results.assert_called_once_with({"postgres-password": "test-password"})
 
+    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.get_primary")
     def test_on_get_primary(self, _get_primary):
         mock_event = Mock()
@@ -120,6 +114,7 @@ class TestCharm(unittest.TestCase):
         _get_primary.assert_called_once()
         mock_event.set_results.assert_called_once_with({"primary": "postgresql-k8s-1"})
 
+    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.get_primary")
     def test_fail_to_get_primary(self, _get_primary):
         mock_event = Mock()
@@ -137,6 +132,7 @@ class TestCharm(unittest.TestCase):
             ActiveStatus(),
         )
 
+    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.get_primary")
     @patch("charm.PostgresqlOperatorCharm._restart_postgresql_service")
     @patch("charm.Patroni.change_master_start_timeout")
@@ -191,6 +187,7 @@ class TestCharm(unittest.TestCase):
         expected_calls = [call.c(0), call.r(), call.c(None)]
         self.assertEqual(manager.mock_calls, expected_calls)
 
+    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.get_primary")
     @patch("charm.PostgresqlOperatorCharm._restart_postgresql_service")
     @patch("charm.Patroni.get_postgresql_state")
@@ -205,6 +202,7 @@ class TestCharm(unittest.TestCase):
             BlockedStatus("failed to check PostgreSQL state with error RetryError[fake error]"),
         )
 
+    @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.get_primary")
     @patch("charm.Patroni.get_postgresql_state")
     def test_on_update_status_with_error_on_get_primary(self, _, _get_primary):
@@ -230,7 +228,9 @@ class TestCharm(unittest.TestCase):
 
     @patch("charm.Client")
     def test_patch_pod_labels(self, _client):
-        self.charm._patch_pod_labels()
+        member = self.charm._unit.replace("/", "-")
+
+        self.charm._patch_pod_labels(member)
         expected_patch = {
             "metadata": {
                 "labels": {"application": "patroni", "cluster-name": self.charm._namespace}
@@ -238,12 +238,14 @@ class TestCharm(unittest.TestCase):
         }
         _client.return_value.patch.assert_called_once_with(
             Pod,
-            name=self.charm._unit.replace("/", "-"),
+            name=member,
             namespace=self.charm._namespace,
             obj=expected_patch,
         )
 
-    def test_postgresql_layer(self):
+    @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
+    @patch("charm.PostgresqlOperatorCharm._create_resources")
+    def test_postgresql_layer(self, _, __):
         # Test with the already generated password.
         self.harness.add_relation(self._peer_relation, self.charm.app.name)
         self.harness.set_leader()
@@ -262,6 +264,7 @@ class TestCharm(unittest.TestCase):
                     "environment": {
                         "PATRONI_KUBERNETES_LABELS": "{application: patroni, cluster-name: postgresql-k8s}",
                         "PATRONI_KUBERNETES_NAMESPACE": self.charm._namespace,
+                        "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
                         "PATRONI_NAME": "postgresql-k8s-0",
                         "PATRONI_SCOPE": self.charm._namespace,
                         "PATRONI_REPLICATION_USERNAME": "replication",
@@ -285,7 +288,9 @@ class TestCharm(unittest.TestCase):
         self.assertIsNotNone(re.fullmatch("[a-zA-Z0-9\b]{16}$", second_password))
         self.assertNotEqual(second_password, first_password)
 
-    def test_get_postgres_password(self):
+    @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
+    @patch("charm.PostgresqlOperatorCharm._create_resources")
+    def test_get_postgres_password(self, _, __):
         # Test for a None password.
         self.harness.add_relation(self._peer_relation, self.charm.app.name)
         self.assertIsNone(self.charm._get_postgres_password())
