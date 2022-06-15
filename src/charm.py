@@ -35,6 +35,7 @@ from patroni import NotReadyError, Patroni
 
 logger = logging.getLogger(__name__)
 
+OLD_DB_RELATION = "db"
 PEER = "postgresql-replicas"
 
 
@@ -55,6 +56,8 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
         self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
+        self.framework.observe(self.on[OLD_DB_RELATION].relation_changed, self._on_old_db_relation_changed)
+        self.framework.observe(self.on[OLD_DB_RELATION].relation_departed, self._on_old_db_relation_departed)
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(
@@ -63,6 +66,14 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
         self.framework.observe(self.on.update_status, self._on_update_status)
         self._storage_path = self.meta.storages["pgdata"].location
+
+    def _on_old_db_relation_changed(self, event: RelationChangedEvent) -> None:
+        # TODO: implement.
+        pass
+
+    def _on_old_db_relation_departed(self, event: RelationDepartedEvent) -> None:
+        # TODO: implement.
+        pass
 
     def _get_endpoints_to_remove(self) -> List[str]:
         """List the endpoints that were part of the cluster but departed."""
