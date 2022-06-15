@@ -25,6 +25,10 @@ peers:
   postgresql-replicas:
     interface: postgresql-replicas
 
+provides:
+  db:
+    interface: pgsql
+
 storage:
   pgdata:
     type: filesystem
