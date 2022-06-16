@@ -17,9 +17,12 @@
 This library provides common PostgreSQL-specific features for the
 PostgreSQL machine and Kubernetes charms.
 """
+import logging
 from typing import List
 
 import psycopg2
+
+logger = logging.getLogger(__name__)
 
 
 def build_username(app_name: str, admin: bool = False) -> str:
@@ -70,6 +73,7 @@ def connect_to_database(
     connection = psycopg2.connect(
         f"dbname='{database}' user='{user}' host='{host}' password='{password}' connect_timeout=1"
     )
+    logger.error(f"dbname='{database}' user='{user}' host='{host}' password='{password}' connect_timeout=1")
     connection.autocommit = True
     return connection
 
@@ -129,6 +133,10 @@ def create_user(
         admin: whether the user should have additional admin privileges.
     """
     statements = ["CREATE ROLE " + user + " WITH LOGIN ENCRYPTED PASSWORD '" + password + "';"]
+    with connection.cursor() as cursor:
+        logger.error(f"Executing: {statements[0]}")
+        cursor.execute(statements[0])
+        logger.error(f"statement executed: {statements[0]}")
     # If the user should be an admin, it will be able to create new databases and roles.
     if admin:
         statements.extend(
@@ -137,7 +145,7 @@ def create_user(
                 "ALTER USER " + user + " CREATEROLE",
             ]
         )
-    execute(connection, statements)
+    # execute(connection, statements)
 
 
 def database_exists(connection: psycopg2.extensions.connection, database: str) -> bool:
@@ -167,4 +175,6 @@ def execute(connection: psycopg2.extensions.connection, statements: List[str]) -
     """
     with connection.cursor() as cursor:
         for statement in statements:
+            logger.error(f"Executing: {statement}")
             cursor.execute(statement)
+            logger.error(f"statement executed: {statement}")

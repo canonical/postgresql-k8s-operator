@@ -18,8 +18,8 @@ containers:
 resources:
   postgresql-image:
     type: oci-image
-    description: OCI image for PostgreSQL (ubuntu/postgres)
-    upstream-source: postgresql-patroni
+    description: OCI image for PostgreSQL (postgresql-patroni:local)
+    upstream-source: postgresql-patroni:local
 
 peers:
   postgresql-replicas:

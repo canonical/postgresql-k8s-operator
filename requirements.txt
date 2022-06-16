@@ -1,6 +1,5 @@
 jinja2==3.0.3
 lightkube==0.10.0
 ops==1.4.0
-psycopg2-binary==2.9.3
 requests==2.27.1
 tenacity==8.0.1

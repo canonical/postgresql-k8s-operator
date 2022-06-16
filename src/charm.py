@@ -9,6 +9,10 @@ import secrets
 import string
 from typing import List
 
+import psycopg2
+from charms.postgresql.v0.postgresql_helpers import (
+    connect_to_database, create_database, create_user
+)
 from lightkube import ApiError, Client, codecs
 from lightkube.resources.core_v1 import Pod
 from ops.charm import (
@@ -68,8 +72,72 @@ class PostgresqlOperatorCharm(CharmBase):
         self._storage_path = self.meta.storages["pgdata"].location
 
     def _on_old_db_relation_changed(self, event: RelationChangedEvent) -> None:
-        # TODO: implement.
-        pass
+        """Handle the legacy db relation changed event."""
+        if not self.unit.is_leader():
+            return
+
+        self.unit.status = MaintenanceStatus("Setting up db relation")
+        logger.warning("DEPRECATION WARNING - `db` is a legacy interface")
+
+        unit_relation_databag = event.relation.data[self.unit]
+
+        if unit_relation_databag.get("user"):
+            # Test if relation data is already set
+            # and avoid overwriting it
+            logger.warning("Data for db already set.")
+            self.unit.status = ActiveStatus()
+            return
+
+        hostname = self._get_hostname_from_unit(self.unit.name.replace("/", "-"))
+        # Use connstring (https://pypi.org/project/pgconnstr/).
+        connection = connect_to_database(
+            "postgres", "postgres", hostname, self._get_postgres_password()
+        )
+        logger.info(f"Connected to PostgreSQL: {connection}")
+
+        user = f"relation_id_{event.relation.id}_{event.app.name.replace('-', '_')}"
+        password = self._new_password()
+        logger.error(str(event.relation.data))
+        database = event.relation.data[event.app].get("database")
+        if not database:
+            event.defer()
+            return
+
+        logger.error(f"Creating user {user} with password {password} with database {database}")
+        logger.error(connection.status == psycopg2.extensions.STATUS_READY)
+
+        # create_user(connection, user, password)
+        statements = ["CREATE ROLE " + user + " WITH LOGIN ENCRYPTED PASSWORD '" + password + "';"]
+        with connection.cursor() as cursor:
+            logger.error(f"Executing: {statements[0]}")
+            cursor.execute(statements[0])
+            logger.error(f"statement executed: {statements[0]}")
+
+        logger.error("user created")
+
+        create_database(connection, database, user)
+
+        logger.error("database created")
+
+        connection.close()
+
+        logger.error("connection closed")
+
+        unit_relation_databag["allowed-subnets"] = ""
+        unit_relation_databag["allowed-units"] = event.unit.name
+        unit_relation_databag["host"] = hostname
+        unit_relation_databag["master"] = hostname
+        unit_relation_databag["port"] = "5432"
+        unit_relation_databag["standbys"] = ""
+        unit_relation_databag["state"] = ""
+        unit_relation_databag["version"] = ""
+        unit_relation_databag["user"] = user
+        unit_relation_databag["password"] = password
+        unit_relation_databag["database"] = database
+
+        logger.error("relation data set")
+
+        self.unit.status = ActiveStatus()
 
     def _on_old_db_relation_departed(self, event: RelationDepartedEvent) -> None:
         # TODO: implement.
