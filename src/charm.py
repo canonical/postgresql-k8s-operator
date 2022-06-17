@@ -7,7 +7,7 @@ import json
 import logging
 import secrets
 import string
-from typing import List
+from typing import List, Iterable
 
 import psycopg2
 from charms.postgresql.v0.postgresql_helpers import (
@@ -31,7 +31,7 @@ from ops.model import (
     BlockedStatus,
     MaintenanceStatus,
     Relation,
-    WaitingStatus,
+    WaitingStatus, Unit,
 )
 from ops.pebble import Layer
 from pgconnstr import ConnectionString
@@ -94,8 +94,9 @@ class PostgresqlOperatorCharm(CharmBase):
         logger.warning("DEPRECATION WARNING - `db` is a legacy interface")
 
         unit_relation_databag = event.relation.data[self.unit]
+        application_relation_databag = event.relation.data[self.app]
 
-        if unit_relation_databag.get("user"):
+        if application_relation_databag.get("user"):
             # Test if relation data is already set
             # and avoid overwriting it
             logger.warning("Data for db already set.")
@@ -103,7 +104,7 @@ class PostgresqlOperatorCharm(CharmBase):
             return
 
         hostname = self._get_hostname_from_unit(self.unit.name.replace("/", "-"))
-        # Use connstring (https://pypi.org/project/pgconnstr/).
+        # TODO: use https://pypi.org/project/pgconnstr/.
         connection = connect_to_database(
             "postgres", "postgres", hostname, self._get_postgres_password()
         )
@@ -120,12 +121,12 @@ class PostgresqlOperatorCharm(CharmBase):
         logger.error(f"Creating user {user} with password {password} with database {database}")
         logger.error(connection.status == psycopg2.extensions.STATUS_READY)
 
-        # create_user(connection, user, password)
-        statements = ["CREATE ROLE " + user + " WITH LOGIN ENCRYPTED PASSWORD '" + password + "';"]
-        with connection.cursor() as cursor:
-            logger.error(f"Executing: {statements[0]}")
-            cursor.execute(statements[0])
-            logger.error(f"statement executed: {statements[0]}")
+        create_user(connection, user, password)
+        # statements = ["CREATE ROLE " + user + " WITH LOGIN ENCRYPTED PASSWORD '" + password + "';"]
+        # with connection.cursor() as cursor:
+        #     logger.error(f"Executing: {statements[0]}")
+        #     cursor.execute(statements[0])
+        #     logger.error(f"statement executed: {statements[0]}")
 
         logger.error("user created")
 
@@ -140,22 +141,26 @@ class PostgresqlOperatorCharm(CharmBase):
         members = self._patroni.cluster_members
         primary = str(
             ConnectionString(
-                host=self._get_hostname_from_unit(self._patroni.get_primary()),
+                # host=f"http://{self._get_hostname_from_unit(self._patroni.get_primary())}",
+                host=self.model.get_binding(PEER).network.bind_address,
                 dbname=database,
                 port=5432,
                 user=user,
                 password=password,
+                fallback_application_name=event.app.name,
             )
         )
         standbys = ",".join(
             [
                 str(
                     ConnectionString(
-                        host=self._get_hostname_from_unit(member),
+                        # host=f"http://{self._get_hostname_from_unit(member)}",
+                        host=self.model.get_binding(PEER).network.bind_address,
                         dbname=database,
                         port=5432,
                         user=user,
                         password=password,
+                        fallback_application_name=event.app.name,
                     )
                 )
                 for member in members
@@ -163,21 +168,49 @@ class PostgresqlOperatorCharm(CharmBase):
             ]
         )
 
-        unit_relation_databag["allowed-subnets"] = ""
-        unit_relation_databag["allowed-units"] = event.unit.name
-        unit_relation_databag["host"] = hostname
-        unit_relation_databag["master"] = primary
-        unit_relation_databag["port"] = "5432"
-        unit_relation_databag["standbys"] = standbys
-        unit_relation_databag["state"] = ""
-        unit_relation_databag["version"] = ""
-        unit_relation_databag["user"] = user
-        unit_relation_databag["password"] = password
-        unit_relation_databag["database"] = database
+        for databag in [application_relation_databag, unit_relation_databag]:
+            databag["allowed-subnets"] = self.get_allowed_subnets(event.relation)
+            databag["allowed-units"] = self.get_allowed_units(event.relation)  # event.unit.name
+            # databag["host"] = f"http://{hostname}"
+            databag["host"] = str(self.model.get_binding(PEER).network.bind_address)
+            databag["master"] = primary
+            databag["port"] = "5432"
+            databag["standbys"] = standbys
+            databag["state"] = "master"
+            databag["version"] = "12"
+            databag["user"] = user
+            databag["password"] = password
+            databag["database"] = database
 
         logger.error("relation data set")
 
         self.unit.status = ActiveStatus()
+
+    def get_allowed_units(self, relation: Relation) -> str:
+        return ",".join(
+            sorted(
+                unit.name
+                for unit in relation.data
+                if isinstance(unit, Unit) and not unit.name.startswith(self.model.app.name)
+            )
+        )
+
+    def get_allowed_subnets(self, relation: Relation) -> str:
+        def _csplit(s) -> Iterable[str]:
+            if s:
+                for b in s.split(","):
+                    b = b.strip()
+                    if b:
+                        yield b
+
+        subnets = set()
+        for unit, reldata in relation.data.items():
+            logger.error(f"Checking subnets for {unit}")
+            logger.error(reldata)
+            if isinstance(unit, Unit) and not unit.name.startswith(self.model.app.name):
+                # NB. egress-subnets is not always available.
+                subnets.update(set(_csplit(reldata.get("egress-subnets", ""))))
+        return ",".join(sorted(subnets))
 
     def _on_old_db_relation_departed(self, event: RelationDepartedEvent) -> None:
         # TODO: implement.
