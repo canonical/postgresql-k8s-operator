@@ -28,7 +28,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
     resources = {"postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]}
     await asyncio.gather(
         ops_test.model.deploy(
-            charm, resources=resources, application_name=DATABASE_NAME, trust=True
+            charm, resources=resources, application_name=DATABASE_NAME, trust=True  # , num_units=3
         ),
         ops_test.model.deploy(APPLICATION_NAME, application_name=APPLICATION_NAME),
     )

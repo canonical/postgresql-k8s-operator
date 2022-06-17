@@ -11,7 +11,9 @@ from typing import List
 
 import psycopg2
 from charms.postgresql.v0.postgresql_helpers import (
-    connect_to_database, create_database, create_user
+    connect_to_database,
+    create_database,
+    create_user,
 )
 from lightkube import ApiError, Client, codecs
 from lightkube.resources.core_v1 import Pod
@@ -32,6 +34,7 @@ from ops.model import (
     WaitingStatus,
 )
 from ops.pebble import Layer
+from pgconnstr import ConnectionString
 from requests import ConnectionError
 from tenacity import RetryError
 
@@ -60,8 +63,12 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
         self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
-        self.framework.observe(self.on[OLD_DB_RELATION].relation_changed, self._on_old_db_relation_changed)
-        self.framework.observe(self.on[OLD_DB_RELATION].relation_departed, self._on_old_db_relation_departed)
+        self.framework.observe(
+            self.on[OLD_DB_RELATION].relation_changed, self._on_old_db_relation_changed
+        )
+        self.framework.observe(
+            self.on[OLD_DB_RELATION].relation_departed, self._on_old_db_relation_departed
+        )
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(
@@ -73,6 +80,13 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _on_old_db_relation_changed(self, event: RelationChangedEvent) -> None:
         """Handle the legacy db relation changed event."""
+        if (
+            "cluster_initialised" not in self._peers.data[self.app]
+            or not self._patroni.member_started
+        ):
+            event.defer()
+            return
+
         if not self.unit.is_leader():
             return
 
@@ -123,12 +137,38 @@ class PostgresqlOperatorCharm(CharmBase):
 
         logger.error("connection closed")
 
+        members = self._patroni.cluster_members
+        primary = str(
+            ConnectionString(
+                host=self._get_hostname_from_unit(self._patroni.get_primary()),
+                dbname=database,
+                port=5432,
+                user=user,
+                password=password,
+            )
+        )
+        standbys = ",".join(
+            [
+                str(
+                    ConnectionString(
+                        host=self._get_hostname_from_unit(member),
+                        dbname=database,
+                        port=5432,
+                        user=user,
+                        password=password,
+                    )
+                )
+                for member in members
+                if self._get_hostname_from_unit(member) != primary
+            ]
+        )
+
         unit_relation_databag["allowed-subnets"] = ""
         unit_relation_databag["allowed-units"] = event.unit.name
         unit_relation_databag["host"] = hostname
-        unit_relation_databag["master"] = hostname
+        unit_relation_databag["master"] = primary
         unit_relation_databag["port"] = "5432"
-        unit_relation_databag["standbys"] = ""
+        unit_relation_databag["standbys"] = standbys
         unit_relation_databag["state"] = ""
         unit_relation_databag["version"] = ""
         unit_relation_databag["user"] = user
