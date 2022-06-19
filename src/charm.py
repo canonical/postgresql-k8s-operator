@@ -354,7 +354,7 @@ class PostgresqlOperatorCharm(CharmBase):
         Returns:
             A string representing the hostname of the PostgreSQL unit.
         """
-        unit_id = member.split("-")[2]
+        unit_id = member.split("-")[-1]
         return f"{self.app.name}-{unit_id}.{self.app.name}-endpoints"
 
     def _on_leader_elected(self, event: LeaderElectedEvent) -> None:
