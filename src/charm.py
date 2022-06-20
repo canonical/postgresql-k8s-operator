@@ -96,12 +96,14 @@ class PostgresqlOperatorCharm(CharmBase):
         unit_relation_databag = event.relation.data[self.unit]
         application_relation_databag = event.relation.data[self.app]
 
+        already = False
         if application_relation_databag.get("user"):
-            # Test if relation data is already set
-            # and avoid overwriting it
-            logger.warning("Data for db already set.")
-            self.unit.status = ActiveStatus()
-            return
+            # # Test if relation data is already set
+            # # and avoid overwriting it
+            # logger.warning("Data for db already set.")
+            # self.unit.status = ActiveStatus()
+            # return
+            already = True
 
         hostname = self._get_hostname_from_unit(self.unit.name.replace("/", "-"))
         # TODO: use https://pypi.org/project/pgconnstr/.
@@ -110,10 +112,10 @@ class PostgresqlOperatorCharm(CharmBase):
         )
         logger.info(f"Connected to PostgreSQL: {connection}")
 
-        user = f"relation_id_{event.relation.id}_{event.app.name.replace('-', '_')}"
-        password = self._new_password()
+        user = unit_relation_databag["user"] if already else f"relation_id_{event.relation.id}_{event.app.name.replace('-', '_')}"
+        password = unit_relation_databag["password"] if already else self._new_password()
         logger.error(str(event.relation.data))
-        database = event.relation.data[event.app].get("database")
+        database = unit_relation_databag["database"] if already else event.relation.data[event.app].get("database")
         if not database:
             event.defer()
             return
@@ -121,18 +123,19 @@ class PostgresqlOperatorCharm(CharmBase):
         logger.error(f"Creating user {user} with password {password} with database {database}")
         logger.error(connection.status == psycopg2.extensions.STATUS_READY)
 
-        create_user(connection, user, password)
-        # statements = ["CREATE ROLE " + user + " WITH LOGIN ENCRYPTED PASSWORD '" + password + "';"]
-        # with connection.cursor() as cursor:
-        #     logger.error(f"Executing: {statements[0]}")
-        #     cursor.execute(statements[0])
-        #     logger.error(f"statement executed: {statements[0]}")
+        if not already:
+            create_user(connection, user, password)
+            # statements = ["CREATE ROLE " + user + " WITH LOGIN ENCRYPTED PASSWORD '" + password + "';"]
+            # with connection.cursor() as cursor:
+            #     logger.error(f"Executing: {statements[0]}")
+            #     cursor.execute(statements[0])
+            #     logger.error(f"statement executed: {statements[0]}")
 
-        logger.error("user created")
+            logger.error("user created")
 
-        create_database(connection, database, user)
+            create_database(connection, database, user)
 
-        logger.error("database created")
+            logger.error("database created")
 
         connection.close()
 
