@@ -7,9 +7,8 @@ import json
 import logging
 import secrets
 import string
-from typing import List, Iterable
+from typing import Iterable, List
 
-import psycopg2
 from charms.postgresql.v0.postgresql_helpers import (
     connect_to_database,
     create_database,
@@ -31,7 +30,8 @@ from ops.model import (
     BlockedStatus,
     MaintenanceStatus,
     Relation,
-    WaitingStatus, Unit,
+    Unit,
+    WaitingStatus,
 )
 from ops.pebble import Layer
 from pgconnstr import ConnectionString
@@ -42,6 +42,7 @@ from patroni import NotReadyError, Patroni
 
 logger = logging.getLogger(__name__)
 
+OLD_DB_ADMIN_RELATION = "db-admin"
 OLD_DB_RELATION = "db"
 PEER = "postgresql-replicas"
 
@@ -64,10 +65,16 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
         self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
         self.framework.observe(
-            self.on[OLD_DB_RELATION].relation_changed, self._on_old_db_relation_changed
+            self.on[OLD_DB_RELATION].relation_changed, self._on_old_relation_changed
         )
         self.framework.observe(
             self.on[OLD_DB_RELATION].relation_departed, self._on_old_db_relation_departed
+        )
+        self.framework.observe(
+            self.on[OLD_DB_ADMIN_RELATION].relation_changed, self._on_old_relation_changed
+        )
+        self.framework.observe(
+            self.on[OLD_DB_ADMIN_RELATION].relation_departed, self._on_old_db_relation_departed
         )
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
@@ -78,7 +85,7 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on.update_status, self._on_update_status)
         self._storage_path = self.meta.storages["pgdata"].location
 
-    def _on_old_db_relation_changed(self, event: RelationChangedEvent) -> None:
+    def _on_old_relation_changed(self, event: RelationChangedEvent) -> None:
         """Handle the legacy db relation changed event."""
         if (
             "cluster_initialised" not in self._peers.data[self.app]
@@ -90,7 +97,9 @@ class PostgresqlOperatorCharm(CharmBase):
         if not self.unit.is_leader():
             return
 
-        self.unit.status = MaintenanceStatus("Setting up db relation")
+        relation_name = event.relation.name
+
+        self.unit.status = MaintenanceStatus(f"Setting up {relation_name} relation")
         logger.warning("DEPRECATION WARNING - `db` is a legacy interface")
 
         unit_relation_databag = event.relation.data[self.unit]
@@ -98,54 +107,42 @@ class PostgresqlOperatorCharm(CharmBase):
 
         already = False
         if application_relation_databag.get("user"):
-            # # Test if relation data is already set
-            # # and avoid overwriting it
-            # logger.warning("Data for db already set.")
-            # self.unit.status = ActiveStatus()
-            # return
             already = True
 
         hostname = self._get_hostname_from_unit(self.unit.name.replace("/", "-"))
-        # TODO: use https://pypi.org/project/pgconnstr/.
         connection = connect_to_database(
             "postgres", "postgres", hostname, self._get_postgres_password()
         )
         logger.info(f"Connected to PostgreSQL: {connection}")
 
-        user = unit_relation_databag["user"] if already else f"relation_id_{event.relation.id}_{event.app.name.replace('-', '_')}"
+        user = (
+            unit_relation_databag["user"]
+            if already
+            else f"relation_id_{event.relation.id}_{event.app.name.replace('-', '_')}"
+        )
         password = unit_relation_databag["password"] if already else self._new_password()
-        logger.error(str(event.relation.data))
-        database = unit_relation_databag["database"] if already else event.relation.data[event.app].get("database")
+        database = (
+            unit_relation_databag["database"]
+            if already
+            else event.relation.data[event.app].get("database")
+        )
         if not database:
+            logger.warning("No database name provided")
             event.defer()
             return
 
-        logger.error(f"Creating user {user} with password {password} with database {database}")
-        logger.error(connection.status == psycopg2.extensions.STATUS_READY)
+        database = database.replace("-", "_")
 
         if not already:
-            create_user(connection, user, password)
-            # statements = ["CREATE ROLE " + user + " WITH LOGIN ENCRYPTED PASSWORD '" + password + "';"]
-            # with connection.cursor() as cursor:
-            #     logger.error(f"Executing: {statements[0]}")
-            #     cursor.execute(statements[0])
-            #     logger.error(f"statement executed: {statements[0]}")
-
-            logger.error("user created")
-
+            create_user(connection, user, password, admin=relation_name == OLD_DB_ADMIN_RELATION)
             create_database(connection, database, user)
 
-            logger.error("database created")
-
         connection.close()
-
-        logger.error("connection closed")
 
         members = self._patroni.cluster_members
         primary = str(
             ConnectionString(
-                # host=f"http://{self._get_hostname_from_unit(self._patroni.get_primary())}",
-                host=self.model.get_binding(PEER).network.bind_address,
+                host=f"{self._get_hostname_from_unit(self._patroni.get_primary())}",
                 dbname=database,
                 port=5432,
                 user=user,
@@ -157,8 +154,7 @@ class PostgresqlOperatorCharm(CharmBase):
             [
                 str(
                     ConnectionString(
-                        # host=f"http://{self._get_hostname_from_unit(member)}",
-                        host=self.model.get_binding(PEER).network.bind_address,
+                        host=f"{self._get_hostname_from_unit(member)}",
                         dbname=database,
                         port=5432,
                         user=user,
@@ -173,9 +169,8 @@ class PostgresqlOperatorCharm(CharmBase):
 
         for databag in [application_relation_databag, unit_relation_databag]:
             databag["allowed-subnets"] = self.get_allowed_subnets(event.relation)
-            databag["allowed-units"] = self.get_allowed_units(event.relation)  # event.unit.name
-            # databag["host"] = f"http://{hostname}"
-            databag["host"] = str(self.model.get_binding(PEER).network.bind_address)
+            databag["allowed-units"] = self.get_allowed_units(event.relation)
+            databag["host"] = f"http://{hostname}"
             databag["master"] = primary
             databag["port"] = "5432"
             databag["standbys"] = standbys
@@ -184,8 +179,6 @@ class PostgresqlOperatorCharm(CharmBase):
             databag["user"] = user
             databag["password"] = password
             databag["database"] = database
-
-        logger.error("relation data set")
 
         self.unit.status = ActiveStatus()
 
@@ -208,8 +201,8 @@ class PostgresqlOperatorCharm(CharmBase):
 
         subnets = set()
         for unit, reldata in relation.data.items():
-            logger.error(f"Checking subnets for {unit}")
-            logger.error(reldata)
+            logger.warning(f"Checking subnets for {unit}")
+            logger.warning(reldata)
             if isinstance(unit, Unit) and not unit.name.startswith(self.model.app.name):
                 # NB. egress-subnets is not always available.
                 subnets.update(set(_csplit(reldata.get("egress-subnets", ""))))
