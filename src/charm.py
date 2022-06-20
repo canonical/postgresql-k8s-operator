@@ -131,8 +131,6 @@ class PostgresqlOperatorCharm(CharmBase):
             event.defer()
             return
 
-        database = database.replace("-", "_")
-
         if not already:
             create_user(connection, user, password, admin=relation_name == OLD_DB_ADMIN_RELATION)
             create_database(connection, database, user)

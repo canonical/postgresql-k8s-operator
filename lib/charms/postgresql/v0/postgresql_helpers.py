@@ -21,6 +21,7 @@ import logging
 from typing import List
 
 import psycopg2
+from psycopg2._psycopg import AsIs
 
 logger = logging.getLogger(__name__)
 
@@ -112,14 +113,9 @@ def create_database(connection: psycopg2.extensions.connection, database: str, u
         database: database to be created.
         user: user that will have access to the database.
     """
-    execute(
-        connection,
-        [
-            "CREATE DATABASE " + database + ";",
-            "GRANT ALL PRIVILEGES ON DATABASE " + database + " TO " + user + ";",
-        ],
-    )
-
+    with connection.cursor() as cursor:
+        cursor.execute(f"CREATE DATABASE {pgidentifier(database)};")
+        cursor.execute(f"GRANT ALL PRIVILEGES ON DATABASE {pgidentifier(database)} TO {pgidentifier(user)};")
 
 def create_user(
     connection: psycopg2.extensions.connection, user: str, password: str, admin: bool = False
@@ -132,20 +128,8 @@ def create_user(
         password: password to be assigned to the user.
         admin: whether the user should have additional admin privileges.
     """
-    statements = ["CREATE ROLE " + user + " WITH LOGIN ENCRYPTED PASSWORD '" + password + "';"]
     with connection.cursor() as cursor:
-        logger.error(f"Executing: {statements[0]}")
-        cursor.execute(statements[0])
-        logger.error(f"statement executed: {statements[0]}")
-    # If the user should be an admin, it will be able to create new databases and roles.
-    if admin:
-        statements.extend(
-            [
-                "ALTER USER " + user + " CREATEDB",
-                "ALTER USER " + user + " CREATEROLE",
-            ]
-        )
-    # execute(connection, statements)
+        cursor.execute(f"CREATE ROLE {user} WITH LOGIN{' SUPERUSER' if admin else ''} ENCRYPTED PASSWORD '{password}';")
 
 
 def database_exists(connection: psycopg2.extensions.connection, database: str) -> bool:
@@ -159,22 +143,58 @@ def database_exists(connection: psycopg2.extensions.connection, database: str) -
         whether the database exists.
     """
     with connection.cursor() as cursor:
-        cursor.execute("SELECT 1 FROM pg_database WHERE datname='" + database + "';")
+        cursor.execute(f"SELECT 1 FROM pg_database WHERE datname={pgidentifier(database)};")
         result = cursor.fetchone()
         # If the data was returned, then the database exists.
         exists = result[0] == 1 if result else False
     return exists
 
 
-def execute(connection: psycopg2.extensions.connection, statements: List[str]) -> None:
-    """Executes SQL statements.
+def quote_identifier(identifier: str):
+    r'''Quote an identifier, such as a table or role name.
 
-    Args:
-        connection: psycopg2 connection object.
-        statements: list of SQL statements to execute.
-    """
-    with connection.cursor() as cursor:
-        for statement in statements:
-            logger.error(f"Executing: {statement}")
-            cursor.execute(statement)
-            logger.error(f"statement executed: {statement}")
+    In SQL, identifiers are quoted using " rather than ' (which is reserved
+    for strings).
+
+    >>> print(quote_identifier('hello'))
+    "hello"
+
+    Quotes and Unicode are handled if you make use of them in your
+    identifiers.
+
+    >>> print(quote_identifier("'"))
+    "'"
+    >>> print(quote_identifier('"'))
+    """"
+    >>> print(quote_identifier("\\"))
+    "\"
+    >>> print(quote_identifier('\\"'))
+    "\"""
+    >>> print(quote_identifier('\\ aargh" \u0441\u043b\u043e\u043d'))
+    U&"\\ aargh"" \0441\043b\043e\043d"
+    '''
+    try:
+        identifier.encode("US-ASCII")
+        return '"{}"'.format(identifier.replace('"', '""'))
+    except UnicodeEncodeError:
+        escaped = []
+        for c in identifier:
+            if c == "\\":
+                escaped.append("\\\\")
+            elif c == '"':
+                escaped.append('""')
+            else:
+                c = c.encode("US-ASCII", "backslashreplace").decode("US-ASCII")
+                # Note Python only supports 32 bit unicode, so we use
+                # the 4 hexdigit PostgreSQL syntax (\1234) rather than
+                # the 6 hexdigit format (\+123456).
+                if c.startswith("\\u"):
+                    c = "\\" + c[2:]
+                escaped.append(c)
+        return 'U&"%s"' % "".join(escaped)
+
+
+def pgidentifier(token: str):
+    """Wrap a string for interpolation by psycopg2 as an SQL identifier"""
+    return AsIs(quote_identifier(token))
+
