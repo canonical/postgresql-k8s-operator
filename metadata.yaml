@@ -20,12 +20,12 @@ resources:
     type: oci-image
     description: OCI image for PostgreSQL (postgresql-patroni:local)
     upstream-source: postgresql-patroni:local
+  cert-file:
+    type: file
+    filename: server.crt
   key-file:
     type: file
     filename: server.key
-  ca-cert-file:
-    type: file
-    filename: ca.crt
 
 peers:
   postgresql-replicas:

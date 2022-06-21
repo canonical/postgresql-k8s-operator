@@ -7,7 +7,8 @@ import json
 import logging
 import secrets
 import string
-from typing import Iterable, List
+from pathlib import Path
+from typing import Iterable, List, Optional
 
 from charms.postgresql.v0.postgresql_helpers import (
     connect_to_database,
@@ -31,7 +32,7 @@ from ops.model import (
     MaintenanceStatus,
     Relation,
     Unit,
-    WaitingStatus,
+    WaitingStatus, ModelError,
 )
 from ops.pebble import Layer
 from pgconnstr import ConnectionString
@@ -205,6 +206,54 @@ class PostgresqlOperatorCharm(CharmBase):
                 # NB. egress-subnets is not always available.
                 subnets.update(set(_csplit(reldata.get("egress-subnets", ""))))
         return ",".join(sorted(subnets))
+
+    def _retrieve_resource(self, resource: str) -> Optional[Path]:
+        """Check that the resource exists and return it.
+        Returns:
+            Path of the resource or None
+        """
+        try:
+            # Fetch the resource path
+            return self.model.resources.fetch(resource)
+        except (ModelError, NameError) as e:
+            return None
+
+    def _store_tls_files(self) -> None:
+        """Copy the TLS certificate and key to the PostgreSQL container."""
+        # Copy the resources to the storage path if all of them were attached
+        # and enable TLS.
+        if self._tls_files:
+            container = self.unit.get_container("postgresql")
+
+            # Copy the files from the resources' location to the PostgreSQL container.
+            for file_path in self._tls_files:
+                with open(file_path, "r") as f:
+                    container.push(f"{self._storage_path}/{file_path.name}", f)
+
+            # Enable TLS.
+            self._patroni.render_patroni_yml_file(True)
+        else:
+            # Disable TLS.
+            self._patroni.render_patroni_yml_file()
+
+        try:
+            if self._patroni.member_started:
+                # Make Patroni use the updated configuration.
+                self._patroni.reload_patroni_configuration()
+        except RetryError:
+            # Ignore retry errors that happen when the member has not started yet.
+            # The configuration will be loaded correctly when Patroni starts.
+            pass
+
+    @property
+    def _tls_files(self) -> Optional[List[Path]]:
+        """Paths of the TLS certificate and key files.
+        Returns:
+            A list with the paths of the certificate and the key
+                if they were attached as resources to this application.
+        """
+        resources = ["cert-file", "key-file"]
+        return [path for path in map(self._retrieve_resource, resources) if path]
 
     def _on_old_db_relation_departed(self, event: RelationDepartedEvent) -> None:
         # TODO: implement.
@@ -437,6 +486,10 @@ class PostgresqlOperatorCharm(CharmBase):
             logger.error("failed to patch pod")
             self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
             return
+
+        # Tries to store the TLS certificate and key on the PostgreSQL container,
+        # as new `juju attach-resource` will trigger this event.
+        self._store_tls_files()
 
     def _patch_pod_labels(self, member: str) -> None:
         """Add labels required for replication to the current pod.

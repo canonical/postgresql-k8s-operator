@@ -144,13 +144,18 @@ class Patroni:
             # Ignore non existing user error when it wasn't created yet.
             pass
 
-    def render_patroni_yml_file(self) -> None:
-        """Render the Patroni configuration file."""
+    def render_patroni_yml_file(self, enable_tls: bool = False) -> None:
+        """Render the Patroni configuration file.
+
+        Args:
+            enable_tls: whether to enable TLS.
+        """
         # Open the template postgresql.conf file.
         with open("templates/patroni.yml.j2", "r") as file:
             template = Template(file.read())
         # Render the template file with the correct values.
         rendered = template.render(
+            enable_tls=enable_tls,
             endpoint=self._endpoint,
             endpoints=self._endpoints,
             namespace=self._namespace,
@@ -178,13 +183,13 @@ class Patroni:
         try:
             if self.member_started:
                 # Make Patroni use the updated configuration.
-                self._reload_patroni_configuration()
+                self.reload_patroni_configuration()
         except RetryError:
             # Ignore retry errors that happen when the member has not started yet.
             # The configuration will be loaded correctly when Patroni starts.
             pass
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-    def _reload_patroni_configuration(self) -> None:
+    def reload_patroni_configuration(self) -> None:
         """Reloads the configuration after it was updated in the file."""
         requests.post(f"http://{self._endpoint}:8008/reload")
