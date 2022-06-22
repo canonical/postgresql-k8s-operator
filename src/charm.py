@@ -88,6 +88,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _on_old_relation_changed(self, event: RelationChangedEvent) -> None:
         """Handle the legacy db relation changed event."""
+        # Check for some conditions before trying to access the PostgreSQL instance.
         if (
             "cluster_initialised" not in self._peers.data[self.app]
             or not self._patroni.member_started
@@ -98,18 +99,27 @@ class PostgresqlOperatorCharm(CharmBase):
         if not self.unit.is_leader():
             return
 
+        # Get the relation name to handle specific logic for each relation (db and db-admin).
         relation_name = event.relation.name
 
         self.unit.status = MaintenanceStatus(f"Setting up {relation_name} relation")
-        logger.warning("DEPRECATION WARNING - `db` is a legacy interface")
+        logger.warning(f"DEPRECATION WARNING - `{relation_name}` is a legacy interface")
 
         unit_relation_databag = event.relation.data[self.unit]
         application_relation_databag = event.relation.data[self.app]
 
+        # When this flag is True it indicates that this hook was already executed and
+        # it set the data about database, user, master, standbys, etc. in the relation
+        # databag. It's needed to rerun this hook on every relation changed event
+        # setting the data again in the databag, otherwise the application charm that
+        # is connecting to this database will receive a "database gone" event from the
+        # old PostgreSQL library (ops-lib-pgsql) and the connection between the
+        # application and this charm will not work.
         already = False
         if application_relation_databag.get("user"):
             already = True
 
+        # Connect to the PostgreSQL instance to later create a user and the database.
         hostname = self._get_hostname_from_unit(self.unit.name.replace("/", "-"))
         connection = connect_to_database(
             "postgres", "postgres", hostname, self._get_postgres_password()
@@ -117,6 +127,8 @@ class PostgresqlOperatorCharm(CharmBase):
         logger.info(f"Connected to PostgreSQL: {connection}")
 
         user = (
+            # Doesn't generate a username if it was already
+            # generated in a previous relation changed event.
             unit_relation_databag["user"]
             if already
             else f"relation_id_{event.relation.id}_{event.app.name.replace('-', '_')}"
@@ -127,18 +139,24 @@ class PostgresqlOperatorCharm(CharmBase):
             if already
             else event.relation.data[event.app].get("database")
         )
+        # Sometimes a relation changed event is triggered, and it doesn't have a database name in it.
         if not database:
             logger.warning("No database name provided")
             event.defer()
             return
 
+        # Creates the user and the database for this specific relation if it was not already
+        # created in a previous relation changed event.
         if not already:
+            # Use the relation name to request or not a superuser (admin flag).
             create_user(connection, user, password, admin=relation_name == OLD_DB_ADMIN_RELATION)
             create_database(connection, database, user)
 
         connection.close()
 
+        # Get the list of all members in the cluster.
         members = self._patroni.cluster_members
+        # Build the primary's connection string.
         primary = str(
             ConnectionString(
                 host=f"{self._get_hostname_from_unit(self._patroni.get_primary())}",
@@ -149,6 +167,7 @@ class PostgresqlOperatorCharm(CharmBase):
                 fallback_application_name=event.app.name,
             )
         )
+        # Build the standbys' connection strings.
         standbys = ",".join(
             [
                 str(
@@ -166,7 +185,10 @@ class PostgresqlOperatorCharm(CharmBase):
             ]
         )
 
+        # Set the data in both application and unit data bag (it's the logic of the old charm
+        # - it needs one more check to confirm whether it's required to do it).
         for databag in [application_relation_databag, unit_relation_databag]:
+            # This list of subnets is not being filled correctly yet.
             databag["allowed-subnets"] = self.get_allowed_subnets(event.relation)
             databag["allowed-units"] = self.get_allowed_units(event.relation)
             databag["host"] = f"http://{hostname}"
