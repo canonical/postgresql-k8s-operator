@@ -5,6 +5,7 @@
 """Charmed Kubernetes Operator for the PostgreSQL database."""
 import json
 import logging
+import pwd
 import secrets
 import string
 from pathlib import Path
@@ -30,9 +31,10 @@ from ops.model import (
     ActiveStatus,
     BlockedStatus,
     MaintenanceStatus,
+    ModelError,
     Relation,
     Unit,
-    WaitingStatus, ModelError,
+    WaitingStatus,
 )
 from ops.pebble import Layer
 from pgconnstr import ConnectionString
@@ -250,13 +252,21 @@ class PostgresqlOperatorCharm(CharmBase):
             # Copy the files from the resources' location to the PostgreSQL container.
             for file_path in self._tls_files:
                 with open(file_path, "r") as f:
-                    container.push(f"{self._storage_path}/{file_path.name}", f)
+                    container.push(
+                        f"{self._storage_path}/{file_path.name}",
+                        f,
+                        permissions=0o600,
+                        user="postgres",
+                        group="postgres",
+                    )
 
             # Enable TLS.
             self._patroni.render_patroni_yml_file(True)
+            logger.error("TLS enabled")
         else:
             # Disable TLS.
             self._patroni.render_patroni_yml_file()
+            logger.error("TLS disabled")
 
         try:
             if self._patroni.member_started:
@@ -474,7 +484,7 @@ class PostgresqlOperatorCharm(CharmBase):
             logging.info("Added updated layer 'postgresql' to Pebble plan")
             # TODO: move this file generation to on config changed hook
             # when adding configs to this charm.
-            self._patroni.render_patroni_yml_file()
+            self._patroni.render_patroni_yml_file(enable_tls=True if self._tls_files else False)
             # Restart it and report a new status to Juju.
             container.restart(self._postgresql_service)
             logging.info("Restarted postgresql service")

@@ -8,6 +8,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.helpers import METADATA
+from tests.integration.helpers import TLS_RESOURCES, attach_resource
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,11 @@ async def test_build_and_deploy(ops_test: OpsTest):
     """
     # Build and deploy charm from local source folder (and also mattermost-k8s from Charmhub).
     charm = await ops_test.build_charm(".")
-    resources = {"postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]}
+    resources = {
+        "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
+        "cert-file": METADATA["resources"]["cert-file"]["filename"],
+        "key-file": METADATA["resources"]["key-file"]["filename"],
+    }
     await asyncio.gather(
         ops_test.model.deploy(
             charm, resources=resources, application_name=DATABASE_NAME, trust=True  # , num_units=3
@@ -36,8 +41,25 @@ async def test_build_and_deploy(ops_test: OpsTest):
 
 
 async def test_old_db_relation(ops_test: OpsTest):
+    await ops_test.model.set_config({"update-status-hook-interval": "5s"})
+
+    for rsc_name, src_path in TLS_RESOURCES.items():
+        await attach_resource(ops_test, DATABASE_NAME, rsc_name, src_path)
+
+        # FIXME: A wait here is not guaranteed to work. It can succeed before resources
+        # have been added. Additionally, attaching resources can result on transient error
+        # states for the application while is stabilizing again.
+        await ops_test.model.wait_for_idle(
+            apps=[DATABASE_NAME],
+            status="active",
+            idle_period=30,
+            raise_on_blocked=False,
+            raise_on_error=False,
+            timeout=1000,
+        )
+
     await ops_test.model.add_relation(
-        DATABASE_NAME,
+        f"{DATABASE_NAME}:db",
         APPLICATION_NAME,
     )
     await ops_test.model.wait_for_idle(

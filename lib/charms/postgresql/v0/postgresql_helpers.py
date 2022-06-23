@@ -74,7 +74,6 @@ def connect_to_database(
     connection = psycopg2.connect(
         f"dbname='{database}' user='{user}' host='{host}' password='{password}' connect_timeout=1"
     )
-    logger.error(f"dbname='{database}' user='{user}' host='{host}' password='{password}' connect_timeout=1")
     connection.autocommit = True
     return connection
 
