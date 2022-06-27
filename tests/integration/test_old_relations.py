@@ -43,20 +43,23 @@ async def test_build_and_deploy(ops_test: OpsTest):
 async def test_old_db_relation(ops_test: OpsTest):
     await ops_test.model.set_config({"update-status-hook-interval": "5s"})
 
+    print(TLS_RESOURCES.items())
     for rsc_name, src_path in TLS_RESOURCES.items():
+        print(f"rsc_name: {rsc_name} - src_path: {src_path}")
         await attach_resource(ops_test, DATABASE_NAME, rsc_name, src_path)
 
-        # FIXME: A wait here is not guaranteed to work. It can succeed before resources
-        # have been added. Additionally, attaching resources can result on transient error
-        # states for the application while is stabilizing again.
-        await ops_test.model.wait_for_idle(
-            apps=[DATABASE_NAME],
-            status="active",
-            idle_period=30,
-            raise_on_blocked=False,
-            raise_on_error=False,
-            timeout=1000,
-        )
+
+    # FIXME: A wait here is not guaranteed to work. It can succeed before resources
+    # have been added. Additionally, attaching resources can result on transient error
+    # states for the application while is stabilizing again.
+    await ops_test.model.wait_for_idle(
+        apps=[DATABASE_NAME],
+        status="active",
+        idle_period=30,
+        raise_on_blocked=False,
+        raise_on_error=False,
+        timeout=1000,
+    )
 
     await ops_test.model.add_relation(
         f"{DATABASE_NAME}:db",
