@@ -12,7 +12,9 @@ from tests.integration.helpers import TLS_RESOURCES, attach_resource
 
 logger = logging.getLogger(__name__)
 
-APPLICATION_NAME = "mattermost-k8s"
+MATTERMOST_APP_NAME = "mattermost-k8s"
+DISCOURSE_APP_NAME = "discourse-k8s"
+REDIS_APP_NAME = "redis-k8s"
 DATABASE_NAME = METADATA["name"]
 
 
@@ -35,9 +37,11 @@ async def test_build_and_deploy(ops_test: OpsTest):
         ops_test.model.deploy(
             charm, resources=resources, application_name=DATABASE_NAME, trust=True  # , num_units=3
         ),
-        ops_test.model.deploy(APPLICATION_NAME, application_name=APPLICATION_NAME),
+        ops_test.model.deploy(MATTERMOST_APP_NAME, application_name=MATTERMOST_APP_NAME),
+        ops_test.model.deploy(DISCOURSE_APP_NAME, application_name=DISCOURSE_APP_NAME),
+        ops_test.model.deploy(REDIS_APP_NAME, application_name=REDIS_APP_NAME),
     )
-    await ops_test.model.wait_for_idle(apps=[DATABASE_NAME], status="active", timeout=1000)
+    await ops_test.model.wait_for_idle(apps=[DATABASE_NAME, REDIS_APP_NAME], status="active", timeout=1000)
 
 
 async def test_old_db_relation(ops_test: OpsTest):
@@ -63,8 +67,27 @@ async def test_old_db_relation(ops_test: OpsTest):
 
     await ops_test.model.add_relation(
         f"{DATABASE_NAME}:db",
-        APPLICATION_NAME,
+        MATTERMOST_APP_NAME,
     )
     await ops_test.model.wait_for_idle(
-        apps=[DATABASE_NAME, APPLICATION_NAME], status="active", timeout=1000
+        apps=[DATABASE_NAME, MATTERMOST_APP_NAME], status="active", timeout=1000
+    )
+
+
+async def test_old_db_admin_relation(ops_test: OpsTest):
+    await ops_test.model.set_config({"update-status-hook-interval": "5s"})
+
+    await asyncio.gather(
+        ops_test.model.add_relation(
+            f"{DATABASE_NAME}:db-admin",
+            DISCOURSE_APP_NAME,
+        ),
+        ops_test.model.add_relation(
+            REDIS_APP_NAME,
+            DISCOURSE_APP_NAME,
+        ),
+    )
+
+    await ops_test.model.wait_for_idle(
+        apps=[DATABASE_NAME, DISCOURSE_APP_NAME, REDIS_APP_NAME], status="active", timeout=1000
     )
