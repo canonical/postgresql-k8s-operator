@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 MATTERMOST_APP_NAME = "mattermost-k8s"
 DISCOURSE_APP_NAME = "discourse-k8s"
 REDIS_APP_NAME = "redis-k8s"
+FINOS_WALTZ_APP_NAME = "finos-waltz-k8s"
 DATABASE_NAME = METADATA["name"]
 
 
@@ -37,58 +38,77 @@ async def test_build_and_deploy(ops_test: OpsTest):
         ops_test.model.deploy(
             charm, resources=resources, application_name=DATABASE_NAME, trust=True  # , num_units=3
         ),
-        ops_test.model.deploy(MATTERMOST_APP_NAME, application_name=MATTERMOST_APP_NAME),
-        ops_test.model.deploy(DISCOURSE_APP_NAME, application_name=DISCOURSE_APP_NAME),
-        ops_test.model.deploy(REDIS_APP_NAME, application_name=REDIS_APP_NAME),
+        # ops_test.model.deploy(MATTERMOST_APP_NAME, application_name=MATTERMOST_APP_NAME),
+        # ops_test.model.deploy(DISCOURSE_APP_NAME, application_name=DISCOURSE_APP_NAME),
+        # ops_test.model.deploy(REDIS_APP_NAME, application_name=REDIS_APP_NAME),
+        ops_test.model.deploy(
+            FINOS_WALTZ_APP_NAME, application_name=FINOS_WALTZ_APP_NAME, channel="edge"
+        ),
     )
     await ops_test.model.wait_for_idle(
-        apps=[DATABASE_NAME, REDIS_APP_NAME], status="active", timeout=1000
-    )
-
-
-async def test_old_db_relation(ops_test: OpsTest):
-    await ops_test.model.set_config({"update-status-hook-interval": "5s"})
-
-    print(TLS_RESOURCES.items())
-    for rsc_name, src_path in TLS_RESOURCES.items():
-        print(f"rsc_name: {rsc_name} - src_path: {src_path}")
-        await attach_resource(ops_test, DATABASE_NAME, rsc_name, src_path)
-
-    # FIXME: A wait here is not guaranteed to work. It can succeed before resources
-    # have been added. Additionally, attaching resources can result on transient error
-    # states for the application while is stabilizing again.
-    await ops_test.model.wait_for_idle(
+        # apps=[DATABASE_NAME, REDIS_APP_NAME], status="active", timeout=1000
         apps=[DATABASE_NAME],
         status="active",
-        idle_period=30,
-        raise_on_blocked=False,
-        raise_on_error=False,
         timeout=1000,
     )
 
-    await ops_test.model.add_relation(
-        f"{DATABASE_NAME}:db",
-        MATTERMOST_APP_NAME,
-    )
-    await ops_test.model.wait_for_idle(
-        apps=[DATABASE_NAME, MATTERMOST_APP_NAME], status="active", timeout=1000
-    )
+
+# async def test_old_db_relation(ops_test: OpsTest):
+#     await ops_test.model.set_config({"update-status-hook-interval": "5s"})
+#
+#     print(TLS_RESOURCES.items())
+#     for rsc_name, src_path in TLS_RESOURCES.items():
+#         print(f"rsc_name: {rsc_name} - src_path: {src_path}")
+#         await attach_resource(ops_test, DATABASE_NAME, rsc_name, src_path)
+#
+#     # FIXME: A wait here is not guaranteed to work. It can succeed before resources
+#     # have been added. Additionally, attaching resources can result on transient error
+#     # states for the application while is stabilizing again.
+#     await ops_test.model.wait_for_idle(
+#         apps=[DATABASE_NAME],
+#         status="active",
+#         idle_period=30,
+#         raise_on_blocked=False,
+#         raise_on_error=False,
+#         timeout=1000,
+#     )
+#
+#     await ops_test.model.add_relation(
+#         f"{DATABASE_NAME}:db",
+#         MATTERMOST_APP_NAME,
+#     )
+#     await ops_test.model.wait_for_idle(
+#         apps=[DATABASE_NAME, MATTERMOST_APP_NAME], status="active", timeout=1000
+#     )
+#
+#
+# async def test_old_db_admin_relation(ops_test: OpsTest):
+#     await ops_test.model.set_config({"update-status-hook-interval": "5s"})
+#
+#     await asyncio.gather(
+#         ops_test.model.add_relation(
+#             f"{DATABASE_NAME}:db-admin",
+#             DISCOURSE_APP_NAME,
+#         ),
+#         ops_test.model.add_relation(
+#             REDIS_APP_NAME,
+#             DISCOURSE_APP_NAME,
+#         ),
+#     )
+#
+#     await ops_test.model.wait_for_idle(
+#         apps=[DATABASE_NAME, DISCOURSE_APP_NAME, REDIS_APP_NAME], status="active", timeout=1000
+#     )
 
 
-async def test_old_db_admin_relation(ops_test: OpsTest):
+async def test_finos_waltz_relation(ops_test: OpsTest):
     await ops_test.model.set_config({"update-status-hook-interval": "5s"})
 
-    await asyncio.gather(
-        ops_test.model.add_relation(
-            f"{DATABASE_NAME}:db-admin",
-            DISCOURSE_APP_NAME,
-        ),
-        ops_test.model.add_relation(
-            REDIS_APP_NAME,
-            DISCOURSE_APP_NAME,
-        ),
+    await ops_test.model.add_relation(
+        f"{DATABASE_NAME}:db",
+        FINOS_WALTZ_APP_NAME,
     )
 
     await ops_test.model.wait_for_idle(
-        apps=[DATABASE_NAME, DISCOURSE_APP_NAME, REDIS_APP_NAME], status="active", timeout=1000
+        apps=[DATABASE_NAME, FINOS_WALTZ_APP_NAME], status="active", timeout=1000
     )
