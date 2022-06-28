@@ -41,7 +41,9 @@ async def test_build_and_deploy(ops_test: OpsTest):
         ops_test.model.deploy(DISCOURSE_APP_NAME, application_name=DISCOURSE_APP_NAME),
         ops_test.model.deploy(REDIS_APP_NAME, application_name=REDIS_APP_NAME),
     )
-    await ops_test.model.wait_for_idle(apps=[DATABASE_NAME, REDIS_APP_NAME], status="active", timeout=1000)
+    await ops_test.model.wait_for_idle(
+        apps=[DATABASE_NAME, REDIS_APP_NAME], status="active", timeout=1000
+    )
 
 
 async def test_old_db_relation(ops_test: OpsTest):
@@ -51,7 +53,6 @@ async def test_old_db_relation(ops_test: OpsTest):
     for rsc_name, src_path in TLS_RESOURCES.items():
         print(f"rsc_name: {rsc_name} - src_path: {src_path}")
         await attach_resource(ops_test, DATABASE_NAME, rsc_name, src_path)
-
 
     # FIXME: A wait here is not guaranteed to work. It can succeed before resources
     # have been added. Additionally, attaching resources can result on transient error

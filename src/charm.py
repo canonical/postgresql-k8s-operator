@@ -5,7 +5,6 @@
 """Charmed Kubernetes Operator for the PostgreSQL database."""
 import json
 import logging
-import pwd
 import secrets
 import string
 from pathlib import Path
@@ -141,7 +140,8 @@ class PostgresqlOperatorCharm(CharmBase):
             if already
             else event.relation.data[event.app].get("database")
         )
-        # Sometimes a relation changed event is triggered, and it doesn't have a database name in it.
+        # Sometimes a relation changed event is triggered,
+        # and it doesn't have a database name in it.
         if not database:
             logger.warning("No database name provided")
             event.defer()
@@ -191,8 +191,8 @@ class PostgresqlOperatorCharm(CharmBase):
         # - it needs one more check to confirm whether it's required to do it).
         for databag in [application_relation_databag, unit_relation_databag]:
             # This list of subnets is not being filled correctly yet.
-            databag["allowed-subnets"] = self.get_allowed_subnets(event.relation)
-            databag["allowed-units"] = self.get_allowed_units(event.relation)
+            databag["allowed-subnets"] = self._get_allowed_subnets(event.relation)
+            databag["allowed-units"] = self._get_allowed_units(event.relation)
             databag["host"] = f"http://{hostname}"
             databag["master"] = primary
             databag["port"] = "5432"
@@ -205,7 +205,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
         self.unit.status = ActiveStatus()
 
-    def get_allowed_units(self, relation: Relation) -> str:
+    def _get_allowed_units(self, relation: Relation) -> str:
         return ",".join(
             sorted(
                 unit.name
@@ -214,7 +214,7 @@ class PostgresqlOperatorCharm(CharmBase):
             )
         )
 
-    def get_allowed_subnets(self, relation: Relation) -> str:
+    def _get_allowed_subnets(self, relation: Relation) -> str:
         def _csplit(s) -> Iterable[str]:
             if s:
                 for b in s.split(","):
@@ -233,13 +233,14 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _retrieve_resource(self, resource: str) -> Optional[Path]:
         """Check that the resource exists and return it.
+
         Returns:
             Path of the resource or None
         """
         try:
             # Fetch the resource path
             return self.model.resources.fetch(resource)
-        except (ModelError, NameError) as e:
+        except (ModelError, NameError):
             return None
 
     def _store_tls_files(self) -> None:
@@ -280,6 +281,7 @@ class PostgresqlOperatorCharm(CharmBase):
     @property
     def _tls_files(self) -> Optional[List[Path]]:
         """Paths of the TLS certificate and key files.
+
         Returns:
             A list with the paths of the certificate and the key
                 if they were attached as resources to this application.
