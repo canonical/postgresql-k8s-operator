@@ -8,7 +8,8 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.helpers import METADATA
-from tests.integration.helpers import TLS_RESOURCES, attach_resource, get_unit_address
+
+# from tests.integration.helpers import TLS_RESOURCES, attach_resource, get_unit_address
 
 logger = logging.getLogger(__name__)
 
@@ -41,16 +42,16 @@ async def test_build_and_deploy(ops_test: OpsTest):
         ),
         # ops_test.model.deploy(MATTERMOST_APP_NAME, application_name=MATTERMOST_APP_NAME),
         # ops_test.model.deploy(FIRST_DISCOURSE_APP_NAME, application_name=FIRST_DISCOURSE_APP_NAME),
-        ops_test.model.deploy(REDIS_APP_NAME, application_name=REDIS_APP_NAME),
-        # ops_test.model.deploy(
-        #     FINOS_WALTZ_APP_NAME, application_name=FINOS_WALTZ_APP_NAME, channel="edge"
-        # ),
+        # ops_test.model.deploy(REDIS_APP_NAME, application_name=REDIS_APP_NAME),
+        ops_test.model.deploy(
+            FINOS_WALTZ_APP_NAME, application_name=FINOS_WALTZ_APP_NAME, channel="edge"
+        ),
     )
     await ops_test.model.wait_for_idle(
-        apps=[DATABASE_NAME, REDIS_APP_NAME], status="active", timeout=1000
-        # apps=[DATABASE_NAME],
-        # status="active",
-        # timeout=1000,
+        # apps=[DATABASE_NAME, REDIS_APP_NAME], status="active", timeout=1000
+        apps=[DATABASE_NAME],
+        status="active",
+        timeout=1000,
     )
 
 
@@ -102,46 +103,46 @@ async def test_build_and_deploy(ops_test: OpsTest):
 #     )
 
 
-async def test_discourse_relation(ops_test: OpsTest):
-    await ops_test.model.set_config({"update-status-hook-interval": "5s"})
-
-    redis_host = await get_unit_address(ops_test, REDIS_APP_NAME, f"{REDIS_APP_NAME}/0")
-
-    await ops_test.model.deploy(
-        SECOND_DISCOURSE_APP_NAME,
-        application_name=SECOND_DISCOURSE_APP_NAME,
-        config={
-            "redis_host": redis_host,
-            "developer_emails": "user@foo.internal",
-            "external_hostname": "foo.internal",
-            "smtp_address": "127.0.0.1",
-            "smtp_domain": "foo.internal",
-        }
-    )
-    await ops_test.model.wait_for_idle(
-        apps=[SECOND_DISCOURSE_APP_NAME], status="blocked", timeout=1000
-    )
-
-    await asyncio.gather(
-        ops_test.model.add_relation(
-            f"{DATABASE_NAME}:db-admin",
-            SECOND_DISCOURSE_APP_NAME,
-        )
-    )
-
-    await ops_test.model.wait_for_idle(
-        apps=[DATABASE_NAME, SECOND_DISCOURSE_APP_NAME, REDIS_APP_NAME], status="active", timeout=1000
-    )
-#
-#
-# async def test_finos_waltz_relation(ops_test: OpsTest):
+# async def test_discourse_relation(ops_test: OpsTest):
 #     await ops_test.model.set_config({"update-status-hook-interval": "5s"})
 #
-#     await ops_test.model.add_relation(
-#         f"{DATABASE_NAME}:db",
-#         FINOS_WALTZ_APP_NAME,
+#     redis_host = await get_unit_address(ops_test, REDIS_APP_NAME, f"{REDIS_APP_NAME}/0")
+#
+#     await ops_test.model.deploy(
+#         SECOND_DISCOURSE_APP_NAME,
+#         application_name=SECOND_DISCOURSE_APP_NAME,
+#         config={
+#             "redis_host": redis_host,
+#             "developer_emails": "user@foo.internal",
+#             "external_hostname": "foo.internal",
+#             "smtp_address": "127.0.0.1",
+#             "smtp_domain": "foo.internal",
+#         }
+#     )
+#     await ops_test.model.wait_for_idle(
+#         apps=[SECOND_DISCOURSE_APP_NAME], status="blocked", timeout=1000
+#     )
+#
+#     await asyncio.gather(
+#         ops_test.model.add_relation(
+#             f"{DATABASE_NAME}:db-admin",
+#             SECOND_DISCOURSE_APP_NAME,
+#         )
 #     )
 #
 #     await ops_test.model.wait_for_idle(
-#         apps=[DATABASE_NAME, FINOS_WALTZ_APP_NAME], status="active", timeout=1000
+#         apps=[DATABASE_NAME, SECOND_DISCOURSE_APP_NAME, REDIS_APP_NAME], status="active", timeout=1000
 #     )
+
+
+async def test_finos_waltz_relation(ops_test: OpsTest):
+    await ops_test.model.set_config({"update-status-hook-interval": "5s"})
+
+    await ops_test.model.add_relation(
+        f"{DATABASE_NAME}:db",
+        FINOS_WALTZ_APP_NAME,
+    )
+
+    await ops_test.model.wait_for_idle(
+        apps=[DATABASE_NAME, FINOS_WALTZ_APP_NAME], status="active", timeout=1000
+    )

@@ -8,13 +8,8 @@ import logging
 import secrets
 import string
 from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import List, Optional
 
-from charms.postgresql.v0.postgresql_helpers import (
-    connect_to_database,
-    create_database,
-    create_user,
-)
 from lightkube import ApiError, Client, codecs
 from lightkube.resources.core_v1 import Pod
 from ops.charm import (
@@ -32,15 +27,14 @@ from ops.model import (
     MaintenanceStatus,
     ModelError,
     Relation,
-    Unit,
     WaitingStatus,
 )
 from ops.pebble import Layer
-from pgconnstr import ConnectionString
 from requests import ConnectionError
 from tenacity import RetryError
 
 from patroni import NotReadyError, Patroni
+from relations.db import LegacyRelation
 
 logger = logging.getLogger(__name__)
 
@@ -66,18 +60,18 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
         self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
-        self.framework.observe(
-            self.on[OLD_DB_RELATION].relation_changed, self._on_old_relation_changed
-        )
-        self.framework.observe(
-            self.on[OLD_DB_RELATION].relation_departed, self._on_old_db_relation_departed
-        )
-        self.framework.observe(
-            self.on[OLD_DB_ADMIN_RELATION].relation_changed, self._on_old_relation_changed
-        )
-        self.framework.observe(
-            self.on[OLD_DB_ADMIN_RELATION].relation_departed, self._on_old_db_relation_departed
-        )
+        # self.framework.observe(
+        #     self.on[OLD_DB_RELATION].relation_changed, self._on_old_relation_changed
+        # )
+        # self.framework.observe(
+        #     self.on[OLD_DB_RELATION].relation_departed, self._on_old_db_relation_departed
+        # )
+        # self.framework.observe(
+        #     self.on[OLD_DB_ADMIN_RELATION].relation_changed, self._on_old_relation_changed
+        # )
+        # self.framework.observe(
+        #     self.on[OLD_DB_ADMIN_RELATION].relation_departed, self._on_old_db_relation_departed
+        # )
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(
@@ -86,150 +80,7 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
         self.framework.observe(self.on.update_status, self._on_update_status)
         self._storage_path = self.meta.storages["pgdata"].location
-
-    def _on_old_relation_changed(self, event: RelationChangedEvent) -> None:
-        """Handle the legacy db relation changed event."""
-        # Check for some conditions before trying to access the PostgreSQL instance.
-        if (
-            "cluster_initialised" not in self._peers.data[self.app]
-            or not self._patroni.member_started
-        ):
-            event.defer()
-            return
-
-        if not self.unit.is_leader():
-            return
-
-        # Get the relation name to handle specific logic for each relation (db and db-admin).
-        relation_name = event.relation.name
-
-        self.unit.status = MaintenanceStatus(f"Setting up {relation_name} relation")
-        logger.warning(f"DEPRECATION WARNING - `{relation_name}` is a legacy interface")
-
-        unit_relation_databag = event.relation.data[self.unit]
-        application_relation_databag = event.relation.data[self.app]
-
-        # When this flag is True it indicates that this hook was already executed and
-        # it set the data about database, user, master, standbys, etc. in the relation
-        # databag. It's needed to rerun this hook on every relation changed event
-        # setting the data again in the databag, otherwise the application charm that
-        # is connecting to this database will receive a "database gone" event from the
-        # old PostgreSQL library (ops-lib-pgsql) and the connection between the
-        # application and this charm will not work.
-        already = False
-        if application_relation_databag.get("user"):
-            already = True
-
-        # Connect to the PostgreSQL instance to later create a user and the database.
-        hostname = self._get_hostname_from_unit(self.unit.name.replace("/", "-"))
-        connection = connect_to_database(
-            "postgres", "postgres", hostname, self._get_postgres_password()
-        )
-        logger.info(f"Connected to PostgreSQL: {connection}")
-
-        user = (
-            # Doesn't generate a username if it was already
-            # generated in a previous relation changed event.
-            unit_relation_databag["user"]
-            if already
-            else f"relation_id_{event.relation.id}_{event.app.name.replace('-', '_')}"
-        )
-        password = unit_relation_databag["password"] if already else self._new_password()
-        database = (
-            unit_relation_databag["database"]
-            if already
-            else event.relation.data[event.app].get("database")
-        )
-        # Sometimes a relation changed event is triggered,
-        # and it doesn't have a database name in it.
-        if not database:
-            logger.warning("No database name provided")
-            event.defer()
-            return
-
-        # Creates the user and the database for this specific relation if it was not already
-        # created in a previous relation changed event.
-        if not already:
-            # Use the relation name to request or not a superuser (admin flag).
-            create_user(connection, user, password, admin=relation_name == OLD_DB_ADMIN_RELATION)
-            create_database(connection, database, user)
-
-        connection.close()
-
-        # Get the list of all members in the cluster.
-        members = self._patroni.cluster_members
-        # Build the primary's connection string.
-        primary = str(
-            ConnectionString(
-                host=f"{self._get_hostname_from_unit(self._patroni.get_primary())}",
-                dbname=database,
-                port=5432,
-                user=user,
-                password=password,
-                fallback_application_name=event.app.name,
-            )
-        )
-        # Build the standbys' connection strings.
-        standbys = ",".join(
-            [
-                str(
-                    ConnectionString(
-                        host=f"{self._get_hostname_from_unit(member)}",
-                        dbname=database,
-                        port=5432,
-                        user=user,
-                        password=password,
-                        fallback_application_name=event.app.name,
-                    )
-                )
-                for member in members
-                if self._get_hostname_from_unit(member) != primary
-            ]
-        )
-
-        # Set the data in both application and unit data bag (it's the logic of the old charm
-        # - it needs one more check to confirm whether it's required to do it).
-        for databag in [application_relation_databag, unit_relation_databag]:
-            # This list of subnets is not being filled correctly yet.
-            databag["allowed-subnets"] = self._get_allowed_subnets(event.relation)
-            databag["allowed-units"] = self._get_allowed_units(event.relation)
-            databag["host"] = f"http://{hostname}"
-            databag["master"] = primary
-            databag["port"] = "5432"
-            databag["standbys"] = standbys
-            databag["state"] = "master"
-            databag["version"] = "12"
-            databag["user"] = user
-            databag["password"] = password
-            databag["database"] = database
-
-        self.unit.status = ActiveStatus()
-
-    def _get_allowed_units(self, relation: Relation) -> str:
-        return ",".join(
-            sorted(
-                unit.name
-                for unit in relation.data
-                if isinstance(unit, Unit) and not unit.name.startswith(self.model.app.name)
-            )
-        )
-
-    def _get_allowed_subnets(self, relation: Relation) -> str:
-        def _csplit(s) -> Iterable[str]:
-            if s:
-                for b in s.split(","):
-                    b = b.strip()
-                    if b:
-                        yield b
-
-        subnets = set()
-        for unit, reldata in relation.data.items():
-            logger.warning(f"Checking subnets for {unit}")
-            logger.warning(reldata)
-            if isinstance(unit, Unit) and not unit.name.startswith(self.model.app.name):
-                # NB. egress-subnets is not always available.
-                subnets.update(set(_csplit(reldata.get("egress-subnets", ""))))
-        return ",".join(sorted(subnets))
+        self.legacy_relation = LegacyRelation(self)
 
     def _retrieve_resource(self, resource: str) -> Optional[Path]:
         """Check that the resource exists and return it.
@@ -288,10 +139,6 @@ class PostgresqlOperatorCharm(CharmBase):
         """
         resources = ["cert-file", "key-file"]
         return [path for path in map(self._retrieve_resource, resources) if path]
-
-    def _on_old_db_relation_departed(self, event: RelationDepartedEvent) -> None:
-        # TODO: implement.
-        pass
 
     def _get_endpoints_to_remove(self) -> List[str]:
         """List the endpoints that were part of the cluster but departed."""
