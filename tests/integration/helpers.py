@@ -4,13 +4,13 @@
 
 from typing import List
 
+import requests
 from lightkube import codecs
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
 from lightkube.core.resource import NamespacedResourceG
 from lightkube.resources.core_v1 import Endpoints, Service
 from lightkube.resources.rbac_authorization_v1 import ClusterRole, ClusterRoleBinding
-import requests
 from pytest_operator.plugin import OpsTest
 
 
