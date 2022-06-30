@@ -225,14 +225,6 @@ async def test_automatic_failover_after_leader_issue(ops_test: OpsTest) -> None:
     assert await get_primary(ops_test) != "None"
 
 
-async def test_remove_application_remove_all_created_k8s_resources(ops_test: OpsTest) -> None:
-    # Check the existing resources.
-
-    # Remove the application and check that the resources were correctly deleted.
-    await ops_test.model.applications[APP_NAME].remove()
-    await ops_test.model.wait_for_idle(timeout=1000)
-
-
 @retry(
     retry=retry_if_result(lambda x: not x),
     stop=stop_after_attempt(10),
