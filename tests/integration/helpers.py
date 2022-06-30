@@ -8,9 +8,8 @@ import requests
 from lightkube import codecs
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
-from lightkube.core.resource import NamespacedResourceG
+from lightkube.generic_resource import GenericNamespacedResource
 from lightkube.resources.core_v1 import Endpoints, Service
-from lightkube.resources.rbac_authorization_v1 import ClusterRole, ClusterRoleBinding
 from pytest_operator.plugin import OpsTest
 
 
@@ -51,7 +50,7 @@ def get_application_units(ops_test: OpsTest, application_name: str) -> List[str]
     ]
 
 
-def get_charm_resources(namespace: str, application: str):
+def get_charm_resources(namespace: str, application: str) -> List[GenericNamespacedResource]:
     """Return the list of k8s resources from resources.yaml file.
 
     Args:
@@ -69,13 +68,13 @@ def get_charm_resources(namespace: str, application: str):
     with open("src/resources.yaml") as f:
         return list(
             filter(
-                lambda x: not isinstance(x, (ClusterRole, ClusterRoleBinding, Service)),
+                lambda x: not isinstance(x, Service),
                 codecs.load_all_yaml(f, context=context),
             )
         )
 
 
-def get_existing_patroni_k8s_resources(namespace: str, application: str) -> set[str]:
+def get_existing_patroni_k8s_resources(namespace: str, application: str) -> set:
     """Return the list of k8s resources that were created by the charm and Patroni.
 
     Args:
@@ -132,7 +131,7 @@ def get_existing_patroni_k8s_resources(namespace: str, application: str) -> set[
     return resources
 
 
-def get_expected_patroni_k8s_resources(namespace: str, application: str) -> set[str]:
+def get_expected_patroni_k8s_resources(namespace: str, application: str) -> set:
     """Return the list of expected k8s resources when the charm is deployed.
 
     Args:
@@ -193,7 +192,7 @@ async def get_unit_address(ops_test: OpsTest, application_name: str, unit_name: 
     return status["applications"][application_name].units[unit_name]["address"]
 
 
-def resource_exists(client: Client, resource: NamespacedResourceG) -> bool:
+def resource_exists(client: Client, resource: GenericNamespacedResource) -> bool:
     """Get the name of the current model.
 
     Args:

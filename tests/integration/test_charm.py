@@ -56,7 +56,6 @@ async def test_build_and_deploy(ops_test: OpsTest):
         assert ops_test.model.applications[APP_NAME].units[unit_id].workload_status == "active"
 
 
-@pytest.mark.abort_on_fail
 async def test_application_created_required_resources(ops_test: OpsTest) -> None:
     # Compare the k8s resources that the charm and Patroni should create with
     # the currently created k8s resources.
@@ -307,7 +306,6 @@ def db_connect(host: str, password: str):
     )
 
 
-@pytest.mark.abort_on_fail
 async def test_application_removal_cleanup_resources(ops_test: OpsTest) -> None:
     # Remove the application and wait until it's gone.
     await ops_test.model.applications[APP_NAME].remove()

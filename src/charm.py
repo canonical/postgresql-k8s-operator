@@ -11,7 +11,6 @@ from typing import List
 
 from lightkube import ApiError, Client, codecs
 from lightkube.resources.core_v1 import Endpoints, Pod, Service
-from lightkube.resources.rbac_authorization_v1 import ClusterRole, ClusterRoleBinding
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -348,22 +347,17 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _on_stop(self, _) -> None:
         """Handle the stop event."""
-        # Check to run the teardown actions only once.
-        if not self.unit.is_leader():
-            return
-
         client = Client()
         resources_to_delete = []
 
         # Get the k8s resources created by the charm.
         with open("src/resources.yaml") as f:
             resources = codecs.load_all_yaml(f, context=self._context)
-            # Ignore the cluster role and its binding that were created together with the
-            # application and also the service resources, which will be retrieved in the next step.
+            # Ignore the service resources, which will be retrieved in the next step.
             resources_to_delete.extend(
                 list(
                     filter(
-                        lambda x: not isinstance(x, (ClusterRole, ClusterRoleBinding, Service)),
+                        lambda x: not isinstance(x, Service),
                         resources,
                     )
                 )
@@ -387,9 +381,12 @@ class PostgresqlOperatorCharm(CharmBase):
                     name=resource.metadata.name,
                     namespace=resource.metadata.namespace,
                 )
-            except ApiError:
-                # Only log a message, as the charm is being stopped.
-                logger.error(f"failed to delete resource: {resource}.")
+            except ApiError as e:
+                if (
+                    e.status.code != 404
+                ):  # 404 means that the resource was already deleted by other unit.
+                    # Only log a message, as the charm is being stopped.
+                    logger.error(f"failed to delete resource: {resource}.")
 
     def _on_update_status(self, _) -> None:
         # Until https://github.com/canonical/pebble/issues/6 is fixed,
