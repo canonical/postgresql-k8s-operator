@@ -52,24 +52,12 @@ async def test_build_and_deploy(ops_test: OpsTest):
 
 @pytest.mark.abort_on_fail
 async def test_application_created_required_resources(ops_test: OpsTest) -> None:
-    # TODO: move namespace to inside the get resources function.
+    # Compare the k8s resources that the charm and Patroni should create with
+    # the currently created k8s resources.
     namespace = await get_model_name(ops_test)
-    existing_resources = get_existing_patroni_k8s_resources(ops_test, APP_NAME, namespace)
-    expected_resources = get_expected_patroni_k8s_resources(APP_NAME, namespace)
-    print(f'existing_resources: {existing_resources}')
-    print(f'expected_resources: {expected_resources}')
+    existing_resources = get_existing_patroni_k8s_resources(namespace, APP_NAME)
+    expected_resources = get_expected_patroni_k8s_resources(namespace, APP_NAME)
     assert set(existing_resources) == set(expected_resources)
-
-
-@pytest.mark.abort_on_fail
-async def test_application_removal_cleanup_resources(ops_test: OpsTest) -> None:
-    # TODO: move namespace to inside the get resources function.
-    await ops_test.model.applications[APP_NAME].remove()
-    await ops_test.model.block_until(lambda: APP_NAME not in ops_test.model.applications)
-    namespace = await get_model_name(ops_test)
-    existing_resources = get_existing_patroni_k8s_resources(ops_test, APP_NAME, namespace)
-    print(f'existing_resources: {existing_resources}')
-    assert set(existing_resources) == set()
 
 
 # @pytest.mark.parametrize("unit_id", UNIT_IDS)
@@ -307,3 +295,15 @@ async def test_application_removal_cleanup_resources(ops_test: OpsTest) -> None:
 #     return psycopg2.connect(
 #         f"dbname='postgres' user='postgres' host='{host}' password='{password}' connect_timeout=10"
 #     )
+
+
+@pytest.mark.abort_on_fail
+async def test_application_removal_cleanup_resources(ops_test: OpsTest) -> None:
+    # Remove the application and wait until it's gone.
+    await ops_test.model.applications[APP_NAME].remove()
+    await ops_test.model.block_until(lambda: APP_NAME not in ops_test.model.applications)
+
+    # Check that all k8s resources created by the charm and Patroni were removed.
+    namespace = await get_model_name(ops_test)
+    existing_resources = get_existing_patroni_k8s_resources(namespace, APP_NAME)
+    assert set(existing_resources) == set()

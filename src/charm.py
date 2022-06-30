@@ -140,6 +140,8 @@ class PostgresqlOperatorCharm(CharmBase):
                     client.create(resource)
                     logger.info(f"created {str(resource)}")
         except ApiError as e:
+            # The 409 error code means that the resource was already created or has a higher version.
+            # This can happen if Patroni creates some resource that the charm is expected to create.
             if e.status.code == 409:
                 logger.info("replacing resource: %s.", str(resource.to_dict()))
                 client.replace(resource)
