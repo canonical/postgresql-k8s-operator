@@ -154,7 +154,6 @@ class Patroni:
         with open("templates/patroni.yml.j2", "r") as file:
             template = Template(file.read())
         # Render the template file with the correct values.
-        logger.error(f"enable TLS: {enable_tls}")
         rendered = template.render(
             enable_tls=enable_tls,
             endpoint=self._endpoint,
@@ -162,8 +161,6 @@ class Patroni:
             namespace=self._namespace,
             storage_path=self._storage_path,
         )
-        logger.error(f"rendered: {rendered}")
-        logger.error(f"template: {template}")
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 
     def render_postgresql_conf_file(self) -> None:

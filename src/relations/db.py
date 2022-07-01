@@ -12,12 +12,11 @@ from charms.postgresql.v0.postgresql_helpers import (
     create_database,
     create_user,
 )
+from constants import LEGACY_DB, LEGACY_DB_ADMIN
 from ops.charm import CharmBase, RelationChangedEvent, RelationDepartedEvent
 from ops.framework import Object
 from ops.model import Relation, Unit
 from pgconnstr import ConnectionString
-
-from constants import LEGACY_DB, LEGACY_DB_ADMIN
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +56,8 @@ class LegacyRelation(Object):
             event.defer()
             return
 
-        if not self._charm.unit.is_leader():
+        primary = self._charm._patroni.get_primary(unit_name_pattern=True)
+        if self._charm._unit != primary:
             return
 
         # Get the relation name to handle specific logic for each relation (db and db-admin).

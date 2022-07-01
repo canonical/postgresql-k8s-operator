@@ -20,8 +20,6 @@ DATABASE_NAME = METADATA["name"]
 async def test_build_and_deploy(ops_test: OpsTest):
     """Build the charm-under-test and deploy it.
 
-    # TODO: move to conftest.py.
-
     Assert on the unit status before any relations/configurations take place.
     """
     # Build and deploy charm from local source folder (and also mattermost-k8s from Charmhub).
@@ -33,10 +31,13 @@ async def test_build_and_deploy(ops_test: OpsTest):
     }
     await asyncio.gather(
         ops_test.model.deploy(
-            charm, resources=resources, application_name=DATABASE_NAME, trust=True  # , num_units=3
+            charm, resources=resources, application_name=DATABASE_NAME, trust=True, num_units=3
         ),
         ops_test.model.deploy(MATTERMOST_APP_NAME, application_name=MATTERMOST_APP_NAME),
     )
+
+    await ops_test.model.set_config({"update-status-hook-interval": "5s"})
+
     await ops_test.model.wait_for_idle(
         apps=[DATABASE_NAME],
         status="active",
@@ -45,11 +46,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
 
 
 async def test_old_db_relation(ops_test: OpsTest):
-    await ops_test.model.set_config({"update-status-hook-interval": "5s"})
-
-    print(TLS_RESOURCES.items())
     for rsc_name, src_path in TLS_RESOURCES.items():
-        print(f"rsc_name: {rsc_name} - src_path: {src_path}")
         await attach_resource(ops_test, DATABASE_NAME, rsc_name, src_path)
 
     # FIXME: A wait here is not guaranteed to work. It can succeed before resources
