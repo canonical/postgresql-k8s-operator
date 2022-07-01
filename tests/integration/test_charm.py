@@ -170,7 +170,7 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
 
 
 async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
-    """Test data persists through a graceful restart."""
+    """Test data persists through a graceful restart.2"""
     primary = await get_primary(ops_test)
     password = await get_postgres_password(ops_test)
     address = await get_unit_address(ops_test, APP_NAME, primary)
