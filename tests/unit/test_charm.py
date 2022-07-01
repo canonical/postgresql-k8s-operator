@@ -267,6 +267,7 @@ class TestCharm(unittest.TestCase):
                         "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
                         "PATRONI_NAME": "postgresql-k8s-0",
                         "PATRONI_SCOPE": self.charm._namespace,
+                        "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
                         "PATRONI_REPLICATION_USERNAME": "replication",
                         "PATRONI_REPLICATION_PASSWORD": self.charm._replication_password,
                         "PATRONI_SUPERUSER_USERNAME": "postgres",

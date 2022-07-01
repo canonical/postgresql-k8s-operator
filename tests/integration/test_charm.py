@@ -18,6 +18,9 @@ from tests.integration.helpers import (
     convert_records_to_dict,
     get_application_units,
     get_cluster_members,
+    get_existing_patroni_k8s_resources,
+    get_expected_patroni_k8s_resources,
+    get_model_name,
     get_unit_address,
     scale_application,
 )
@@ -51,6 +54,15 @@ async def test_build_and_deploy(ops_test: OpsTest):
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
     for unit_id in UNIT_IDS:
         assert ops_test.model.applications[APP_NAME].units[unit_id].workload_status == "active"
+
+
+async def test_application_created_required_resources(ops_test: OpsTest) -> None:
+    # Compare the k8s resources that the charm and Patroni should create with
+    # the currently created k8s resources.
+    namespace = await get_model_name(ops_test)
+    existing_resources = get_existing_patroni_k8s_resources(namespace, APP_NAME)
+    expected_resources = get_expected_patroni_k8s_resources(namespace, APP_NAME)
+    assert set(existing_resources) == set(expected_resources)
 
 
 @pytest.mark.parametrize("unit_id", UNIT_IDS)
@@ -176,7 +188,9 @@ async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
     # These have to run sequentially for the test to be valid/stable.
     await ops_test.model.applications[APP_NAME].scale(0)
     await ops_test.model.applications[APP_NAME].scale(3)
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME], status="active", timeout=1000, idle_period=45, check_freq=2
+    )
 
     # Testing write occurred to every postgres instance by reading from them
     status = await ops_test.model.get_status()  # noqa: F821
@@ -292,3 +306,14 @@ def db_connect(host: str, password: str):
     return psycopg2.connect(
         f"dbname='postgres' user='postgres' host='{host}' password='{password}' connect_timeout=10"
     )
+
+
+async def test_application_removal_cleanup_resources(ops_test: OpsTest) -> None:
+    # Remove the application and wait until it's gone.
+    await ops_test.model.applications[APP_NAME].remove()
+    await ops_test.model.block_until(lambda: APP_NAME not in ops_test.model.applications)
+
+    # Check that all k8s resources created by the charm and Patroni were removed.
+    namespace = await get_model_name(ops_test)
+    existing_resources = get_existing_patroni_k8s_resources(namespace, APP_NAME)
+    assert set(existing_resources) == set()
