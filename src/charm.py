@@ -60,18 +60,6 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
         self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
-        # self.framework.observe(
-        #     self.on[OLD_DB_RELATION].relation_changed, self._on_old_relation_changed
-        # )
-        # self.framework.observe(
-        #     self.on[OLD_DB_RELATION].relation_departed, self._on_old_db_relation_departed
-        # )
-        # self.framework.observe(
-        #     self.on[OLD_DB_ADMIN_RELATION].relation_changed, self._on_old_relation_changed
-        # )
-        # self.framework.observe(
-        #     self.on[OLD_DB_ADMIN_RELATION].relation_departed, self._on_old_db_relation_departed
-        # )
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(
@@ -112,13 +100,11 @@ class PostgresqlOperatorCharm(CharmBase):
                         group="postgres",
                     )
 
-            # Enable TLS.
-            self._patroni.render_patroni_yml_file(True)
-            logger.error("TLS enabled")
+            logger.info("TLS enabled")
         else:
-            # Disable TLS.
-            self._patroni.render_patroni_yml_file()
-            logger.error("TLS disabled")
+            logger.info("TLS disabled")
+
+        self._update_config()
 
         try:
             if self._patroni.member_started:
@@ -333,7 +319,7 @@ class PostgresqlOperatorCharm(CharmBase):
             logging.info("Added updated layer 'postgresql' to Pebble plan")
             # TODO: move this file generation to on config changed hook
             # when adding configs to this charm.
-            self._patroni.render_patroni_yml_file(enable_tls=True if self._tls_files else False)
+            self._update_config()
             # Restart it and report a new status to Juju.
             container.restart(self._postgresql_service)
             logging.info("Restarted postgresql service")
@@ -358,6 +344,9 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # All is well, set an ActiveStatus.
         self.unit.status = ActiveStatus()
+
+    def _update_config(self) -> None:
+        self._patroni.render_patroni_yml_file(enable_tls=True if self._tls_files else False)
 
     def _on_upgrade_charm(self, _) -> None:
         # Add labels required for replication when the pod loses them (like when it's deleted).
