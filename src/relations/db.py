@@ -12,11 +12,12 @@ from charms.postgresql.v0.postgresql_helpers import (
     create_database,
     create_user,
 )
-from constants import LEGACY_DB, LEGACY_DB_ADMIN
 from ops.charm import CharmBase, RelationChangedEvent, RelationDepartedEvent
 from ops.framework import Object
 from ops.model import Relation, Unit
 from pgconnstr import ConnectionString
+
+from constants import LEGACY_DB, LEGACY_DB_ADMIN
 
 logger = logging.getLogger(__name__)
 
@@ -56,8 +57,7 @@ class LegacyRelation(Object):
             event.defer()
             return
 
-        primary = self._charm._patroni.get_primary(unit_name_pattern=True)
-        if self._charm._unit != primary:
+        if not self._charm.unit.is_leader():
             return
 
         # Get the relation name to handle specific logic for each relation (db and db-admin).
@@ -68,19 +68,8 @@ class LegacyRelation(Object):
         unit_relation_databag = event.relation.data[self._charm.unit]
         application_relation_databag = event.relation.data[self._charm.app]
 
-        # When this flag is True it indicates that this hook was already executed and
-        # it set the data about database, user, master, standbys, etc. in the relation
-        # databag. It's needed to rerun this hook on every relation changed event
-        # setting the data again in the databag, otherwise the application charm that
-        # is connecting to this database will receive a "database gone" event from the
-        # old PostgreSQL library (ops-lib-pgsql) and the connection between the
-        # application and this charm will not work.
-        # already = False
-        # if application_relation_databag.get("user"):
-        #     already = True
-
         # Connect to the PostgreSQL instance to later create a user and the database.
-        hostname = self._charm._get_hostname_from_unit(self._charm.unit.name.replace("/", "-"))
+        hostname = self._charm._get_hostname_from_unit(self._charm._patroni.get_primary())
         connection = connect_to_database(
             "postgres", "postgres", hostname, self._charm._get_postgres_password()
         )
@@ -97,7 +86,6 @@ class LegacyRelation(Object):
 
         # Creates the user and the database for this specific relation if it was not already
         # created in a previous relation changed event.
-        # if not already:
         # Use the relation name to request or not a superuser (admin flag).
         create_user(connection, user, password, admin=relation_name == LEGACY_DB_ADMIN)
         create_database(connection, database, user)
@@ -122,7 +110,7 @@ class LegacyRelation(Object):
             [
                 str(
                     ConnectionString(
-                        host=f"{self._charm._get_hostname_from_unit(member)}",
+                        host=hostname,
                         dbname=database,
                         port=5432,
                         user=user,
@@ -135,8 +123,12 @@ class LegacyRelation(Object):
             ]
         )
 
-        # Set the data in both application and unit data bag (it's the logic of the old charm
-        # - it needs one more check to confirm whether it's required to do it).
+        # Set the data in both application and unit data bag.
+        # It 's needed to run this logic on every relation changed event
+        # setting the data again in the databag, otherwise the application charm that
+        # is connecting to this database will receive a "database gone" event from the
+        # old PostgreSQL library (ops-lib-pgsql) and the connection between the
+        # application and this charm will not work.
         for databag in [application_relation_databag, unit_relation_databag]:
             # This list of subnets is not being filled correctly yet.
             databag["allowed-subnets"] = self._get_allowed_subnets(event.relation)
