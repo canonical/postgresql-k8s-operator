@@ -18,8 +18,8 @@ containers:
 resources:
   postgresql-image:
     type: oci-image
-    description: OCI image for PostgreSQL (postgresql-patroni:local)
-    upstream-source: postgresql-patroni:local
+    description: OCI image for PostgreSQL (postgresql-patroni)
+    upstream-source: postgresql-patroni
   cert-file:
     type: file
     filename: server.crt
