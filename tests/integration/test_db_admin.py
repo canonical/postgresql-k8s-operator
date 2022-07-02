@@ -46,7 +46,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
     )
 
 
-async def test_old_db_admin_relation(ops_test: OpsTest):
+async def test_discourse(ops_test: OpsTest):
     await asyncio.gather(
         ops_test.model.add_relation(
             f"{DATABASE_NAME}:db-admin",
@@ -61,11 +61,11 @@ async def test_old_db_admin_relation(ops_test: OpsTest):
     await ops_test.model.wait_for_idle(
         apps=[DATABASE_NAME, FIRST_DISCOURSE_APP_NAME, REDIS_APP_NAME],
         status="active",
-        timeout=1000,
+        timeout=1500,
     )
 
 
-async def test_discourse_relation(ops_test: OpsTest):
+async def test_discourse_from_discourse_charmers(ops_test: OpsTest):
     redis_host = await get_unit_address(ops_test, REDIS_APP_NAME, f"{REDIS_APP_NAME}/0")
 
     await ops_test.model.deploy(
@@ -93,5 +93,5 @@ async def test_discourse_relation(ops_test: OpsTest):
     await ops_test.model.wait_for_idle(
         apps=[DATABASE_NAME, SECOND_DISCOURSE_APP_NAME, REDIS_APP_NAME],
         status="active",
-        timeout=1000,
+        timeout=1500,
     )
