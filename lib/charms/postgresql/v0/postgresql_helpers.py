@@ -25,21 +25,6 @@ from psycopg2 import sql
 logger = logging.getLogger(__name__)
 
 
-def build_connection_string(database: str, user: str, host: str, password: str) -> str:
-    """Builds a connection string based on authentication details.
-
-    Args:
-        database: name of the database to connect to.
-        user: user used to connect to the database.
-        host: address of the database server.
-        password: password used to connect to the database.
-
-    Returns:
-         a connection string.
-    """
-    return f"dbname='{database}' user='{user}' host='{host}' password='{password}'"
-
-
 def connect_to_database(
     database: str, user: str, host: str, password: str
 ) -> psycopg2.extensions.connection:
@@ -95,3 +80,18 @@ def create_user(
             cursor.execute(f"ALTER ROLE {user_definition};")
         else:
             cursor.execute(f"CREATE ROLE {user_definition};")
+
+
+def drop_user(
+    connection: psycopg2.extensions.connection, user: str
+) -> None:
+    """Drops a database user.
+
+    Args:
+        connection: psycopg2 connection object.
+        user: user to be dropped.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(f"REASSIGN OWNED BY {user} TO postgres;")
+        cursor.execute(f"DROP OWNED BY {user};")
+        cursor.execute(f"DROP ROLE {user};")

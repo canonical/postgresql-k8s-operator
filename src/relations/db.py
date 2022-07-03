@@ -11,8 +11,14 @@ from charms.postgresql.v0.postgresql_helpers import (
     connect_to_database,
     create_database,
     create_user,
+    drop_user,
 )
-from ops.charm import CharmBase, RelationChangedEvent, RelationDepartedEvent
+from ops.charm import (
+    CharmBase,
+    RelationBrokenEvent,
+    RelationChangedEvent,
+    RelationDepartedEvent,
+)
 from ops.framework import Object
 from ops.model import BlockedStatus, Relation, Unit
 from pgconnstr import ConnectionString
@@ -36,12 +42,16 @@ class LegacyRelation(Object):
         self.framework.observe(
             self._charm.on[LEGACY_DB].relation_departed, self._on_relation_departed
         )
+        self.framework.observe(self._charm.on[LEGACY_DB].relation_broken, self._on_relation_broken)
 
         self.framework.observe(
             self._charm.on[LEGACY_DB_ADMIN].relation_changed, self._on_relation_changed
         )
         self.framework.observe(
             self._charm.on[LEGACY_DB_ADMIN].relation_departed, self._on_relation_departed
+        )
+        self.framework.observe(
+            self._charm.on[LEGACY_DB_ADMIN].relation_broken, self._on_relation_broken
         )
 
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
@@ -200,6 +210,28 @@ class LegacyRelation(Object):
             {unit for unit in current_allowed_units.split() if unit != departing_unit}
         )
 
-        # remove unit users
-        logger.debug(f"Removing user for unit {departing_unit}")
-        self._charm.delete_users_for_unit(departing_unit)
+    def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
+        # Remove the user created for this relation.
+        # Check for some conditions before trying to access the PostgreSQL instance.
+        if (
+            "cluster_initialised" not in self._charm._peers.data[self._charm.app]
+            or not self._charm._patroni.member_started
+        ):
+            event.defer()
+            return
+
+        if not self._charm.unit.is_leader():
+            return
+
+        application_relation_databag = event.relation.data[self._charm.app]
+        database = application_relation_databag.get("database")
+
+        # Connect to the PostgreSQL instance to later create a user and the database.
+        hostname = self._charm._get_hostname_from_unit(self._charm._patroni.get_primary())
+        connection = connect_to_database(
+            database, "postgres", hostname, self._charm._get_postgres_password()
+        )
+
+        # Drop the user.
+        user = f"relation_id_{event.relation.id}"
+        drop_user(connection, user)
