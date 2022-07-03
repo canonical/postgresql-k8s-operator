@@ -87,7 +87,8 @@ class LegacyRelation(Object):
             return
 
         # Connect to the PostgreSQL instance to later create a user and the database.
-        hostname = self._charm._get_hostname_from_unit(self._charm._patroni.get_primary())
+        # self._charm._get_hostname_from_unit(self._charm._patroni.get_primary())
+        hostname = self._charm.primary_endpoint
         connection = connect_to_database(
             "postgres", "postgres", hostname, self._charm._get_postgres_password()
         )
@@ -111,11 +112,12 @@ class LegacyRelation(Object):
         connection.close()
 
         # Get the list of all members in the cluster.
-        members = self._charm._patroni.cluster_members
+        # members = self._charm._patroni.cluster_members
         # Build the primary's connection string.
         primary = str(
             ConnectionString(
-                host=f"{self._charm._get_hostname_from_unit(self._charm._patroni.get_primary())}",
+                # host=f"{self._charm._get_hostname_from_unit(self._charm._patroni.get_primary())}",
+                host=self._charm.primary_endpoint,
                 dbname=database,
                 port=5432,
                 user=user,
@@ -124,22 +126,23 @@ class LegacyRelation(Object):
             )
         )
         # Build the standbys' connection strings.
-        standbys = ",".join(
-            [
-                str(
-                    ConnectionString(
-                        host=hostname,
-                        dbname=database,
-                        port=5432,
-                        user=user,
-                        password=password,
-                        fallback_application_name=event.app.name,
-                    )
-                )
-                for member in members
-                if self._charm._get_hostname_from_unit(member) != primary
-            ]
+        # standbys = ",".join(
+        #     [
+        standbys = str(
+            ConnectionString(
+                # host=hostname,
+                host=self._charm.replicas_endpoint,
+                dbname=database,
+                port=5432,
+                user=user,
+                password=password,
+                fallback_application_name=event.app.name,
+            )
         )
+        #         for member in members
+        #         if self._charm._get_hostname_from_unit(member) != primary
+        #     ]
+        # )
 
         # Set the data in both application and unit data bag.
         # It 's needed to run this logic on every relation changed event

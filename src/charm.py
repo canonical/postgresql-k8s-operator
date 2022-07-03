@@ -70,6 +70,20 @@ class PostgresqlOperatorCharm(CharmBase):
         self._storage_path = self.meta.storages["pgdata"].location
         self.legacy_relation = LegacyRelation(self)
 
+    @property
+    def primary_endpoint(self) -> str:
+        """Returns the endpoint of the primary instance."""
+        return self._build_service_name("primary")
+
+    @property
+    def replicas_endpoint(self) -> str:
+        """Returns the endpoint of the replicas instances."""
+        return self._build_service_name("replicas")
+
+    def _build_service_name(self, service: str) -> str:
+        """Build a full k8s service name based on the service name."""
+        return f"{self._name}-{service}.{self._namespace}.svc.cluster.local"
+
     def _retrieve_resource(self, resource: str) -> Optional[Path]:
         """Check that the resource exists and return it.
 
