@@ -14,7 +14,7 @@ from charms.postgresql.v0.postgresql_helpers import (
 )
 from ops.charm import CharmBase, RelationChangedEvent, RelationDepartedEvent
 from ops.framework import Object
-from ops.model import Relation, Unit
+from ops.model import BlockedStatus, Relation, Unit
 from pgconnstr import ConnectionString
 
 from constants import LEGACY_DB, LEGACY_DB_ADMIN
@@ -67,6 +67,14 @@ class LegacyRelation(Object):
 
         unit_relation_databag = event.relation.data[self._charm.unit]
         application_relation_databag = event.relation.data[self._charm.app]
+
+        if "extensions" in unit_relation_databag or "extensions" in application_relation_databag:
+            logger.error(
+                "ERROR - `extensions` cannot be requested through relations"
+                " - they should be installed through a database charm config in the future"
+            )
+            self._charm.unit.status = BlockedStatus("extensions requested through relation")
+            return
 
         # Connect to the PostgreSQL instance to later create a user and the database.
         hostname = self._charm._get_hostname_from_unit(self._charm._patroni.get_primary())
