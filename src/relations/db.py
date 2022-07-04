@@ -95,7 +95,9 @@ class LegacyRelation(Object):
 
         user = f"relation_id_{event.relation.id}"
         password = unit_relation_databag.get("password", self._charm._new_password())
-        database = event.relation.data[event.app].get("database")
+        database = event.relation.data[event.app].get(
+            "database", event.relation.data[event.unit].get("database")
+        )
         # Sometimes a relation changed event is triggered,
         # and it doesn't have a database name in it.
         if not database:
