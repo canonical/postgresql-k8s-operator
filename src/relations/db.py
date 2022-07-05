@@ -12,6 +12,7 @@ from charms.postgresql.v0.postgresql_helpers import (
     create_database,
     create_user,
     drop_user,
+    get_postgresql_version,
 )
 from ops.charm import (
     CharmBase,
@@ -23,78 +24,76 @@ from ops.framework import Object
 from ops.model import BlockedStatus, Relation, Unit
 from pgconnstr import ConnectionString
 
-from constants import LEGACY_DB, LEGACY_DB_ADMIN
-
 logger = logging.getLogger(__name__)
 
 
-class LegacyRelation(Object):
-    """Legacy `db` and ``db-admin relations implementation."""
+class DbProvides(Object):
+    """Defines functionality for the 'provides' side of the 'db' relation.
 
-    def __init__(self, charm: CharmBase):
-        super().__init__(charm, "db-handler")
+    Hook events observed:
+        - relation-changed
+        - relation-departed
+        - relation-broken
+    """
 
-        self._charm = charm
+    def __init__(self, charm: CharmBase, admin: bool = False):
+        """Constructor for DbProvides object.
+
+        Args:
+            charm: the charm for which this relation is provided
+            admin: a boolean defining whether or not this relation has admin permissions, switching
+                between "db" and "db-admin" relations.
+        """
+        if admin:
+            self.relation_name = "db-admin"
+        else:
+            self.relation_name = "db"
+
+        super().__init__(charm, self.relation_name)
 
         self.framework.observe(
-            self._charm.on[LEGACY_DB].relation_changed, self._on_relation_changed
+            charm.on[self.relation_name].relation_changed, self._on_relation_changed
         )
         self.framework.observe(
-            self._charm.on[LEGACY_DB].relation_departed, self._on_relation_departed
+            charm.on[self.relation_name].relation_departed, self._on_relation_departed
         )
-        self.framework.observe(self._charm.on[LEGACY_DB].relation_broken, self._on_relation_broken)
+        self.framework.observe(
+            charm.on[self.relation_name].relation_broken, self._on_relation_broken
+        )
 
-        self.framework.observe(
-            self._charm.on[LEGACY_DB_ADMIN].relation_changed, self._on_relation_changed
-        )
-        self.framework.observe(
-            self._charm.on[LEGACY_DB_ADMIN].relation_departed, self._on_relation_departed
-        )
-        self.framework.observe(
-            self._charm.on[LEGACY_DB_ADMIN].relation_broken, self._on_relation_broken
-        )
+        self.charm = charm
+        self.admin = admin
 
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
-        """Handle the legacy shared_db relation changed event.
+        """Handle the legacy db/db-admin relation changed event.
 
         Generate password and handle user and database creation for the related application.
         """
         # Check for some conditions before trying to access the PostgreSQL instance.
         if (
-            "cluster_initialised" not in self._charm._peers.data[self._charm.app]
-            or not self._charm._patroni.member_started
+            "cluster_initialised" not in self.charm._peers.data[self.charm.app]
+            or not self.charm._patroni.member_started
         ):
             event.defer()
             return
 
-        if not self._charm.unit.is_leader():
+        if not self.charm.unit.is_leader():
             return
 
-        # Get the relation name to handle specific logic for each relation (db and db-admin).
-        relation_name = event.relation.name
+        logger.warning(f"DEPRECATION WARNING - `{event.relation.name}` is a legacy interface")
 
-        logger.warning(f"DEPRECATION WARNING - `{relation_name}` is a legacy interface")
-
-        unit_relation_databag = event.relation.data[self._charm.unit]
-        application_relation_databag = event.relation.data[self._charm.app]
+        unit_relation_databag = event.relation.data[self.charm.unit]
+        application_relation_databag = event.relation.data[self.charm.app]
 
         if "extensions" in unit_relation_databag or "extensions" in application_relation_databag:
             logger.error(
                 "ERROR - `extensions` cannot be requested through relations"
                 " - they should be installed through a database charm config in the future"
             )
-            self._charm.unit.status = BlockedStatus("extensions requested through relation")
+            self.charm.unit.status = BlockedStatus("extensions requested through relation")
             return
 
-        # Connect to the PostgreSQL instance to later create a user and the database.
-        # self._charm._get_hostname_from_unit(self._charm._patroni.get_primary())
-        hostname = self._charm.primary_endpoint
-        connection = connect_to_database(
-            "postgres", "postgres", hostname, self._charm._get_postgres_password()
-        )
-
-        user = f"relation_id_{event.relation.id}"
-        password = unit_relation_databag.get("password", self._charm._new_password())
+        # Retrieve
         database = event.relation.data[event.app].get(
             "database", event.relation.data[event.unit].get("database")
         )
@@ -105,21 +104,28 @@ class LegacyRelation(Object):
             event.defer()
             return
 
+        # Connect to the PostgreSQL instance to later create a user and the database.
+        connection = connect_to_database(
+            "postgres",
+            "postgres",
+            self.charm.primary_endpoint,
+            self.charm._get_postgres_password(),
+        )
+
+        # Define the new user credentials.
+        user = f"relation_id_{event.relation.id}"
+        password = unit_relation_databag.get("password", self.charm._new_password())
+
         # Creates the user and the database for this specific relation if it was not already
         # created in a previous relation changed event.
         # Use the relation name to request or not a superuser (admin flag).
-        create_user(connection, user, password, admin=relation_name == LEGACY_DB_ADMIN)
+        create_user(connection, user, password, admin=self.admin)
         create_database(connection, database, user)
 
-        connection.close()
-
-        # Get the list of all members in the cluster.
-        # members = self._charm._patroni.cluster_members
         # Build the primary's connection string.
         primary = str(
             ConnectionString(
-                # host=f"{self._charm._get_hostname_from_unit(self._charm._patroni.get_primary())}",
-                host=self._charm.primary_endpoint,
+                host=self.charm.primary_endpoint,
                 dbname=database,
                 port=5432,
                 user=user,
@@ -127,13 +133,10 @@ class LegacyRelation(Object):
                 fallback_application_name=event.app.name,
             )
         )
-        # Build the standbys' connection strings.
-        # standbys = ",".join(
-        #     [
+        # Build the standbys' connection string.
         standbys = str(
             ConnectionString(
-                # host=hostname,
-                host=self._charm.replicas_endpoint,
+                host=self.charm.replicas_endpoint,
                 dbname=database,
                 port=5432,
                 user=user,
@@ -141,10 +144,6 @@ class LegacyRelation(Object):
                 fallback_application_name=event.app.name,
             )
         )
-        #         for member in members
-        #         if self._charm._get_hostname_from_unit(member) != primary
-        #     ]
-        # )
 
         # Set the data in both application and unit data bag.
         # It 's needed to run this logic on every relation changed event
@@ -156,15 +155,17 @@ class LegacyRelation(Object):
             # This list of subnets is not being filled correctly yet.
             databag["allowed-subnets"] = self._get_allowed_subnets(event.relation)
             databag["allowed-units"] = self._get_allowed_units(event.relation)
-            databag["host"] = f"{hostname}"
+            databag["host"] = self.charm.primary_endpoint
             databag["master"] = primary
             databag["port"] = "5432"
             databag["standbys"] = standbys
-            databag["state"] = "master"
-            databag["version"] = "12"
+            databag["state"] = self._get_state()
+            databag["version"] = get_postgresql_version(connection)
             databag["user"] = user
             databag["password"] = password
             databag["database"] = database
+
+        connection.close()
 
     def _get_allowed_units(self, relation: Relation) -> str:
         return ",".join(
@@ -192,21 +193,34 @@ class LegacyRelation(Object):
                 subnets.update(set(_csplit(reldata.get("egress-subnets", ""))))
         return ",".join(sorted(subnets))
 
+    def _get_state(self) -> str:
+        """Gets the given state for this unit.
+
+        Returns:
+            The described state of this unit. Can be 'standalone', 'master', or 'standby'.
+        """
+        if len(self.charm._peers.units) == 0:
+            return "standalone"
+        if self.charm._patroni.get_primary(unit_name_pattern=True) == self.charm.unit.name:
+            return "master"
+        else:
+            return "standby"
+
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Handle the departure of legacy db and db-admin relations.
 
         Remove unit name from allowed_units key.
         """
-        if not self._charm.unit.is_leader():
+        if not self.charm.unit.is_leader():
             return
 
-        if event.departing_unit.app == self._charm.app:
+        if event.departing_unit.app == self.charm.app:
             # Just run for departing of remote units
             return
 
         departing_unit = event.departing_unit.name
-        local_unit_data = event.relation.data[self._charm.unit]
-        local_app_data = event.relation.data[self._charm.app]
+        local_unit_data = event.relation.data[self.charm.unit]
+        local_app_data = event.relation.data[self.charm.app]
 
         current_allowed_units = local_unit_data.get("allowed_units", "")
 
@@ -219,22 +233,21 @@ class LegacyRelation(Object):
         # Remove the user created for this relation.
         # Check for some conditions before trying to access the PostgreSQL instance.
         if (
-            "cluster_initialised" not in self._charm._peers.data[self._charm.app]
-            or not self._charm._patroni.member_started
+            "cluster_initialised" not in self.charm._peers.data[self.charm.app]
+            or not self.charm._patroni.member_started
         ):
             event.defer()
             return
 
-        if not self._charm.unit.is_leader():
+        if not self.charm.unit.is_leader():
             return
 
-        application_relation_databag = event.relation.data[self._charm.app]
+        application_relation_databag = event.relation.data[self.charm.app]
         database = application_relation_databag.get("database")
 
         # Connect to the PostgreSQL instance to later create a user and the database.
-        hostname = self._charm._get_hostname_from_unit(self._charm._patroni.get_primary())
         connection = connect_to_database(
-            database, "postgres", hostname, self._charm._get_postgres_password()
+            database, "postgres", self.charm.primary_endpoint, self.charm._get_postgres_password()
         )
 
         # Drop the user.

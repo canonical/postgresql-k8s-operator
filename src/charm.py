@@ -34,7 +34,7 @@ from requests import ConnectionError
 from tenacity import RetryError
 
 from patroni import NotReadyError, Patroni
-from relations.db import LegacyRelation
+from relations.db import DbProvides
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +68,9 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
         self.framework.observe(self.on.update_status, self._on_update_status)
         self._storage_path = self.meta.storages["pgdata"].location
-        self.legacy_relation = LegacyRelation(self)
+
+        self.legacy_db_relation = DbProvides(self, admin=False)
+        self.legacy_db_admin_relation = DbProvides(self, admin=True)
 
     @property
     def primary_endpoint(self) -> str:

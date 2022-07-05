@@ -75,7 +75,6 @@ def create_user(
     user_definition = f"{user} WITH LOGIN{' SUPERUSER' if admin else ''} ENCRYPTED PASSWORD '{password}'"
     with connection.cursor() as cursor:
         cursor.execute(f"SELECT TRUE FROM pg_roles WHERE rolname='{user}';")
-        # logger.error(cursor.fetchone())
         if cursor.fetchone() is not None:
             cursor.execute(f"ALTER ROLE {user_definition};")
         else:
@@ -95,3 +94,19 @@ def drop_user(
         cursor.execute(f"REASSIGN OWNED BY {user} TO postgres;")
         cursor.execute(f"DROP OWNED BY {user};")
         cursor.execute(f"DROP ROLE {user};")
+
+
+def get_postgresql_version(
+    connection: psycopg2.extensions.connection
+) -> str:
+    """Creates a database user.
+
+    Args:
+        connection: psycopg2 connection object.
+
+    Returns:
+        PostgreSQL version.
+    """
+    with connection.cursor() as cursor:
+        cursor.execute(f"SELECT version();")
+        return cursor.fetchone()[0]
