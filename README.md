@@ -8,7 +8,7 @@ This operator provides a Postgres database with replication enabled (one master 
 
 ## Usage
 
-As this charm is not yet published, you need to follow the build and deploy instructions from [CONTRIBUTING.md](CONTRIBUTING.md).
+As this charm is not yet published, you need to follow the build and deploy instructions from [CONTRIBUTING.md](https://github.com/canonical/postgresql-k8s-operator/blob/main/CONTRIBUTING.md).
 
 ## Accessing the database
 
