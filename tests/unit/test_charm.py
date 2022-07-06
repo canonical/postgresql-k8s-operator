@@ -1,7 +1,6 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import re
 import unittest
 from unittest.mock import Mock, call, patch
 
@@ -214,13 +213,10 @@ class TestCharm(unittest.TestCase):
                 "ERROR:charm:failed to get primary with error RetryError[fake error]", logs.output
             )
 
-    @patch("charm.PostgresqlOperatorCharm._store_tls_files")
     @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
-    def test_on_upgrade_charm(self, _patch_pod_labels, _store_tls_files):
+    def test_on_upgrade_charm(self, _patch_pod_labels):
         self.charm.on.upgrade_charm.emit()
         _patch_pod_labels.assert_called_once()
-        # TODO: remove this mock and mock the file update.
-        _store_tls_files.assert_called_once()
 
     @patch("charm.Client")
     def test_create_resources(self, _client):
@@ -279,17 +275,6 @@ class TestCharm(unittest.TestCase):
             },
         }
         self.assertDictEqual(plan, expected)
-
-    def test_new_password(self):
-        # Test the password generation twice in order to check if we get different passwords and
-        # that they meet the required criteria.
-        first_password = self.charm._new_password()
-        self.assertEqual(len(first_password), 16)
-        self.assertIsNotNone(re.fullmatch("[a-zA-Z0-9\b]{16}$", first_password))
-
-        second_password = self.charm._new_password()
-        self.assertIsNotNone(re.fullmatch("[a-zA-Z0-9\b]{16}$", second_password))
-        self.assertNotEqual(second_password, first_password)
 
     @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
     @patch("charm.PostgresqlOperatorCharm._create_resources")
