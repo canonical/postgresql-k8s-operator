@@ -5,10 +5,9 @@
 """Charmed Kubernetes Operator for the PostgreSQL database."""
 import json
 import logging
-import secrets
-import string
 from typing import List
 
+from charms.postgresql_k8s.v0.postgresql import PostgreSQL
 from lightkube import ApiError, Client, codecs
 from lightkube.resources.core_v1 import Pod
 from ops.charm import (
@@ -32,6 +31,8 @@ from requests import ConnectionError
 from tenacity import RetryError
 
 from patroni import NotReadyError, Patroni
+from relations.db import DbProvides
+from utils import new_password
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +64,38 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
         self.framework.observe(self.on.update_status, self._on_update_status)
         self._storage_path = self.meta.storages["pgdata"].location
+
+        self.legacy_db_relation = DbProvides(self, admin=False)
+        self.legacy_db_admin_relation = DbProvides(self, admin=True)
+
+    @property
+    def postgresql(self) -> PostgreSQL:
+        """Returns an instance of the object used to interact with the database."""
+        return PostgreSQL(
+            host=self._patroni.get_primary(),
+            user="postgres",
+            password=self._get_postgres_password(),
+            database="postgres",
+        )
+
+    @property
+    def endpoint(self) -> str:
+        """Returns the endpoint of this instance's pod."""
+        return f'{self._unit.replace("/", "-")}.{self._build_service_name("endpoints")}'
+
+    @property
+    def primary_endpoint(self) -> str:
+        """Returns the endpoint of the primary instance's service."""
+        return self._build_service_name("primary")
+
+    @property
+    def replicas_endpoint(self) -> str:
+        """Returns the endpoint of the replicas instances' service."""
+        return self._build_service_name("replicas")
+
+    def _build_service_name(self, service: str) -> str:
+        """Build a full k8s service name based on the service name."""
+        return f"{self._name}-{service}.{self._namespace}.svc.cluster.local"
 
     def _get_endpoints_to_remove(self) -> List[str]:
         """List the endpoints that were part of the cluster but departed."""
@@ -202,7 +235,7 @@ class PostgresqlOperatorCharm(CharmBase):
         Returns:
             A string representing the hostname of the PostgreSQL unit.
         """
-        unit_id = member.split("-")[2]
+        unit_id = member.split("-")[-1]
         return f"{self.app.name}-{unit_id}.{self.app.name}-endpoints"
 
     def _on_leader_elected(self, event: LeaderElectedEvent) -> None:
@@ -212,10 +245,10 @@ class PostgresqlOperatorCharm(CharmBase):
         replication_password = data.get("replication-password", None)
 
         if postgres_password is None:
-            self._peers.data[self.app]["postgres-password"] = self._new_password()
+            self._peers.data[self.app]["postgres-password"] = new_password()
 
         if replication_password is None:
-            self._peers.data[self.app]["replication-password"] = self._new_password()
+            self._peers.data[self.app]["replication-password"] = new_password()
 
         # Create resources and add labels needed for replication.
         self._create_resources()
@@ -449,16 +482,6 @@ class PostgresqlOperatorCharm(CharmBase):
             },
         }
         return Layer(layer_config)
-
-    def _new_password(self) -> str:
-        """Generate a random password string.
-
-        Returns:
-           A random password string.
-        """
-        choices = string.ascii_letters + string.digits
-        password = "".join([secrets.choice(choices) for i in range(16)])
-        return password
 
     @property
     def _peers(self) -> Relation:
