@@ -12,6 +12,15 @@ from pytest_operator.plugin import OpsTest
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
+TLS_RESOURCES = {
+    "cert-file": "tests/tls/server.crt",
+    "key-file": "tests/tls/server.key",
+}
+
+
+async def attach_resource(ops_test: OpsTest, app_name: str, rsc_name: str, rsc_path: str) -> None:
+    """Use the `juju attach-resource` command to add resources."""
+    await ops_test.juju("attach-resource", app_name, f"{rsc_name}={rsc_path}")
 
 
 async def check_database_users_existence(
@@ -92,6 +101,7 @@ async def deploy_and_relate_application_with_postgresql(
     number_of_units: int,
     channel: str = "stable",
     relation: str = "db",
+    status: str = "blocked",
 ) -> int:
     """Helper function to deploy and relate application with PostgreSQL.
 
@@ -103,6 +113,7 @@ async def deploy_and_relate_application_with_postgresql(
         channel: The channel to use for the charm.
         relation: Name of the PostgreSQL relation to relate
             the application to.
+        status: The status to wait for in the application (default: blocked).
 
     Returns:
         the id of the created relation.
@@ -116,7 +127,7 @@ async def deploy_and_relate_application_with_postgresql(
     )
     await ops_test.model.wait_for_idle(
         apps=[application_name],
-        status="blocked",
+        status=status,
         raise_on_blocked=False,
         timeout=1000,
     )

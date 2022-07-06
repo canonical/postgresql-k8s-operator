@@ -5,7 +5,9 @@
 """Charmed Kubernetes Operator for the PostgreSQL database."""
 import json
 import logging
-from typing import List
+from pathlib import Path
+from socket import socket
+from typing import List, Optional
 
 from charms.postgresql_k8s.v0.postgresql import PostgreSQL
 from lightkube import ApiError, Client, codecs
@@ -23,6 +25,7 @@ from ops.model import (
     ActiveStatus,
     BlockedStatus,
     MaintenanceStatus,
+    ModelError,
     Relation,
     WaitingStatus,
 )
@@ -72,7 +75,7 @@ class PostgresqlOperatorCharm(CharmBase):
     def postgresql(self) -> PostgreSQL:
         """Returns an instance of the object used to interact with the database."""
         return PostgreSQL(
-            host=self._patroni.get_primary(),
+            host=self.primary_endpoint,
             user="postgres",
             password=self._get_postgres_password(),
             database="postgres",
@@ -96,6 +99,59 @@ class PostgresqlOperatorCharm(CharmBase):
     def _build_service_name(self, service: str) -> str:
         """Build a full k8s service name based on the service name."""
         return f"{self._name}-{service}.{self._namespace}.svc.cluster.local"
+
+    def _retrieve_resource(self, resource: str) -> Optional[Path]:
+        """Check that the resource exists and return it.
+
+        Args:
+            resource: name of the resource to retrieve.
+
+        Returns:
+            Path of the resource or None
+        """
+        try:
+            # Fetch the resource path
+            return self.model.resources.fetch(resource)
+        except (ModelError, NameError):
+            return None
+
+    def _store_tls_files(self) -> None:
+        """Copy the TLS certificate and key to the PostgreSQL container."""
+        # Copy the resources to the storage path if all of them were attached
+        # and enable TLS.
+        if self._tls_files:
+            container = self.unit.get_container("postgresql")
+
+            # Copy the files from the resources' location to the PostgreSQL container.
+            for file_path in self._tls_files:
+                with open(file_path, "r") as f:
+                    container.push(
+                        f"{self._storage_path}/{file_path.name}",
+                        f,
+                        permissions=0o600,
+                        user="postgres",
+                        group="postgres",
+                    )
+
+            logger.info("TLS enabled")
+            logger.warning(
+                "WARNING - this TLS implementation is temporary - it will change in the future"
+            )
+        else:
+            logger.info("TLS disabled")
+
+        self._update_config()
+
+    @property
+    def _tls_files(self) -> Optional[List[Path]]:
+        """Paths of the TLS certificate and key files.
+
+        Returns:
+            A list with the paths of the certificate and the key
+                if they were attached as resources to this application.
+        """
+        resources = ["cert-file", "key-file"]
+        return [path for path in map(self._retrieve_resource, resources) if path]
 
     def _get_endpoints_to_remove(self) -> List[str]:
         """List the endpoints that were part of the cluster but departed."""
@@ -290,7 +346,7 @@ class PostgresqlOperatorCharm(CharmBase):
             logging.info("Added updated layer 'postgresql' to Pebble plan")
             # TODO: move this file generation to on config changed hook
             # when adding configs to this charm.
-            self._patroni.render_patroni_yml_file()
+            self._update_config()
             # Restart it and report a new status to Juju.
             container.restart(self._postgresql_service)
             logging.info("Restarted postgresql service")
@@ -316,6 +372,10 @@ class PostgresqlOperatorCharm(CharmBase):
         # All is well, set an ActiveStatus.
         self.unit.status = ActiveStatus()
 
+    def _update_config(self) -> None:
+        """Creates os updates Patroni config file based on the existence of the TLS files."""
+        self._patroni.render_patroni_yml_file(enable_tls=True if self._tls_files else False)
+
     def _on_upgrade_charm(self, _) -> None:
         # Add labels required for replication when the pod loses them (like when it's deleted).
         try:
@@ -324,6 +384,10 @@ class PostgresqlOperatorCharm(CharmBase):
             logger.error("failed to patch pod")
             self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
             return
+
+        # Tries to store the TLS certificate and key on the PostgreSQL container,
+        # as new `juju attach-resource` will trigger this event.
+        self._store_tls_files()
 
     def _patch_pod_labels(self, member: str) -> None:
         """Add labels required for replication to the current pod.
@@ -400,10 +464,17 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _restart_postgresql_service(self) -> None:
         """Restart PostgreSQL and Patroni."""
-        self.unit.status = MaintenanceStatus(f"restarting {self._postgresql_service} service")
-        container = self.unit.get_container("postgresql")
-        container.restart(self._postgresql_service)
-        self.unit.status = ActiveStatus()
+        try:
+            self.unit.status = MaintenanceStatus(f"restarting {self._postgresql_service} service")
+            container = self.unit.get_container("postgresql")
+            container.restart(self._postgresql_service)
+            self.unit.status = ActiveStatus()
+        except socket.timeout as e:
+            logger.error(f"failed to restart {self._postgresql_service} service with error {e}")
+            self.unit.status = BlockedStatus(
+                f"failed to restart {self._postgresql_service} service"
+            )
+            return
 
     @property
     def _patroni(self):

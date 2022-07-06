@@ -144,13 +144,18 @@ class Patroni:
             # Ignore non existing user error when it wasn't created yet.
             pass
 
-    def render_patroni_yml_file(self) -> None:
-        """Render the Patroni configuration file."""
+    def render_patroni_yml_file(self, enable_tls: bool = False) -> None:
+        """Render the Patroni configuration file.
+
+        Args:
+            enable_tls: whether to enable TLS.
+        """
         # Open the template postgresql.conf file.
         with open("templates/patroni.yml.j2", "r") as file:
             template = Template(file.read())
         # Render the template file with the correct values.
         rendered = template.render(
+            enable_tls=enable_tls,
             endpoint=self._endpoint,
             endpoints=self._endpoints,
             namespace=self._namespace,

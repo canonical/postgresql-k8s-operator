@@ -81,7 +81,7 @@ class DbProvides(Object):
         if not self.charm.unit.is_leader():
             return
 
-        logger.warning(f"DEPRECATION WARNING - `{event.relation.name}` is a legacy interface")
+        logger.warning(f"DEPRECATION WARNING - `{self.relation_name}` is a legacy interface")
 
         unit_relation_databag = event.relation.data[self.charm.unit]
         application_relation_databag = event.relation.data[self.charm.app]
@@ -142,25 +142,26 @@ class DbProvides(Object):
             # old PostgreSQL library (ops-lib-pgsql) and the connection between the
             # application and this charm will not work.
             for databag in [application_relation_databag, unit_relation_databag]:
-                # This list of subnets is not being filled correctly yet.
-                databag["allowed-subnets"] = self._get_allowed_subnets(event.relation)
-                databag["allowed-units"] = self._get_allowed_units(event.relation)
-                databag["host"] = self.charm.endpoint
-                databag["master"] = primary
-                databag["port"] = "5432"
-                databag["standbys"] = standbys
-                databag["state"] = self._get_state()
-                databag["version"] = self.charm.postgresql.get_postgresql_version()
-                databag["user"] = user
-                databag["password"] = password
-                databag["database"] = database
+                updates = {
+                    "allowed-subnets": self._get_allowed_subnets(event.relation),
+                    "allowed-units": self._get_allowed_units(event.relation),
+                    "host": self.charm.endpoint,
+                    "master": primary,
+                    "port": "5432",
+                    "standbys": standbys,
+                    "version": self.charm.postgresql.get_postgresql_version(),
+                    "user": user,
+                    "password": password,
+                    "database": database,
+                }
+                databag.update(updates)
         except (
             PostgreSQLCreateDatabaseError,
             PostgreSQLCreateUserError,
             PostgreSQLGetPostgreSQLVersionError,
         ):
             self.charm.unit.status = BlockedStatus(
-                f"Failed to initialize {event.relation.name} relation"
+                f"Failed to initialize {self.relation_name} relation"
             )
             return
 
@@ -214,7 +215,7 @@ class DbProvides(Object):
             self.charm.postgresql.delete_user(user)
         except PostgreSQLDeleteUserError:
             self.charm.unit.status = BlockedStatus(
-                f"Failed to delete user during {event.relation.name} relation broken event"
+                f"Failed to delete user during {self.relation_name} relation broken event"
             )
 
     def _get_allowed_subnets(self, relation: Relation) -> str:
