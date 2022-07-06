@@ -36,7 +36,6 @@ async def check_database_users_existence(
         password,
         "SELECT usename FROM pg_catalog.pg_user;",
     )
-    print(f"output: {output}")
 
     # Assert users that should exist.
     for user in users_that_should_exist:
@@ -65,7 +64,6 @@ async def check_database_creation(ops_test: OpsTest, database: str) -> None:
             password,
             "SELECT datname FROM pg_database;",
         )
-        print(f"output: {output}")
         assert database in output
 
         # Ensure that application tables exist in the database
@@ -75,7 +73,6 @@ async def check_database_creation(ops_test: OpsTest, database: str) -> None:
             "SELECT table_name FROM information_schema.tables;",
             database=database,
         )
-        print(f"output: {output}")
         assert len(output)
 
 

@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
-import logging
 
 from pytest_operator.plugin import OpsTest
 
@@ -13,12 +12,10 @@ from tests.integration.helpers import (
     deploy_and_relate_application_with_postgresql,
 )
 
-logger = logging.getLogger(__name__)
-
 FINOS_WALTZ_APP_NAME = "finos-waltz"
 ANOTHER_FINOS_WALTZ_APP_NAME = "another-finos-waltz"
 APPLICATION_UNITS = 1
-DATABASE_UNITS = 1  # TODO: update this.
+DATABASE_UNITS = 3
 
 
 async def test_finos_waltz_db(ops_test: OpsTest) -> None:
@@ -71,6 +68,8 @@ async def test_finos_waltz_db(ops_test: OpsTest) -> None:
             APPLICATION_UNITS,
             channel="edge",
         )
+        # In this case, the database name is the same as in the first deployment
+        # because it's a fixed value in Finos Waltz charm.
         await check_database_creation(ops_test, "waltz")
 
         another_finos_waltz_users = [f"relation_id_{another_relation_id}"]
