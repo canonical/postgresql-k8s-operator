@@ -1,8 +1,8 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
-
 import unittest
-from unittest.mock import Mock, call, patch
+from pathlib import Path, PosixPath
+from unittest.mock import Mock, PropertyMock, call, mock_open, patch
 
 from lightkube import codecs
 from lightkube.resources.core_v1 import Pod
@@ -290,3 +290,59 @@ class TestCharm(unittest.TestCase):
         password = self.charm._get_postgres_password()
         self.assertIsNotNone(password)
         self.assertNotEqual(password, "")
+
+    def test_retrieve_resource(self):
+        # Test without adding the resource.
+        path = self.charm._retrieve_resource("key-file")
+        self.assertIsNone(path)
+
+        # Add an empty file as a resource.
+        self.harness.add_resource("key-file", "")
+        # Assert a path is returned.
+        path = self.charm._retrieve_resource("key-file")
+        self.assertTrue(isinstance(path, PosixPath))
+
+    @patch("charm.PostgresqlOperatorCharm._update_config")
+    @patch("ops.model.Container.push")
+    @patch("builtins.open", mock_open(), create=True)
+    def test_store_tls_files(self, _push, _update_config):
+        # Test without uploaded resources.
+        with patch("charm.PostgresqlOperatorCharm._tls_files", PropertyMock(return_value=[])):
+            self.charm._store_tls_files()
+            _push.assert_not_called()
+            _update_config.assert_called_once()
+
+        # Test with only one resource.
+        with patch(
+            "charm.PostgresqlOperatorCharm._tls_files",
+            PropertyMock(return_value=[Path("/tmp/server.key")]),
+        ):
+            self.charm._store_tls_files()
+            _push.assert_not_called()
+            self.assertEqual(_update_config.call_count, 2)
+
+        # Test with both resources.
+        with patch(
+            "charm.PostgresqlOperatorCharm._tls_files",
+            PropertyMock(return_value=[Path("/tmp/server.crt"), Path("/tmp/server.key")]),
+        ):
+            self.charm._store_tls_files()
+            self.assertEqual(_push.call_count, 2)
+            self.assertEqual(_update_config.call_count, 3)
+
+    @patch("charm.PostgresqlOperatorCharm._retrieve_resource")
+    def test_tls_files(self, _retrieve_resource):
+        # Test without uploaded resources.
+        _retrieve_resource.side_effect = [None, None]
+        files = self.charm._tls_files
+        self.assertEqual(files, [])
+
+        # Test with only one resource.
+        _retrieve_resource.side_effect = [None, "/tmp/server.key"]
+        files = self.charm._tls_files
+        self.assertEqual(files, ["/tmp/server.key"])
+
+        # Test with both resources.
+        _retrieve_resource.side_effect = ["/tmp/server.crt", "/tmp/server.key"]
+        files = self.charm._tls_files
+        self.assertEqual(files, ["/tmp/server.crt", "/tmp/server.key"])

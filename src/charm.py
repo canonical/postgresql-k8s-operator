@@ -6,7 +6,6 @@
 import json
 import logging
 from pathlib import Path
-from socket import socket
 from typing import List, Optional
 
 from charms.postgresql_k8s.v0.postgresql import PostgreSQL
@@ -40,6 +39,7 @@ from utils import new_password
 logger = logging.getLogger(__name__)
 
 PEER = "postgresql-replicas"
+TLS_RESOURCES = ["cert-file", "key-file"]
 
 
 class PostgresqlOperatorCharm(CharmBase):
@@ -119,7 +119,7 @@ class PostgresqlOperatorCharm(CharmBase):
         """Copy the TLS certificate and key to the PostgreSQL container."""
         # Copy the resources to the storage path if all of them were attached
         # and enable TLS.
-        if self._tls_files:
+        if len(self._tls_files) == len(TLS_RESOURCES):
             container = self.unit.get_container("postgresql")
 
             # Copy the files from the resources' location to the PostgreSQL container.
@@ -150,8 +150,7 @@ class PostgresqlOperatorCharm(CharmBase):
             A list with the paths of the certificate and the key
                 if they were attached as resources to this application.
         """
-        resources = ["cert-file", "key-file"]
-        return [path for path in map(self._retrieve_resource, resources) if path]
+        return [path for path in map(self._retrieve_resource, TLS_RESOURCES) if path]
 
     def _get_endpoints_to_remove(self) -> List[str]:
         """List the endpoints that were part of the cluster but departed."""
@@ -464,17 +463,10 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _restart_postgresql_service(self) -> None:
         """Restart PostgreSQL and Patroni."""
-        try:
-            self.unit.status = MaintenanceStatus(f"restarting {self._postgresql_service} service")
-            container = self.unit.get_container("postgresql")
-            container.restart(self._postgresql_service)
-            self.unit.status = ActiveStatus()
-        except socket.timeout as e:
-            logger.error(f"failed to restart {self._postgresql_service} service with error {e}")
-            self.unit.status = BlockedStatus(
-                f"failed to restart {self._postgresql_service} service"
-            )
-            return
+        self.unit.status = MaintenanceStatus(f"restarting {self._postgresql_service} service")
+        container = self.unit.get_container("postgresql")
+        container.restart(self._postgresql_service)
+        self.unit.status = ActiveStatus()
 
     @property
     def _patroni(self):
