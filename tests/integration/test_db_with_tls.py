@@ -15,7 +15,7 @@ from tests.integration.helpers import (
 )
 
 MATTERMOST_APP_NAME = "mattermost"
-APPLICATION_UNITS = 1
+APPLICATION_UNITS = 2
 DATABASE_UNITS = 3
 
 
