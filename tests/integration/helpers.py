@@ -12,16 +12,6 @@ from pytest_operator.plugin import OpsTest
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
-TLS_RESOURCES = {
-    "cert-file": "tests/tls/server.crt",
-    "key-file": "tests/tls/server.key",
-}
-
-
-async def attach_resource(ops_test: OpsTest, app_name: str, rsc_name: str, rsc_path: str) -> None:
-    """Use the `juju attach-resource` command to add resources."""
-    # logger.info(f"Attaching resource: attach-resource {APP_NAME} {rsc_name}={rsc_path}")
-    await ops_test.juju("attach-resource", app_name, f"{rsc_name}={rsc_path}")
 
 
 async def check_database_users_existence(
