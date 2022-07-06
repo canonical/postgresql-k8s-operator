@@ -7,7 +7,7 @@ import json
 import logging
 from typing import List
 
-from charms.postgresql.v0.postgresql import PostgreSQL
+from charms.postgresql_k8s.v0.postgresql import PostgreSQL
 from lightkube import ApiError, Client, codecs
 from lightkube.resources.core_v1 import Pod
 from ops.charm import (

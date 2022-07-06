@@ -23,7 +23,7 @@ import psycopg2
 from psycopg2 import sql
 
 # The unique Charmhub library identifier, never change it
-LIBID = "b4ef28bf98604fb0b766c9e2b6ba26c7"
+LIBID = "24ee217a54e840a598ff21a079c3e678"
 
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
@@ -31,6 +31,7 @@ LIBAPI = 0
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
 LIBPATCH = 1
+
 
 class PostgreSQL:
     """Abstract class to encapsulate all operations related to the MySQL instance and cluster.
@@ -81,9 +82,11 @@ class PostgreSQL:
         cursor.execute(f"SELECT datname FROM pg_database WHERE datname='{database}';")
         if cursor.fetchone() is None:
             cursor.execute(sql.SQL("CREATE DATABASE {};").format(sql.Identifier(database)))
-        cursor.execute(sql.SQL("GRANT ALL PRIVILEGES ON DATABASE {} TO {};")
-                       .format(sql.Identifier(database),
-                               sql.Identifier(user)))
+        cursor.execute(
+            sql.SQL("GRANT ALL PRIVILEGES ON DATABASE {} TO {};").format(
+                sql.Identifier(database), sql.Identifier(user)
+            )
+        )
 
     def create_user(self, user: str, password: str, admin: bool = False) -> None:
         """Creates a database user.
@@ -95,7 +98,9 @@ class PostgreSQL:
         """
         with self._connect_to_database() as connection, connection.cursor() as cursor:
             cursor.execute(f"SELECT TRUE FROM pg_roles WHERE rolname='{user}';")
-            user_definition = f"{user} WITH LOGIN{' SUPERUSER' if admin else ''} ENCRYPTED PASSWORD '{password}'"
+            user_definition = (
+                f"{user} WITH LOGIN{' SUPERUSER' if admin else ''} ENCRYPTED PASSWORD '{password}'"
+            )
             if cursor.fetchone() is not None:
                 cursor.execute(f"ALTER ROLE {user_definition};")
             else:
@@ -109,7 +114,7 @@ class PostgreSQL:
         """
         # List all databases.
         with self._connect_to_database() as connection, connection.cursor() as cursor:
-            cursor.execute(f"SELECT datname FROM pg_database WHERE datistemplate = false;")
+            cursor.execute("SELECT datname FROM pg_database WHERE datistemplate = false;")
             databases = [row[0] for row in cursor.fetchall()]
 
         # Existing objects need to be reassigned in each database before the user can be deleted.
@@ -129,7 +134,6 @@ class PostgreSQL:
             PostgreSQL version number.
         """
         with self._connect_to_database() as connection, connection.cursor() as cursor:
-            cursor.execute(f"SELECT version();")
+            cursor.execute("SELECT version();")
             # Split to get only the version number.
             return cursor.fetchone()[0].split(" ")[1]
-
