@@ -7,6 +7,12 @@
 import logging
 from typing import Iterable
 
+from charms.postgresql_k8s.v0.postgresql import (
+    PostgreSQLCreateDatabaseError,
+    PostgreSQLCreateUserError,
+    PostgreSQLDeleteUserError,
+    PostgreSQLGetPostgreSQLVersionError,
+)
 from ops.charm import (
     CharmBase,
     RelationBrokenEvent,
@@ -97,56 +103,66 @@ class DbProvides(Object):
             event.defer()
             return
 
-        # Creates the user and the database for this specific relation if it was not already
-        # created in a previous relation changed event.
-        user = f"relation_id_{event.relation.id}"
-        password = unit_relation_databag.get("password", new_password())
-        self.charm.postgresql.create_user(user, password, self.admin)
-        self.charm.postgresql.create_database(database, user)
+        try:
+            # Creates the user and the database for this specific relation if it was not already
+            # created in a previous relation changed event.
+            user = f"relation_id_{event.relation.id}"
+            password = unit_relation_databag.get("password", new_password())
+            self.charm.postgresql.create_user(user, password, self.admin)
+            self.charm.postgresql.create_database(database, user)
 
-        # Build the primary's connection string.
-        primary = str(
-            ConnectionString(
-                host=self.charm.primary_endpoint,
-                dbname=database,
-                port=5432,
-                user=user,
-                password=password,
-                fallback_application_name=event.app.name,
+            # Build the primary's connection string.
+            primary = str(
+                ConnectionString(
+                    host=self.charm.primary_endpoint,
+                    dbname=database,
+                    port=5432,
+                    user=user,
+                    password=password,
+                    fallback_application_name=event.app.name,
+                )
             )
-        )
 
-        # Build the standbys' connection string.
-        standbys = str(
-            ConnectionString(
-                host=self.charm.replicas_endpoint,
-                dbname=database,
-                port=5432,
-                user=user,
-                password=password,
-                fallback_application_name=event.app.name,
+            # Build the standbys' connection string.
+            standbys = str(
+                ConnectionString(
+                    host=self.charm.replicas_endpoint,
+                    dbname=database,
+                    port=5432,
+                    user=user,
+                    password=password,
+                    fallback_application_name=event.app.name,
+                )
             )
-        )
 
-        # Set the data in both application and unit data bag.
-        # It 's needed to run this logic on every relation changed event
-        # setting the data again in the databag, otherwise the application charm that
-        # is connecting to this database will receive a "database gone" event from the
-        # old PostgreSQL library (ops-lib-pgsql) and the connection between the
-        # application and this charm will not work.
-        for databag in [application_relation_databag, unit_relation_databag]:
-            # This list of subnets is not being filled correctly yet.
-            databag["allowed-subnets"] = self._get_allowed_subnets(event.relation)
-            databag["allowed-units"] = self._get_allowed_units(event.relation)
-            databag["host"] = self.charm.endpoint
-            databag["master"] = primary
-            databag["port"] = "5432"
-            databag["standbys"] = standbys
-            databag["state"] = self._get_state()
-            databag["version"] = self.charm.postgresql.get_postgresql_version()
-            databag["user"] = user
-            databag["password"] = password
-            databag["database"] = database
+            # Set the data in both application and unit data bag.
+            # It 's needed to run this logic on every relation changed event
+            # setting the data again in the databag, otherwise the application charm that
+            # is connecting to this database will receive a "database gone" event from the
+            # old PostgreSQL library (ops-lib-pgsql) and the connection between the
+            # application and this charm will not work.
+            for databag in [application_relation_databag, unit_relation_databag]:
+                # This list of subnets is not being filled correctly yet.
+                databag["allowed-subnets"] = self._get_allowed_subnets(event.relation)
+                databag["allowed-units"] = self._get_allowed_units(event.relation)
+                databag["host"] = self.charm.endpoint
+                databag["master"] = primary
+                databag["port"] = "5432"
+                databag["standbys"] = standbys
+                databag["state"] = self._get_state()
+                databag["version"] = self.charm.postgresql.get_postgresql_version()
+                databag["user"] = user
+                databag["password"] = password
+                databag["database"] = database
+        except (
+            PostgreSQLCreateDatabaseError,
+            PostgreSQLCreateUserError,
+            PostgreSQLGetPostgreSQLVersionError,
+        ):
+            self.charm.unit.status = BlockedStatus(
+                f"Failed to initialize {event.relation.name} relation"
+            )
+            return
 
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Handle the departure of legacy db and db-admin relations.
@@ -194,7 +210,12 @@ class DbProvides(Object):
 
         # Delete the user.
         user = f"relation_id_{event.relation.id}"
-        self.charm.postgresql.delete_user(user)
+        try:
+            self.charm.postgresql.delete_user(user)
+        except PostgreSQLDeleteUserError:
+            self.charm.unit.status = BlockedStatus(
+                f"Failed to delete user during {event.relation.name} relation broken event"
+            )
 
     def _get_allowed_subnets(self, relation: Relation) -> str:
         """Build the list of allowed subnets as in the legacy charm."""

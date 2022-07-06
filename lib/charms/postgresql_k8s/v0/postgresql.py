@@ -15,7 +15,10 @@
 """PostgreSQL helper class.
 
 The `postgresql` module provides methods for interacting with the PostgreSQL instance.
+
+Any charm using this library should import the `psycopg2` or `psycopg2-binary` dependency.
 """
+import logging
 
 import psycopg2
 from psycopg2 import sql
@@ -29,6 +32,25 @@ LIBAPI = 0
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
 LIBPATCH = 1
+
+
+logger = logging.getLogger(__name__)
+
+
+class PostgreSQLCreateDatabaseError(Exception):
+    """Exception raised when creating a database fails."""
+
+
+class PostgreSQLCreateUserError(Exception):
+    """Exception raised when creating a user fails."""
+
+
+class PostgreSQLDeleteUserError(Exception):
+    """Exception raised when deleting a user fails."""
+
+
+class PostgreSQLGetPostgreSQLVersionError(Exception):
+    """Exception raised when retrieving PostgreSQL version fails."""
 
 
 class PostgreSQL:
@@ -69,16 +91,20 @@ class PostgreSQL:
             database: database to be created.
             user: user that will have access to the database.
         """
-        connection = self._connect_to_database()
-        cursor = connection.cursor()
-        cursor.execute(f"SELECT datname FROM pg_database WHERE datname='{database}';")
-        if cursor.fetchone() is None:
-            cursor.execute(sql.SQL("CREATE DATABASE {};").format(sql.Identifier(database)))
-        cursor.execute(
-            sql.SQL("GRANT ALL PRIVILEGES ON DATABASE {} TO {};").format(
-                sql.Identifier(database), sql.Identifier(user)
+        try:
+            connection = self._connect_to_database()
+            cursor = connection.cursor()
+            cursor.execute(f"SELECT datname FROM pg_database WHERE datname='{database}';")
+            if cursor.fetchone() is None:
+                cursor.execute(sql.SQL("CREATE DATABASE {};").format(sql.Identifier(database)))
+            cursor.execute(
+                sql.SQL("GRANT ALL PRIVILEGES ON DATABASE {} TO {};").format(
+                    sql.Identifier(database), sql.Identifier(user)
+                )
             )
-        )
+        except psycopg2.Error as e:
+            logger.error(f"Failed to create database: {e}")
+            raise PostgreSQLCreateDatabaseError()
 
     def create_user(self, user: str, password: str, admin: bool = False) -> None:
         """Creates a database user.
@@ -88,15 +114,17 @@ class PostgreSQL:
             password: password to be assigned to the user.
             admin: whether the user should have additional admin privileges.
         """
-        with self._connect_to_database() as connection, connection.cursor() as cursor:
-            cursor.execute(f"SELECT TRUE FROM pg_roles WHERE rolname='{user}';")
-            user_definition = (
-                f"{user} WITH LOGIN{' SUPERUSER' if admin else ''} ENCRYPTED PASSWORD '{password}'"
-            )
-            if cursor.fetchone() is not None:
-                cursor.execute(f"ALTER ROLE {user_definition};")
-            else:
-                cursor.execute(f"CREATE ROLE {user_definition};")
+        try:
+            with self._connect_to_database() as connection, connection.cursor() as cursor:
+                cursor.execute(f"SELECT TRUE FROM pg_roles WHERE rolname='{user}';")
+                user_definition = f"{user} WITH LOGIN{' SUPERUSER' if admin else ''} ENCRYPTED PASSWORD '{password}'"
+                if cursor.fetchone() is not None:
+                    cursor.execute(f"ALTER ROLE {user_definition};")
+                else:
+                    cursor.execute(f"CREATE ROLE {user_definition};")
+        except psycopg2.Error as e:
+            logger.error(f"Failed to create user: {e}")
+            raise PostgreSQLCreateUserError()
 
     def delete_user(self, user: str) -> None:
         """Deletes a database user.
@@ -105,19 +133,26 @@ class PostgreSQL:
             user: user to be deleted.
         """
         # List all databases.
-        with self._connect_to_database() as connection, connection.cursor() as cursor:
-            cursor.execute("SELECT datname FROM pg_database WHERE datistemplate = false;")
-            databases = [row[0] for row in cursor.fetchall()]
+        try:
+            with self._connect_to_database() as connection, connection.cursor() as cursor:
+                cursor.execute("SELECT datname FROM pg_database WHERE datistemplate = false;")
+                databases = [row[0] for row in cursor.fetchall()]
 
-        # Existing objects need to be reassigned in each database before the user can be deleted.
-        for database in databases:
-            with self._connect_to_database(database) as connection, connection.cursor() as cursor:
-                cursor.execute(f"REASSIGN OWNED BY {user} TO postgres;")
-                cursor.execute(f"DROP OWNED BY {user};")
+            # Existing objects need to be reassigned in each database
+            # before the user can be deleted.
+            for database in databases:
+                with self._connect_to_database(
+                    database
+                ) as connection, connection.cursor() as cursor:
+                    cursor.execute(f"REASSIGN OWNED BY {user} TO postgres;")
+                    cursor.execute(f"DROP OWNED BY {user};")
 
-        # Delete the user.
-        with self._connect_to_database() as connection, connection.cursor() as cursor:
-            cursor.execute(f"DROP ROLE {user};")
+            # Delete the user.
+            with self._connect_to_database() as connection, connection.cursor() as cursor:
+                cursor.execute(f"DROP ROLE {user};")
+        except psycopg2.Error as e:
+            logger.error(f"Failed to delete user: {e}")
+            raise PostgreSQLDeleteUserError()
 
     def get_postgresql_version(self) -> str:
         """Returns the PostgreSQL version.
@@ -125,7 +160,11 @@ class PostgreSQL:
         Returns:
             PostgreSQL version number.
         """
-        with self._connect_to_database() as connection, connection.cursor() as cursor:
-            cursor.execute("SELECT version();")
-            # Split to get only the version number.
-            return cursor.fetchone()[0].split(" ")[1]
+        try:
+            with self._connect_to_database() as connection, connection.cursor() as cursor:
+                cursor.execute("SELECT version();")
+                # Split to get only the version number.
+                return cursor.fetchone()[0].split(" ")[1]
+        except psycopg2.Error as e:
+            logger.error(f"Failed to get PostgreSQL version: {e}")
+            raise PostgreSQLGetPostgreSQLVersionError()
