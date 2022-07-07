@@ -76,5 +76,7 @@ jobs:
       - name: Load Image into microk8s
         run: |
           /usr/bin/sg microk8s -c "microk8s ctr image import /tmp/image.tar"
+      - name: Setup upterm session
+        uses: lhotari/action-upterm@v1
       - name: Run integration tests
         run: tox -e integration
