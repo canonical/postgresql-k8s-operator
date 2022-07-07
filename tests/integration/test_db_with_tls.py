@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
+from asyncio import sleep
 
 from pytest_operator.plugin import OpsTest
 
@@ -64,6 +65,10 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
             wait_for_exact_units=DATABASE_UNITS,
         )
 
+        await sleep(180)
+        print(ops_test.juju("run", "--unit", "postgresql-k8s/0", "resource-get", "cert-file"))
+        print(ops_test.juju("run", "--unit", "postgresql-k8s/1", "resource-get", "cert-file"))
+        print(ops_test.juju("run", "--unit", "postgresql-k8s/2", "resource-get", "cert-file"))
         for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
             assert unit.workload_status == "active"
 
