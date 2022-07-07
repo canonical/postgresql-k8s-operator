@@ -78,3 +78,5 @@ jobs:
           /usr/bin/sg microk8s -c "microk8s ctr image import /tmp/image.tar"
       - name: Run integration tests
         run: tox -e integration -- tests/integration/test_db_with_tls.py
+      - name: Setup tmate session
+        uses: mxschmitt/action-tmate@v3
