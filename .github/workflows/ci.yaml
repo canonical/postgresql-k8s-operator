@@ -35,7 +35,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: 'canonical/postgresql-patroni-container'
-          ref: 'v0.1.0'
+          ref: '2.1.4'
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v1
       - name: Build Image and Export
@@ -76,7 +76,5 @@ jobs:
       - name: Load Image into microk8s
         run: |
           /usr/bin/sg microk8s -c "microk8s ctr image import /tmp/image.tar"
-      - name: Setup tmate session
-        uses: mxschmitt/action-tmate@v3
       - name: Run integration tests
         run: tox -e integration
