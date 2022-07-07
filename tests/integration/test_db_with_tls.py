@@ -66,9 +66,9 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         )
 
         await sleep(180)
-        print(ops_test.juju("run", "--unit", "postgresql-k8s/0", "resource-get", "cert-file"))
-        print(ops_test.juju("run", "--unit", "postgresql-k8s/1", "resource-get", "cert-file"))
-        print(ops_test.juju("run", "--unit", "postgresql-k8s/2", "resource-get", "cert-file"))
+        print(await ops_test.juju("run", "--unit", "postgresql-k8s/0", "resource-get", "cert-file"))
+        print(await ops_test.juju("run", "--unit", "postgresql-k8s/1", "resource-get", "cert-file"))
+        print(await ops_test.juju("run", "--unit", "postgresql-k8s/2", "resource-get", "cert-file"))
         for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
             assert unit.workload_status == "active"
 
