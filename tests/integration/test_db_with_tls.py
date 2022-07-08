@@ -30,17 +30,17 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
     """
     async with ops_test.fast_forward():
         # Build and deploy the PostgreSQL charm.
-        # charm = await ops_test.build_charm(".")
-        # resources = {
-        #     "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
-        #     "cert-file": METADATA["resources"]["cert-file"]["filename"],
-        #     "key-file": METADATA["resources"]["key-file"]["filename"],
-        # }
+        charm = await ops_test.build_charm(".")
+        resources = {
+            "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
+            "cert-file": METADATA["resources"]["cert-file"]["filename"],
+            "key-file": METADATA["resources"]["key-file"]["filename"],
+        }
         await ops_test.model.deploy(
-            "postgresql-k8s",
-            # resources=resources,
+            charm,
+            resources=resources,
             application_name=DATABASE_APP_NAME,
-            # trust=True,
+            trust=True,
             num_units=DATABASE_UNITS,
         ),
         # Wait until the PostgreSQL charm is successfully deployed.
@@ -53,13 +53,13 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         )
         assert len(ops_test.model.applications[DATABASE_APP_NAME].units) == DATABASE_UNITS
 
-        # # Add TLS certificate and key to PostgreSQL.
-        # for rsc_name, src_path in TLS_RESOURCES.items():
-        #     await attach_resource(ops_test, DATABASE_APP_NAME, rsc_name, src_path)
+        # Add TLS certificate and key to PostgreSQL.
+        for rsc_name, src_path in TLS_RESOURCES.items():
+            await attach_resource(ops_test, DATABASE_APP_NAME, rsc_name, src_path)
 
-        # # Wait for all units enabling TLS (after the execution of the upgrade charm hook).
-        # for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
-        #     assert await is_tls_enabled(ops_test, unit.name)
+        # Wait for all units enabling TLS (after the execution of the upgrade charm hook).
+        for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
+            assert await is_tls_enabled(ops_test, unit.name)
 
         await ops_test.model.wait_for_idle(
             apps=[DATABASE_APP_NAME],
@@ -76,14 +76,14 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         relation_id = await deploy_and_relate_application_with_postgresql(
             ops_test, "mattermost-k8s", MATTERMOST_APP_NAME, APPLICATION_UNITS, status="waiting"
         )
-        # await check_database_creation(ops_test, "mattermost")
-        #
-        # mattermost_users = [f"relation_id_{relation_id}"]
-        #
-        # await check_database_users_existence(ops_test, mattermost_users, [])
-        #
-        # # Remove the deployment of Mattermost.
-        # await ops_test.model.remove_application(MATTERMOST_APP_NAME, block_until_done=True)
-        #
-        # # Remove the PostgreSQL application.
-        # await ops_test.model.remove_application(DATABASE_APP_NAME, block_until_done=True)
+        await check_database_creation(ops_test, "mattermost")
+
+        mattermost_users = [f"relation_id_{relation_id}"]
+
+        await check_database_users_existence(ops_test, mattermost_users, [])
+
+        # Remove the deployment of Mattermost.
+        await ops_test.model.remove_application(MATTERMOST_APP_NAME, block_until_done=True)
+
+        # Remove the PostgreSQL application.
+        await ops_test.model.remove_application(DATABASE_APP_NAME, block_until_done=True)
