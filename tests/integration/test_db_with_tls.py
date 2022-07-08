@@ -65,7 +65,16 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
             wait_for_exact_units=DATABASE_UNITS,
         )
 
-        # await sleep(180)
+        print(
+            await ops_test.juju("run", "--unit", "postgresql-k8s/0", "resource-get", "cert-file")
+        )
+        print(
+            await ops_test.juju("run", "--unit", "postgresql-k8s/1", "resource-get", "cert-file")
+        )
+        print(
+            await ops_test.juju("run", "--unit", "postgresql-k8s/2", "resource-get", "cert-file")
+        )
+        await sleep(180)
         print(
             await ops_test.juju("run", "--unit", "postgresql-k8s/0", "resource-get", "cert-file")
         )
