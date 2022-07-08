@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
-from asyncio import sleep
 
 from pytest_operator.plugin import OpsTest
 
@@ -13,6 +12,7 @@ from tests.integration.helpers import (
     check_database_creation,
     check_database_users_existence,
     deploy_and_relate_application_with_postgresql,
+    is_tls_enabled,
 )
 
 MATTERMOST_APP_NAME = "mattermost"
@@ -57,6 +57,9 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         for rsc_name, src_path in TLS_RESOURCES.items():
             await attach_resource(ops_test, DATABASE_APP_NAME, rsc_name, src_path)
 
+        for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
+            assert await is_tls_enabled(ops_test, unit.name)
+
         await ops_test.model.wait_for_idle(
             apps=[DATABASE_APP_NAME],
             status="active",
@@ -65,25 +68,6 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
             wait_for_exact_units=DATABASE_UNITS,
         )
 
-        print(
-            await ops_test.juju("run", "--unit", "postgresql-k8s/0", "resource-get", "cert-file")
-        )
-        print(
-            await ops_test.juju("run", "--unit", "postgresql-k8s/1", "resource-get", "cert-file")
-        )
-        print(
-            await ops_test.juju("run", "--unit", "postgresql-k8s/2", "resource-get", "cert-file")
-        )
-        await sleep(180)
-        print(
-            await ops_test.juju("run", "--unit", "postgresql-k8s/0", "resource-get", "cert-file")
-        )
-        print(
-            await ops_test.juju("run", "--unit", "postgresql-k8s/1", "resource-get", "cert-file")
-        )
-        print(
-            await ops_test.juju("run", "--unit", "postgresql-k8s/2", "resource-get", "cert-file")
-        )
         for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
             assert unit.workload_status == "active"
 
@@ -96,16 +80,6 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         mattermost_users = [f"relation_id_{relation_id}"]
 
         await check_database_users_existence(ops_test, mattermost_users, [])
-
-        print(
-            await ops_test.juju("run", "--unit", "postgresql-k8s/0", "resource-get", "cert-file")
-        )
-        print(
-            await ops_test.juju("run", "--unit", "postgresql-k8s/1", "resource-get", "cert-file")
-        )
-        print(
-            await ops_test.juju("run", "--unit", "postgresql-k8s/2", "resource-get", "cert-file")
-        )
 
         # Remove the deployment of Mattermost.
         await ops_test.model.remove_application(MATTERMOST_APP_NAME, block_until_done=True)

@@ -9,6 +9,7 @@ import psycopg2
 import requests
 import yaml
 from pytest_operator.plugin import OpsTest
+from tenacity import retry, retry_if_result, stop_after_attempt, wait_exponential
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
@@ -236,6 +237,31 @@ async def get_unit_address(ops_test: OpsTest, unit_name: str) -> str:
     """
     status = await ops_test.model.get_status()
     return status["applications"][unit_name.split("/")[0]].units[unit_name]["address"]
+
+
+@retry(
+    retry=retry_if_result(lambda x: not x),
+    stop=stop_after_attempt(10),
+    wait=wait_exponential(multiplier=1, min=2, max=30),
+)
+async def is_tls_enabled(ops_test: OpsTest, unit_name: str) -> bool:
+    """Returns whether TLS is enabled on the specific PostgreSQL instance.
+
+    Args:
+        ops_test: The ops test framework instance.
+        unit_name: The name of the unit of the PostgreSQL instance.
+
+    Returns:
+        Whether TLS is enabled.
+    """
+    unit_address = await get_unit_address(ops_test, unit_name)
+    password = await get_postgres_password(ops_test)
+    try:
+        output = await execute_query_on_unit(unit_address, password, "SHOW ssl;")
+        print(f"Output: {output} for unit {unit_name}")
+    except psycopg2.Error:
+        return False
+    return "on" in output
 
 
 async def scale_application(ops_test: OpsTest, application_name: str, scale: int) -> None:
