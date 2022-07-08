@@ -57,6 +57,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         for rsc_name, src_path in TLS_RESOURCES.items():
             await attach_resource(ops_test, DATABASE_APP_NAME, rsc_name, src_path)
 
+        # Wait for all units enabling TLS (after the execution of the upgrade charm hook).
         for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
             assert await is_tls_enabled(ops_test, unit.name)
 

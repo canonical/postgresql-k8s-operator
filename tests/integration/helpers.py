@@ -258,7 +258,6 @@ async def is_tls_enabled(ops_test: OpsTest, unit_name: str) -> bool:
     password = await get_postgres_password(ops_test)
     try:
         output = await execute_query_on_unit(unit_address, password, "SHOW ssl;")
-        print(f"Output: {output} for unit {unit_name}")
     except psycopg2.Error:
         return False
     return "on" in output
