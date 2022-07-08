@@ -141,10 +141,6 @@ async def deploy_and_relate_application_with_postgresql(
         apps=[application_name],
         status="active",
         raise_on_blocked=False,  # Application that needs a relation is blocked initially.
-        # Some applications like Mattermost try to install a plugin in its own container
-        # that triggers a temporary error (it also happens when relating to the legacy
-        # PostgreSQL charm).
-        raise_on_error=False,
         timeout=1000,
     )
 
