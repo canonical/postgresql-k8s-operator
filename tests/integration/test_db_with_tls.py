@@ -82,6 +82,10 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
 
         await check_database_users_existence(ops_test, mattermost_users, [])
 
+        print(await ops_test.juju("run", "--unit", "postgresql-k8s/0", "resource-get", "cert-file"))
+        print(await ops_test.juju("run", "--unit", "postgresql-k8s/1", "resource-get", "cert-file"))
+        print(await ops_test.juju("run", "--unit", "postgresql-k8s/2", "resource-get", "cert-file"))
+
         # Remove the deployment of Mattermost.
         await ops_test.model.remove_application(MATTERMOST_APP_NAME, block_until_done=True)
 
