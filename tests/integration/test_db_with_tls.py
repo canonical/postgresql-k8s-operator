@@ -65,10 +65,16 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
             wait_for_exact_units=DATABASE_UNITS,
         )
 
-        await sleep(180)
-        print(await ops_test.juju("run", "--unit", "postgresql-k8s/0", "resource-get", "cert-file"))
-        print(await ops_test.juju("run", "--unit", "postgresql-k8s/1", "resource-get", "cert-file"))
-        print(await ops_test.juju("run", "--unit", "postgresql-k8s/2", "resource-get", "cert-file"))
+        # await sleep(180)
+        print(
+            await ops_test.juju("run", "--unit", "postgresql-k8s/0", "resource-get", "cert-file")
+        )
+        print(
+            await ops_test.juju("run", "--unit", "postgresql-k8s/1", "resource-get", "cert-file")
+        )
+        print(
+            await ops_test.juju("run", "--unit", "postgresql-k8s/2", "resource-get", "cert-file")
+        )
         for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
             assert unit.workload_status == "active"
 
@@ -82,9 +88,15 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
 
         await check_database_users_existence(ops_test, mattermost_users, [])
 
-        print(await ops_test.juju("run", "--unit", "postgresql-k8s/0", "resource-get", "cert-file"))
-        print(await ops_test.juju("run", "--unit", "postgresql-k8s/1", "resource-get", "cert-file"))
-        print(await ops_test.juju("run", "--unit", "postgresql-k8s/2", "resource-get", "cert-file"))
+        print(
+            await ops_test.juju("run", "--unit", "postgresql-k8s/0", "resource-get", "cert-file")
+        )
+        print(
+            await ops_test.juju("run", "--unit", "postgresql-k8s/1", "resource-get", "cert-file")
+        )
+        print(
+            await ops_test.juju("run", "--unit", "postgresql-k8s/2", "resource-get", "cert-file")
+        )
 
         # Remove the deployment of Mattermost.
         await ops_test.model.remove_application(MATTERMOST_APP_NAME, block_until_done=True)
