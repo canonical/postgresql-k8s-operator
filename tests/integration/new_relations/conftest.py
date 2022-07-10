@@ -2,8 +2,6 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import shutil
-
 import pytest
 from pytest_operator.plugin import OpsTest
 

@@ -1,3 +1,31 @@
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    role: master
+  name: {{ app_name }}-primary
+spec:
+  ports:
+    - port: 5432
+      targetPort: 5432
+  selector:
+    role: master
+
+---
+kind: Service
+apiVersion: v1
+metadata:
+  labels:
+    role: replica
+  name: {{ app_name }}-replicas
+spec:
+  ports:
+    - port: 5432
+      targetPort: 5432
+  selector:
+    role: replica
+
+---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:

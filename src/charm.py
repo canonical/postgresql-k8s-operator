@@ -9,10 +9,7 @@ import secrets
 import string
 from typing import List
 
-from charms.data_platform_libs.v0.database_provides import (
-    DatabaseProvides,
-    DatabaseRequestedEvent,
-)
+from charms.postgresql_k8s.v0.postgresql import PostgreSQL
 from lightkube import ApiError, Client, codecs
 from lightkube.resources.core_v1 import Pod
 from ops.charm import (
@@ -32,11 +29,11 @@ from ops.model import (
     WaitingStatus,
 )
 from ops.pebble import Layer
-import psycopg2
 from requests import ConnectionError
 from tenacity import RetryError
 
 from patroni import NotReadyError, Patroni
+from relations.postgresql_client import PostgreSQLClientProvides
 
 logger = logging.getLogger(__name__)
 
@@ -69,60 +66,36 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on.update_status, self._on_update_status)
         self._storage_path = self.meta.storages["pgdata"].location
 
-        # Charm events defined in the database provides charm library.
-        self.database = DatabaseProvides(self, relation_name="postgresql")
-        self.framework.observe(self.database.on.database_requested, self._on_database_requested)
+        self.postgresql_client_relation = PostgreSQLClientProvides(self)
 
-    def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:
-        # TODO: change this code to use postgresql helpers library.
-        """Event triggered when a new database is requested."""
-        self.unit.status = MaintenanceStatus("creating database")
-
-        # Retrieve the database name and extra user roles using the charm library.
-        database = event.database
-        extra_user_roles = event.extra_user_roles
-
-        # Generate a username and a password for the application.
-        username = f"juju_{database}"
-        password = self._new_password()
-
-        # Connect to the database.
-        connection_string = f"dbname='postgres' user='postgres' host='localhost' password='{self._get_postgres_password()}' connect_timeout=10"
-        connection = psycopg2.connect(connection_string)
-        connection.autocommit = True
-        cursor = connection.cursor()
-        # Create the database, user and password. Also gives the user access to the database.
-        cursor.execute(f"CREATE DATABASE {database};")
-        cursor.execute(f"CREATE USER {username} WITH ENCRYPTED PASSWORD '{password}';")
-        cursor.execute(f"GRANT ALL PRIVILEGES ON DATABASE {database} TO {username};")
-        # Add the roles to the user.
-        if extra_user_roles:
-            cursor.execute(f'ALTER USER {username} {extra_user_roles.replace(",", " ")};')
-        # Get the database version.
-        cursor.execute("SELECT version();")
-        version = cursor.fetchone()[0]
-        cursor.close()
-        connection.close()
-
-        # Share the credentials with the application.
-        self.database.set_credentials(event.relation.id, username, password)
-
-        # Set the read/write endpoint.
-        self.database.set_endpoints(
-            # TODO: change to hostname (and use a service name to avoid changes).
-            event.relation.id, f'{self.model.get_binding("postgresql").network.bind_address}:5432'
+    @property
+    def postgresql(self) -> PostgreSQL:
+        """Returns an instance of the object used to interact with the database."""
+        return PostgreSQL(
+            host=self.primary_endpoint,
+            user="postgres",
+            password=self._get_postgres_password(),
+            database="postgres",
         )
 
-        self.database.set_read_only_endpoints(
-            # TODO: change to the real read only endpoints service hostname.
-            event.relation.id, f'{self.model.get_binding("postgresql").network.bind_address}:5432'
-        )
+    @property
+    def endpoint(self) -> str:
+        """Returns the endpoint of this instance's pod."""
+        return f'{self._unit.replace("/", "-")}.{self._build_service_name("endpoints")}'
 
-        # Share additional information with the application.
-        self.database.set_tls(event.relation.id, "False")
-        self.database.set_version(event.relation.id, version)
+    @property
+    def primary_endpoint(self) -> str:
+        """Returns the endpoint of the primary instance's service."""
+        return self._build_service_name("primary")
 
-        self.unit.status = ActiveStatus()
+    @property
+    def replicas_endpoint(self) -> str:
+        """Returns the endpoint of the replicas instances' service."""
+        return self._build_service_name("replicas")
+
+    def _build_service_name(self, service: str) -> str:
+        """Build a full k8s service name based on the service name."""
+        return f"{self._name}-{service}.{self._namespace}.svc.cluster.local"
 
     def _get_endpoints_to_remove(self) -> List[str]:
         """List the endpoints that were part of the cluster but departed."""
