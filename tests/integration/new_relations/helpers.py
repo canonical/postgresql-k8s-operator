@@ -5,6 +5,8 @@ import json
 from typing import Optional
 
 import yaml
+from lightkube.core.client import AsyncClient
+from lightkube.resources.core_v1 import Service
 from pytest_operator.plugin import OpsTest
 
 
@@ -43,30 +45,10 @@ async def build_connection_string(
     host = endpoints.split(",")[0].split(":")[0]
 
     # Translate the service hostname to an IP address.
-    cmd = [
-        "sg",
-        "microk8s",
-        "-c",
-        " ".join(
-            [
-                "microk8s.kubectl",
-                "get",
-                "service",
-                "-n",
-                ops_test.model_name,
-                host.split(".")[0],
-                "-o",
-                "json",
-                "|",
-                "jq",
-                "-r",
-                ".spec.clusterIP",
-            ]
-        ),
-    ]
-    retcode, stdout, stderr = await ops_test.run(*cmd)
-    assert retcode == 0, f"kubectl failed: {(stderr or stdout).strip()}"
-    ip = stdout.strip()
+    model = await ops_test.model.get_info()
+    client = AsyncClient(namespace=model.name)
+    service = await client.get(Service, name=host.split(".")[0])
+    ip = service.spec.clusterIP
 
     # Build the complete connection string to connect to the database.
     return f"dbname='{database}' user='{username}' host='{ip}' password='{password}' connect_timeout=10"
