@@ -75,12 +75,12 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest):
     )
     await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active")
 
-    # Get the connection string to connect to the database.
+    # Get the connection string to connect to the database using the read/write endpoint.
     connection_string = await build_connection_string(
         ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME
     )
 
-    # Connect to the database.
+    # Connect to the database using the read/write endpoint.
     with psycopg2.connect(connection_string) as connection, connection.cursor() as cursor:
         # Check that it's possible to write and read data from the database that
         # was created for the application.
@@ -102,6 +102,22 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest):
             ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME, "version"
         )
         assert version == data
+
+    # Get the connection string to connect to the database using the read-only endpoint.
+    connection_string = await build_connection_string(
+        ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME, read_only_endpoint=True
+    )
+
+    # Connect to the database using the read-only endpoint.
+    with psycopg2.connect(connection_string) as connection, connection.cursor() as cursor:
+        # Read some data.
+        cursor.execute("SELECT data FROM test;")
+        data = cursor.fetchone()
+        assert data[0] == "some data"
+
+        # Try to alter some data in a read-only transaction.
+        with pytest.raises(psycopg2.errors.ReadOnlySqlTransaction):
+            cursor.execute("DROP TABLE test;")
 
 
 async def test_user_with_extra_roles(ops_test: OpsTest):

@@ -17,6 +17,7 @@ async def build_connection_string(
     *,
     relation_id: str = None,
     relation_alias: str = None,
+    read_only_endpoint: bool = False,
 ) -> str:
     """Build a PostgreSQL connection string.
 
@@ -27,6 +28,8 @@ async def build_connection_string(
         relation_id: id of the relation to get connection data from
         relation_alias: alias of the relation (like a connection name)
             to get connection data from
+        read_only_endpoint: whether to choose the read-only endpoint
+            instead of the read/write endpoint
 
     Returns:
         a PostgreSQL connection string
@@ -40,7 +43,12 @@ async def build_connection_string(
         ops_test, application_name, relation_name, "password", relation_id, relation_alias
     )
     endpoints = await get_application_relation_data(
-        ops_test, application_name, relation_name, "endpoints", relation_id, relation_alias
+        ops_test,
+        application_name,
+        relation_name,
+        "read-only-endpoints" if read_only_endpoint else "endpoints",
+        relation_id,
+        relation_alias,
     )
     host = endpoints.split(",")[0].split(":")[0]
 
