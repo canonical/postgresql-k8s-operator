@@ -9,9 +9,19 @@ import psycopg2
 import requests
 import yaml
 from pytest_operator.plugin import OpsTest
+from tenacity import retry, retry_if_result, stop_after_attempt, wait_exponential
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
+TLS_RESOURCES = {
+    "cert-file": "tests/tls/server.crt",
+    "key-file": "tests/tls/server.key",
+}
+
+
+async def attach_resource(ops_test: OpsTest, app_name: str, rsc_name: str, rsc_path: str) -> None:
+    """Use the `juju attach-resource` command to add resources."""
+    await ops_test.juju("attach-resource", app_name, f"{rsc_name}={rsc_path}")
 
 
 async def check_database_users_existence(
@@ -92,6 +102,7 @@ async def deploy_and_relate_application_with_postgresql(
     number_of_units: int,
     channel: str = "stable",
     relation: str = "db",
+    status: str = "blocked",
 ) -> int:
     """Helper function to deploy and relate application with PostgreSQL.
 
@@ -103,6 +114,7 @@ async def deploy_and_relate_application_with_postgresql(
         channel: The channel to use for the charm.
         relation: Name of the PostgreSQL relation to relate
             the application to.
+        status: The status to wait for in the application (default: blocked).
 
     Returns:
         the id of the created relation.
@@ -116,7 +128,7 @@ async def deploy_and_relate_application_with_postgresql(
     )
     await ops_test.model.wait_for_idle(
         apps=[application_name],
-        status="blocked",
+        status=status,
         raise_on_blocked=False,
         timeout=1000,
     )
@@ -225,6 +237,30 @@ async def get_unit_address(ops_test: OpsTest, unit_name: str) -> str:
     """
     status = await ops_test.model.get_status()
     return status["applications"][unit_name.split("/")[0]].units[unit_name]["address"]
+
+
+@retry(
+    retry=retry_if_result(lambda x: not x),
+    stop=stop_after_attempt(10),
+    wait=wait_exponential(multiplier=1, min=2, max=30),
+)
+async def is_tls_enabled(ops_test: OpsTest, unit_name: str) -> bool:
+    """Returns whether TLS is enabled on the specific PostgreSQL instance.
+
+    Args:
+        ops_test: The ops test framework instance.
+        unit_name: The name of the unit of the PostgreSQL instance.
+
+    Returns:
+        Whether TLS is enabled.
+    """
+    unit_address = await get_unit_address(ops_test, unit_name)
+    password = await get_postgres_password(ops_test)
+    try:
+        output = await execute_query_on_unit(unit_address, password, "SHOW ssl;")
+    except psycopg2.Error:
+        return False
+    return "on" in output
 
 
 async def scale_application(ops_test: OpsTest, application_name: str, scale: int) -> None:
