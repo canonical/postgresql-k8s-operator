@@ -136,7 +136,7 @@ class DbProvides(Object):
             )
 
             # Set the data in both application and unit data bag.
-            # It 's needed to run this logic on every relation changed event
+            # It's needed to run this logic on every relation changed event
             # setting the data again in the databag, otherwise the application charm that
             # is connecting to this database will receive a "database gone" event from the
             # old PostgreSQL library (ops-lib-pgsql) and the connection between the
