@@ -18,6 +18,7 @@ async def check_database_users_existence(
     ops_test: OpsTest,
     users_that_should_exist: List[str],
     users_that_should_not_exist: List[str],
+    admin: bool = False,
 ) -> None:
     """Checks that applications users exist in the database.
 
@@ -25,6 +26,7 @@ async def check_database_users_existence(
         ops_test: The ops test framework
         users_that_should_exist: List of users that should exist in the database
         users_that_should_not_exist: List of users that should not exist in the database
+        admin: Whether to check if the existing users are superusers
     """
     unit = ops_test.model.applications[DATABASE_APP_NAME].units[0]
     unit_address = await get_unit_address(ops_test, unit.name)
@@ -34,12 +36,18 @@ async def check_database_users_existence(
     output = await execute_query_on_unit(
         unit_address,
         password,
-        "SELECT usename FROM pg_catalog.pg_user;",
+        "SELECT CONCAT(usename, ':', usesuper) FROM pg_catalog.pg_user;"
+        if admin
+        else "SELECT usename FROM pg_catalog.pg_user;",
     )
 
     # Assert users that should exist.
     for user in users_that_should_exist:
-        assert user in output
+        if admin:
+            # The t flag indicates the user is a superuser.
+            assert f"{user}:t" in output
+        else:
+            assert user in output
 
     # Assert users that should not exist.
     for user in users_that_should_not_exist:
