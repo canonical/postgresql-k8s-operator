@@ -80,7 +80,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 2
 
 logger = logging.getLogger(__name__)
 
@@ -184,7 +184,7 @@ class DatabaseProvides(Object):
         # Emit a database requested event if the setup key (database name and optional
         # extra user roles) was added to the relation databag by the application.
         if "database" in diff.added:
-            self.on.database_requested.emit(event.relation)
+            self.on.database_requested.emit(event.relation, app=event.app, unit=event.unit)
 
     def fetch_relation_data(self) -> dict:
         """Retrieves data from relation.
