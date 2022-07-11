@@ -337,7 +337,11 @@ class PostgresqlOperatorCharm(CharmBase):
                 to K8s API
         """
         client = Client()
-        patch = {"metadata": {"labels": {"application": "patroni", "cluster-name": self._name}}}
+        patch = {
+            "metadata": {
+                "labels": {"application": "patroni", "cluster-name": f"patroni-{self._name}"}
+            }
+        }
         client.patch(
             Pod,
             name=self._unit_name_to_pod_name(member),
@@ -468,11 +472,11 @@ class PostgresqlOperatorCharm(CharmBase):
                     "user": "postgres",
                     "group": "postgres",
                     "environment": {
-                        "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: {self._name}}}",
+                        "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: patroni-{self._name}}}",
                         "PATRONI_KUBERNETES_NAMESPACE": self._namespace,
-                        # "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
+                        "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
                         "PATRONI_NAME": pod_name,
-                        "PATRONI_SCOPE": self._name,
+                        "PATRONI_SCOPE": f"patroni-{self._name}",
                         "PATRONI_REPLICATION_USERNAME": "replication",
                         "PATRONI_REPLICATION_PASSWORD": self._replication_password,
                         "PATRONI_SUPERUSER_USERNAME": "postgres",
