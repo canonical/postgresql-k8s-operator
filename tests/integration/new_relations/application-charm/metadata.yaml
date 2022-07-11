@@ -10,10 +10,10 @@ summary: |
 requires:
   first-database:
     interface: postgresql-client
-#  second-database:
-#    interface: database-client
-#  multiple-database-clusters:
-#    interface: database-client
-#  aliased-multiple-database-clusters:
-#    interface: database-client
-#    limit: 2
+  second-database:
+    interface: postgresql-client
+  multiple-database-clusters:
+    interface: postgresql-client
+  aliased-multiple-database-clusters:
+    interface: postgresql-client
+    limit: 2
