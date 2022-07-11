@@ -5,8 +5,6 @@
 """Charmed Kubernetes Operator for the PostgreSQL database."""
 import json
 import logging
-import secrets
-import string
 from typing import List
 
 from charms.postgresql_k8s.v0.postgresql import PostgreSQL
@@ -33,7 +31,9 @@ from requests import ConnectionError
 from tenacity import RetryError
 
 from patroni import NotReadyError, Patroni
+from relations.db import DbProvides
 from relations.postgresql_client import PostgreSQLClientProvides
+from utils import new_password
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +67,8 @@ class PostgresqlOperatorCharm(CharmBase):
         self._storage_path = self.meta.storages["pgdata"].location
 
         self.postgresql_client_relation = PostgreSQLClientProvides(self)
+        self.legacy_db_relation = DbProvides(self, admin=False)
+        self.legacy_db_admin_relation = DbProvides(self, admin=True)
 
     @property
     def postgresql(self) -> PostgreSQL:
@@ -245,10 +247,10 @@ class PostgresqlOperatorCharm(CharmBase):
         replication_password = data.get("replication-password", None)
 
         if postgres_password is None:
-            self._peers.data[self.app]["postgres-password"] = self._new_password()
+            self._peers.data[self.app]["postgres-password"] = new_password()
 
         if replication_password is None:
-            self._peers.data[self.app]["replication-password"] = self._new_password()
+            self._peers.data[self.app]["replication-password"] = new_password()
 
         # Create resources and add labels needed for replication.
         self._create_resources()
@@ -480,16 +482,6 @@ class PostgresqlOperatorCharm(CharmBase):
             },
         }
         return Layer(layer_config)
-
-    def _new_password(self) -> str:
-        """Generate a random password string.
-
-        Returns:
-           A random password string.
-        """
-        choices = string.ascii_letters + string.digits
-        password = "".join([secrets.choice(choices) for i in range(16)])
-        return password
 
     @property
     def _peers(self) -> Relation:

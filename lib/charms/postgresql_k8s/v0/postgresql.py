@@ -106,7 +106,9 @@ class PostgreSQL:
             logger.error(f"Failed to create database: {e}")
             raise PostgreSQLCreateDatabaseError()
 
-    def create_user(self, user: str, password: str, admin: bool = False, extra_user_roles: str = None) -> None:
+    def create_user(
+        self, user: str, password: str, admin: bool = False, extra_user_roles: str = None
+    ) -> None:
         """Creates a database user.
 
         Args:
