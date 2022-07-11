@@ -17,7 +17,7 @@ log:
 restapi:
   connect_address: '{{ endpoint }}:8008'
   listen: 0.0.0.0:8008
-pod_ip: '{{ endpoint }}'
+# pod_ip: '{{ endpoint }}'
 postgresql:
   connect_address: '{{ endpoint }}:5432'
   custom_conf: {{ storage_path }}/postgresql-k8s-operator.conf
