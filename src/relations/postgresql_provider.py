@@ -25,7 +25,7 @@ from utils import new_password
 logger = logging.getLogger(__name__)
 
 
-class PostgreSQLClientProvides(Object):
+class PostgreSQLProvider(Object):
     """Defines functionality for the 'provides' side of the 'postgresql-client' relation.
 
     Hook events observed:

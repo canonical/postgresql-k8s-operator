@@ -32,7 +32,7 @@ from tenacity import RetryError
 
 from patroni import NotReadyError, Patroni
 from relations.db import DbProvides
-from relations.postgresql_client import PostgreSQLClientProvides
+from relations.postgresql_provider import PostgreSQLProvider
 from utils import new_password
 
 logger = logging.getLogger(__name__)
@@ -66,7 +66,7 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on.update_status, self._on_update_status)
         self._storage_path = self.meta.storages["pgdata"].location
 
-        self.postgresql_client_relation = PostgreSQLClientProvides(self)
+        self.postgresql_client_relation = PostgreSQLProvider(self)
         self.legacy_db_relation = DbProvides(self, admin=False)
         self.legacy_db_admin_relation = DbProvides(self, admin=True)
 
