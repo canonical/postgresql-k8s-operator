@@ -10,8 +10,10 @@ import pytest
 import yaml
 from pytest_operator.plugin import OpsTest
 
+from tests.integration.helpers import scale_application
 from tests.integration.new_relations.helpers import (
     build_connection_string,
+    check_relation_data_existence,
     get_application_relation_data,
 )
 
@@ -259,3 +261,37 @@ async def test_an_application_can_request_multiple_databases(ops_test: OpsTest, 
 
     # Assert the two application have different relation (connection) data.
     assert first_database_connection_string != second_database_connection_string
+
+
+async def test_no_read_only_endpoint_in_standalone_cluster(ops_test: OpsTest):
+    """Test that there is no read-only endpoint in a standalone cluster."""
+    async with ops_test.fast_forward():
+        # Scale down the database.
+        await scale_application(ops_test, DATABASE_APP_NAME, 1)
+
+        # Try to get the connection string of the database using the read-only endpoint.
+        # It should not be available anymore.
+        assert await check_relation_data_existence(
+            ops_test,
+            APPLICATION_APP_NAME,
+            FIRST_DATABASE_RELATION_NAME,
+            "read-only-endpoints",
+            exists=False,
+        )
+
+
+async def test_read_only_endpoint_in_scaled_up_cluster(ops_test: OpsTest):
+    """Test that there is read-only endpoint in a scaled up cluster."""
+    async with ops_test.fast_forward():
+        # Scale up the database.
+        await scale_application(ops_test, DATABASE_APP_NAME, 3)
+
+        # Try to get the connection string of the database using the read-only endpoint.
+        # It should be available again.
+        assert await check_relation_data_existence(
+            ops_test,
+            APPLICATION_APP_NAME,
+            FIRST_DATABASE_RELATION_NAME,
+            "read-only-endpoints",
+            exists=True,
+        )

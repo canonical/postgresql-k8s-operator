@@ -116,6 +116,7 @@ class PostgresqlOperatorCharm(CharmBase):
             return
 
         endpoints_to_remove = self._get_endpoints_to_remove()
+        self.postgresql_client_relation.update_read_only_endpoint()
         self._remove_from_endpoints(endpoints_to_remove)
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent) -> None:
@@ -144,6 +145,8 @@ class PostgresqlOperatorCharm(CharmBase):
             self.unit.status = WaitingStatus("awaiting for member to start")
             event.defer()
             return
+
+        self.postgresql_client_relation.update_read_only_endpoint()
 
         self.unit.status = ActiveStatus()
 

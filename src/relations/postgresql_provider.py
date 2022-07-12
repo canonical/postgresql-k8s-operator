@@ -92,12 +92,8 @@ class PostgreSQLProvider(Object):
                 f"{self.charm.primary_endpoint}:{DATABASE_PORT}",
             )
 
-            # Set the read-only endpoint only if there are replicas.
-            if len(self.charm._peers.units) > 0:
-                self.database_provides.set_read_only_endpoints(
-                    event.relation.id,
-                    f"{self.charm.replicas_endpoint}:{DATABASE_PORT}",
-                )
+            # Update the read-only endpoint.
+            self.update_read_only_endpoint(event)
 
             # Set the database version.
             self.database_provides.set_version(
@@ -134,3 +130,23 @@ class PostgreSQLProvider(Object):
             self.charm.unit.status = BlockedStatus(
                 f"Failed to delete user during {self.relation_name} relation broken event"
             )
+
+    def update_read_only_endpoint(self, event: DatabaseRequestedEvent = None) -> None:
+        """Set the read-only endpoint only if there are replicas."""
+        if not self.charm.unit.is_leader():
+            return
+
+        # Get the current relation or all the relations
+        # if this is triggered by another type of event.
+        relations = [event.relation] if event else self.model.relations[self.relation_name]
+
+        if len(self.charm._peers.units) > 0:
+            for relation in relations:
+                self.database_provides.set_read_only_endpoints(
+                    relation.id,
+                    f"{self.charm.replicas_endpoint}:{DATABASE_PORT}",
+                )
+        else:
+            # If there are no replicas, remove the read-only endpoint.
+            for relation in relations:
+                relation.data[self.charm.model.app].pop("read-only-endpoints", None)
