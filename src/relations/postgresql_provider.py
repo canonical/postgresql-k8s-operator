@@ -20,6 +20,7 @@ from ops.charm import CharmBase, RelationBrokenEvent
 from ops.framework import Object
 from ops.model import BlockedStatus
 
+from constants import DATABASE_PORT
 from utils import new_password
 
 logger = logging.getLogger(__name__)
@@ -88,14 +89,14 @@ class PostgreSQLProvider(Object):
             # Set the read/write endpoint.
             self.database_provides.set_endpoints(
                 event.relation.id,
-                f"{self.charm.primary_endpoint}:5432",
+                f"{self.charm.primary_endpoint}:{DATABASE_PORT}",
             )
 
             # Set the read-only endpoint only if there are replicas.
             if len(self.charm._peers.units) > 0:
                 self.database_provides.set_read_only_endpoints(
                     event.relation.id,
-                    f"{self.charm.replicas_endpoint}:5432",
+                    f"{self.charm.replicas_endpoint}:{DATABASE_PORT}",
                 )
 
             # Set the database version.
