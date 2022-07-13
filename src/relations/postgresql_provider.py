@@ -136,17 +136,19 @@ class PostgreSQLProvider(Object):
         if not self.charm.unit.is_leader():
             return
 
+        # If there are no replicas, remove the read-only endpoint.
+        endpoints = (
+            f"{self.charm.replicas_endpoint}:{DATABASE_PORT}"
+            if len(self.charm._peers.units) > 0
+            else ""
+        )
+
         # Get the current relation or all the relations
         # if this is triggered by another type of event.
         relations = [event.relation] if event else self.model.relations[self.relation_name]
 
-        if len(self.charm._peers.units) > 0:
-            for relation in relations:
-                self.database_provides.set_read_only_endpoints(
-                    relation.id,
-                    f"{self.charm.replicas_endpoint}:{DATABASE_PORT}",
-                )
-        else:
-            # If there are no replicas, remove the read-only endpoint.
-            for relation in relations:
-                relation.data[self.charm.model.app].pop("read-only-endpoints", None)
+        for relation in relations:
+            self.database_provides.set_read_only_endpoints(
+                relation.id,
+                endpoints,
+            )
