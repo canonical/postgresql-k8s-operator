@@ -14,7 +14,9 @@ from tests.helpers import STORAGE_PATH
 class TestPatroni(unittest.TestCase):
     def setUp(self):
         # Setup Patroni wrapper.
-        self.patroni = Patroni("postgresql-k8s-0", "postgresql-k8s-0", "test-model", STORAGE_PATH)
+        self.patroni = Patroni(
+            "postgresql-k8s-0", "postgresql-k8s-0", "test-model", 1, STORAGE_PATH
+        )
 
     @patch("requests.patch")
     def test_change_master_start_timeout(self, _patch):
@@ -120,8 +122,13 @@ class TestPatroni(unittest.TestCase):
     @patch("charm.Patroni._render_file")
     def test_render_postgresql_conf_file(self, _render_file):
         # Get the expected content from a file.
-        with open("tests/data/postgresql.conf") as file:
-            expected_content = file.read()
+        with open("templates/postgresql.conf.j2") as file:
+            template = Template(file.read())
+        expected_content = template.render(
+            logging_collector="on",
+            synchronous_commit="off",
+            synchronous_standby_names="*",
+        )
 
         # Setup a mock for the `open` method, set returned data to postgresql.conf template.
         with open("templates/postgresql.conf.j2", "r") as f:
@@ -136,6 +143,28 @@ class TestPatroni(unittest.TestCase):
         self.assertEqual(mock.call_args_list[0][0], ("templates/postgresql.conf.j2", "r"))
         # Ensure the correct rendered template is sent to _render_file method.
         _render_file.assert_called_once_with(
+            f"{STORAGE_PATH}/postgresql-k8s-operator.conf",
+            expected_content,
+            0o644,
+        )
+
+        # Also test with multiple planned units (synchronous_commit is turned on).
+        self.patroni = Patroni(
+            "postgresql-k8s-0", "postgresql-k8s-0", "test-model", 3, STORAGE_PATH
+        )
+        expected_content = template.render(
+            logging_collector="on",
+            synchronous_commit="on",
+            synchronous_standby_names="*",
+        )
+
+        # Patch the `open` method with our mock.
+        with patch("builtins.open", mock, create=True):
+            # Call the method
+            self.patroni.render_postgresql_conf_file()
+
+        # Ensure the correct rendered template is sent to _render_file method.
+        _render_file.assert_called_with(
             f"{STORAGE_PATH}/postgresql-k8s-operator.conf",
             expected_content,
             0o644,

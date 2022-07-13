@@ -116,6 +116,9 @@ class PostgresqlOperatorCharm(CharmBase):
         endpoints_to_remove = self._get_endpoints_to_remove()
         self._remove_from_endpoints(endpoints_to_remove)
 
+        # Update the replication configuration.
+        self._patroni.render_postgresql_conf_file()
+
     def _on_peer_relation_changed(self, event: RelationChangedEvent) -> None:
         """Reconfigure cluster members."""
         # The cluster must be initialized first in the leader unit
@@ -184,6 +187,9 @@ class PostgresqlOperatorCharm(CharmBase):
             for member in self._hosts - self._patroni.cluster_members:
                 logger.debug("Adding %s to cluster", member)
                 self.add_cluster_member(member)
+
+                # Update the replication configuration.
+                self._patroni.render_postgresql_conf_file()
         except NotReadyError:
             logger.info("Deferring reconfigure: another member doing sync right now")
             event.defer()
@@ -262,6 +268,9 @@ class PostgresqlOperatorCharm(CharmBase):
         self._remove_from_endpoints(self._get_endpoints_to_remove())
 
         self._add_members(event)
+
+        # Update the replication configuration.
+        self._patroni.render_postgresql_conf_file()
 
     def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
         """Event handler for PostgreSQL container on PebbleReadyEvent."""
@@ -412,6 +421,7 @@ class PostgresqlOperatorCharm(CharmBase):
             self._endpoint,
             self._endpoints,
             self._namespace,
+            self.app.planned_units(),
             self._storage_path,
         )
 

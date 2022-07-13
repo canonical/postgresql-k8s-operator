@@ -31,11 +31,14 @@ class NotReadyError(Exception):
 class Patroni:
     """This class handles the communication with Patroni API and configuration files."""
 
-    def __init__(self, endpoint: str, endpoints: List[str], namespace: str, storage_path: str):
+    def __init__(
+        self, endpoint: str, endpoints: List[str], namespace: str, planned_units, storage_path: str
+    ):
         self._endpoint = endpoint
         self._endpoints = endpoints
         self._namespace = namespace
         self._storage_path = storage_path
+        self._planned_units = planned_units
 
     def change_master_start_timeout(self, seconds: int) -> None:
         """Change master start timeout configuration.
@@ -166,7 +169,9 @@ class Patroni:
         # Render the template file with the correct values.
         # TODO: add extra configurations here later.
         rendered = template.render(
-            logging_collector="on", synchronous_commit="on", synchronous_standby_names="*"
+            logging_collector="on",
+            synchronous_commit="on" if self._planned_units > 1 else "off",
+            synchronous_standby_names="*",
         )
         self._render_file(f"{self._storage_path}/postgresql-k8s-operator.conf", rendered, 0o644)
 
