@@ -50,6 +50,9 @@ juju deploy ./postgresql-k8s_ubuntu-20.04-amd64.charm \
      -n 3 --trust
 juju deploy finos-waltz-k8s
 
+# Reduce the update status frequency to speed up nodes being added to the cluster.
+juju model-config update-status-hook-interval=10s
+
 # Relate FINOS Waltz Server with PostgreSQL
 juju relate finos-waltz-k8s postgresql:shared-db
 ```
@@ -65,6 +68,9 @@ juju ./postgresql-k8s_ubuntu-20.04-amd64.charm \
      --resource postgresql-image=dataplatformoci/postgres-patroni
      -n 3 --trust
 juju deploy discourse-k8s
+
+# Reduce the update status frequency to speed up nodes being added to the cluster.
+juju model-config update-status-hook-interval=10s
 
 # Relate Discourse with PostgreSQL
 juju relate discourse-k8s postgresql-k8s:db-admin
