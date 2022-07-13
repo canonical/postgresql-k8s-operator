@@ -126,7 +126,7 @@ class PostgreSQL:
             logger.error(f"Failed to create user: {e}")
             raise PostgreSQLCreateUserError()
 
-    def delete_user(self, user: str) -> None:
+    def delete_user(self, user: str, if_exists: bool=False) -> None:
         """Deletes a database user.
 
         Args:
@@ -149,7 +149,7 @@ class PostgreSQL:
 
             # Delete the user.
             with self._connect_to_database() as connection, connection.cursor() as cursor:
-                cursor.execute(f"DROP ROLE {user};")
+                cursor.execute(f"DROP ROLE {'IF EXISTS' if if_exists else ''} {user};")
         except psycopg2.Error as e:
             logger.error(f"Failed to delete user: {e}")
             raise PostgreSQLDeleteUserError()
