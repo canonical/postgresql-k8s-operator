@@ -28,7 +28,6 @@ jobs:
         run: tox -e unit
   integration-test-microk8s:
     name: Integration tests (microk8s)
-    needs: build-oci-image
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
