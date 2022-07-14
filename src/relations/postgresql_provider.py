@@ -103,11 +103,11 @@ class PostgreSQLProvider(Object):
             PostgreSQLCreateDatabaseError,
             PostgreSQLCreateUserError,
             PostgreSQLGetPostgreSQLVersionError,
-        ):
+        ) as e:
+            logger.exception(e)
             self.charm.unit.status = BlockedStatus(
                 f"Failed to initialize {self.relation_name} relation"
             )
-            return
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Remove the user created for this relation."""
@@ -126,7 +126,8 @@ class PostgreSQLProvider(Object):
         user = f"relation_id_{event.relation.id}"
         try:
             self.charm.postgresql.delete_user(user)
-        except PostgreSQLDeleteUserError:
+        except PostgreSQLDeleteUserError as e:
+            logger.exception(e)
             self.charm.unit.status = BlockedStatus(
                 f"Failed to delete user during {self.relation_name} relation broken event"
             )
