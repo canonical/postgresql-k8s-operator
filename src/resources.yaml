@@ -9,6 +9,7 @@ spec:
     - port: 5432
       targetPort: 5432
   selector:
+    cluster-name: patroni-{{ app_name }}
     role: master
 
 ---
@@ -23,6 +24,7 @@ spec:
     - port: 5432
       targetPort: 5432
   selector:
+    cluster-name: patroni-{{ app_name }}
     role: replica
 
 ---

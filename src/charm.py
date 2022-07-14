@@ -32,6 +32,7 @@ from tenacity import RetryError
 
 from patroni import NotReadyError, Patroni
 from relations.db import DbProvides
+from relations.postgresql_provider import PostgreSQLProvider
 from utils import new_password
 
 logger = logging.getLogger(__name__)
@@ -65,6 +66,7 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on.update_status, self._on_update_status)
         self._storage_path = self.meta.storages["pgdata"].location
 
+        self.postgresql_client_relation = PostgreSQLProvider(self)
         self.legacy_db_relation = DbProvides(self, admin=False)
         self.legacy_db_admin_relation = DbProvides(self, admin=True)
 
@@ -114,6 +116,7 @@ class PostgresqlOperatorCharm(CharmBase):
             return
 
         endpoints_to_remove = self._get_endpoints_to_remove()
+        self.postgresql_client_relation.update_read_only_endpoint()
         self._remove_from_endpoints(endpoints_to_remove)
 
         # Update the replication configuration.
@@ -145,6 +148,8 @@ class PostgresqlOperatorCharm(CharmBase):
             self.unit.status = WaitingStatus("awaiting for member to start")
             event.defer()
             return
+
+        self.postgresql_client_relation.update_read_only_endpoint()
 
         self.unit.status = ActiveStatus()
 
@@ -345,7 +350,9 @@ class PostgresqlOperatorCharm(CharmBase):
         """
         client = Client()
         patch = {
-            "metadata": {"labels": {"application": "patroni", "cluster-name": self._namespace}}
+            "metadata": {
+                "labels": {"application": "patroni", "cluster-name": f"patroni-{self._name}"}
+            }
         }
         client.patch(
             Pod,
@@ -478,11 +485,11 @@ class PostgresqlOperatorCharm(CharmBase):
                     "user": "postgres",
                     "group": "postgres",
                     "environment": {
-                        "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: {self._name}}}",
+                        "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: patroni-{self._name}}}",
                         "PATRONI_KUBERNETES_NAMESPACE": self._namespace,
                         "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
                         "PATRONI_NAME": pod_name,
-                        "PATRONI_SCOPE": self._namespace,
+                        "PATRONI_SCOPE": f"patroni-{self._name}",
                         "PATRONI_REPLICATION_USERNAME": "replication",
                         "PATRONI_REPLICATION_PASSWORD": self._replication_password,
                         "PATRONI_SUPERUSER_USERNAME": "postgres",

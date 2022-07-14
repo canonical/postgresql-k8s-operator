@@ -61,7 +61,7 @@ async def test_labels_consistency_across_pods(ops_test: OpsTest, unit_id: int) -
     # Ensures that the correct kubernetes labels are set
     # (these ones guarantee the correct working of replication).
     assert pod.metadata.labels["application"] == "patroni"
-    assert pod.metadata.labels["cluster-name"] == model.name
+    assert pod.metadata.labels["cluster-name"] == f"patroni-{APP_NAME}"
 
 
 @pytest.mark.parametrize("unit_id", UNIT_IDS)
@@ -99,7 +99,7 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
         settings = convert_records_to_dict(records)
 
     # Validate each configuration set by Patroni on PostgreSQL.
-    assert settings["cluster_name"] == (await ops_test.model.get_info()).name
+    assert settings["cluster_name"] == f"patroni-{APP_NAME}"
     assert settings["data_directory"] == f"{STORAGE_PATH}/pgdata"
     assert settings["data_checksums"] == "on"
     assert settings["listen_addresses"] == "0.0.0.0"
