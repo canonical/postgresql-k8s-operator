@@ -23,6 +23,7 @@ from ops.framework import Object
 from ops.model import BlockedStatus, Relation, Unit
 from pgconnstr import ConnectionString
 
+from constants import DATABASE_PORT
 from utils import new_password
 
 logger = logging.getLogger(__name__)
@@ -116,7 +117,7 @@ class DbProvides(Object):
                 ConnectionString(
                     host=self.charm.primary_endpoint,
                     dbname=database,
-                    port=5432,
+                    port=DATABASE_PORT,
                     user=user,
                     password=password,
                     fallback_application_name=event.app.name,
@@ -128,7 +129,7 @@ class DbProvides(Object):
                 ConnectionString(
                     host=self.charm.replicas_endpoint,
                     dbname=database,
-                    port=5432,
+                    port=DATABASE_PORT,
                     user=user,
                     password=password,
                     fallback_application_name=event.app.name,
@@ -147,7 +148,7 @@ class DbProvides(Object):
                     "allowed-units": self._get_allowed_units(event.relation),
                     "host": self.charm.endpoint,
                     "master": primary,
-                    "port": "5432",
+                    "port": DATABASE_PORT,
                     "standbys": standbys,
                     "version": self.charm.postgresql.get_postgresql_version(),
                     "user": user,
