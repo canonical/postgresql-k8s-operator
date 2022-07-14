@@ -121,6 +121,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Update the replication configuration.
         self._patroni.render_postgresql_conf_file()
+        self._patroni.reload_patroni_configuration()
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent) -> None:
         """Reconfigure cluster members."""
@@ -195,6 +196,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
                 # Update the replication configuration.
                 self._patroni.render_postgresql_conf_file()
+                self._patroni.reload_patroni_configuration()
         except NotReadyError:
             logger.info("Deferring reconfigure: another member doing sync right now")
             event.defer()
@@ -276,6 +278,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Update the replication configuration.
         self._patroni.render_postgresql_conf_file()
+        self._patroni.reload_patroni_configuration()
 
     def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
         """Event handler for PostgreSQL container on PebbleReadyEvent."""

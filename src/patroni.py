@@ -183,13 +183,13 @@ class Patroni:
         try:
             if self.member_started:
                 # Make Patroni use the updated configuration.
-                self._reload_patroni_configuration()
+                self.reload_patroni_configuration()
         except RetryError:
             # Ignore retry errors that happen when the member has not started yet.
             # The configuration will be loaded correctly when Patroni starts.
             pass
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-    def _reload_patroni_configuration(self) -> None:
+    def reload_patroni_configuration(self) -> None:
         """Reloads the configuration after it was updated in the file."""
         requests.post(f"http://{self._endpoint}:8008/reload")
