@@ -121,7 +121,10 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Update the replication configuration.
         self._patroni.render_postgresql_conf_file()
-        self._patroni.reload_patroni_configuration()
+        try:
+            self._patroni.reload_patroni_configuration()
+        except RetryError:
+            pass  # This error can happen in the first leader election, as Patroni is not running yet.
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent) -> None:
         """Reconfigure cluster members."""
