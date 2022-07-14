@@ -193,10 +193,6 @@ class PostgresqlOperatorCharm(CharmBase):
             for member in self._hosts - self._patroni.cluster_members:
                 logger.debug("Adding %s to cluster", member)
                 self.add_cluster_member(member)
-
-                # Update the replication configuration.
-                self._patroni.render_postgresql_conf_file()
-                self._patroni.reload_patroni_configuration()
         except NotReadyError:
             logger.info("Deferring reconfigure: another member doing sync right now")
             event.defer()
@@ -332,6 +328,10 @@ class PostgresqlOperatorCharm(CharmBase):
                 return
 
             self._peers.data[self.app]["cluster_initialised"] = "True"
+
+        # Update the replication configuration.
+        self._patroni.render_postgresql_conf_file()
+        self._patroni.reload_patroni_configuration()
 
         # All is well, set an ActiveStatus.
         self.unit.status = ActiveStatus()
