@@ -232,7 +232,7 @@ class TestCharm(unittest.TestCase):
         self.charm._patch_pod_labels(member)
         expected_patch = {
             "metadata": {
-                "labels": {"application": "patroni", "cluster-name": self.charm._namespace}
+                "labels": {"application": "patroni", "cluster-name": f"patroni-{self.charm._name}"}
             }
         }
         _client.return_value.patch.assert_called_once_with(
@@ -261,11 +261,11 @@ class TestCharm(unittest.TestCase):
                     "user": "postgres",
                     "group": "postgres",
                     "environment": {
-                        "PATRONI_KUBERNETES_LABELS": "{application: patroni, cluster-name: postgresql-k8s}",
+                        "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: patroni-{self.charm._name}}}",
                         "PATRONI_KUBERNETES_NAMESPACE": self.charm._namespace,
                         "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
                         "PATRONI_NAME": "postgresql-k8s-0",
-                        "PATRONI_SCOPE": self.charm._namespace,
+                        "PATRONI_SCOPE": f"patroni-{self.charm._name}",
                         "PATRONI_REPLICATION_USERNAME": "replication",
                         "PATRONI_REPLICATION_PASSWORD": self.charm._replication_password,
                         "PATRONI_SUPERUSER_USERNAME": "postgres",
