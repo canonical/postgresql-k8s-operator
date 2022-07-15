@@ -31,11 +31,14 @@ class NotReadyError(Exception):
 class Patroni:
     """This class handles the communication with Patroni API and configuration files."""
 
-    def __init__(self, endpoint: str, endpoints: List[str], namespace: str, storage_path: str):
+    def __init__(
+        self, endpoint: str, endpoints: List[str], namespace: str, planned_units, storage_path: str
+    ):
         self._endpoint = endpoint
         self._endpoints = endpoints
         self._namespace = namespace
         self._storage_path = storage_path
+        self._planned_units = planned_units
 
     def change_master_start_timeout(self, seconds: int) -> None:
         """Change master start timeout configuration.
@@ -166,7 +169,9 @@ class Patroni:
         # Render the template file with the correct values.
         # TODO: add extra configurations here later.
         rendered = template.render(
-            logging_collector="on", synchronous_commit="on", synchronous_standby_names="*"
+            logging_collector="on",
+            synchronous_commit="on" if self._planned_units > 1 else "off",
+            synchronous_standby_names="*",
         )
         self._render_file(f"{self._storage_path}/postgresql-k8s-operator.conf", rendered, 0o644)
 
@@ -178,13 +183,13 @@ class Patroni:
         try:
             if self.member_started:
                 # Make Patroni use the updated configuration.
-                self._reload_patroni_configuration()
+                self.reload_patroni_configuration()
         except RetryError:
             # Ignore retry errors that happen when the member has not started yet.
             # The configuration will be loaded correctly when Patroni starts.
             pass
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-    def _reload_patroni_configuration(self) -> None:
+    def reload_patroni_configuration(self) -> None:
         """Reloads the configuration after it was updated in the file."""
         requests.post(f"http://{self._endpoint}:8008/reload")

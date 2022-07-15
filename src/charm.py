@@ -119,6 +119,10 @@ class PostgresqlOperatorCharm(CharmBase):
         self.postgresql_client_relation.update_read_only_endpoint()
         self._remove_from_endpoints(endpoints_to_remove)
 
+        # Update the replication configuration.
+        self._patroni.render_postgresql_conf_file()
+        self._patroni.reload_patroni_configuration()
+
     def _on_peer_relation_changed(self, event: RelationChangedEvent) -> None:
         """Reconfigure cluster members."""
         # The cluster must be initialized first in the leader unit
@@ -268,6 +272,13 @@ class PostgresqlOperatorCharm(CharmBase):
 
         self._add_members(event)
 
+        # Update the replication configuration.
+        self._patroni.render_postgresql_conf_file()
+        try:
+            self._patroni.reload_patroni_configuration()
+        except RetryError:
+            pass  # This error can happen in the first leader election, as Patroni is not running yet.
+
     def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
         """Event handler for PostgreSQL container on PebbleReadyEvent."""
         # TODO: move this code to an "_update_layer" method in order to also utilize it in
@@ -317,6 +328,10 @@ class PostgresqlOperatorCharm(CharmBase):
                 return
 
             self._peers.data[self.app]["cluster_initialised"] = "True"
+
+        # Update the replication configuration.
+        self._patroni.render_postgresql_conf_file()
+        self._patroni.reload_patroni_configuration()
 
         # All is well, set an ActiveStatus.
         self.unit.status = ActiveStatus()
@@ -419,6 +434,7 @@ class PostgresqlOperatorCharm(CharmBase):
             self._endpoint,
             self._endpoints,
             self._namespace,
+            self.app.planned_units(),
             self._storage_path,
         )
 
