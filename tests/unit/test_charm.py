@@ -1,7 +1,6 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import re
 import unittest
 from unittest.mock import Mock, call, patch
 
@@ -40,9 +39,11 @@ class TestCharm(unittest.TestCase):
         self.charm.on.install.emit()
         _render_postgresql_conf_file.assert_called_once()
 
+    @patch("charm.Patroni.reload_patroni_configuration")
+    @patch("charm.Patroni.render_postgresql_conf_file")
     @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
     @patch("charm.PostgresqlOperatorCharm._create_resources")
-    def test_on_leader_elected(self, _, __):
+    def test_on_leader_elected(self, _, __, _render_postgresql_conf_file, ___):
         # Assert that there is no password in the peer relation.
         self.harness.add_relation(self._peer_relation, self.charm.app.name)
         self.assertIsNone(self.charm._peers.data[self.charm.app].get("postgres-password", None))
@@ -57,6 +58,7 @@ class TestCharm(unittest.TestCase):
             "replication-password", None
         )
         self.assertIsNotNone(replication_password)
+        _render_postgresql_conf_file.assert_called_once()
 
         # Trigger a new leader election and check that the password is still the same.
         self.harness.set_leader(False)
@@ -70,12 +72,16 @@ class TestCharm(unittest.TestCase):
             replication_password,
         )
 
+    @patch("charm.Patroni.reload_patroni_configuration")
+    @patch("charm.Patroni.render_postgresql_conf_file")
     @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.member_started")
     @patch("charm.Patroni.render_patroni_yml_file")
     @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
     @patch("charm.PostgresqlOperatorCharm._create_resources")
-    def test_on_postgresql_pebble_ready(self, _, __, _render_patroni_yml_file, _member_started):
+    def test_on_postgresql_pebble_ready(
+        self, _, __, _render_patroni_yml_file, _member_started, ___, ____
+    ):
         # Check that the initial plan is empty.
         plan = self.harness.get_container_pebble_plan(self._postgresql_container)
         self.assertEqual(plan.to_dict(), {})
@@ -233,7 +239,7 @@ class TestCharm(unittest.TestCase):
         self.charm._patch_pod_labels(member)
         expected_patch = {
             "metadata": {
-                "labels": {"application": "patroni", "cluster-name": self.charm._namespace}
+                "labels": {"application": "patroni", "cluster-name": f"patroni-{self.charm._name}"}
             }
         }
         _client.return_value.patch.assert_called_once_with(
@@ -243,9 +249,11 @@ class TestCharm(unittest.TestCase):
             obj=expected_patch,
         )
 
+    @patch("charm.Patroni.reload_patroni_configuration")
+    @patch("charm.Patroni.render_postgresql_conf_file")
     @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
     @patch("charm.PostgresqlOperatorCharm._create_resources")
-    def test_postgresql_layer(self, _, __):
+    def test_postgresql_layer(self, _, __, ___, ____):
         # Test with the already generated password.
         self.harness.add_relation(self._peer_relation, self.charm.app.name)
         self.harness.set_leader()
@@ -262,12 +270,11 @@ class TestCharm(unittest.TestCase):
                     "user": "postgres",
                     "group": "postgres",
                     "environment": {
-                        "PATRONI_KUBERNETES_LABELS": "{application: patroni, cluster-name: postgresql-k8s}",
+                        "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: patroni-{self.charm._name}}}",
                         "PATRONI_KUBERNETES_NAMESPACE": self.charm._namespace,
                         "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
                         "PATRONI_NAME": "postgresql-k8s-0",
-                        "PATRONI_SCOPE": self.charm._namespace,
-                        "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
+                        "PATRONI_SCOPE": f"patroni-{self.charm._name}",
                         "PATRONI_REPLICATION_USERNAME": "replication",
                         "PATRONI_REPLICATION_PASSWORD": self.charm._replication_password,
                         "PATRONI_SUPERUSER_USERNAME": "postgres",
@@ -278,20 +285,11 @@ class TestCharm(unittest.TestCase):
         }
         self.assertDictEqual(plan, expected)
 
-    def test_new_password(self):
-        # Test the password generation twice in order to check if we get different passwords and
-        # that they meet the required criteria.
-        first_password = self.charm._new_password()
-        self.assertEqual(len(first_password), 16)
-        self.assertIsNotNone(re.fullmatch("[a-zA-Z0-9\b]{16}$", first_password))
-
-        second_password = self.charm._new_password()
-        self.assertIsNotNone(re.fullmatch("[a-zA-Z0-9\b]{16}$", second_password))
-        self.assertNotEqual(second_password, first_password)
-
+    @patch("charm.Patroni.reload_patroni_configuration")
+    @patch("charm.Patroni.render_postgresql_conf_file")
     @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
     @patch("charm.PostgresqlOperatorCharm._create_resources")
-    def test_get_postgres_password(self, _, __):
+    def test_get_postgres_password(self, _, __, ___, ____):
         # Test for a None password.
         self.harness.add_relation(self._peer_relation, self.charm.app.name)
         self.assertIsNone(self.charm._get_postgres_password())

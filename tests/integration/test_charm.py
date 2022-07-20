@@ -73,14 +73,14 @@ async def test_labels_consistency_across_pods(ops_test: OpsTest, unit_id: int) -
     # Ensures that the correct kubernetes labels are set
     # (these ones guarantee the correct working of replication).
     assert pod.metadata.labels["application"] == "patroni"
-    assert pod.metadata.labels["cluster-name"] == model.name
+    assert pod.metadata.labels["cluster-name"] == f"patroni-{APP_NAME}"
 
 
 @pytest.mark.parametrize("unit_id", UNIT_IDS)
 async def test_database_is_up(ops_test: OpsTest, unit_id: int):
     # Query Patroni REST API and check the status that indicates
     # both Patroni and PostgreSQL are up and running.
-    host = await get_unit_address(ops_test, APP_NAME, f"{APP_NAME}/{unit_id}")
+    host = await get_unit_address(ops_test, f"{APP_NAME}/{unit_id}")
     result = requests.get(f"http://{host}:8008/health")
     assert result.status_code == 200
 
@@ -90,7 +90,7 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
     password = await get_postgres_password(ops_test)
 
     # Connect to PostgreSQL.
-    host = await get_unit_address(ops_test, APP_NAME, f"{APP_NAME}/{unit_id}")
+    host = await get_unit_address(ops_test, f"{APP_NAME}/{unit_id}")
     logger.info("connecting to the database host: %s", host)
     with psycopg2.connect(
         f"dbname='postgres' user='postgres' host='{host}' password='{password}' connect_timeout=1"
@@ -111,7 +111,7 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
         settings = convert_records_to_dict(records)
 
     # Validate each configuration set by Patroni on PostgreSQL.
-    assert settings["cluster_name"] == (await ops_test.model.get_info()).name
+    assert settings["cluster_name"] == f"patroni-{APP_NAME}"
     assert settings["data_directory"] == f"{STORAGE_PATH}/pgdata"
     assert settings["data_checksums"] == "on"
     assert settings["listen_addresses"] == "0.0.0.0"
@@ -159,7 +159,7 @@ async def test_scale_down_and_up(ops_test: OpsTest):
     # Ensure the member was correctly removed from the cluster
     # (by comparing the cluster members and the current units).
     primary = await get_primary(ops_test)
-    address = await get_unit_address(ops_test, APP_NAME, primary)
+    address = await get_unit_address(ops_test, primary)
     assert get_cluster_members(address) == get_application_units(ops_test, APP_NAME)
 
     # Scale up the application (2 more units than the current scale).
@@ -176,7 +176,7 @@ async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
     """Test data persists through a graceful restart."""
     primary = await get_primary(ops_test)
     password = await get_postgres_password(ops_test)
-    address = await get_unit_address(ops_test, APP_NAME, primary)
+    address = await get_unit_address(ops_test, primary)
 
     # Write data to primary IP.
     logger.info(f"connecting to primary {primary} on {address}")
@@ -206,7 +206,7 @@ async def test_persist_data_through_failure(ops_test: OpsTest):
     """Test data persists through a failure."""
     primary = await get_primary(ops_test)
     password = await get_postgres_password(ops_test)
-    address = await get_unit_address(ops_test, APP_NAME, primary)
+    address = await get_unit_address(ops_test, primary)
 
     # Write data to primary IP.
     logger.info(f"connecting to primary {primary} on {address}")
