@@ -44,6 +44,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
     await ops_test.model.deploy(
         charm, resources=resources, application_name=APP_NAME, num_units=len(UNIT_IDS), trust=True
     )
+    await ops_test.model.set_config({"update-status-hook-interval": "5s"})
 
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
     for unit_id in UNIT_IDS:
