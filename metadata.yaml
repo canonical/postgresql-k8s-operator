@@ -18,12 +18,20 @@ containers:
 resources:
   postgresql-image:
     type: oci-image
-    description: OCI image for PostgreSQL (ubuntu/postgres)
-    upstream-source: postgresql-patroni
+    description: OCI image for PostgreSQL (dataplatformoci/postgres-patroni)
+    upstream-source: dataplatformoci/postgres-patroni
 
 peers:
   postgresql-replicas:
     interface: postgresql-replicas
+
+provides:
+  database:
+    interface: postgresql-client
+  db:
+    interface: pgsql
+  db-admin:
+    interface: pgsql
 
 storage:
   pgdata:
