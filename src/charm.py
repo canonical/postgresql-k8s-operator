@@ -108,7 +108,8 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _on_peer_relation_departed(self, event: RelationDepartedEvent) -> None:
         """The leader removes the departing units from the list of cluster members."""
-        if not self.unit.is_leader():
+        # Allow leader to update endpoints if it isn't leaving.
+        if not self.unit.is_leader() or event.departing_unit == self.unit:
             return
 
         if "cluster_initialised" not in self._peers.data[self.app]:
