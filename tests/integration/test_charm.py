@@ -245,6 +245,26 @@ async def test_automatic_failover_after_leader_issue(ops_test: OpsTest) -> None:
     assert await get_primary(ops_test) != "None"
 
 
+async def test_application_removal(ops_test: OpsTest) -> None:
+    # Remove the application to trigger some hooks (like peer relation departed).
+    await ops_test.model.applications[APP_NAME].remove()
+
+    # Block until the application is completely removed, or any unit gets in an error state.
+    await ops_test.model.block_until(
+        lambda: APP_NAME not in ops_test.model.applications
+        or any(
+            [
+                unit.workload_status == "error"
+                for unit in ops_test.model.applications[APP_NAME].units
+            ]
+        )
+    )
+
+    # Check whether the application is gone
+    # (in that situation, the units aren't in an error state).
+    assert APP_NAME not in ops_test.model.applications
+
+
 @retry(
     retry=retry_if_result(lambda x: not x),
     stop=stop_after_attempt(10),

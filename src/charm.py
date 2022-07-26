@@ -108,7 +108,8 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _on_peer_relation_departed(self, event: RelationDepartedEvent) -> None:
         """The leader removes the departing units from the list of cluster members."""
-        if not self.unit.is_leader():
+        # Allow leader to update endpoints if it isn't leaving.
+        if not self.unit.is_leader() or event.departing_unit == self.unit:
             return
 
         if "cluster_initialised" not in self._peers.data[self.app]:
@@ -374,10 +375,13 @@ class PostgresqlOperatorCharm(CharmBase):
             with open("src/resources.yaml") as f:
                 for resource in codecs.load_all_yaml(f, context=self._context):
                     client.create(resource)
-                    logger.info(f"created {str(resource)}")
+                    logger.debug(f"created {str(resource)}")
         except ApiError as e:
+            # The 409 error code means that the resource was already created
+            # or has a higher version. This can happen if Patroni creates a
+            # resource that the charm is expected to create.
             if e.status.code == 409:
-                logger.info("replacing resource: %s.", str(resource.to_dict()))
+                logger.debug("replacing resource: %s.", str(resource.to_dict()))
                 client.replace(resource)
             else:
                 logger.error("failed to create resource: %s.", str(resource.to_dict()))
