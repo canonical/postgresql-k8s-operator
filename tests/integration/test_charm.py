@@ -55,7 +55,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
 
 @pytest.mark.parametrize("unit_id", UNIT_IDS)
 async def test_labels_consistency_across_pods(ops_test: OpsTest, unit_id: int) -> None:
-    model = await ops_test.model.get_info()
+    model = ops_test.model.info
     client = AsyncClient(namespace=model.name)
     pod = await client.get(Pod, name=f"postgresql-k8s-{unit_id}")
     # Ensures that the correct kubernetes labels are set
@@ -118,7 +118,7 @@ async def test_cluster_is_stable_after_leader_deletion(ops_test: OpsTest) -> Non
     primary = await get_primary(ops_test)
 
     # Delete the primary pod.
-    model = await ops_test.model.get_info()
+    model = ops_test.model.info
     client = AsyncClient(namespace=model.name)
     await client.delete(Pod, name=primary.replace("/", "-"))
     logger.info(f"deleted pod {primary}")
@@ -201,7 +201,7 @@ async def test_persist_data_through_failure(ops_test: OpsTest):
         connection.cursor().execute("CREATE TABLE failtest (testcol INT );")
 
     # Cause a machine failure by killing a unit in k8s
-    model = await ops_test.model.get_info()
+    model = ops_test.model.info
     client = AsyncClient(namespace=model.name)
     await client.delete(Pod, name=primary.replace("/", "-"))
     logger.info("primary pod deleted")

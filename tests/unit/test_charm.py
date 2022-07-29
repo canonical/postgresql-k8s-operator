@@ -11,13 +11,14 @@ from ops.testing import Harness
 from tenacity import RetryError
 
 from charm import PostgresqlOperatorCharm
+from constants import PEER
 from tests.helpers import patch_network_get
 
 
 class TestCharm(unittest.TestCase):
     @patch_network_get(private_address="1.1.1.1")
     def setUp(self):
-        self._peer_relation = "postgresql-replicas"
+        self._peer_relation = PEER
         self._postgresql_container = "postgresql"
         self._postgresql_service = "postgresql"
 

@@ -30,14 +30,13 @@ from ops.pebble import Layer
 from requests import ConnectionError
 from tenacity import RetryError
 
+from constants import PEER
 from patroni import NotReadyError, Patroni
 from relations.db import DbProvides
 from relations.postgresql_provider import PostgreSQLProvider
 from utils import new_password
 
 logger = logging.getLogger(__name__)
-
-PEER = "postgresql-replicas"
 
 
 class PostgresqlOperatorCharm(CharmBase):
