@@ -22,12 +22,12 @@ resources:
     upstream-source: dataplatformoci/postgres-patroni
 
 peers:
-  postgresql-replicas:
-    interface: postgresql-replicas
+  database-peers:
+    interface: postgresql_peers
 
 provides:
   database:
-    interface: postgresql-client
+    interface: postgresql_client
   db:
     interface: pgsql
   db-admin:
