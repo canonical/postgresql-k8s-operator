@@ -64,6 +64,7 @@ juju remove-relation postgresql-k8s application
 #### Legacy `pgsql` interface:
 We have also added support for the two database legacy relations from the [original version](https://launchpad.net/charm-k8s-postgresql) of the charm via the `pgsql` interface. Please note that these relations will be deprecated.
  ```shell
+juju relate postgresql-k8s:db finos-waltz-k8s
 juju relate postgresql-k8s:db-admin discourse-k8s
 ```
 
