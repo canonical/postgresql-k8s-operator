@@ -36,44 +36,25 @@ Note: the `--destroy-storage` will delete any data persisted by PostgreSQL.
 
 ## Relations
 
-We have added support for two legacy relations (from the [original version](https://launchpad.net/charm-k8s-postgresql) of the charm):
+Supported [relations](https://juju.is/docs/olm/relations):
 
-1. `db` is a relation that one uses when it is needed only a new database and a user with permissions on it. The following commands can be executed to deploy and relate to the FINOS Waltz Server charm:
+#### New `postgresql_client` interface:
+
+Relations to new applications are supported via the `postgresql_client` interface. To create a relation: 
 
 ```shell
-# Pack the charm
-charmcraft pack
-
-# Deploy the relevant charms
-juju deploy ./postgresql-k8s_ubuntu-20.04-amd64.charm \
-     --resource postgresql-image=dataplatformoci/postgres-patroni
-     -n 3 --trust
-juju deploy finos-waltz-k8s
-
-# Reduce the update status frequency to speed up nodes being added to the cluster.
-juju model-config update-status-hook-interval=10s
-
-# Relate FINOS Waltz Server with PostgreSQL
-juju relate finos-waltz-k8s postgresql:shared-db
+juju relate postgresql-k8s application
 ```
 
-1. `db-admin` is a relation that one uses when the application needs to connect to the database cluster with superuser privileges. The following commands can be executed to deploy and relate to the Discourse charm:
-
+To remove a relation:
 ```shell
-# Pack the charm
-charmcraft pack
+juju remove-relation postgresql-k8s application
+```
 
-# Deploy the relevant charms
-juju ./postgresql-k8s_ubuntu-20.04-amd64.charm \
-     --resource postgresql-image=dataplatformoci/postgres-patroni
-     -n 3 --trust
-juju deploy discourse-k8s
-
-# Reduce the update status frequency to speed up nodes being added to the cluster.
-juju model-config update-status-hook-interval=10s
-
-# Relate Discourse with PostgreSQL
-juju relate discourse-k8s postgresql-k8s:db-admin
+#### Legacy `pgsql` interface:
+We have also added support for the two database legacy relations from the [original version](https://launchpad.net/charm-k8s-postgresql) of the charm via the `pgsql` interface. Please note that these relations will be deprecated.
+ ```shell
+juju relate postgresql-k8s:db-admin discourse-k8s
 ```
 
 ## Security
