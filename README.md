@@ -76,6 +76,9 @@ juju model-config update-status-hook-interval=10s
 juju relate discourse-k8s postgresql-k8s:db-admin
 ```
 
+## Security
+Security issues in the Charmed PostgreSQL k8s Operator can be reported through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). Please do not file GitHub issues about security issues.
+
 ## Contributing
 
 Please see the [Juju SDK docs](https://juju.is/docs/sdk) for guidelines on enhancements to this charm following best practice guidelines, and [CONTRIBUTING.md](https://github.com/canonical/postgresql-k8s-operator/blob/main/CONTRIBUTING.md) for developer guidance.
