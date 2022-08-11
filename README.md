@@ -8,31 +8,25 @@ This operator provides a Postgres database with replication enabled (one master 
 
 ## Usage
 
-To deploy this charm using Juju 2.9.0 or later, run:
-
+### Basic Usage
+To deploy a single unit of PostgreSQL using its default configuration.
 ```shell
-juju add-model postgresql
-charmcraft pack
-juju deploy ./postgresql-k8s_ubuntu-20.04-amd64.charm
+juju deploy postgresql-k8s --channel edge --trust
 ```
 
-Note: the above model must exist inside a k8s cluster (you can use juju bootstrap to create a controller in the k8s cluster).
+Note: `--trust` is required because the charm and Patroni need to create some k8s resources.
 
-To confirm the deployment, you can run:
-
+It is customary to use PostgreSQL with replication. Hence usually more than one unit (preferably an odd number to prohibit a "split-brain" scenario) is deployed. To deploy PostgreSQL with multiple replicas, specify the number of desired units with the `-n` option.
 ```shell
-juju status --color
+juju deploy postgresql-k8s --channel edge -n <number_of_replicas> --trust
 ```
 
-Once PostgreSQL starts up, it will be running on the default port (5432).
-
-If required, you can remove the deployment completely by running:
-
+To retrieve primary replica one can use the action `get-primary` on any of the units running PostgreSQL.
 ```shell
-juju destroy-model -y postgresql --destroy-storage
+juju run-action postgresql-k8s/<unit_number> get-primary --wait
 ```
 
-Note: the `--destroy-storage` will delete any data persisted by PostgreSQL.
+Similarly, the primary replica is displayed as a status message in `juju status`, however one should note that this hook gets called on regular time intervals and the primary may be outdated if the status hook has not been called recently.
 
 ## Relations
 
