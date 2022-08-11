@@ -18,7 +18,7 @@ Note: `--trust` is required because the charm and Patroni need to create some k8
 
 It is customary to use PostgreSQL with replication. Hence usually more than one unit (preferably an odd number to prohibit a "split-brain" scenario) is deployed. To deploy PostgreSQL with multiple replicas, specify the number of desired units with the `-n` option.
 ```shell
-juju deploy postgresql-k8s --channel edge -n <number_of_replicas> --trust
+juju deploy postgresql-k8s --channel edge -n <number_of_units> --trust
 ```
 
 To retrieve primary replica one can use the action `get-primary` on any of the units running PostgreSQL.
@@ -27,6 +27,22 @@ juju run-action postgresql-k8s/<unit_number> get-primary --wait
 ```
 
 Similarly, the primary replica is displayed as a status message in `juju status`, however one should note that this hook gets called on regular time intervals and the primary may be outdated if the status hook has not been called recently.
+
+### Replication
+#### Adding Replicas
+To add more replicas one can use the `juju scale-application` functionality i.e.
+```shell
+juju scale-application postgresql-k8s -n <number_of_units>
+```
+The implementation of `scale-application` allows the operator to add more than one unit, but functions internally by adding one replica at a time, avoiding multiple replicas syncing from the primary at the same time.
+
+
+#### Removing Replicas
+Similarly to scale down the number of replicas the `juju scale-application` functionality may be used i.e.
+```shell
+juju scale-application postgresql-k8s -n <number_of_units>
+```
+The implementation of `scale-application` allows the operator to remove more than one unit. The functionality of `scale-application` functions by removing one replica at a time to avoid downtime.
 
 ## Relations
 
