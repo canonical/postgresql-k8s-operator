@@ -1,81 +1,79 @@
-# PostgreSQL Kubernetes Operator
+# Charmed PostgreSQL Kubernetes Operator
 
 ## Description
 
-The PostgreSQL Kubernetes Operator deploys and operates the [PostgreSQL](https://www.postgresql.org/about/) database on Kubernetes clusters.
+The Charmed PostgreSQL Kubernetes Operator deploys and operates the [PostgreSQL](https://www.postgresql.org/about/) database on Kubernetes clusters.
 
-This operator provides a Postgres database with replication enabled (one master instance and one or more hot standby replicas). The Operator in this repository is a Python script which wraps the LTS Postgres versions distributed by [Ubuntu](https://hub.docker.com/r/ubuntu/postgres) and adding [Patroni](https://github.com/zalando/patroni) on top of it, providing lifecycle management and handling events (install, configure, integrate, remove).
+This operator provides a Postgres database with replication enabled (one master instance and one or more hot standby replicas). The Operator in this repository is a Python script which wraps the LTS Postgres versions distributed by [Ubuntu](https://hub.docker.com/r/ubuntu/postgres) and adding [Patroni](https://github.com/zalando/patroni) on top of it, providing lifecycle management and handling events (install, configure, integrate, remove, etc).
 
 ## Usage
 
-To deploy this charm using Juju 2.9.0 or later, run:
-
+### Basic Usage
+To deploy a single unit of PostgreSQL using its default configuration.
 ```shell
-juju add-model postgresql
-charmcraft pack
-juju deploy ./postgresql-k8s_ubuntu-20.04-amd64.charm
+juju deploy postgresql-k8s --channel edge --trust
 ```
 
-Note: the above model must exist inside a k8s cluster (you can use juju bootstrap to create a controller in the k8s cluster).
+Note: `--trust` is required because the charm and Patroni need to create some k8s resources.
 
-To confirm the deployment, you can run:
-
+It is customary to use PostgreSQL with replication. Hence usually more than one unit (preferably an odd number to prohibit a "split-brain" scenario) is deployed. To deploy PostgreSQL with multiple replicas, specify the number of desired units with the `-n` option.
 ```shell
-juju status --color
+juju deploy postgresql-k8s --channel edge -n <number_of_units> --trust
 ```
 
-Once PostgreSQL starts up, it will be running on the default port (5432).
-
-If required, you can remove the deployment completely by running:
-
+To retrieve primary replica one can use the action `get-primary` on any of the units running PostgreSQL.
 ```shell
-juju destroy-model -y postgresql --destroy-storage
+juju run-action postgresql-k8s/<unit_number> get-primary --wait
 ```
 
-Note: the `--destroy-storage` will delete any data persisted by PostgreSQL.
+Similarly, the primary replica is displayed as a status message in `juju status`, however one should note that this hook gets called on regular time intervals and the primary may be outdated if the status hook has not been called recently.
+
+### Replication
+#### Adding Replicas
+To add more replicas one can use the `juju scale-application` functionality i.e.
+```shell
+juju scale-application postgresql-k8s -n <number_of_units>
+```
+The implementation of `scale-application` allows the operator to add more than one unit, but functions internally by adding one replica at a time, avoiding multiple replicas syncing from the primary at the same time.
+
+
+#### Removing Replicas
+Similarly to scale down the number of replicas the `juju scale-application` functionality may be used i.e.
+```shell
+juju scale-application postgresql-k8s -n <number_of_units>
+```
+The implementation of `scale-application` allows the operator to remove more than one unit. The functionality of `scale-application` functions by removing one replica at a time to avoid downtime.
 
 ## Relations
 
-We have added support for two legacy relations (from the [original version](https://launchpad.net/charm-k8s-postgresql) of the charm):
+Supported [relations](https://juju.is/docs/olm/relations):
 
-1. `db` is a relation that one uses when it is needed only a new database and a user with permissions on it. The following commands can be executed to deploy and relate to the FINOS Waltz Server charm:
+#### New `postgresql_client` interface:
 
-```shell
-# Pack the charm
-charmcraft pack
-
-# Deploy the relevant charms
-juju deploy ./postgresql-k8s_ubuntu-20.04-amd64.charm \
-     --resource postgresql-image=dataplatformoci/postgres-patroni
-     -n 3 --trust
-juju deploy finos-waltz-k8s
-
-# Reduce the update status frequency to speed up nodes being added to the cluster.
-juju model-config update-status-hook-interval=10s
-
-# Relate FINOS Waltz Server with PostgreSQL
-juju relate finos-waltz-k8s postgresql:shared-db
-```
-
-1. `db-admin` is a relation that one uses when the application needs to connect to the database cluster with superuser privileges. The following commands can be executed to deploy and relate to the Discourse charm:
+Relations to new applications are supported via the `postgresql_client` interface. To create a relation: 
 
 ```shell
-# Pack the charm
-charmcraft pack
-
-# Deploy the relevant charms
-juju ./postgresql-k8s_ubuntu-20.04-amd64.charm \
-     --resource postgresql-image=dataplatformoci/postgres-patroni
-     -n 3 --trust
-juju deploy discourse-k8s
-
-# Reduce the update status frequency to speed up nodes being added to the cluster.
-juju model-config update-status-hook-interval=10s
-
-# Relate Discourse with PostgreSQL
-juju relate discourse-k8s postgresql-k8s:db-admin
+juju relate postgresql-k8s application
 ```
+
+To remove a relation:
+```shell
+juju remove-relation postgresql-k8s application
+```
+
+#### Legacy `pgsql` interface:
+We have also added support for the two database legacy relations from the [original version](https://launchpad.net/charm-k8s-postgresql) of the charm via the `pgsql` interface. Please note that these relations will be deprecated.
+ ```shell
+juju relate postgresql-k8s:db finos-waltz-k8s
+juju relate postgresql-k8s:db-admin discourse-k8s
+```
+
+## Security
+Security issues in the Charmed PostgreSQL Kubernetes Operator can be reported through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). Please do not file GitHub issues about security issues.
 
 ## Contributing
 
 Please see the [Juju SDK docs](https://juju.is/docs/sdk) for guidelines on enhancements to this charm following best practice guidelines, and [CONTRIBUTING.md](https://github.com/canonical/postgresql-k8s-operator/blob/main/CONTRIBUTING.md) for developer guidance.
+
+## License
+The Charmed PostgreSQL Kubernetes Operator is free software, distributed under the Apache Software License, version 2.0. See [LICENSE](https://github.com/canonical/postgresql-k8s-operator/blob/main/LICENSE) for more information.
