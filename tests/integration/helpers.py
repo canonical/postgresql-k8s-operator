@@ -244,4 +244,9 @@ async def scale_application(ops_test: OpsTest, application_name: str, scale: int
         scale: The number of units to scale to
     """
     await ops_test.model.applications[application_name].scale(scale)
-    await ops_test.model.wait_for_idle(apps=[application_name], status="active", timeout=1000)
+    await ops_test.model.wait_for_idle(
+        apps=[application_name],
+        status="active",
+        timeout=1000,
+        wait_for_exact_units=scale,
+    )

@@ -30,13 +30,13 @@ from ops.pebble import Layer
 from requests import ConnectionError
 from tenacity import RetryError
 
+from constants import PEER
 from patroni import NotReadyError, Patroni
 from relations.db import DbProvides
+from relations.postgresql_provider import PostgreSQLProvider
 from utils import new_password
 
 logger = logging.getLogger(__name__)
-
-PEER = "postgresql-replicas"
 
 
 class PostgresqlOperatorCharm(CharmBase):
@@ -65,6 +65,7 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on.update_status, self._on_update_status)
         self._storage_path = self.meta.storages["pgdata"].location
 
+        self.postgresql_client_relation = PostgreSQLProvider(self)
         self.legacy_db_relation = DbProvides(self, admin=False)
         self.legacy_db_admin_relation = DbProvides(self, admin=True)
 
@@ -106,7 +107,8 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _on_peer_relation_departed(self, event: RelationDepartedEvent) -> None:
         """The leader removes the departing units from the list of cluster members."""
-        if not self.unit.is_leader():
+        # Allow leader to update endpoints if it isn't leaving.
+        if not self.unit.is_leader() or event.departing_unit == self.unit:
             return
 
         if "cluster_initialised" not in self._peers.data[self.app]:
@@ -114,7 +116,12 @@ class PostgresqlOperatorCharm(CharmBase):
             return
 
         endpoints_to_remove = self._get_endpoints_to_remove()
+        self.postgresql_client_relation.update_read_only_endpoint()
         self._remove_from_endpoints(endpoints_to_remove)
+
+        # Update the replication configuration.
+        self._patroni.render_postgresql_conf_file()
+        self._patroni.reload_patroni_configuration()
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent) -> None:
         """Reconfigure cluster members."""
@@ -142,6 +149,8 @@ class PostgresqlOperatorCharm(CharmBase):
             self.unit.status = WaitingStatus("awaiting for member to start")
             event.defer()
             return
+
+        self.postgresql_client_relation.update_read_only_endpoint()
 
         self.unit.status = ActiveStatus()
 
@@ -263,6 +272,13 @@ class PostgresqlOperatorCharm(CharmBase):
 
         self._add_members(event)
 
+        # Update the replication configuration.
+        self._patroni.render_postgresql_conf_file()
+        try:
+            self._patroni.reload_patroni_configuration()
+        except RetryError:
+            pass  # This error can happen in the first leader election, as Patroni is not running yet.
+
     def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
         """Event handler for PostgreSQL container on PebbleReadyEvent."""
         # TODO: move this code to an "_update_layer" method in order to also utilize it in
@@ -313,6 +329,10 @@ class PostgresqlOperatorCharm(CharmBase):
 
             self._peers.data[self.app]["cluster_initialised"] = "True"
 
+        # Update the replication configuration.
+        self._patroni.render_postgresql_conf_file()
+        self._patroni.reload_patroni_configuration()
+
         # All is well, set an ActiveStatus.
         self.unit.status = ActiveStatus()
 
@@ -336,7 +356,9 @@ class PostgresqlOperatorCharm(CharmBase):
         """
         client = Client()
         patch = {
-            "metadata": {"labels": {"application": "patroni", "cluster-name": self._namespace}}
+            "metadata": {
+                "labels": {"application": "patroni", "cluster-name": f"patroni-{self._name}"}
+            }
         }
         client.patch(
             Pod,
@@ -352,10 +374,13 @@ class PostgresqlOperatorCharm(CharmBase):
             with open("src/resources.yaml") as f:
                 for resource in codecs.load_all_yaml(f, context=self._context):
                     client.create(resource)
-                    logger.info(f"created {str(resource)}")
+                    logger.debug(f"created {str(resource)}")
         except ApiError as e:
+            # The 409 error code means that the resource was already created
+            # or has a higher version. This can happen if Patroni creates a
+            # resource that the charm is expected to create.
             if e.status.code == 409:
-                logger.info("replacing resource: %s.", str(resource.to_dict()))
+                logger.debug("replacing resource: %s.", str(resource.to_dict()))
                 client.replace(resource)
             else:
                 logger.error("failed to create resource: %s.", str(resource.to_dict()))
@@ -412,6 +437,7 @@ class PostgresqlOperatorCharm(CharmBase):
             self._endpoint,
             self._endpoints,
             self._namespace,
+            self.app.planned_units(),
             self._storage_path,
         )
 
@@ -468,11 +494,11 @@ class PostgresqlOperatorCharm(CharmBase):
                     "user": "postgres",
                     "group": "postgres",
                     "environment": {
-                        "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: {self._name}}}",
+                        "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: patroni-{self._name}}}",
                         "PATRONI_KUBERNETES_NAMESPACE": self._namespace,
                         "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
                         "PATRONI_NAME": pod_name,
-                        "PATRONI_SCOPE": self._namespace,
+                        "PATRONI_SCOPE": f"patroni-{self._name}",
                         "PATRONI_REPLICATION_USERNAME": "replication",
                         "PATRONI_REPLICATION_PASSWORD": self._replication_password,
                         "PATRONI_SUPERUSER_USERNAME": "postgres",

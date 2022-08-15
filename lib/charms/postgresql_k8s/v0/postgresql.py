@@ -106,18 +106,23 @@ class PostgreSQL:
             logger.error(f"Failed to create database: {e}")
             raise PostgreSQLCreateDatabaseError()
 
-    def create_user(self, user: str, password: str, admin: bool = False) -> None:
+    def create_user(
+        self, user: str, password: str, admin: bool = False, extra_user_roles: str = None
+    ) -> None:
         """Creates a database user.
 
         Args:
             user: user to be created.
             password: password to be assigned to the user.
             admin: whether the user should have additional admin privileges.
+            extra_user_roles: additional roles to be assigned to the user.
         """
         try:
             with self._connect_to_database() as connection, connection.cursor() as cursor:
                 cursor.execute(f"SELECT TRUE FROM pg_roles WHERE rolname='{user}';")
                 user_definition = f"{user} WITH LOGIN{' SUPERUSER' if admin else ''} ENCRYPTED PASSWORD '{password}'"
+                if extra_user_roles:
+                    user_definition += f' {extra_user_roles.replace(",", " ")}'
                 if cursor.fetchone() is not None:
                     cursor.execute(f"ALTER ROLE {user_definition};")
                 else:
