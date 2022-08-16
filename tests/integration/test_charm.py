@@ -82,7 +82,7 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
     host = await get_unit_address(ops_test, f"{APP_NAME}/{unit_id}")
     logger.info("connecting to the database host: %s", host)
     with psycopg2.connect(
-        f"dbname='postgres' user='postgres' host='{host}' password='{password}' connect_timeout=1"
+        f"dbname='postgres' user='operator' host='{host}' password='{password}' connect_timeout=1"
     ) as connection, connection.cursor() as cursor:
         assert connection.status == psycopg2.extensions.STATUS_READY
 
@@ -303,5 +303,5 @@ def db_connect(host: str, password: str):
         psycopg2 connection object linked to postgres db, under "operator" user.
     """
     return psycopg2.connect(
-        f"dbname='postgres' user='postgres' host='{host}' password='{password}' connect_timeout=10"
+        f"dbname='postgres' user='operator' host='{host}' password='{password}' connect_timeout=10"
     )
