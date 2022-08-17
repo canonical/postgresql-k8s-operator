@@ -6,3 +6,13 @@ get-primary:
 get-operator-password:
   description: Get the operator user password used by charm.
     It is internal charm user, SHOULD NOT be used by applications.
+rotate-users-passwords:
+  description: Change the operator user password used by charm.
+    It is internal charm user, SHOULD NOT be used by applications.
+  params:
+    user:
+      type: string
+      description: The password will be auto-generated if this option is not specified.
+    password:
+      type: string
+      description: The password will be auto-generated if this option is not specified.

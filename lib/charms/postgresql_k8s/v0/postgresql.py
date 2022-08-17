@@ -19,6 +19,7 @@ The `postgresql` module provides methods for interacting with the PostgreSQL ins
 Any charm using this library should import the `psycopg2` or `psycopg2-binary` dependency.
 """
 import logging
+from typing import Dict
 
 import psycopg2
 from psycopg2 import sql
@@ -31,7 +32,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 1
+LIBPATCH = 2
 
 
 logger = logging.getLogger(__name__)
@@ -53,6 +54,10 @@ class PostgreSQLGetPostgreSQLVersionError(Exception):
     """Exception raised when retrieving PostgreSQL version fails."""
 
 
+class PostgreSQLSetUserPasswordError(Exception):
+    """Exception raised when setting/updating a user password fails."""
+
+
 class PostgreSQL:
     """Class to encapsulate all operations related to interacting with PostgreSQL instance."""
 
@@ -68,12 +73,16 @@ class PostgreSQL:
         self.password = password
         self.database = database
 
-    def _connect_to_database(self, database: str = None) -> psycopg2.extensions.connection:
+    def _connect_to_database(
+        self, database: str = None, autocommit: bool = True
+    ) -> psycopg2.extensions.connection:
         """Creates a connection to the database.
 
         Args:
             database: database to connect to (defaults to the database
                 provided when the object for this class was created).
+            autocommit: whether every command issued to the database
+                should be immediately committed.
 
         Returns:
              psycopg2 connection object.
@@ -81,7 +90,8 @@ class PostgreSQL:
         connection = psycopg2.connect(
             f"dbname='{database if database else self.database}' user='{self.user}' host='{self.host}' password='{self.password}' connect_timeout=1"
         )
-        connection.autocommit = True
+        if autocommit:
+            connection.autocommit = True
         return connection
 
     def create_database(self, database: str, user: str) -> None:
@@ -173,3 +183,30 @@ class PostgreSQL:
         except psycopg2.Error as e:
             logger.error(f"Failed to get PostgreSQL version: {e}")
             raise PostgreSQLGetPostgreSQLVersionError()
+
+    def rotate_users_passwords(self, users_with_passwords: Dict[str, str]) -> None:
+        """Rotates one or more users passwords.
+
+        Args:
+            users_with_passwords: a dict following the format {"user": "password"}.
+                It can contain multiple users.
+
+        Raises:
+            PostgreSQLSetUserPasswordError if any user password couldn't be changed.
+        """
+        try:
+            with self._connect_to_database(
+                autocommit=False
+            ) as connection, connection.cursor() as cursor:
+                for user, password in users_with_passwords.items():
+                    cursor.execute(
+                        sql.SQL(
+                            "ALTER USER {} WITH ENCRYPTED PASSWORD '" + password + "';"
+                        ).format(sql.Identifier(user))
+                    )
+        except psycopg2.Error as e:
+            logger.error(f"Failed to rotate user password: {e}")
+            raise PostgreSQLSetUserPasswordError()
+        finally:
+            if connection is not None:
+                connection.close()

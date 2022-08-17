@@ -5,4 +5,6 @@
 
 DATABASE_PORT = "5432"
 PEER = "database-peers"
+REPLICATION_USER = "replication"
 USER = "operator"
+SYSTEM_USERS = [REPLICATION_USER, USER]

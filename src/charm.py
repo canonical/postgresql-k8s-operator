@@ -7,7 +7,10 @@ import json
 import logging
 from typing import List
 
-from charms.postgresql_k8s.v0.postgresql import PostgreSQL
+from charms.postgresql_k8s.v0.postgresql import (
+    PostgreSQL,
+    PostgreSQLSetUserPasswordError,
+)
 from lightkube import ApiError, Client, codecs
 from lightkube.resources.core_v1 import Pod
 from ops.charm import (
@@ -30,7 +33,7 @@ from ops.pebble import Layer
 from requests import ConnectionError
 from tenacity import RetryError
 
-from constants import PEER, USER
+from constants import PEER, REPLICATION_USER, SYSTEM_USERS, USER
 from patroni import NotReadyError, Patroni
 from relations.db import DbProvides
 from relations.postgresql_provider import PostgreSQLProvider
@@ -60,6 +63,9 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(
             self.on.get_operator_password_action, self._on_get_operator_password
+        )
+        self.framework.observe(
+            self.on.rotate_users_passwords_action, self._on_rotate_users_passwords
         )
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
         self.framework.observe(self.on.update_status, self._on_update_status)
@@ -391,6 +397,53 @@ class PostgresqlOperatorCharm(CharmBase):
         """Returns the password for the operator user as an action response."""
         event.set_results({"operator-password": self._get_operator_password()})
 
+    def _on_rotate_users_passwords(self, event: ActionEvent) -> None:
+        """Rotate the password for all system users or the specified user."""
+        # Only the leader can write the new password into peer relation.
+        if not self.unit.is_leader():
+            event.fail("The action can be run only on the leader unit")
+            return
+
+        if "user" in event.params:
+            user = event.params["user"]
+
+            # Fail if the user is not a system user.
+            # One example is users created through relations.
+            if user not in SYSTEM_USERS:
+                event.fail(f"User {user} is not a system user")
+                return
+
+            # Generate a new password and use it if no password was provided to the action.
+            users = {
+                user: event.params["password"] if "password" in event.params else new_password()
+            }
+        else:
+            if "password" in event.params:
+                event.fail("The same password cannot be set for multiple users")
+                return
+
+            users = {user: new_password() for user in SYSTEM_USERS}
+
+        try:
+            self.postgresql.rotate_users_passwords(users)
+        except PostgreSQLSetUserPasswordError as e:
+            event.fail(f"Failed to set user password with error {e}")
+            return
+
+        # Update the password in the peer relation if the operation was successful.
+        for user, password in users.items():
+            self._peers.data[self.app].update({f"{user}-password": password})
+
+        # for unit in
+        self._patroni.reload_patroni_configuration()
+
+        # Return the generated password when the user option is given.
+        if "user" in event.params and "password" not in event.params:
+            user = event.params["user"]
+            event.set_results(
+                {f"{user}-password": self._peers.data[self.app].get(f"{user}-password")}
+            )
+
     def _on_get_primary(self, event: ActionEvent) -> None:
         """Get primary instance."""
         try:
@@ -499,7 +552,7 @@ class PostgresqlOperatorCharm(CharmBase):
                         "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
                         "PATRONI_NAME": pod_name,
                         "PATRONI_SCOPE": f"patroni-{self._name}",
-                        "PATRONI_REPLICATION_USERNAME": "replication",
+                        "PATRONI_REPLICATION_USERNAME": REPLICATION_USER,
                         "PATRONI_REPLICATION_PASSWORD": self._replication_password,
                         "PATRONI_SUPERUSER_USERNAME": USER,
                         "PATRONI_SUPERUSER_PASSWORD": self._get_operator_password(),
