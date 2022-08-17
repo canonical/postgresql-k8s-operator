@@ -11,13 +11,14 @@ from ops.testing import Harness
 from tenacity import RetryError
 
 from charm import PostgresqlOperatorCharm
+from constants import PEER
 from tests.helpers import patch_network_get
 
 
 class TestCharm(unittest.TestCase):
     @patch_network_get(private_address="1.1.1.1")
     def setUp(self):
-        self._peer_relation = "postgresql-replicas"
+        self._peer_relation = PEER
         self._postgresql_container = "postgresql"
         self._postgresql_service = "postgresql"
 
@@ -51,7 +52,7 @@ class TestCharm(unittest.TestCase):
 
         # Check that a new password was generated on leader election.
         self.harness.set_leader()
-        superuser_password = self.charm._peers.data[self.charm.app].get("postgres-password", None)
+        superuser_password = self.charm._peers.data[self.charm.app].get("operator-password", None)
         self.assertIsNotNone(superuser_password)
 
         replication_password = self.charm._peers.data[self.charm.app].get(
@@ -64,7 +65,7 @@ class TestCharm(unittest.TestCase):
         self.harness.set_leader(False)
         self.harness.set_leader()
         self.assertEqual(
-            self.charm._peers.data[self.charm.app].get("postgres-password", None),
+            self.charm._peers.data[self.charm.app].get("operator-password", None),
             superuser_password,
         )
         self.assertEqual(
@@ -103,13 +104,13 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(container.get_service(self._postgresql_service).is_running(), True)
         _render_patroni_yml_file.assert_called_once()
 
-    @patch("charm.PostgresqlOperatorCharm._get_postgres_password")
-    def test_on_get_postgres_password(self, _get_postgres_password):
+    @patch("charm.PostgresqlOperatorCharm._get_operator_password")
+    def test_on_get_operator_password(self, _get_operator_password):
         mock_event = Mock()
-        _get_postgres_password.return_value = "test-password"
-        self.charm._on_get_postgres_password(mock_event)
-        _get_postgres_password.assert_called_once()
-        mock_event.set_results.assert_called_once_with({"postgres-password": "test-password"})
+        _get_operator_password.return_value = "test-password"
+        self.charm._on_get_operator_password(mock_event)
+        _get_operator_password.assert_called_once()
+        mock_event.set_results.assert_called_once_with({"operator-password": "test-password"})
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.get_primary")
@@ -223,8 +224,8 @@ class TestCharm(unittest.TestCase):
                         "PATRONI_SCOPE": f"patroni-{self.charm._name}",
                         "PATRONI_REPLICATION_USERNAME": "replication",
                         "PATRONI_REPLICATION_PASSWORD": self.charm._replication_password,
-                        "PATRONI_SUPERUSER_USERNAME": "postgres",
-                        "PATRONI_SUPERUSER_PASSWORD": self.charm._get_postgres_password(),
+                        "PATRONI_SUPERUSER_USERNAME": "operator",
+                        "PATRONI_SUPERUSER_PASSWORD": self.charm._get_operator_password(),
                     },
                 }
             },
@@ -235,13 +236,13 @@ class TestCharm(unittest.TestCase):
     @patch("charm.Patroni.render_postgresql_conf_file")
     @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
     @patch("charm.PostgresqlOperatorCharm._create_resources")
-    def test_get_postgres_password(self, _, __, ___, ____):
+    def test_get_operator_password(self, _, __, ___, ____):
         # Test for a None password.
         self.harness.add_relation(self._peer_relation, self.charm.app.name)
-        self.assertIsNone(self.charm._get_postgres_password())
+        self.assertIsNone(self.charm._get_operator_password())
 
         # Then test for a non empty password after leader election and peer data set.
         self.harness.set_leader()
-        password = self.charm._get_postgres_password()
+        password = self.charm._get_operator_password()
         self.assertIsNotNone(password)
         self.assertNotEqual(password, "")

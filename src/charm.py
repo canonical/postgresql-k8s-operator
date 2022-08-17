@@ -30,14 +30,13 @@ from ops.pebble import Layer
 from requests import ConnectionError
 from tenacity import RetryError
 
+from constants import PEER, USER
 from patroni import NotReadyError, Patroni
 from relations.db import DbProvides
 from relations.postgresql_provider import PostgreSQLProvider
 from utils import new_password
 
 logger = logging.getLogger(__name__)
-
-PEER = "postgresql-replicas"
 
 
 class PostgresqlOperatorCharm(CharmBase):
@@ -60,7 +59,7 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(
-            self.on.get_postgres_password_action, self._on_get_postgres_password
+            self.on.get_operator_password_action, self._on_get_operator_password
         )
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
         self.framework.observe(self.on.update_status, self._on_update_status)
@@ -75,8 +74,8 @@ class PostgresqlOperatorCharm(CharmBase):
         """Returns an instance of the object used to interact with the database."""
         return PostgreSQL(
             host=self.primary_endpoint,
-            user="postgres",
-            password=self._get_postgres_password(),
+            user=USER,
+            password=self._get_operator_password(),
             database="postgres",
         )
 
@@ -108,7 +107,8 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _on_peer_relation_departed(self, event: RelationDepartedEvent) -> None:
         """The leader removes the departing units from the list of cluster members."""
-        if not self.unit.is_leader():
+        # Allow leader to update endpoints if it isn't leaving.
+        if not self.unit.is_leader() or event.departing_unit == self.unit:
             return
 
         if "cluster_initialised" not in self._peers.data[self.app]:
@@ -250,11 +250,11 @@ class PostgresqlOperatorCharm(CharmBase):
     def _on_leader_elected(self, event: LeaderElectedEvent) -> None:
         """Handle the leader-elected event."""
         data = self._peers.data[self.app]
-        postgres_password = data.get("postgres-password", None)
+        operator_password = data.get("operator-password", None)
         replication_password = data.get("replication-password", None)
 
-        if postgres_password is None:
-            self._peers.data[self.app]["postgres-password"] = new_password()
+        if operator_password is None:
+            self._peers.data[self.app]["operator-password"] = new_password()
 
         if replication_password is None:
             self._peers.data[self.app]["replication-password"] = new_password()
@@ -374,19 +374,22 @@ class PostgresqlOperatorCharm(CharmBase):
             with open("src/resources.yaml") as f:
                 for resource in codecs.load_all_yaml(f, context=self._context):
                     client.create(resource)
-                    logger.info(f"created {str(resource)}")
+                    logger.debug(f"created {str(resource)}")
         except ApiError as e:
+            # The 409 error code means that the resource was already created
+            # or has a higher version. This can happen if Patroni creates a
+            # resource that the charm is expected to create.
             if e.status.code == 409:
-                logger.info("replacing resource: %s.", str(resource.to_dict()))
+                logger.debug("replacing resource: %s.", str(resource.to_dict()))
                 client.replace(resource)
             else:
                 logger.error("failed to create resource: %s.", str(resource.to_dict()))
                 self.unit.status = BlockedStatus(f"failed to create services {e}")
                 return
 
-    def _on_get_postgres_password(self, event: ActionEvent) -> None:
-        """Returns the password for the postgres user as an action response."""
-        event.set_results({"postgres-password": self._get_postgres_password()})
+    def _on_get_operator_password(self, event: ActionEvent) -> None:
+        """Returns the password for the operator user as an action response."""
+        event.set_results({"operator-password": self._get_operator_password()})
 
     def _on_get_primary(self, event: ActionEvent) -> None:
         """Get primary instance."""
@@ -475,8 +478,8 @@ class PostgresqlOperatorCharm(CharmBase):
                         "PATRONI_SCOPE": f"patroni-{self._name}",
                         "PATRONI_REPLICATION_USERNAME": "replication",
                         "PATRONI_REPLICATION_PASSWORD": self._replication_password,
-                        "PATRONI_SUPERUSER_USERNAME": "postgres",
-                        "PATRONI_SUPERUSER_PASSWORD": self._get_postgres_password(),
+                        "PATRONI_SUPERUSER_USERNAME": USER,
+                        "PATRONI_SUPERUSER_PASSWORD": self._get_operator_password(),
                     },
                 }
             },
@@ -493,10 +496,10 @@ class PostgresqlOperatorCharm(CharmBase):
         """
         return self.model.get_relation(PEER)
 
-    def _get_postgres_password(self) -> str:
-        """Get postgres user password."""
+    def _get_operator_password(self) -> str:
+        """Get operator user password."""
         data = self._peers.data[self.app]
-        return data.get("postgres-password", None)
+        return data.get("operator-password", None)
 
     @property
     def _replication_password(self) -> str:

@@ -18,6 +18,7 @@ from tests.integration.helpers import (
     convert_records_to_dict,
     get_application_units,
     get_cluster_members,
+    get_operator_password,
     get_unit_address,
     scale_application,
 )
@@ -53,7 +54,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
 
 @pytest.mark.parametrize("unit_id", UNIT_IDS)
 async def test_labels_consistency_across_pods(ops_test: OpsTest, unit_id: int) -> None:
-    model = await ops_test.model.get_info()
+    model = ops_test.model.info
     client = AsyncClient(namespace=model.name)
     pod = await client.get(Pod, name=f"postgresql-k8s-{unit_id}")
     # Ensures that the correct kubernetes labels are set
@@ -73,13 +74,13 @@ async def test_database_is_up(ops_test: OpsTest, unit_id: int):
 
 @pytest.mark.parametrize("unit_id", UNIT_IDS)
 async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
-    password = await get_postgres_password(ops_test)
+    password = await get_operator_password(ops_test)
 
     # Connect to PostgreSQL.
     host = await get_unit_address(ops_test, f"{APP_NAME}/{unit_id}")
     logger.info("connecting to the database host: %s", host)
     with psycopg2.connect(
-        f"dbname='postgres' user='postgres' host='{host}' password='{password}' connect_timeout=1"
+        f"dbname='postgres' user='operator' host='{host}' password='{password}' connect_timeout=1"
     ) as connection, connection.cursor() as cursor:
         assert connection.status == psycopg2.extensions.STATUS_READY
 
@@ -116,7 +117,7 @@ async def test_cluster_is_stable_after_leader_deletion(ops_test: OpsTest) -> Non
     primary = await get_primary(ops_test)
 
     # Delete the primary pod.
-    model = await ops_test.model.get_info()
+    model = ops_test.model.info
     client = AsyncClient(namespace=model.name)
     await client.delete(Pod, name=primary.replace("/", "-"))
     logger.info(f"deleted pod {primary}")
@@ -161,7 +162,7 @@ async def test_scale_down_and_up(ops_test: OpsTest):
 async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
     """Test data persists through a graceful restart."""
     primary = await get_primary(ops_test)
-    password = await get_postgres_password(ops_test)
+    password = await get_operator_password(ops_test)
     address = await get_unit_address(ops_test, primary)
 
     # Write data to primary IP.
@@ -189,7 +190,7 @@ async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
 async def test_persist_data_through_failure(ops_test: OpsTest):
     """Test data persists through a failure."""
     primary = await get_primary(ops_test)
-    password = await get_postgres_password(ops_test)
+    password = await get_operator_password(ops_test)
     address = await get_unit_address(ops_test, primary)
 
     # Write data to primary IP.
@@ -199,7 +200,7 @@ async def test_persist_data_through_failure(ops_test: OpsTest):
         connection.cursor().execute("CREATE TABLE failtest (testcol INT );")
 
     # Cause a machine failure by killing a unit in k8s
-    model = await ops_test.model.get_info()
+    model = ops_test.model.info
     client = AsyncClient(namespace=model.name)
     await client.delete(Pod, name=primary.replace("/", "-"))
     logger.info("primary pod deleted")
@@ -243,6 +244,26 @@ async def test_automatic_failover_after_leader_issue(ops_test: OpsTest) -> None:
     assert await get_primary(ops_test) != "None"
 
 
+async def test_application_removal(ops_test: OpsTest) -> None:
+    # Remove the application to trigger some hooks (like peer relation departed).
+    await ops_test.model.applications[APP_NAME].remove()
+
+    # Block until the application is completely removed, or any unit gets in an error state.
+    await ops_test.model.block_until(
+        lambda: APP_NAME not in ops_test.model.applications
+        or any(
+            [
+                unit.workload_status == "error"
+                for unit in ops_test.model.applications[APP_NAME].units
+            ]
+        )
+    )
+
+    # Check whether the application is gone
+    # (in that situation, the units aren't in an error state).
+    assert APP_NAME not in ops_test.model.applications
+
+
 @retry(
     retry=retry_if_result(lambda x: not x),
     stop=stop_after_attempt(10),
@@ -269,14 +290,6 @@ async def get_primary(ops_test: OpsTest, unit_id=0) -> str:
     return action.results["primary"]
 
 
-async def get_postgres_password(ops_test: OpsTest):
-    """Retrieve the postgres user password using the action."""
-    unit = ops_test.model.units.get(f"{APP_NAME}/0")
-    action = await unit.run_action("get-postgres-password")
-    result = await action.wait()
-    return result.results["postgres-password"]
-
-
 def db_connect(host: str, password: str):
     """Returns psycopg2 connection object linked to postgres db in the given host.
 
@@ -285,8 +298,8 @@ def db_connect(host: str, password: str):
         password: postgres password
 
     Returns:
-        psycopg2 connection object linked to postgres db, under "postgres" user.
+        psycopg2 connection object linked to postgres db, under "operator" user.
     """
     return psycopg2.connect(
-        f"dbname='postgres' user='postgres' host='{host}' password='{password}' connect_timeout=10"
+        f"dbname='postgres' user='operator' host='{host}' password='{password}' connect_timeout=10"
     )
