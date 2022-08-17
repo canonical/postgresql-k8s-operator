@@ -40,17 +40,6 @@ class Patroni:
         self._storage_path = storage_path
         self._planned_units = planned_units
 
-    def change_master_start_timeout(self, seconds: int) -> None:
-        """Change master start timeout configuration.
-
-        Args:
-            seconds: number of seconds to set in master_start_timeout configuration.
-        """
-        requests.patch(
-            f"http://{self._endpoint}:8008/config",
-            json={"master_start_timeout": seconds},
-        )
-
     def get_primary(self, unit_name_pattern=False) -> str:
         """Get primary instance.
 
@@ -71,16 +60,6 @@ class Patroni:
                     primary = "/".join(primary.rsplit("-", 1))
                 break
         return primary
-
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-    def get_postgresql_state(self) -> str:
-        """Get PostgreSQL state.
-
-        Returns:
-            running, restarting or stopping.
-        """
-        r = requests.get(f"http://{self._endpoint}:8008/health")
-        return r.json()["state"]
 
     @property
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
