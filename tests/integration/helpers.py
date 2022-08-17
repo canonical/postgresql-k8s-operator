@@ -30,7 +30,7 @@ async def check_database_users_existence(
     """
     unit = ops_test.model.applications[DATABASE_APP_NAME].units[0]
     unit_address = await get_unit_address(ops_test, unit.name)
-    password = await get_postgres_password(ops_test)
+    password = await get_operator_password(ops_test)
 
     # Retrieve all users in the database.
     output = await execute_query_on_unit(
@@ -61,7 +61,7 @@ async def check_database_creation(ops_test: OpsTest, database: str) -> None:
         ops_test: The ops test framework
         database: Name of the database that should have been created
     """
-    password = await get_postgres_password(ops_test)
+    password = await get_operator_password(ops_test)
 
     for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
         unit_address = await get_unit_address(ops_test, unit.name)
@@ -161,7 +161,7 @@ async def execute_query_on_unit(
         A list of rows that were potentially returned from the query.
     """
     with psycopg2.connect(
-        f"dbname='{database}' user='postgres' host='{unit_address}' password='{password}' connect_timeout=10"
+        f"dbname='{database}' user='operator' host='{unit_address}' password='{password}' connect_timeout=10"
     ) as connection, connection.cursor() as cursor:
         cursor.execute(query)
         output = list(itertools.chain(*cursor.fetchall()))
@@ -196,12 +196,12 @@ def get_application_units(ops_test: OpsTest, application_name: str) -> List[str]
     ]
 
 
-async def get_postgres_password(ops_test: OpsTest):
-    """Retrieve the postgres user password using the action."""
+async def get_operator_password(ops_test: OpsTest):
+    """Retrieve the operator user password using the action."""
     unit = ops_test.model.units.get(f"{DATABASE_APP_NAME}/0")
-    action = await unit.run_action("get-postgres-password")
+    action = await unit.run_action("get-operator-password")
     result = await action.wait()
-    return result.results["postgres-password"]
+    return result.results["operator-password"]
 
 
 async def get_primary(ops_test: OpsTest, unit_id=0) -> str:

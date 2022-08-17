@@ -5,3 +5,4 @@
 
 DATABASE_PORT = "5432"
 PEER = "database-peers"
+USER = "operator"

@@ -18,6 +18,7 @@ from tests.integration.helpers import (
     convert_records_to_dict,
     get_application_units,
     get_cluster_members,
+    get_operator_password,
     get_unit_address,
     scale_application,
 )
@@ -75,13 +76,13 @@ async def test_database_is_up(ops_test: OpsTest, unit_id: int):
 
 @pytest.mark.parametrize("unit_id", UNIT_IDS)
 async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
-    password = await get_postgres_password(ops_test)
+    password = await get_operator_password(ops_test)
 
     # Connect to PostgreSQL.
     host = await get_unit_address(ops_test, f"{APP_NAME}/{unit_id}")
     logger.info("connecting to the database host: %s", host)
     with psycopg2.connect(
-        f"dbname='postgres' user='postgres' host='{host}' password='{password}' connect_timeout=1"
+        f"dbname='postgres' user='operator' host='{host}' password='{password}' connect_timeout=1"
     ) as connection, connection.cursor() as cursor:
         assert connection.status == psycopg2.extensions.STATUS_READY
 
@@ -163,7 +164,7 @@ async def test_scale_down_and_up(ops_test: OpsTest):
 async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
     """Test data persists through a graceful restart."""
     primary = await get_primary(ops_test)
-    password = await get_postgres_password(ops_test)
+    password = await get_operator_password(ops_test)
     address = await get_unit_address(ops_test, primary)
 
     # Write data to primary IP.
@@ -191,7 +192,7 @@ async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
 async def test_persist_data_through_failure(ops_test: OpsTest):
     """Test data persists through a failure."""
     primary = await get_primary(ops_test)
-    password = await get_postgres_password(ops_test)
+    password = await get_operator_password(ops_test)
     address = await get_unit_address(ops_test, primary)
 
     # Write data to primary IP.
@@ -291,14 +292,6 @@ async def get_primary(ops_test: OpsTest, unit_id=0) -> str:
     return action.results["primary"]
 
 
-async def get_postgres_password(ops_test: OpsTest):
-    """Retrieve the postgres user password using the action."""
-    unit = ops_test.model.units.get(f"{APP_NAME}/0")
-    action = await unit.run_action("get-postgres-password")
-    result = await action.wait()
-    return result.results["postgres-password"]
-
-
 def db_connect(host: str, password: str):
     """Returns psycopg2 connection object linked to postgres db in the given host.
 
@@ -307,8 +300,8 @@ def db_connect(host: str, password: str):
         password: postgres password
 
     Returns:
-        psycopg2 connection object linked to postgres db, under "postgres" user.
+        psycopg2 connection object linked to postgres db, under "operator" user.
     """
     return psycopg2.connect(
-        f"dbname='postgres' user='postgres' host='{host}' password='{password}' connect_timeout=10"
+        f"dbname='postgres' user='operator' host='{host}' password='{password}' connect_timeout=10"
     )
