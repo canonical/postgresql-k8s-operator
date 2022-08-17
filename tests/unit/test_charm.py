@@ -2,11 +2,11 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import Mock, call, patch
+from unittest.mock import Mock, patch
 
 from lightkube import codecs
 from lightkube.resources.core_v1 import Pod
-from ops.model import ActiveStatus, BlockedStatus
+from ops.model import ActiveStatus
 from ops.testing import Harness
 from tenacity import RetryError
 
@@ -130,41 +130,19 @@ class TestCharm(unittest.TestCase):
         _get_primary.assert_called_once()
         mock_event.set_results.assert_not_called()
 
-    @patch("ops.model.Container.restart")
-    def test_restart_postgresql_service(self, _restart):
-        self.charm._restart_postgresql_service()
-        _restart.assert_called_once_with(self._postgresql_service)
-        self.assertEqual(
-            self.harness.model.unit.status,
-            ActiveStatus(),
-        )
-
     @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.get_primary")
-    @patch("charm.PostgresqlOperatorCharm._restart_postgresql_service")
-    @patch("charm.Patroni.change_master_start_timeout")
-    @patch("charm.Patroni.get_postgresql_state")
     def test_on_update_status(
         self,
-        _get_postgresql_state,
-        _change_master_start_timeout,
-        _restart_postgresql_service,
         _get_primary,
     ):
-        _get_postgresql_state.side_effect = ["running", "running", "restarting", "stopping"]
         _get_primary.side_effect = [
             "postgresql-k8s/1",
             self.charm.unit.name,
-            self.charm.unit.name,
-            self.charm.unit.name,
         ]
 
-        # Test running status.
-        self.charm.on.update_status.emit()
-        _change_master_start_timeout.assert_not_called()
-        _restart_postgresql_service.assert_not_called()
-
         # Check primary message not being set (current unit is not the primary).
+        self.charm.on.update_status.emit()
         _get_primary.assert_called_once()
         self.assertNotEqual(
             self.harness.model.unit.status,
@@ -178,41 +156,9 @@ class TestCharm(unittest.TestCase):
             ActiveStatus("Primary"),
         )
 
-        # Test restarting status.
-        self.charm.on.update_status.emit()
-        _change_master_start_timeout.assert_not_called()
-        _restart_postgresql_service.assert_called_once()
-
-        # Create a manager mock to check the correct order of the calls.
-        manager = Mock()
-        manager.attach_mock(_change_master_start_timeout, "c")
-        manager.attach_mock(_restart_postgresql_service, "r")
-
-        # Test stopping status.
-        _restart_postgresql_service.reset_mock()
-        self.charm.on.update_status.emit()
-        expected_calls = [call.c(0), call.r(), call.c(None)]
-        self.assertEqual(manager.mock_calls, expected_calls)
-
     @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.get_primary")
-    @patch("charm.PostgresqlOperatorCharm._restart_postgresql_service")
-    @patch("charm.Patroni.get_postgresql_state")
-    def test_on_update_status_with_error_on_postgresql_status_check(
-        self, _get_postgresql_state, _restart_postgresql_service, _
-    ):
-        _get_postgresql_state.side_effect = [RetryError("fake error")]
-        self.charm.on.update_status.emit()
-        _restart_postgresql_service.assert_not_called()
-        self.assertEqual(
-            self.harness.model.unit.status,
-            BlockedStatus("failed to check PostgreSQL state with error RetryError[fake error]"),
-        )
-
-    @patch_network_get(private_address="1.1.1.1")
-    @patch("charm.Patroni.get_primary")
-    @patch("charm.Patroni.get_postgresql_state")
-    def test_on_update_status_with_error_on_get_primary(self, _, _get_primary):
+    def test_on_update_status_with_error_on_get_primary(self, _get_primary):
         _get_primary.side_effect = [RetryError("fake error")]
 
         with self.assertLogs("charm", "ERROR") as logs:
