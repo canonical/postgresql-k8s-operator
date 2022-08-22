@@ -453,35 +453,12 @@ class PostgresqlOperatorCharm(CharmBase):
             logger.error(f"failed to get primary with error {e}")
 
     def _on_update_status(self, _) -> None:
-        # Until https://github.com/canonical/pebble/issues/6 is fixed,
-        # we need to use the logic below to restart the leader
-        # and a stuck replica after a failover/switchover.
-        try:
-            state = self._patroni.get_postgresql_state()
-            if state == "restarting":
-                # Restart the stuck replica.
-                self._restart_postgresql_service()
-            elif state == "starting" or state == "stopping":
-                # Force a primary change when the current primary is stuck.
-                self.force_primary_change()
-        except RetryError as e:
-            logger.error("failed to check PostgreSQL state")
-            self.unit.status = BlockedStatus(f"failed to check PostgreSQL state with error {e}")
-            return
-
         # Display an active status message if the current unit is the primary.
         try:
             if self._patroni.get_primary(unit_name_pattern=True) == self.unit.name:
                 self.unit.status = ActiveStatus("Primary")
         except (RetryError, ConnectionError) as e:
             logger.error(f"failed to get primary with error {e}")
-
-    def _restart_postgresql_service(self) -> None:
-        """Restart PostgreSQL and Patroni."""
-        self.unit.status = MaintenanceStatus(f"restarting {self._postgresql_service} service")
-        container = self.unit.get_container("postgresql")
-        container.restart(self._postgresql_service)
-        self.unit.status = ActiveStatus()
 
     @property
     def _patroni(self):
@@ -593,21 +570,6 @@ class PostgresqlOperatorCharm(CharmBase):
             pod name in "postgresql-k8s-0" format.
         """
         return unit_name.replace("/", "-")
-
-    def force_primary_change(self) -> None:
-        """Force primary changes immediately.
-
-        This function is needed to handle cases related to
-        https://github.com/canonical/pebble/issues/6 .
-        When a fail-over is started, Patroni gets stuck on the primary
-        change because of some zombie process that are not cleaned by Pebble.
-        """
-        # Change needed to force an immediate failover.
-        self._patroni.change_master_start_timeout(0)
-        # Restart the stuck previous leader (will trigger an immediate failover).
-        self._restart_postgresql_service()
-        # Revert configuration to default.
-        self._patroni.change_master_start_timeout(None)
 
 
 if __name__ == "__main__":
