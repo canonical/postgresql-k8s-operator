@@ -30,7 +30,7 @@ from ops.pebble import Layer
 from requests import ConnectionError
 from tenacity import RetryError
 
-from constants import PEER, USER
+from constants import PEER, REPLICATION_PASSWORD_KEY, USER, USER_PASSWORD_KEY
 from patroni import NotReadyError, Patroni
 from relations.db import DbProvides
 from relations.postgresql_provider import PostgreSQLProvider
@@ -291,11 +291,11 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _on_leader_elected(self, event: LeaderElectedEvent) -> None:
         """Handle the leader-elected event."""
-        if self._get_secret("app", "operator-password") is None:
-            self._set_secret("app", "operator-password", new_password())
+        if self._get_secret("app", USER_PASSWORD_KEY) is None:
+            self._set_secret("app", USER_PASSWORD_KEY, new_password())
 
-        if self._get_secret("app", "replication-password") is None:
-            self._set_secret("app", "replication-password", new_password())
+        if self._get_secret("app", REPLICATION_PASSWORD_KEY) is None:
+            self._set_secret("app", REPLICATION_PASSWORD_KEY, new_password())
 
         # Create resources and add labels needed for replication.
         self._create_resources()
@@ -427,7 +427,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _on_get_operator_password(self, event: ActionEvent) -> None:
         """Returns the password for the operator user as an action response."""
-        event.set_results({"operator-password": self._get_operator_password()})
+        event.set_results({USER_PASSWORD_KEY: self._get_operator_password()})
 
     def _on_get_primary(self, event: ActionEvent) -> None:
         """Get primary instance."""
@@ -536,12 +536,12 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _get_operator_password(self) -> str:
         """Get operator user password."""
-        return self._get_secret("app", "operator-password")
+        return self._get_secret("app", USER_PASSWORD_KEY)
 
     @property
     def _replication_password(self) -> str:
         """Get replication user password."""
-        return self._get_secret("app", "replication-password")
+        return self._get_secret("app", REPLICATION_PASSWORD_KEY)
 
     def _unit_name_to_pod_name(self, unit_name: str) -> str:
         """Converts unit name to pod name.
