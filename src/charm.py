@@ -68,12 +68,8 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
-        self.framework.observe(
-            self.on.get_operator_password_action, self._on_get_operator_password
-        )
-        self.framework.observe(
-            self.on.rotate_users_passwords_action, self._on_rotate_users_passwords
-        )
+        self.framework.observe(self.on.get_password_action, self._on_get_password)
+        self.framework.observe(self.on.set_password_action, self._on_set_password)
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
         self.framework.observe(self.on.update_status, self._on_update_status)
         self._storage_path = self.meta.storages["pgdata"].location
@@ -130,7 +126,7 @@ class PostgresqlOperatorCharm(CharmBase):
         return PostgreSQL(
             host=self.primary_endpoint,
             user=USER,
-            password=self._get_operator_password(),
+            password=self._get_password(),
             database="postgres",
         )
 
@@ -438,11 +434,17 @@ class PostgresqlOperatorCharm(CharmBase):
                 self.unit.status = BlockedStatus(f"failed to create services {e}")
                 return
 
-    def _on_get_operator_password(self, event: ActionEvent) -> None:
-        """Returns the password for the operator user as an action response."""
-        event.set_results({USER_PASSWORD_KEY: self._get_operator_password()})
+    def _on_get_password(self, event: ActionEvent) -> None:
+        """Returns the password for a user as an action response.
 
-    def _on_rotate_users_passwords(self, event: ActionEvent) -> None:
+        If no user is provided, the password of the operator user is returned.
+        """
+        user = USER
+        if "username" in event.params:
+            user = event.params["username"]
+        event.set_results({f"{user}-password": self._get_password(user)})
+
+    def _on_set_password(self, event: ActionEvent) -> None:
         """Rotate the password for all system users or the specified user."""
         # Only the leader can write the new password into peer relation.
         if not self.unit.is_leader():
@@ -575,9 +577,9 @@ class PostgresqlOperatorCharm(CharmBase):
                         "PATRONI_NAME": pod_name,
                         "PATRONI_SCOPE": f"patroni-{self._name}",
                         "PATRONI_REPLICATION_USERNAME": REPLICATION_USER,
-                        "PATRONI_REPLICATION_PASSWORD": self._replication_password,
+                        "PATRONI_REPLICATION_PASSWORD": self._get_password("replication"),
                         "PATRONI_SUPERUSER_USERNAME": USER,
-                        "PATRONI_SUPERUSER_PASSWORD": self._get_operator_password(),
+                        "PATRONI_SUPERUSER_PASSWORD": self._get_password(),
                     },
                 }
             },
@@ -594,14 +596,19 @@ class PostgresqlOperatorCharm(CharmBase):
         """
         return self.model.get_relation(PEER)
 
-    def _get_operator_password(self) -> str:
-        """Get operator user password."""
-        return self._get_secret("app", USER_PASSWORD_KEY)
+    def _get_password(self, user: str = None) -> str:
+        """Get operator user password.
 
-    @property
-    def _replication_password(self) -> str:
-        """Get replication user password."""
-        return self._get_secret("app", REPLICATION_PASSWORD_KEY)
+        Args:
+            user: the user to retrieve the password.
+                Defaults to operator user.
+
+        Returns:
+            the user password.
+        """
+        if user is None:
+            user = USER
+        return self._get_secret("app", f"{user}-password")
 
     def _unit_name_to_pod_name(self, unit_name: str) -> str:
         """Converts unit name to pod name.

@@ -199,7 +199,7 @@ def get_application_units(ops_test: OpsTest, application_name: str) -> List[str]
 async def get_operator_password(ops_test: OpsTest):
     """Retrieve the operator user password using the action."""
     unit = ops_test.model.units.get(f"{DATABASE_APP_NAME}/0")
-    action = await unit.run_action("get-operator-password")
+    action = await unit.run_action("get-password")
     result = await action.wait()
     return result.results["operator-password"]
 

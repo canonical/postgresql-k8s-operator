@@ -9,4 +9,5 @@ REPLICATION_USER = "replication"
 REPLICATION_PASSWORD_KEY = "replication-password"
 USER = "operator"
 USER_PASSWORD_KEY = "operator-password"
+# List of system usernames needed for correct work of the charm/workload.
 SYSTEM_USERS = [REPLICATION_USER, USER]
