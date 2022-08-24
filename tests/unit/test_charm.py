@@ -140,69 +140,70 @@ class TestCharm(unittest.TestCase):
     @patch("charm.Patroni.reload_patroni_configuration")
     @patch("charm.Patroni.render_patroni_yml_file")
     @patch("charm.PostgresqlOperatorCharm._set_secret")
+    @patch("charm.PostgresqlOperatorCharm.postgresql")
     @patch("charm.Patroni.are_all_members_ready")
     @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
     def test_on_set_password(
         self,
         _,
         _are_all_members_ready,
+        _postgresql,
         _set_secret,
         _render_patroni_yml_file,
         _reload_patroni_configuration,
     ):
-        with patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock:
-            # Create a mock event.
-            mock_event = MagicMock(params={})
+        # Create a mock event.
+        mock_event = MagicMock(params={})
 
-            # Set some values for the other mocks.
-            _are_all_members_ready.side_effect = [False, True, True, True, True]
-            postgresql_mock.update_user_password = PropertyMock(
-                side_effect=[PostgreSQLUpdateUserPasswordError, None, None, None]
-            )
+        # Set some values for the other mocks.
+        _are_all_members_ready.side_effect = [False, True, True, True, True]
+        _postgresql.update_user_password = PropertyMock(
+            side_effect=[PostgreSQLUpdateUserPasswordError, None, None, None]
+        )
 
-            # Test trying to set a password through a non leader unit.
-            self.charm._on_set_password(mock_event)
-            mock_event.fail.assert_called_once()
-            _set_secret.assert_not_called()
+        # Test trying to set a password through a non leader unit.
+        self.charm._on_set_password(mock_event)
+        mock_event.fail.assert_called_once()
+        _set_secret.assert_not_called()
 
-            # Test providing an invalid username.
-            self.harness.set_leader()
-            mock_event.reset_mock()
-            mock_event.params["username"] = "user"
-            self.charm._on_set_password(mock_event)
-            mock_event.fail.assert_called_once()
-            _set_secret.assert_not_called()
+        # Test providing an invalid username.
+        self.harness.set_leader()
+        mock_event.reset_mock()
+        mock_event.params["username"] = "user"
+        self.charm._on_set_password(mock_event)
+        mock_event.fail.assert_called_once()
+        _set_secret.assert_not_called()
 
-            # Test without providing the username option but without all cluster members ready.
-            mock_event.reset_mock()
-            del mock_event.params["username"]
-            self.charm._on_set_password(mock_event)
-            mock_event.fail.assert_called_once()
-            _set_secret.assert_not_called()
+        # Test without providing the username option but without all cluster members ready.
+        mock_event.reset_mock()
+        del mock_event.params["username"]
+        self.charm._on_set_password(mock_event)
+        mock_event.fail.assert_called_once()
+        _set_secret.assert_not_called()
 
-            # Test for an error updating when updating the user password in the database.
-            mock_event.reset_mock()
-            self.charm._on_set_password(mock_event)
-            mock_event.fail.assert_called_once()
-            _set_secret.assert_not_called()
+        # Test for an error updating when updating the user password in the database.
+        mock_event.reset_mock()
+        self.charm._on_set_password(mock_event)
+        mock_event.fail.assert_called_once()
+        _set_secret.assert_not_called()
 
-            # Test without providing the username option.
-            self.charm._on_set_password(mock_event)
-            self.assertEqual(_set_secret.call_args_list[0][0][1], "operator-password")
+        # Test without providing the username option.
+        self.charm._on_set_password(mock_event)
+        self.assertEqual(_set_secret.call_args_list[0][0][1], "operator-password")
 
-            # Also test providing the username option.
-            _set_secret.reset_mock()
-            mock_event.params["username"] = "replication"
-            self.charm._on_set_password(mock_event)
-            self.assertEqual(_set_secret.call_args_list[0][0][1], "replication-password")
+        # Also test providing the username option.
+        _set_secret.reset_mock()
+        mock_event.params["username"] = "replication"
+        self.charm._on_set_password(mock_event)
+        self.assertEqual(_set_secret.call_args_list[0][0][1], "replication-password")
 
-            # And test providing both the username and password options.
-            _set_secret.reset_mock()
-            mock_event.params["password"] = "replication-test-password"
-            self.charm._on_set_password(mock_event)
-            _set_secret.assert_called_once_with(
-                "app", "replication-password", "replication-test-password"
-            )
+        # And test providing both the username and password options.
+        _set_secret.reset_mock()
+        mock_event.params["password"] = "replication-test-password"
+        self.charm._on_set_password(mock_event)
+        _set_secret.assert_called_once_with(
+            "app", "replication-password", "replication-test-password"
+        )
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.get_primary")
