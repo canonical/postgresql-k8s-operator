@@ -186,11 +186,6 @@ class PostgresqlOperatorCharm(CharmBase):
         # one at a time.
         if self.unit.is_leader():
             self._add_members(event)
-        else:
-            # Update the Patroni configuration in this unit to use new passwords when they change.
-            # The config is reloaded later in `update_cluster_members` if the member has already
-            # started, or it is loaded the first time Patroni starts.
-            self._patroni.render_patroni_yml_file()
 
         # Don't update this member before it's part of the members list.
         if self._endpoint not in self._endpoints:
@@ -506,7 +501,7 @@ class PostgresqlOperatorCharm(CharmBase):
         self._set_secret("app", f"{username}-password", password)
 
         # Update and reload Patroni configuration in this unit to use the new password.
-        # Other units Patroni configuration will be
+        # Other units Patroni configuration will be reloaded in the peer relation changed event.
         self._patroni.render_patroni_yml_file()
         self._patroni.reload_patroni_configuration()
 
