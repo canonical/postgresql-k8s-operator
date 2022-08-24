@@ -2,8 +2,9 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, Mock, PropertyMock, patch
 
+from charms.postgresql_k8s.v0.postgresql import PostgreSQLUpdateUserPasswordError
 from lightkube import codecs
 from lightkube.resources.core_v1 import Pod
 from ops.model import ActiveStatus
@@ -136,6 +137,73 @@ class TestCharm(unittest.TestCase):
             {"replication-password": "replication-test-password"}
         )
 
+    @patch("charm.Patroni.reload_patroni_configuration")
+    @patch("charm.Patroni.render_patroni_yml_file")
+    @patch("charm.PostgresqlOperatorCharm._set_secret")
+    @patch("charm.Patroni.are_all_members_ready")
+    @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
+    def test_on_set_password(
+        self,
+        _,
+        _are_all_members_ready,
+        _set_secret,
+        _render_patroni_yml_file,
+        _reload_patroni_configuration,
+    ):
+        with patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock:
+            # Create a mock event.
+            mock_event = MagicMock(params={})
+
+            # Set some values for the other mocks.
+            _are_all_members_ready.side_effect = [False, True, True, True, True]
+            postgresql_mock.update_user_password = PropertyMock(
+                side_effect=[PostgreSQLUpdateUserPasswordError, None, None, None]
+            )
+
+            # Test trying to set a password through a non leader unit.
+            self.charm._on_set_password(mock_event)
+            mock_event.fail.assert_called_once()
+            _set_secret.assert_not_called()
+
+            # Test providing an invalid username.
+            self.harness.set_leader()
+            mock_event.reset_mock()
+            mock_event.params["username"] = "user"
+            self.charm._on_set_password(mock_event)
+            mock_event.fail.assert_called_once()
+            _set_secret.assert_not_called()
+
+            # Test without providing the username option but without all cluster members ready.
+            mock_event.reset_mock()
+            del mock_event.params["username"]
+            self.charm._on_set_password(mock_event)
+            mock_event.fail.assert_called_once()
+            _set_secret.assert_not_called()
+
+            # Test for an error updating when updating the user password in the database.
+            mock_event.reset_mock()
+            self.charm._on_set_password(mock_event)
+            mock_event.fail.assert_called_once()
+            _set_secret.assert_not_called()
+
+            # Test without providing the username option.
+            self.charm._on_set_password(mock_event)
+            self.assertEqual(_set_secret.call_args_list[0][0][1], "operator-password")
+
+            # Also test providing the username option.
+            _set_secret.reset_mock()
+            mock_event.params["username"] = "replication"
+            self.charm._on_set_password(mock_event)
+            self.assertEqual(_set_secret.call_args_list[0][0][1], "replication-password")
+
+            # And test providing both the username and password options.
+            _set_secret.reset_mock()
+            mock_event.params["password"] = "replication-test-password"
+            self.charm._on_set_password(mock_event)
+            _set_secret.assert_called_once_with(
+                "app", "replication-password", "replication-test-password"
+            )
+
     @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.get_primary")
     def test_on_get_primary(self, _get_primary):
@@ -153,21 +221,6 @@ class TestCharm(unittest.TestCase):
         self.charm._on_get_primary(mock_event)
         _get_primary.assert_called_once()
         mock_event.set_results.assert_not_called()
-
-    # @patch("charm.Patroni.rotate_users_passwords")
-    # def test_on_rotate_users_passwords(self):
-    #     self.harness.add_relation(self._peer_relation, self.charm.app.name)
-    #     with patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock:
-    #         mock_event = Mock()
-    #
-    #         self.harness.set_leader(False)
-    #         self.charm._on_rotate_users_passwords(mock_event)
-    #         # mock_event.set_results.assert_called_once_with
-    #         # ({"operator-password": "test-password"})
-    #         postgresql_mock.rotate_users_passwords.assert_not_called()
-    #
-    #         self.harness.set_leader(True)
-    #         postgresql_mock.rotate_users_passwords.assert_called_once()
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.get_primary")
