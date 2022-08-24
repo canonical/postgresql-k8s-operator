@@ -5,4 +5,6 @@
 
 DATABASE_PORT = "5432"
 PEER = "database-peers"
+REPLICATION_PASSWORD_KEY = "replication-password"
 USER = "operator"
+USER_PASSWORD_KEY = "operator-password"

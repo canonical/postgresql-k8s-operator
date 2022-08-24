@@ -31,6 +31,8 @@ class TestCharm(unittest.TestCase):
             "app_name": self.harness.model.app.name,
         }
 
+        self.rel_id = self.harness.add_relation(self._peer_relation, self.charm.app.name)
+
     @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.render_postgresql_conf_file")
     def test_on_install(
@@ -46,7 +48,6 @@ class TestCharm(unittest.TestCase):
     @patch("charm.PostgresqlOperatorCharm._create_resources")
     def test_on_leader_elected(self, _, __, _render_postgresql_conf_file, ___):
         # Assert that there is no password in the peer relation.
-        self.harness.add_relation(self._peer_relation, self.charm.app.name)
         self.assertIsNone(self.charm._peers.data[self.charm.app].get("postgres-password", None))
         self.assertIsNone(self.charm._peers.data[self.charm.app].get("replication-password", None))
 
@@ -86,7 +87,6 @@ class TestCharm(unittest.TestCase):
         # Check that the initial plan is empty.
         plan = self.harness.get_container_pebble_plan(self._postgresql_container)
         self.assertEqual(plan.to_dict(), {})
-        self.harness.add_relation(self._peer_relation, self.charm.app.name)
 
         # Get the current and the expected layer from the pebble plan and the _postgresql_layer
         # method, respectively.
@@ -202,7 +202,6 @@ class TestCharm(unittest.TestCase):
     @patch("charm.PostgresqlOperatorCharm._create_resources")
     def test_postgresql_layer(self, _, __, ___, ____):
         # Test with the already generated password.
-        self.harness.add_relation(self._peer_relation, self.charm.app.name)
         self.harness.set_leader()
         plan = self.charm._postgresql_layer().to_dict()
         expected = {
@@ -238,7 +237,6 @@ class TestCharm(unittest.TestCase):
     @patch("charm.PostgresqlOperatorCharm._create_resources")
     def test_get_operator_password(self, _, __, ___, ____):
         # Test for a None password.
-        self.harness.add_relation(self._peer_relation, self.charm.app.name)
         self.assertIsNone(self.charm._get_operator_password())
 
         # Then test for a non empty password after leader election and peer data set.
@@ -246,3 +244,45 @@ class TestCharm(unittest.TestCase):
         password = self.charm._get_operator_password()
         self.assertIsNotNone(password)
         self.assertNotEqual(password, "")
+
+    @patch("charm.Patroni.reload_patroni_configuration")
+    @patch("charm.Patroni.render_postgresql_conf_file")
+    @patch("charm.PostgresqlOperatorCharm._create_resources")
+    def test_get_secret(self, _, __, ___):
+        self.harness.set_leader()
+
+        # Test application scope.
+        assert self.charm._get_secret("app", "password") is None
+        self.harness.update_relation_data(
+            self.rel_id, self.charm.app.name, {"password": "test-password"}
+        )
+        assert self.charm._get_secret("app", "password") == "test-password"
+
+        # Test unit scope.
+        assert self.charm._get_secret("unit", "password") is None
+        self.harness.update_relation_data(
+            self.rel_id, self.charm.unit.name, {"password": "test-password"}
+        )
+        assert self.charm._get_secret("unit", "password") == "test-password"
+
+    @patch("charm.Patroni.reload_patroni_configuration")
+    @patch("charm.Patroni.render_postgresql_conf_file")
+    @patch("charm.PostgresqlOperatorCharm._create_resources")
+    def test_set_secret(self, _, __, ___):
+        self.harness.set_leader()
+
+        # Test application scope.
+        assert "password" not in self.harness.get_relation_data(self.rel_id, self.charm.app.name)
+        self.charm._set_secret("app", "password", "test-password")
+        assert (
+            self.harness.get_relation_data(self.rel_id, self.charm.app.name)["password"]
+            == "test-password"
+        )
+
+        # Test unit scope.
+        assert "password" not in self.harness.get_relation_data(self.rel_id, self.charm.unit.name)
+        self.charm._set_secret("unit", "password", "test-password")
+        assert (
+            self.harness.get_relation_data(self.rel_id, self.charm.unit.name)["password"]
+            == "test-password"
+        )

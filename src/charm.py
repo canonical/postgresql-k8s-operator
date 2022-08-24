@@ -5,7 +5,7 @@
 """Charmed Kubernetes Operator for the PostgreSQL database."""
 import json
 import logging
-from typing import List
+from typing import Dict, List, Optional
 
 from charms.postgresql_k8s.v0.postgresql import PostgreSQL
 from lightkube import ApiError, Client, codecs
@@ -30,7 +30,7 @@ from ops.pebble import Layer
 from requests import ConnectionError
 from tenacity import RetryError
 
-from constants import PEER, USER
+from constants import PEER, REPLICATION_PASSWORD_KEY, USER, USER_PASSWORD_KEY
 from patroni import NotReadyError, Patroni
 from relations.db import DbProvides
 from relations.postgresql_provider import PostgreSQLProvider
@@ -68,6 +68,48 @@ class PostgresqlOperatorCharm(CharmBase):
         self.postgresql_client_relation = PostgreSQLProvider(self)
         self.legacy_db_relation = DbProvides(self, admin=False)
         self.legacy_db_admin_relation = DbProvides(self, admin=True)
+
+    @property
+    def app_peer_data(self) -> Dict:
+        """Application peer relation data object."""
+        relation = self.model.get_relation(PEER)
+        if relation is None:
+            return {}
+
+        return relation.data[self.app]
+
+    @property
+    def unit_peer_data(self) -> Dict:
+        """Unit peer relation data object."""
+        relation = self.model.get_relation(PEER)
+        if relation is None:
+            return {}
+
+        return relation.data[self.unit]
+
+    def _get_secret(self, scope: str, key: str) -> Optional[str]:
+        """Get secret from the secret storage."""
+        if scope == "unit":
+            return self.unit_peer_data.get(key, None)
+        elif scope == "app":
+            return self.app_peer_data.get(key, None)
+        else:
+            raise RuntimeError("Unknown secret scope.")
+
+    def _set_secret(self, scope: str, key: str, value: Optional[str]) -> None:
+        """Get secret from the secret storage."""
+        if scope == "unit":
+            if not value:
+                del self.unit_peer_data[key]
+                return
+            self.unit_peer_data.update({key: value})
+        elif scope == "app":
+            if not value:
+                del self.app_peer_data[key]
+                return
+            self.app_peer_data.update({key: value})
+        else:
+            raise RuntimeError("Unknown secret scope.")
 
     @property
     def postgresql(self) -> PostgreSQL:
@@ -249,15 +291,11 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _on_leader_elected(self, event: LeaderElectedEvent) -> None:
         """Handle the leader-elected event."""
-        data = self._peers.data[self.app]
-        operator_password = data.get("operator-password", None)
-        replication_password = data.get("replication-password", None)
+        if self._get_secret("app", USER_PASSWORD_KEY) is None:
+            self._set_secret("app", USER_PASSWORD_KEY, new_password())
 
-        if operator_password is None:
-            self._peers.data[self.app]["operator-password"] = new_password()
-
-        if replication_password is None:
-            self._peers.data[self.app]["replication-password"] = new_password()
+        if self._get_secret("app", REPLICATION_PASSWORD_KEY) is None:
+            self._set_secret("app", REPLICATION_PASSWORD_KEY, new_password())
 
         # Create resources and add labels needed for replication.
         self._create_resources()
@@ -389,7 +427,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _on_get_operator_password(self, event: ActionEvent) -> None:
         """Returns the password for the operator user as an action response."""
-        event.set_results({"operator-password": self._get_operator_password()})
+        event.set_results({USER_PASSWORD_KEY: self._get_operator_password()})
 
     def _on_get_primary(self, event: ActionEvent) -> None:
         """Get primary instance."""
@@ -498,14 +536,12 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _get_operator_password(self) -> str:
         """Get operator user password."""
-        data = self._peers.data[self.app]
-        return data.get("operator-password", None)
+        return self._get_secret("app", USER_PASSWORD_KEY)
 
     @property
     def _replication_password(self) -> str:
         """Get replication user password."""
-        data = self._peers.data[self.app]
-        return data.get("replication-password", None)
+        return self._get_secret("app", REPLICATION_PASSWORD_KEY)
 
     def _unit_name_to_pod_name(self, unit_name: str) -> str:
         """Converts unit name to pod name.
