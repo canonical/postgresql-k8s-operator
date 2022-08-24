@@ -105,7 +105,8 @@ class TestCharm(unittest.TestCase):
         _render_patroni_yml_file.assert_called_once()
 
     def test_on_get_password(self):
-        # Set passwords in peer relation data.
+        # Create a mock event and set passwords in peer relation data.
+        mock_event = MagicMock(params={})
         self.harness.update_relation_data(
             self.rel_id,
             self.charm.app.name,
@@ -115,8 +116,15 @@ class TestCharm(unittest.TestCase):
             },
         )
 
+        # Test providing an invalid username.
+        mock_event.params["username"] = "user"
+        self.charm._on_get_password(mock_event)
+        mock_event.fail.assert_called_once()
+        mock_event.set_results.assert_not_called()
+
         # Test without providing the username option.
-        mock_event = MagicMock(params={})
+        mock_event.reset_mock()
+        del mock_event.params["username"]
         self.charm._on_get_password(mock_event)
         mock_event.set_results.assert_called_once_with({"operator-password": "test-password"})
 
