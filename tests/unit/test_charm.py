@@ -104,20 +104,29 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(container.get_service(self._postgresql_service).is_running(), True)
         _render_patroni_yml_file.assert_called_once()
 
-    @patch("charm.PostgresqlOperatorCharm._get_password")
-    def test_on_get_password(self, _get_password):
+    def test_on_get_password(self):
+        # Set passwords in peer relation data.
+        self.harness.update_relation_data(
+            self.rel_id,
+            self.charm.app.name,
+            {
+                "operator-password": "test-password",
+                "replication-password": "replication-test-password",
+            },
+        )
+
         # Test without providing the username option.
         mock_event = MagicMock(params={})
-        _get_password.return_value = "test-password"
         self.charm._on_get_password(mock_event)
-        _get_password.assert_called_once()
         mock_event.set_results.assert_called_once_with({"operator-password": "test-password"})
 
         # Also test providing the username option.
         mock_event.reset_mock()
         mock_event.params["username"] = "replication"
         self.charm._on_get_password(mock_event)
-        mock_event.set_results.assert_called_once_with({"replication-password": "test-password"})
+        mock_event.set_results.assert_called_once_with(
+            {"replication-password": "replication-test-password"}
+        )
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.get_primary")
@@ -244,35 +253,12 @@ class TestCharm(unittest.TestCase):
                         "PATRONI_NAME": "postgresql-k8s-0",
                         "PATRONI_SCOPE": f"patroni-{self.charm._name}",
                         "PATRONI_REPLICATION_USERNAME": "replication",
-                        "PATRONI_REPLICATION_PASSWORD": self.charm._get_password("replication"),
                         "PATRONI_SUPERUSER_USERNAME": "operator",
-                        "PATRONI_SUPERUSER_PASSWORD": self.charm._get_password(),
                     },
                 }
             },
         }
         self.assertDictEqual(plan, expected)
-
-    @patch("charm.Patroni.reload_patroni_configuration")
-    @patch("charm.Patroni.render_postgresql_conf_file")
-    @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
-    @patch("charm.PostgresqlOperatorCharm._create_resources")
-    def test_get_password(self, _, __, ___, ____):
-        # Test for a None password.
-        self.assertIsNone(self.charm._get_password())
-
-        # Then test for a non empty password after leader election and peer data set.
-        self.harness.set_leader()
-        password = self.charm._get_password()
-        self.assertIsNotNone(password)
-        self.assertNotEqual(password, "")
-
-        # And also test that when requesting the password for another user
-        # it is different from the password from the default user.
-        replication_password = self.charm._get_password("replication")
-        self.assertIsNotNone(replication_password)
-        self.assertNotEqual(replication_password, "")
-        self.assertNotEqual(replication_password, password)
 
     @patch("charm.Patroni.reload_patroni_configuration")
     @patch("charm.Patroni.render_postgresql_conf_file")

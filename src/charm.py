@@ -9,7 +9,7 @@ from typing import Dict, List, Optional
 
 from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQL,
-    PostgreSQLSetUserPasswordError,
+    PostgreSQLUpdateUserPasswordError,
 )
 from lightkube import ApiError, Client, codecs
 from lightkube.resources.core_v1 import Pod
@@ -126,7 +126,7 @@ class PostgresqlOperatorCharm(CharmBase):
         return PostgreSQL(
             host=self.primary_endpoint,
             user=USER,
-            password=self._get_password(),
+            password=self._get_secret("app", f"{USER}-password"),
             database="postgres",
         )
 
@@ -186,6 +186,11 @@ class PostgresqlOperatorCharm(CharmBase):
         # one at a time.
         if self.unit.is_leader():
             self._add_members(event)
+        else:
+            # Update the Patroni configuration in this unit to use new passwords when they change.
+            # The config is reloaded later in `update_cluster_members` if the member has already
+            # started, or it is loaded the first time Patroni starts.
+            self._patroni.render_patroni_yml_file()
 
         # Don't update this member before it's part of the members list.
         if self._endpoint not in self._endpoints:
@@ -439,57 +444,71 @@ class PostgresqlOperatorCharm(CharmBase):
 
         If no user is provided, the password of the operator user is returned.
         """
-        user = USER
+        username = USER
         if "username" in event.params:
-            user = event.params["username"]
-        event.set_results({f"{user}-password": self._get_password(user)})
+            username = event.params["username"]
+        if username not in SYSTEM_USERS:
+            event.fail(
+                f"The action can be run only for users used by the charm: {SYSTEM_USERS} not {username}"
+            )
+            return
+        event.set_results(
+            {f"{username}-password": self._get_secret("app", f"{username}-password")}
+        )
 
     def _on_set_password(self, event: ActionEvent) -> None:
-        """Rotate the password for all system users or the specified user."""
-        # Only the leader can write the new password into peer relation.
+        """Set the password for the specified user."""
+        # Only leader can write the new password into peer relation.
         if not self.unit.is_leader():
-            event.fail("The action can be run only on the leader unit")
+            event.fail("The action can be run only on leader unit")
             return
 
-        if "user" in event.params:
-            user = event.params["user"]
+        username = USER
+        if "username" in event.params:
+            username = event.params["username"]
+        if username not in SYSTEM_USERS:
+            event.fail(
+                f"The action can be run only for users used by the charm: {SYSTEM_USERS} not {username}."
+            )
+            return
 
-            # Fail if the user is not a system user.
-            # One example is users created through relations.
-            if user not in SYSTEM_USERS:
-                event.fail(f"User {user} is not a system user")
-                return
+        password = new_password()
+        if "password" in event.params:
+            password = event.params["password"]
 
-            # Generate a new password and use it if no password was provided to the action.
-            users = {
-                user: event.params["password"] if "password" in event.params else new_password()
-            }
-        else:
-            if "password" in event.params:
-                event.fail("The same password cannot be set for multiple users")
-                return
+        if password == self._get_secret("app", f"{username}-password"):
+            event.log("The old and new passwords are equal.")
+            event.set_results({f"{username}-password": password})
+            return
 
-            users = {user: new_password() for user in SYSTEM_USERS}
+        # Ensure all members are ready before trying to reload Patroni
+        # configuration to avoid errors (like the API not responding in
+        # one instance because PostgreSQL and/or Patroni are not ready).
+        if not self._patroni.are_all_members_ready():
+            event.fail(
+                "Failed changing the password: Not all members healthy or finished initial sync."
+            )
+            return
 
+        # Update the password in the PostgreSQL instance.
         try:
-            self.postgresql.rotate_users_passwords(users)
-        except PostgreSQLSetUserPasswordError as e:
-            event.fail(f"Failed to set user password with error {e}")
+            self.postgresql.update_user_password(username, password)
+        except PostgreSQLUpdateUserPasswordError as e:
+            logger.exception(e)
+            event.fail(
+                "Failed changing the password: Not all members healthy or finished initial sync."
+            )
             return
 
-        # Update the password in the peer relation if the operation was successful.
-        for user, password in users.items():
-            self._peers.data[self.app].update({f"{user}-password": password})
+        # Update the password in the secret store.
+        self._set_secret("app", f"{username}-password", password)
 
-        # for unit in
+        # Update and reload Patroni configuration in this unit to use the new password.
+        # Other units Patroni configuration will be
+        self._patroni.render_patroni_yml_file()
         self._patroni.reload_patroni_configuration()
 
-        # Return the generated password when the user option is given.
-        if "user" in event.params and "password" not in event.params:
-            user = event.params["user"]
-            event.set_results(
-                {f"{user}-password": self._peers.data[self.app].get(f"{user}-password")}
-            )
+        event.set_results({f"{username}-password": password})
 
     def _on_get_primary(self, event: ActionEvent) -> None:
         """Get primary instance."""
@@ -516,6 +535,8 @@ class PostgresqlOperatorCharm(CharmBase):
             self._namespace,
             self.app.planned_units(),
             self._storage_path,
+            self._get_secret("app", USER_PASSWORD_KEY),
+            self._get_secret("app", REPLICATION_PASSWORD_KEY),
         )
 
     @property
@@ -577,9 +598,7 @@ class PostgresqlOperatorCharm(CharmBase):
                         "PATRONI_NAME": pod_name,
                         "PATRONI_SCOPE": f"patroni-{self._name}",
                         "PATRONI_REPLICATION_USERNAME": REPLICATION_USER,
-                        "PATRONI_REPLICATION_PASSWORD": self._get_password("replication"),
                         "PATRONI_SUPERUSER_USERNAME": USER,
-                        "PATRONI_SUPERUSER_PASSWORD": self._get_password(),
                     },
                 }
             },
@@ -595,20 +614,6 @@ class PostgresqlOperatorCharm(CharmBase):
              the peer relation.
         """
         return self.model.get_relation(PEER)
-
-    def _get_password(self, user: str = None) -> str:
-        """Get operator user password.
-
-        Args:
-            user: the user to retrieve the password.
-                Defaults to operator user.
-
-        Returns:
-            the user password.
-        """
-        if user is None:
-            user = USER
-        return self._get_secret("app", f"{user}-password")
 
     def _unit_name_to_pod_name(self, unit_name: str) -> str:
         """Converts unit name to pod name.
