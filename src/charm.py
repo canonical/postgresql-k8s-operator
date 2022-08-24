@@ -449,7 +449,8 @@ class PostgresqlOperatorCharm(CharmBase):
             username = event.params["username"]
         if username not in SYSTEM_USERS:
             event.fail(
-                f"The action can be run only for users used by the charm: {SYSTEM_USERS} not {username}"
+                f"The action can be run only for users used by the charm or Patroni:"
+                f" {', '.join(SYSTEM_USERS)} not {username}"
             )
             return
         event.set_results(
@@ -468,7 +469,8 @@ class PostgresqlOperatorCharm(CharmBase):
             username = event.params["username"]
         if username not in SYSTEM_USERS:
             event.fail(
-                f"The action can be run only for users used by the charm: {SYSTEM_USERS} not {username}."
+                f"The action can be run only for users used by the charm:"
+                f" {', '.join(SYSTEM_USERS)} not {username}"
             )
             return
 
