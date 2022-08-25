@@ -439,9 +439,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
         If no user is provided, the password of the operator user is returned.
         """
-        username = USER
-        if "username" in event.params:
-            username = event.params["username"]
+        username = event.params.get("username", USER)
         if username not in SYSTEM_USERS:
             event.fail(
                 f"The action can be run only for users used by the charm or Patroni:"
@@ -459,9 +457,7 @@ class PostgresqlOperatorCharm(CharmBase):
             event.fail("The action can be run only on leader unit")
             return
 
-        username = USER
-        if "username" in event.params:
-            username = event.params["username"]
+        username = event.params.get("username", USER)
         if username not in SYSTEM_USERS:
             event.fail(
                 f"The action can be run only for users used by the charm:"
