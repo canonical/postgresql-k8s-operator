@@ -6,7 +6,12 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.helpers import METADATA
-from tests.integration.helpers import get_password, restart_patroni, set_password
+from tests.integration.helpers import (
+    check_patroni,
+    get_password,
+    restart_patroni,
+    set_password,
+)
 
 APP_NAME = METADATA["name"]
 
@@ -59,6 +64,14 @@ async def test_password_rotation(ops_test: OpsTest):
 
     # Restart Patroni on any non-leader unit and check that
     # Patroni and PostgreSQL continue to work.
-    for unit in ops_test.model.applications[APP_NAME].units:
-        if not await unit.is_leader_from_status():
-            await restart_patroni(ops_test, unit.name)
+    non_leader_units = [
+        unit.name:
+        for unit in ops_test.model.applications[APP_NAME].units
+        if not await unit.is_leader_from_status()
+    ]
+
+    for unit in non_leader_units:
+        await restart_patroni(ops_test, unit)
+
+    for unit in non_leader_units:
+        assert await check_patroni(ops_test, unit)

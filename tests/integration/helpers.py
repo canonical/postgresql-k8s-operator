@@ -84,6 +84,22 @@ async def check_database_creation(ops_test: OpsTest, database: str) -> None:
         assert len(output)
 
 
+async def check_patroni(ops_test: OpsTest, unit_name: str) -> bool:
+    """Check if Patroni is running correctly on a specific unit.
+
+    Args:
+        ops_test: The ops test framework instance
+        unit_name: The name of the unit
+
+    Returns:
+        whether Patroni is running correctly.
+    """
+    unit_ip = await get_unit_address(ops_test, unit_name)
+    health_info = requests.get(f"http://{unit_ip}:8008/health")
+    print(health_info.json())
+    return health_info.json()["state"] == "running"
+
+
 def convert_records_to_dict(records: List[tuple]) -> dict:
     """Converts psycopg2 records list to a dict."""
     records_dict = {}
@@ -204,6 +220,22 @@ async def get_password(ops_test: OpsTest, username: str = "operator"):
     return result.results[f"{username}-password"]
 
 
+async def get_postgresql_start_time(ops_test: OpsTest, unit_name: str) -> bool:
+    """Get PostgreSQL start time.
+
+    Args:
+        ops_test: The ops test framework instance
+        unit_name: The name of the unit
+
+    Returns:
+        PostgreSQL start time.
+    """
+    unit_ip = await get_unit_address(ops_test, unit_name)
+    health_info = requests.get(f"http://{unit_ip}:8008/health")
+    print(health_info.json())
+    return health_info.json()["postmaster_start_time"]
+
+
 async def get_primary(ops_test: OpsTest, unit_id=0) -> str:
     """Get the primary unit.
 
@@ -236,7 +268,7 @@ async def get_unit_address(ops_test: OpsTest, unit_name: str) -> str:
 
 
 async def restart_patroni(ops_test: OpsTest, unit_name: str) -> None:
-    """Restart patroni on a specific unit.
+    """Restart Patroni on a specific unit.
 
     Args:
         ops_test: The ops test framework instance
