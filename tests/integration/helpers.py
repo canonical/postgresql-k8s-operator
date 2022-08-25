@@ -217,12 +217,7 @@ def get_charm_resources(namespace: str, application: str) -> List[GenericNamespa
 
     # Load the list of the resources from resources.yaml.
     with open("src/resources.yaml") as f:
-        return list(
-            filter(
-                lambda x: not isinstance(x, Service),
-                codecs.load_all_yaml(f, context=context),
-            )
-        )
+        return codecs.load_all_yaml(f, context=context)
 
 
 def get_existing_patroni_k8s_resources(namespace: str, application: str) -> set:
@@ -306,9 +301,11 @@ def get_expected_patroni_k8s_resources(namespace: str, application: str) -> set:
 
     # Include the resources created by Patroni.
     patroni_resources = [
-        f"Endpoints/{namespace}-config",
-        f"Endpoints/{namespace}",
-        f"Service/{namespace}-config",
+        f"Endpoints/patroni-{application}-config",
+        f"Endpoints/patroni-{application}",
+        f"Endpoints/{application}-primary",
+        f"Endpoints/{application}-replicas",
+        f"Service/patroni-{application}-config",
     ]
     resources.update(patroni_resources)
 
