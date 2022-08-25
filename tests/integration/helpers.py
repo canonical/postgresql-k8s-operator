@@ -2,6 +2,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 import itertools
+from datetime import datetime
 from pathlib import Path
 from typing import List
 
@@ -90,20 +91,23 @@ async def check_database_creation(ops_test: OpsTest, database: str) -> None:
     stop=stop_after_attempt(10),
     wait=wait_exponential(multiplier=1, min=2, max=30),
 )
-async def check_patroni(ops_test: OpsTest, unit_name: str) -> bool:
+async def check_patroni(ops_test: OpsTest, unit_name: str, restart_time: float) -> bool:
     """Check if Patroni is running correctly on a specific unit.
 
     Args:
         ops_test: The ops test framework instance
         unit_name: The name of the unit
+        restart_time: Point in time before the unit was restarted.
 
     Returns:
         whether Patroni is running correctly.
     """
     unit_ip = await get_unit_address(ops_test, unit_name)
-    health_info = requests.get(f"http://{unit_ip}:8008/health")
-    print(health_info.json())
-    return health_info.json()["state"] == "running"
+    health_info = requests.get(f"http://{unit_ip}:8008/health").json()
+    postmaster_start_time = datetime.strptime(
+        health_info["postmaster_start_time"], "%Y-%m-%d %H:%M:%S.%f%z"
+    ).timestamp()
+    return postmaster_start_time > restart_time and health_info["state"] == "running"
 
 
 def convert_records_to_dict(records: List[tuple]) -> dict:
@@ -224,22 +228,6 @@ async def get_password(ops_test: OpsTest, username: str = "operator"):
     action = await unit.run_action("get-password", **{"username": username})
     result = await action.wait()
     return result.results[f"{username}-password"]
-
-
-async def get_postgresql_start_time(ops_test: OpsTest, unit_name: str) -> bool:
-    """Get PostgreSQL start time.
-
-    Args:
-        ops_test: The ops test framework instance
-        unit_name: The name of the unit
-
-    Returns:
-        PostgreSQL start time.
-    """
-    unit_ip = await get_unit_address(ops_test, unit_name)
-    health_info = requests.get(f"http://{unit_ip}:8008/health")
-    print(health_info.json())
-    return health_info.json()["postmaster_start_time"]
 
 
 async def get_primary(ops_test: OpsTest, unit_id=0) -> str:

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
+import time
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -64,14 +65,8 @@ async def test_password_rotation(ops_test: OpsTest):
 
     # Restart Patroni on any non-leader unit and check that
     # Patroni and PostgreSQL continue to work.
-    non_leader_units = [
-        unit.name
-        for unit in ops_test.model.applications[APP_NAME].units
-        if not await unit.is_leader_from_status()
-    ]
-
-    for unit in non_leader_units:
-        await restart_patroni(ops_test, unit)
-
-    for unit in non_leader_units:
-        assert await check_patroni(ops_test, unit)
+    restart_time = time.time()
+    for unit in ops_test.model.applications[APP_NAME].units:
+        if not await unit.is_leader_from_status():
+            await restart_patroni(ops_test, unit.name)
+            assert await check_patroni(ops_test, unit.name, restart_time)
