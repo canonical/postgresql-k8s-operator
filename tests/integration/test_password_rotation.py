@@ -65,7 +65,7 @@ async def test_password_rotation(ops_test: OpsTest):
     # Restart Patroni on any non-leader unit and check that
     # Patroni and PostgreSQL continue to work.
     non_leader_units = [
-        unit.name:
+        unit.name
         for unit in ops_test.model.applications[APP_NAME].units
         if not await unit.is_leader_from_status()
     ]
