@@ -5,7 +5,7 @@
 """Charmed Kubernetes Operator for the PostgreSQL database."""
 import json
 import logging
-from typing import List
+from typing import Dict, List, Optional
 
 from charms.postgresql_k8s.v0.postgresql import PostgreSQL
 from lightkube import ApiError, Client, codecs
@@ -30,14 +30,13 @@ from ops.pebble import Layer
 from requests import ConnectionError
 from tenacity import RetryError
 
+from constants import PEER, REPLICATION_PASSWORD_KEY, USER, USER_PASSWORD_KEY
 from patroni import NotReadyError, Patroni
 from relations.db import DbProvides
 from relations.postgresql_provider import PostgreSQLProvider
 from utils import new_password
 
 logger = logging.getLogger(__name__)
-
-PEER = "postgresql-replicas"
 
 
 class PostgresqlOperatorCharm(CharmBase):
@@ -61,7 +60,7 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on.stop, self._on_stop)
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(
-            self.on.get_postgres_password_action, self._on_get_postgres_password
+            self.on.get_operator_password_action, self._on_get_operator_password
         )
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
         self.framework.observe(self.on.update_status, self._on_update_status)
@@ -72,12 +71,54 @@ class PostgresqlOperatorCharm(CharmBase):
         self.legacy_db_admin_relation = DbProvides(self, admin=True)
 
     @property
+    def app_peer_data(self) -> Dict:
+        """Application peer relation data object."""
+        relation = self.model.get_relation(PEER)
+        if relation is None:
+            return {}
+
+        return relation.data[self.app]
+
+    @property
+    def unit_peer_data(self) -> Dict:
+        """Unit peer relation data object."""
+        relation = self.model.get_relation(PEER)
+        if relation is None:
+            return {}
+
+        return relation.data[self.unit]
+
+    def _get_secret(self, scope: str, key: str) -> Optional[str]:
+        """Get secret from the secret storage."""
+        if scope == "unit":
+            return self.unit_peer_data.get(key, None)
+        elif scope == "app":
+            return self.app_peer_data.get(key, None)
+        else:
+            raise RuntimeError("Unknown secret scope.")
+
+    def _set_secret(self, scope: str, key: str, value: Optional[str]) -> None:
+        """Get secret from the secret storage."""
+        if scope == "unit":
+            if not value:
+                del self.unit_peer_data[key]
+                return
+            self.unit_peer_data.update({key: value})
+        elif scope == "app":
+            if not value:
+                del self.app_peer_data[key]
+                return
+            self.app_peer_data.update({key: value})
+        else:
+            raise RuntimeError("Unknown secret scope.")
+
+    @property
     def postgresql(self) -> PostgreSQL:
         """Returns an instance of the object used to interact with the database."""
         return PostgreSQL(
             host=self.primary_endpoint,
-            user="postgres",
-            password=self._get_postgres_password(),
+            user=USER,
+            password=self._get_operator_password(),
             database="postgres",
         )
 
@@ -109,7 +150,8 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _on_peer_relation_departed(self, event: RelationDepartedEvent) -> None:
         """The leader removes the departing units from the list of cluster members."""
-        if not self.unit.is_leader():
+        # Allow leader to update endpoints if it isn't leaving.
+        if not self.unit.is_leader() or event.departing_unit == self.unit:
             return
 
         if "cluster_initialised" not in self._peers.data[self.app]:
@@ -250,15 +292,11 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _on_leader_elected(self, event: LeaderElectedEvent) -> None:
         """Handle the leader-elected event."""
-        data = self._peers.data[self.app]
-        postgres_password = data.get("postgres-password", None)
-        replication_password = data.get("replication-password", None)
+        if self._get_secret("app", USER_PASSWORD_KEY) is None:
+            self._set_secret("app", USER_PASSWORD_KEY, new_password())
 
-        if postgres_password is None:
-            self._peers.data[self.app]["postgres-password"] = new_password()
-
-        if replication_password is None:
-            self._peers.data[self.app]["replication-password"] = new_password()
+        if self._get_secret("app", REPLICATION_PASSWORD_KEY) is None:
+            self._set_secret("app", REPLICATION_PASSWORD_KEY, new_password())
 
         # Create resources and add labels needed for replication.
         self._create_resources()
@@ -375,22 +413,22 @@ class PostgresqlOperatorCharm(CharmBase):
             with open("src/resources.yaml") as f:
                 for resource in codecs.load_all_yaml(f, context=self._context):
                     client.create(resource)
-                    logger.info(f"created {str(resource)}")
+                    logger.debug(f"created {str(resource)}")
         except ApiError as e:
             # The 409 error code means that the resource was already created
             # or has a higher version. This can happen if Patroni creates a
             # resource that the charm is expected to create.
             if e.status.code == 409:
-                logger.info("replacing resource: %s.", str(resource.to_dict()))
+                logger.debug("replacing resource: %s.", str(resource.to_dict()))
                 client.replace(resource)
             else:
                 logger.error("failed to create resource: %s.", str(resource.to_dict()))
                 self.unit.status = BlockedStatus(f"failed to create services {e}")
                 return
 
-    def _on_get_postgres_password(self, event: ActionEvent) -> None:
-        """Returns the password for the postgres user as an action response."""
-        event.set_results({"postgres-password": self._get_postgres_password()})
+    def _on_get_operator_password(self, event: ActionEvent) -> None:
+        """Returns the password for the operator user as an action response."""
+        event.set_results({USER_PASSWORD_KEY: self._get_operator_password()})
 
     def _on_get_primary(self, event: ActionEvent) -> None:
         """Get primary instance."""
@@ -444,35 +482,12 @@ class PostgresqlOperatorCharm(CharmBase):
                     logger.error(f"failed to delete resource: {resource}.")
 
     def _on_update_status(self, _) -> None:
-        # Until https://github.com/canonical/pebble/issues/6 is fixed,
-        # we need to use the logic below to restart the leader
-        # and a stuck replica after a failover/switchover.
-        try:
-            state = self._patroni.get_postgresql_state()
-            if state == "restarting":
-                # Restart the stuck replica.
-                self._restart_postgresql_service()
-            elif state == "starting" or state == "stopping":
-                # Force a primary change when the current primary is stuck.
-                self.force_primary_change()
-        except RetryError as e:
-            logger.error("failed to check PostgreSQL state")
-            self.unit.status = BlockedStatus(f"failed to check PostgreSQL state with error {e}")
-            return
-
         # Display an active status message if the current unit is the primary.
         try:
             if self._patroni.get_primary(unit_name_pattern=True) == self.unit.name:
                 self.unit.status = ActiveStatus("Primary")
         except (RetryError, ConnectionError) as e:
             logger.error(f"failed to get primary with error {e}")
-
-    def _restart_postgresql_service(self) -> None:
-        """Restart PostgreSQL and Patroni."""
-        self.unit.status = MaintenanceStatus(f"restarting {self._postgresql_service} service")
-        container = self.unit.get_container("postgresql")
-        container.restart(self._postgresql_service)
-        self.unit.status = ActiveStatus()
 
     @property
     def _patroni(self):
@@ -545,8 +560,8 @@ class PostgresqlOperatorCharm(CharmBase):
                         "PATRONI_SCOPE": f"patroni-{self._name}",
                         "PATRONI_REPLICATION_USERNAME": "replication",
                         "PATRONI_REPLICATION_PASSWORD": self._replication_password,
-                        "PATRONI_SUPERUSER_USERNAME": "postgres",
-                        "PATRONI_SUPERUSER_PASSWORD": self._get_postgres_password(),
+                        "PATRONI_SUPERUSER_USERNAME": USER,
+                        "PATRONI_SUPERUSER_PASSWORD": self._get_operator_password(),
                     },
                 }
             },
@@ -563,16 +578,14 @@ class PostgresqlOperatorCharm(CharmBase):
         """
         return self.model.get_relation(PEER)
 
-    def _get_postgres_password(self) -> str:
-        """Get postgres user password."""
-        data = self._peers.data[self.app]
-        return data.get("postgres-password", None)
+    def _get_operator_password(self) -> str:
+        """Get operator user password."""
+        return self._get_secret("app", USER_PASSWORD_KEY)
 
     @property
     def _replication_password(self) -> str:
         """Get replication user password."""
-        data = self._peers.data[self.app]
-        return data.get("replication-password", None)
+        return self._get_secret("app", REPLICATION_PASSWORD_KEY)
 
     def _unit_name_to_pod_name(self, unit_name: str) -> str:
         """Converts unit name to pod name.
@@ -584,21 +597,6 @@ class PostgresqlOperatorCharm(CharmBase):
             pod name in "postgresql-k8s-0" format.
         """
         return unit_name.replace("/", "-")
-
-    def force_primary_change(self) -> None:
-        """Force primary changes immediately.
-
-        This function is needed to handle cases related to
-        https://github.com/canonical/pebble/issues/6 .
-        When a fail-over is started, Patroni gets stuck on the primary
-        change because of some zombie process that are not cleaned by Pebble.
-        """
-        # Change needed to force an immediate failover.
-        self._patroni.change_master_start_timeout(0)
-        # Restart the stuck previous leader (will trigger an immediate failover).
-        self._restart_postgresql_service()
-        # Revert configuration to default.
-        self._patroni.change_master_start_timeout(None)
 
 
 if __name__ == "__main__":
