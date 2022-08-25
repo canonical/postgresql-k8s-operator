@@ -9,17 +9,17 @@ import psycopg2
 import requests
 import yaml
 from pytest_operator.plugin import OpsTest
-from tenacity import retry, retry_if_result, wait_exponential, stop_after_attempt
+from tenacity import retry, retry_if_result, stop_after_attempt, wait_exponential
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
 
 
 async def check_database_users_existence(
-        ops_test: OpsTest,
-        users_that_should_exist: List[str],
-        users_that_should_not_exist: List[str],
-        admin: bool = False,
+    ops_test: OpsTest,
+    users_that_should_exist: List[str],
+    users_that_should_not_exist: List[str],
+    admin: bool = False,
 ) -> None:
     """Checks that applications users exist in the database.
 
@@ -116,12 +116,12 @@ def convert_records_to_dict(records: List[tuple]) -> dict:
 
 
 async def deploy_and_relate_application_with_postgresql(
-        ops_test: OpsTest,
-        charm: str,
-        application_name: str,
-        number_of_units: int,
-        channel: str = "stable",
-        relation: str = "db",
+    ops_test: OpsTest,
+    charm: str,
+    application_name: str,
+    number_of_units: int,
+    channel: str = "stable",
+    relation: str = "db",
 ) -> int:
     """Helper function to deploy and relate application with PostgreSQL.
 
@@ -166,10 +166,10 @@ async def deploy_and_relate_application_with_postgresql(
 
 
 async def execute_query_on_unit(
-        unit_address: str,
-        password: str,
-        query: str,
-        database: str = "postgres",
+    unit_address: str,
+    password: str,
+    query: str,
+    database: str = "postgres",
 ):
     """Execute given PostgreSQL query on a unit.
 
@@ -183,7 +183,7 @@ async def execute_query_on_unit(
         A list of rows that were potentially returned from the query.
     """
     with psycopg2.connect(
-            f"dbname='{database}' user='operator' host='{unit_address}' password='{password}' connect_timeout=10"
+        f"dbname='{database}' user='operator' host='{unit_address}' password='{password}' connect_timeout=10"
     ) as connection, connection.cursor() as cursor:
         cursor.execute(query)
         output = list(itertools.chain(*cursor.fetchall()))
