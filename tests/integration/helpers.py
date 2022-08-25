@@ -235,6 +235,17 @@ async def get_unit_address(ops_test: OpsTest, unit_name: str) -> str:
     return status["applications"][unit_name.split("/")[0]].units[unit_name]["address"]
 
 
+async def restart_patroni(ops_test: OpsTest, unit_name: str) -> None:
+    """Restart patroni on a specific unit.
+
+    Args:
+        ops_test: The ops test framework instance
+        unit_name: The name of the unit
+    """
+    unit_ip = await get_unit_address(ops_test, unit_name)
+    requests.post(f"http://{unit_ip}:8008/restart")
+
+
 async def scale_application(ops_test: OpsTest, application_name: str, scale: int) -> None:
     """Scale a given application to a specific unit count.
 
@@ -250,3 +261,11 @@ async def scale_application(ops_test: OpsTest, application_name: str, scale: int
         timeout=1000,
         wait_for_exact_units=scale,
     )
+
+
+async def set_password(ops_test: OpsTest, unit_name: str, username: str = "operator"):
+    """Retrieve a user password using the action."""
+    unit = ops_test.model.units.get(unit_name)
+    action = await unit.run_action("set-password", **{"username": username})
+    result = await action.wait()
+    return result.results
