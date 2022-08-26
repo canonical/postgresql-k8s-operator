@@ -186,9 +186,7 @@ async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
     # These have to run sequentially for the test to be valid/stable.
     await ops_test.model.applications[APP_NAME].scale(0)
     await ops_test.model.applications[APP_NAME].scale(3)
-    await ops_test.model.wait_for_idle(
-        apps=[APP_NAME], status="active", timeout=1000, idle_period=45, check_freq=2
-    )
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
     # Testing write occurred to every postgres instance by reading from them
     status = await ops_test.model.get_status()  # noqa: F821
@@ -200,7 +198,6 @@ async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
             connection.cursor().execute("SELECT * FROM gracetest;")
 
 
-@pytest.mark.abort_on_fail
 async def test_persist_data_through_failure(ops_test: OpsTest):
     """Test data persists through a failure."""
     primary = await get_primary(ops_test)
@@ -258,7 +255,7 @@ async def test_automatic_failover_after_leader_issue(ops_test: OpsTest) -> None:
     assert await get_primary(ops_test) != "None"
 
 
-async def test_application_removal_cleanup_resources(ops_test: OpsTest) -> None:
+async def test_application_removal(ops_test: OpsTest) -> None:
     # Remove the application to trigger some hooks (like peer relation departed).
     await ops_test.model.applications[APP_NAME].remove()
 
