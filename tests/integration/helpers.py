@@ -28,72 +28,6 @@ async def check_database_users_existence(
     ops_test: OpsTest,
     users_that_should_exist: List[str],
     users_that_should_not_exist: List[str],
-) -> None:
-    """Checks that applications users exist in the database.
-
-    Args:
-        ops_test: The ops test framework
-        users_that_should_exist: List of users that should exist in the database
-        users_that_should_not_exist: List of users that should not exist in the database
-    """
-    unit = ops_test.model.applications[DATABASE_APP_NAME].units[0]
-    unit_address = await get_unit_address(ops_test, unit.name)
-    password = await get_postgres_password(ops_test)
-
-    # Retrieve all users in the database.
-    output = await execute_query_on_unit(
-        unit_address,
-        password,
-        "SELECT usename FROM pg_catalog.pg_user;",
-    )
-
-    # Assert users that should exist.
-    for user in users_that_should_exist:
-        assert user in output
-
-    # Assert users that should not exist.
-    for user in users_that_should_not_exist:
-        assert user not in output
-
-
-async def check_database_creation(ops_test: OpsTest, database: str) -> None:
-    """Checks that database and tables are successfully created for the application.
-
-    Args:
-        ops_test: The ops test framework
-        database: Name of the database that should have been created
-    """
-    password = await get_postgres_password(ops_test)
-
-    for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
-        unit_address = await get_unit_address(ops_test, unit.name)
-
-        # Ensure database exists in PostgreSQL.
-        output = await execute_query_on_unit(
-            unit_address,
-            password,
-            "SELECT datname FROM pg_database;",
-        )
-        assert database in output
-
-        # Ensure that application tables exist in the database
-        output = await execute_query_on_unit(
-            unit_address,
-            password,
-            "SELECT table_name FROM information_schema.tables;",
-            database=database,
-        )
-        assert len(output)
-
-
-METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
-DATABASE_APP_NAME = METADATA["name"]
-
-
-async def check_database_users_existence(
-    ops_test: OpsTest,
-    users_that_should_exist: List[str],
-    users_that_should_not_exist: List[str],
     admin: bool = False,
 ) -> None:
     """Checks that applications users exist in the database.
@@ -329,7 +263,7 @@ async def is_tls_enabled(ops_test: OpsTest, unit_name: str) -> bool:
         Whether TLS is enabled.
     """
     unit_address = await get_unit_address(ops_test, unit_name)
-    password = await get_postgres_password(ops_test)
+    password = await get_operator_password(ops_test)
     try:
         output = await execute_query_on_unit(unit_address, password, "SHOW ssl;")
     except psycopg2.Error:
