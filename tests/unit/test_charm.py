@@ -3,7 +3,7 @@
 
 import unittest
 from pathlib import Path, PosixPath
-from unittest.mock import Mock, PropertyMock, call, mock_open, patch
+from unittest.mock import Mock, PropertyMock, mock_open, patch
 
 from lightkube import codecs
 from lightkube.resources.core_v1 import Pod
