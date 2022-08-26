@@ -102,21 +102,6 @@ jobs:
       - name: Run integration tests
         run: tox -e db-admin-relation-integration
 
-  integration-test-db-admin-relation:
-    name: Integration tests for db-admin relation
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v2
-      - name: Setup operator environment
-        uses: charmed-kubernetes/actions-operator@main
-        with:
-          provider: microk8s
-          # This is needed until https://bugs.launchpad.net/juju/+bug/1977582 is fixed.
-          bootstrap-options: "--agent-version 2.9.29"
-      - name: Run integration tests
-        run: tox -e db-admin-relation-integration
-
   integration-test-password-rotation:
     name: Integration tests for password rotation
     runs-on: ubuntu-latest
