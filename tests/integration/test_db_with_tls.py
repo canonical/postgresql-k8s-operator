@@ -20,7 +20,7 @@ APPLICATION_UNITS = 2
 DATABASE_UNITS = 3
 
 
-@pytest.mark.legacy_relations
+@pytest.mark.db_relation
 async def test_mattermost_db(ops_test: OpsTest) -> None:
     """Deploy Mattermost to test the 'db' relation.
 
