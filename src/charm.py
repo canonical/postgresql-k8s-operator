@@ -5,6 +5,7 @@
 """Charmed Kubernetes Operator for the PostgreSQL database."""
 import json
 import logging
+from pathlib import Path
 from typing import Dict, List, Optional
 
 from charms.postgresql_k8s.v0.postgresql import PostgreSQL
@@ -23,6 +24,7 @@ from ops.model import (
     ActiveStatus,
     BlockedStatus,
     MaintenanceStatus,
+    ModelError,
     Relation,
     WaitingStatus,
 )
@@ -37,6 +39,8 @@ from relations.postgresql_provider import PostgreSQLProvider
 from utils import new_password
 
 logger = logging.getLogger(__name__)
+
+TLS_RESOURCES = ["cert-file", "key-file"]
 
 
 class PostgresqlOperatorCharm(CharmBase):
@@ -139,6 +143,58 @@ class PostgresqlOperatorCharm(CharmBase):
     def _build_service_name(self, service: str) -> str:
         """Build a full k8s service name based on the service name."""
         return f"{self._name}-{service}.{self._namespace}.svc.cluster.local"
+
+    def _retrieve_resource(self, resource: str) -> Optional[Path]:
+        """Check that the resource exists and return it.
+
+        Args:
+            resource: name of the resource to retrieve.
+
+        Returns:
+            Path of the resource or None
+        """
+        try:
+            # Fetch the resource path
+            return self.model.resources.fetch(resource)
+        except (ModelError, NameError):
+            return None
+
+    def _store_tls_files(self) -> None:
+        """Copy the TLS certificate and key to the PostgreSQL container."""
+        # Copy the resources to the storage path if all of them were attached
+        # and enable TLS.
+        if len(self._tls_files) == len(TLS_RESOURCES):
+            container = self.unit.get_container("postgresql")
+
+            # Copy the files from the resources' location to the PostgreSQL container.
+            for file_path in self._tls_files:
+                with open(file_path, "r") as f:
+                    container.push(
+                        f"{self._storage_path}/{file_path.name}",
+                        f,
+                        permissions=0o600,
+                        user="postgres",
+                        group="postgres",
+                    )
+
+            logger.info("TLS enabled")
+            logger.warning(
+                "WARNING - this TLS implementation is temporary - it will change in the future"
+            )
+        else:
+            logger.info("TLS disabled")
+
+        self._update_config()
+
+    @property
+    def _tls_files(self) -> Optional[List[Path]]:
+        """Paths of the TLS certificate and key files.
+
+        Returns:
+            A list with the paths of the certificate and the key
+                if they were attached as resources to this application.
+        """
+        return [path for path in map(self._retrieve_resource, TLS_RESOURCES) if path]
 
     def _get_endpoints_to_remove(self) -> List[str]:
         """List the endpoints that were part of the cluster but departed."""
@@ -344,7 +400,7 @@ class PostgresqlOperatorCharm(CharmBase):
             logging.info("Added updated layer 'postgresql' to Pebble plan")
             # TODO: move this file generation to on config changed hook
             # when adding configs to this charm.
-            self._patroni.render_patroni_yml_file()
+            self._update_config()
             # Restart it and report a new status to Juju.
             container.restart(self._postgresql_service)
             logging.info("Restarted postgresql service")
@@ -374,6 +430,10 @@ class PostgresqlOperatorCharm(CharmBase):
         # All is well, set an ActiveStatus.
         self.unit.status = ActiveStatus()
 
+    def _update_config(self) -> None:
+        """Creates os updates Patroni config file based on the existence of the TLS files."""
+        self._patroni.render_patroni_yml_file(enable_tls=True if self._tls_files else False)
+
     def _on_upgrade_charm(self, _) -> None:
         # Add labels required for replication when the pod loses them (like when it's deleted).
         try:
@@ -382,6 +442,10 @@ class PostgresqlOperatorCharm(CharmBase):
             logger.error("failed to patch pod")
             self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
             return
+
+        # Tries to store the TLS certificate and key on the PostgreSQL container,
+        # as new `juju attach-resource` will trigger this event.
+        self._store_tls_files()
 
     def _patch_pod_labels(self, member: str) -> None:
         """Add labels required for replication to the current pod.
