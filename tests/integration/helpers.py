@@ -345,7 +345,7 @@ async def get_unit_address(ops_test: OpsTest, unit_name: str) -> str:
 
 
 def resource_exists(client: Client, resource: GenericNamespacedResource) -> bool:
-    """Get the name of the current model.
+    """Check whether a specific resource exists.
 
     Args:
         client: k8s API client instance.
