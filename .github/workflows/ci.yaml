@@ -86,7 +86,7 @@ jobs:
         run: tox -e db-admin-relation-integration
 
   integration-test-microk8s-password-rotation:
-    name: Integration tests for password rotation(microk8s)
+    name: Integration tests for password rotation (microk8s)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
