@@ -18,8 +18,8 @@ from tests.integration.helpers import (
     convert_records_to_dict,
     get_application_units,
     get_cluster_members,
-    get_existing_patroni_k8s_resources,
-    get_expected_patroni_k8s_resources,
+    get_existing_k8s_resources,
+    get_expected_k8s_resources,
     get_operator_password,
     get_unit_address,
     scale_application,
@@ -58,8 +58,8 @@ async def test_application_created_required_resources(ops_test: OpsTest) -> None
     # Compare the k8s resources that the charm and Patroni should create with
     # the currently created k8s resources.
     namespace = ops_test.model.info.name
-    existing_resources = get_existing_patroni_k8s_resources(namespace, APP_NAME)
-    expected_resources = get_expected_patroni_k8s_resources(namespace, APP_NAME)
+    existing_resources = get_existing_k8s_resources(namespace, APP_NAME)
+    expected_resources = get_expected_k8s_resources(namespace, APP_NAME)
     assert set(existing_resources) == set(expected_resources)
 
 
@@ -272,7 +272,7 @@ async def test_application_removal(ops_test: OpsTest) -> None:
 
     # Check that all k8s resources created by the charm and Patroni were removed.
     namespace = ops_test.model.info.name
-    existing_resources = get_existing_patroni_k8s_resources(namespace, APP_NAME)
+    existing_resources = get_existing_k8s_resources(namespace, APP_NAME)
     assert set(existing_resources) == set()
 
     # Check whether the application is gone
@@ -280,7 +280,7 @@ async def test_application_removal(ops_test: OpsTest) -> None:
     assert APP_NAME not in ops_test.model.applications
 
 
-async def test_redeploy_charm_in_the_same_model(ops_test: OpsTest):
+async def test_redeploy_charm_same_model(ops_test: OpsTest):
     """Redeploy the charm in the same model to test that it works."""
     charm = await ops_test.build_charm(".")
     async with ops_test.fast_forward():

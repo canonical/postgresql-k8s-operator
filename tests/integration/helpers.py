@@ -220,7 +220,7 @@ def get_charm_resources(namespace: str, application: str) -> List[GenericNamespa
         return codecs.load_all_yaml(f, context=context)
 
 
-def get_existing_patroni_k8s_resources(namespace: str, application: str) -> set:
+def get_existing_k8s_resources(namespace: str, application: str) -> set:
     """Return the list of k8s resources that were created by the charm and Patroni.
 
     Args:
@@ -237,9 +237,10 @@ def get_existing_patroni_k8s_resources(namespace: str, application: str) -> set:
     # Retrieve the k8s resources the charm should create.
     charm_resources = get_charm_resources(namespace, application)
 
-    # Check the k8s API for the resources that currently exist.
-    existing_charm_resources = list(
+    # Add only the resources that currently exist.
+    resources = set(
         map(
+            # Build an identifier for each resource (using its type and name).
             lambda x: f"{type(x).__name__}/{x.metadata.name}",
             filter(
                 lambda x: (resource_exists(client, x)),
@@ -248,36 +249,27 @@ def get_existing_patroni_k8s_resources(namespace: str, application: str) -> set:
         )
     )
 
-    # Add only the existing resources to the list.
-    resources = set(
-        map(
-            lambda x: f"{x.split('/')[0]}/{x.split('/')[1]}",
-            existing_charm_resources,
-        )
-    )
-
-    # Include the resources created by Patroni.
+    # Include the resources created by the charm and Patroni.
     for kind in [Endpoints, Service]:
-        patroni_resources = client.list(
+        extra_resources = client.list(
             kind,
             namespace=namespace,
             labels={"app.juju.is/created-by": application},
         )
-
-        # Build an identifier for each resource (using its type and name).
-        mapped_patroni_resources = set(
-            map(
-                lambda x: f"{kind.__name__}/{x.metadata.name}",
-                patroni_resources,
+        resources.update(
+            set(
+                map(
+                    # Build an identifier for each resource (using its type and name).
+                    lambda x: f"{kind.__name__}/{x.metadata.name}",
+                    extra_resources,
+                )
             )
         )
-
-        resources.update(mapped_patroni_resources)
 
     return resources
 
 
-def get_expected_patroni_k8s_resources(namespace: str, application: str) -> set:
+def get_expected_k8s_resources(namespace: str, application: str) -> set:
     """Return the list of expected k8s resources when the charm is deployed.
 
     Args:
@@ -299,15 +291,16 @@ def get_expected_patroni_k8s_resources(namespace: str, application: str) -> set:
         )
     )
 
-    # Include the resources created by Patroni.
-    patroni_resources = [
-        f"Endpoints/patroni-{application}-config",
-        f"Endpoints/patroni-{application}",
-        f"Endpoints/{application}-primary",
-        f"Endpoints/{application}-replicas",
-        f"Service/patroni-{application}-config",
-    ]
-    resources.update(patroni_resources)
+    # Include the resources created by the charm and Patroni.
+    resources.update(
+        [
+            f"Endpoints/patroni-{application}-config",
+            f"Endpoints/patroni-{application}",
+            f"Endpoints/{application}-primary",
+            f"Endpoints/{application}-replicas",
+            f"Service/patroni-{application}-config",
+        ]
+    )
 
     return resources
 

@@ -439,24 +439,21 @@ class PostgresqlOperatorCharm(CharmBase):
             logger.error(f"failed to get primary with error {e}")
 
     def _on_stop(self, _) -> None:
-        """Handle the stop event."""
+        """Remove k8s resources created by the charm and Patroni."""
         client = Client()
-        resources_to_delete = []
 
         # Get the k8s resources created by the charm.
         with open("src/resources.yaml") as f:
             resources = codecs.load_all_yaml(f, context=self._context)
             # Ignore the service resources, which will be retrieved in the next step.
-            resources_to_delete.extend(
-                list(
-                    filter(
-                        lambda x: not isinstance(x, Service),
-                        resources,
-                    )
+            resources_to_delete = list(
+                filter(
+                    lambda x: not isinstance(x, Service),
+                    resources,
                 )
             )
 
-        # Get the k8s resources created by Patroni.
+        # Get the k8s resources created by the charm and Patroni.
         for kind in [Endpoints, Service]:
             resources_to_delete.extend(
                 client.list(
