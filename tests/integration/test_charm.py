@@ -200,6 +200,7 @@ async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
             connection.cursor().execute("SELECT * FROM gracetest;")
 
 
+@pytest.mark.abort_on_fail
 async def test_persist_data_through_failure(ops_test: OpsTest):
     """Test data persists through a failure."""
     primary = await get_primary(ops_test)
@@ -280,6 +281,26 @@ async def test_application_removal_cleanup_resources(ops_test: OpsTest) -> None:
     # Check whether the application is gone
     # (in that situation, the units aren't in an error state).
     assert APP_NAME not in ops_test.model.applications
+
+
+async def test_redeploy_charm_in_the_same_model(ops_test: OpsTest):
+    """Redeploy the charm in the same model to test that it works."""
+    charm = await ops_test.build_charm(".")
+    async with ops_test.fast_forward():
+        await ops_test.model.deploy(
+            charm,
+            resources={
+                "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
+            },
+            application_name=APP_NAME,
+            num_units=3,
+            trust=True,
+        )
+
+        # This check is enough to ensure that the charm/workload is working for this specific test.
+        await ops_test.model.wait_for_idle(
+            apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3
+        )
 
 
 @retry(
