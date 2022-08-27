@@ -54,6 +54,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
         assert ops_test.model.applications[APP_NAME].units[unit_id].workload_status == "active"
 
 
+@pytest.mark.charm
 async def test_application_created_required_resources(ops_test: OpsTest) -> None:
     # Compare the k8s resources that the charm and Patroni should create with
     # the currently created k8s resources.
@@ -280,6 +281,7 @@ async def test_application_removal(ops_test: OpsTest) -> None:
     assert APP_NAME not in ops_test.model.applications
 
 
+@pytest.mark.charm
 async def test_redeploy_charm_same_model(ops_test: OpsTest):
     """Redeploy the charm in the same model to test that it works."""
     charm = await ops_test.build_charm(".")
