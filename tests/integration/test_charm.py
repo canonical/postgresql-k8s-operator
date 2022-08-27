@@ -17,7 +17,7 @@ from tests.integration.helpers import (
     convert_records_to_dict,
     get_application_units,
     get_cluster_members,
-    get_operator_password,
+    get_password,
     get_unit_address,
     scale_application,
 )
@@ -74,7 +74,7 @@ async def test_database_is_up(ops_test: OpsTest, unit_id: int):
 @pytest.mark.charm
 @pytest.mark.parametrize("unit_id", UNIT_IDS)
 async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
-    password = await get_operator_password(ops_test)
+    password = await get_password(ops_test)
 
     # Connect to PostgreSQL.
     host = await get_unit_address(ops_test, f"{APP_NAME}/{unit_id}")
@@ -165,7 +165,7 @@ async def test_scale_down_and_up(ops_test: OpsTest):
 async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
     """Test data persists through a graceful restart."""
     primary = await get_primary(ops_test)
-    password = await get_operator_password(ops_test)
+    password = await get_password(ops_test)
     address = await get_unit_address(ops_test, primary)
 
     # Write data to primary IP.
@@ -194,7 +194,7 @@ async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
 async def test_persist_data_through_failure(ops_test: OpsTest):
     """Test data persists through a failure."""
     primary = await get_primary(ops_test)
-    password = await get_operator_password(ops_test)
+    password = await get_password(ops_test)
     address = await get_unit_address(ops_test, primary)
 
     # Write data to primary IP.

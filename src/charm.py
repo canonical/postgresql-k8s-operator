@@ -7,7 +7,10 @@ import json
 import logging
 from typing import Dict, List, Optional
 
-from charms.postgresql_k8s.v0.postgresql import PostgreSQL
+from charms.postgresql_k8s.v0.postgresql import (
+    PostgreSQL,
+    PostgreSQLUpdateUserPasswordError,
+)
 from lightkube import ApiError, Client, codecs
 from lightkube.resources.core_v1 import Pod
 from ops.charm import (
@@ -30,7 +33,14 @@ from ops.pebble import Layer
 from requests import ConnectionError
 from tenacity import RetryError
 
-from constants import PEER, REPLICATION_PASSWORD_KEY, USER, USER_PASSWORD_KEY
+from constants import (
+    PEER,
+    REPLICATION_PASSWORD_KEY,
+    REPLICATION_USER,
+    SYSTEM_USERS,
+    USER,
+    USER_PASSWORD_KEY,
+)
 from patroni import NotReadyError, Patroni
 from relations.db import DbProvides
 from relations.postgresql_provider import PostgreSQLProvider
@@ -58,9 +68,8 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
-        self.framework.observe(
-            self.on.get_operator_password_action, self._on_get_operator_password
-        )
+        self.framework.observe(self.on.get_password_action, self._on_get_password)
+        self.framework.observe(self.on.set_password_action, self._on_set_password)
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
         self.framework.observe(self.on.update_status, self._on_update_status)
         self._storage_path = self.meta.storages["pgdata"].location
@@ -117,7 +126,7 @@ class PostgresqlOperatorCharm(CharmBase):
         return PostgreSQL(
             host=self.primary_endpoint,
             user=USER,
-            password=self._get_operator_password(),
+            password=self._get_secret("app", f"{USER}-password"),
             database="postgres",
         )
 
@@ -425,9 +434,74 @@ class PostgresqlOperatorCharm(CharmBase):
                 self.unit.status = BlockedStatus(f"failed to create services {e}")
                 return
 
-    def _on_get_operator_password(self, event: ActionEvent) -> None:
-        """Returns the password for the operator user as an action response."""
-        event.set_results({USER_PASSWORD_KEY: self._get_operator_password()})
+    def _on_get_password(self, event: ActionEvent) -> None:
+        """Returns the password for a user as an action response.
+
+        If no user is provided, the password of the operator user is returned.
+        """
+        username = event.params.get("username", USER)
+        if username not in SYSTEM_USERS:
+            event.fail(
+                f"The action can be run only for users used by the charm or Patroni:"
+                f" {', '.join(SYSTEM_USERS)} not {username}"
+            )
+            return
+        event.set_results(
+            {f"{username}-password": self._get_secret("app", f"{username}-password")}
+        )
+
+    def _on_set_password(self, event: ActionEvent) -> None:
+        """Set the password for the specified user."""
+        # Only leader can write the new password into peer relation.
+        if not self.unit.is_leader():
+            event.fail("The action can be run only on leader unit")
+            return
+
+        username = event.params.get("username", USER)
+        if username not in SYSTEM_USERS:
+            event.fail(
+                f"The action can be run only for users used by the charm:"
+                f" {', '.join(SYSTEM_USERS)} not {username}"
+            )
+            return
+
+        password = new_password()
+        if "password" in event.params:
+            password = event.params["password"]
+
+        if password == self._get_secret("app", f"{username}-password"):
+            event.log("The old and new passwords are equal.")
+            event.set_results({f"{username}-password": password})
+            return
+
+        # Ensure all members are ready before trying to reload Patroni
+        # configuration to avoid errors (like the API not responding in
+        # one instance because PostgreSQL and/or Patroni are not ready).
+        if not self._patroni.are_all_members_ready():
+            event.fail(
+                "Failed changing the password: Not all members healthy or finished initial sync."
+            )
+            return
+
+        # Update the password in the PostgreSQL instance.
+        try:
+            self.postgresql.update_user_password(username, password)
+        except PostgreSQLUpdateUserPasswordError as e:
+            logger.exception(e)
+            event.fail(
+                "Failed changing the password: Not all members healthy or finished initial sync."
+            )
+            return
+
+        # Update the password in the secret store.
+        self._set_secret("app", f"{username}-password", password)
+
+        # Update and reload Patroni configuration in this unit to use the new password.
+        # Other units Patroni configuration will be reloaded in the peer relation changed event.
+        self._patroni.render_patroni_yml_file()
+        self._patroni.reload_patroni_configuration()
+
+        event.set_results({f"{username}-password": password})
 
     def _on_get_primary(self, event: ActionEvent) -> None:
         """Get primary instance."""
@@ -454,6 +528,8 @@ class PostgresqlOperatorCharm(CharmBase):
             self._namespace,
             self.app.planned_units(),
             self._storage_path,
+            self._get_secret("app", USER_PASSWORD_KEY),
+            self._get_secret("app", REPLICATION_PASSWORD_KEY),
         )
 
     @property
@@ -514,10 +590,8 @@ class PostgresqlOperatorCharm(CharmBase):
                         "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
                         "PATRONI_NAME": pod_name,
                         "PATRONI_SCOPE": f"patroni-{self._name}",
-                        "PATRONI_REPLICATION_USERNAME": "replication",
-                        "PATRONI_REPLICATION_PASSWORD": self._replication_password,
+                        "PATRONI_REPLICATION_USERNAME": REPLICATION_USER,
                         "PATRONI_SUPERUSER_USERNAME": USER,
-                        "PATRONI_SUPERUSER_PASSWORD": self._get_operator_password(),
                     },
                 }
             },
@@ -533,15 +607,6 @@ class PostgresqlOperatorCharm(CharmBase):
              the peer relation.
         """
         return self.model.get_relation(PEER)
-
-    def _get_operator_password(self) -> str:
-        """Get operator user password."""
-        return self._get_secret("app", USER_PASSWORD_KEY)
-
-    @property
-    def _replication_password(self) -> str:
-        """Get replication user password."""
-        return self._get_secret("app", REPLICATION_PASSWORD_KEY)
 
     def _unit_name_to_pod_name(self, unit_name: str) -> str:
         """Converts unit name to pod name.
