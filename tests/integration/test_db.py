@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
-
+import pytest as pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.helpers import METADATA
@@ -18,6 +18,7 @@ APPLICATION_UNITS = 1
 DATABASE_UNITS = 3
 
 
+@pytest.mark.db_relation
 async def test_finos_waltz_db(ops_test: OpsTest) -> None:
     """Deploy Finos Waltz to test the 'db' relation.
 
