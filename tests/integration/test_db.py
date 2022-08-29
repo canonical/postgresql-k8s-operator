@@ -18,7 +18,7 @@ APPLICATION_UNITS = 1
 DATABASE_UNITS = 3
 
 
-@pytest.mark.db_relation
+@pytest.mark.db_relation_tests
 async def test_finos_waltz_db(ops_test: OpsTest) -> None:
     """Deploy Finos Waltz to test the 'db' relation.
 
