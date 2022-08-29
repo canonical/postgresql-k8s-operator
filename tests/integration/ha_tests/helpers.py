@@ -68,7 +68,7 @@ async def kill_process(ops_test: OpsTest, unit_name: str, process: str, kill_cod
         await ops_test.model.applications[app].add_unit(count=1)
         await ops_test.model.wait_for_idle(apps=[app], status="active", timeout=1000)
 
-    kill_cmd = f"run --unit {unit_name} -- pkill --signal {kill_code} {process}"
+    kill_cmd = f"ssh --container postgresql {unit_name} pkill --signal {kill_code} {process}"
     return_code, _, _ = await ops_test.juju(*kill_cmd.split())
 
     if return_code != 0:
