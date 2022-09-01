@@ -415,9 +415,14 @@ async def scale_application(ops_test: OpsTest, application_name: str, scale: int
     )
 
 
-async def set_password(ops_test: OpsTest, unit_name: str, username: str = "operator"):
-    """Retrieve a user password using the action."""
+async def set_password(
+    ops_test: OpsTest, unit_name: str, username: str = "operator", password: str = None
+):
+    """Set a user password using the action."""
     unit = ops_test.model.units.get(unit_name)
-    action = await unit.run_action("set-password", **{"username": username})
+    parameters = {"username": username}
+    if password is not None:
+        parameters["password"] = password
+    action = await unit.run_action("set-password", **parameters)
     result = await action.wait()
     return result.results
