@@ -17,6 +17,8 @@ from tests.integration.helpers import (
     convert_records_to_dict,
     get_application_units,
     get_cluster_members,
+    get_existing_k8s_resources,
+    get_expected_k8s_resources,
     get_password,
     get_unit_address,
     scale_application,
@@ -29,8 +31,8 @@ UNIT_IDS = [0, 1, 2]
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.skip_if_deployed
 @pytest.mark.charm_tests
+@pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest):
     """Build the charm-under-test and deploy it.
 
@@ -47,6 +49,16 @@ async def test_build_and_deploy(ops_test: OpsTest):
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
     for unit_id in UNIT_IDS:
         assert ops_test.model.applications[APP_NAME].units[unit_id].workload_status == "active"
+
+
+@pytest.mark.charm_tests
+async def test_application_created_required_resources(ops_test: OpsTest) -> None:
+    # Compare the k8s resources that the charm and Patroni should create with
+    # the currently created k8s resources.
+    namespace = ops_test.model.info.name
+    existing_resources = get_existing_k8s_resources(namespace, APP_NAME)
+    expected_resources = get_expected_k8s_resources(namespace, APP_NAME)
+    assert set(existing_resources) == set(expected_resources)
 
 
 @pytest.mark.charm_tests
@@ -265,9 +277,35 @@ async def test_application_removal(ops_test: OpsTest) -> None:
         )
     )
 
+    # Check that all k8s resources created by the charm and Patroni were removed.
+    namespace = ops_test.model.info.name
+    existing_resources = get_existing_k8s_resources(namespace, APP_NAME)
+    assert set(existing_resources) == set()
+
     # Check whether the application is gone
     # (in that situation, the units aren't in an error state).
     assert APP_NAME not in ops_test.model.applications
+
+
+@pytest.mark.charm_tests
+async def test_redeploy_charm_same_model(ops_test: OpsTest):
+    """Redeploy the charm in the same model to test that it works."""
+    charm = await ops_test.build_charm(".")
+    async with ops_test.fast_forward():
+        await ops_test.model.deploy(
+            charm,
+            resources={
+                "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
+            },
+            application_name=APP_NAME,
+            num_units=3,
+            trust=True,
+        )
+
+        # This check is enough to ensure that the charm/workload is working for this specific test.
+        await ops_test.model.wait_for_idle(
+            apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3
+        )
 
 
 @retry(
