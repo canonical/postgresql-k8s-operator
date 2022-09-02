@@ -5,6 +5,7 @@
 
 DATABASE_PORT = "5432"
 PEER = "database-peers"
+REPLICATION_USER = "replication"
 REPLICATION_PASSWORD_KEY = "replication-password"
 USER = "operator"
 USER_PASSWORD_KEY = "operator-password"
@@ -13,3 +14,5 @@ TLS_EXT_PEM_FILE = "external-cert.pem"
 TLS_EXT_CA_FILE = "external-ca.crt"
 TLS_INT_PEM_FILE = "internal-cert.pem"
 TLS_INT_CA_FILE = "internal-ca.crt"
+# List of system usernames needed for correct work of the charm/workload.
+SYSTEM_USERS = [REPLICATION_USER, USER]

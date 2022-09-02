@@ -37,4 +37,9 @@ postgresql:
   {%- for endpoint in endpoints %}
   - host replication replication {{ endpoint }}.{{ namespace }}.svc.cluster.local md5
   {%- endfor %}
+  authentication:
+    replication:
+      password: {{ replication_password }}
+    superuser:
+      password: {{ superuser_password }}
 use_endpoints: true
