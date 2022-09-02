@@ -32,13 +32,22 @@ class Patroni:
     """This class handles the communication with Patroni API and configuration files."""
 
     def __init__(
-        self, endpoint: str, endpoints: List[str], namespace: str, planned_units, storage_path: str
+        self,
+        endpoint: str,
+        endpoints: List[str],
+        namespace: str,
+        planned_units,
+        storage_path: str,
+        superuser_password: str,
+        replication_password: str,
     ):
         self._endpoint = endpoint
         self._endpoints = endpoints
         self._namespace = namespace
         self._storage_path = storage_path
         self._planned_units = planned_units
+        self._superuser_password = superuser_password
+        self._replication_password = replication_password
 
     def get_primary(self, unit_name_pattern=False) -> str:
         """Get primary instance.
@@ -137,6 +146,8 @@ class Patroni:
             endpoints=self._endpoints,
             namespace=self._namespace,
             storage_path=self._storage_path,
+            superuser_password=self._superuser_password,
+            replication_password=self._replication_password,
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 
