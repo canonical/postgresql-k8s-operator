@@ -235,6 +235,25 @@ async def get_unit_address(ops_test: OpsTest, unit_name: str) -> str:
     return status["applications"][unit_name.split("/")[0]].units[unit_name]["address"]
 
 
+async def is_tls_enabled(ops_test: OpsTest, unit_name: str) -> bool:
+    """Returns whether TLS is enabled on the specific PostgreSQL instance.
+
+    Args:
+        ops_test: The ops test framework instance.
+        unit_name: The name of the unit of the PostgreSQL instance.
+
+    Returns:
+        Whether TLS is enabled.
+    """
+    unit_address = await get_unit_address(ops_test, unit_name)
+    password = await get_operator_password(ops_test)
+    try:
+        output = await execute_query_on_unit(unit_address, password, "SHOW ssl;")
+    except psycopg2.Error:
+        return False
+    return "on" in output
+
+
 async def scale_application(ops_test: OpsTest, application_name: str, scale: int) -> None:
     """Scale a given application to a specific unit count.
 

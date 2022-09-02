@@ -252,18 +252,18 @@ class TestCharm(unittest.TestCase):
         self.harness.set_leader()
 
         # Test application scope.
-        assert self.charm._get_secret("app", "password") is None
+        assert self.charm.get_secret("app", "password") is None
         self.harness.update_relation_data(
             self.rel_id, self.charm.app.name, {"password": "test-password"}
         )
-        assert self.charm._get_secret("app", "password") == "test-password"
+        assert self.charm.get_secret("app", "password") == "test-password"
 
         # Test unit scope.
-        assert self.charm._get_secret("unit", "password") is None
+        assert self.charm.get_secret("unit", "password") is None
         self.harness.update_relation_data(
             self.rel_id, self.charm.unit.name, {"password": "test-password"}
         )
-        assert self.charm._get_secret("unit", "password") == "test-password"
+        assert self.charm.get_secret("unit", "password") == "test-password"
 
     @patch("charm.Patroni.reload_patroni_configuration")
     @patch("charm.Patroni.render_postgresql_conf_file")
@@ -273,7 +273,7 @@ class TestCharm(unittest.TestCase):
 
         # Test application scope.
         assert "password" not in self.harness.get_relation_data(self.rel_id, self.charm.app.name)
-        self.charm._set_secret("app", "password", "test-password")
+        self.charm.set_secret("app", "password", "test-password")
         assert (
             self.harness.get_relation_data(self.rel_id, self.charm.app.name)["password"]
             == "test-password"
@@ -281,7 +281,7 @@ class TestCharm(unittest.TestCase):
 
         # Test unit scope.
         assert "password" not in self.harness.get_relation_data(self.rel_id, self.charm.unit.name)
-        self.charm._set_secret("unit", "password", "test-password")
+        self.charm.set_secret("unit", "password", "test-password")
         assert (
             self.harness.get_relation_data(self.rel_id, self.charm.unit.name)["password"]
             == "test-password"
