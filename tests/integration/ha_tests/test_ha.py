@@ -21,7 +21,7 @@ POSTGRESQL_PROCESS = "postgres"
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.ha
+@pytest.mark.ha_tests
 async def test_build_and_deploy(ops_test: OpsTest, continuous_writes) -> None:
     """Build and deploy three unit of PostgreSQL."""
     # It is possible for users to provide their own cluster for HA testing. Hence, check if there
@@ -42,7 +42,7 @@ async def test_build_and_deploy(ops_test: OpsTest, continuous_writes) -> None:
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
 
-@pytest.mark.ha
+@pytest.mark.ha_tests
 async def test_kill_db_processes(ops_test) -> None:
     # locate primary unit
     app = await app_name(ops_test)
