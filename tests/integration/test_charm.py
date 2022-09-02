@@ -17,6 +17,8 @@ from tests.integration.helpers import (
     convert_records_to_dict,
     get_application_units,
     get_cluster_members,
+    get_existing_k8s_resources,
+    get_expected_k8s_resources,
     get_password,
     get_unit_address,
     scale_application,
@@ -29,8 +31,8 @@ UNIT_IDS = [0, 1, 2]
 
 
 @pytest.mark.abort_on_fail
+@pytest.mark.charm_tests
 @pytest.mark.skip_if_deployed
-@pytest.mark.charm
 async def test_build_and_deploy(ops_test: OpsTest):
     """Build the charm-under-test and deploy it.
 
@@ -49,7 +51,17 @@ async def test_build_and_deploy(ops_test: OpsTest):
         assert ops_test.model.applications[APP_NAME].units[unit_id].workload_status == "active"
 
 
-@pytest.mark.charm
+@pytest.mark.charm_tests
+async def test_application_created_required_resources(ops_test: OpsTest) -> None:
+    # Compare the k8s resources that the charm and Patroni should create with
+    # the currently created k8s resources.
+    namespace = ops_test.model.info.name
+    existing_resources = get_existing_k8s_resources(namespace, APP_NAME)
+    expected_resources = get_expected_k8s_resources(namespace, APP_NAME)
+    assert set(existing_resources) == set(expected_resources)
+
+
+@pytest.mark.charm_tests
 @pytest.mark.parametrize("unit_id", UNIT_IDS)
 async def test_labels_consistency_across_pods(ops_test: OpsTest, unit_id: int) -> None:
     model = ops_test.model.info
@@ -61,7 +73,7 @@ async def test_labels_consistency_across_pods(ops_test: OpsTest, unit_id: int) -
     assert pod.metadata.labels["cluster-name"] == f"patroni-{APP_NAME}"
 
 
-@pytest.mark.charm
+@pytest.mark.charm_tests
 @pytest.mark.parametrize("unit_id", UNIT_IDS)
 async def test_database_is_up(ops_test: OpsTest, unit_id: int):
     # Query Patroni REST API and check the status that indicates
@@ -71,7 +83,7 @@ async def test_database_is_up(ops_test: OpsTest, unit_id: int):
     assert result.status_code == 200
 
 
-@pytest.mark.charm
+@pytest.mark.charm_tests
 @pytest.mark.parametrize("unit_id", UNIT_IDS)
 async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
     password = await get_password(ops_test)
@@ -111,7 +123,7 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
     assert settings["postgresql"]["use_pg_rewind"]
 
 
-@pytest.mark.charm
+@pytest.mark.charm_tests
 async def test_cluster_is_stable_after_leader_deletion(ops_test: OpsTest) -> None:
     """Tests that the cluster maintains a primary after the primary is deleted."""
     # Find the current primary unit.
@@ -135,7 +147,7 @@ async def test_cluster_is_stable_after_leader_deletion(ops_test: OpsTest) -> Non
     assert await get_primary(ops_test, other_unit_id) != "None"
 
 
-@pytest.mark.charm
+@pytest.mark.charm_tests
 async def test_scale_down_and_up(ops_test: OpsTest):
     """Test data is replicated to new units after a scale up."""
     # Ensure the initial number of units in the application.
@@ -161,7 +173,7 @@ async def test_scale_down_and_up(ops_test: OpsTest):
     await scale_application(ops_test, APP_NAME, initial_scale)
 
 
-@pytest.mark.charm
+@pytest.mark.charm_tests
 async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
     """Test data persists through a graceful restart."""
     primary = await get_primary(ops_test)
@@ -190,7 +202,7 @@ async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
             connection.cursor().execute("SELECT * FROM gracetest;")
 
 
-@pytest.mark.charm
+@pytest.mark.charm_tests
 async def test_persist_data_through_failure(ops_test: OpsTest):
     """Test data persists through a failure."""
     primary = await get_primary(ops_test)
@@ -231,7 +243,7 @@ async def test_persist_data_through_failure(ops_test: OpsTest):
             connection.cursor().execute("SELECT * FROM failtest;")
 
 
-@pytest.mark.charm
+@pytest.mark.charm_tests
 async def test_automatic_failover_after_leader_issue(ops_test: OpsTest) -> None:
     """Tests that an automatic failover is triggered after an issue happens in the leader."""
     # Find the current primary unit.
@@ -249,7 +261,7 @@ async def test_automatic_failover_after_leader_issue(ops_test: OpsTest) -> None:
     assert await get_primary(ops_test) != "None"
 
 
-@pytest.mark.charm
+@pytest.mark.charm_tests
 async def test_application_removal(ops_test: OpsTest) -> None:
     # Remove the application to trigger some hooks (like peer relation departed).
     await ops_test.model.applications[APP_NAME].remove()
@@ -265,9 +277,35 @@ async def test_application_removal(ops_test: OpsTest) -> None:
         )
     )
 
+    # Check that all k8s resources created by the charm and Patroni were removed.
+    namespace = ops_test.model.info.name
+    existing_resources = get_existing_k8s_resources(namespace, APP_NAME)
+    assert set(existing_resources) == set()
+
     # Check whether the application is gone
     # (in that situation, the units aren't in an error state).
     assert APP_NAME not in ops_test.model.applications
+
+
+@pytest.mark.charm_tests
+async def test_redeploy_charm_same_model(ops_test: OpsTest):
+    """Redeploy the charm in the same model to test that it works."""
+    charm = await ops_test.build_charm(".")
+    async with ops_test.fast_forward():
+        await ops_test.model.deploy(
+            charm,
+            resources={
+                "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
+            },
+            application_name=APP_NAME,
+            num_units=3,
+            trust=True,
+        )
+
+        # This check is enough to ensure that the charm/workload is working for this specific test.
+        await ops_test.model.wait_for_idle(
+            apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3
+        )
 
 
 @retry(

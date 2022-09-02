@@ -22,7 +22,7 @@ DATABASE_UNITS = 3
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.db_admin_relation
+@pytest.mark.db_admin_relation_tests
 async def test_build_and_deploy(ops_test: OpsTest):
     """Build the charm-under-test and deploy it.
 
@@ -57,7 +57,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
         )
 
 
-@pytest.mark.db_admin_relation
+@pytest.mark.db_admin_relation_tests
 async def test_discourse(ops_test: OpsTest):
     # Test the first Discourse charm.
     # Add both relations to Discourse (PostgreSQL and Redis)
@@ -82,7 +82,7 @@ async def test_discourse(ops_test: OpsTest):
     await check_database_users_existence(ops_test, discourse_users, [], admin=True)
 
 
-@pytest.mark.db_admin_relation
+@pytest.mark.db_admin_relation_tests
 async def test_discourse_from_discourse_charmers(ops_test: OpsTest):
     # Test the second Discourse charm.
 

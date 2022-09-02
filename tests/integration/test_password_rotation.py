@@ -18,7 +18,7 @@ APP_NAME = METADATA["name"]
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.password_rotation
+@pytest.mark.password_rotation_tests
 @pytest.mark.skip_if_deployed
 async def test_deploy_active(ops_test: OpsTest):
     """Build the charm and deploy it."""
@@ -36,7 +36,7 @@ async def test_deploy_active(ops_test: OpsTest):
         await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
 
-@pytest.mark.password_rotation
+@pytest.mark.password_rotation_tests
 async def test_password_rotation(ops_test: OpsTest):
     """Test password rotation action."""
     # Get the initial passwords set for the system users.
@@ -55,14 +55,18 @@ async def test_password_rotation(ops_test: OpsTest):
     assert "operator-password" in result.keys()
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
-    result = await set_password(ops_test, unit_name=leader, username="replication")
+    # For replication, generate a specific password and pass it to the action.
+    new_replication_password = "test-password"
+    result = await set_password(
+        ops_test, unit_name=leader, username="replication", password=new_replication_password
+    )
     assert "replication-password" in result.keys()
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
     new_superuser_password = await get_password(ops_test)
-    new_replication_password = await get_password(ops_test, "replication")
 
     assert superuser_password != new_superuser_password
+    assert new_replication_password == await get_password(ops_test, "replication")
     assert replication_password != new_replication_password
 
     # Restart Patroni on any non-leader unit and check that
