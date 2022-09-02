@@ -39,6 +39,11 @@ provides:
   db-admin:
     interface: pgsql
 
+requires:
+  certificates:
+    interface: tls-certificates
+    limit: 1
+
 storage:
   pgdata:
     type: filesystem

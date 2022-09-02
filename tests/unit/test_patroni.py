@@ -15,7 +15,13 @@ class TestPatroni(unittest.TestCase):
     def setUp(self):
         # Setup Patroni wrapper.
         self.patroni = Patroni(
-            "postgresql-k8s-0", "postgresql-k8s-0", "test-model", 1, STORAGE_PATH
+            "postgresql-k8s-0",
+            "postgresql-k8s-0",
+            "test-model",
+            1,
+            STORAGE_PATH,
+            "superuser-password",
+            "replication-password",
         )
 
     @patch("requests.get")
@@ -77,6 +83,8 @@ class TestPatroni(unittest.TestCase):
             endpoints=self.patroni._endpoints,
             namespace=self.patroni._namespace,
             storage_path=self.patroni._storage_path,
+            superuser_password=self.patroni._superuser_password,
+            replication_password=self.patroni._replication_password,
         )
 
         # Setup a mock for the `open` method, set returned data to postgresql.conf template.
@@ -161,7 +169,13 @@ class TestPatroni(unittest.TestCase):
 
         # Also test with multiple planned units (synchronous_commit is turned on).
         self.patroni = Patroni(
-            "postgresql-k8s-0", "postgresql-k8s-0", "test-model", 3, STORAGE_PATH
+            "postgresql-k8s-0",
+            "postgresql-k8s-0",
+            "test-model",
+            3,
+            STORAGE_PATH,
+            "superuser-password",
+            "replication-password",
         )
         expected_content = template.render(
             logging_collector="on",

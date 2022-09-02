@@ -5,12 +5,15 @@
 """Charmed Kubernetes Operator for the PostgreSQL database."""
 import json
 import logging
-from pathlib import Path
 from typing import Dict, List, Optional
 
-from charms.postgresql_k8s.v0.postgresql import PostgreSQL
+from charms.postgresql_k8s.v0.postgresql import (
+    PostgreSQL,
+    PostgreSQLUpdateUserPasswordError,
+)
+from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
 from lightkube import ApiError, Client, codecs
-from lightkube.resources.core_v1 import Pod
+from lightkube.resources.core_v1 import Endpoints, Pod, Service
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -23,16 +26,28 @@ from ops.main import main
 from ops.model import (
     ActiveStatus,
     BlockedStatus,
+    Container,
     MaintenanceStatus,
-    ModelError,
     Relation,
     WaitingStatus,
 )
-from ops.pebble import Layer
+from ops.pebble import Layer, PathError, ProtocolError
 from requests import ConnectionError
 from tenacity import RetryError
 
-from constants import PEER, REPLICATION_PASSWORD_KEY, USER, USER_PASSWORD_KEY
+from constants import (
+    PEER,
+    REPLICATION_PASSWORD_KEY,
+    REPLICATION_USER,
+    SYSTEM_USERS,
+    TLS_EXT_CA_FILE,
+    TLS_EXT_PEM_FILE,
+    TLS_INT_CA_FILE,
+    TLS_INT_PEM_FILE,
+    USER,
+    USER_PASSWORD_KEY,
+    WORKLOAD_OS_USER_GROUP,
+)
 from patroni import NotReadyError, Patroni
 from relations.db import DbProvides
 from relations.postgresql_provider import PostgreSQLProvider
@@ -61,10 +76,10 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
         self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
+        self.framework.observe(self.on.stop, self._on_stop)
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
-        self.framework.observe(
-            self.on.get_operator_password_action, self._on_get_operator_password
-        )
+        self.framework.observe(self.on.get_password_action, self._on_get_password)
+        self.framework.observe(self.on.set_password_action, self._on_set_password)
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
         self.framework.observe(self.on.update_status, self._on_update_status)
         self._storage_path = self.meta.storages["pgdata"].location
@@ -72,6 +87,7 @@ class PostgresqlOperatorCharm(CharmBase):
         self.postgresql_client_relation = PostgreSQLProvider(self)
         self.legacy_db_relation = DbProvides(self, admin=False)
         self.legacy_db_admin_relation = DbProvides(self, admin=True)
+        self.tls = PostgreSQLTLS(self, PEER)
 
     @property
     def app_peer_data(self) -> Dict:
@@ -91,7 +107,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
         return relation.data[self.unit]
 
-    def _get_secret(self, scope: str, key: str) -> Optional[str]:
+    def get_secret(self, scope: str, key: str) -> Optional[str]:
         """Get secret from the secret storage."""
         if scope == "unit":
             return self.unit_peer_data.get(key, None)
@@ -100,7 +116,7 @@ class PostgresqlOperatorCharm(CharmBase):
         else:
             raise RuntimeError("Unknown secret scope.")
 
-    def _set_secret(self, scope: str, key: str, value: Optional[str]) -> None:
+    def set_secret(self, scope: str, key: str, value: Optional[str]) -> None:
         """Get secret from the secret storage."""
         if scope == "unit":
             if not value:
@@ -121,7 +137,7 @@ class PostgresqlOperatorCharm(CharmBase):
         return PostgreSQL(
             host=self.primary_endpoint,
             user=USER,
-            password=self._get_operator_password(),
+            password=self.get_secret("app", f"{USER}-password"),
             database="postgres",
         )
 
@@ -144,57 +160,17 @@ class PostgresqlOperatorCharm(CharmBase):
         """Build a full k8s service name based on the service name."""
         return f"{self._name}-{service}.{self._namespace}.svc.cluster.local"
 
-    def _retrieve_resource(self, resource: str) -> Optional[Path]:
-        """Check that the resource exists and return it.
+    def get_hostname_by_unit(self, unit_name: str) -> str:
+        """Create a DNS name for a PostgreSQL unit.
 
         Args:
-            resource: name of the resource to retrieve.
+            unit_name: the juju unit name, e.g. "postgre-sql/1".
 
         Returns:
-            Path of the resource or None
+            A string representing the hostname of the PostgreSQL unit.
         """
-        try:
-            # Fetch the resource path
-            return self.model.resources.fetch(resource)
-        except (ModelError, NameError):
-            return None
-
-    def _store_tls_files(self) -> None:
-        """Copy the TLS certificate and key to the PostgreSQL container."""
-        # Copy the resources to the storage path if all of them were attached
-        # and enable TLS.
-        if len(self._tls_files) == len(TLS_RESOURCES):
-            container = self.unit.get_container("postgresql")
-
-            # Copy the files from the resources' location to the PostgreSQL container.
-            for file_path in self._tls_files:
-                with open(file_path, "r") as f:
-                    container.push(
-                        f"{self._storage_path}/{file_path.name}",
-                        f,
-                        permissions=0o600,
-                        user="postgres",
-                        group="postgres",
-                    )
-
-            logger.info("TLS enabled")
-            logger.warning(
-                "WARNING - this TLS implementation is temporary - it will change in the future"
-            )
-        else:
-            logger.info("TLS disabled")
-
-        self._update_config()
-
-    @property
-    def _tls_files(self) -> Optional[List[Path]]:
-        """Paths of the TLS certificate and key files.
-
-        Returns:
-            A list with the paths of the certificate and the key
-                if they were attached as resources to this application.
-        """
-        return [path for path in map(self._retrieve_resource, TLS_RESOURCES) if path]
+        unit_id = unit_name.split("/")[1]
+        return f"{self.app.name}-{unit_id}.{self.app.name}-endpoints"
 
     def _get_endpoints_to_remove(self) -> List[str]:
         """List the endpoints that were part of the cluster but departed."""
@@ -241,6 +217,14 @@ class PostgresqlOperatorCharm(CharmBase):
         # Update the list of the cluster members in the replicas to make them know each other.
         # Update the cluster members in this unit (updating patroni configuration).
         self._patroni.update_cluster_members()
+
+        try:
+            container = self.unit.get_container("postgresql")
+            self._push_certificate_to_workload(container)
+        except (PathError, ProtocolError) as e:
+            logger.error("Cannot push TLS certificates: %r", e)
+            event.defer()
+            return
 
         # Validate the status of the member before setting an ActiveStatus.
         if not self._patroni.member_started:
@@ -347,11 +331,11 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _on_leader_elected(self, event: LeaderElectedEvent) -> None:
         """Handle the leader-elected event."""
-        if self._get_secret("app", USER_PASSWORD_KEY) is None:
-            self._set_secret("app", USER_PASSWORD_KEY, new_password())
+        if self.get_secret("app", USER_PASSWORD_KEY) is None:
+            self.set_secret("app", USER_PASSWORD_KEY, new_password())
 
-        if self._get_secret("app", REPLICATION_PASSWORD_KEY) is None:
-            self._set_secret("app", REPLICATION_PASSWORD_KEY, new_password())
+        if self.get_secret("app", REPLICATION_PASSWORD_KEY) is None:
+            self.set_secret("app", REPLICATION_PASSWORD_KEY, new_password())
 
         # Create resources and add labels needed for replication.
         self._create_resources()
@@ -388,6 +372,13 @@ class PostgresqlOperatorCharm(CharmBase):
         # any update in the members list on the units won't have effect
         # on fixing that.
         if not self.unit.is_leader() and "cluster_initialised" not in self._peers.data[self.app]:
+            event.defer()
+            return
+
+        try:
+            self._push_certificate_to_workload(container)
+        except (PathError, ProtocolError) as e:
+            logger.error("Cannot push TLS certificates: %r", e)
             event.defer()
             return
 
@@ -430,10 +421,6 @@ class PostgresqlOperatorCharm(CharmBase):
         # All is well, set an ActiveStatus.
         self.unit.status = ActiveStatus()
 
-    def _update_config(self) -> None:
-        """Creates os updates Patroni config file based on the existence of the TLS files."""
-        self._patroni.render_patroni_yml_file(enable_tls=True if self._tls_files else False)
-
     def _on_upgrade_charm(self, _) -> None:
         # Add labels required for replication when the pod loses them (like when it's deleted).
         try:
@@ -442,10 +429,6 @@ class PostgresqlOperatorCharm(CharmBase):
             logger.error("failed to patch pod")
             self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
             return
-
-        # Tries to store the TLS certificate and key on the PostgreSQL container,
-        # as new `juju attach-resource` will trigger this event.
-        self._store_tls_files()
 
     def _patch_pod_labels(self, member: str) -> None:
         """Add labels required for replication to the current pod.
@@ -489,9 +472,72 @@ class PostgresqlOperatorCharm(CharmBase):
                 self.unit.status = BlockedStatus(f"failed to create services {e}")
                 return
 
-    def _on_get_operator_password(self, event: ActionEvent) -> None:
-        """Returns the password for the operator user as an action response."""
-        event.set_results({USER_PASSWORD_KEY: self._get_operator_password()})
+    def _on_get_password(self, event: ActionEvent) -> None:
+        """Returns the password for a user as an action response.
+
+        If no user is provided, the password of the operator user is returned.
+        """
+        username = event.params.get("username", USER)
+        if username not in SYSTEM_USERS:
+            event.fail(
+                f"The action can be run only for users used by the charm or Patroni:"
+                f" {', '.join(SYSTEM_USERS)} not {username}"
+            )
+            return
+        event.set_results({f"{username}-password": self.get_secret("app", f"{username}-password")})
+
+    def _on_set_password(self, event: ActionEvent) -> None:
+        """Set the password for the specified user."""
+        # Only leader can write the new password into peer relation.
+        if not self.unit.is_leader():
+            event.fail("The action can be run only on leader unit")
+            return
+
+        username = event.params.get("username", USER)
+        if username not in SYSTEM_USERS:
+            event.fail(
+                f"The action can be run only for users used by the charm:"
+                f" {', '.join(SYSTEM_USERS)} not {username}"
+            )
+            return
+
+        password = new_password()
+        if "password" in event.params:
+            password = event.params["password"]
+
+        if password == self.get_secret("app", f"{username}-password"):
+            event.log("The old and new passwords are equal.")
+            event.set_results({f"{username}-password": password})
+            return
+
+        # Ensure all members are ready before trying to reload Patroni
+        # configuration to avoid errors (like the API not responding in
+        # one instance because PostgreSQL and/or Patroni are not ready).
+        if not self._patroni.are_all_members_ready():
+            event.fail(
+                "Failed changing the password: Not all members healthy or finished initial sync."
+            )
+            return
+
+        # Update the password in the PostgreSQL instance.
+        try:
+            self.postgresql.update_user_password(username, password)
+        except PostgreSQLUpdateUserPasswordError as e:
+            logger.exception(e)
+            event.fail(
+                "Failed changing the password: Not all members healthy or finished initial sync."
+            )
+            return
+
+        # Update the password in the secret store.
+        self.set_secret("app", f"{username}-password", password)
+
+        # Update and reload Patroni configuration in this unit to use the new password.
+        # Other units Patroni configuration will be reloaded in the peer relation changed event.
+        self._patroni.render_patroni_yml_file()
+        self._patroni.reload_patroni_configuration()
+
+        event.set_results({f"{username}-password": password})
 
     def _on_get_primary(self, event: ActionEvent) -> None:
         """Get primary instance."""
@@ -500,6 +546,46 @@ class PostgresqlOperatorCharm(CharmBase):
             event.set_results({"primary": primary})
         except RetryError as e:
             logger.error(f"failed to get primary with error {e}")
+
+    def _on_stop(self, _) -> None:
+        """Remove k8s resources created by the charm and Patroni."""
+        client = Client()
+
+        # Get the k8s resources created by the charm.
+        with open("src/resources.yaml") as f:
+            resources = codecs.load_all_yaml(f, context=self._context)
+            # Ignore the service resources, which will be retrieved in the next step.
+            resources_to_delete = list(
+                filter(
+                    lambda x: not isinstance(x, Service),
+                    resources,
+                )
+            )
+
+        # Get the k8s resources created by the charm and Patroni.
+        for kind in [Endpoints, Service]:
+            resources_to_delete.extend(
+                client.list(
+                    kind,
+                    namespace=self._namespace,
+                    labels={"app.juju.is/created-by": f"{self._name}"},
+                )
+            )
+
+        # Delete the resources.
+        for resource in resources_to_delete:
+            try:
+                client.delete(
+                    type(resource),
+                    name=resource.metadata.name,
+                    namespace=resource.metadata.namespace,
+                )
+            except ApiError as e:
+                if (
+                    e.status.code != 404
+                ):  # 404 means that the resource was already deleted by other unit.
+                    # Only log a message, as the charm is being stopped.
+                    logger.error(f"failed to delete resource: {resource}.")
 
     def _on_update_status(self, _) -> None:
         # Display an active status message if the current unit is the primary.
@@ -518,6 +604,8 @@ class PostgresqlOperatorCharm(CharmBase):
             self._namespace,
             self.app.planned_units(),
             self._storage_path,
+            self.get_secret("app", USER_PASSWORD_KEY),
+            self.get_secret("app", REPLICATION_PASSWORD_KEY),
         )
 
     @property
@@ -578,10 +666,8 @@ class PostgresqlOperatorCharm(CharmBase):
                         "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
                         "PATRONI_NAME": pod_name,
                         "PATRONI_SCOPE": f"patroni-{self._name}",
-                        "PATRONI_REPLICATION_USERNAME": "replication",
-                        "PATRONI_REPLICATION_PASSWORD": self._replication_password,
+                        "PATRONI_REPLICATION_USERNAME": REPLICATION_USER,
                         "PATRONI_SUPERUSER_USERNAME": USER,
-                        "PATRONI_SUPERUSER_PASSWORD": self._get_operator_password(),
                     },
                 }
             },
@@ -600,12 +686,67 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _get_operator_password(self) -> str:
         """Get operator user password."""
-        return self._get_secret("app", USER_PASSWORD_KEY)
+        return self.get_secret("app", USER_PASSWORD_KEY)
 
     @property
     def _replication_password(self) -> str:
         """Get replication user password."""
-        return self._get_secret("app", REPLICATION_PASSWORD_KEY)
+        return self.get_secret("app", REPLICATION_PASSWORD_KEY)
+
+    def _push_certificate_to_workload(self, container: Container) -> None:
+        """Uploads certificate to the workload container."""
+        external_key, external_cert = self.tls.get_tls_files("unit")
+        if external_key is not None:
+            container.push(
+                f"{self._storage_path}/{TLS_EXT_CA_FILE}",
+                external_key,
+                make_dirs=True,
+                permissions=0o400,
+                user=WORKLOAD_OS_USER_GROUP,
+                group=WORKLOAD_OS_USER_GROUP,
+            )
+        if external_cert is not None:
+            container.push(
+                f"{self._storage_path}/{TLS_EXT_PEM_FILE}",
+                external_cert,
+                make_dirs=True,
+                permissions=0o400,
+                user=WORKLOAD_OS_USER_GROUP,
+                group=WORKLOAD_OS_USER_GROUP,
+            )
+
+        internal_key, internal_cert = self.tls.get_tls_files("app")
+        if internal_key is not None:
+            container.push(
+                f"{self._storage_path}/{TLS_INT_CA_FILE}",
+                internal_key,
+                make_dirs=True,
+                permissions=0o400,
+                user=WORKLOAD_OS_USER_GROUP,
+                group=WORKLOAD_OS_USER_GROUP,
+            )
+        if internal_cert is not None:
+            container.push(
+                f"{self._storage_path}/{TLS_INT_PEM_FILE}",
+                internal_cert,
+                make_dirs=True,
+                permissions=0o400,
+                user=WORKLOAD_OS_USER_GROUP,
+                group=WORKLOAD_OS_USER_GROUP,
+            )
+
+        self._update_config()
+
+    def _update_config(self) -> None:
+        """Creates os updates Patroni config file based on the existence of the TLS files."""
+        enable_tls = False
+        external_ca, external_pem = self.tls.get_tls_files("unit")
+        if external_ca is not None:
+            enable_tls = True
+        internal_ca, internal_pem = self.tls.get_tls_files("app")
+        if internal_ca is not None:
+            enable_tls = True
+        self._patroni.render_patroni_yml_file(enable_tls=enable_tls)
 
     def _unit_name_to_pod_name(self, unit_name: str) -> str:
         """Converts unit name to pod name.
