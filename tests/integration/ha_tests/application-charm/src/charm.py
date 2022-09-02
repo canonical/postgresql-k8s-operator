@@ -38,7 +38,7 @@ class ApplicationCharm(CharmBase):
         self.framework.observe(self.on.start, self._on_start)
 
         # Events related to the database that is requested.
-        self.database_name = f'{self.app.name.replace("-", "_")}_database'
+        self.database_name = "application"
         self.database = DatabaseRequires(self, "database", self.database_name)
         self.framework.observe(self.database.on.database_created, self._on_database_created)
         self.framework.observe(self.database.on.endpoints_changed, self._on_endpoints_changed)
@@ -47,13 +47,19 @@ class ApplicationCharm(CharmBase):
 
     @property
     def _connection_string(self) -> Optional[str]:
-        if None in [self.database.username, self.database.password, self.database.endpoints]:
+        data = list(self.database.fetch_relation_data().values())[0]
+        logger.warning(f"data: {data}")
+        username = data.get("username")
+        password = data.get("password")
+        endpoints = data.get("endpoints")
+        logger.warning([username, password, endpoints])
+        if None in [username, password, endpoints]:
             return None
 
-        host = self.database.endpoints.split(":")[0]
+        host = endpoints.split(":")[0]
         return (
-            f"dbname='{self.database_name}' user='{self.database.username}'"
-            f" host='{host}' password='{self.database.password}' connect_timeout=10"
+            f"dbname='{self.database_name}' user='{username}'"
+            f" host='{host}' password='{password}' connect_timeout=10"
         )
 
     def _on_start(self, _) -> None:
@@ -87,20 +93,24 @@ class ApplicationCharm(CharmBase):
         return count
 
     def _start_continuous_writes(self, starting_number: int) -> None:
-        """Starts continuous writes to PostgreSQL with available replicas."""
+        """Starts continuous writes to PostgreSQL instance."""
+        if self._connection_string is None:
+            return
+
         self._stop_continuous_writes()
 
         # run continuous writes in the background.
+        logger.warning(self._connection_string)
         self._stored.continuous_writes_pid = subprocess.Popen(
             [
-                "python3",
-                "./continuous_writes.py",
+                "/usr/bin/python3",
+                "src/continuous_writes.py",
                 self._connection_string,
                 str(starting_number),
             ]
         ).pid
 
-    async def _stop_continuous_writes(self) -> Optional[int]:
+    def _stop_continuous_writes(self) -> Optional[int]:
         """Stops continuous writes to PostgreSQL and returns the last written value."""
         if not self._stored.continuous_writes_pid:
             return None

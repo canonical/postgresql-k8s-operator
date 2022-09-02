@@ -20,25 +20,48 @@ def continuous_writes(connection_string: str, starting_number: int):
 
     write_value = starting_number
 
-    # Connect to the database and create the table that will store the inserted rows.
-    connection = psycopg2.connect(connection_string)
-    connection.autocommit = True
-    with connection, connection.cursor() as cursor:
-        cursor.execute("CREATE TABLE IF NOT EXISTS continuous_writes(number INTEGER);")
-
     global interrupt_loop
+    connection = None
+    reconnect = False
     while not interrupt_loop:
         try:
+            # Connect to the database and create the table that will store the inserted rows.
+            if reconnect:
+                connection.close()
+            if connection is None or reconnect:
+                connection = psycopg2.connect(connection_string)
+                connection.autocommit = True
+                reconnect = False
+                with connection, connection.cursor() as cursor:
+                    cursor.execute("CREATE TABLE IF NOT EXISTS continuous_writes(number INTEGER);")
             with connection, connection.cursor() as cursor:
                 cursor.execute(f"INSERT INTO continuous_writes(number) VALUES({write_value});")
-        except psycopg2.errors.ConnectionException:
+        except psycopg2.errors.ConnectionException as e:
             # this means that the primary was not able to be found. An application should try to
             # reconnect and re-write the previous value. Hence, we `continue` here, without
             # incrementing `write_value` as to try to insert this value again.
+            reconnect = True
+            f = open("/tmp/demofile1.txt", "a")
+            f.write(str(type(e)))
+            f.close()
             continue
-        except psycopg2.Error:
+        except psycopg2.Error as e:
             # We should not raise this exception but instead increment the write value and move
             # on, indicating that there was a failure writing to the database.
+            # psycopg2.InterfaceError
+            # psycopg2.OperationalError
+            f = open("/tmp/demofile2.txt", "a")
+            f.write(str(type(e)))
+            f.write("\n")
+            f.write(str(e))
+            f.write("\n")
+            f.close()
+            reconnect = True
+            pass
+        except Exception as e:
+            f = open("/tmp/demofile3.txt", "a")
+            f.write(str(type(e)))
+            f.close()
             pass
 
         write_value += 1
