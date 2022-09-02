@@ -42,8 +42,8 @@ jobs:
       - name: Run tests
         run: tox -e unit
 
-  integration-test:
-    name: Integration tests
+  integration-test-charm:
+    name: Integration tests for charm deployment
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -55,7 +55,67 @@ jobs:
           # This is needed until https://bugs.launchpad.net/juju/+bug/1977582 is fixed.
           bootstrap-options: "--agent-version 2.9.29"
       - name: Run integration tests
-        run: tox -e integration
+        run: tox -e charm-integration
+
+  integration-test-database-relation:
+    name: Integration tests for database relation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+          # This is needed until https://bugs.launchpad.net/juju/+bug/1977582 is fixed.
+          bootstrap-options: "--agent-version 2.9.29"
+      - name: Run integration tests
+        run: tox -e database-relation-integration
+
+  integration-test-db-relation:
+    name: Integration tests for db relation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+          # This is needed until https://bugs.launchpad.net/juju/+bug/1977582 is fixed.
+          bootstrap-options: "--agent-version 2.9.29"
+      - name: Run integration tests
+        run: tox -e db-relation-integration
+
+  integration-test-db-admin-relation:
+    name: Integration tests for db-admin relation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+          # This is needed until https://bugs.launchpad.net/juju/+bug/1977582 is fixed.
+          bootstrap-options: "--agent-version 2.9.29"
+      - name: Run integration tests
+        run: tox -e db-admin-relation-integration
+
+  integration-test-password-rotation:
+    name: Integration tests for password rotation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+          # This is needed until https://bugs.launchpad.net/juju/+bug/1977582 is fixed.
+          bootstrap-options: "--agent-version 2.9.29"
+      - name: Run integration tests
+        run: tox -e password-rotation-integration
 
   release-to-charmhub:
     name: Release to CharmHub
@@ -63,7 +123,11 @@ jobs:
       - lib-check
       - lint
       - unit-test
-      - integration-test
+      - integration-test-charm
+      - integration-test-database-relation
+      - integration-test-db-relation
+      - integration-test-db-admin-relation
+      - integration-test-password-rotation
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
