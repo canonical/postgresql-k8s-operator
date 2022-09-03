@@ -5,6 +5,7 @@ import time
 
 import pytest
 from pytest_operator.plugin import OpsTest
+from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
 from tests.integration.ha_tests.helpers import (
     METADATA,
@@ -14,6 +15,8 @@ from tests.integration.ha_tests.helpers import (
     get_primary,
     kill_process,
     postgresql_ready,
+    secondary_up_to_date,
+    stop_continuous_writes,
 )
 
 # PATRONI_PROCESS = "/usr/bin/python3 /usr/local/bin/patroni /var/lib/postgresql/data/patroni.yml"
@@ -74,3 +77,20 @@ async def test_kill_db_processes(ops_test) -> None:
     # verify that a new primary gets elected (ie old primary is secondary)
     new_primary_name = await get_primary(ops_test, app)
     assert new_primary_name != primary_name
+
+    # verify that no writes to the db were missed
+    total_expected_writes = await stop_continuous_writes(ops_test)
+    try:
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+            with attempt:
+                actual_writes = await count_writes(ops_test)
+                print(actual_writes)
+                print(total_expected_writes)
+                assert total_expected_writes == actual_writes, "writes to the db were missed."
+    except RetryError:
+        raise
+
+    # verify that old primary is up to date.
+    assert await secondary_up_to_date(
+        ops_test, primary_name, total_expected_writes
+    ), "secondary not up to date with the cluster after restarting."

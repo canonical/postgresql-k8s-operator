@@ -45,6 +45,41 @@ def continuous_writes(connection_string: str, starting_number: int):
             f.write(str(type(e)))
             f.close()
             continue
+        except psycopg2.InterfaceError as e:
+            # We should not raise this exception but instead increment the write value and move
+            # on, indicating that there was a failure writing to the database.
+            # psycopg2.InterfaceError
+            # psycopg2.OperationalError
+            f = open("/tmp/demofile7.txt", "a")
+            f.write(str(type(e)))
+            f.write("\n")
+            # f.write(e.pgcode)
+            # f.write("\n")
+            f.write(str(e))
+            f.write("\n")
+            f.write(f"{write_value}")
+            f.write("\n")
+            f.close()
+            reconnect = True
+            continue
+        except psycopg2.OperationalError as e:
+            # We should not raise this exception but instead increment the write value and move
+            # on, indicating that there was a failure writing to the database.
+            # psycopg2.InterfaceError
+            # psycopg2.OperationalError
+            f = open("/tmp/demofile4.txt", "a")
+            f.write(str(type(e)))
+            f.write("\n")
+            # f.write(e.pgcode)
+            f.write(str(dir(e)))
+            f.write("\n")
+            f.write(str(e))
+            f.write("\n")
+            f.write(f"{write_value}")
+            f.write("\n")
+            f.close()
+            reconnect = True
+            continue
         except psycopg2.Error as e:
             # We should not raise this exception but instead increment the write value and move
             # on, indicating that there was a failure writing to the database.
@@ -53,11 +88,17 @@ def continuous_writes(connection_string: str, starting_number: int):
             f = open("/tmp/demofile2.txt", "a")
             f.write(str(type(e)))
             f.write("\n")
+            f.write(str(e.pgcode))
+            f.write("\n")
+            f.write(str(e.pgerror))
+            f.write("\n")
             f.write(str(e))
+            f.write("\n")
+            f.write(f"{write_value}")
             f.write("\n")
             f.close()
             reconnect = True
-            pass
+            continue
         except Exception as e:
             f = open("/tmp/demofile3.txt", "a")
             f.write(str(type(e)))

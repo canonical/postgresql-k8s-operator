@@ -136,3 +136,46 @@ async def postgresql_ready(ops_test, unit_name: str) -> bool:
         return False
 
     return True
+
+
+async def secondary_up_to_date(ops_test: OpsTest, unit_ip, expected_writes) -> bool:
+    """Checks if secondary is up to date with the cluster.
+
+    Retries over the period of one minute to give secondary adequate time to copy over data.
+    """
+    app = await app_name(ops_test)
+    password = await get_password(ops_test, app)
+    # TODO: randomize or do something similar here to check multiple units.
+    # hosts = [unit.public_address for unit in ops_test.model.applications[app].units]
+    status = await ops_test.model.get_status()
+    host = list(status["applications"][APP_NAME]["units"].values())[0]["address"]
+    connection_string = (
+        f"dbname='application' user='operator'"
+        f" host='{host}' password='{password}' connect_timeout=10"
+    )
+
+    try:
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+            with attempt:
+                with psycopg2.connect(
+                    connection_string
+                ) as connection, connection.cursor() as cursor:
+                    cursor.execute("SELECT COUNT(number) FROM continuous_writes;")
+                    secondary_writes = cursor.fetchone()[0]
+                    print(secondary_writes)
+                    print(expected_writes)
+                    assert secondary_writes == expected_writes
+    except RetryError:
+        return False
+    finally:
+        connection.close()
+
+    return True
+
+
+async def stop_continuous_writes(ops_test: OpsTest) -> int:
+    """Stops continuous writes to PostgreSQL and returns the last written value."""
+    # stop the process
+    action = await ops_test.model.units.get("application/0").run_action("stop-continuous-writes")
+    action = await action.wait()
+    return int(action.results["writes"])

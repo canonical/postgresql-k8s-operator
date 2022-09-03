@@ -1,0 +1,5 @@
+# Copyright 2022 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+stop-continuous-writes:
+  description: Stop continuous writes.

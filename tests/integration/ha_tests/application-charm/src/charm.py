@@ -18,7 +18,7 @@ from charms.data_platform_libs.v0.database_requires import (
     DatabaseEndpointsChangedEvent,
     DatabaseRequires,
 )
-from ops.charm import CharmBase
+from ops.charm import ActionEvent, CharmBase
 from ops.framework import StoredState
 from ops.main import main
 from ops.model import ActiveStatus
@@ -42,6 +42,9 @@ class ApplicationCharm(CharmBase):
         self.database = DatabaseRequires(self, "database", self.database_name)
         self.framework.observe(self.database.on.database_created, self._on_database_created)
         self.framework.observe(self.database.on.endpoints_changed, self._on_endpoints_changed)
+        self.framework.observe(
+            self.on.stop_continuous_writes_action, self._on_stop_continuous_writes_action
+        )
 
         self._stored.set_default(continuous_writes_pid=0)
 
@@ -91,6 +94,10 @@ class ApplicationCharm(CharmBase):
         connection.close()
         print(f"count: {count}")
         return count
+
+    def _on_stop_continuous_writes_action(self, event: ActionEvent) -> None:
+        writes = self._stop_continuous_writes()
+        event.set_results({"writes": writes})
 
     def _start_continuous_writes(self, starting_number: int) -> None:
         """Starts continuous writes to PostgreSQL instance."""
