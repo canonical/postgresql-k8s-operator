@@ -1,15 +1,22 @@
 #!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
-
-import pytest
+import pytest as pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.helpers import METADATA
-from tests.integration.helpers import is_tls_enabled, set_tls_private_key
+from tests.integration.helpers import (
+    DATABASE_APP_NAME,
+    check_database_creation,
+    check_database_users_existence,
+    deploy_and_relate_application_with_postgresql,
+    is_tls_enabled,
+)
 
-APP_NAME = METADATA["name"]
+MATTERMOST_APP_NAME = "mattermost"
 TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
+APPLICATION_UNITS = 2
+DATABASE_UNITS = 1
 
 
 @pytest.mark.abort_on_fail
@@ -24,16 +31,22 @@ async def test_deploy_active(ops_test: OpsTest):
             resources={
                 "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
             },
-            application_name=APP_NAME,
-            num_units=1,
+            application_name=DATABASE_APP_NAME,
+            num_units=DATABASE_UNITS,
             trust=True,
         )
-        await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
+        await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=1000)
 
 
 @pytest.mark.tls_tests
-async def test_tls(ops_test: OpsTest):
-    """Test TLS enabled on PostgreSQL instance."""
+async def test_mattermost_db(ops_test: OpsTest) -> None:
+    """Deploy Mattermost to test the 'db' relation.
+
+    Mattermost needs TLS enabled on PostgreSQL to correctly connect to it.
+
+    Args:
+        ops_test: The ops test framework
+    """
     async with ops_test.fast_forward():
         # Deploy TLS Certificates operator.
         config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
@@ -42,14 +55,20 @@ async def test_tls(ops_test: OpsTest):
             apps=[TLS_CERTIFICATES_APP_NAME], status="active", timeout=1000
         )
 
-        # Relate it to the PostgreSQL charm.
-        await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+        # Relate it to the PostgreSQL to enable TLS.
+        await ops_test.model.relate(DATABASE_APP_NAME, TLS_CERTIFICATES_APP_NAME)
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
-        # Set a private key.
-        await set_tls_private_key(ops_test, ops_test.model.applications[APP_NAME].units[0].name)
-        await ops_test.model.wait_for_idle(status="active", timeout=1000)
+        # Wait for all units enabling TLS.
+        for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
+            assert await is_tls_enabled(ops_test, unit.name)
 
-    # Wait for all units enabling TLS.
-    for unit in ops_test.model.applications[APP_NAME].units:
-        assert await is_tls_enabled(ops_test, unit.name)
+        # Deploy and test Mattermost.
+        relation_id = await deploy_and_relate_application_with_postgresql(
+            ops_test, "mattermost-k8s", MATTERMOST_APP_NAME, APPLICATION_UNITS, status="waiting"
+        )
+        await check_database_creation(ops_test, "mattermost")
+
+        mattermost_users = [f"relation_id_{relation_id}"]
+
+        await check_database_users_existence(ops_test, mattermost_users, [])
