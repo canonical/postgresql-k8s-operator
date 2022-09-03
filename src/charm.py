@@ -698,7 +698,7 @@ class PostgresqlOperatorCharm(CharmBase):
         external_key, external_cert = self.tls.get_tls_files("unit")
         if external_key is not None:
             container.push(
-                f"{self._storage_path}/{TLS_EXT_CA_FILE}",
+                f"{self._storage_path}/{TLS_EXT_PEM_FILE}",
                 external_key,
                 make_dirs=True,
                 permissions=0o400,
@@ -707,7 +707,7 @@ class PostgresqlOperatorCharm(CharmBase):
             )
         if external_cert is not None:
             container.push(
-                f"{self._storage_path}/{TLS_EXT_PEM_FILE}",
+                f"{self._storage_path}/{TLS_EXT_CA_FILE}",
                 external_cert,
                 make_dirs=True,
                 permissions=0o400,
@@ -718,7 +718,7 @@ class PostgresqlOperatorCharm(CharmBase):
         internal_key, internal_cert = self.tls.get_tls_files("app")
         if internal_key is not None:
             container.push(
-                f"{self._storage_path}/{TLS_INT_CA_FILE}",
+                f"{self._storage_path}/{TLS_INT_PEM_FILE}",
                 internal_key,
                 make_dirs=True,
                 permissions=0o400,
@@ -727,7 +727,7 @@ class PostgresqlOperatorCharm(CharmBase):
             )
         if internal_cert is not None:
             container.push(
-                f"{self._storage_path}/{TLS_INT_PEM_FILE}",
+                f"{self._storage_path}/{TLS_INT_CA_FILE}",
                 internal_cert,
                 make_dirs=True,
                 permissions=0o400,
@@ -741,10 +741,10 @@ class PostgresqlOperatorCharm(CharmBase):
         """Creates os updates Patroni config file based on the existence of the TLS files."""
         enable_tls = False
         external_ca, external_pem = self.tls.get_tls_files("unit")
-        if external_ca is not None:
+        if None not in [external_ca, external_pem]:
             enable_tls = True
         internal_ca, internal_pem = self.tls.get_tls_files("app")
-        if internal_ca is not None:
+        if None not in [internal_ca, internal_pem]:
             enable_tls = True
         self._patroni.render_patroni_yml_file(enable_tls=enable_tls)
 

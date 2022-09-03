@@ -190,6 +190,7 @@ async def execute_query_on_unit(
     password: str,
     query: str,
     database: str = "postgres",
+    sslmode: str = None,
 ):
     """Execute given PostgreSQL query on a unit.
 
@@ -198,12 +199,15 @@ async def execute_query_on_unit(
         password: The PostgreSQL superuser password.
         query: Query to execute.
         database: Optional database to connect to (defaults to postgres database).
+        sslmode: Optional ssl mode to use (defaults to None).
 
     Returns:
-        A list of rows that were potentially returned from the query.
+        The result of the query.
     """
+    extra_connection_parameters = f" sslmode={sslmode}" if sslmode is not None else ""
     with psycopg2.connect(
-        f"dbname='{database}' user='operator' host='{unit_address}' password='{password}' connect_timeout=10"
+        f"dbname='{database}' user='operator' host='{unit_address}'"
+        f"password='{password}' connect_timeout=10{extra_connection_parameters}"
     ) as connection, connection.cursor() as cursor:
         cursor.execute(query)
         output = list(itertools.chain(*cursor.fetchall()))
@@ -394,7 +398,9 @@ async def is_tls_enabled(ops_test: OpsTest, unit_name: str) -> bool:
     unit_address = await get_unit_address(ops_test, unit_name)
     password = await get_password(ops_test)
     try:
-        output = await execute_query_on_unit(unit_address, password, "SHOW ssl;")
+        output = await execute_query_on_unit(
+            unit_address, password, "SHOW ssl;", sslmode="require"
+        )
     except psycopg2.Error:
         return False
     return "on" in output
@@ -456,3 +462,10 @@ async def set_password(
     action = await unit.run_action("set-password", **parameters)
     result = await action.wait()
     return result.results
+
+
+async def set_tls_private_key(ops_test: OpsTest, unit_name: str):
+    """Set a user password using the action."""
+    unit = ops_test.model.units.get(unit_name)
+    action = await unit.run_action("set-tls-private-key")
+    await action.wait()
