@@ -451,3 +451,10 @@ async def set_password(
     action = await unit.run_action("set-password", **parameters)
     result = await action.wait()
     return result.results
+
+
+async def set_tls_private_key(ops_test: OpsTest, unit_name: str):
+    """Set a user password using the action."""
+    unit = ops_test.model.units.get(unit_name)
+    action = await unit.run_action("set-tls-private-key")
+    await action.wait()

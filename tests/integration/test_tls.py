@@ -6,7 +6,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.helpers import METADATA
-from tests.integration.helpers import is_tls_enabled
+from tests.integration.helpers import is_tls_enabled, set_tls_private_key
 
 APP_NAME = METADATA["name"]
 TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
@@ -25,7 +25,7 @@ async def test_deploy_active(ops_test: OpsTest):
                 "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
             },
             application_name=APP_NAME,
-            num_units=3,
+            num_units=1,
             trust=True,
         )
         await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
@@ -44,6 +44,10 @@ async def test_tls(ops_test: OpsTest):
 
         # Relate it to the PostgreSQL charm.
         await ops_test.model.relate(APP_NAME, TLS_CERTIFICATES_APP_NAME)
+        await ops_test.model.wait_for_idle(status="active", timeout=1000)
+
+        # Set a private key.
+        await set_tls_private_key(ops_test, ops_test.model.applications[APP_NAME].units[0].name)
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
     # Wait for all units enabling TLS.
