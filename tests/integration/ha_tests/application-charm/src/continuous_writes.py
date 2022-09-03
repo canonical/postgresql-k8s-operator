@@ -34,6 +34,9 @@ def continuous_writes(connection_string: str, starting_number: int):
                 reconnect = False
                 with connection, connection.cursor() as cursor:
                     cursor.execute("CREATE TABLE IF NOT EXISTS continuous_writes(number INTEGER);")
+                    cursor.execute(
+                        "CREATE UNIQUE INDEX IF NOT EXISTS number ON continuous_writes(number);"
+                    )
             with connection, connection.cursor() as cursor:
                 cursor.execute(f"INSERT INTO continuous_writes(number) VALUES({write_value});")
         except psycopg2.errors.ConnectionException as e:
@@ -45,41 +48,67 @@ def continuous_writes(connection_string: str, starting_number: int):
             f.write(str(type(e)))
             f.close()
             continue
-        except psycopg2.InterfaceError as e:
+        # except psycopg2.InterfaceError as e:
+        #     # We should not raise this exception but instead increment the write value and move
+        #     # on, indicating that there was a failure writing to the database.
+        #     # psycopg2.InterfaceError
+        #     # psycopg2.OperationalError
+        #     f = open("/tmp/demofile7.txt", "a")
+        #     f.write(str(type(e)))
+        #     f.write("\n")
+        #     f.write(str(e.pgcode))
+        #     f.write("\n")
+        #     f.write(str(e.pgerror))
+        #     f.write("\n")
+        #     f.write(str(e))
+        #     f.write("\n")
+        #     f.write(f"{write_value}")
+        #     f.write("\n")
+        #     f.close()
+        #     reconnect = True
+        #     continue
+        # except psycopg2.OperationalError as e:
+        #     # We should not raise this exception but instead increment the write value and move
+        #     # on, indicating that there was a failure writing to the database.
+        #     # psycopg2.InterfaceError
+        #     # psycopg2.OperationalError
+        #     f = open("/tmp/demofile4.txt", "a")
+        #     f.write(str(type(e)))
+        #     f.write("\n")
+        #     f.write(str(e.pgcode))
+        #     f.write("\n")
+        #     f.write(str(psycopg2.errors.UniqueViolation))
+        #     f.write("\n")
+        #     f.write(str(e.pgerror))
+        #     f.write("\n")
+        #     f.write(str(dir(e)))
+        #     f.write("\n")
+        #     f.write(str(e))
+        #     f.write("\n")
+        #     f.write(f"{write_value}")
+        #     f.write("\n")
+        #     f.close()
+        #     reconnect = True
+        #     continue
+        #     # if e.pgcode != psycopg2.errors.UniqueViolation:
+        #     #     continue
+        except psycopg2.errors.UniqueViolation as e:
             # We should not raise this exception but instead increment the write value and move
             # on, indicating that there was a failure writing to the database.
             # psycopg2.InterfaceError
             # psycopg2.OperationalError
-            f = open("/tmp/demofile7.txt", "a")
+            f = open("/tmp/demofile8.txt", "a")
             f.write(str(type(e)))
             f.write("\n")
-            # f.write(e.pgcode)
-            # f.write("\n")
+            f.write(str(e.pgcode))
+            f.write("\n")
+            f.write(str(e.pgerror))
+            f.write("\n")
             f.write(str(e))
             f.write("\n")
             f.write(f"{write_value}")
             f.write("\n")
             f.close()
-            reconnect = True
-            continue
-        except psycopg2.OperationalError as e:
-            # We should not raise this exception but instead increment the write value and move
-            # on, indicating that there was a failure writing to the database.
-            # psycopg2.InterfaceError
-            # psycopg2.OperationalError
-            f = open("/tmp/demofile4.txt", "a")
-            f.write(str(type(e)))
-            f.write("\n")
-            # f.write(e.pgcode)
-            f.write(str(dir(e)))
-            f.write("\n")
-            f.write(str(e))
-            f.write("\n")
-            f.write(f"{write_value}")
-            f.write("\n")
-            f.close()
-            reconnect = True
-            continue
         except psycopg2.Error as e:
             # We should not raise this exception but instead increment the write value and move
             # on, indicating that there was a failure writing to the database.
