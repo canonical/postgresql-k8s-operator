@@ -15,7 +15,14 @@ from lightkube.core.exceptions import ApiError
 from lightkube.generic_resource import GenericNamespacedResource
 from lightkube.resources.core_v1 import Endpoints, Service
 from pytest_operator.plugin import OpsTest
-from tenacity import retry, retry_if_result, stop_after_attempt, wait_exponential
+from tenacity import (
+    RetryError,
+    Retrying,
+    retry,
+    retry_if_result,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
@@ -387,10 +394,16 @@ async def is_tls_enabled(ops_test: OpsTest, unit_name: str) -> bool:
     unit_address = await get_unit_address(ops_test, unit_name)
     password = await get_password(ops_test)
     try:
-        output = await execute_query_on_unit(
-            unit_address, password, "SHOW ssl;", sslmode="require"
-        )
-    except psycopg2.Error:
+        for attempt in Retrying(
+            stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
+        ):
+            with attempt:
+                output = await execute_query_on_unit(
+                    unit_address, password, "SHOW ssl;", sslmode="require"
+                )
+                if "on" not in output:
+                    raise ValueError(f"TLS is not enabled on {unit_name}")
+    except RetryError:
         return False
     return "on" in output
 
