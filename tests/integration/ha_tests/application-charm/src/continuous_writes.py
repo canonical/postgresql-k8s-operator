@@ -25,7 +25,11 @@ def continuous_writes(connection_string: str, starting_number: int):
             with psycopg2.connect(connection_string) as connection, connection.cursor() as cursor:
                 connection.autocommit = True
                 cursor.execute(f"INSERT INTO continuous_writes(number) VALUES({write_value});")
-        except (psycopg2.OperationalError, psycopg2.errors.ReadOnlySqlTransaction) as e:
+        except (
+            psycopg2.InterfaceError,
+            psycopg2.OperationalError,
+            psycopg2.errors.ReadOnlySqlTransaction,
+        ) as e:
             # We should not raise this exception but instead increment the write value and move
             # on, indicating that there was a failure writing to the database.
             # psycopg2.InterfaceError
