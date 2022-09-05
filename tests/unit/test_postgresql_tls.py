@@ -1,4 +1,4 @@
-# Copyright 2021 Canonical Ltd.
+# Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 import base64
 import socket
@@ -21,14 +21,17 @@ class TestPostgreSQLTLS(unittest.TestCase):
             certificate = file.read()
         return certificate
 
+    def relate_to_tls_certificates_operator(self) -> int:
+        rel_id = self.harness.add_relation(RELATION_NAME, "tls-certificates-operator")
+        self.harness.add_relation_unit(rel_id, "tls-certificates-operator/0")
+        return rel_id
+
     @patch_network_get(private_address="1.1.1.1")
     def setUp(self):
         self.harness = Harness(PostgresqlOperatorCharm)
         self.addCleanup(self.harness.cleanup)
 
         # Set up the initial relation and hooks.
-        self.rel_id = self.harness.add_relation(RELATION_NAME, "tls-certificates-operator")
-        self.harness.add_relation_unit(self.rel_id, "tls-certificates-operator/0")
         self.peer_rel_id = self.harness.add_relation(PEER, "postgresql-k8s")
         self.harness.add_relation_unit(self.peer_rel_id, "postgresql-k8s/0")
         self.harness.begin()
@@ -69,7 +72,18 @@ class TestPostgreSQLTLS(unittest.TestCase):
     )
     @patch("charm.PostgresqlOperatorCharm.set_secret")
     def test_request_certificate(self, _set_secret, _request_certificate_creation):
+        # Test without an established relation.
+        self.charm.tls._request_certificate("unit", None)
+        self.assertEqual(_set_secret.call_args_list[0][0][0], "unit")
+        self.assertEqual(_set_secret.call_args_list[0][0][1], "key")
+        self.assertEqual(_set_secret.call_args_list[1][0][0], "unit")
+        self.assertEqual(_set_secret.call_args_list[1][0][1], "csr")
+        _request_certificate_creation.assert_not_called()
+
         # Test without providing a private key.
+        _set_secret.reset_mock()
+        with self.harness.hooks_disabled():
+            self.relate_to_tls_certificates_operator()
         self.charm.tls._request_certificate("unit", None)
         self.assertEqual(_set_secret.call_args_list[0][0][0], "unit")
         self.assertEqual(_set_secret.call_args_list[0][0][1], "key")
@@ -78,6 +92,7 @@ class TestPostgreSQLTLS(unittest.TestCase):
         _request_certificate_creation.assert_called_once()
 
         # Test providing a private key.
+        _set_secret.reset_mock()
         _request_certificate_creation.reset_mock()
         key = self.get_content_from_file(filename="tests/unit/key.pem")
         self.charm.tls._request_certificate("unit", key)
@@ -99,6 +114,33 @@ class TestPostgreSQLTLS(unittest.TestCase):
             base64.b64encode(key.encode("utf-8")).decode("utf-8")
         )
         self.assertEqual(parsed_key, key.encode("utf-8"))
+
+    @patch_network_get(private_address="1.1.1.1")
+    @patch("charms.postgresql_k8s.v0.postgresql_tls.PostgreSQLTLS._request_certificate")
+    @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
+    def test_on_tls_relation_joined(self, _, _request_certificate):
+        # Test event on a non leader unit.
+        self.harness.set_leader(False)
+        rel_id = self.relate_to_tls_certificates_operator()
+        _request_certificate.assert_called_once_with("unit", None)
+
+        # Test event on a leader unit.
+        _request_certificate.reset_mock()
+        with self.harness.hooks_disabled():
+            self.harness.remove_relation(rel_id)
+        self.harness.set_leader(True)
+        self.relate_to_tls_certificates_operator()
+        calls = [call("app", None), call("unit", None)]
+        _request_certificate.assert_has_calls(calls)
+
+    def test_on_tls_relation_broken(self):
+        pass
+
+    def test_on_certificate_available(self):
+        pass
+
+    def test_on_certificate_expiring(self):
+        pass
 
     @patch_network_get(private_address="1.1.1.1")
     def test_get_sans(self):
