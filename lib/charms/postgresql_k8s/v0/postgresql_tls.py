@@ -125,7 +125,7 @@ class PostgreSQLTLS(Object):
             self.charm.set_secret("app", "chain", None)
         if self.charm.get_secret("app", "cert"):
             logger.debug(
-                "Defer till the leader delete the internal TLS certificate to avoid second restart."
+                "Defer till the leader delete the internal TLS certificate to avoid second reload."
             )
             event.defer()
             return
@@ -165,7 +165,7 @@ class PostgreSQLTLS(Object):
             or not self.charm.get_secret("unit", "cert")
         ):
             logger.debug(
-                "Defer till both internal and external TLS certificates available to avoid second restart."
+                "Defer till both internal and external TLS certificates available to avoid second reload."
             )
             event.defer()
             return
@@ -222,18 +222,8 @@ class PostgreSQLTLS(Object):
         if scope != "app":
             return None
 
-        key_usage = x509.KeyUsage(
-            digital_signature=True,
-            content_commitment=False,
-            key_encipherment=True,
-            data_encipherment=True,
-            key_agreement=False,
-            key_cert_sign=False,
-            crl_sign=False,
-            encipher_only=False,
-            decipher_only=False,
-        )
-        return [key_usage]
+        basic_constraints = x509.BasicConstraints(ca=True, path_length=None)
+        return [basic_constraints]
 
     def get_tls_files(self, scope: str) -> (Optional[str], Optional[str]):
         """Prepare TLS files in special PostgreSQL way.
