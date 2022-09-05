@@ -1,6 +1,7 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 import base64
+import socket
 import unittest
 from unittest.mock import MagicMock, call, patch
 
@@ -22,15 +23,14 @@ class TestPostgreSQLTLS(unittest.TestCase):
 
     @patch_network_get(private_address="1.1.1.1")
     def setUp(self):
-        # self.harness = Harness(DatabaseCharm, actions=ACTIONS, meta=METADATA)
         self.harness = Harness(PostgresqlOperatorCharm)
         self.addCleanup(self.harness.cleanup)
 
         # Set up the initial relation and hooks.
         self.rel_id = self.harness.add_relation(RELATION_NAME, "tls-certificates-operator")
         self.harness.add_relation_unit(self.rel_id, "tls-certificates-operator/0")
-        self.peer_rel_id = self.harness.add_relation(PEER, "database")
-        self.harness.add_relation_unit(self.peer_rel_id, "database/0")
+        self.peer_rel_id = self.harness.add_relation(PEER, "postgresql-k8s")
+        self.harness.add_relation_unit(self.peer_rel_id, "postgresql-k8s/0")
         self.harness.begin()
         self.charm = self.harness.charm
 
@@ -99,3 +99,21 @@ class TestPostgreSQLTLS(unittest.TestCase):
             base64.b64encode(key.encode("utf-8")).decode("utf-8")
         )
         self.assertEqual(parsed_key, key.encode("utf-8"))
+
+    @patch_network_get(private_address="1.1.1.1")
+    def test_get_sans(self):
+        sans = self.charm.tls._get_sans()
+        self.assertEqual(sans, ["postgresql-k8s-0", socket.getfqdn(), "1.1.1.1"])
+
+    def test_get_tls_files(self):
+        # Test with no TLS files available.
+        key, certificate = self.charm.tls.get_tls_files("unit")
+        self.assertIsNone(key)
+        self.assertIsNone(certificate)
+
+        # Test with TLS files available.
+        self.charm.set_secret("unit", "key", "test-internal-key")
+        self.charm.set_secret("unit", "cert", "test-internal-cert")
+        key, certificate = self.charm.tls.get_tls_files("unit")
+        self.assertEqual(key, "test-internal-key")
+        self.assertEqual(certificate, "test-internal-cert")
