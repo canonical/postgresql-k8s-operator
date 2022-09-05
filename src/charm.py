@@ -58,8 +58,6 @@ from utils import new_password
 
 logger = logging.getLogger(__name__)
 
-TLS_RESOURCES = ["cert-file", "key-file"]
-
 
 class PostgresqlOperatorCharm(CharmBase):
     """Charmed Operator for the PostgreSQL database."""
@@ -676,15 +674,6 @@ class PostgresqlOperatorCharm(CharmBase):
              the peer relation.
         """
         return self.model.get_relation(PEER)
-
-    def _get_operator_password(self) -> str:
-        """Get operator user password."""
-        return self.get_secret("app", USER_PASSWORD_KEY)
-
-    @property
-    def _replication_password(self) -> str:
-        """Get replication user password."""
-        return self.get_secret("app", REPLICATION_PASSWORD_KEY)
 
     def push_certificate_to_workload(self, container: Container = None) -> None:
         """Uploads certificate to the workload container."""

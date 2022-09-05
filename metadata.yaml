@@ -20,12 +20,6 @@ resources:
     type: oci-image
     description: OCI image for PostgreSQL (dataplatformoci/postgres-patroni)
     upstream-source: dataplatformoci/postgres-patroni
-  cert-file:
-    type: file
-    filename: server.crt
-  key-file:
-    type: file
-    filename: server.key
 
 peers:
   database-peers:
