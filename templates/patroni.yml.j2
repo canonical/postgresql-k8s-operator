@@ -26,13 +26,13 @@ postgresql:
   {%- if enable_tls %}
   parameters:
     ssl: on
-    ssl_ca_file: {{ storage_path }}/external-ca-file.crt
-    ssl_cert_file: {{ storage_path }}/external-ca.crt
-    ssl_key_file: {{ storage_path }}/external-cert.pem
+    ssl_ca_file: {{ storage_path }}/external-ca.crt
+    ssl_cert_file: {{ storage_path }}/external-cert.crt
+    ssl_key_file: {{ storage_path }}/external-key.key
   {%- endif %}
   pgpass: /tmp/pgpass
   pg_hba:
-  - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 cert md5
+  - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 md5
   - host replication replication 127.0.0.1/32 md5
   {%- for endpoint in endpoints %}
   - host replication replication {{ endpoint }}.{{ namespace }}.svc.cluster.local md5

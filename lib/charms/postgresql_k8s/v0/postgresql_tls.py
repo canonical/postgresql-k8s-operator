@@ -79,9 +79,7 @@ class PostgreSQLTLS(Object):
         if param is None:
             key = generate_private_key()
         else:
-            key = self._parse_tls_file(
-                param
-            )  # param if param is not None else generate_private_key()
+            key = self._parse_tls_file(param)
 
         csr = generate_csr(
             private_key=key,
@@ -138,8 +136,6 @@ class PostgreSQLTLS(Object):
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Enable TLS when TLS certificate available."""
-        logger.error(123)
-        print(event.certificate_signing_request)
         if event.certificate_signing_request == self.charm.get_secret("unit", "csr"):
             logger.debug("The external TLS certificate available.")
             scope = "unit"  # external crs
@@ -152,8 +148,6 @@ class PostgreSQLTLS(Object):
             logger.error("An unknown certificate expiring.")
             return
 
-        logger.error("certificate !!!!!!!!!!!!!!!!")
-        logger.error(str(event.certificate))
         old_cert = self.charm.get_secret(scope, "cert")
         renewal = old_cert and old_cert != event.certificate
         self.charm.set_secret(scope, "chain", event.chain)
@@ -241,7 +235,4 @@ class PostgreSQLTLS(Object):
 
         key = self.charm.get_secret(scope, "key")
         cert = self.charm.get_secret(scope, "cert")
-        logger.warning(f"scope: {scope}")
-        logger.warning(f"key: {key}")
-        logger.warning(f"cert: {cert}")
         return key, ca_file, cert

@@ -41,12 +41,15 @@ from constants import (
     REPLICATION_USER,
     SYSTEM_USERS,
     TLS_EXT_CA_FILE,
-    TLS_EXT_PEM_FILE,
+    TLS_EXT_CERT_FILE,
+    TLS_EXT_KEY_FILE,
     TLS_INT_CA_FILE,
-    TLS_INT_PEM_FILE,
+    TLS_INT_CERT_FILE,
+    TLS_INT_KEY_FILE,
     USER,
     USER_PASSWORD_KEY,
-    WORKLOAD_OS_USER_GROUP,
+    WORKLOAD_OS_GROUP,
+    WORKLOAD_OS_USER,
 )
 from patroni import NotReadyError, Patroni
 from relations.db import DbProvides
@@ -691,50 +694,59 @@ class PostgresqlOperatorCharm(CharmBase):
         external_key, external_ca, external_cert = self.tls.get_tls_files("unit")
         if external_key is not None:
             container.push(
-                f"{self._storage_path}/{TLS_EXT_PEM_FILE}",
+                f"{self._storage_path}/{TLS_EXT_KEY_FILE}",
                 external_key,
                 make_dirs=True,
                 permissions=0o400,
-                user=WORKLOAD_OS_USER_GROUP,
-                group=WORKLOAD_OS_USER_GROUP,
+                user=WORKLOAD_OS_USER,
+                group=WORKLOAD_OS_GROUP,
             )
         if external_ca is not None:
             container.push(
-                f"{self._storage_path}/external-ca-file.crt",
+                f"{self._storage_path}/{TLS_EXT_CA_FILE}",
                 external_ca,
                 make_dirs=True,
                 permissions=0o400,
-                user=WORKLOAD_OS_USER_GROUP,
-                group=WORKLOAD_OS_USER_GROUP,
+                user=WORKLOAD_OS_USER,
+                group=WORKLOAD_OS_GROUP,
             )
         if external_cert is not None:
             container.push(
-                f"{self._storage_path}/{TLS_EXT_CA_FILE}",
+                f"{self._storage_path}/{TLS_EXT_CERT_FILE}",
                 external_cert,
                 make_dirs=True,
                 permissions=0o400,
-                user=WORKLOAD_OS_USER_GROUP,
-                group=WORKLOAD_OS_USER_GROUP,
+                user=WORKLOAD_OS_USER,
+                group=WORKLOAD_OS_GROUP,
             )
 
-        internal_key, _, internal_cert = self.tls.get_tls_files("app")
+        internal_key, internal_ca, internal_cert = self.tls.get_tls_files("app")
         if internal_key is not None:
             container.push(
-                f"{self._storage_path}/{TLS_INT_PEM_FILE}",
+                f"{self._storage_path}/{TLS_INT_KEY_FILE}",
                 internal_key,
                 make_dirs=True,
                 permissions=0o400,
-                user=WORKLOAD_OS_USER_GROUP,
-                group=WORKLOAD_OS_USER_GROUP,
+                user=WORKLOAD_OS_USER,
+                group=WORKLOAD_OS_GROUP,
+            )
+        if internal_ca is not None:
+            container.push(
+                f"{self._storage_path}/{TLS_INT_CA_FILE}",
+                internal_ca,
+                make_dirs=True,
+                permissions=0o400,
+                user=WORKLOAD_OS_USER,
+                group=WORKLOAD_OS_GROUP,
             )
         if internal_cert is not None:
             container.push(
-                f"{self._storage_path}/{TLS_INT_CA_FILE}",
+                f"{self._storage_path}/{TLS_INT_CERT_FILE}",
                 internal_cert,
                 make_dirs=True,
                 permissions=0o400,
-                user=WORKLOAD_OS_USER_GROUP,
-                group=WORKLOAD_OS_USER_GROUP,
+                user=WORKLOAD_OS_USER,
+                group=WORKLOAD_OS_GROUP,
             )
 
         self._update_config()
@@ -745,9 +757,6 @@ class PostgresqlOperatorCharm(CharmBase):
         external_key, external_ca, external_cert = self.tls.get_tls_files("unit")
         if None not in [external_key, external_ca, external_cert]:
             enable_tls = True
-        logger.error(external_key)
-        logger.error(external_cert)
-        logger.error(enable_tls)
         self._patroni.render_patroni_yml_file(enable_tls=enable_tls)
         if self._patroni.member_started:
             self._patroni.reload_patroni_configuration()

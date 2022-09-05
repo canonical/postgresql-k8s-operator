@@ -142,8 +142,6 @@ class Patroni:
             enable_tls: whether to enable TLS.
         """
         # Open the template postgresql.conf file.
-        logger.error(789)
-        logger.error(enable_tls)
         with open("templates/patroni.yml.j2", "r") as file:
             template = Template(file.read())
         # Render the template file with the correct values.
