@@ -5,6 +5,7 @@ import socket
 import unittest
 from unittest.mock import MagicMock, call, patch
 
+from ops.framework import EventBase
 from ops.testing import Harness
 
 from charm import PostgresqlOperatorCharm
@@ -18,13 +19,38 @@ class TestPostgreSQLTLS(unittest.TestCase):
     @staticmethod
     def get_content_from_file(filename: str) -> str:
         with open(filename, "r") as file:
-            certificate = file.read()
-        return certificate
+            content = file.read()
+        return content
+
+    def no_secrets(self, include_internal: bool = False) -> bool:
+        secrets = [
+            self.charm.get_secret("unit", "ca"),
+            self.charm.get_secret("unit", "cert"),
+            self.charm.get_secret("unit", "chain"),
+        ]
+        if include_internal:
+            secrets.extend(
+                [
+                    self.charm.get_secret("app", "ca"),
+                    self.charm.get_secret("app", "cert"),
+                    self.charm.get_secret("app", "chain"),
+                ]
+            )
+        return all(secret is None for secret in secrets)
 
     def relate_to_tls_certificates_operator(self) -> int:
         rel_id = self.harness.add_relation(RELATION_NAME, "tls-certificates-operator")
         self.harness.add_relation_unit(rel_id, "tls-certificates-operator/0")
         return rel_id
+
+    def set_secrets(self) -> None:
+        if self.charm.unit.is_leader():
+            self.charm.set_secret("app", "ca", "test-internal-ca")
+            self.charm.set_secret("app", "cert", "test-internal-cert")
+            self.charm.set_secret("app", "chain", "test-internal-chain")
+        self.charm.set_secret("unit", "ca", "test-external-ca")
+        self.charm.set_secret("unit", "cert", "test-external-cert")
+        self.charm.set_secret("unit", "chain", "test-external-chain")
 
     @patch_network_get(private_address="1.1.1.1")
     def setUp(self):
@@ -133,8 +159,40 @@ class TestPostgreSQLTLS(unittest.TestCase):
         calls = [call("app", None), call("unit", None)]
         _request_certificate.assert_has_calls(calls)
 
-    def test_on_tls_relation_broken(self):
-        pass
+    @patch_network_get(private_address="1.1.1.1")
+    @patch.object(EventBase, "defer")
+    @patch("charm.PostgresqlOperatorCharm.push_certificate_to_workload")
+    @patch("charms.postgresql_k8s.v0.postgresql_tls.PostgreSQLTLS._request_certificate")
+    @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
+    def test_on_tls_relation_broken(
+        self, _, _request_certificate, _push_certificate_to_workload, _defer
+    ):
+        # Test event on a non leader unit.
+        self.set_secrets()
+        self.harness.set_leader(False)
+        rel_id = self.relate_to_tls_certificates_operator()
+        self.harness.remove_relation(rel_id)
+        _push_certificate_to_workload.assert_called_once()
+        self.assertTrue(self.no_secrets())
+
+        # Test event again on a non leader unit, but with internal certificate.
+        _push_certificate_to_workload.reset_mock()
+        self.harness.set_leader(True)
+        self.set_secrets()
+        self.harness.set_leader(False)
+        rel_id = self.relate_to_tls_certificates_operator()
+        self.harness.remove_relation(rel_id)
+        _defer.assert_called_once()
+        _push_certificate_to_workload.assert_not_called()
+        self.assertTrue(self.no_secrets())
+
+        # Test event on a leader unit.
+        _push_certificate_to_workload.reset_mock()
+        self.harness.set_leader(True)
+        rel_id = self.relate_to_tls_certificates_operator()
+        self.harness.remove_relation(rel_id)
+        _push_certificate_to_workload.assert_called_once()
+        self.assertTrue(self.no_secrets(include_internal=True))
 
     def test_on_certificate_available(self):
         pass
