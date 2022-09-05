@@ -113,6 +113,8 @@ class TestPatroni(unittest.TestCase):
             endpoints=self.patroni._endpoints,
             namespace=self.patroni._namespace,
             storage_path=self.patroni._storage_path,
+            superuser_password=self.patroni._superuser_password,
+            replication_password=self.patroni._replication_password,
         )
         self.assertNotEqual(expected_content_with_tls, expected_content)
 

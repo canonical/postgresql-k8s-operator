@@ -16,6 +16,16 @@ RELATION_NAME = "certificates"
 
 
 class TestPostgreSQLTLS(unittest.TestCase):
+    def delete_secrets(self) -> None:
+        # Delete TLS secrets from the secret store.
+        if self.charm.unit.is_leader():
+            self.charm.set_secret("app", "ca", None)
+            self.charm.set_secret("app", "cert", None)
+            self.charm.set_secret("app", "chain", None)
+        self.charm.set_secret("unit", "ca", None)
+        self.charm.set_secret("unit", "cert", None)
+        self.charm.set_secret("unit", "chain", None)
+
     def emit_certificate_available_event(self, internal: bool = False) -> None:
         scope = "internal" if internal else "external"
         self.charm.tls.certs.on.certificate_available.emit(
@@ -38,6 +48,7 @@ class TestPostgreSQLTLS(unittest.TestCase):
         return content
 
     def no_secrets(self, include_certificate: bool = True, include_internal: bool = False) -> bool:
+        # Check whether there is no TLS secrets in the secret store.
         secrets = [self.charm.get_secret("unit", "ca"), self.charm.get_secret("unit", "chain")]
         if include_certificate:
             secrets.append(self.charm.get_secret("unit", "cert"))
@@ -50,11 +61,13 @@ class TestPostgreSQLTLS(unittest.TestCase):
         return all(secret is None for secret in secrets)
 
     def relate_to_tls_certificates_operator(self) -> int:
+        # Relate the charm to the TLS certificates operator.
         rel_id = self.harness.add_relation(RELATION_NAME, "tls-certificates-operator")
         self.harness.add_relation_unit(rel_id, "tls-certificates-operator/0")
         return rel_id
 
     def set_secrets(self) -> None:
+        # Set some TLS secrets in the secret store.
         if self.charm.unit.is_leader():
             self.charm.set_secret("app", "ca", "test-internal-ca")
             self.charm.set_secret("app", "cert", "test-internal-cert")
@@ -107,36 +120,28 @@ class TestPostgreSQLTLS(unittest.TestCase):
     @patch(
         "charms.tls_certificates_interface.v1.tls_certificates.TLSCertificatesRequiresV1.request_certificate_creation"
     )
-    @patch("charm.PostgresqlOperatorCharm.set_secret")
-    def test_request_certificate(self, _set_secret, _request_certificate_creation):
+    def test_request_certificate(self, _request_certificate_creation):
         # Test without an established relation.
+        self.delete_secrets()
         self.charm.tls._request_certificate("unit", None)
-        self.assertEqual(_set_secret.call_args_list[0][0][0], "unit")
-        self.assertEqual(_set_secret.call_args_list[0][0][1], "key")
-        self.assertEqual(_set_secret.call_args_list[1][0][0], "unit")
-        self.assertEqual(_set_secret.call_args_list[1][0][1], "csr")
+        self.assertIsNotNone(self.charm.get_secret("unit", "key"))
+        self.assertIsNotNone(self.charm.get_secret("unit", "csr"))
         _request_certificate_creation.assert_not_called()
 
         # Test without providing a private key.
-        _set_secret.reset_mock()
         with self.harness.hooks_disabled():
             self.relate_to_tls_certificates_operator()
-        self.charm.tls._request_certificate("unit", None)
-        self.assertEqual(_set_secret.call_args_list[0][0][0], "unit")
-        self.assertEqual(_set_secret.call_args_list[0][0][1], "key")
-        self.assertEqual(_set_secret.call_args_list[1][0][0], "unit")
-        self.assertEqual(_set_secret.call_args_list[1][0][1], "csr")
+        print(self.charm.tls._request_certificate("unit", None))
+        self.assertIsNotNone(self.charm.get_secret("unit", "key"))
+        self.assertIsNotNone(self.charm.get_secret("unit", "csr"))
         _request_certificate_creation.assert_called_once()
 
         # Test providing a private key.
-        _set_secret.reset_mock()
         _request_certificate_creation.reset_mock()
         key = self.get_content_from_file(filename="tests/unit/key.pem")
         self.charm.tls._request_certificate("unit", key)
-        self.assertEqual(_set_secret.call_args_list[0][0][0], "unit")
-        self.assertEqual(_set_secret.call_args_list[0][0][1], "key")
-        self.assertEqual(_set_secret.call_args_list[1][0][0], "unit")
-        self.assertEqual(_set_secret.call_args_list[1][0][1], "csr")
+        self.assertIsNotNone(self.charm.get_secret("unit", "key"))
+        self.assertIsNotNone(self.charm.get_secret("unit", "csr"))
         _request_certificate_creation.assert_called_once()
 
     def test_parse_tls_file(self):
