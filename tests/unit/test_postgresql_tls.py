@@ -205,6 +205,17 @@ class TestPostgreSQLTLS(unittest.TestCase):
         sans = self.charm.tls._get_sans()
         self.assertEqual(sans, ["postgresql-k8s-0", socket.getfqdn(), "1.1.1.1"])
 
+    def test_get_tls_extensions(self):
+        # Test for external certificates.
+        extensions = self.charm.tls._get_tls_extensions("unit")
+        self.assertIsNone(extensions)
+
+        # Test for internal certificates.
+        extensions = self.charm.tls._get_tls_extensions("app")
+        self.assertEqual(len(extensions), 1)
+        self.assertEqual(extensions[0].ca, True)
+        self.assertIsNone(extensions[0].path_length)
+
     def test_get_tls_files(self):
         # Test with no TLS files available.
         key, certificate = self.charm.tls.get_tls_files("unit")
