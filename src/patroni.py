@@ -142,6 +142,8 @@ class Patroni:
             enable_tls: whether to enable TLS.
         """
         # Open the template postgresql.conf file.
+        logger.error(789)
+        logger.error(enable_tls)
         with open("templates/patroni.yml.j2", "r") as file:
             template = Template(file.read())
         # Render the template file with the correct values.
@@ -169,20 +171,6 @@ class Patroni:
             synchronous_standby_names="*",
         )
         self._render_file(f"{self._storage_path}/postgresql-k8s-operator.conf", rendered, 0o644)
-
-    def update_cluster_members(self) -> None:
-        """Update the list of members of the cluster."""
-        # Update the members in the Patroni configuration.
-        self.render_patroni_yml_file()
-
-        try:
-            if self.member_started:
-                # Make Patroni use the updated configuration.
-                self.reload_patroni_configuration()
-        except RetryError:
-            # Ignore retry errors that happen when the member has not started yet.
-            # The configuration will be loaded correctly when Patroni starts.
-            pass
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def reload_patroni_configuration(self) -> None:

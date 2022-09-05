@@ -79,11 +79,11 @@ class TestCharm(unittest.TestCase):
     @patch("charm.Patroni.render_postgresql_conf_file")
     @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.member_started")
-    @patch("charm.Patroni.render_patroni_yml_file")
+    @patch("charm.PostgresqlOperatorCharm.push_certificate_to_workload")
     @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
-    @patch("charm.PostgresqlOperatorCharm._create_resources")
+    @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
     def test_on_postgresql_pebble_ready(
-        self, _, __, _render_patroni_yml_file, _member_started, ___, ____
+        self, _, __, _push_certificate_to_workload, _member_started, ___, ____
     ):
         # Check that the initial plan is empty.
         plan = self.harness.get_container_pebble_plan(self._postgresql_container)
@@ -103,7 +103,7 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(self.harness.model.unit.status, ActiveStatus())
         container = self.harness.model.unit.get_container(self._postgresql_container)
         self.assertEqual(container.get_service(self._postgresql_service).is_running(), True)
-        _render_patroni_yml_file.assert_called_once()
+        _push_certificate_to_workload.assert_called_once()
 
     def test_on_get_password(self):
         # Create a mock event and set passwords in peer relation data.
@@ -138,7 +138,7 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("charm.Patroni.reload_patroni_configuration")
-    @patch("charm.Patroni.render_patroni_yml_file")
+    @patch("charm.PostgresqlOperatorCharm._update_config")
     @patch("charm.PostgresqlOperatorCharm.set_secret")
     @patch("charm.PostgresqlOperatorCharm.postgresql")
     @patch("charm.Patroni.are_all_members_ready")
@@ -149,7 +149,7 @@ class TestCharm(unittest.TestCase):
         _are_all_members_ready,
         _postgresql,
         _set_secret,
-        _render_patroni_yml_file,
+        _update_config,
         _reload_patroni_configuration,
     ):
         # Create a mock event.
