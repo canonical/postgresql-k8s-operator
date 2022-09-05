@@ -25,6 +25,7 @@ from cryptography import x509
 from cryptography.x509.extensions import ExtensionType
 from ops.charm import ActionEvent, RelationBrokenEvent, RelationJoinedEvent
 from ops.framework import Object
+from ops.pebble import PathError, ProtocolError
 
 # The unique Charmhub library identifier, never change it
 LIBID = ""
@@ -78,7 +79,9 @@ class PostgreSQLTLS(Object):
         if param is None:
             key = generate_private_key()
         else:
-            key = self._parse_tls_file(param)
+            key = self._parse_tls_file(
+                param
+            )  # param if param is not None else generate_private_key()
 
         csr = generate_csr(
             private_key=key,
@@ -90,7 +93,6 @@ class PostgreSQLTLS(Object):
         self.charm.set_secret(scope, "key", key.decode("utf-8"))
         self.charm.set_secret(scope, "csr", csr.decode("utf-8"))
 
-        logger.error(str(self.charm.model.get_relation(TLS_RELATION)))
         if self.charm.model.get_relation(TLS_RELATION):
             self.certs.request_certificate_creation(certificate_signing_request=csr)
 
@@ -100,7 +102,7 @@ class PostgreSQLTLS(Object):
         if re.match(r"(-+(BEGIN|END) [A-Z ]+-+)", raw_content):
             return re.sub(
                 r"(-+(BEGIN|END) [A-Z ]+-+)",
-                "\n\\1\n",
+                "\\1",
                 raw_content,
             ).encode("utf-8")
         return base64.b64decode(raw_content)
@@ -121,13 +123,18 @@ class PostgreSQLTLS(Object):
             self.charm.set_secret("app", "ca", None)
             self.charm.set_secret("app", "cert", None)
             self.charm.set_secret("app", "chain", None)
-        # if self.charm.get_secret("app", "cert"):
-        #     logger.debug(
-        #         "Defer till the leader delete the internal TLS certificate to avoid second restart."
-        #     )
-        #     event.defer()
-        #     return
-        # self.charm._on_postgresql_pebble_ready(event)
+        if self.charm.get_secret("app", "cert"):
+            logger.debug(
+                "Defer till the leader delete the internal TLS certificate to avoid second restart."
+            )
+            event.defer()
+            return
+        try:
+            self.charm.push_certificate_to_workload()
+        except (PathError, ProtocolError) as e:
+            logger.error("Cannot push TLS certificates: %r", e)
+            event.defer()
+            return
 
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Enable TLS when TLS certificate available."""
@@ -152,16 +159,23 @@ class PostgreSQLTLS(Object):
         self.charm.set_secret(scope, "cert", event.certificate)
         self.charm.set_secret(scope, "ca", event.ca)
 
-        # if renewal:
-        #     self.charm.unit.get_container("postgresql").stop("postgresql")
-        # elif not self.charm.get_secret("app", "cert") or not self.charm.get_secret("unit", "cert"):
-        #     logger.debug(
-        #         "Defer till both internal and external TLS certificates available to avoid second restart."
-        #     )
-        #     event.defer()
-        #     return
-        #
-        # self.charm._on_postgresql_pebble_ready(event)
+        if (
+            not renewal
+            and not self.charm.get_secret("app", "cert")
+            or not self.charm.get_secret("unit", "cert")
+        ):
+            logger.debug(
+                "Defer till both internal and external TLS certificates available to avoid second restart."
+            )
+            event.defer()
+            return
+
+        try:
+            self.charm.push_certificate_to_workload()
+        except (PathError, ProtocolError) as e:
+            logger.error("Cannot push TLS certificates: %r", e)
+            event.defer()
+            return
 
     def _on_certificate_expiring(self, event: CertificateExpiringEvent) -> None:
         """Request the new certificate when old certificate is expiring."""

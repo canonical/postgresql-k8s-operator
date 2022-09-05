@@ -214,15 +214,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Update the list of the cluster members in the replicas to make them know each other.
         # Update the cluster members in this unit (updating patroni configuration).
-        self._patroni.update_cluster_members()
-
-        try:
-            container = self.unit.get_container("postgresql")
-            self._push_certificate_to_workload(container)
-        except (PathError, ProtocolError) as e:
-            logger.error("Cannot push TLS certificates: %r", e)
-            event.defer()
-            return
+        self._update_config()
 
         # Validate the status of the member before setting an ActiveStatus.
         if not self._patroni.member_started:
@@ -374,7 +366,7 @@ class PostgresqlOperatorCharm(CharmBase):
             return
 
         try:
-            self._push_certificate_to_workload(container)
+            self.push_certificate_to_workload(container)
         except (PathError, ProtocolError) as e:
             logger.error("Cannot push TLS certificates: %r", e)
             event.defer()
@@ -389,7 +381,6 @@ class PostgresqlOperatorCharm(CharmBase):
             logging.info("Added updated layer 'postgresql' to Pebble plan")
             # TODO: move this file generation to on config changed hook
             # when adding configs to this charm.
-            self._update_config()
             # Restart it and report a new status to Juju.
             container.restart(self._postgresql_service)
             logging.info("Restarted postgresql service")
@@ -532,8 +523,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Update and reload Patroni configuration in this unit to use the new password.
         # Other units Patroni configuration will be reloaded in the peer relation changed event.
-        self._patroni.render_patroni_yml_file()
-        self._patroni.reload_patroni_configuration()
+        self._update_config()
 
         event.set_results({f"{username}-password": password})
 
@@ -691,8 +681,11 @@ class PostgresqlOperatorCharm(CharmBase):
         """Get replication user password."""
         return self.get_secret("app", REPLICATION_PASSWORD_KEY)
 
-    def _push_certificate_to_workload(self, container: Container) -> None:
+    def push_certificate_to_workload(self, container: Container = None) -> None:
         """Uploads certificate to the workload container."""
+        if container is None:
+            container = self.unit.get_container("postgresql")
+
         external_key, external_cert = self.tls.get_tls_files("unit")
         if external_key is not None:
             container.push(
@@ -738,13 +731,15 @@ class PostgresqlOperatorCharm(CharmBase):
     def _update_config(self) -> None:
         """Creates os updates Patroni config file based on the existence of the TLS files."""
         enable_tls = False
-        external_ca, external_pem = self.tls.get_tls_files("unit")
-        if None not in [external_ca, external_pem]:
+        external_key, external_cert = self.tls.get_tls_files("unit")
+        if None not in [external_key, external_cert]:
             enable_tls = True
-        internal_ca, internal_pem = self.tls.get_tls_files("app")
-        if None not in [internal_ca, internal_pem]:
-            enable_tls = True
+        logger.error(external_key)
+        logger.error(external_cert)
+        logger.error(enable_tls)
         self._patroni.render_patroni_yml_file(enable_tls=enable_tls)
+        if self._patroni.member_started:
+            self._patroni.reload_patroni_configuration()
 
     def _unit_name_to_pod_name(self, unit_name: str) -> str:
         """Converts unit name to pod name.

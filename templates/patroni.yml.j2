@@ -23,12 +23,11 @@ postgresql:
   custom_conf: {{ storage_path }}/postgresql-k8s-operator.conf
   data_dir: {{ storage_path }}/pgdata
   listen: 0.0.0.0:5432
-  # {{ enable_tls }}
   {%- if enable_tls %}
   parameters:
     ssl: on
-    ssl_cert_file: {{ storage_path }}/internal-ca.crt
-    ssl_key_file: {{ storage_path }}/internal-cert.pem
+    ssl_cert_file: {{ storage_path }}/external-ca.crt
+    ssl_key_file: {{ storage_path }}/external-cert.pem
   {%- endif %}
   pgpass: /tmp/pgpass
   pg_hba:
