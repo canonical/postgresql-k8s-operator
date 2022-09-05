@@ -139,6 +139,7 @@ class PostgreSQLTLS(Object):
     def _on_certificate_available(self, event: CertificateAvailableEvent) -> None:
         """Enable TLS when TLS certificate available."""
         logger.error(123)
+        print(event.certificate_signing_request)
         if event.certificate_signing_request == self.charm.get_secret("unit", "csr"):
             logger.debug("The external TLS certificate available.")
             scope = "unit"  # external crs
@@ -184,6 +185,8 @@ class PostgreSQLTLS(Object):
             scope = "unit"  # external cert
         elif event.certificate == self.charm.get_secret("app", "cert"):
             logger.debug("The internal TLS certificate expiring.")
+            if not self.charm.unit.is_leader():
+                return
             scope = "app"  # internal cert
         else:
             logger.error("An unknown certificate expiring.")
@@ -232,9 +235,13 @@ class PostgreSQLTLS(Object):
         — CA file should have a full chain.
         — PEM file should have private key and certificate without certificate chain.
         """
+        ca = self.charm.get_secret(scope, "ca")
+        chain = self.charm.get_secret(scope, "chain")
+        ca_file = chain if chain else ca
+
         key = self.charm.get_secret(scope, "key")
         cert = self.charm.get_secret(scope, "cert")
         logger.warning(f"scope: {scope}")
         logger.warning(f"key: {key}")
         logger.warning(f"cert: {cert}")
-        return key, cert
+        return key, ca_file, cert

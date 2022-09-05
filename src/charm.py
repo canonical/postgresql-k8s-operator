@@ -688,11 +688,20 @@ class PostgresqlOperatorCharm(CharmBase):
         if container is None:
             container = self.unit.get_container("postgresql")
 
-        external_key, external_cert = self.tls.get_tls_files("unit")
+        external_key, external_ca, external_cert = self.tls.get_tls_files("unit")
         if external_key is not None:
             container.push(
                 f"{self._storage_path}/{TLS_EXT_PEM_FILE}",
                 external_key,
+                make_dirs=True,
+                permissions=0o400,
+                user=WORKLOAD_OS_USER_GROUP,
+                group=WORKLOAD_OS_USER_GROUP,
+            )
+        if external_ca is not None:
+            container.push(
+                f"{self._storage_path}/external-ca-file.crt",
+                external_ca,
                 make_dirs=True,
                 permissions=0o400,
                 user=WORKLOAD_OS_USER_GROUP,
@@ -708,7 +717,7 @@ class PostgresqlOperatorCharm(CharmBase):
                 group=WORKLOAD_OS_USER_GROUP,
             )
 
-        internal_key, internal_cert = self.tls.get_tls_files("app")
+        internal_key, _, internal_cert = self.tls.get_tls_files("app")
         if internal_key is not None:
             container.push(
                 f"{self._storage_path}/{TLS_INT_PEM_FILE}",
@@ -733,8 +742,8 @@ class PostgresqlOperatorCharm(CharmBase):
     def _update_config(self) -> None:
         """Creates os updates Patroni config file based on the existence of the TLS files."""
         enable_tls = False
-        external_key, external_cert = self.tls.get_tls_files("unit")
-        if None not in [external_key, external_cert]:
+        external_key, external_ca, external_cert = self.tls.get_tls_files("unit")
+        if None not in [external_key, external_ca, external_cert]:
             enable_tls = True
         logger.error(external_key)
         logger.error(external_cert)
