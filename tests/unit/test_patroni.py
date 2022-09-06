@@ -22,6 +22,7 @@ class TestPatroni(unittest.TestCase):
             STORAGE_PATH,
             "superuser-password",
             "replication-password",
+            False,
         )
 
     @patch("requests.get")
@@ -177,6 +178,7 @@ class TestPatroni(unittest.TestCase):
             STORAGE_PATH,
             "superuser-password",
             "replication-password",
+            False,
         )
         expected_content = template.render(
             logging_collector="on",

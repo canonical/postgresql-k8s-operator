@@ -17,6 +17,11 @@ log:
 restapi:
   connect_address: '{{ endpoint }}:8008'
   listen: 0.0.0.0:8008
+  {%- if enable_tls %}
+  cafile: {{ storage_path }}/ca.pem
+  certfile: {{ storage_path }}/cert.pem
+  keyfile: {{ storage_path }}/key.pem
+  {%- endif %}
 pod_ip: '{{ endpoint }}'
 postgresql:
   connect_address: '{{ endpoint }}:5432'

@@ -164,7 +164,7 @@ class PostgreSQLTLS(Object):
         basic_constraints = x509.BasicConstraints(ca=True, path_length=None)
         return [basic_constraints]
 
-    def get_tls_files(self) -> (Optional[str], Optional[str]):
+    def get_tls_files(self) -> (Optional[str], Optional[str], Optional[str]):
         """Prepare TLS files in special PostgreSQL way.
 
         PostgreSQL needs three files:
@@ -178,4 +178,6 @@ class PostgreSQLTLS(Object):
 
         key = self.charm.get_secret(SCOPE, "key")
         cert = self.charm.get_secret(SCOPE, "cert")
+        # if cert:
+        #     cert = key + "\n" + cert if key else cert
         return key, ca_file, cert
