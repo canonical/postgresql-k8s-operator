@@ -3,9 +3,8 @@
 import base64
 import socket
 import unittest
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
-from ops.framework import EventBase
 from ops.testing import Harness
 
 from charm import PostgresqlOperatorCharm
@@ -13,33 +12,26 @@ from constants import PEER
 from tests.helpers import patch_network_get
 
 RELATION_NAME = "certificates"
+SCOPE = "unit"
 
 
 class TestPostgreSQLTLS(unittest.TestCase):
     def delete_secrets(self) -> None:
         # Delete TLS secrets from the secret store.
-        if self.charm.unit.is_leader():
-            self.charm.set_secret("app", "ca", None)
-            self.charm.set_secret("app", "cert", None)
-            self.charm.set_secret("app", "chain", None)
-        self.charm.set_secret("unit", "ca", None)
-        self.charm.set_secret("unit", "cert", None)
-        self.charm.set_secret("unit", "chain", None)
+        self.charm.set_secret(SCOPE, "ca", None)
+        self.charm.set_secret(SCOPE, "cert", None)
+        self.charm.set_secret(SCOPE, "chain", None)
 
-    def emit_certificate_available_event(self, internal: bool = False) -> None:
-        scope = "internal" if internal else "external"
+    def emit_certificate_available_event(self) -> None:
         self.charm.tls.certs.on.certificate_available.emit(
-            certificate_signing_request=f"test-{scope}-csr",
-            certificate=f"test-{scope}-cert",
-            ca=f"test-{scope}-ca",
-            chain=f"test-{scope}-chain",
+            certificate_signing_request="test-csr",
+            certificate="test-cert",
+            ca="test-ca",
+            chain="test-chain",
         )
 
-    def emit_certificate_expiring_event(self, internal: bool = False) -> None:
-        scope = "internal" if internal else "external"
-        self.charm.tls.certs.on.certificate_expiring.emit(
-            certificate=f"test-{scope}-cert", expiry=None
-        )
+    def emit_certificate_expiring_event(self) -> None:
+        self.charm.tls.certs.on.certificate_expiring.emit(certificate="test-cert", expiry=None)
 
     @staticmethod
     def get_content_from_file(filename: str) -> str:
@@ -47,17 +39,11 @@ class TestPostgreSQLTLS(unittest.TestCase):
             content = file.read()
         return content
 
-    def no_secrets(self, include_certificate: bool = True, include_internal: bool = False) -> bool:
+    def no_secrets(self, include_certificate: bool = True) -> bool:
         # Check whether there is no TLS secrets in the secret store.
-        secrets = [self.charm.get_secret("unit", "ca"), self.charm.get_secret("unit", "chain")]
+        secrets = [self.charm.get_secret(SCOPE, "ca"), self.charm.get_secret(SCOPE, "chain")]
         if include_certificate:
-            secrets.append(self.charm.get_secret("unit", "cert"))
-        if include_internal:
-            secrets.extend(
-                [self.charm.get_secret("app", "ca"), self.charm.get_secret("app", "chain")]
-            )
-            if include_certificate:
-                secrets.append(self.charm.get_secret("app", "cert"))
+            secrets.append(self.charm.get_secret(SCOPE, "cert"))
         return all(secret is None for secret in secrets)
 
     def relate_to_tls_certificates_operator(self) -> int:
@@ -68,15 +54,10 @@ class TestPostgreSQLTLS(unittest.TestCase):
 
     def set_secrets(self) -> None:
         # Set some TLS secrets in the secret store.
-        if self.charm.unit.is_leader():
-            self.charm.set_secret("app", "ca", "test-internal-ca")
-            self.charm.set_secret("app", "cert", "test-internal-cert")
-            self.charm.set_secret("app", "chain", "test-internal-chain")
-        self.charm.set_secret("unit", "ca", "test-external-ca")
-        self.charm.set_secret("unit", "cert", "test-external-cert")
-        self.charm.set_secret("unit", "chain", "test-external-chain")
+        self.charm.set_secret(SCOPE, "ca", "test-ca")
+        self.charm.set_secret(SCOPE, "cert", "test-cert")
+        self.charm.set_secret(SCOPE, "chain", "test-chain")
 
-    @patch_network_get(private_address="1.1.1.1")
     def setUp(self):
         self.harness = Harness(PostgresqlOperatorCharm)
         self.addCleanup(self.harness.cleanup)
@@ -88,33 +69,19 @@ class TestPostgreSQLTLS(unittest.TestCase):
         self.charm = self.harness.charm
 
     @patch("charms.postgresql_k8s.v0.postgresql_tls.PostgreSQLTLS._request_certificate")
-    @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
-    def test_on_set_tls_private_key(self, _, _request_certificate):
+    def test_on_set_tls_private_key(self, _request_certificate):
         # Create a mock event.
         mock_event = MagicMock(params={})
 
-        # Test setting a TLS private key through a non leader unit
-        # (only the external private key is set).
-        self.harness.set_leader(False)
+        # Test without providing a private key.
         self.charm.tls._on_set_tls_private_key(mock_event)
-        _request_certificate.assert_called_once_with("unit", None)
+        _request_certificate.assert_called_once_with(None)
 
-        # Test setting a TLS private key through a leader unit
-        # (both private keys are set).
+        # Test providing the private key.
+        mock_event.params["external-key"] = "test-key"
         _request_certificate.reset_mock()
-        self.harness.set_leader(True)
         self.charm.tls._on_set_tls_private_key(mock_event)
-        calls = [call("unit", None), call("app", None)]
-        _request_certificate.assert_has_calls(calls)
-
-        # Test providing the private keys.
-        mock_event.params["external-key"] = "test-external-key"
-        mock_event.params["internal-key"] = "test-internal-key"
-        _request_certificate.reset_mock()
-        self.harness.set_leader(True)
-        self.charm.tls._on_set_tls_private_key(mock_event)
-        calls = [call("unit", "test-external-key"), call("app", "test-internal-key")]
-        _request_certificate.assert_has_calls(calls)
+        _request_certificate.assert_called_once_with("test-key")
 
     @patch_network_get(private_address="1.1.1.1")
     @patch(
@@ -123,25 +90,25 @@ class TestPostgreSQLTLS(unittest.TestCase):
     def test_request_certificate(self, _request_certificate_creation):
         # Test without an established relation.
         self.delete_secrets()
-        self.charm.tls._request_certificate("unit", None)
-        self.assertIsNotNone(self.charm.get_secret("unit", "key"))
-        self.assertIsNotNone(self.charm.get_secret("unit", "csr"))
+        self.charm.tls._request_certificate(None)
+        self.assertIsNotNone(self.charm.get_secret(SCOPE, "key"))
+        self.assertIsNotNone(self.charm.get_secret(SCOPE, "csr"))
         _request_certificate_creation.assert_not_called()
 
         # Test without providing a private key.
         with self.harness.hooks_disabled():
             self.relate_to_tls_certificates_operator()
-        print(self.charm.tls._request_certificate("unit", None))
-        self.assertIsNotNone(self.charm.get_secret("unit", "key"))
-        self.assertIsNotNone(self.charm.get_secret("unit", "csr"))
+        self.charm.tls._request_certificate(None)
+        self.assertIsNotNone(self.charm.get_secret(SCOPE, "key"))
+        self.assertIsNotNone(self.charm.get_secret(SCOPE, "csr"))
         _request_certificate_creation.assert_called_once()
 
         # Test providing a private key.
         _request_certificate_creation.reset_mock()
         key = self.get_content_from_file(filename="tests/unit/key.pem")
-        self.charm.tls._request_certificate("unit", key)
-        self.assertIsNotNone(self.charm.get_secret("unit", "key"))
-        self.assertIsNotNone(self.charm.get_secret("unit", "csr"))
+        self.charm.tls._request_certificate(key)
+        self.assertIsNotNone(self.charm.get_secret(SCOPE, "key"))
+        self.assertIsNotNone(self.charm.get_secret(SCOPE, "csr"))
         _request_certificate_creation.assert_called_once()
 
     def test_parse_tls_file(self):
@@ -157,113 +124,52 @@ class TestPostgreSQLTLS(unittest.TestCase):
         )
         self.assertEqual(parsed_key, key.encode("utf-8"))
 
-    @patch_network_get(private_address="1.1.1.1")
     @patch("charms.postgresql_k8s.v0.postgresql_tls.PostgreSQLTLS._request_certificate")
-    @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
-    def test_on_tls_relation_joined(self, _, _request_certificate):
-        # Test event on a non leader unit.
-        self.harness.set_leader(False)
-        rel_id = self.relate_to_tls_certificates_operator()
-        _request_certificate.assert_called_once_with("unit", None)
-
-        # Test event on a leader unit.
-        _request_certificate.reset_mock()
-        with self.harness.hooks_disabled():
-            self.harness.remove_relation(rel_id)
-        self.harness.set_leader(True)
+    def test_on_tls_relation_joined(self, _request_certificate):
         self.relate_to_tls_certificates_operator()
-        calls = [call("app", None), call("unit", None)]
-        _request_certificate.assert_has_calls(calls)
+        _request_certificate.assert_called_once_with(None)
 
     @patch_network_get(private_address="1.1.1.1")
-    @patch.object(EventBase, "defer")
-    @patch("charm.PostgresqlOperatorCharm.push_certificate_to_workload")
-    @patch("charms.postgresql_k8s.v0.postgresql_tls.PostgreSQLTLS._request_certificate")
-    @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
-    def test_on_tls_relation_broken(
-        self, _, _request_certificate, _push_certificate_to_workload, _defer
-    ):
-        # Test event on a non leader unit.
-        self.set_secrets()
-        self.harness.set_leader(False)
+    @patch("charm.PostgresqlOperatorCharm.update_config")
+    def test_on_tls_relation_broken(self, _update_config):
+        _update_config.reset_mock()
         rel_id = self.relate_to_tls_certificates_operator()
         self.harness.remove_relation(rel_id)
-        _push_certificate_to_workload.assert_called_once()
+        _update_config.assert_called_once()
         self.assertTrue(self.no_secrets())
 
-        # Test event again on a non leader unit, but with internal certificate.
-        _push_certificate_to_workload.reset_mock()
-        self.harness.set_leader(True)
-        self.set_secrets()
-        self.harness.set_leader(False)
-        rel_id = self.relate_to_tls_certificates_operator()
-        self.harness.remove_relation(rel_id)
-        _defer.assert_called_once()
-        _push_certificate_to_workload.assert_not_called()
-        self.assertTrue(self.no_secrets())
-
-        # Test event on a leader unit.
-        _push_certificate_to_workload.reset_mock()
-        self.harness.set_leader(True)
-        rel_id = self.relate_to_tls_certificates_operator()
-        self.harness.remove_relation(rel_id)
-        _push_certificate_to_workload.assert_called_once()
-        self.assertTrue(self.no_secrets(include_internal=True))
-
     @patch("charm.PostgresqlOperatorCharm.push_certificate_to_workload")
-    @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
-    def test_on_certificate_available(self, _, _push_certificate_to_workload):
+    def test_on_certificate_available(self, _push_certificate_to_workload):
         # Test with no provided or invalid CSR.
         self.emit_certificate_available_event()
-        self.assertTrue(self.no_secrets(include_internal=True))
+        self.assertTrue(self.no_secrets())
         _push_certificate_to_workload.assert_not_called()
 
-        # Test with internal CSR, but on a non leader unit.
-        self.harness.set_leader(True)
-        self.charm.set_secret("app", "csr", "test-internal-csr")
-        self.harness.set_leader(False)
-        self.emit_certificate_available_event(internal=True)
-        self.assertTrue(self.no_secrets(include_internal=True))
-        _push_certificate_to_workload.assert_not_called()
-
-        # Test with internal CSR on a leader unit.
-        self.harness.set_leader(True)
-        self.emit_certificate_available_event(internal=True)
-        self.assertEqual(self.charm.get_secret("app", "ca"), "test-internal-ca")
-        self.assertEqual(self.charm.get_secret("app", "cert"), "test-internal-cert")
-        self.assertEqual(self.charm.get_secret("app", "chain"), "test-internal-chain")
-        _push_certificate_to_workload.assert_not_called()
-
-        # Test with both internal and external CSR.
-        self.charm.set_secret("unit", "csr", "test-external-csr")
+        # Test providing CSR.
+        self.charm.set_secret(SCOPE, "csr", "test-csr")
         self.emit_certificate_available_event()
+        self.assertEqual(self.charm.get_secret(SCOPE, "ca"), "test-ca")
+        self.assertEqual(self.charm.get_secret(SCOPE, "cert"), "test-cert")
+        self.assertEqual(self.charm.get_secret(SCOPE, "chain"), "test-chain")
         _push_certificate_to_workload.assert_called_once()
 
     @patch_network_get(private_address="1.1.1.1")
     @patch(
         "charms.tls_certificates_interface.v1.tls_certificates.TLSCertificatesRequiresV1.request_certificate_renewal"
     )
-    @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
-    def test_on_certificate_expiring(self, _, _request_certificate_renewal):
+    def test_on_certificate_expiring(self, _request_certificate_renewal):
         # Test with no provided or invalid certificate.
         self.emit_certificate_expiring_event()
-        self.assertTrue(self.no_secrets(include_internal=True))
+        self.assertTrue(self.no_secrets())
 
-        # Test with internal certificate, but on a non leader unit.
-        self.harness.set_leader(True)
+        # Test providing a certificate.
         self.charm.set_secret(
-            "app", "key", self.get_content_from_file(filename="tests/unit/key.pem")
+            SCOPE, "key", self.get_content_from_file(filename="tests/unit/key.pem")
         )
-        self.charm.set_secret("app", "cert", "test-internal-cert")
-        self.charm.set_secret("app", "csr", "test-internal-csr")
-        self.harness.set_leader(False)
-        self.emit_certificate_expiring_event(internal=True)
-        self.assertTrue(self.no_secrets(include_certificate=False, include_internal=True))
-
-        # Test with internal certificate on a leader unit.
-        self.harness.set_leader(True)
-        self.emit_certificate_expiring_event(internal=True)
-        self.assertNotEqual(self.charm.get_secret("app", "csr"), "test-internal-csr")
+        self.charm.set_secret(SCOPE, "cert", "test-cert")
+        self.charm.set_secret(SCOPE, "csr", "test-csr")
+        self.emit_certificate_expiring_event()
+        self.assertTrue(self.no_secrets(include_certificate=False))
         _request_certificate_renewal.assert_called_once()
 
     @patch_network_get(private_address="1.1.1.1")
@@ -272,28 +178,23 @@ class TestPostgreSQLTLS(unittest.TestCase):
         self.assertEqual(sans, ["postgresql-k8s-0", socket.getfqdn(), "1.1.1.1"])
 
     def test_get_tls_extensions(self):
-        # Test for external certificates.
-        extensions = self.charm.tls._get_tls_extensions("unit")
-        self.assertIsNone(extensions)
-
-        # Test for internal certificates.
-        extensions = self.charm.tls._get_tls_extensions("app")
+        extensions = self.charm.tls._get_tls_extensions()
         self.assertEqual(len(extensions), 1)
         self.assertEqual(extensions[0].ca, True)
         self.assertIsNone(extensions[0].path_length)
 
     def test_get_tls_files(self):
         # Test with no TLS files available.
-        key, ca, certificate = self.charm.tls.get_tls_files("unit")
+        key, ca, certificate = self.charm.tls.get_tls_files()
         self.assertIsNone(key)
         self.assertIsNone(ca)
         self.assertIsNone(certificate)
 
         # Test with TLS files available.
-        self.charm.set_secret("unit", "key", "test-external-key")
-        self.charm.set_secret("unit", "ca", "test-external-ca")
-        self.charm.set_secret("unit", "cert", "test-external-cert")
-        key, ca, certificate = self.charm.tls.get_tls_files("unit")
-        self.assertEqual(key, "test-external-key")
-        self.assertEqual(ca, "test-external-ca")
-        self.assertEqual(certificate, "test-external-cert")
+        self.charm.set_secret(SCOPE, "key", "test-key")
+        self.charm.set_secret(SCOPE, "ca", "test-ca")
+        self.charm.set_secret(SCOPE, "cert", "test-cert")
+        key, ca, certificate = self.charm.tls.get_tls_files()
+        self.assertEqual(key, "test-key")
+        self.assertEqual(ca, "test-ca")
+        self.assertEqual(certificate, "test-cert")

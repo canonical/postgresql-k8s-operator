@@ -43,9 +43,6 @@ from constants import (
     TLS_EXT_CA_FILE,
     TLS_EXT_CERT_FILE,
     TLS_EXT_KEY_FILE,
-    TLS_INT_CA_FILE,
-    TLS_INT_CERT_FILE,
-    TLS_INT_KEY_FILE,
     USER,
     USER_PASSWORD_KEY,
     WORKLOAD_OS_GROUP,
@@ -217,7 +214,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Update the list of the cluster members in the replicas to make them know each other.
         # Update the cluster members in this unit (updating patroni configuration).
-        self._update_config()
+        self.update_config()
 
         # Validate the status of the member before setting an ActiveStatus.
         if not self._patroni.member_started:
@@ -526,7 +523,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Update and reload Patroni configuration in this unit to use the new password.
         # Other units Patroni configuration will be reloaded in the peer relation changed event.
-        self._update_config()
+        self.update_config()
 
         event.set_results({f"{username}-password": password})
 
@@ -680,7 +677,7 @@ class PostgresqlOperatorCharm(CharmBase):
         if container is None:
             container = self.unit.get_container("postgresql")
 
-        external_key, external_ca, external_cert = self.tls.get_tls_files("unit")
+        external_key, external_ca, external_cert = self.tls.get_tls_files()
         if external_key is not None:
             container.push(
                 f"{self._storage_path}/{TLS_EXT_KEY_FILE}",
@@ -709,43 +706,16 @@ class PostgresqlOperatorCharm(CharmBase):
                 group=WORKLOAD_OS_GROUP,
             )
 
-        internal_key, internal_ca, internal_cert = self.tls.get_tls_files("app")
-        if internal_key is not None:
-            container.push(
-                f"{self._storage_path}/{TLS_INT_KEY_FILE}",
-                internal_key,
-                make_dirs=True,
-                permissions=0o400,
-                user=WORKLOAD_OS_USER,
-                group=WORKLOAD_OS_GROUP,
-            )
-        if internal_ca is not None:
-            container.push(
-                f"{self._storage_path}/{TLS_INT_CA_FILE}",
-                internal_ca,
-                make_dirs=True,
-                permissions=0o400,
-                user=WORKLOAD_OS_USER,
-                group=WORKLOAD_OS_GROUP,
-            )
-        if internal_cert is not None:
-            container.push(
-                f"{self._storage_path}/{TLS_INT_CERT_FILE}",
-                internal_cert,
-                make_dirs=True,
-                permissions=0o400,
-                user=WORKLOAD_OS_USER,
-                group=WORKLOAD_OS_GROUP,
-            )
+        self.update_config()
 
-        self._update_config()
-
-    def _update_config(self) -> None:
+    def update_config(self) -> None:
         """Creates os updates Patroni config file based on the existence of the TLS files."""
         enable_tls = False
-        external_key, external_ca, external_cert = self.tls.get_tls_files("unit")
+        external_key, external_ca, external_cert = self.tls.get_tls_files()
         if None not in [external_key, external_ca, external_cert]:
             enable_tls = True
+
+        # Update and reload configuration based on TLS files availability.
         self._patroni.render_patroni_yml_file(enable_tls=enable_tls)
         if self._patroni.member_started:
             self._patroni.reload_patroni_configuration()

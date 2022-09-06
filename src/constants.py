@@ -14,8 +14,5 @@ WORKLOAD_OS_USER = "postgres"
 TLS_EXT_KEY_FILE = "external-key.pem"
 TLS_EXT_CA_FILE = "external-ca.pem"
 TLS_EXT_CERT_FILE = "external-cert.pem"
-TLS_INT_KEY_FILE = "internal-key.pem"
-TLS_INT_CA_FILE = "internal-ca.pem"
-TLS_INT_CERT_FILE = "internal-cert.pem"
 # List of system usernames needed for correct work of the charm/workload.
 SYSTEM_USERS = [REPLICATION_USER, USER]

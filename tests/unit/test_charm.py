@@ -138,7 +138,7 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("charm.Patroni.reload_patroni_configuration")
-    @patch("charm.PostgresqlOperatorCharm._update_config")
+    @patch("charm.PostgresqlOperatorCharm.update_config")
     @patch("charm.PostgresqlOperatorCharm.set_secret")
     @patch("charm.PostgresqlOperatorCharm.postgresql")
     @patch("charm.Patroni.are_all_members_ready")
