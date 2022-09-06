@@ -31,7 +31,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 2
+LIBPATCH = 3
 
 
 logger = logging.getLogger(__name__)
@@ -177,6 +177,20 @@ class PostgreSQL:
         except psycopg2.Error as e:
             logger.error(f"Failed to get PostgreSQL version: {e}")
             raise PostgreSQLGetPostgreSQLVersionError()
+
+    def is_tls_enabled(self) -> bool:
+        """Returns whether TLS is enabled.
+
+        Returns:
+            whether TLS is enabled.
+        """
+        try:
+            with self._connect_to_database() as connection, connection.cursor() as cursor:
+                cursor.execute("SHOW ssl;")
+                return "on" in cursor.fetchone()[0]
+        except psycopg2.Error as e:
+            logger.error(f"Failed to get check whether TLS is enabled: {e}")
+        return False
 
     def update_user_password(self, username: str, password: str) -> None:
         """Update a user password.
