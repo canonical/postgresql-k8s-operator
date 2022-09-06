@@ -9,8 +9,8 @@ bootstrap:
   - locale: en_US.UTF-8
   - data-checksums
   pg_hba:
-  - host all all 0.0.0.0/0 md5
-  - host replication replication 127.0.0.1/32 md5
+  - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 md5
+  - {{ 'hostssl' if enable_tls else 'host' }} replication replication 127.0.0.1/32 md5
 bypass_api_service: true
 log:
   dir: /var/log/postgresql
@@ -33,9 +33,9 @@ postgresql:
   pgpass: /tmp/pgpass
   pg_hba:
   - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 md5
-  - host replication replication 127.0.0.1/32 md5
+  - {{ 'hostssl' if enable_tls else 'host' }} replication replication 127.0.0.1/32 md5
   {%- for endpoint in endpoints %}
-  - host replication replication {{ endpoint }}.{{ namespace }}.svc.cluster.local md5
+  - {{ 'hostssl' if enable_tls else 'host' }} replication replication {{ endpoint }}.{{ namespace }}.svc.cluster.local md5
   {%- endfor %}
   authentication:
     replication:
