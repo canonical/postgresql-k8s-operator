@@ -28,14 +28,14 @@ from ops.framework import Object
 from ops.pebble import PathError, ProtocolError
 
 # The unique Charmhub library identifier, never change it
-LIBID = ""
+LIBID = "c27af44a92df4ef38d7ae06418b2800f"
 
 # Increment this major API version when introducing breaking changes
 LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version.
-LIBPATCH = 0
+LIBPATCH = 1
 
 logger = logging.getLogger(__name__)
 TLS_RELATION = "certificates"

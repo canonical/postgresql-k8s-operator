@@ -11,6 +11,7 @@ from tests.integration.helpers import (
     check_database_users_existence,
     deploy_and_relate_application_with_postgresql,
     is_tls_enabled,
+    scale_application,
 )
 
 MATTERMOST_APP_NAME = "mattermost"
@@ -59,11 +60,14 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         await ops_test.model.relate(DATABASE_APP_NAME, TLS_CERTIFICATES_APP_NAME)
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
+        # Add one more PostgreSQL unit.
+        await scale_application(ops_test, DATABASE_APP_NAME, 2)
+
         # Wait for all units enabling TLS.
         for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
             assert await is_tls_enabled(ops_test, unit.name)
 
-        # Deploy and test Mattermost.
+        # Deploy and check Mattermost user and database existence.
         relation_id = await deploy_and_relate_application_with_postgresql(
             ops_test, "mattermost-k8s", MATTERMOST_APP_NAME, APPLICATION_UNITS, status="waiting"
         )
