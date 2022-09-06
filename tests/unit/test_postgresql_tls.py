@@ -138,12 +138,12 @@ class TestPostgreSQLTLS(unittest.TestCase):
         _update_config.assert_called_once()
         self.assertTrue(self.no_secrets())
 
-    @patch("charm.PostgresqlOperatorCharm.push_certificate_to_workload")
-    def test_on_certificate_available(self, _push_certificate_to_workload):
+    @patch("charm.PostgresqlOperatorCharm.push_tls_files_to_workload")
+    def test_on_certificate_available(self, _push_tls_files_to_workload):
         # Test with no provided or invalid CSR.
         self.emit_certificate_available_event()
         self.assertTrue(self.no_secrets())
-        _push_certificate_to_workload.assert_not_called()
+        _push_tls_files_to_workload.assert_not_called()
 
         # Test providing CSR.
         self.charm.set_secret(SCOPE, "csr", "test-csr")
@@ -151,7 +151,7 @@ class TestPostgreSQLTLS(unittest.TestCase):
         self.assertEqual(self.charm.get_secret(SCOPE, "ca"), "test-ca")
         self.assertEqual(self.charm.get_secret(SCOPE, "cert"), "test-cert")
         self.assertEqual(self.charm.get_secret(SCOPE, "chain"), "test-chain")
-        _push_certificate_to_workload.assert_called_once()
+        _push_tls_files_to_workload.assert_called_once()
 
     @patch_network_get(private_address="1.1.1.1")
     @patch(

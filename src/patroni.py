@@ -174,3 +174,8 @@ class Patroni:
     def reload_patroni_configuration(self) -> None:
         """Reloads the configuration after it was updated in the file."""
         requests.post(f"http://{self._endpoint}:8008/reload")
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    def restart_postgresql(self) -> None:
+        """Restart PostgreSQL."""
+        requests.post(f"http://{self._endpoint}:8008/restart")

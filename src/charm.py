@@ -12,6 +12,7 @@ from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQLUpdateUserPasswordError,
 )
 from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
+from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from lightkube import ApiError, Client, codecs
 from lightkube.resources.core_v1 import Endpoints, Pod, Service
 from ops.charm import (
@@ -86,6 +87,9 @@ class PostgresqlOperatorCharm(CharmBase):
         self.legacy_db_relation = DbProvides(self, admin=False)
         self.legacy_db_admin_relation = DbProvides(self, admin=True)
         self.tls = PostgreSQLTLS(self, PEER)
+        self.restart_manager = RollingOpsManager(
+            charm=self, relation="restart", callback=self._restart
+        )
 
     @property
     def app_peer_data(self) -> Dict:
@@ -366,7 +370,7 @@ class PostgresqlOperatorCharm(CharmBase):
             return
 
         try:
-            self.push_certificate_to_workload(container)
+            self.push_tls_files_to_workload(container)
         except (PathError, ProtocolError) as e:
             logger.error("Cannot push TLS certificates: %r", e)
             event.defer()
@@ -672,8 +676,8 @@ class PostgresqlOperatorCharm(CharmBase):
         """
         return self.model.get_relation(PEER)
 
-    def push_certificate_to_workload(self, container: Container = None) -> None:
-        """Uploads certificate to the workload container."""
+    def push_tls_files_to_workload(self, container: Container = None) -> None:
+        """Uploads TLS files to the workload container."""
         if container is None:
             container = self.unit.get_container("postgresql")
 
@@ -708,8 +712,16 @@ class PostgresqlOperatorCharm(CharmBase):
 
         self.update_config()
 
+    def _restart(self, _) -> None:
+        """Restart PostgreSQL."""
+        try:
+            self._patroni.restart_postgresql()
+        except RetryError as e:
+            logger.error("failed to restart PostgreSQL")
+            self.unit.status = BlockedStatus(f"failed to restart PostgreSQL with error {e}")
+
     def update_config(self) -> None:
-        """Creates os updates Patroni config file based on the existence of the TLS files."""
+        """Updates Patroni config file based on the existence of the TLS files."""
         enable_tls = False
         external_key, external_ca, external_cert = self.tls.get_tls_files()
         if None not in [external_key, external_ca, external_cert]:
@@ -717,8 +729,16 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Update and reload configuration based on TLS files availability.
         self._patroni.render_patroni_yml_file(enable_tls=enable_tls)
-        if self._patroni.member_started:
-            self._patroni.reload_patroni_configuration()
+        if not self._patroni.member_started:
+            return
+
+        restart_postgresql = enable_tls != self.postgresql.is_tls_enabled()
+        self._patroni.reload_patroni_configuration()
+
+        # Restart PostgreSQL if TLS configuration has changed
+        # (so the both old and new connections use the configuration).
+        if restart_postgresql:
+            self.on[self.restart_manager.name].acquire_lock.emit()
 
     def _unit_name_to_pod_name(self, unit_name: str) -> str:
         """Converts unit name to pod name.

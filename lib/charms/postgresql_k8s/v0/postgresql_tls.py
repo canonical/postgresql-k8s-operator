@@ -1,7 +1,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""In this class we manage client database relations.
+"""In this class we manage certificates relation.
 
 This class creates user and database for each application relation
 and expose needed information for client connection via fields in
@@ -43,10 +43,10 @@ TLS_RELATION = "certificates"
 
 
 class PostgreSQLTLS(Object):
-    """In this class we manage client database relations."""
+    """In this class we manage certificates relation."""
 
     def __init__(self, charm, peer_relation):
-        """Manager of PostgreSQL client relations."""
+        """Manager of PostgreSQL relation with TLS Certificates Operator."""
         super().__init__(charm, "client-relations")
         self.charm = charm
         self.peer_relation = peer_relation
@@ -71,6 +71,7 @@ class PostgreSQLTLS(Object):
             event.fail(str(e))
 
     def _request_certificate(self, param: Optional[str]):
+        """Request a certificate to TLS Certificates Operator."""
         if param is None:
             key = generate_private_key()
         else:
@@ -122,7 +123,7 @@ class PostgreSQLTLS(Object):
         self.charm.set_secret(SCOPE, "ca", event.ca)
 
         try:
-            self.charm.push_certificate_to_workload()
+            self.charm.push_tls_files_to_workload()
         except (PathError, ProtocolError) as e:
             logger.error("Cannot push TLS certificates: %r", e)
             event.defer()
@@ -170,9 +171,10 @@ class PostgreSQLTLS(Object):
     def get_tls_files(self) -> (Optional[str], Optional[str]):
         """Prepare TLS files in special PostgreSQL way.
 
-        PostgreSQL needs two files:
+        PostgreSQL needs three files:
         — CA file should have a full chain.
-        — PEM file should have private key and certificate without certificate chain.
+        — Key file should have private key.
+        — Certificate file should have certificate without certificate chain.
         """
         ca = self.charm.get_secret(SCOPE, "ca")
         chain = self.charm.get_secret(SCOPE, "chain")
