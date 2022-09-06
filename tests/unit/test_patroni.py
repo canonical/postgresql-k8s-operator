@@ -133,15 +133,11 @@ class TestPatroni(unittest.TestCase):
         # Also, ensure the right parameters are in the expected content
         # (as it was already validated with the above render file call).
         self.assertIn("ssl: on", expected_content_with_tls)
+        self.assertIn("ssl_ca_file: /var/lib/postgresql/data/ca.pem", expected_content_with_tls)
         self.assertIn(
-            "ssl_ca_file: /var/lib/postgresql/data/external-ca.pem", expected_content_with_tls
+            "ssl_cert_file: /var/lib/postgresql/data/cert.pem", expected_content_with_tls
         )
-        self.assertIn(
-            "ssl_cert_file: /var/lib/postgresql/data/external-cert.pem", expected_content_with_tls
-        )
-        self.assertIn(
-            "ssl_key_file: /var/lib/postgresql/data/external-key.pem", expected_content_with_tls
-        )
+        self.assertIn("ssl_key_file: /var/lib/postgresql/data/key.pem", expected_content_with_tls)
 
     @patch("charm.Patroni._render_file")
     def test_render_postgresql_conf_file(self, _render_file):

@@ -26,9 +26,9 @@ postgresql:
   {%- if enable_tls %}
   parameters:
     ssl: on
-    ssl_ca_file: {{ storage_path }}/external-ca.pem
-    ssl_cert_file: {{ storage_path }}/external-cert.pem
-    ssl_key_file: {{ storage_path }}/external-key.pem
+    ssl_ca_file: {{ storage_path }}/ca.pem
+    ssl_cert_file: {{ storage_path }}/cert.pem
+    ssl_key_file: {{ storage_path }}/key.pem
   {%- endif %}
   pgpass: /tmp/pgpass
   pg_hba:

@@ -41,9 +41,9 @@ from constants import (
     REPLICATION_PASSWORD_KEY,
     REPLICATION_USER,
     SYSTEM_USERS,
-    TLS_EXT_CA_FILE,
-    TLS_EXT_CERT_FILE,
-    TLS_EXT_KEY_FILE,
+    TLS_CA_FILE,
+    TLS_CERT_FILE,
+    TLS_KEY_FILE,
     USER,
     USER_PASSWORD_KEY,
     WORKLOAD_OS_GROUP,
@@ -681,29 +681,29 @@ class PostgresqlOperatorCharm(CharmBase):
         if container is None:
             container = self.unit.get_container("postgresql")
 
-        external_key, external_ca, external_cert = self.tls.get_tls_files()
-        if external_key is not None:
+        key, ca, cert = self.tls.get_tls_files()
+        if key is not None:
             container.push(
-                f"{self._storage_path}/{TLS_EXT_KEY_FILE}",
-                external_key,
+                f"{self._storage_path}/{TLS_KEY_FILE}",
+                key,
                 make_dirs=True,
                 permissions=0o400,
                 user=WORKLOAD_OS_USER,
                 group=WORKLOAD_OS_GROUP,
             )
-        if external_ca is not None:
+        if ca is not None:
             container.push(
-                f"{self._storage_path}/{TLS_EXT_CA_FILE}",
-                external_ca,
+                f"{self._storage_path}/{TLS_CA_FILE}",
+                ca,
                 make_dirs=True,
                 permissions=0o400,
                 user=WORKLOAD_OS_USER,
                 group=WORKLOAD_OS_GROUP,
             )
-        if external_cert is not None:
+        if cert is not None:
             container.push(
-                f"{self._storage_path}/{TLS_EXT_CERT_FILE}",
-                external_cert,
+                f"{self._storage_path}/{TLS_CERT_FILE}",
+                cert,
                 make_dirs=True,
                 permissions=0o400,
                 user=WORKLOAD_OS_USER,
@@ -723,8 +723,8 @@ class PostgresqlOperatorCharm(CharmBase):
     def update_config(self) -> None:
         """Updates Patroni config file based on the existence of the TLS files."""
         enable_tls = False
-        external_key, external_ca, external_cert = self.tls.get_tls_files()
-        if None not in [external_key, external_ca, external_cert]:
+        key, ca, cert = self.tls.get_tls_files()
+        if None not in [key, ca, cert]:
             enable_tls = True
 
         # Update and reload configuration based on TLS files availability.

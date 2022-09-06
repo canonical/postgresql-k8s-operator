@@ -23,11 +23,8 @@ set-password:
       type: string
       description: The password will be auto-generated if this option is not specified.
 set-tls-private-key:
-  description: Set the privates key, which will be used for certificate signing requests (CSR). Run for each unit separately.
+  description: Set the private key, which will be used for certificate signing requests (CSR). Run for each unit separately.
   params:
-    external-key:
+    private-key:
       type: string
-      description: The content of private key for external communications with clients. Content will be auto-generated if this option is not specified.
-    internal-key:
-      type: string
-      description: The content of private key for internal communications with clients. Content will be auto-generated if this option is not specified.
+      description: The content of private key for communications with clients. Content will be auto-generated if this option is not specified.

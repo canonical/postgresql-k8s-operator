@@ -78,7 +78,7 @@ class TestPostgreSQLTLS(unittest.TestCase):
         _request_certificate.assert_called_once_with(None)
 
         # Test providing the private key.
-        mock_event.params["external-key"] = "test-key"
+        mock_event.params["private-key"] = "test-key"
         _request_certificate.reset_mock()
         self.charm.tls._on_set_tls_private_key(mock_event)
         _request_certificate.assert_called_once_with("test-key")

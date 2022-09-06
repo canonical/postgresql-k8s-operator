@@ -3,9 +3,8 @@
 
 """In this class we manage certificates relation.
 
-This class creates user and database for each application relation
-and expose needed information for client connection via fields in
-external relation.
+This class handles certificate request and renewal through
+the interaction with the TLS Certificates Operator.
 """
 
 import base64
@@ -65,10 +64,7 @@ class PostgreSQLTLS(Object):
 
     def _on_set_tls_private_key(self, event: ActionEvent) -> None:
         """Set the TLS private key, which will be used for requesting the certificate."""
-        try:
-            self._request_certificate(event.params.get("external-key", None))
-        except ValueError as e:
-            event.fail(str(e))
+        self._request_certificate(event.params.get("private-key", None))
 
     def _request_certificate(self, param: Optional[str]):
         """Request a certificate to TLS Certificates Operator."""
