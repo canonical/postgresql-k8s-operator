@@ -24,6 +24,8 @@ resources:
 peers:
   database-peers:
     interface: postgresql_peers
+  restart:
+    interface: rolling_op
 
 provides:
   database:
@@ -32,6 +34,11 @@ provides:
     interface: pgsql
   db-admin:
     interface: pgsql
+
+requires:
+  certificates:
+    interface: tls-certificates
+    limit: 1
 
 storage:
   pgdata:
