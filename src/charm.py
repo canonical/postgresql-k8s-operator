@@ -722,10 +722,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def update_config(self) -> None:
         """Updates Patroni config file based on the existence of the TLS files."""
-        enable_tls = False
-        key, ca, cert = self.tls.get_tls_files()
-        if None not in [key, ca, cert]:
-            enable_tls = True
+        enable_tls = all(self.tls.get_tls_files())
 
         # Update and reload configuration based on TLS files availability.
         self._patroni.render_patroni_yml_file(enable_tls=enable_tls)

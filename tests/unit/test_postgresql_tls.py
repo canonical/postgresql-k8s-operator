@@ -117,7 +117,7 @@ class TestPostgreSQLTLS(unittest.TestCase):
         parsed_key = self.charm.tls._parse_tls_file(key)
         self.assertEqual(parsed_key, key.encode("utf-8"))
 
-        # Test with a base4 encoded key.
+        # Test with a base64 encoded key.
         key = self.get_content_from_file(filename="tests/unit/key.pem")
         parsed_key = self.charm.tls._parse_tls_file(
             base64.b64encode(key.encode("utf-8")).decode("utf-8")
