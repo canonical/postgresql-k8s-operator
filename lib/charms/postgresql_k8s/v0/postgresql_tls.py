@@ -5,6 +5,16 @@
 
 This class handles certificate request and renewal through
 the interaction with the TLS Certificates Operator.
+
+This library needs that https://charmhub.io/tls-certificates-interface/libraries/tls_certificates
+library is imported to work.
+
+It also needs the following methods in the charm class:
+— get_hostname_by_unit: to retrieve the DNS hostname of the unit.
+— get_secret: to retrieve TLS files from secrets.
+— push_tls_files_to_workload: to push TLS files to the workload container and enable TLS.
+— set_secret: to store TLS files as secrets.
+— update_config: to disable TLS when relation with the TLS Certificates Operator is broken.
 """
 
 import base64
@@ -89,9 +99,10 @@ class PostgreSQLTLS(Object):
     @staticmethod
     def _parse_tls_file(raw_content: str) -> bytes:
         """Parse TLS files from both plain text or base64 format."""
-        if re.match(r"(-+(BEGIN|END) [A-Z ]+-+)", raw_content):
+        plain_text_tls_file_regex = r"(-+(BEGIN|END) [A-Z ]+-+)"
+        if re.match(plain_text_tls_file_regex, raw_content):
             return re.sub(
-                r"(-+(BEGIN|END) [A-Z ]+-+)",
+                plain_text_tls_file_regex,
                 "\\1",
                 raw_content,
             ).encode("utf-8")
