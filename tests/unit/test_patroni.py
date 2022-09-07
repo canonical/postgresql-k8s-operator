@@ -39,13 +39,13 @@ class TestPatroni(unittest.TestCase):
         # Test returning pod name.
         primary = self.patroni.get_primary()
         self.assertEqual(primary, "postgresql-k8s-1")
-        _get.assert_called_once_with("http://postgresql-k8s-0:8008/cluster")
+        _get.assert_called_once_with("http://postgresql-k8s-0:8008/cluster", verify=True)
 
         # Test returning unit name.
         _get.reset_mock()
         primary = self.patroni.get_primary(unit_name_pattern=True)
         self.assertEqual(primary, "postgresql-k8s/1")
-        _get.assert_called_once_with("http://postgresql-k8s-0:8008/cluster")
+        _get.assert_called_once_with("http://postgresql-k8s-0:8008/cluster", verify=True)
 
     @patch("os.chmod")
     @patch("os.chown")

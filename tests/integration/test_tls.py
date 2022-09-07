@@ -11,13 +11,12 @@ from tests.integration.helpers import (
     check_database_users_existence,
     deploy_and_relate_application_with_postgresql,
     is_tls_enabled,
-    scale_application,
 )
 
 MATTERMOST_APP_NAME = "mattermost"
 TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
 APPLICATION_UNITS = 2
-DATABASE_UNITS = 1
+DATABASE_UNITS = 3
 
 
 @pytest.mark.abort_on_fail
@@ -59,9 +58,6 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         # Relate it to the PostgreSQL to enable TLS.
         await ops_test.model.relate(DATABASE_APP_NAME, TLS_CERTIFICATES_APP_NAME)
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
-
-        # Add one more PostgreSQL unit.
-        await scale_application(ops_test, DATABASE_APP_NAME, 2)
 
         # Wait for all units enabling TLS.
         for unit in ops_test.model.applications[DATABASE_APP_NAME].units:

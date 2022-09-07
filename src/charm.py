@@ -599,7 +599,7 @@ class PostgresqlOperatorCharm(CharmBase):
             self._storage_path,
             self.get_secret("app", USER_PASSWORD_KEY),
             self.get_secret("app", REPLICATION_PASSWORD_KEY),
-            self.postgresql.is_tls_enabled(current_host=True),
+            self.postgresql.is_tls_enabled(check_current_host=True),
         )
 
     @property
