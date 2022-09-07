@@ -189,6 +189,4 @@ class PostgreSQLTLS(Object):
 
         key = self.charm.get_secret(SCOPE, "key")
         cert = self.charm.get_secret(SCOPE, "cert")
-        # if cert:
-        #     cert = key + "\n" + cert if key else cert
         return key, ca_file, cert
