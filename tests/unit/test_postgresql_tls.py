@@ -27,7 +27,7 @@ class TestPostgreSQLTLS(unittest.TestCase):
             certificate_signing_request="test-csr",
             certificate="test-cert",
             ca="test-ca",
-            chain="test-chain",
+            chain=["test-chain-ca-certificate", "test-chain-certificate"],
         )
 
     def emit_certificate_expiring_event(self) -> None:
@@ -150,7 +150,10 @@ class TestPostgreSQLTLS(unittest.TestCase):
         self.emit_certificate_available_event()
         self.assertEqual(self.charm.get_secret(SCOPE, "ca"), "test-ca")
         self.assertEqual(self.charm.get_secret(SCOPE, "cert"), "test-cert")
-        self.assertEqual(self.charm.get_secret(SCOPE, "chain"), "test-chain")
+        self.assertEqual(
+            self.charm.get_secret(SCOPE, "chain"),
+            "test-chain-ca-certificate\ntest-chain-certificate",
+        )
         _push_tls_files_to_workload.assert_called_once()
 
     @patch_network_get(private_address="1.1.1.1")
