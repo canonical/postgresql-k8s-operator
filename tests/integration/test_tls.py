@@ -9,8 +9,8 @@ from tests.integration.helpers import (
     DATABASE_APP_NAME,
     check_database_creation,
     check_database_users_existence,
+    check_tls,
     deploy_and_relate_application_with_postgresql,
-    is_tls_enabled,
 )
 
 MATTERMOST_APP_NAME = "mattermost"
@@ -61,7 +61,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
 
         # Wait for all units enabling TLS.
         for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
-            assert await is_tls_enabled(ops_test, unit.name)
+            assert await check_tls(ops_test, unit.name, enabled=True)
 
         # Deploy and check Mattermost user and database existence.
         relation_id = await deploy_and_relate_application_with_postgresql(
@@ -72,3 +72,13 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         mattermost_users = [f"relation_id_{relation_id}"]
 
         await check_database_users_existence(ops_test, mattermost_users, [])
+
+        # Remove the relations.
+        await ops_test.model.applications[DATABASE_APP_NAME].remove_relation(
+            f"{DATABASE_APP_NAME}:certificates", f"{TLS_CERTIFICATES_APP_NAME}:certificates"
+        )
+        await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=1000)
+
+        # Wait for all units disabling TLS.
+        for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
+            assert await check_tls(ops_test, unit.name, enabled=False)
