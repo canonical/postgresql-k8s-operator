@@ -417,6 +417,34 @@ async def check_tls(ops_test: OpsTest, unit_name: str, enabled: bool) -> bool:
         return False
 
 
+async def check_tls_patroni_api(ops_test: OpsTest, unit_name: str, enabled: bool) -> bool:
+    """Returns whether TLS is enabled on Patroni REST API.
+
+    Args:
+        ops_test: The ops test framework instance.
+        unit_name: The name of the unit where Patroni is running.
+        enabled: check if TLS is enabled/disabled
+
+    Returns:
+        Whether TLS is enabled/disabled on Patroni REST API.
+    """
+    unit_address = await get_unit_address(ops_test, unit_name)
+    try:
+        for attempt in Retrying(
+            stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
+        ):
+            with attempt:
+                # 'verify=False' is used here because the unit IP that is used in the test
+                # doesn't match the certificate hostname (that is a k8s hostname).
+                health_info = requests.get(
+                    f"{'https' if enabled else 'http'}://{unit_address}:8008/health",
+                    verify=False,
+                )
+                return health_info.status_code == 200
+    except RetryError:
+        return False
+
+
 async def restart_patroni(ops_test: OpsTest, unit_name: str) -> None:
     """Restart Patroni on a specific unit.
 
