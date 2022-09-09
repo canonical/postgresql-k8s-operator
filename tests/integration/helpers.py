@@ -383,15 +383,16 @@ async def get_unit_address(ops_test: OpsTest, unit_name: str) -> str:
     return status["applications"][unit_name.split("/")[0]].units[unit_name]["address"]
 
 
-async def is_tls_enabled(ops_test: OpsTest, unit_name: str) -> bool:
+async def check_tls(ops_test: OpsTest, unit_name: str, enabled: bool) -> bool:
     """Returns whether TLS is enabled on the specific PostgreSQL instance.
 
     Args:
         ops_test: The ops test framework instance.
         unit_name: The name of the unit of the PostgreSQL instance.
+        enabled: check if TLS is enabled/disabled
 
     Returns:
-        Whether TLS is enabled.
+        Whether TLS is enabled/disabled.
     """
     unit_address = await get_unit_address(ops_test, unit_name)
     password = await get_password(ops_test)
@@ -401,13 +402,19 @@ async def is_tls_enabled(ops_test: OpsTest, unit_name: str) -> bool:
         ):
             with attempt:
                 output = await execute_query_on_unit(
-                    unit_address, password, "SHOW ssl;", sslmode="require"
+                    unit_address,
+                    password,
+                    "SHOW ssl;",
+                    sslmode="require" if enabled else "disable",
                 )
-                if "on" not in output:
-                    raise ValueError(f"TLS is not enabled on {unit_name}")
+                tls_enabled = "on" in output
+                if enabled != tls_enabled:
+                    raise ValueError(
+                        f"TLS is{' not' if not tls_enabled else ''} enabled on {unit_name}"
+                    )
+                return True
     except RetryError:
         return False
-    return "on" in output
 
 
 async def restart_patroni(ops_test: OpsTest, unit_name: str) -> None:
