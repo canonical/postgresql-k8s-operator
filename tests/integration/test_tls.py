@@ -73,7 +73,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
 
         await check_database_users_existence(ops_test, mattermost_users, [])
 
-        # Remove the relations.
+        # Remove the relation.
         await ops_test.model.applications[DATABASE_APP_NAME].remove_relation(
             f"{DATABASE_APP_NAME}:certificates", f"{TLS_CERTIFICATES_APP_NAME}:certificates"
         )
