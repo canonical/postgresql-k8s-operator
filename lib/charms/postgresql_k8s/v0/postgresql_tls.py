@@ -125,7 +125,9 @@ class PostgreSQLTLS(Object):
             logger.error("An unknown certificate expiring.")
             return
 
-        self.charm.set_secret(SCOPE, "chain", event.chain)
+        self.charm.set_secret(
+            SCOPE, "chain", "\n".join(event.chain) if event.chain is not None else None
+        )
         self.charm.set_secret(SCOPE, "cert", event.certificate)
         self.charm.set_secret(SCOPE, "ca", event.ca)
 
