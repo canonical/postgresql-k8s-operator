@@ -19,7 +19,7 @@ resources:
   postgresql-image:
     type: oci-image
     description: OCI image for PostgreSQL (dataplatformoci/postgres-patroni)
-    upstream-source: dataplatformoci/postgres-patroni
+    upstream-source: neppel/patroni:edge
 
 peers:
   database-peers:
