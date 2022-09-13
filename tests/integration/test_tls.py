@@ -10,6 +10,7 @@ from tests.integration.helpers import (
     check_database_creation,
     check_database_users_existence,
     check_tls,
+    check_tls_patroni_api,
     deploy_and_relate_application_with_postgresql,
 )
 
@@ -62,6 +63,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         # Wait for all units enabling TLS.
         for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
             assert await check_tls(ops_test, unit.name, enabled=True)
+            assert await check_tls_patroni_api(ops_test, unit.name, enabled=True)
 
         # Deploy and check Mattermost user and database existence.
         relation_id = await deploy_and_relate_application_with_postgresql(
@@ -82,3 +84,4 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         # Wait for all units disabling TLS.
         for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
             assert await check_tls(ops_test, unit.name, enabled=False)
+            assert await check_tls_patroni_api(ops_test, unit.name, enabled=False)

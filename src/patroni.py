@@ -21,6 +21,8 @@ from tenacity import (
     wait_fixed,
 )
 
+from constants import TLS_CA_FILE
+
 logger = logging.getLogger(__name__)
 
 
@@ -40,6 +42,7 @@ class Patroni:
         storage_path: str,
         superuser_password: str,
         replication_password: str,
+        tls_enabled: bool,
     ):
         self._endpoint = endpoint
         self._endpoints = endpoints
@@ -48,6 +51,16 @@ class Patroni:
         self._planned_units = planned_units
         self._superuser_password = superuser_password
         self._replication_password = replication_password
+        self._tls_enabled = tls_enabled
+        # Variable mapping to requests library verify parameter.
+        # The CA bundle file is used to validate the server certificate when
+        # TLS is enabled, otherwise True is set because it's the default value.
+        self._verify = f"{self._storage_path}/{TLS_CA_FILE}" if tls_enabled else True
+
+    @property
+    def _patroni_url(self) -> str:
+        """Patroni REST API URL."""
+        return f"{'https' if self._tls_enabled else 'http'}://{self._endpoint}:8008"
 
     def get_primary(self, unit_name_pattern=False) -> str:
         """Get primary instance.
@@ -60,7 +73,7 @@ class Patroni:
         """
         primary = None
         # Request info from cluster endpoint (which returns all members of the cluster).
-        r = requests.get(f"http://{self._endpoint}:8008/cluster")
+        r = requests.get(f"{self._patroni_url}/cluster", verify=self._verify)
         for member in r.json()["members"]:
             if member["role"] == "leader":
                 primary = member["name"]
@@ -75,7 +88,7 @@ class Patroni:
     def cluster_members(self) -> set:
         """Get the current cluster members."""
         # Request info from cluster endpoint (which returns all members of the cluster).
-        r = requests.get(f"http://{self._endpoint}:8008/cluster")
+        r = requests.get(f"{self._patroni_url}/cluster", verify=self._verify)
         return set([member["name"] for member in r.json()["members"]])
 
     def are_all_members_ready(self) -> bool:
@@ -90,7 +103,7 @@ class Patroni:
         try:
             for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(3)):
                 with attempt:
-                    r = requests.get(f"http://{self._endpoint}:8008/cluster")
+                    r = requests.get(f"{self._patroni_url}/cluster", verify=self._verify)
         except RetryError:
             return False
 
@@ -107,7 +120,7 @@ class Patroni:
         try:
             for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
                 with attempt:
-                    r = requests.get(f"http://{self._endpoint}:8008/health")
+                    r = requests.get(f"{self._patroni_url}/health", verify=self._verify)
         except RetryError:
             return False
 
@@ -173,9 +186,9 @@ class Patroni:
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def reload_patroni_configuration(self) -> None:
         """Reloads the configuration after it was updated in the file."""
-        requests.post(f"http://{self._endpoint}:8008/reload")
+        requests.post(f"{self._patroni_url}/reload", verify=self._verify)
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def restart_postgresql(self) -> None:
         """Restart PostgreSQL."""
-        requests.post(f"http://{self._endpoint}:8008/restart")
+        requests.post(f"{self._patroni_url}/restart", verify=self._verify)

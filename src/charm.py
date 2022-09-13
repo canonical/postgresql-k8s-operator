@@ -137,7 +137,8 @@ class PostgresqlOperatorCharm(CharmBase):
     def postgresql(self) -> PostgreSQL:
         """Returns an instance of the object used to interact with the database."""
         return PostgreSQL(
-            host=self.primary_endpoint,
+            primary_host=self.primary_endpoint,
+            current_host=self.endpoint,
             user=USER,
             password=self.get_secret("app", f"{USER}-password"),
             database="postgres",
@@ -598,6 +599,7 @@ class PostgresqlOperatorCharm(CharmBase):
             self._storage_path,
             self.get_secret("app", USER_PASSWORD_KEY),
             self.get_secret("app", REPLICATION_PASSWORD_KEY),
+            self.postgresql.is_tls_enabled(check_current_host=True),
         )
 
     @property
