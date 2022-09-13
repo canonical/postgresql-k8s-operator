@@ -53,6 +53,8 @@ class Patroni:
         self._replication_password = replication_password
         self._tls_enabled = tls_enabled
         # Variable mapping to requests library verify parameter.
+        # The CA bundle file is used to validate the server certificate when
+        # TLS is enabled, otherwise True is set because it's the default value.
         self._verify = f"{self._storage_path}/{TLS_CA_FILE}" if tls_enabled else True
 
     @property

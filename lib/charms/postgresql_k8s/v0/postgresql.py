@@ -202,8 +202,9 @@ class PostgreSQL:
             ) as connection, connection.cursor() as cursor:
                 cursor.execute("SHOW ssl;")
                 return "on" in cursor.fetchone()[0]
-        except psycopg2.Error:
+        except psycopg2.Error as e:
             # Connection errors happen when PostgreSQL has not started yet.
+            logger.debug(e.pgerror)
             return False
 
     def update_user_password(self, username: str, password: str) -> None:
