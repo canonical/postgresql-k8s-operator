@@ -31,7 +31,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 3
+LIBPATCH = 4
 
 
 logger = logging.getLogger(__name__)
@@ -62,28 +62,36 @@ class PostgreSQL:
 
     def __init__(
         self,
-        host: str,
+        primary_host: str,
+        current_host: str,
         user: str,
         password: str,
         database: str,
     ):
-        self.host = host
+        self.primary_host = primary_host
+        self.current_host = current_host
         self.user = user
         self.password = password
         self.database = database
 
-    def _connect_to_database(self, database: str = None) -> psycopg2.extensions.connection:
+    def _connect_to_database(
+        self, database: str = None, connect_to_current_host: bool = False
+    ) -> psycopg2.extensions.connection:
         """Creates a connection to the database.
 
         Args:
             database: database to connect to (defaults to the database
                 provided when the object for this class was created).
+            connect_to_current_host: whether to connect to the current host
+                instead of the primary host.
 
         Returns:
              psycopg2 connection object.
         """
+        host = self.current_host if connect_to_current_host else self.primary_host
         connection = psycopg2.connect(
-            f"dbname='{database if database else self.database}' user='{self.user}' host='{self.host}' password='{self.password}' connect_timeout=1"
+            f"dbname='{database if database else self.database}' user='{self.user}' host='{host}'"
+            f"password='{self.password}' connect_timeout=1"
         )
         connection.autocommit = True
         return connection
@@ -178,19 +186,26 @@ class PostgreSQL:
             logger.error(f"Failed to get PostgreSQL version: {e}")
             raise PostgreSQLGetPostgreSQLVersionError()
 
-    def is_tls_enabled(self) -> bool:
+    def is_tls_enabled(self, check_current_host: bool = False) -> bool:
         """Returns whether TLS is enabled.
+
+        Args:
+            check_current_host: whether to check the current host
+                instead of the primary host.
 
         Returns:
             whether TLS is enabled.
         """
         try:
-            with self._connect_to_database() as connection, connection.cursor() as cursor:
+            with self._connect_to_database(
+                connect_to_current_host=check_current_host
+            ) as connection, connection.cursor() as cursor:
                 cursor.execute("SHOW ssl;")
                 return "on" in cursor.fetchone()[0]
         except psycopg2.Error as e:
-            logger.error(f"Failed to get check whether TLS is enabled: {e}")
-        return False
+            # Connection errors happen when PostgreSQL has not started yet.
+            logger.debug(e.pgerror)
+            return False
 
     def update_user_password(self, username: str, password: str) -> None:
         """Update a user password.
