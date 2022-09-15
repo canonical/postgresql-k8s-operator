@@ -22,6 +22,7 @@ class TestPatroni(unittest.TestCase):
             STORAGE_PATH,
             "superuser-password",
             "replication-password",
+            False,
         )
 
     @patch("requests.get")
@@ -38,13 +39,13 @@ class TestPatroni(unittest.TestCase):
         # Test returning pod name.
         primary = self.patroni.get_primary()
         self.assertEqual(primary, "postgresql-k8s-1")
-        _get.assert_called_once_with("http://postgresql-k8s-0:8008/cluster")
+        _get.assert_called_once_with("http://postgresql-k8s-0:8008/cluster", verify=True)
 
         # Test returning unit name.
         _get.reset_mock()
         primary = self.patroni.get_primary(unit_name_pattern=True)
         self.assertEqual(primary, "postgresql-k8s/1")
-        _get.assert_called_once_with("http://postgresql-k8s-0:8008/cluster")
+        _get.assert_called_once_with("http://postgresql-k8s-0:8008/cluster", verify=True)
 
     @patch("os.chmod")
     @patch("os.chown")
@@ -94,7 +95,7 @@ class TestPatroni(unittest.TestCase):
         # Patch the `open` method with our mock.
         with patch("builtins.open", mock, create=True):
             # Call the method
-            self.patroni.render_patroni_yml_file()
+            self.patroni.render_patroni_yml_file(enable_tls=False)
 
         # Check the template is opened read-only in the call to open.
         self.assertEqual(mock.call_args_list[0][0], ("templates/patroni.yml.j2", "r"))
@@ -104,6 +105,40 @@ class TestPatroni(unittest.TestCase):
             expected_content,
             0o644,
         )
+
+        # Then test the rendering of the file with TLS enabled.
+        _render_file.reset_mock()
+        expected_content_with_tls = template.render(
+            enable_tls=True,
+            endpoint=self.patroni._endpoint,
+            endpoints=self.patroni._endpoints,
+            namespace=self.patroni._namespace,
+            storage_path=self.patroni._storage_path,
+            superuser_password=self.patroni._superuser_password,
+            replication_password=self.patroni._replication_password,
+        )
+        self.assertNotEqual(expected_content_with_tls, expected_content)
+
+        # Patch the `open` method with our mock.
+        with patch("builtins.open", mock, create=True):
+            # Call the method
+            self.patroni.render_patroni_yml_file(enable_tls=True)
+
+        # Ensure the correct rendered template is sent to _render_file method.
+        _render_file.assert_called_once_with(
+            f"{STORAGE_PATH}/patroni.yml",
+            expected_content_with_tls,
+            0o644,
+        )
+
+        # Also, ensure the right parameters are in the expected content
+        # (as it was already validated with the above render file call).
+        self.assertIn("ssl: on", expected_content_with_tls)
+        self.assertIn("ssl_ca_file: /var/lib/postgresql/data/ca.pem", expected_content_with_tls)
+        self.assertIn(
+            "ssl_cert_file: /var/lib/postgresql/data/cert.pem", expected_content_with_tls
+        )
+        self.assertIn("ssl_key_file: /var/lib/postgresql/data/key.pem", expected_content_with_tls)
 
     @patch("charm.Patroni._render_file")
     def test_render_postgresql_conf_file(self, _render_file):
@@ -143,6 +178,7 @@ class TestPatroni(unittest.TestCase):
             STORAGE_PATH,
             "superuser-password",
             "replication-password",
+            False,
         )
         expected_content = template.render(
             logging_collector="on",

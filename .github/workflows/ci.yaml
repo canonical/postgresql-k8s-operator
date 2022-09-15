@@ -114,3 +114,18 @@ jobs:
           bootstrap-options: "--agent-version 2.9.29"
       - name: Run integration tests
         run: tox -e password-rotation-integration
+
+  integration-test-microk8s-tls:
+    name: Integration tests for TLS (microk8s)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+          # This is needed until https://bugs.launchpad.net/juju/+bug/1977582 is fixed.
+          bootstrap-options: "--agent-version 2.9.29"
+      - name: Run integration tests
+        run: tox -e tls-integration

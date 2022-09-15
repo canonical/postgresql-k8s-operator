@@ -15,7 +15,14 @@ from lightkube.core.exceptions import ApiError
 from lightkube.generic_resource import GenericNamespacedResource
 from lightkube.resources.core_v1 import Endpoints, Service
 from pytest_operator.plugin import OpsTest
-from tenacity import retry, retry_if_result, stop_after_attempt, wait_exponential
+from tenacity import (
+    RetryError,
+    Retrying,
+    retry,
+    retry_if_result,
+    stop_after_attempt,
+    wait_exponential,
+)
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
@@ -131,6 +138,7 @@ async def deploy_and_relate_application_with_postgresql(
     number_of_units: int,
     channel: str = "stable",
     relation: str = "db",
+    status: str = "blocked",
 ) -> int:
     """Helper function to deploy and relate application with PostgreSQL.
 
@@ -142,6 +150,7 @@ async def deploy_and_relate_application_with_postgresql(
         channel: The channel to use for the charm.
         relation: Name of the PostgreSQL relation to relate
             the application to.
+        status: The status to wait for in the application (default: blocked).
 
     Returns:
         the id of the created relation.
@@ -155,7 +164,7 @@ async def deploy_and_relate_application_with_postgresql(
     )
     await ops_test.model.wait_for_idle(
         apps=[application_name],
-        status="blocked",
+        status=status,
         raise_on_blocked=False,
         timeout=1000,
     )
@@ -179,6 +188,7 @@ async def execute_query_on_unit(
     password: str,
     query: str,
     database: str = "postgres",
+    sslmode: str = None,
 ):
     """Execute given PostgreSQL query on a unit.
 
@@ -187,12 +197,15 @@ async def execute_query_on_unit(
         password: The PostgreSQL superuser password.
         query: Query to execute.
         database: Optional database to connect to (defaults to postgres database).
+        sslmode: Optional ssl mode to use (defaults to None).
 
     Returns:
-        A list of rows that were potentially returned from the query.
+        The result of the query.
     """
+    extra_connection_parameters = f" sslmode={sslmode}" if sslmode is not None else ""
     with psycopg2.connect(
-        f"dbname='{database}' user='operator' host='{unit_address}' password='{password}' connect_timeout=10"
+        f"dbname='{database}' user='operator' host='{unit_address}'"
+        f"password='{password}' connect_timeout=10{extra_connection_parameters}"
     ) as connection, connection.cursor() as cursor:
         cursor.execute(query)
         output = list(itertools.chain(*cursor.fetchall()))
@@ -368,6 +381,68 @@ async def get_unit_address(ops_test: OpsTest, unit_name: str) -> str:
     """
     status = await ops_test.model.get_status()
     return status["applications"][unit_name.split("/")[0]].units[unit_name]["address"]
+
+
+async def check_tls(ops_test: OpsTest, unit_name: str, enabled: bool) -> bool:
+    """Returns whether TLS is enabled on the specific PostgreSQL instance.
+
+    Args:
+        ops_test: The ops test framework instance.
+        unit_name: The name of the unit of the PostgreSQL instance.
+        enabled: check if TLS is enabled/disabled
+
+    Returns:
+        Whether TLS is enabled/disabled.
+    """
+    unit_address = await get_unit_address(ops_test, unit_name)
+    password = await get_password(ops_test)
+    try:
+        for attempt in Retrying(
+            stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
+        ):
+            with attempt:
+                output = await execute_query_on_unit(
+                    unit_address,
+                    password,
+                    "SHOW ssl;",
+                    sslmode="require" if enabled else "disable",
+                )
+                tls_enabled = "on" in output
+                if enabled != tls_enabled:
+                    raise ValueError(
+                        f"TLS is{' not' if not tls_enabled else ''} enabled on {unit_name}"
+                    )
+                return True
+    except RetryError:
+        return False
+
+
+async def check_tls_patroni_api(ops_test: OpsTest, unit_name: str, enabled: bool) -> bool:
+    """Returns whether TLS is enabled on Patroni REST API.
+
+    Args:
+        ops_test: The ops test framework instance.
+        unit_name: The name of the unit where Patroni is running.
+        enabled: check if TLS is enabled/disabled
+
+    Returns:
+        Whether TLS is enabled/disabled on Patroni REST API.
+    """
+    unit_address = await get_unit_address(ops_test, unit_name)
+    try:
+        for attempt in Retrying(
+            stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
+        ):
+            with attempt:
+                # 'verify=False' is used here because the unit IP that is used in the test
+                # doesn't match the certificate hostname (that is a k8s hostname).
+                health_info = requests.get(
+                    f"{'https' if enabled else 'http'}://{unit_address}:8008/health",
+                    verify=False,
+                )
+                return health_info.status_code == 200
+    except RetryError:
+        return False
 
 
 async def restart_patroni(ops_test: OpsTest, unit_name: str) -> None:

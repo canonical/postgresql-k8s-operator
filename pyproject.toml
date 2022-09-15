@@ -19,6 +19,7 @@ markers = [
     "db_admin_relation_tests",
     "ha_tests",
     "password_rotation_tests",
+    "tls_tests",
 ]
 
 # Formatting tools configuration
