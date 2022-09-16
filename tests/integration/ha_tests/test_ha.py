@@ -16,16 +16,17 @@ from tests.integration.ha_tests.helpers import (
     kill_process,
     postgresql_ready,
     secondary_up_to_date,
+    start_continuous_writes,
     stop_continuous_writes,
 )
 
-# PATRONI_PROCESS = "/usr/bin/python3 /usr/local/bin/patroni /var/lib/postgresql/data/patroni.yml"
+PATRONI_PROCESS = "/usr/local/bin/patroni"
 POSTGRESQL_PROCESS = "postgres"
 
 
 @pytest.mark.abort_on_fail
 @pytest.mark.ha_tests
-async def test_build_and_deploy(ops_test: OpsTest, continuous_writes) -> None:
+async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy three unit of PostgreSQL."""
     # It is possible for users to provide their own cluster for HA testing. Hence, check if there
     # is a pre-existing cluster.
@@ -46,15 +47,14 @@ async def test_build_and_deploy(ops_test: OpsTest, continuous_writes) -> None:
 
 
 @pytest.mark.ha_tests
-async def test_kill_db_processes(ops_test) -> None:
+@pytest.mark.parametrize("process", [POSTGRESQL_PROCESS, PATRONI_PROCESS])
+async def test_kill_db_process(ops_test: OpsTest, process: str, continuous_writes) -> None:
     # locate primary unit
     app = await app_name(ops_test)
     primary_name = await get_primary(ops_test, app)
 
-    await ops_test.model.relate(app, "application")
-    await ops_test.model.wait_for_idle(status="active", timeout=1000)
+    await start_continuous_writes(ops_test, app)
 
-    print(f"primary_name: {primary_name}")
     await change_master_start_timeout(ops_test, 0)
     await kill_process(ops_test, primary_name, POSTGRESQL_PROCESS, kill_code="SIGKILL")
     await change_master_start_timeout(ops_test, 300)
@@ -64,8 +64,6 @@ async def test_kill_db_processes(ops_test) -> None:
     writes = await count_writes(ops_test)
     time.sleep(5)
     more_writes = await count_writes(ops_test)
-    print(writes)
-    print(more_writes)
     assert more_writes > writes, "writes not continuing to DB"
 
     # sleep for twice the median election time
@@ -84,8 +82,6 @@ async def test_kill_db_processes(ops_test) -> None:
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
             with attempt:
                 actual_writes = await count_writes(ops_test)
-                print(actual_writes)
-                print(total_expected_writes)
                 assert total_expected_writes == actual_writes, "writes to the db were missed."
     except RetryError:
         raise

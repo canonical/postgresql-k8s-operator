@@ -1,6 +1,6 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
-
+import subprocess
 from pathlib import Path
 from typing import Optional
 
@@ -21,7 +21,7 @@ class ProcessError(Exception):
     pass
 
 
-async def app_name(ops_test: OpsTest) -> Optional[str]:
+async def app_name(ops_test: OpsTest, application_name: str = "postgresql-k8s") -> Optional[str]:
     """Returns the name of the cluster running PostgreSQL.
 
     This is important since not all deployments of the PostgreSQL charm have the application name
@@ -33,7 +33,7 @@ async def app_name(ops_test: OpsTest) -> Optional[str]:
     for app in ops_test.model.applications:
         # note that format of the charm field is not exactly "postgresql"
         # \but instead takes the form of `local:focal/postgresql-6`
-        if "postgresql" in status["applications"][app]["charm"]:
+        if application_name in status["applications"][app]["charm"]:
             return app
 
     return None
@@ -79,6 +79,19 @@ async def count_writes(ops_test: OpsTest) -> int:
     except RetryError:
         return -1
     return count
+
+
+async def cut_network_from_unit(ops_test: OpsTest, unit_name: str) -> None:
+    """Cut network from a k8s pod.
+
+    Args:
+        ops_test: ops_test instance.
+        unit_name: the name of the unit to cut network from.
+    """
+    # Add an iptables rule to block
+    unit_ip = await get_unit_address(ops_test, unit_name)
+    cut_network_command = f"sudo iptables -I INPUT -s {unit_ip} -j DROP"
+    subprocess.check_call(cut_network_command.split())
 
 
 async def get_password(ops_test: OpsTest, app) -> str:
@@ -138,6 +151,19 @@ async def postgresql_ready(ops_test, unit_name: str) -> bool:
     return True
 
 
+async def restore_network_for_unit(ops_test: OpsTest, unit_name: str) -> None:
+    """Restore network for a k8s pod.
+
+    Args:
+        ops_test: ops_test instance.
+        unit_name: the name of the unit to cut network from.
+    """
+    # Remove the previously added iptables rule.
+    unit_ip = await get_unit_address(ops_test, unit_name)
+    restore_network_command = f"sudo iptables -D INPUT -s {unit_ip} -j DROP"
+    subprocess.check_call(restore_network_command.split())
+
+
 async def secondary_up_to_date(ops_test: OpsTest, unit_ip, expected_writes) -> bool:
     """Checks if secondary is up to date with the cluster.
 
@@ -162,8 +188,6 @@ async def secondary_up_to_date(ops_test: OpsTest, unit_ip, expected_writes) -> b
                 ) as connection, connection.cursor() as cursor:
                     cursor.execute("SELECT COUNT(number) FROM continuous_writes;")
                     secondary_writes = cursor.fetchone()[0]
-                    print(secondary_writes)
-                    print(expected_writes)
                     assert secondary_writes == expected_writes
     except RetryError:
         return False
@@ -171,6 +195,26 @@ async def secondary_up_to_date(ops_test: OpsTest, unit_ip, expected_writes) -> b
         connection.close()
 
     return True
+
+
+async def start_continuous_writes(ops_test: OpsTest, app: str) -> None:
+    """Start continuous writes to PostgreSQL."""
+    # start the process
+    relations = [
+        relation
+        for relation in ops_test.model.applications[app].relations
+        if not relation.is_peer
+        and f"{relation.requires.application_name}:{relation.requires.name}"
+        == "application:database"
+    ]
+    if not relations:
+        await ops_test.model.relate(app, "application")
+        await ops_test.model.wait_for_idle(status="active", timeout=1000)
+    else:
+        action = await ops_test.model.units.get("application/0").run_action(
+            "start-continuous-writes"
+        )
+        await action.wait()
 
 
 async def stop_continuous_writes(ops_test: OpsTest) -> int:
