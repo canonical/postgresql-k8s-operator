@@ -32,7 +32,14 @@ from ops.model import (
     Relation,
     WaitingStatus,
 )
-from ops.pebble import Layer, PathError, ProtocolError
+from ops.pebble import (
+    ChangeError,
+    ChangeState,
+    Layer,
+    PathError,
+    ProtocolError,
+    ServiceStatus,
+)
 from requests import ConnectionError
 from tenacity import RetryError
 
@@ -587,6 +594,24 @@ class PostgresqlOperatorCharm(CharmBase):
                 self.unit.status = ActiveStatus("Primary")
         except (RetryError, ConnectionError) as e:
             logger.error(f"failed to get primary with error {e}")
+            # Check if the service is running correctly:
+            container = self.unit.get_container("postgresql")
+            client = container.pebble
+            changes = client.get_changes(select=ChangeState.ALL, service=self._postgresql_service)
+            if len(changes) == 0:
+                return
+
+            services = client.get_services(names=[self._postgresql_service])
+            if (
+                services[0].current == ServiceStatus.INACTIVE
+                and changes[-1].kind == "restart"
+                and changes[-1].status == "Done"
+            ):
+                logger.info("starting Patroni from inactive state")
+                try:
+                    container.start(self._postgresql_service)
+                except ChangeError as e:
+                    logger.warning(e)
 
     @property
     def _patroni(self):
@@ -662,6 +687,15 @@ class PostgresqlOperatorCharm(CharmBase):
                         "PATRONI_SCOPE": f"patroni-{self._name}",
                         "PATRONI_REPLICATION_USERNAME": REPLICATION_USER,
                         "PATRONI_SUPERUSER_USERNAME": USER,
+                    },
+                    "on-check-failure": {"patroni": "restart"},
+                }
+            },
+            "checks": {
+                "patroni": {
+                    "override": "replace",
+                    "http": {
+                        "url": self._patroni._patroni_url,
                     },
                 }
             },
