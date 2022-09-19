@@ -22,6 +22,7 @@ from tests.integration.ha_tests.helpers import (
 
 PATRONI_PROCESS = "/usr/local/bin/patroni"
 POSTGRESQL_PROCESS = "postgres"
+DB_PROCESSES = [POSTGRESQL_PROCESS, PATRONI_PROCESS]
 
 
 @pytest.mark.abort_on_fail
@@ -47,7 +48,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.ha_tests
-@pytest.mark.parametrize("process", [POSTGRESQL_PROCESS, PATRONI_PROCESS])
+@pytest.mark.parametrize("process", DB_PROCESSES)
 async def test_kill_db_process(ops_test: OpsTest, process: str, continuous_writes) -> None:
     # locate primary unit
     app = await app_name(ops_test)
@@ -57,7 +58,6 @@ async def test_kill_db_process(ops_test: OpsTest, process: str, continuous_write
 
     await change_master_start_timeout(ops_test, 0)
     await kill_process(ops_test, primary_name, process, kill_code="SIGKILL")
-    await change_master_start_timeout(ops_test, 300)
 
     async with ops_test.fast_forward():
         # verify new writes are continuing by counting the number of writes before and after a
@@ -69,6 +69,7 @@ async def test_kill_db_process(ops_test: OpsTest, process: str, continuous_write
 
         # verify that db service got restarted and is ready
         assert await postgresql_ready(ops_test, primary_name)
+        await change_master_start_timeout(ops_test, 300)
 
     # verify that a new primary gets elected (ie old primary is secondary)
     new_primary_name = await get_primary(ops_test, app)
@@ -88,52 +89,3 @@ async def test_kill_db_process(ops_test: OpsTest, process: str, continuous_write
     assert await secondary_up_to_date(
         ops_test, primary_name, total_expected_writes
     ), "secondary not up to date with the cluster after restarting."
-
-
-# @pytest.mark.ha_tests
-# @pytest.mark.parametrize("process", [POSTGRESQL_PROCESS, PATRONI_PROCESS])
-# async def test_freeze_db_process(ops_test: OpsTest, process: str, continuous_writes) -> None:
-#     # locate primary unit
-#     app = await app_name(ops_test)
-#     primary_name = await get_primary(ops_test, app)
-#
-#     await start_continuous_writes(ops_test, app)
-#
-#     await change_master_start_timeout(ops_test, 0)
-#     await kill_process(ops_test, primary_name, process, kill_code="SIGSTOP")
-#     await change_master_start_timeout(ops_test, 300)
-#
-#     # verify new writes are continuing by counting the number of writes before and after a
-#     # 5 seconds wait
-#     writes = await count_writes(ops_test)
-#     time.sleep(5)
-#     more_writes = await count_writes(ops_test)
-#     assert more_writes > writes, "writes not continuing to DB"
-#
-#     # un-freeze the old primary
-#     await kill_process(ops_test, primary_name, process, kill_code="SIGCONT")
-#
-#     # sleep for twice the median election time
-#     time.sleep(30 * 2)
-#
-#     # verify that db service got restarted and is ready
-#     assert await postgresql_ready(ops_test, primary_name)
-#
-#     # verify that a new primary gets elected (ie old primary is secondary)
-#     new_primary_name = await get_primary(ops_test, app)
-#     assert new_primary_name != primary_name
-#
-#     # verify that no writes to the db were missed
-#     total_expected_writes = await stop_continuous_writes(ops_test)
-#     try:
-#         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
-#             with attempt:
-#                 actual_writes = await count_writes(ops_test)
-#                 assert total_expected_writes == actual_writes, "writes to the db were missed."
-#     except RetryError:
-#         raise
-#
-#     # verify that old primary is up to date.
-#     assert await secondary_up_to_date(
-#         ops_test, primary_name, total_expected_writes
-#     ), "secondary not up to date with the cluster after restarting."
