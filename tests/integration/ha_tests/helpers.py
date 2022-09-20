@@ -6,6 +6,9 @@ from typing import Optional
 import psycopg2
 import requests
 import yaml
+from kubernetes import config
+from kubernetes.client.api import core_v1_api
+from kubernetes.stream import stream
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
@@ -106,23 +109,37 @@ async def get_primary(ops_test: OpsTest, app) -> str:
 
 async def kill_process(ops_test: OpsTest, unit_name: str, process: str, kill_code: str) -> None:
     """Kills process on the unit according to the provided kill code."""
-    # Killing the only replica can be disastrous.
+    # Killing the only instance can be disastrous.
     app = await app_name(ops_test)
     if len(ops_test.model.applications[app].units) < 2:
         await ops_test.model.applications[app].add_unit(count=1)
         await ops_test.model.wait_for_idle(apps=[app], status="active", timeout=1000)
 
-    # kill_cmd = f"ssh --container postgresql {unit_name} pkill --signal {kill_code} -f {process}"
-    pod_name = unit_name.replace("/", "-")
-    kill_cmd = (
-        f"microk8s kubectl exec -n {ops_test.model.info.name} --container postgresql {pod_name} -- "
-        f"pkill --signal {kill_code} -f {process}"
-    )
-    return_code, _, _ = await ops_test.run(*kill_cmd.split())
+    # Load Kubernetes configuration to connect to the cluster.
+    config.load_kube_config()
 
-    if return_code != 0:
+    # Execute the kill command.
+    pod_name = unit_name.replace("/", "-")
+    kill_cmd = f"pkill --signal {kill_code} -f {process}"
+    response = stream(
+        core_v1_api.CoreV1Api().connect_get_namespaced_pod_exec,
+        pod_name,
+        ops_test.model.info.name,
+        container="postgresql",
+        command=kill_cmd.split(),
+        stderr=True,
+        stdin=False,
+        stdout=True,
+        tty=False,
+        _preload_content=False,
+    )
+    response.run_forever(timeout=5)
+
+    if response.returncode != 0:
         raise ProcessError(
-            "Expected kill command %s to succeed instead it failed: %s", kill_cmd, return_code
+            "Expected kill command %s to succeed instead it failed: %s",
+            kill_cmd,
+            response.returncode,
         )
 
 
