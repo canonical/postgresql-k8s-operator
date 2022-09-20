@@ -39,7 +39,7 @@ async def app_name(ops_test: OpsTest, application_name: str = "postgresql-k8s") 
     return None
 
 
-async def change_master_start_timeout(ops_test: OpsTest, seconds: int) -> None:
+async def change_master_start_timeout(ops_test: OpsTest, seconds: Optional[int]) -> None:
     """Change master start timeout configuration.
 
     Args:
@@ -79,6 +79,25 @@ async def count_writes(ops_test: OpsTest) -> int:
     except RetryError:
         return -1
     return count
+
+
+async def get_master_start_timeout(ops_test: OpsTest) -> Optional[int]:
+    """Get the master start timeout configuration.
+
+    Args:
+        ops_test: ops_test instance.
+
+    Returns:
+        master start timeout in seconds or None if it's using the default value.
+    """
+    for attempt in Retrying(stop=stop_after_delay(30 * 2), wait=wait_fixed(3)):
+        with attempt:
+            app = await app_name(ops_test)
+            primary_name = await get_primary(ops_test, app)
+            unit_ip = await get_unit_address(ops_test, primary_name)
+            configuration_info = requests.get(f"http://{unit_ip}:8008/config")
+            master_start_timeout = configuration_info.json().get("master_start_timeout")
+            return int(master_start_timeout) if master_start_timeout is not None else None
 
 
 async def get_password(ops_test: OpsTest, app) -> str:

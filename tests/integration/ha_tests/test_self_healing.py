@@ -12,6 +12,7 @@ from tests.integration.ha_tests.helpers import (
     app_name,
     change_master_start_timeout,
     count_writes,
+    get_master_start_timeout,
     get_primary,
     kill_process,
     postgresql_ready,
@@ -58,20 +59,22 @@ async def test_kill_db_process(ops_test: OpsTest, process: str, continuous_write
     await start_continuous_writes(ops_test, app)
 
     # Change the parameter that makes the primary reelection faster and kill the database process.
+    initial_master_start_timeout = await get_master_start_timeout(ops_test)
     await change_master_start_timeout(ops_test, 0)
     await kill_process(ops_test, primary_name, process, kill_code="SIGKILL")
 
     async with ops_test.fast_forward():
         # Verify new writes are continuing by counting the number of writes before and after a
-        # 10 seconds wait
+        # 15 seconds wait (this is a little more than the loop wait configuration, that is
+        # considered to trigger a fail-over after master_start_timeout is changed).
         writes = await count_writes(ops_test)
-        time.sleep(10)
+        time.sleep(15)
         more_writes = await count_writes(ops_test)
         assert more_writes > writes, "writes not continuing to DB"
 
         # Verify that the database service got restarted and is ready in the old primary.
         assert await postgresql_ready(ops_test, primary_name)
-        await change_master_start_timeout(ops_test, 300)
+        await change_master_start_timeout(ops_test, initial_master_start_timeout)
 
     # Verify that a new primary gets elected (ie old primary is secondary).
     new_primary_name = await get_primary(ops_test, app)
