@@ -85,6 +85,21 @@ jobs:
       - name: Run integration tests
         run: tox -e db-admin-relation-integration
 
+  integration-test-microk8s-ha-self-healing:
+    name: Integration tests for high availability self healing (microk8s)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+          # This is needed until https://bugs.launchpad.net/juju/+bug/1977582 is fixed.
+          bootstrap-options: "--agent-version 2.9.29"
+      - name: Run integration tests
+        run: tox -e ha-self-healing-integration
+
   integration-test-microk8s-password-rotation:
     name: Integration tests for password rotation (microk8s)
     runs-on: ubuntu-latest

@@ -53,6 +53,10 @@ class PostgreSQLGetPostgreSQLVersionError(Exception):
     """Exception raised when retrieving PostgreSQL version fails."""
 
 
+class PostgreSQLListUsersError(Exception):
+    """Exception raised when retrieving PostgreSQL users list fails."""
+
+
 class PostgreSQLUpdateUserPasswordError(Exception):
     """Exception raised when updating a user password fails."""
 
@@ -132,13 +136,18 @@ class PostgreSQL:
         try:
             with self._connect_to_database() as connection, connection.cursor() as cursor:
                 cursor.execute(f"SELECT TRUE FROM pg_roles WHERE rolname='{user}';")
-                user_definition = f"{user} WITH LOGIN{' SUPERUSER' if admin else ''} ENCRYPTED PASSWORD '{password}'"
+                user_definition = (
+                    f"WITH LOGIN{' SUPERUSER' if admin else ''} ENCRYPTED PASSWORD '{password}'"
+                )
                 if extra_user_roles:
                     user_definition += f' {extra_user_roles.replace(",", " ")}'
                 if cursor.fetchone() is not None:
-                    cursor.execute(f"ALTER ROLE {user_definition};")
+                    statement = "ALTER ROLE {}"
                 else:
-                    cursor.execute(f"CREATE ROLE {user_definition};")
+                    statement = "CREATE ROLE {}"
+                cursor.execute(
+                    sql.SQL(f"{statement} {user_definition};").format(sql.Identifier(user))
+                )
         except psycopg2.Error as e:
             logger.error(f"Failed to create user: {e}")
             raise PostgreSQLCreateUserError()
@@ -161,12 +170,16 @@ class PostgreSQL:
                 with self._connect_to_database(
                     database
                 ) as connection, connection.cursor() as cursor:
-                    cursor.execute(f"REASSIGN OWNED BY {user} TO postgres;")
-                    cursor.execute(f"DROP OWNED BY {user};")
+                    cursor.execute(
+                        sql.SQL("REASSIGN OWNED BY {} TO {};").format(
+                            sql.Identifier(user), sql.Identifier(self.user)
+                        )
+                    )
+                    cursor.execute(sql.SQL("DROP OWNED BY {};").format(sql.Identifier(user)))
 
             # Delete the user.
             with self._connect_to_database() as connection, connection.cursor() as cursor:
-                cursor.execute(f"DROP ROLE {user};")
+                cursor.execute(sql.SQL("DROP ROLE {};").format(sql.Identifier(user)))
         except psycopg2.Error as e:
             logger.error(f"Failed to delete user: {e}")
             raise PostgreSQLDeleteUserError()

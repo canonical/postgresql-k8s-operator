@@ -98,6 +98,7 @@ class TestCharm(unittest.TestCase):
         expected = self.charm._postgresql_layer().to_dict()
         expected.pop("summary", "")
         expected.pop("description", "")
+        expected.pop("checks", "")
         # Check the plan is as expected.
         self.assertEqual(plan.to_dict(), expected)
         self.assertEqual(self.harness.model.unit.status, ActiveStatus())
@@ -250,8 +251,9 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("ops.testing._TestingPebbleClient.get_changes", return_value=[])
     @patch("charm.Patroni.get_primary")
-    def test_on_update_status_with_error_on_get_primary(self, _get_primary):
+    def test_on_update_status_with_error_on_get_primary(self, _get_primary, _):
         _get_primary.side_effect = [RetryError("fake error")]
 
         with self.assertLogs("charm", "ERROR") as logs:
@@ -316,6 +318,15 @@ class TestCharm(unittest.TestCase):
                         "PATRONI_SCOPE": f"patroni-{self.charm._name}",
                         "PATRONI_REPLICATION_USERNAME": "replication",
                         "PATRONI_SUPERUSER_USERNAME": "operator",
+                    },
+                    "on-check-failure": {"patroni": "restart"},
+                }
+            },
+            "checks": {
+                "patroni": {
+                    "override": "replace",
+                    "http": {
+                        "url": "http://postgresql-k8s-0.postgresql-k8s-endpoints:8008",
                     },
                 }
             },
