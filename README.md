@@ -68,6 +68,23 @@ juju relate postgresql-k8s:db finos-waltz-k8s
 juju relate postgresql-k8s:db-admin discourse-k8s
 ```
 
+#### `tls-certificates` interface:
+
+The Charmed PostgreSQL Kubernetes Operator also supports TLS encryption on internal and external connections. To enable TLS:
+
+```shell
+# Deploy the TLS Certificates Operator. 
+juju deploy tls-certificates-operator --channel=edge
+# Add the necessary configurations for TLS.
+juju config tls-certificates-operator generate-self-signed-certificates="true" ca-common-name="Test CA" 
+# Enable TLS via relation.
+juju relate postgresql-k8s tls-certificates-operator
+# Disable TLS by removing relation.
+juju remove-relation postgresql-k8s tls-certificates-operator
+```
+
+Note: The TLS settings shown here are for self-signed-certificates, which are not recommended for production clusters. The TLS Certificates Operator offers a variety of configurations. Read more on the TLS Certificates Operator [here](https://charmhub.io/tls-certificates-operator).
+
 ## Security
 Security issues in the Charmed PostgreSQL Kubernetes Operator can be reported through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). Please do not file GitHub issues about security issues.
 
