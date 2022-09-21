@@ -10,9 +10,7 @@ from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 from tests.integration.ha_tests.helpers import (
     METADATA,
     app_name,
-    change_master_start_timeout,
     count_writes,
-    get_master_start_timeout,
     get_primary,
     kill_process,
     postgresql_ready,
@@ -50,7 +48,9 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
 @pytest.mark.ha_self_healing_tests
 @pytest.mark.parametrize("process", DB_PROCESSES)
-async def test_kill_db_process(ops_test: OpsTest, process: str, continuous_writes) -> None:
+async def test_kill_db_process(
+    ops_test: OpsTest, process: str, continuous_writes, master_start_timeout
+) -> None:
     # Locate primary unit.
     app = await app_name(ops_test)
     primary_name = await get_primary(ops_test, app)
@@ -58,9 +58,7 @@ async def test_kill_db_process(ops_test: OpsTest, process: str, continuous_write
     # Start an application that continuously writes data to the database.
     await start_continuous_writes(ops_test, app)
 
-    # Change the parameter that makes the primary reelection faster and kill the database process.
-    initial_master_start_timeout = await get_master_start_timeout(ops_test)
-    await change_master_start_timeout(ops_test, 0)
+    # Kill the database process.
     await kill_process(ops_test, primary_name, process, kill_code="SIGKILL")
 
     async with ops_test.fast_forward():
@@ -74,7 +72,6 @@ async def test_kill_db_process(ops_test: OpsTest, process: str, continuous_write
 
         # Verify that the database service got restarted and is ready in the old primary.
         assert await postgresql_ready(ops_test, primary_name)
-        await change_master_start_timeout(ops_test, initial_master_start_timeout)
 
     # Verify that a new primary gets elected (ie old primary is secondary).
     new_primary_name = await get_primary(ops_test, app)
