@@ -595,11 +595,14 @@ class PostgresqlOperatorCharm(CharmBase):
         except (RetryError, ConnectionError) as e:
             logger.error(f"failed to get primary with error {e}")
 
-            # # Workaround for restarting the service if the Patroni
-            # # OS process is killed and pebble is not able to restart it
-            # # like described on https://github.com/canonical/pebble/issues/149.
-            # container = self.unit.get_container("postgresql")
-            # client = container.pebble
+            # Workaround for restarting the service if the Patroni
+            # OS process is killed and pebble is not able to restart it
+            # like described on https://github.com/canonical/pebble/issues/149.
+            container = self.unit.get_container("postgresql")
+            client = container.pebble
+            checks = client.get_checks()
+            logger.error(f"checks: {str(checks)}")
+            return
             # changes = client.get_changes(select=ChangeState.ALL, service=self._postgresql_service)
             # if len(changes) == 0:
             #     return
@@ -694,7 +697,7 @@ class PostgresqlOperatorCharm(CharmBase):
                         "PATRONI_REPLICATION_USERNAME": REPLICATION_USER,
                         "PATRONI_SUPERUSER_USERNAME": USER,
                     },
-                    "on-check-failure": {"patroni": "restart"},
+                    # "on-check-failure": {"patroni": "restart"},
                 }
             },
             "checks": {
