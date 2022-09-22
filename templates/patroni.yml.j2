@@ -2,6 +2,9 @@ bootstrap:
   dcs:
     postgresql:
       use_pg_rewind: true
+      parameters:
+        max_wal_senders: 3
+        wal_level: logical
   initdb:
   - auth-host: md5
   - auth-local: trust
