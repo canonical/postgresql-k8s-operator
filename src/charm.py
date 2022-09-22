@@ -581,7 +581,16 @@ class PostgresqlOperatorCharm(CharmBase):
                     logger.error(f"failed to delete resource: {resource}.")
 
     def _on_update_status(self, _) -> None:
-        # Display an active status message if the current unit is the primary.
+        """Display an active status message if the current unit is the primary."""
+        container = self.unit.get_container("postgresql")
+        if not container.can_connect():
+            return
+
+        services = container.pebble.get_services(names=[self._postgresql_service])
+        if len(services) == 0:
+            # Service has not been added nor started yet, so don't try to check Patroni API.
+            return
+
         try:
             if self._patroni.get_primary(unit_name_pattern=True) == self.unit.name:
                 self.unit.status = ActiveStatus("Primary")
