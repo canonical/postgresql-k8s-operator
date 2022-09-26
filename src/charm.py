@@ -406,6 +406,11 @@ class PostgresqlOperatorCharm(CharmBase):
                 self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
                 return
 
+            if not self._patroni.primary_endpoint_ready:
+                self.unit.status = WaitingStatus("awaiting for primary endpoint to be ready")
+                event.defer()
+                return
+
             self._peers.data[self.app]["cluster_initialised"] = "True"
 
         # Update the replication configuration.
@@ -416,7 +421,15 @@ class PostgresqlOperatorCharm(CharmBase):
         self.unit.status = ActiveStatus()
 
     def _on_upgrade_charm(self, _) -> None:
-        # Add labels required for replication when the pod loses them (like when it's deleted).
+        # Recreate k8s resources and add labels required for replication
+        # when the pod loses them (like when it's deleted).
+        try:
+            self._create_resources()
+        except ApiError:
+            logger.exception("failed to create k8s resources")
+            self.unit.status = BlockedStatus("failed to create k8s resources")
+            return
+
         try:
             self._patch_pod_labels(self.unit.name)
         except ApiError as e:
@@ -603,8 +616,8 @@ class PostgresqlOperatorCharm(CharmBase):
         return Patroni(
             self._endpoint,
             self._endpoints,
+            self.primary_endpoint,
             self._namespace,
-            self.app.planned_units(),
             self._storage_path,
             self.get_secret("app", USER_PASSWORD_KEY),
             self.get_secret("app", REPLICATION_PASSWORD_KEY),

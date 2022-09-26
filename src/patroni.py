@@ -37,8 +37,8 @@ class Patroni:
         self,
         endpoint: str,
         endpoints: List[str],
+        primary_endpoint: str,
         namespace: str,
-        planned_units,
         storage_path: str,
         superuser_password: str,
         replication_password: str,
@@ -46,9 +46,10 @@ class Patroni:
     ):
         self._endpoint = endpoint
         self._endpoints = endpoints
+        self._primary_endpoint = primary_endpoint
         self._namespace = namespace
         self._storage_path = storage_path
-        self._planned_units = planned_units
+        self._members_count = len(self._endpoints)
         self._superuser_password = superuser_password
         self._replication_password = replication_password
         self._tls_enabled = tls_enabled
@@ -108,6 +109,25 @@ class Patroni:
             return False
 
         return all(member["state"] == "running" for member in r.json()["members"])
+
+    @property
+    def primary_endpoint_ready(self) -> bool:
+        """Is the primary endpoint redirecting connections to the primary pod.
+
+        Returns:
+            Return whether the primary endpoint is redirecting connections to the primary pod.
+        """
+        try:
+            for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(3)):
+                with attempt:
+                    r = requests.get(
+                        f"{'https' if self._tls_enabled else 'http'}://{self._primary_endpoint}:8008/health",
+                        verify=self._verify,
+                    )
+        except RetryError:
+            return False
+
+        return r.json()["state"] == "running"
 
     @property
     def member_started(self) -> bool:
@@ -178,7 +198,7 @@ class Patroni:
         # TODO: add extra configurations here later.
         rendered = template.render(
             logging_collector="on",
-            synchronous_commit="on" if self._planned_units > 1 else "off",
+            synchronous_commit="on" if self._members_count > 1 else "off",
             synchronous_standby_names="*",
         )
         self._render_file(f"{self._storage_path}/postgresql-k8s-operator.conf", rendered, 0o644)

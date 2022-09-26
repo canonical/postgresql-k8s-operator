@@ -16,9 +16,9 @@ class TestPatroni(unittest.TestCase):
         # Setup Patroni wrapper.
         self.patroni = Patroni(
             "postgresql-k8s-0",
-            "postgresql-k8s-0",
+            ["postgresql-k8s-0"],
+            "postgresql-k8s-primary.dev.svc.cluster.local",
             "test-model",
-            1,
             STORAGE_PATH,
             "superuser-password",
             "replication-password",
@@ -173,8 +173,8 @@ class TestPatroni(unittest.TestCase):
         self.patroni = Patroni(
             "postgresql-k8s-0",
             "postgresql-k8s-0",
+            "postgresql-k8s-primary.dev.svc.cluster.local",
             "test-model",
-            3,
             STORAGE_PATH,
             "superuser-password",
             "replication-password",
