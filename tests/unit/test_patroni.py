@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import mock_open, patch
 
 from jinja2 import Template
+from tenacity import RetryError
 
 from patroni import Patroni
 from tests.helpers import STORAGE_PATH
@@ -197,3 +198,19 @@ class TestPatroni(unittest.TestCase):
             expected_content,
             0o644,
         )
+
+    @patch("requests.get")
+    def test_primary_endpoint_ready(self, _get):
+        # Test with an issue when trying to connect to the Patroni API.
+        _get.side_effect = RetryError
+        self.assertFalse(self.patroni.primary_endpoint_ready)
+
+        # Mock the request return values.
+        _get.side_effect = None
+        _get.return_value.json.side_effect = [{"state": "stopped"}, {"state": "running"}]
+
+        # Test with the primary endpoint not ready yet.
+        self.assertFalse(self.patroni.primary_endpoint_ready)
+
+        # Test with the primary endpoint ready.
+        self.assertTrue(self.patroni.primary_endpoint_ready)
