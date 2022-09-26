@@ -21,7 +21,7 @@ from tenacity import (
     wait_fixed,
 )
 
-from constants import TLS_CA_FILE
+from constants import BACKUP_USER, TLS_CA_FILE
 
 logger = logging.getLogger(__name__)
 
@@ -42,6 +42,7 @@ class Patroni:
         storage_path: str,
         superuser_password: str,
         replication_password: str,
+        backup_password: str,
         tls_enabled: bool,
     ):
         self._endpoint = endpoint
@@ -51,6 +52,7 @@ class Patroni:
         self._planned_units = planned_units
         self._superuser_password = superuser_password
         self._replication_password = replication_password
+        self._backup_password = backup_password
         self._tls_enabled = tls_enabled
         # Variable mapping to requests library verify parameter.
         # The CA bundle file is used to validate the server certificate when
@@ -158,14 +160,19 @@ class Patroni:
         with open("templates/patroni.yml.j2", "r") as file:
             template = Template(file.read())
         # Render the template file with the correct values.
+        peers_count = self._planned_units - 1
         rendered = template.render(
             enable_tls=enable_tls,
             endpoint=self._endpoint,
             endpoints=self._endpoints,
+            max_wal_senders=peers_count
+            + 3,  # One WAL sender for each replica plus 3 backup WAL senders.
             namespace=self._namespace,
             storage_path=self._storage_path,
             superuser_password=self._superuser_password,
             replication_password=self._replication_password,
+            backup_user=BACKUP_USER,
+            backup_password=self._backup_password,
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 

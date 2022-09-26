@@ -2,8 +2,12 @@ bootstrap:
   dcs:
     postgresql:
       use_pg_rewind: true
+      remove_data_directory_on_rewind_failure: true
+      remove_data_directory_on_diverged_timelines: true
       parameters:
-        max_wal_senders: 3
+        archive_command: /bin/true
+        archive_mode: on
+        max_wal_senders: {{ max_wal_senders }}
         wal_level: logical
   initdb:
   - auth-host: md5
@@ -54,6 +58,9 @@ postgresql:
   authentication:
     replication:
       password: {{ replication_password }}
+    rewind:
+      username: {{ backup_user }}
+      password: {{ backup_password }}
     superuser:
       password: {{ superuser_password }}
 use_endpoints: true

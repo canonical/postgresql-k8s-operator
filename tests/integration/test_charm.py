@@ -102,6 +102,8 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
         # and its value, filtering the retrieved data to return only the settings
         # that were set by Patroni.
         settings_names = [
+            "archive_command",
+            "archive_mode",
             "data_directory",
             "cluster_name",
             "data_checksums",
@@ -119,11 +121,15 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
         settings = convert_records_to_dict(records)
 
     # Validate each configuration set by Patroni on PostgreSQL.
+    assert settings["archive_command"] == "/bin/true"
+    assert settings["archive_mode"] == "on"
     assert settings["cluster_name"] == f"patroni-{APP_NAME}"
     assert settings["data_directory"] == f"{STORAGE_PATH}/pgdata"
     assert settings["data_checksums"] == "on"
     assert settings["listen_addresses"] == "0.0.0.0"
-    assert settings["max_wal_senders"] == "3"
+    assert settings["max_wal_senders"] == str(
+        len(UNIT_IDS) + 2
+    )  # Number of units - 1 (primary) + 3 (backup WAL senders).
     assert settings["wal_level"] == "logical"
 
     # Retrieve settings from Patroni REST API.
@@ -132,6 +138,8 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
 
     # Validate configuration exposed by Patroni.
     assert settings["postgresql"]["use_pg_rewind"]
+    assert settings["postgresql"]["remove_data_directory_on_rewind_failure"]
+    assert settings["postgresql"]["remove_data_directory_on_diverged_timelines"]
 
 
 @pytest.mark.charm_tests
