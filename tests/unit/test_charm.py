@@ -7,7 +7,7 @@ from unittest.mock import MagicMock, Mock, PropertyMock, patch
 from charms.postgresql_k8s.v0.postgresql import PostgreSQLUpdateUserPasswordError
 from lightkube import codecs
 from lightkube.resources.core_v1 import Pod
-from ops.model import ActiveStatus
+from ops.model import ActiveStatus, WaitingStatus
 from ops.testing import Harness
 from tenacity import RetryError
 
@@ -75,6 +75,7 @@ class TestCharm(unittest.TestCase):
             replication_password,
         )
 
+    @patch("charm.Patroni.primary_endpoint_ready", new_callable=PropertyMock)
     @patch("charm.Patroni.reload_patroni_configuration")
     @patch("charm.Patroni.render_postgresql_conf_file")
     @patch_network_get(private_address="1.1.1.1")
@@ -83,8 +84,18 @@ class TestCharm(unittest.TestCase):
     @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
     @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
     def test_on_postgresql_pebble_ready(
-        self, _, __, _push_tls_files_to_workload, _member_started, ___, ____
+        self,
+        _,
+        __,
+        _push_tls_files_to_workload,
+        _member_started,
+        ___,
+        ____,
+        _primary_endpoint_ready,
     ):
+        # Mock the primary endpoint ready property values.
+        _primary_endpoint_ready.side_effect = [False, True]
+
         # Check that the initial plan is empty.
         plan = self.harness.get_container_pebble_plan(self._postgresql_container)
         self.assertEqual(plan.to_dict(), {})
@@ -93,6 +104,13 @@ class TestCharm(unittest.TestCase):
         # method, respectively.
         # TODO: test also replicas (DPE-398).
         self.harness.set_leader()
+
+        # Check for a Waiting status when the primary k8s endpoint is not ready yet.
+        self.harness.container_pebble_ready(self._postgresql_container)
+        self.assertTrue(isinstance(self.harness.model.unit.status, WaitingStatus))
+
+        # Check for the Active status.
+        _push_tls_files_to_workload.reset_mock()
         self.harness.container_pebble_ready(self._postgresql_container)
         plan = self.harness.get_container_pebble_plan(self._postgresql_container)
         expected = self.charm._postgresql_layer().to_dict()
@@ -225,10 +243,23 @@ class TestCharm(unittest.TestCase):
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.get_primary")
+    @patch("ops.model.Container.pebble")
     def test_on_update_status(
         self,
+        _pebble,
         _get_primary,
     ):
+        # Mock the access to the list of Pebble services.
+        _pebble.get_services.side_effect = [
+            [],
+            ["service data"],
+            ["service data"],
+        ]
+
+        # Test before the PostgreSQL service is available.
+        self.charm.on.update_status.emit()
+        _get_primary.assert_not_called()
+
         _get_primary.side_effect = [
             "postgresql-k8s/1",
             self.charm.unit.name,
@@ -251,7 +282,11 @@ class TestCharm(unittest.TestCase):
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.get_primary")
-    def test_on_update_status_with_error_on_get_primary(self, _get_primary):
+    @patch("ops.model.Container.pebble")
+    def test_on_update_status_with_error_on_get_primary(self, _pebble, _get_primary):
+        # Mock the access to the list of Pebble services.
+        _pebble.get_services.return_value = ["service data"]
+
         _get_primary.side_effect = [RetryError("fake error")]
 
         with self.assertLogs("charm", "ERROR") as logs:
