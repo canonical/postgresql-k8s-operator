@@ -19,6 +19,7 @@ The `postgresql` module provides methods for interacting with the PostgreSQL ins
 Any charm using this library should import the `psycopg2` or `psycopg2-binary` dependency.
 """
 import logging
+from typing import Set
 
 import psycopg2
 from psycopg2 import sql
@@ -31,7 +32,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 4
+LIBPATCH = 5
 
 
 logger = logging.getLogger(__name__)
@@ -51,6 +52,10 @@ class PostgreSQLDeleteUserError(Exception):
 
 class PostgreSQLGetPostgreSQLVersionError(Exception):
     """Exception raised when retrieving PostgreSQL version fails."""
+
+
+class PostgreSQLListUsersError(Exception):
+    """Exception raised when retrieving PostgreSQL users list fails."""
 
 
 class PostgreSQLUpdateUserPasswordError(Exception):
@@ -132,13 +137,18 @@ class PostgreSQL:
         try:
             with self._connect_to_database() as connection, connection.cursor() as cursor:
                 cursor.execute(f"SELECT TRUE FROM pg_roles WHERE rolname='{user}';")
-                user_definition = f"{user} WITH LOGIN{' SUPERUSER' if admin else ''} ENCRYPTED PASSWORD '{password}'"
+                user_definition = (
+                    f"WITH LOGIN{' SUPERUSER' if admin else ''} ENCRYPTED PASSWORD '{password}'"
+                )
                 if extra_user_roles:
                     user_definition += f' {extra_user_roles.replace(",", " ")}'
                 if cursor.fetchone() is not None:
-                    cursor.execute(f"ALTER ROLE {user_definition};")
+                    statement = "ALTER ROLE {}"
                 else:
-                    cursor.execute(f"CREATE ROLE {user_definition};")
+                    statement = "CREATE ROLE {}"
+                cursor.execute(
+                    sql.SQL(f"{statement} {user_definition};").format(sql.Identifier(user))
+                )
         except psycopg2.Error as e:
             logger.error(f"Failed to create user: {e}")
             raise PostgreSQLCreateUserError()
@@ -161,12 +171,16 @@ class PostgreSQL:
                 with self._connect_to_database(
                     database
                 ) as connection, connection.cursor() as cursor:
-                    cursor.execute(f"REASSIGN OWNED BY {user} TO postgres;")
-                    cursor.execute(f"DROP OWNED BY {user};")
+                    cursor.execute(
+                        sql.SQL("REASSIGN OWNED BY {} TO {};").format(
+                            sql.Identifier(user), sql.Identifier(self.user)
+                        )
+                    )
+                    cursor.execute(sql.SQL("DROP OWNED BY {};").format(sql.Identifier(user)))
 
             # Delete the user.
             with self._connect_to_database() as connection, connection.cursor() as cursor:
-                cursor.execute(f"DROP ROLE {user};")
+                cursor.execute(sql.SQL("DROP ROLE {};").format(sql.Identifier(user)))
         except psycopg2.Error as e:
             logger.error(f"Failed to delete user: {e}")
             raise PostgreSQLDeleteUserError()
@@ -202,10 +216,24 @@ class PostgreSQL:
             ) as connection, connection.cursor() as cursor:
                 cursor.execute("SHOW ssl;")
                 return "on" in cursor.fetchone()[0]
-        except psycopg2.Error as e:
+        except psycopg2.Error:
             # Connection errors happen when PostgreSQL has not started yet.
-            logger.debug(e.pgerror)
             return False
+
+    def list_users(self) -> Set[str]:
+        """Returns the list of PostgreSQL database users.
+
+        Returns:
+            List of PostgreSQL database users.
+        """
+        try:
+            with self._connect_to_database() as connection, connection.cursor() as cursor:
+                cursor.execute("SELECT usename FROM pg_catalog.pg_user;")
+                usernames = cursor.fetchall()
+                return {username[0] for username in usernames}
+        except psycopg2.Error as e:
+            logger.error(f"Failed to list PostgreSQL database users: {e}")
+            raise PostgreSQLListUsersError()
 
     def update_user_password(self, username: str, password: str) -> None:
         """Update a user password.

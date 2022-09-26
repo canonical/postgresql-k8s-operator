@@ -10,7 +10,7 @@ import pytest
 import yaml
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers import scale_application
+from tests.integration.helpers import check_database_users_existence, scale_application
 from tests.integration.new_relations.helpers import (
     build_connection_string,
     check_relation_data_existence,
@@ -298,4 +298,25 @@ async def test_read_only_endpoint_in_scaled_up_cluster(ops_test: OpsTest):
             FIRST_DATABASE_RELATION_NAME,
             "read-only-endpoints",
             exists=True,
+        )
+
+
+@pytest.mark.database_relation_tests
+async def test_relation_broken(ops_test: OpsTest):
+    """Test that the user is removed when the relation is broken."""
+    async with ops_test.fast_forward():
+        # Retrieve the relation user.
+        relation_user = await get_application_relation_data(
+            ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME, "username"
+        )
+
+        # Break the relation.
+        await ops_test.model.applications[DATABASE_APP_NAME].remove_relation(
+            f"{DATABASE_APP_NAME}", f"{APPLICATION_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}"
+        )
+        await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active", raise_on_blocked=True)
+
+        # Check that the relation user was removed from the database.
+        await check_database_users_existence(
+            ops_test, [], [relation_user], database_app_name=DATABASE_APP_NAME
         )
