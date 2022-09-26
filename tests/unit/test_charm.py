@@ -6,14 +6,34 @@ from unittest.mock import MagicMock, Mock, PropertyMock, patch
 
 from charms.postgresql_k8s.v0.postgresql import PostgreSQLUpdateUserPasswordError
 from lightkube import codecs
+from lightkube.core.exceptions import ApiError
 from lightkube.resources.core_v1 import Pod
-from ops.model import ActiveStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from ops.testing import Harness
 from tenacity import RetryError
 
 from charm import PostgresqlOperatorCharm
 from constants import PEER
 from tests.helpers import patch_network_get
+
+
+class _FakeResponse:
+    """Used to fake an httpx response during testing only."""
+
+    def json(self):
+        return {
+            "apiVersion": 1,
+            "code": "400",
+            "message": "broken",
+            "reason": "",
+        }
+
+
+class _FakeApiError(ApiError):
+    """Used to simulate an ApiError during testing."""
+
+    def __init__(self):
+        super().__init__(response=_FakeResponse())
 
 
 class TestCharm(unittest.TestCase):
@@ -295,10 +315,34 @@ class TestCharm(unittest.TestCase):
                 "ERROR:charm:failed to get primary with error RetryError[fake error]", logs.output
             )
 
-    @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
-    def test_on_upgrade_charm(self, _patch_pod_labels):
+    @patch("charm.PostgresqlOperatorCharm._patch_pod_labels", side_effect=[_FakeApiError, None])
+    @patch(
+        "charm.PostgresqlOperatorCharm._create_resources", side_effect=[_FakeApiError, None, None]
+    )
+    def test_on_upgrade_charm(self, _create_resources, _patch_pod_labels):
+        # Test with a problem happening when trying to create the k8s resources.
+        self.charm.unit.status = ActiveStatus()
         self.charm.on.upgrade_charm.emit()
+        _create_resources.assert_called_once()
+        _patch_pod_labels.assert_not_called()
+        self.assertTrue(isinstance(self.charm.unit.status, BlockedStatus))
+
+        # Test a successful k8s resources creation, but unsuccessful pod patch operation.
+        _create_resources.reset_mock()
+        self.charm.unit.status = ActiveStatus()
+        self.charm.on.upgrade_charm.emit()
+        _create_resources.assert_called_once()
         _patch_pod_labels.assert_called_once()
+        self.assertTrue(isinstance(self.charm.unit.status, BlockedStatus))
+
+        # Test a successful k8s resources creation and the operation to patch the pod.
+        _create_resources.reset_mock()
+        _patch_pod_labels.reset_mock()
+        self.charm.unit.status = ActiveStatus()
+        self.charm.on.upgrade_charm.emit()
+        _create_resources.assert_called_once()
+        _patch_pod_labels.assert_called_once()
+        self.assertFalse(isinstance(self.charm.unit.status, BlockedStatus))
 
     @patch("charm.Client")
     def test_create_resources(self, _client):
