@@ -207,10 +207,11 @@ class TestPatroni(unittest.TestCase):
 
         # Mock the request return values.
         _get.side_effect = None
-        _get.return_value.json.side_effect = [{"state": "stopped"}, {"state": "running"}]
+        _get.return_value.json.return_value = {"state": "stopped"}
 
         # Test with the primary endpoint not ready yet.
         self.assertFalse(self.patroni.primary_endpoint_ready)
 
         # Test with the primary endpoint ready.
+        _get.return_value.json.return_value = {"state": "running"}
         self.assertTrue(self.patroni.primary_endpoint_ready)

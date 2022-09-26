@@ -30,6 +30,10 @@ class NotReadyError(Exception):
     """Raised when not all cluster members healthy or finished initial sync."""
 
 
+class EndpointNotReadyError(Exception):
+    """Raised when an endpoint is not ready."""
+
+
 class Patroni:
     """This class handles the communication with Patroni API and configuration files."""
 
@@ -124,10 +128,12 @@ class Patroni:
                         f"{'https' if self._tls_enabled else 'http'}://{self._primary_endpoint}:8008/health",
                         verify=self._verify,
                     )
+                    if r.json()["state"] != "running":
+                        raise EndpointNotReadyError
         except RetryError:
             return False
 
-        return r.json()["state"] == "running"
+        return True
 
     @property
     def member_started(self) -> bool:
