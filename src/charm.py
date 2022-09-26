@@ -137,7 +137,7 @@ class PostgresqlOperatorCharm(CharmBase):
     def postgresql(self) -> PostgreSQL:
         """Returns an instance of the object used to interact with the database."""
         return PostgreSQL(
-            primary_host=self.primary_endpoint,
+            primary_host=self._primary_endpoint,
             current_host=self.endpoint,
             user=USER,
             password=self.get_secret("app", f"{USER}-password"),
@@ -150,7 +150,7 @@ class PostgresqlOperatorCharm(CharmBase):
         return f'{self._unit.replace("/", "-")}.{self._build_service_name("endpoints")}'
 
     @property
-    def primary_endpoint(self) -> str:
+    def _primary_endpoint(self) -> str:
         """Returns the endpoint of the primary instance's service."""
         return self._build_service_name("primary")
 
@@ -616,7 +616,7 @@ class PostgresqlOperatorCharm(CharmBase):
         return Patroni(
             self._endpoint,
             self._endpoints,
-            self.primary_endpoint,
+            self._primary_endpoint,
             self._namespace,
             self._storage_path,
             self.get_secret("app", USER_PASSWORD_KEY),
