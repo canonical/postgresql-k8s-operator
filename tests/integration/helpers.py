@@ -33,6 +33,7 @@ async def check_database_users_existence(
     users_that_should_exist: List[str],
     users_that_should_not_exist: List[str],
     admin: bool = False,
+    database_app_name: str = DATABASE_APP_NAME,
 ) -> None:
     """Checks that applications users exist in the database.
 
@@ -41,10 +42,12 @@ async def check_database_users_existence(
         users_that_should_exist: List of users that should exist in the database
         users_that_should_not_exist: List of users that should not exist in the database
         admin: Whether to check if the existing users are superusers
+        database_app_name: Optional database app name
+            (the default value is the name on metadata.yaml)
     """
-    unit = ops_test.model.applications[DATABASE_APP_NAME].units[0]
+    unit = ops_test.model.applications[database_app_name].units[0]
     unit_address = await get_unit_address(ops_test, unit.name)
-    password = await get_password(ops_test)
+    password = await get_password(ops_test, database_app_name=database_app_name)
 
     # Retrieve all users in the database.
     output = await execute_query_on_unit(
@@ -344,9 +347,11 @@ def get_expected_k8s_resources(namespace: str, application: str) -> set:
     return resources
 
 
-async def get_password(ops_test: OpsTest, username: str = "operator"):
+async def get_password(
+    ops_test: OpsTest, username: str = "operator", database_app_name: str = DATABASE_APP_NAME
+):
     """Retrieve a user password using the action."""
-    unit = ops_test.model.units.get(f"{DATABASE_APP_NAME}/0")
+    unit = ops_test.model.units.get(f"{database_app_name}/0")
     action = await unit.run_action("get-password", **{"username": username})
     result = await action.wait()
     return result.results[f"{username}-password"]

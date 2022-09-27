@@ -6,6 +6,7 @@ import unittest
 from unittest.mock import mock_open, patch
 
 from jinja2 import Template
+from tenacity import RetryError
 
 from patroni import Patroni
 from tests.helpers import STORAGE_PATH
@@ -16,9 +17,9 @@ class TestPatroni(unittest.TestCase):
         # Setup Patroni wrapper.
         self.patroni = Patroni(
             "postgresql-k8s-0",
-            "postgresql-k8s-0",
+            ["postgresql-k8s-0"],
+            "postgresql-k8s-primary.dev.svc.cluster.local",
             "test-model",
-            1,
             STORAGE_PATH,
             "superuser-password",
             "replication-password",
@@ -173,8 +174,8 @@ class TestPatroni(unittest.TestCase):
         self.patroni = Patroni(
             "postgresql-k8s-0",
             "postgresql-k8s-0",
+            "postgresql-k8s-primary.dev.svc.cluster.local",
             "test-model",
-            3,
             STORAGE_PATH,
             "superuser-password",
             "replication-password",
@@ -197,3 +198,20 @@ class TestPatroni(unittest.TestCase):
             expected_content,
             0o644,
         )
+
+    @patch("requests.get")
+    def test_primary_endpoint_ready(self, _get):
+        # Test with an issue when trying to connect to the Patroni API.
+        _get.side_effect = RetryError
+        self.assertFalse(self.patroni.primary_endpoint_ready)
+
+        # Mock the request return values.
+        _get.side_effect = None
+        _get.return_value.json.return_value = {"state": "stopped"}
+
+        # Test with the primary endpoint not ready yet.
+        self.assertFalse(self.patroni.primary_endpoint_ready)
+
+        # Test with the primary endpoint ready.
+        _get.return_value.json.return_value = {"state": "running"}
+        self.assertTrue(self.patroni.primary_endpoint_ready)
