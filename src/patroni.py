@@ -21,7 +21,7 @@ from tenacity import (
     wait_fixed,
 )
 
-from constants import BACKUP_USER, TLS_CA_FILE
+from constants import REWIND_USER, TLS_CA_FILE
 
 logger = logging.getLogger(__name__)
 
@@ -42,7 +42,7 @@ class Patroni:
         storage_path: str,
         superuser_password: str,
         replication_password: str,
-        backup_password: str,
+        rewind_password: str,
         tls_enabled: bool,
     ):
         self._endpoint = endpoint
@@ -52,7 +52,7 @@ class Patroni:
         self._planned_units = planned_units
         self._superuser_password = superuser_password
         self._replication_password = replication_password
-        self._backup_password = backup_password
+        self._rewind_password = rewind_password
         self._tls_enabled = tls_enabled
         # Variable mapping to requests library verify parameter.
         # The CA bundle file is used to validate the server certificate when
@@ -168,8 +168,8 @@ class Patroni:
             storage_path=self._storage_path,
             superuser_password=self._superuser_password,
             replication_password=self._replication_password,
-            backup_user=BACKUP_USER,
-            backup_password=self._backup_password,
+            rewind_user=REWIND_USER,
+            rewind_password=self._rewind_password,
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 

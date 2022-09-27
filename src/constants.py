@@ -3,12 +3,12 @@
 
 """File containing constants to be used in the charm."""
 
-BACKUP_USER = "backup"
-BACKUP_PASSWORD_KEY = "backup-password"
 DATABASE_PORT = "5432"
 PEER = "database-peers"
 REPLICATION_USER = "replication"
 REPLICATION_PASSWORD_KEY = "replication-password"
+REWIND_USER = "rewind"
+REWIND_PASSWORD_KEY = "rewind-password"
 TLS_KEY_FILE = "key.pem"
 TLS_CA_FILE = "ca.pem"
 TLS_CERT_FILE = "cert.pem"
@@ -17,4 +17,4 @@ USER_PASSWORD_KEY = "operator-password"
 WORKLOAD_OS_GROUP = "postgres"
 WORKLOAD_OS_USER = "postgres"
 # List of system usernames needed for correct work of the charm/workload.
-SYSTEM_USERS = [BACKUP_USER, REPLICATION_USER, USER]
+SYSTEM_USERS = [REPLICATION_USER, REWIND_USER, USER]
