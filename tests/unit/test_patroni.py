@@ -7,6 +7,7 @@ from unittest.mock import mock_open, patch
 
 from jinja2 import Template
 
+from constants import BACKUP_USER
 from patroni import Patroni
 from tests.helpers import STORAGE_PATH
 
@@ -16,12 +17,13 @@ class TestPatroni(unittest.TestCase):
         # Setup Patroni wrapper.
         self.patroni = Patroni(
             "postgresql-k8s-0",
-            "postgresql-k8s-0",
+            ["postgresql-k8s-0"],
             "test-model",
             1,
             STORAGE_PATH,
             "superuser-password",
             "replication-password",
+            "backup-password",
             False,
         )
 
@@ -82,10 +84,13 @@ class TestPatroni(unittest.TestCase):
         expected_content = template.render(
             endpoint=self.patroni._endpoint,
             endpoints=self.patroni._endpoints,
+            max_wal_senders=3,
             namespace=self.patroni._namespace,
             storage_path=self.patroni._storage_path,
             superuser_password=self.patroni._superuser_password,
             replication_password=self.patroni._replication_password,
+            backup_user=BACKUP_USER,
+            backup_password=self.patroni._backup_password,
         )
 
         # Setup a mock for the `open` method, set returned data to postgresql.conf template.
@@ -112,10 +117,13 @@ class TestPatroni(unittest.TestCase):
             enable_tls=True,
             endpoint=self.patroni._endpoint,
             endpoints=self.patroni._endpoints,
+            max_wal_senders=3,
             namespace=self.patroni._namespace,
             storage_path=self.patroni._storage_path,
             superuser_password=self.patroni._superuser_password,
             replication_password=self.patroni._replication_password,
+            backup_user=BACKUP_USER,
+            backup_password=self.patroni._backup_password,
         )
         self.assertNotEqual(expected_content_with_tls, expected_content)
 
@@ -172,12 +180,13 @@ class TestPatroni(unittest.TestCase):
         # Also test with multiple planned units (synchronous_commit is turned on).
         self.patroni = Patroni(
             "postgresql-k8s-0",
-            "postgresql-k8s-0",
+            ["postgresql-k8s-0"],
             "test-model",
             3,
             STORAGE_PATH,
             "superuser-password",
             "replication-password",
+            "backup-password",
             False,
         )
         expected_content = template.render(
