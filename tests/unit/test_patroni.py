@@ -84,7 +84,6 @@ class TestPatroni(unittest.TestCase):
         expected_content = template.render(
             endpoint=self.patroni._endpoint,
             endpoints=self.patroni._endpoints,
-            max_wal_senders=3,
             namespace=self.patroni._namespace,
             storage_path=self.patroni._storage_path,
             superuser_password=self.patroni._superuser_password,
@@ -117,7 +116,6 @@ class TestPatroni(unittest.TestCase):
             enable_tls=True,
             endpoint=self.patroni._endpoint,
             endpoints=self.patroni._endpoints,
-            max_wal_senders=3,
             namespace=self.patroni._namespace,
             storage_path=self.patroni._storage_path,
             superuser_password=self.patroni._superuser_password,
