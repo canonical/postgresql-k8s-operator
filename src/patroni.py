@@ -160,13 +160,10 @@ class Patroni:
         with open("templates/patroni.yml.j2", "r") as file:
             template = Template(file.read())
         # Render the template file with the correct values.
-        peers_count = self._planned_units - 1
         rendered = template.render(
             enable_tls=enable_tls,
             endpoint=self._endpoint,
             endpoints=self._endpoints,
-            max_wal_senders=peers_count
-            + 3,  # One WAL sender for each replica plus 3 backup WAL senders.
             namespace=self._namespace,
             storage_path=self._storage_path,
             superuser_password=self._superuser_password,

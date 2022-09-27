@@ -108,8 +108,6 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
             "cluster_name",
             "data_checksums",
             "listen_addresses",
-            "max_replication_slots",
-            "max_wal_senders",
             "wal_level",
         ]
         cursor.execute(
@@ -128,12 +126,6 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
     assert settings["data_directory"] == f"{STORAGE_PATH}/pgdata"
     assert settings["data_checksums"] == "on"
     assert settings["listen_addresses"] == "0.0.0.0"
-    assert settings["max_replication_slots"] == str(
-        len(UNIT_IDS) + 2
-    )  # Number of units - 1 (primary) + 3 (backup WAL senders).
-    assert settings["max_wal_senders"] == str(
-        len(UNIT_IDS) + 2
-    )  # Number of units - 1 (primary) + 3 (backup WAL senders).
     assert settings["wal_level"] == "logical"
 
     # Retrieve settings from Patroni REST API.
