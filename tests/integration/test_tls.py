@@ -21,7 +21,7 @@ from tests.integration.helpers import (
 MATTERMOST_APP_NAME = "mattermost"
 TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
 APPLICATION_UNITS = 2
-DATABASE_UNITS = 2
+DATABASE_UNITS = 3
 
 
 @pytest.mark.abort_on_fail
@@ -102,7 +102,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         assert (
             "connection authorized: user=rewind database=postgres"
             " SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)" in logs
-        ), "TLS was not being used on pg_rewind connections"
+        ), "TLS is not being used on pg_rewind connections"
 
         # Deploy and check Mattermost user and database existence.
         relation_id = await deploy_and_relate_application_with_postgresql(
