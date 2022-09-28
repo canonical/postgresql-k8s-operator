@@ -78,6 +78,9 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
             for unit in ops_test.model.applications[DATABASE_APP_NAME].units
             if unit.name != primary
         ][0]
+
+        # Enable additional logs on the PostgreSQL instance to check TLS
+        # being used in a later step.
         await enable_connections_logging(ops_test, primary)
 
         # Promote the replica to primary.

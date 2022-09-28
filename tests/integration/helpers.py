@@ -188,6 +188,12 @@ async def deploy_and_relate_application_with_postgresql(
 
 
 async def enable_connections_logging(ops_test: OpsTest, unit_name: str) -> None:
+    """Turn on the log of all connections made to a PostgreSQL instance.
+
+    Args:
+        ops_test: The ops test framework instance
+        unit_name: The name of the unit to turn on the connection logs
+    """
     unit_address = await get_unit_address(ops_test, unit_name)
     requests.patch(
         f"https://{unit_address}:8008/config",
@@ -471,7 +477,12 @@ async def check_tls_patroni_api(ops_test: OpsTest, unit_name: str, enabled: bool
     wait=wait_exponential(multiplier=1, min=2, max=30),
 )
 async def primary_changed(ops_test: OpsTest, old_primary: str) -> bool:
-    """Checks whether the primary unit has changed."""
+    """Checks whether the primary unit has changed.
+
+    Args:
+        ops_test: The ops test framework instance
+        old_primary: The name of the unit that was the primary before.
+    """
     other_unit = [
         unit.name
         for unit in ops_test.model.applications[DATABASE_APP_NAME].units
@@ -511,6 +522,16 @@ def resource_exists(client: Client, resource: GenericNamespacedResource) -> bool
 
 
 async def run_command_on_unit(ops_test: OpsTest, unit_name: str, command: str) -> str:
+    """Run a command on a specific unit.
+
+    Args:
+        ops_test: The ops test framework instance
+        unit_name: The name of the unit to run the command on
+        command: The command to run
+
+    Returns:
+        the command output if it succeeds, otherwise raises an exception.
+    """
     complete_command = f"ssh --container postgresql {unit_name} {command}"
     return_code, stdout, stderr = await ops_test.juju(*complete_command.split())
     if return_code != 0:
