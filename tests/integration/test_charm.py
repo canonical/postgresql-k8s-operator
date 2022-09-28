@@ -11,7 +11,6 @@ from lightkube import AsyncClient
 from lightkube.resources.core_v1 import Pod
 from psycopg2 import sql
 from pytest_operator.plugin import OpsTest
-from tenacity import retry, retry_if_result, stop_after_attempt, wait_exponential
 
 from tests.helpers import METADATA, STORAGE_PATH
 from tests.integration.helpers import (
@@ -321,17 +320,6 @@ async def test_redeploy_charm_same_model(ops_test: OpsTest):
         await ops_test.model.wait_for_idle(
             apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3
         )
-
-
-@retry(
-    retry=retry_if_result(lambda x: not x),
-    stop=stop_after_attempt(10),
-    wait=wait_exponential(multiplier=1, min=2, max=30),
-)
-async def primary_changed(ops_test: OpsTest, old_primary: str) -> bool:
-    """Checks whether or not the primary unit has changed."""
-    primary = await get_primary(ops_test)
-    return primary != old_primary
 
 
 async def get_primary(ops_test: OpsTest, unit_id=0) -> str:

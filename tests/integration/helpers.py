@@ -19,6 +19,7 @@ from tenacity import (
     RetryError,
     Retrying,
     retry,
+    retry_if_exception,
     retry_if_result,
     stop_after_attempt,
     wait_exponential,
@@ -181,6 +182,15 @@ async def deploy_and_relate_application_with_postgresql(
     )
 
     return relation.id
+
+
+async def enable_connections_logging(ops_test: OpsTest, unit_name: str) -> None:
+    unit_address = await get_unit_address(ops_test, unit_name)
+    requests.patch(
+        f"https://{unit_address}:8008/config",
+        json={"postgresql": {"parameters": {"log_connections": True}}},
+        verify=False,
+    )
 
 
 async def execute_query_on_unit(
@@ -352,6 +362,11 @@ async def get_password(ops_test: OpsTest, username: str = "operator"):
     return result.results[f"{username}-password"]
 
 
+@retry(
+    retry=retry_if_exception(KeyError),
+    stop=stop_after_attempt(10),
+    wait=wait_exponential(multiplier=1, min=2, max=30),
+)
 async def get_primary(ops_test: OpsTest, unit_id=0) -> str:
     """Get the primary unit.
 
@@ -445,6 +460,23 @@ async def check_tls_patroni_api(ops_test: OpsTest, unit_name: str, enabled: bool
         return False
 
 
+@retry(
+    retry=retry_if_result(lambda x: not x),
+    stop=stop_after_attempt(10),
+    wait=wait_exponential(multiplier=1, min=2, max=30),
+)
+async def primary_changed(ops_test: OpsTest, old_primary: str) -> bool:
+    """Checks whether the primary unit has changed."""
+    other_unit = [
+        unit.name
+        for unit in ops_test.model.applications[DATABASE_APP_NAME].units
+        if unit.name != old_primary
+    ][0]
+    unit_id = int(other_unit.split("/")[1])
+    primary = await get_primary(ops_test, unit_id)
+    return primary != old_primary
+
+
 async def restart_patroni(ops_test: OpsTest, unit_name: str) -> None:
     """Restart Patroni on a specific unit.
 
@@ -471,6 +503,16 @@ def resource_exists(client: Client, resource: GenericNamespacedResource) -> bool
         return True
     except ApiError:
         return False
+
+
+async def run_command_on_unit(ops_test: OpsTest, unit_name: str, command: str) -> str:
+    complete_command = f"ssh --container postgresql {unit_name} {command}"
+    return_code, stdout, stderr = await ops_test.juju(*complete_command.split())
+    if return_code != 0:
+        raise Exception(
+            "Expected command %s to succeed instead it failed: %s", command, return_code
+        )
+    return stdout
 
 
 async def scale_application(ops_test: OpsTest, application_name: str, scale: int) -> None:
