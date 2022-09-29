@@ -8,6 +8,7 @@ This charm is meant to be used only for testing
 high availability of the PostgreSQL charm.
 """
 
+import logging
 import subprocess
 from typing import Optional
 
@@ -17,6 +18,9 @@ from ops.charm import ActionEvent, CharmBase
 from ops.framework import StoredState
 from ops.main import main
 from ops.model import ActiveStatus
+from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
+
+logger = logging.getLogger(__name__)
 
 
 class ApplicationCharm(CharmBase):
@@ -138,13 +142,20 @@ class ApplicationCharm(CharmBase):
 
         self._stored.continuous_writes_pid = None
 
-        # Return the max written value.
-        with psycopg2.connect(
-            self._connection_string
-        ) as connection, connection.cursor() as cursor:
-            cursor.execute("SELECT MAX(number) FROM continuous_writes;")
-            last_written_value = cursor.fetchone()[0]
-        connection.close()
+        # Return the max written value (or -1 if it was not possible to get that value).
+        try:
+            for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+                with attempt:
+                    with psycopg2.connect(
+                        self._connection_string
+                    ) as connection, connection.cursor() as cursor:
+                        cursor.execute("SELECT MAX(number) FROM continuous_writes;")
+                        last_written_value = int(cursor.fetchone()[0])
+                    connection.close()
+        except RetryError as e:
+            logger.exception(e)
+            return -1
+
         return last_written_value
 
 
