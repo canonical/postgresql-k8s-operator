@@ -6,8 +6,12 @@ metadata:
   name: {{ app_name }}-primary
 spec:
   ports:
-    - port: 5432
+    - name: database
+      port: 5432
       targetPort: 5432
+    - name: api
+      port: 8008
+      targetPort: 8008
   selector:
     cluster-name: patroni-{{ app_name }}
     role: master

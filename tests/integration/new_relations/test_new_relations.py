@@ -10,7 +10,7 @@ import pytest
 import yaml
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers import scale_application
+from tests.integration.helpers import check_database_users_existence, scale_application
 from tests.integration.new_relations.helpers import (
     build_connection_string,
     check_relation_data_existence,
@@ -32,8 +32,10 @@ ALIASED_MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME = "aliased-multiple-database-cl
 
 @pytest.mark.abort_on_fail
 @pytest.mark.database_relation_tests
-async def test_deploy_charms(ops_test: OpsTest, application_charm, database_charm):
-    """Deploy both charms (application and database) to use in the tests."""
+async def test_database_relation_with_charm_libraries(
+    ops_test: OpsTest, application_charm, database_charm
+):
+    """Test basic functionality of database relation interface."""
     # Deploy both charms (multiple units for each application to test that later they correctly
     # set data in the relation application databag using only the leader unit).
     async with ops_test.fast_forward():
@@ -66,17 +68,11 @@ async def test_deploy_charms(ops_test: OpsTest, application_charm, database_char
                 trust=True,
             ),
         )
-        await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active", wait_for_units=1)
-
-
-@pytest.mark.database_relation_tests
-async def test_database_relation_with_charm_libraries(ops_test: OpsTest):
-    """Test basic functionality of database relation interface."""
-    # Relate the charms and wait for them exchanging some connection data.
-    await ops_test.model.add_relation(
-        f"{APPLICATION_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}", DATABASE_APP_NAME
-    )
-    await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active")
+        # Relate the charms and wait for them exchanging some connection data.
+        await ops_test.model.add_relation(
+            f"{APPLICATION_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}", DATABASE_APP_NAME
+        )
+        await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active", raise_on_blocked=True)
 
     # Get the connection string to connect to the database using the read/write endpoint.
     connection_string = await build_connection_string(
@@ -302,4 +298,25 @@ async def test_read_only_endpoint_in_scaled_up_cluster(ops_test: OpsTest):
             FIRST_DATABASE_RELATION_NAME,
             "read-only-endpoints",
             exists=True,
+        )
+
+
+@pytest.mark.database_relation_tests
+async def test_relation_broken(ops_test: OpsTest):
+    """Test that the user is removed when the relation is broken."""
+    async with ops_test.fast_forward():
+        # Retrieve the relation user.
+        relation_user = await get_application_relation_data(
+            ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME, "username"
+        )
+
+        # Break the relation.
+        await ops_test.model.applications[DATABASE_APP_NAME].remove_relation(
+            f"{DATABASE_APP_NAME}", f"{APPLICATION_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}"
+        )
+        await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active", raise_on_blocked=True)
+
+        # Check that the relation user was removed from the database.
+        await check_database_users_existence(
+            ops_test, [], [relation_user], database_app_name=DATABASE_APP_NAME
         )

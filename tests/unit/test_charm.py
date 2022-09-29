@@ -6,14 +6,34 @@ from unittest.mock import MagicMock, Mock, PropertyMock, patch
 
 from charms.postgresql_k8s.v0.postgresql import PostgreSQLUpdateUserPasswordError
 from lightkube import codecs
+from lightkube.core.exceptions import ApiError
 from lightkube.resources.core_v1 import Pod
-from ops.model import ActiveStatus
+from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
 from ops.testing import Harness
 from tenacity import RetryError
 
 from charm import PostgresqlOperatorCharm
 from constants import PEER
 from tests.helpers import patch_network_get
+
+
+class _FakeResponse:
+    """Used to fake an httpx response during testing only."""
+
+    def json(self):
+        return {
+            "apiVersion": 1,
+            "code": "400",
+            "message": "broken",
+            "reason": "",
+        }
+
+
+class _FakeApiError(ApiError):
+    """Used to simulate an ApiError during testing."""
+
+    def __init__(self):
+        super().__init__(response=_FakeResponse())
 
 
 class TestCharm(unittest.TestCase):
@@ -75,6 +95,7 @@ class TestCharm(unittest.TestCase):
             replication_password,
         )
 
+    @patch("charm.Patroni.primary_endpoint_ready", new_callable=PropertyMock)
     @patch("charm.Patroni.reload_patroni_configuration")
     @patch("charm.Patroni.render_postgresql_conf_file")
     @patch_network_get(private_address="1.1.1.1")
@@ -83,8 +104,18 @@ class TestCharm(unittest.TestCase):
     @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
     @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
     def test_on_postgresql_pebble_ready(
-        self, _, __, _push_tls_files_to_workload, _member_started, ___, ____
+        self,
+        _,
+        __,
+        _push_tls_files_to_workload,
+        _member_started,
+        ___,
+        ____,
+        _primary_endpoint_ready,
     ):
+        # Mock the primary endpoint ready property values.
+        _primary_endpoint_ready.side_effect = [False, True]
+
         # Check that the initial plan is empty.
         plan = self.harness.get_container_pebble_plan(self._postgresql_container)
         self.assertEqual(plan.to_dict(), {})
@@ -93,6 +124,13 @@ class TestCharm(unittest.TestCase):
         # method, respectively.
         # TODO: test also replicas (DPE-398).
         self.harness.set_leader()
+
+        # Check for a Waiting status when the primary k8s endpoint is not ready yet.
+        self.harness.container_pebble_ready(self._postgresql_container)
+        self.assertTrue(isinstance(self.harness.model.unit.status, WaitingStatus))
+
+        # Check for the Active status.
+        _push_tls_files_to_workload.reset_mock()
         self.harness.container_pebble_ready(self._postgresql_container)
         plan = self.harness.get_container_pebble_plan(self._postgresql_container)
         expected = self.charm._postgresql_layer().to_dict()
@@ -226,10 +264,23 @@ class TestCharm(unittest.TestCase):
 
     @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.get_primary")
+    @patch("ops.model.Container.pebble")
     def test_on_update_status(
         self,
+        _pebble,
         _get_primary,
     ):
+        # Mock the access to the list of Pebble services.
+        _pebble.get_services.side_effect = [
+            [],
+            ["service data"],
+            ["service data"],
+        ]
+
+        # Test before the PostgreSQL service is available.
+        self.charm.on.update_status.emit()
+        _get_primary.assert_not_called()
+
         _get_primary.side_effect = [
             "postgresql-k8s/1",
             self.charm.unit.name,
@@ -253,7 +304,11 @@ class TestCharm(unittest.TestCase):
     @patch_network_get(private_address="1.1.1.1")
     @patch("ops.testing._TestingPebbleClient.get_changes", return_value=[])
     @patch("charm.Patroni.get_primary")
-    def test_on_update_status_with_error_on_get_primary(self, _get_primary, _):
+    @patch("ops.model.Container.pebble")
+    def test_on_update_status_with_error_on_get_primary(self, _pebble, _get_primary):
+        # Mock the access to the list of Pebble services.
+        _pebble.get_services.return_value = ["service data"]
+
         _get_primary.side_effect = [RetryError("fake error")]
 
         with self.assertLogs("charm", "ERROR") as logs:
@@ -262,10 +317,34 @@ class TestCharm(unittest.TestCase):
                 "ERROR:charm:failed to get primary with error RetryError[fake error]", logs.output
             )
 
-    @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
-    def test_on_upgrade_charm(self, _patch_pod_labels):
+    @patch("charm.PostgresqlOperatorCharm._patch_pod_labels", side_effect=[_FakeApiError, None])
+    @patch(
+        "charm.PostgresqlOperatorCharm._create_resources", side_effect=[_FakeApiError, None, None]
+    )
+    def test_on_upgrade_charm(self, _create_resources, _patch_pod_labels):
+        # Test with a problem happening when trying to create the k8s resources.
+        self.charm.unit.status = ActiveStatus()
         self.charm.on.upgrade_charm.emit()
+        _create_resources.assert_called_once()
+        _patch_pod_labels.assert_not_called()
+        self.assertTrue(isinstance(self.charm.unit.status, BlockedStatus))
+
+        # Test a successful k8s resources creation, but unsuccessful pod patch operation.
+        _create_resources.reset_mock()
+        self.charm.unit.status = ActiveStatus()
+        self.charm.on.upgrade_charm.emit()
+        _create_resources.assert_called_once()
         _patch_pod_labels.assert_called_once()
+        self.assertTrue(isinstance(self.charm.unit.status, BlockedStatus))
+
+        # Test a successful k8s resources creation and the operation to patch the pod.
+        _create_resources.reset_mock()
+        _patch_pod_labels.reset_mock()
+        self.charm.unit.status = ActiveStatus()
+        self.charm.on.upgrade_charm.emit()
+        _create_resources.assert_called_once()
+        _patch_pod_labels.assert_called_once()
+        self.assertFalse(isinstance(self.charm.unit.status, BlockedStatus))
 
     @patch("charm.Client")
     def test_create_resources(self, _client):

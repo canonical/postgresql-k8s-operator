@@ -19,6 +19,7 @@ The `postgresql` module provides methods for interacting with the PostgreSQL ins
 Any charm using this library should import the `psycopg2` or `psycopg2-binary` dependency.
 """
 import logging
+from typing import Set
 
 import psycopg2
 from psycopg2 import sql
@@ -31,7 +32,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 4
+LIBPATCH = 5
 
 
 logger = logging.getLogger(__name__)
@@ -215,10 +216,24 @@ class PostgreSQL:
             ) as connection, connection.cursor() as cursor:
                 cursor.execute("SHOW ssl;")
                 return "on" in cursor.fetchone()[0]
-        except psycopg2.Error as e:
+        except psycopg2.Error:
             # Connection errors happen when PostgreSQL has not started yet.
-            logger.debug(e.pgerror)
             return False
+
+    def list_users(self) -> Set[str]:
+        """Returns the list of PostgreSQL database users.
+
+        Returns:
+            List of PostgreSQL database users.
+        """
+        try:
+            with self._connect_to_database() as connection, connection.cursor() as cursor:
+                cursor.execute("SELECT usename FROM pg_catalog.pg_user;")
+                usernames = cursor.fetchall()
+                return {username[0] for username in usernames}
+        except psycopg2.Error as e:
+            logger.error(f"Failed to list PostgreSQL database users: {e}")
+            raise PostgreSQLListUsersError()
 
     def update_user_password(self, username: str, password: str) -> None:
         """Update a user password.

@@ -413,6 +413,11 @@ class PostgresqlOperatorCharm(CharmBase):
                 self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
                 return
 
+            if not self._patroni.primary_endpoint_ready:
+                self.unit.status = WaitingStatus("awaiting for primary endpoint to be ready")
+                event.defer()
+                return
+
             self._peers.data[self.app]["cluster_initialised"] = "True"
 
         # Update the replication configuration.
@@ -423,7 +428,15 @@ class PostgresqlOperatorCharm(CharmBase):
         self.unit.status = ActiveStatus()
 
     def _on_upgrade_charm(self, _) -> None:
-        # Add labels required for replication when the pod loses them (like when it's deleted).
+        # Recreate k8s resources and add labels required for replication
+        # when the pod loses them (like when it's deleted).
+        try:
+            self._create_resources()
+        except ApiError:
+            logger.exception("failed to create k8s resources")
+            self.unit.status = BlockedStatus("failed to create k8s resources")
+            return
+
         try:
             self._patch_pod_labels(self.unit.name)
         except ApiError as e:
@@ -588,7 +601,16 @@ class PostgresqlOperatorCharm(CharmBase):
                     logger.error(f"failed to delete resource: {resource}.")
 
     def _on_update_status(self, _) -> None:
-        # Display an active status message if the current unit is the primary.
+        """Display an active status message if the current unit is the primary."""
+        container = self.unit.get_container("postgresql")
+        if not container.can_connect():
+            return
+
+        services = container.pebble.get_services(names=[self._postgresql_service])
+        if len(services) == 0:
+            # Service has not been added nor started yet, so don't try to check Patroni API.
+            return
+
         try:
             if self._patroni.get_primary(unit_name_pattern=True) == self.unit.name:
                 self.unit.status = ActiveStatus("Primary")
@@ -628,8 +650,8 @@ class PostgresqlOperatorCharm(CharmBase):
         return Patroni(
             self._endpoint,
             self._endpoints,
+            self.primary_endpoint,
             self._namespace,
-            self.app.planned_units(),
             self._storage_path,
             self.get_secret("app", USER_PASSWORD_KEY),
             self.get_secret("app", REPLICATION_PASSWORD_KEY),
