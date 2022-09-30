@@ -40,6 +40,7 @@ from constants import (
     PEER,
     REPLICATION_PASSWORD_KEY,
     REPLICATION_USER,
+    REWIND_PASSWORD_KEY,
     SYSTEM_USERS,
     TLS_CA_FILE,
     TLS_CERT_FILE,
@@ -332,6 +333,9 @@ class PostgresqlOperatorCharm(CharmBase):
         if self.get_secret("app", REPLICATION_PASSWORD_KEY) is None:
             self.set_secret("app", REPLICATION_PASSWORD_KEY, new_password())
 
+        if self.get_secret("app", REWIND_PASSWORD_KEY) is None:
+            self.set_secret("app", REWIND_PASSWORD_KEY, new_password())
+
         # Create resources and add labels needed for replication.
         self._create_resources()
 
@@ -621,6 +625,7 @@ class PostgresqlOperatorCharm(CharmBase):
             self._storage_path,
             self.get_secret("app", USER_PASSWORD_KEY),
             self.get_secret("app", REPLICATION_PASSWORD_KEY),
+            self.get_secret("app", REWIND_PASSWORD_KEY),
             self.postgresql.is_tls_enabled(check_current_host=True),
         )
 

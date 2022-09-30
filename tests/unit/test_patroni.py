@@ -8,6 +8,7 @@ from unittest.mock import mock_open, patch
 from jinja2 import Template
 from tenacity import RetryError
 
+from constants import REWIND_USER
 from patroni import Patroni
 from tests.helpers import STORAGE_PATH
 
@@ -23,6 +24,7 @@ class TestPatroni(unittest.TestCase):
             STORAGE_PATH,
             "superuser-password",
             "replication-password",
+            "rewind-password",
             False,
         )
 
@@ -87,6 +89,8 @@ class TestPatroni(unittest.TestCase):
             storage_path=self.patroni._storage_path,
             superuser_password=self.patroni._superuser_password,
             replication_password=self.patroni._replication_password,
+            rewind_user=REWIND_USER,
+            rewind_password=self.patroni._rewind_password,
         )
 
         # Setup a mock for the `open` method, set returned data to postgresql.conf template.
@@ -117,6 +121,8 @@ class TestPatroni(unittest.TestCase):
             storage_path=self.patroni._storage_path,
             superuser_password=self.patroni._superuser_password,
             replication_password=self.patroni._replication_password,
+            rewind_user=REWIND_USER,
+            rewind_password=self.patroni._rewind_password,
         )
         self.assertNotEqual(expected_content_with_tls, expected_content)
 
@@ -173,12 +179,13 @@ class TestPatroni(unittest.TestCase):
         # Also test with multiple planned units (synchronous_commit is turned on).
         self.patroni = Patroni(
             "postgresql-k8s-0",
-            "postgresql-k8s-0",
+            ["postgresql-k8s-0", "postgresql-k8s-1"],
             "postgresql-k8s-primary.dev.svc.cluster.local",
             "test-model",
             STORAGE_PATH,
             "superuser-password",
             "replication-password",
+            "rewind-password",
             False,
         )
         expected_content = template.render(

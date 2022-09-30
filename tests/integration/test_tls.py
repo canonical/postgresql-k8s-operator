@@ -12,6 +12,10 @@ from tests.integration.helpers import (
     check_tls,
     check_tls_patroni_api,
     deploy_and_relate_application_with_postgresql,
+    enable_connections_logging,
+    get_primary,
+    primary_changed,
+    run_command_on_unit,
 )
 
 MATTERMOST_APP_NAME = "mattermost"
@@ -64,6 +68,41 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
             assert await check_tls(ops_test, unit.name, enabled=True)
             assert await check_tls_patroni_api(ops_test, unit.name, enabled=True)
+
+        # Test TLS being used by pg_rewind. To accomplish that, get the primary unit
+        # and a replica that will be promoted to primary (this should trigger a rewind
+        # operation when the old primary is started again).
+        primary = await get_primary(ops_test)
+        replica = [
+            unit.name
+            for unit in ops_test.model.applications[DATABASE_APP_NAME].units
+            if unit.name != primary
+        ][0]
+
+        # Enable additional logs on the PostgreSQL instance to check TLS
+        # being used in a later step.
+        await enable_connections_logging(ops_test, primary)
+
+        # Promote the replica to primary.
+        await run_command_on_unit(
+            ops_test,
+            replica,
+            'su postgres -c "/usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/data/pgdata promote"',
+        )
+
+        # Stop the initial primary.
+        await run_command_on_unit(ops_test, primary, "/charm/bin/pebble stop postgresql")
+
+        # Check that the primary changed.
+        assert await primary_changed(ops_test, primary), "primary not changed"
+
+        # Restart the initial primary and check the logs to ensure TLS is being used by pg_rewind.
+        await run_command_on_unit(ops_test, primary, "/charm/bin/pebble start postgresql")
+        logs = await run_command_on_unit(ops_test, replica, "/charm/bin/pebble logs")
+        assert (
+            "connection authorized: user=rewind database=postgres"
+            " SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)" in logs
+        ), "TLS is not being used on pg_rewind connections"
 
         # Deploy and check Mattermost user and database existence.
         relation_id = await deploy_and_relate_application_with_postgresql(
