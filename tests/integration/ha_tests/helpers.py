@@ -16,7 +16,6 @@ from tests.integration.helpers import get_unit_address
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 PORT = 5432
-APP_NAME = METADATA["name"]
 
 
 class ProcessError(Exception):
@@ -62,7 +61,7 @@ async def count_writes(ops_test: OpsTest) -> int:
     app = await app_name(ops_test)
     password = await get_password(ops_test, app)
     status = await ops_test.model.get_status()
-    host = list(status["applications"][APP_NAME]["units"].values())[0]["address"]
+    host = list(status["applications"][app]["units"].values())[0]["address"]
     connection_string = (
         f"dbname='application' user='operator'"
         f" host='{host}' password='{password}' connect_timeout=10"
@@ -184,7 +183,7 @@ async def secondary_up_to_date(ops_test: OpsTest, unit_name: str, expected_write
     app = await app_name(ops_test)
     password = await get_password(ops_test, app)
     status = await ops_test.model.get_status()
-    host = status["applications"][APP_NAME]["units"][unit_name]["address"]
+    host = status["applications"][app]["units"][unit_name]["address"]
     connection_string = (
         f"dbname='application' user='operator'"
         f" host='{host}' password='{password}' connect_timeout=10"

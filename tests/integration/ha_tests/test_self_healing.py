@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
-import time
 
 import pytest
 from pytest_operator.plugin import OpsTest
-from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
+from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from tests.integration.ha_tests.helpers import (
     METADATA,
@@ -66,9 +65,10 @@ async def test_kill_db_process(
         # 15 seconds wait (this is a little more than the loop wait configuration, that is
         # considered to trigger a fail-over after master_start_timeout is changed).
         writes = await count_writes(ops_test)
-        time.sleep(15)
-        more_writes = await count_writes(ops_test)
-        assert more_writes > writes, "writes not continuing to DB"
+        for attempt in Retrying(stop=stop_after_delay(15), wait=wait_fixed(3)):
+            with attempt:
+                more_writes = await count_writes(ops_test)
+                assert more_writes > writes, "writes not continuing to DB"
 
         # Verify that the database service got restarted and is ready in the old primary.
         assert await postgresql_ready(ops_test, primary_name)
@@ -79,13 +79,10 @@ async def test_kill_db_process(
 
     # Verify that no writes to the database were missed after stopping the writes.
     total_expected_writes = await stop_continuous_writes(ops_test)
-    try:
-        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
-            with attempt:
-                actual_writes = await count_writes(ops_test)
-                assert total_expected_writes == actual_writes, "writes to the db were missed."
-    except RetryError:
-        raise
+    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+        with attempt:
+            actual_writes = await count_writes(ops_test)
+            assert total_expected_writes == actual_writes, "writes to the db were missed."
 
     # Verify that old primary is up-to-date.
     assert await secondary_up_to_date(

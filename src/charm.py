@@ -33,8 +33,10 @@ from ops.model import (
     WaitingStatus,
 )
 from ops.pebble import (
+    Change,
     ChangeError,
     ChangeState,
+    CheckStatus,
     Layer,
     PathError,
     ProtocolError,
@@ -626,27 +628,36 @@ class PostgresqlOperatorCharm(CharmBase):
             # like described on https://github.com/canonical/pebble/issues/149.
             container = self.unit.get_container("postgresql")
             client = container.pebble
-            checks = client.get_checks()
+            services = client.get_services(names=[self._postgresql_service])
+            logger.error(f"services: {services}")
+            if len(services) == 0:
+                return
+
+            checks = client.get_checks(names=["patroni"])
             logger.error(f"checks: {str(checks)}")
-            return
-            # changes = client.get_changes(select=ChangeState.ALL, service=self._postgresql_service)
-            # if len(changes) == 0:
-            #     return
-            #
-            # services = client.get_services(names=[self._postgresql_service])
-            # if (
-            #     services[0].current == ServiceStatus.INACTIVE
-            #     and changes[-1].kind == "restart"
-            #     and changes[-1].status
-            #     == "Done"  # An unsuccessful restart in this situation has status equal to 'Done'.
-            # ):
-            #     logger.error(services)
-            #     logger.error(changes)
-            #     logger.info("starting Patroni from inactive state")
-            #     try:
-            #         container.start(self._postgresql_service)
-            #     except ChangeError as e:
-            #         logger.warning(e)
+            changes = client.get_changes(select=ChangeState.ALL, service=self._postgresql_service)
+            logger.error(f"changes: {changes}")
+
+            if (
+                services[0].current == ServiceStatus.ACTIVE
+                and checks[0].status == CheckStatus.DOWN
+            ):
+                logger.info("restarting Patroni")
+                try:
+                    container.restart(self._postgresql_service)
+                except ChangeError as e:
+                    logger.warning(e)
+            elif (
+                services[0].current == ServiceStatus.INACTIVE
+                and len(changes) > 0
+                and changes[-1].kind == "restart"
+                and changes[-1].status == "Error"
+            ):
+                logger.info("starting Patroni from inactive state")
+                try:
+                    container.start(self._postgresql_service)
+                except ChangeError as e:
+                    logger.warning(e)
 
     @property
     def _patroni(self):
@@ -724,6 +735,8 @@ class PostgresqlOperatorCharm(CharmBase):
                         "PATRONI_REPLICATION_USERNAME": REPLICATION_USER,
                         "PATRONI_SUPERUSER_USERNAME": USER,
                     },
+                    # "on-success": "restart",
+                    # "on-failure": "restart",
                     # "on-check-failure": {"patroni": "restart"},
                 }
             },
