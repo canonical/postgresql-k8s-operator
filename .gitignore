@@ -5,3 +5,6 @@ build/
 .coverage
 __pycache__/
 *.py[cod]
+
+# PyCharm project folder.
+.idea/
