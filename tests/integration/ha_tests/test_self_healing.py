@@ -45,7 +45,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
 
-@pytest.mark.ha_tests
+@pytest.mark.ha_self_healing_tests
 @pytest.mark.parametrize("process", DB_PROCESSES)
 async def test_freeze_db_process(
     ops_test: OpsTest, process: str, continuous_writes, master_start_timeout
