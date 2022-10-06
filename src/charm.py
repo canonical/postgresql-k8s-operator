@@ -454,30 +454,7 @@ class PostgresqlOperatorCharm(CharmBase):
         patch = {
             "metadata": {
                 "labels": {"application": "patroni", "cluster-name": f"patroni-{self._name}"}
-            },
-            # "spec": {
-            #     "template": {
-            #         "spec": {
-            #             "containers": {
-            #                 "postgresql": {
-            #                     "readinessProbe": {
-            #                         "initialDelaySeconds": 1,
-            #                         "periodSeconds": 2,
-            #                         "timeoutSeconds": 1,
-            #                         "successThreshold": 1,
-            #                         "failureThreshold": 3,
-            #                         "httpGet": {
-            #                             "host": "127.0.0.1",
-            #                             "scheme": "HTTP",
-            #                             "patch": "/health",
-            #                             "port": 8008,
-            #                         },
-            #                     }
-            #                 }
-            #             }
-            #         }
-            #     }
-            # },
+            }
         }
         client.patch(
             Pod,
@@ -720,7 +697,7 @@ class PostgresqlOperatorCharm(CharmBase):
                     "override": "replace",
                     "level": "ready",
                     "http": {
-                        "url": self._patroni._patroni_url,
+                        "url": f"{self._patroni._patroni_url}/health",
                     },
                 }
             },
