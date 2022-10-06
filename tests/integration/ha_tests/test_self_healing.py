@@ -54,12 +54,6 @@ async def test_network_cut(ops_test: OpsTest, continuous_writes, master_start_ti
     # Start an application that continuously writes data to the database.
     await start_continuous_writes(ops_test, app)
 
-    assert await is_unit_reachable_from(
-        ops_test, "controller-0", primary_name, use_controller_namespace=True
-    ), "❌ unit is reachable from controller"
-
-    return
-
     # Cut the network from the primary unit.
     await cut_network_from_unit(ops_test, primary_name)
 
