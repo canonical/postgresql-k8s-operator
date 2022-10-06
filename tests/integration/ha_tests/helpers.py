@@ -8,9 +8,6 @@ from typing import Optional
 import psycopg2
 import requests
 import yaml
-from kubernetes import config
-from kubernetes.client.api import core_v1_api
-from kubernetes.stream import stream
 from pytest_operator.plugin import OpsTest
 from tenacity import (
     RetryError,
@@ -188,11 +185,11 @@ async def is_unit_reachable_from(
         return False
 
 
-async def postgresql_ready(ops_test, unit_name: str) -> bool:
+async def postgresql_ready(ops_test, unit_name: str, timeout: int = 60 * 5) -> bool:
     """Verifies a PostgreSQL instance is running and available."""
     unit_ip = await get_unit_address(ops_test, unit_name)
     try:
-        for attempt in Retrying(stop=stop_after_delay(60 * 5), wait=wait_fixed(3)):
+        for attempt in Retrying(stop=stop_after_delay(timeout), wait=wait_fixed(3)):
             with attempt:
                 instance_health_info = requests.get(f"http://{unit_ip}:8008/health")
                 assert instance_health_info.status_code == 200
