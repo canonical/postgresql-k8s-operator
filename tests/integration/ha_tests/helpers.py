@@ -1,5 +1,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
+import asyncio
+import signal
 from pathlib import Path
 from typing import Optional
 
@@ -10,7 +12,13 @@ from kubernetes import config
 from kubernetes.client.api import core_v1_api
 from kubernetes.stream import stream
 from pytest_operator.plugin import OpsTest
-from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
+from tenacity import (
+    RetryError,
+    Retrying,
+    stop_after_attempt,
+    stop_after_delay,
+    wait_fixed,
+)
 
 from tests.integration.helpers import get_unit_address
 
@@ -58,24 +66,45 @@ async def change_master_start_timeout(ops_test: OpsTest, seconds: Optional[int])
 
 async def count_writes(ops_test: OpsTest) -> int:
     """Count the number of writes in the database."""
+    print(11)
     app = await app_name(ops_test)
+    print(12)
     password = await get_password(ops_test, app)
+    print(13)
     status = await ops_test.model.get_status()
-    host = list(status["applications"][app]["units"].values())[0]["address"]
-    connection_string = (
-        f"dbname='application' user='operator'"
-        f" host='{host}' password='{password}' connect_timeout=10"
-    )
+    print(16)
     try:
-        for attempt in Retrying(stop=stop_after_delay(30 * 2), wait=wait_fixed(3)):
+        for attempt in Retrying(
+            stop=stop_after_attempt(len(status["applications"][app]["units"]))
+        ):
             with attempt:
+                print(14)
+                host = list(status["applications"][app]["units"].values())[
+                    attempt.retry_state.attempt_number - 1
+                ]["address"]
+                print(15)
+                connection_string = (
+                    f"dbname='application' user='operator'"
+                    f" host='{host}' password='{password}' connect_timeout=10"
+                )
+                print(17)
                 with psycopg2.connect(
                     connection_string
                 ) as connection, connection.cursor() as cursor:
+                    print(17.1)
                     cursor.execute("SELECT COUNT(number) FROM continuous_writes;")
+                    print(17.2)
                     count = cursor.fetchone()[0]
+                    print(17.4)
+                print(17.5)
                 connection.close()
-    except RetryError:
+                print(17.6)
+    except RetryError as e:
+        print(str(e))
+        return -1
+    except asyncio.TimeoutError as e:
+        print(str(e))
+        print(str(type(e)))
         return -1
     return count
 
@@ -106,10 +135,23 @@ async def get_password(ops_test: OpsTest, app) -> str:
         string with the password stored on the peer relation databag.
     """
     # Can retrieve from any unit running unit, so we pick the first.
-    unit_name = ops_test.model.applications[app].units[0].name
-    action = await ops_test.model.units.get(unit_name).run_action("get-password")
-    action = await action.wait()
-    return action.results["operator-password"]
+    for attempt in Retrying(stop=stop_after_attempt(len(ops_test.model.applications[app].units))):
+        with attempt:
+
+            # def handler(_, __):
+            #     signal.alarm(0)
+            #     raise RetryError("end of time")
+            #
+            # signal.signal(signal.SIGALRM, handler)
+            # signal.alarm(10)
+
+            unit_name = (
+                ops_test.model.applications[app].units[attempt.retry_state.attempt_number - 1].name
+            )
+            print(f"unit_name: {unit_name}")
+            action = await ops_test.model.units.get(unit_name).run_action("get-password")
+            action = await asyncio.wait_for(action.wait(), 10)
+            return action.results["operator-password"]
 
 
 async def get_primary(ops_test: OpsTest, app) -> str:
@@ -210,6 +252,7 @@ async def send_signal_to_process(
         _preload_content=False,
     )
     response.run_forever(timeout=5)
+    print(f"response: {response}")
 
     if response.returncode != 0:
         raise ProcessError(

@@ -38,19 +38,53 @@ def continuous_writes(connection_string: str, starting_number: int):
             psycopg2.InterfaceError,
             psycopg2.OperationalError,
             psycopg2.errors.ReadOnlySqlTransaction,
-        ):
+        ) as e:
             # We should not raise any of those exceptions that can happen when a connection failure
             # happens, for example, when a primary is being reelected after a failure on the old
             # primary.
+            f = open("/tmp/demofile1.txt", "a")
+            f.write(str(write_value))
+            f.write("\n")
+            f.write(str(e))
+            f.write("\n")
+            f.write(str(type(e)))
+            f.write("\n\n")
+            f.close()
             continue
-        except psycopg2.Error:
+        except psycopg2.Error as e:
             # If another error happens, like writing a duplicate number when a connection failed
             # in a previous iteration (but the transaction was already committed), just increment
             # the number.
+            f = open("/tmp/demofile2.txt", "a")
+            f.write(str(write_value))
+            f.write("\n")
+            f.write(str(e))
+            f.write("\n")
+            f.write(str(type(e)))
+            f.write("\n\n")
+            f.close()
+            pass
+        except Exception as e:
+            f = open("/tmp/demofile3.txt", "a")
+            f.write(str(write_value))
+            f.write("\n")
+            f.write(str(e))
+            f.write("\n")
+            f.write(str(type(e)))
+            f.write("\n\n")
+            f.close()
             pass
         finally:
+            f = open("/tmp/demofile5.txt", "a")
+            f.write(str(write_value))
+            f.write("\n\n")
+            f.close()
             connection.close()
 
+        f = open("/tmp/demofile4.txt", "a")
+        f.write(str(write_value))
+        f.write("\n\n")
+        f.close()
         write_value += 1
 
 

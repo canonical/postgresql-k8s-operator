@@ -24,10 +24,10 @@ async def continuous_writes(ops_test: OpsTest) -> None:
             await ops_test.model.wait_for_idle(status="active", timeout=1000)
     yield
     # Clear the written data at the end.
-    action = await ops_test.model.units.get(f"{APPLICATION_NAME}/0").run_action(
-        "clear-continuous-writes"
-    )
-    await action.wait()
+    # action = await ops_test.model.units.get(f"{APPLICATION_NAME}/0").run_action(
+    #     "clear-continuous-writes"
+    # )
+    # await action.wait()
 
 
 @pytest.fixture()

@@ -454,7 +454,30 @@ class PostgresqlOperatorCharm(CharmBase):
         patch = {
             "metadata": {
                 "labels": {"application": "patroni", "cluster-name": f"patroni-{self._name}"}
-            }
+            },
+            # "spec": {
+            #     "template": {
+            #         "spec": {
+            #             "containers": {
+            #                 "postgresql": {
+            #                     "readinessProbe": {
+            #                         "initialDelaySeconds": 1,
+            #                         "periodSeconds": 2,
+            #                         "timeoutSeconds": 1,
+            #                         "successThreshold": 1,
+            #                         "failureThreshold": 3,
+            #                         "httpGet": {
+            #                             "host": "127.0.0.1",
+            #                             "scheme": "HTTP",
+            #                             "patch": "/health",
+            #                             "port": 8008,
+            #                         },
+            #                     }
+            #                 }
+            #             }
+            #         }
+            #     }
+            # },
         }
         client.patch(
             Pod,
@@ -692,6 +715,15 @@ class PostgresqlOperatorCharm(CharmBase):
                     },
                 }
             },
+            "checks": {
+                "patroni": {
+                    "override": "replace",
+                    "level": "ready",
+                    "http": {
+                        "url": self._patroni._patroni_url,
+                    },
+                }
+            },
         }
         return Layer(layer_config)
 
@@ -755,6 +787,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Update and reload configuration based on TLS files availability.
         self._patroni.render_patroni_yml_file(enable_tls=enable_tls)
+        self._patroni.render_postgresql_conf_file()
         if not self._patroni.member_started:
             return
 
