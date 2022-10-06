@@ -8,6 +8,9 @@ from typing import Optional
 import psycopg2
 import requests
 import yaml
+from kubernetes import config
+from kubernetes.client.api import core_v1_api
+from kubernetes.stream import stream
 from pytest_operator.plugin import OpsTest
 from tenacity import (
     RetryError,
@@ -91,6 +94,7 @@ async def count_writes(ops_test: OpsTest) -> int:
 
 async def cut_network_from_unit(ops_test: OpsTest, unit_name: str) -> None:
     """Cut network from a k8s pod.
+
     Args:
         ops_test: ops_test instance.
         unit_name: the name of the unit to cut network from.
@@ -158,31 +162,39 @@ async def is_unit_reachable_from(
     """Test network reachability between hosts.
 
     Args:
-        origin_machine: hostname of the machine to test connection from
-        target_machine: hostname of the machine to test connection to
+        ops_test: OpsTest instance.
+        origin_unit: unit to test connection from.
+        target_unit: unit to test connection to.
+        use_controller_namespace: whether to connect to the unit in
+            the controller namespace or in the current namespace.
     """
-    try:
-        pod_name = origin_unit.replace("/", "-")
-        target_pod_endpoint = f'{target_unit.replace("/", "-")}.{target_unit.split("/")[0]}-endpoints.{ops_test.model.info.name}'
-        namespace = (
-            f"controller-{ops_test.controller_name}"
-            if use_controller_namespace
-            else ops_test.model.info.name
-        )
-        command = (
-            f"curl {target_pod_endpoint}:8008 --connect-timeout 5"
-            if use_controller_namespace
-            else f"curl {target_pod_endpoint}:8008 --connect-timeout 5"
-        )
-        container = "--container api-server" if use_controller_namespace else ""
-        print(f"namespace: {namespace}")
-        complete_command = f"kubectl exec -n {namespace} pod/{pod_name} {container} -- {command}"
-        print(f"command: {complete_command}")
-        subprocess.check_call(complete_command.split())
-        return True
-    except subprocess.CalledProcessError as e:
-        print(str(e))
-        return False
+    pod_name = origin_unit.replace("/", "-")
+    target_pod_endpoint = f'{target_unit.replace("/", "-")}.{target_unit.split("/")[0]}-endpoints.{ops_test.model.info.name}'
+    namespace = (
+        f"controller-{ops_test.controller_name}"
+        if use_controller_namespace
+        else ops_test.model.info.name
+    )
+
+    # Load Kubernetes configuration to connect to the cluster.
+    config.load_kube_config()
+
+    # Run the connectivity check.
+    command = f"curl {target_pod_endpoint}:8008 --connect-timeout 5"
+    response = stream(
+        core_v1_api.CoreV1Api().connect_get_namespaced_pod_exec,
+        pod_name,
+        namespace,
+        container="api-server" if use_controller_namespace else "charm",
+        command=command.split(),
+        stderr=True,
+        stdin=False,
+        stdout=True,
+        tty=False,
+        _preload_content=False,
+    )
+    response.run_forever(timeout=10)
+    return response.returncode == 0
 
 
 async def postgresql_ready(ops_test, unit_name: str, timeout: int = 60 * 5) -> bool:
@@ -201,6 +213,7 @@ async def postgresql_ready(ops_test, unit_name: str, timeout: int = 60 * 5) -> b
 
 async def restore_network_for_unit(ops_test: OpsTest, unit_name: str) -> None:
     """Restore network for a k8s pod.
+
     Args:
         ops_test: ops_test instance.
         unit_name: the name of the unit to cut network from.
