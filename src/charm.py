@@ -755,6 +755,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Update and reload configuration based on TLS files availability.
         self._patroni.render_patroni_yml_file(enable_tls=enable_tls)
+        self._patroni.render_postgresql_conf_file()
         if not self._patroni.member_started:
             return
 
