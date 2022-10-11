@@ -27,6 +27,9 @@ jobs:
 
   integration-test-microk8s-charm:
     name: Integration tests for charm deployment (microk8s)
+    needs:
+      - lint
+      - unit-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -42,6 +45,9 @@ jobs:
 
   integration-test-microk8s-database-relation:
     name: Integration tests for database relation (microk8s)
+    needs:
+      - lint
+      - unit-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -57,6 +63,9 @@ jobs:
 
   integration-test-microk8s-db-relation:
     name: Integration tests for db relation (microk8s)
+    needs:
+      - lint
+      - unit-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -72,6 +81,9 @@ jobs:
 
   integration-test-microk8s-db-admin-relation:
     name: Integration tests for db-admin relation (microk8s)
+    needs:
+      - lint
+      - unit-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -87,6 +99,9 @@ jobs:
 
   integration-test-microk8s-password-rotation:
     name: Integration tests for password rotation (microk8s)
+    needs:
+      - lint
+      - unit-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -102,6 +117,9 @@ jobs:
 
   integration-test-microk8s-tls:
     name: Integration tests for TLS (microk8s)
+    needs:
+      - lint
+      - unit-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
