@@ -38,8 +38,7 @@ jobs:
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: microk8s
-          # This is needed until https://bugs.launchpad.net/juju/+bug/1977582 is fixed.
-          bootstrap-options: "--agent-version 2.9.29"
+          juju-channel: 2.9/edge
       - name: Run integration tests
         run: tox -e charm-integration
 
@@ -56,7 +55,8 @@ jobs:
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: microk8s
-          juju-channel: 2.9/edge
+          # This is needed until https://bugs.launchpad.net/juju/+bug/1977582 is fixed.
+          bootstrap-options: "--agent-version 2.9.29"
       - name: Run integration tests
         run: tox -e database-relation-integration
 
