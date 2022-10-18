@@ -706,10 +706,7 @@ class PostgresqlOperatorCharm(CharmBase):
         return self.model.get_relation(PEER)
 
     def push_tls_files_to_workload(self, container: Container = None) -> None:
-        """Uploads TLS files to the workload container.
-
-        TODO if the container doesn't exist, adding this relation will break.
-        """
+        """Uploads TLS files to the workload container."""
         if container is None:
             container = self.unit.get_container("postgresql")
 
