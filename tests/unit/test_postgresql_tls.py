@@ -5,8 +5,8 @@ import socket
 import unittest
 from unittest.mock import MagicMock, patch
 
-from ops.testing import Harness
 from ops.pebble import ConnectionError
+from ops.testing import Harness
 
 from charm import PostgresqlOperatorCharm
 from constants import PEER
