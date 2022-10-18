@@ -24,11 +24,15 @@ APPLICATION_UNITS = 2
 DATABASE_UNITS = 3
 
 
-@pytest.mark.abort_on_fail
 @pytest.mark.tls_tests
-@pytest.mark.skip_if_deployed
-async def test_deploy_active(ops_test: OpsTest):
-    """Build the charm and deploy it."""
+async def test_mattermost_db(ops_test: OpsTest) -> None:
+    """Deploy Mattermost to test the 'db' relation.
+
+    Mattermost needs TLS enabled on PostgreSQL to correctly connect to it.
+
+    Args:
+        ops_test: The ops test framework
+    """
     charm = await ops_test.build_charm(".")
     async with ops_test.fast_forward():
         await ops_test.model.deploy(
@@ -40,26 +44,9 @@ async def test_deploy_active(ops_test: OpsTest):
             num_units=DATABASE_UNITS,
             trust=True,
         )
-        await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=1000)
-
-
-@pytest.mark.tls_tests
-async def test_mattermost_db(ops_test: OpsTest) -> None:
-    """Deploy Mattermost to test the 'db' relation.
-
-    Mattermost needs TLS enabled on PostgreSQL to correctly connect to it.
-
-    Args:
-        ops_test: The ops test framework
-    """
-    async with ops_test.fast_forward():
         # Deploy TLS Certificates operator.
         config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
         await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="edge", config=config)
-        await ops_test.model.wait_for_idle(
-            apps=[TLS_CERTIFICATES_APP_NAME], status="active", timeout=1000
-        )
-
         # Relate it to the PostgreSQL to enable TLS.
         await ops_test.model.relate(DATABASE_APP_NAME, TLS_CERTIFICATES_APP_NAME)
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
