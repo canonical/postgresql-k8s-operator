@@ -135,7 +135,6 @@ class PostgreSQLTLS(Object):
             self.charm.push_tls_files_to_workload()
         except (ConnectionError, PathError, ProtocolError) as e:
             logger.error("Cannot push TLS certificates: %r", e)
-            logger.error(event.defer)
             event.defer()
             return
 
