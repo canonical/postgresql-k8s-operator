@@ -34,7 +34,7 @@ from cryptography import x509
 from cryptography.x509.extensions import ExtensionType
 from ops.charm import ActionEvent
 from ops.framework import Object
-from ops.pebble import PathError, ProtocolError
+from ops.pebble import ConnectionError, PathError, ProtocolError
 
 # The unique Charmhub library identifier, never change it
 LIBID = "c27af44a92df4ef38d7ae06418b2800f"
@@ -133,7 +133,7 @@ class PostgreSQLTLS(Object):
 
         try:
             self.charm.push_tls_files_to_workload()
-        except (PathError, ProtocolError) as e:
+        except (ConnectionError, PathError, ProtocolError) as e:
             logger.error("Cannot push TLS certificates: %r", e)
             event.defer()
             return
