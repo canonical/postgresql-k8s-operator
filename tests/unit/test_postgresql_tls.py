@@ -185,7 +185,15 @@ class TestPostgreSQLTLS(unittest.TestCase):
     @patch_network_get(private_address="1.1.1.1")
     def test_get_sans(self):
         sans = self.charm.tls._get_sans()
-        self.assertEqual(sans, ["postgresql-k8s-0", socket.getfqdn(), "1.1.1.1"])
+        self.assertEqual(
+            sans,
+            [
+                "postgresql-k8s-0",
+                "postgresql-k8s-0.postgresql-k8s-endpoints",
+                socket.getfqdn(),
+                "1.1.1.1",
+            ],
+        )
 
     def test_get_tls_extensions(self):
         extensions = self.charm.tls._get_tls_extensions()

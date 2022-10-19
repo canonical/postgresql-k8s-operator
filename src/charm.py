@@ -359,15 +359,30 @@ class PostgresqlOperatorCharm(CharmBase):
         except RetryError:
             pass  # This error can happen in the first leader election, as Patroni is not running yet.
 
-    def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
-        """Event handler for PostgreSQL container on PebbleReadyEvent."""
-        # TODO: move this code to an "_update_layer" method in order to also utilize it in
-        # config-changed hook.
+    def _update_layer(self, event: WorkloadEvent) -> None:
         # Get the postgresql container so we can configure/manipulate it.
         container = event.workload
         # Create a new config layer.
         new_layer = self._postgresql_layer()
 
+        # Get the current layer.
+        try:
+            current_layer = container.get_plan()
+        except pebble.ConnectionError:
+            event.defer()
+            return
+
+        # Check if there are any changes to layer services.
+        if current_layer.services != new_layer.services:
+            # Changes were made, add the new layer.
+            container.add_layer(self._postgresql_service, new_layer, combine=True)
+            logging.info("Added updated layer 'postgresql' to Pebble plan")
+            # Restart it and report a new status to Juju.
+            container.restart(self._postgresql_service)
+            logging.info("Restarted postgresql service")
+
+    def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
+        """Event handler for PostgreSQL container on PebbleReadyEvent."""
         # Defer the initialization of the workload in the replicas
         # if the cluster hasn't been bootstrap on the primary yet.
         # Otherwise, each unit will create a different cluster and
@@ -377,6 +392,8 @@ class PostgresqlOperatorCharm(CharmBase):
             event.defer()
             return
 
+        # Get the postgresql container so we can configure/manipulate it.
+        container = event.workload
         try:
             self.push_tls_files_to_workload(container)
         except (pebble.ConnectionError, PathError, ProtocolError) as e:
@@ -384,18 +401,7 @@ class PostgresqlOperatorCharm(CharmBase):
             event.defer()
             return
 
-        # Get the current layer.
-        current_layer = container.get_plan()
-        # Check if there are any changes to layer services.
-        if current_layer.services != new_layer.services:
-            # Changes were made, add the new layer.
-            container.add_layer(self._postgresql_service, new_layer, combine=True)
-            logging.info("Added updated layer 'postgresql' to Pebble plan")
-            # TODO: move this file generation to on config changed hook
-            # when adding configs to this charm.
-            # Restart it and report a new status to Juju.
-            container.restart(self._postgresql_service)
-            logging.info("Restarted postgresql service")
+        self._update_layer(event)
 
         # Ensure the member is up and running before marking the cluster as initialised.
         if not self._patroni.member_started:
@@ -418,10 +424,10 @@ class PostgresqlOperatorCharm(CharmBase):
                 event.defer()
                 return
 
-            # if self._patroni._tls_enabled and None in self.tls.get_tls_files():
-            #     self.unit.status = WaitingStatus("Awaiting TLS cert generation")
-            #     event.defer()
-            #     return
+            if self._tls_enabled and not self.tls.ready:
+                self.unit.status = WaitingStatus("Awaiting TLS cert generation")
+                event.defer()
+                return
 
             self._peers.data[self.app][CLUSTER_INIT_FLAG] = "True"
 
@@ -635,6 +641,7 @@ class PostgresqlOperatorCharm(CharmBase):
             self.get_secret("app", REPLICATION_PASSWORD_KEY),
             self.get_secret("app", REWIND_PASSWORD_KEY),
             self.postgresql.is_tls_enabled(check_current_host=True),
+            self.tls.ready,
         )
 
     @property
@@ -759,7 +766,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def update_config(self) -> None:
         """Updates Patroni config file based on the existence of the TLS files."""
-        enable_tls = all(self.tls.get_tls_files())
+        enable_tls = self.tls.ready
 
         # Update and reload configuration based on TLS files availability.
         self._patroni.render_patroni_yml_file(enable_tls=enable_tls)

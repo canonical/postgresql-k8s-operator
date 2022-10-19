@@ -21,7 +21,7 @@ import base64
 import logging
 import re
 import socket
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from charms.tls_certificates_interface.v1.tls_certificates import (
     CertificateAvailableEvent,
@@ -178,7 +178,7 @@ class PostgreSQLTLS(Object):
         basic_constraints = x509.BasicConstraints(ca=True, path_length=None)
         return [basic_constraints]
 
-    def get_tls_files(self) -> (Optional[str], Optional[str], Optional[str]):
+    def get_tls_files(self) -> Tuple[Optional[str], Optional[str], Optional[str]]:
         """Prepare TLS files in special PostgreSQL way.
 
         PostgreSQL needs three files:
@@ -193,3 +193,8 @@ class PostgreSQLTLS(Object):
         key = self.charm.get_secret(SCOPE, "key")
         cert = self.charm.get_secret(SCOPE, "cert")
         return key, ca_file, cert
+
+    @property
+    def ready(self) -> bool:
+        """Checks whether TLS certificates are ready."""
+        return all(self.get_tls_files())

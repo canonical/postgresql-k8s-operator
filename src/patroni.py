@@ -48,6 +48,7 @@ class Patroni:
         replication_password: str,
         rewind_password: str,
         tls_enabled: bool,
+        tls_ready: bool,
     ):
         self._endpoint = endpoint
         self._endpoints = endpoints
@@ -59,15 +60,18 @@ class Patroni:
         self._replication_password = replication_password
         self._rewind_password = rewind_password
         self._tls_enabled = tls_enabled
+        self._tls_ready = tls_ready
         # Variable mapping to requests library verify parameter.
         # The CA bundle file is used to validate the server certificate when
         # TLS is enabled, otherwise True is set because it's the default value.
         self._verify = f"{self._storage_path}/{TLS_CA_FILE}" if tls_enabled else True
 
+
+
     @property
     def _patroni_url(self) -> str:
         """Patroni REST API URL."""
-        return f"{'https' if self._tls_enabled else 'http'}://{self._endpoint}:8008"
+        return f"{'https' if self._tls_ready and self._tls_enabled else 'http'}://{self._endpoint}:8008"
 
     def get_primary(self, unit_name_pattern=False) -> str:
         """Get primary instance.
@@ -123,6 +127,9 @@ class Patroni:
         Returns:
             Return whether the primary endpoint is redirecting connections to the primary pod.
         """
+        if not (self._tls_ready and self._tls_enabled):
+            return False
+
         try:
             for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(3)):
                 with attempt:
