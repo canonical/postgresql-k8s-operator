@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 import pytest as pytest
 from pytest_operator.plugin import OpsTest
+from tenacity import Retrying, stop_after_delay, wait_exponential
 
 from tests.helpers import METADATA
 from tests.integration.helpers import (
@@ -13,10 +14,13 @@ from tests.integration.helpers import (
     check_tls_patroni_api,
     deploy_and_relate_application_with_postgresql,
     enable_connections_logging,
+    get_password,
     get_primary,
+    get_unit_address,
     primary_changed,
     run_command_on_unit,
 )
+from tests.integration.test_charm import db_connect
 
 MATTERMOST_APP_NAME = "mattermost"
 TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
@@ -70,12 +74,39 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         # being used in a later step.
         await enable_connections_logging(ops_test, primary)
 
-        # Promote the replica to primary.
-        await run_command_on_unit(
-            ops_test,
-            replica,
-            'su postgres -c "/usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/data/pgdata promote"',
-        )
+        for attempt in Retrying(
+            stop=stop_after_delay(60 * 5), wait=wait_exponential(multiplier=1, min=2, max=30)
+        ):
+            with attempt:
+                # Promote the replica to primary.
+                await run_command_on_unit(
+                    ops_test,
+                    replica,
+                    'su postgres -c "/usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/data/pgdata promote"',
+                )
+
+                # Check that the replica was promoted.
+                host = await get_unit_address(ops_test, replica)
+                password = await get_password(ops_test)
+                with db_connect(host, password) as connection:
+                    connection.autocommit = True
+                    with connection.cursor() as cursor:
+                        cursor.execute("SELECT pg_is_in_recovery();")
+                        in_recovery = cursor.fetchone()[0]
+                        print(f"in_recovery: {in_recovery}")
+                        assert not in_recovery
+                connection.close()
+
+        # Write some data to the initial primary (this causes a divergence
+        # in the instances' timelines).
+        host = await get_unit_address(ops_test, primary)
+        password = await get_password(ops_test)
+        with db_connect(host, password) as connection:
+            connection.autocommit = True
+            with connection.cursor() as cursor:
+                cursor.execute("CREATE TABLE pgrewindtest (testcol INT);")
+                cursor.execute("INSERT INTO pgrewindtest SELECT generate_series(1,1000);")
+        connection.close()
 
         # Stop the initial primary.
         await run_command_on_unit(ops_test, primary, "/charm/bin/pebble stop postgresql")

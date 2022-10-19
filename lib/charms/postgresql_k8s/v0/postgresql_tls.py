@@ -44,7 +44,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version.
-LIBPATCH = 2
+LIBPATCH = 3
 
 logger = logging.getLogger(__name__)
 SCOPE = "unit"
@@ -167,6 +167,7 @@ class PostgreSQLTLS(Object):
         unit_id = self.charm.unit.name.split("/")[1]
         return [
             f"{self.charm.app.name}-{unit_id}",
+            self.charm.get_hostname_by_unit(self.charm.unit.name),
             socket.getfqdn(),
             str(self.charm.model.get_binding(self.peer_relation).network.bind_address),
         ]
