@@ -26,6 +26,7 @@ class TestPatroni(unittest.TestCase):
             "replication-password",
             "rewind-password",
             False,
+            False,
         )
 
     @patch("requests.get")
@@ -187,6 +188,7 @@ class TestPatroni(unittest.TestCase):
             "replication-password",
             "rewind-password",
             False,
+            False,
         )
         expected_content = template.render(
             logging_collector="on",
@@ -218,6 +220,19 @@ class TestPatroni(unittest.TestCase):
 
         # Test with the primary endpoint not ready yet.
         self.assertFalse(self.patroni.primary_endpoint_ready)
+
+        self.patroni = Patroni(
+            "postgresql-k8s-0",
+            ["postgresql-k8s-0"],
+            "postgresql-k8s-primary.dev.svc.cluster.local",
+            "test-model",
+            STORAGE_PATH,
+            "superuser-password",
+            "replication-password",
+            "rewind-password",
+            True,
+            True,
+        )
 
         # Test with the primary endpoint ready.
         _get.return_value.json.return_value = {"state": "running"}

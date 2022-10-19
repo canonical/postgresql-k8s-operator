@@ -66,8 +66,6 @@ class Patroni:
         # TLS is enabled, otherwise True is set because it's the default value.
         self._verify = f"{self._storage_path}/{TLS_CA_FILE}" if tls_enabled else True
 
-
-
     @property
     def _patroni_url(self) -> str:
         """Patroni REST API URL."""

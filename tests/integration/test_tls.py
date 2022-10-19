@@ -44,12 +44,14 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
             num_units=DATABASE_UNITS,
             trust=True,
         )
+        # TODO remove this wait
+        await ops_test.model.wait_for_idle(status="active", timeout=600)
         # Deploy TLS Certificates operator.
         config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
         await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="edge", config=config)
         # Relate it to the PostgreSQL to enable TLS.
         await ops_test.model.relate(DATABASE_APP_NAME, TLS_CERTIFICATES_APP_NAME)
-        await ops_test.model.wait_for_idle(status="active", timeout=1000)
+        await ops_test.model.wait_for_idle(status="active", timeout=600)
 
         # Wait for all units enabling TLS.
         for unit in ops_test.model.applications[DATABASE_APP_NAME].units:

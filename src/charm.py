@@ -424,7 +424,7 @@ class PostgresqlOperatorCharm(CharmBase):
                 event.defer()
                 return
 
-            if self._tls_enabled and not self.tls.ready:
+            if self._patroni._tls_enabled and not self.tls.ready:
                 self.unit.status = WaitingStatus("Awaiting TLS cert generation")
                 event.defer()
                 return
