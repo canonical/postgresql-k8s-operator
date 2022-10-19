@@ -7,6 +7,7 @@ import json
 import logging
 from typing import Dict, List, Optional
 
+import requests
 from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQL,
     PostgreSQLUpdateUserPasswordError,
@@ -15,6 +16,7 @@ from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from lightkube import ApiError, Client, codecs
 from lightkube.resources.core_v1 import Endpoints, Pod, Service
+from ops import pebble
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -33,7 +35,6 @@ from ops.model import (
     WaitingStatus,
 )
 from ops.pebble import Layer, PathError, ProtocolError
-from requests import ConnectionError
 from tenacity import RetryError
 
 from constants import (
@@ -56,6 +57,8 @@ from relations.postgresql_provider import PostgreSQLProvider
 from utils import new_password
 
 logger = logging.getLogger(__name__)
+
+CLUSTER_INIT_FLAG = "cluster_initialised"
 
 
 class PostgresqlOperatorCharm(CharmBase):
@@ -189,7 +192,7 @@ class PostgresqlOperatorCharm(CharmBase):
         if not self.unit.is_leader() or event.departing_unit == self.unit:
             return
 
-        if "cluster_initialised" not in self._peers.data[self.app]:
+        if CLUSTER_INIT_FLAG not in self._peers.data[self.app]:
             event.defer()
             return
 
@@ -205,7 +208,7 @@ class PostgresqlOperatorCharm(CharmBase):
         """Reconfigure cluster members."""
         # The cluster must be initialized first in the leader unit
         # before any other member joins the cluster.
-        if "cluster_initialised" not in self._peers.data[self.app]:
+        if CLUSTER_INIT_FLAG not in self._peers.data[self.app]:
             event.defer()
             return
 
@@ -257,7 +260,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Reconfiguration can be successful only if the cluster is initialised
         # (i.e. first unit has bootstrap the cluster).
-        if "cluster_initialised" not in self._peers.data[self.app]:
+        if CLUSTER_INIT_FLAG not in self._peers.data[self.app]:
             return
 
         try:
@@ -370,13 +373,13 @@ class PostgresqlOperatorCharm(CharmBase):
         # Otherwise, each unit will create a different cluster and
         # any update in the members list on the units won't have effect
         # on fixing that.
-        if not self.unit.is_leader() and "cluster_initialised" not in self._peers.data[self.app]:
+        if not self.unit.is_leader() and CLUSTER_INIT_FLAG not in self._peers.data[self.app]:
             event.defer()
             return
 
         try:
             self.push_tls_files_to_workload(container)
-        except (PathError, ProtocolError) as e:
+        except (pebble.ConnectionError, PathError, ProtocolError) as e:
             logger.error("Cannot push TLS certificates: %r", e)
             event.defer()
             return
@@ -415,7 +418,12 @@ class PostgresqlOperatorCharm(CharmBase):
                 event.defer()
                 return
 
-            self._peers.data[self.app]["cluster_initialised"] = "True"
+            # if self._patroni._tls_enabled and None in self.tls.get_tls_files():
+            #     self.unit.status = WaitingStatus("Awaiting TLS cert generation")
+            #     event.defer()
+            #     return
+
+            self._peers.data[self.app][CLUSTER_INIT_FLAG] = "True"
 
         # Update the replication configuration.
         self._patroni.render_postgresql_conf_file()
@@ -611,7 +619,7 @@ class PostgresqlOperatorCharm(CharmBase):
         try:
             if self._patroni.get_primary(unit_name_pattern=True) == self.unit.name:
                 self.unit.status = ActiveStatus("Primary")
-        except (RetryError, ConnectionError) as e:
+        except (RetryError, requests.ConnectionError) as e:
             logger.error(f"failed to get primary with error {e}")
 
     @property

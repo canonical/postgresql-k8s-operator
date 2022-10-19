@@ -167,6 +167,7 @@ class PostgreSQLTLS(Object):
         unit_id = self.charm.unit.name.split("/")[1]
         return [
             f"{self.charm.app.name}-{unit_id}",
+            self.charm.get_hostname_by_unit(self.charm.unit.name),
             socket.getfqdn(),
             str(self.charm.model.get_binding(self.peer_relation).network.bind_address),
         ]
