@@ -187,12 +187,16 @@ class TestPostgreSQLTLS(unittest.TestCase):
         sans = self.charm.tls._get_sans()
         self.assertEqual(
             sans,
-            [
-                "postgresql-k8s-0",
-                "postgresql-k8s-0.postgresql-k8s-endpoints",
-                socket.getfqdn(),
-                "1.1.1.1",
-            ],
+            {
+                "sans_ip": ["1.1.1.1"],
+                "sans_dns": [
+                    "postgresql-k8s-0",
+                    "postgresql-k8s-0.postgresql-k8s-endpoints",
+                    socket.getfqdn(),
+                    "postgresql-k8s-primary.None.svc.cluster.local",
+                    "postgresql-k8s-replicas.None.svc.cluster.local",
+                ],
+            },
         )
 
     def test_get_tls_extensions(self):

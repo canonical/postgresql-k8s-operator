@@ -18,6 +18,7 @@ It also needs the following methods in the charm class:
 """
 
 import base64
+import ipaddress
 import logging
 import re
 import socket
@@ -167,22 +168,32 @@ class PostgreSQLTLS(Object):
         Returns:
             A list representing the IP and hostnames of the PostgreSQL unit.
         """
+
+        def is_ip_address(address: str) -> bool:
+            """Returns whether and address is an IP address."""
+            try:
+                ipaddress.ip_address(address)
+                return True
+            except ValueError:
+                return False
+
         unit_id = self.charm.unit.name.split("/")[1]
-        # return [
-        #     f"{self.charm.app.name}-{unit_id}",
-        #     self.charm.get_hostname_by_unit(self.charm.unit.name),
-        #     socket.getfqdn(),
-        #     str(self.charm.model.get_binding(self.peer_relation).network.bind_address),
-        # ]
-        sans_dns = [
+
+        # Create a list of all the Subject Alternative Names.
+        sans = [
             f"{self.charm.app.name}-{unit_id}",
+            self.charm.get_hostname_by_unit(self.charm.unit.name),
             socket.getfqdn(),
             str(self.charm.model.get_binding(self.peer_relation).network.bind_address),
         ]
-        sans_dns.extend(self.additional_dns_names)
+        sans.extend(self.additional_dns_names)
+
+        # Separate IP addresses and DNS names.
+        sans_ip = [san for san in sans if is_ip_address(san)]
+        sans_dns = [san for san in sans if not is_ip_address(san)]
+
         return {
-            # "sans_oid": "1.2.3.4.5.5",
-            "sans_ip": [self.charm.get_hostname_by_unit(self.charm.unit.name)],
+            "sans_ip": sans_ip,
             "sans_dns": sans_dns,
         }
 
