@@ -87,7 +87,7 @@ class PostgresqlOperatorCharm(CharmBase):
         self.postgresql_client_relation = PostgreSQLProvider(self)
         self.legacy_db_relation = DbProvides(self, admin=False)
         self.legacy_db_admin_relation = DbProvides(self, admin=True)
-        self.tls = PostgreSQLTLS(self, PEER)
+        self.tls = PostgreSQLTLS(self, PEER, [self.primary_endpoint, self.replicas_endpoint])
         self.restart_manager = RollingOpsManager(
             charm=self, relation="restart", callback=self._restart
         )
