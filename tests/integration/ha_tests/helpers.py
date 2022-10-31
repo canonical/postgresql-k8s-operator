@@ -10,6 +10,8 @@ import yaml
 from kubernetes import config
 from kubernetes.client.api import core_v1_api
 from kubernetes.stream import stream
+from lightkube.core.client import Client
+from lightkube.resources.core_v1 import Pod
 from pytest_operator.plugin import OpsTest
 from tenacity import (
     RetryError,
@@ -23,6 +25,14 @@ from tests.integration.helpers import get_unit_address
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 PORT = 5432
+
+
+class MemberNotListedOnClusterError(Exception):
+    """Raised when a member is not listed in the cluster."""
+
+
+class MemberNotUpdatedOnClusterError(Exception):
+    """Raised when a member is not yet updated in the cluster."""
 
 
 class ProcessError(Exception):
@@ -91,6 +101,36 @@ async def count_writes(ops_test: OpsTest) -> int:
     return count
 
 
+async def fetch_cluster_members(ops_test: OpsTest):
+    """Fetches the IPs listed by Patroni as cluster members.
+
+    Args:
+        ops_test: OpsTest instance.
+    """
+
+    def get_host_ip(host: str) -> str:
+        # Translate the pod hostname to an IP address.
+        model = ops_test.model.info
+        client = Client(namespace=model.name)
+        pod = client.get(Pod, name=host.split(".")[0])
+        return pod.status.podIP
+
+    app = await app_name(ops_test)
+    member_ips = {}
+    for unit in ops_test.model.applications[app].units:
+        unit_address = await get_unit_address(ops_test, unit.name)
+        cluster_info = requests.get(f"http://{unit_address}:8008/cluster")
+        if len(member_ips) > 0:
+            # If the list of members IPs was already fetched, also compare the
+            # list provided by other members.
+            assert member_ips == {
+                get_host_ip(member["host"]) for member in cluster_info.json()["members"]
+            }, "members report different lists of cluster members."
+        else:
+            member_ips = {get_host_ip(member["host"]) for member in cluster_info.json()["members"]}
+    return member_ips
+
+
 async def get_master_start_timeout(ops_test: OpsTest) -> Optional[int]:
     """Get the master start timeout configuration.
 
@@ -142,6 +182,36 @@ async def get_primary(ops_test: OpsTest, app) -> str:
             action = await ops_test.model.units.get(unit_name).run_action("get-primary")
             action = await asyncio.wait_for(action.wait(), 10)
             return action.results["primary"]
+
+
+async def is_replica(ops_test: OpsTest, unit_name: str) -> bool:
+    """Returns whether the unit a replica in the cluster."""
+    unit_ip = await get_unit_address(ops_test, unit_name)
+    member_name = unit_name.replace("/", "-")
+
+    try:
+        for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
+            with attempt:
+                cluster_info = requests.get(f"http://{unit_ip}:8008/cluster")
+
+                # The unit may take some time to be listed on Patroni REST API cluster endpoint.
+                if member_name not in {
+                    member["name"] for member in cluster_info.json()["members"]
+                }:
+                    raise MemberNotListedOnClusterError()
+
+                for member in cluster_info.json()["members"]:
+                    if member["name"] == member_name:
+                        role = member["role"]
+
+                # A member that restarted has the DB process stopped may
+                # take some time to know that a new primary was elected.
+                if role == "replica":
+                    return True
+                else:
+                    raise MemberNotUpdatedOnClusterError()
+    except RetryError:
+        return False
 
 
 async def postgresql_ready(ops_test, unit_name: str) -> bool:

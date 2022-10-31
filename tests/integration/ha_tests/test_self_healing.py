@@ -10,13 +10,16 @@ from tests.integration.ha_tests.helpers import (
     METADATA,
     app_name,
     count_writes,
+    fetch_cluster_members,
     get_primary,
+    is_replica,
     postgresql_ready,
     secondary_up_to_date,
     send_signal_to_process,
     start_continuous_writes,
     stop_continuous_writes,
 )
+from tests.integration.helpers import get_unit_address
 
 PATRONI_PROCESS = "/usr/local/bin/patroni"
 POSTGRESQL_PROCESS = "postgres"
@@ -82,6 +85,19 @@ async def test_restart_db_process(
     # Verify that a new primary gets elected (ie old primary is secondary).
     new_primary_name = await get_primary(ops_test, app)
     assert new_primary_name != primary_name
+
+    # Verify that the old primary is now a replica.
+    assert await is_replica(
+        ops_test, primary_name
+    ), "there are more than one primary in the cluster."
+
+    # Verify that all units are part of the same cluster.
+    member_ips = await fetch_cluster_members(ops_test)
+    ip_addresses = [
+        await get_unit_address(ops_test, unit.name)
+        for unit in ops_test.model.applications[app].units
+    ]
+    assert set(member_ips) == set(ip_addresses), "not all units are part of the same cluster."
 
     # Verify that no writes to the database were missed after stopping the writes.
     total_expected_writes = await stop_continuous_writes(ops_test)
