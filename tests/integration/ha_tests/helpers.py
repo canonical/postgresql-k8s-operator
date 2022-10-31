@@ -1,7 +1,6 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 import asyncio
-import subprocess
 from pathlib import Path
 from typing import Optional
 
