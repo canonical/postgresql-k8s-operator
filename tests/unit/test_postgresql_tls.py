@@ -5,6 +5,7 @@ import socket
 import unittest
 from unittest.mock import MagicMock, patch
 
+from ops.pebble import ConnectionError
 from ops.testing import Harness
 
 from charm import PostgresqlOperatorCharm
@@ -138,8 +139,9 @@ class TestPostgreSQLTLS(unittest.TestCase):
         _update_config.assert_called_once()
         self.assertTrue(self.no_secrets())
 
+    @patch("ops.framework.EventBase.defer")
     @patch("charm.PostgresqlOperatorCharm.push_tls_files_to_workload")
-    def test_on_certificate_available(self, _push_tls_files_to_workload):
+    def test_on_certificate_available(self, _push_tls_files_to_workload, _defer):
         # Test with no provided or invalid CSR.
         self.emit_certificate_available_event()
         self.assertTrue(self.no_secrets())
@@ -155,6 +157,11 @@ class TestPostgreSQLTLS(unittest.TestCase):
             "test-chain-ca-certificate\ntest-chain-certificate",
         )
         _push_tls_files_to_workload.assert_called_once()
+        _defer.assert_not_called()
+
+        _push_tls_files_to_workload.side_effect = ConnectionError
+        self.emit_certificate_available_event()
+        _defer.assert_called_once()
 
     @patch_network_get(private_address="1.1.1.1")
     @patch(
@@ -178,7 +185,19 @@ class TestPostgreSQLTLS(unittest.TestCase):
     @patch_network_get(private_address="1.1.1.1")
     def test_get_sans(self):
         sans = self.charm.tls._get_sans()
-        self.assertEqual(sans, ["postgresql-k8s-0", socket.getfqdn(), "1.1.1.1"])
+        self.assertEqual(
+            sans,
+            {
+                "sans_ip": ["1.1.1.1"],
+                "sans_dns": [
+                    "postgresql-k8s-0",
+                    "postgresql-k8s-0.postgresql-k8s-endpoints",
+                    socket.getfqdn(),
+                    "postgresql-k8s-primary.None.svc.cluster.local",
+                    "postgresql-k8s-replicas.None.svc.cluster.local",
+                ],
+            },
+        )
 
     def test_get_tls_extensions(self):
         extensions = self.charm.tls._get_tls_extensions()
