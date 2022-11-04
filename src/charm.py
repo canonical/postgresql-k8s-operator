@@ -370,7 +370,10 @@ class PostgresqlOperatorCharm(CharmBase):
         # Otherwise, each unit will create a different cluster and
         # any update in the members list on the units won't have effect
         # on fixing that.
-        if not self.unit.is_leader() and "cluster_initialised" not in self._peers.data[self.app]:
+        # Also defers when the workload is not reachable.
+        if (
+            not self.unit.is_leader() and "cluster_initialised" not in self._peers.data[self.app]
+        ) or not container.can_connect():
             event.defer()
             return
 
