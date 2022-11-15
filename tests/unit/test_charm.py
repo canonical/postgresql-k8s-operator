@@ -147,7 +147,7 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(container.get_service(self._postgresql_service).is_running(), True)
         _push_tls_files_to_workload.assert_called_once()
 
-    def test_on_postgresql_pebble_ready_no_connect(self):
+    def test_on_postgresql_pebble_ready_no_connection(self):
         mock_event = MagicMock()
         mock_event.workload = self.harness.model.unit.get_container(self._postgresql_container)
         self.charm._on_postgresql_pebble_ready(mock_event)
