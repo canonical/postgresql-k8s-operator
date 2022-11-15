@@ -119,7 +119,7 @@ juju relate postgresql-k8s application
 juju v3.x
 
 ```shell
-juju integrtate postgresql-k8s application
+juju integrate postgresql-k8s application
 ```
 
 To remove a relation:
