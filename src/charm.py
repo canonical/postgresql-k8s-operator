@@ -190,6 +190,9 @@ class PostgresqlOperatorCharm(CharmBase):
             return
 
         if "cluster_initialised" not in self._peers.data[self.app]:
+            logger.debug(
+                "Deferring on_peer_relation_departed: Cluster must be initialized before members can leave"
+            )
             event.defer()
             return
 
@@ -206,6 +209,9 @@ class PostgresqlOperatorCharm(CharmBase):
         # The cluster must be initialized first in the leader unit
         # before any other member joins the cluster.
         if "cluster_initialised" not in self._peers.data[self.app]:
+            logger.debug(
+                "Deferring on_peer_relation_changed: Cluster must be initialized before members can join"
+            )
             event.defer()
             return
 
@@ -224,6 +230,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Validate the status of the member before setting an ActiveStatus.
         if not self._patroni.member_started:
+            logger.debug("Deferring on_peer_relation_changed: Waiting for member to start")
             self.unit.status = WaitingStatus("awaiting for member to start")
             event.defer()
             return
@@ -371,13 +378,18 @@ class PostgresqlOperatorCharm(CharmBase):
         # any update in the members list on the units won't have effect
         # on fixing that.
         if not self.unit.is_leader() and "cluster_initialised" not in self._peers.data[self.app]:
+            logger.debug(
+                "Deferring on_postgresql_pebble_ready: Not leader or cluster not initialized"
+            )
             event.defer()
             return
 
         try:
             self.push_tls_files_to_workload(container)
         except (PathError, ProtocolError) as e:
-            logger.error("Cannot push TLS certificates: %r", e)
+            logger.error(
+                "Deferring on_postgresql_pebble_ready: Cannot push TLS certificates: %r", e
+            )
             event.defer()
             return
 
@@ -396,6 +408,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Ensure the member is up and running before marking the cluster as initialised.
         if not self._patroni.member_started:
+            logger.debug("Deferring on_postgresql_pebble_ready: Waiting for cluster to start")
             self.unit.status = WaitingStatus("awaiting for cluster to start")
             event.defer()
             return
@@ -411,6 +424,9 @@ class PostgresqlOperatorCharm(CharmBase):
                 return
 
             if not self._patroni.primary_endpoint_ready:
+                logger.debug(
+                    "Deferring on_postgresql_pebble_ready: Waiting for primary endpoint to be ready"
+                )
                 self.unit.status = WaitingStatus("awaiting for primary endpoint to be ready")
                 event.defer()
                 return
