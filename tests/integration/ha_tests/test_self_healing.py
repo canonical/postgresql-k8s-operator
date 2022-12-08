@@ -56,7 +56,7 @@ async def test_restart_db_process(
     app = await app_name(ops_test)
     primary_name = await get_primary(ops_test, app)
 
-    # Freeze the database process.
+    # Restart the database process.
     await send_signal_to_process(ops_test, primary_name, process, "SIGTERM")
 
     async with ops_test.fast_forward():
