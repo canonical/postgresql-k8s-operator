@@ -62,17 +62,17 @@ async def test_restart_db_process(
     async with ops_test.fast_forward():
         # Verify new writes are continuing by counting the number of writes before and after a
         # 2 minutes wait (a db process freeze takes more time to trigger a fail-over).
-        writes = await count_writes(ops_test)
+        writes = await count_writes(ops_test, primary_name)
         for attempt in Retrying(stop=stop_after_delay(60 * 2), wait=wait_fixed(3)):
             with attempt:
-                more_writes = await count_writes(ops_test)
+                more_writes = await count_writes(ops_test, primary_name)
                 assert more_writes > writes, "writes not continuing to DB"
 
         # Verify that the database service got restarted and is ready in the old primary.
         assert await postgresql_ready(ops_test, primary_name)
 
     # Verify that a new primary gets elected (ie old primary is secondary).
-    new_primary_name = await get_primary(ops_test, app)
+    new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
     assert new_primary_name != primary_name
 
     # Verify that the old primary is now a replica.

@@ -1,6 +1,5 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
-import asyncio
 from pathlib import Path
 from typing import Optional
 
@@ -13,15 +12,9 @@ from kubernetes.stream import stream
 from lightkube.core.client import Client
 from lightkube.resources.core_v1 import Pod
 from pytest_operator.plugin import OpsTest
-from tenacity import (
-    RetryError,
-    Retrying,
-    stop_after_attempt,
-    stop_after_delay,
-    wait_fixed,
-)
+from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
-from tests.integration.helpers import get_unit_address
+from tests.integration.helpers import get_password, get_primary, get_unit_address
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 PORT = 5432
@@ -73,23 +66,22 @@ async def change_master_start_timeout(ops_test: OpsTest, seconds: Optional[int])
             )
 
 
-async def count_writes(ops_test: OpsTest) -> int:
+async def count_writes(ops_test: OpsTest, down_unit: str = None) -> int:
     """Count the number of writes in the database."""
     app = await app_name(ops_test)
-    password = await get_password(ops_test, app)
+    password = await get_password(ops_test, database_app_name=app, down_unit=down_unit)
     status = await ops_test.model.get_status()
+    for unit_name, unit in status["applications"][app]["units"].items():
+        if unit_name != down_unit:
+            host = unit["address"]
+            break
+    connection_string = (
+        f"dbname='application' user='operator'"
+        f" host='{host}' password='{password}' connect_timeout=10"
+    )
     try:
-        for attempt in Retrying(
-            stop=stop_after_attempt(len(status["applications"][app]["units"]))
-        ):
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
             with attempt:
-                host = list(status["applications"][app]["units"].values())[
-                    attempt.retry_state.attempt_number - 1
-                ]["address"]
-                connection_string = (
-                    f"dbname='application' user='operator'"
-                    f" host='{host}' password='{password}' connect_timeout=10"
-                )
                 with psycopg2.connect(
                     connection_string
                 ) as connection, connection.cursor() as cursor:
@@ -150,40 +142,6 @@ async def get_master_start_timeout(ops_test: OpsTest) -> Optional[int]:
             return int(master_start_timeout) if master_start_timeout is not None else None
 
 
-async def get_password(ops_test: OpsTest, app) -> str:
-    """Use the charm action to retrieve the password from provided application.
-
-    Returns:
-        string with the password stored on the peer relation databag.
-    """
-    # Can retrieve from any unit running unit, so we pick the first.
-    for attempt in Retrying(stop=stop_after_attempt(len(ops_test.model.applications[app].units))):
-        with attempt:
-            unit_name = (
-                ops_test.model.applications[app].units[attempt.retry_state.attempt_number - 1].name
-            )
-            action = await ops_test.model.units.get(unit_name).run_action("get-password")
-            action = await asyncio.wait_for(action.wait(), 10)
-            return action.results["operator-password"]
-
-
-async def get_primary(ops_test: OpsTest, app) -> str:
-    """Use the charm action to retrieve the primary from provided application.
-
-    Returns:
-        string with the password stored on the peer relation databag.
-    """
-    # Can retrieve from any unit running unit, so we pick the first.
-    for attempt in Retrying(stop=stop_after_attempt(len(ops_test.model.applications[app].units))):
-        with attempt:
-            unit_name = (
-                ops_test.model.applications[app].units[attempt.retry_state.attempt_number - 1].name
-            )
-            action = await ops_test.model.units.get(unit_name).run_action("get-primary")
-            action = await asyncio.wait_for(action.wait(), 10)
-            return action.results["primary"]
-
-
 async def is_replica(ops_test: OpsTest, unit_name: str) -> bool:
     """Returns whether the unit a replica in the cluster."""
     unit_ip = await get_unit_address(ops_test, unit_name)
@@ -234,7 +192,7 @@ async def secondary_up_to_date(ops_test: OpsTest, unit_name: str, expected_write
     Retries over the period of one minute to give secondary adequate time to copy over data.
     """
     app = await app_name(ops_test)
-    password = await get_password(ops_test, app)
+    password = await get_password(ops_test, database_app_name=app)
     status = await ops_test.model.get_status()
     host = status["applications"][app]["units"][unit_name]["address"]
     connection_string = (
