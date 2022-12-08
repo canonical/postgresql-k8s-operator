@@ -36,7 +36,7 @@ class MemberNotUpdatedOnClusterError(Exception):
 
 
 class ProcessError(Exception):
-    pass
+    """Raised when a process fails."""
 
 
 async def app_name(ops_test: OpsTest, application_name: str = "postgresql-k8s") -> Optional[str]:
