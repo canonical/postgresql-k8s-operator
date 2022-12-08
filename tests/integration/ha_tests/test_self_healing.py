@@ -16,7 +16,6 @@ from tests.integration.ha_tests.helpers import (
     postgresql_ready,
     secondary_up_to_date,
     send_signal_to_process,
-    start_continuous_writes,
     stop_continuous_writes,
 )
 from tests.integration.helpers import get_unit_address
@@ -56,9 +55,6 @@ async def test_restart_db_process(
     # Locate primary unit.
     app = await app_name(ops_test)
     primary_name = await get_primary(ops_test, app)
-
-    # Start an application that continuously writes data to the database.
-    await start_continuous_writes(ops_test, app)
 
     # Freeze the database process.
     await send_signal_to_process(ops_test, primary_name, process, "SIGTERM")

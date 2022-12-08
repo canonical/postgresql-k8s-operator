@@ -8,6 +8,7 @@ from tests.integration.ha_tests.helpers import (
     app_name,
     change_master_start_timeout,
     get_master_start_timeout,
+    stop_continuous_writes,
 )
 
 APPLICATION_NAME = "application"
@@ -22,8 +23,28 @@ async def continuous_writes(ops_test: OpsTest) -> None:
             charm = await ops_test.build_charm("tests/integration/ha_tests/application-charm")
             await ops_test.model.deploy(charm, application_name=APPLICATION_NAME)
             await ops_test.model.wait_for_idle(status="active", timeout=1000)
+
+    # Start the continuous writes process by relating the application to the database or
+    # by calling the action if the relation already exists.
+    database_app = await app_name(ops_test)
+    relations = [
+        relation
+        for relation in ops_test.model.applications[database_app].relations
+        if not relation.is_peer
+        and f"{relation.requires.application_name}:{relation.requires.name}"
+        == "application:database"
+    ]
+    if not relations:
+        await ops_test.model.relate(database_app, APPLICATION_NAME)
+        await ops_test.model.wait_for_idle(status="active", timeout=1000)
+    else:
+        action = await ops_test.model.units.get(f"{APPLICATION_NAME}/0").run_action(
+            "start-continuous-writes"
+        )
+        await action.wait()
     yield
-    # Clear the written data at the end.
+    # Stop the continuous writes process and clear the written data at the end.
+    await stop_continuous_writes(ops_test)
     action = await ops_test.model.units.get(f"{APPLICATION_NAME}/0").run_action(
         "clear-continuous-writes"
     )

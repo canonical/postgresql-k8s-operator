@@ -309,27 +309,6 @@ async def send_signal_to_process(
         )
 
 
-async def start_continuous_writes(ops_test: OpsTest, app: str) -> None:
-    """Start continuous writes to PostgreSQL."""
-    # Start the process by relating the application to the database or
-    # by calling the action if the relation already exists.
-    relations = [
-        relation
-        for relation in ops_test.model.applications[app].relations
-        if not relation.is_peer
-        and f"{relation.requires.application_name}:{relation.requires.name}"
-        == "application:database"
-    ]
-    if not relations:
-        await ops_test.model.relate(app, "application")
-        await ops_test.model.wait_for_idle(status="active", timeout=1000)
-    else:
-        action = await ops_test.model.units.get("application/0").run_action(
-            "start-continuous-writes"
-        )
-        await action.wait()
-
-
 async def stop_continuous_writes(ops_test: OpsTest) -> int:
     """Stops continuous writes to PostgreSQL and returns the last written value."""
     action = await ops_test.model.units.get("application/0").run_action("stop-continuous-writes")
