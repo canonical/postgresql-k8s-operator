@@ -379,7 +379,7 @@ class PostgresqlOperatorCharm(CharmBase):
         # on fixing that.
         if not self.unit.is_leader() and "cluster_initialised" not in self._peers.data[self.app]:
             logger.debug(
-                "Deferring on_postgresql_pebble_ready: Not leader or cluster not initialized"
+                "Deferring on_postgresql_pebble_ready: Not leader and cluster not initialized"
             )
             event.defer()
             return
