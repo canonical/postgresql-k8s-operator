@@ -15,11 +15,13 @@ from pytest_operator.plugin import OpsTest
 from tests.helpers import METADATA, STORAGE_PATH
 from tests.integration.helpers import (
     convert_records_to_dict,
+    db_connect,
     get_application_units,
     get_cluster_members,
     get_existing_k8s_resources,
     get_expected_k8s_resources,
     get_password,
+    get_primary,
     get_unit_address,
     scale_application,
 )
@@ -157,8 +159,7 @@ async def test_cluster_is_stable_after_leader_deletion(ops_test: OpsTest) -> Non
 
     # We also need to check that a replica can see the leader
     # to make sure that the cluster is stable again.
-    other_unit_id = 1 if primary.split("/")[1] == 0 else 0
-    assert await get_primary(ops_test, other_unit_id) != "None"
+    assert await get_primary(ops_test, down_unit=primary) != "None"
 
 
 @pytest.mark.charm_tests
@@ -320,33 +321,3 @@ async def test_redeploy_charm_same_model(ops_test: OpsTest):
         await ops_test.model.wait_for_idle(
             apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3
         )
-
-
-async def get_primary(ops_test: OpsTest, unit_id=0) -> str:
-    """Get the primary unit.
-
-    Args:
-        ops_test: ops_test instance.
-        unit_id: the number of the unit.
-
-    Returns:
-        the current primary unit.
-    """
-    action = await ops_test.model.units.get(f"{APP_NAME}/{unit_id}").run_action("get-primary")
-    action = await action.wait()
-    return action.results["primary"]
-
-
-def db_connect(host: str, password: str):
-    """Returns psycopg2 connection object linked to postgres db in the given host.
-
-    Args:
-        host: the IP of the postgres host container
-        password: postgres password
-
-    Returns:
-        psycopg2 connection object linked to postgres db, under "operator" user.
-    """
-    return psycopg2.connect(
-        f"dbname='postgres' user='operator' host='{host}' password='{password}' connect_timeout=10"
-    )

@@ -135,6 +135,21 @@ def convert_records_to_dict(records: List[tuple]) -> dict:
     return records_dict
 
 
+def db_connect(host: str, password: str):
+    """Returns psycopg2 connection object linked to postgres db in the given host.
+
+    Args:
+        host: the IP of the postgres host container
+        password: postgres password
+
+    Returns:
+        psycopg2 connection object linked to postgres db, under "operator" user.
+    """
+    return psycopg2.connect(
+        f"dbname='postgres' user='operator' host='{host}' password='{password}' connect_timeout=10"
+    )
+
+
 async def deploy_and_relate_application_with_postgresql(
     ops_test: OpsTest,
     charm: str,
@@ -364,13 +379,17 @@ def get_expected_k8s_resources(namespace: str, application: str) -> set:
 
 
 async def get_password(
-    ops_test: OpsTest, username: str = "operator", database_app_name: str = DATABASE_APP_NAME
+    ops_test: OpsTest,
+    username: str = "operator",
+    database_app_name: str = DATABASE_APP_NAME,
+    down_unit: str = None,
 ):
     """Retrieve a user password using the action."""
-    unit = ops_test.model.units.get(f"{database_app_name}/0")
-    action = await unit.run_action("get-password", **{"username": username})
-    result = await action.wait()
-    return result.results[f"{username}-password"]
+    for unit in ops_test.model.applications[database_app_name].units:
+        if unit.name != down_unit:
+            action = await unit.run_action("get-password", **{"username": username})
+            result = await action.wait()
+            return result.results[f"{username}-password"]
 
 
 @retry(
@@ -378,21 +397,24 @@ async def get_password(
     stop=stop_after_attempt(10),
     wait=wait_exponential(multiplier=1, min=2, max=30),
 )
-async def get_primary(ops_test: OpsTest, unit_id=0) -> str:
+async def get_primary(
+    ops_test: OpsTest, database_app_name: str = DATABASE_APP_NAME, down_unit: str = None
+) -> str:
     """Get the primary unit.
 
     Args:
         ops_test: ops_test instance.
-        unit_id: the number of the unit.
+        database_app_name: name of the application.
+        down_unit: stopped unit to ignore when calling the action.
 
     Returns:
         the current primary unit.
     """
-    action = await ops_test.model.units.get(f"{DATABASE_APP_NAME}/{unit_id}").run_action(
-        "get-primary"
-    )
-    action = await action.wait()
-    return action.results["primary"]
+    for unit in ops_test.model.applications[database_app_name].units:
+        if unit.name != down_unit:
+            action = await unit.run_action("get-primary")
+            action = await action.wait()
+            return action.results["primary"]
 
 
 async def get_unit_address(ops_test: OpsTest, unit_name: str) -> str:
@@ -483,13 +505,8 @@ async def primary_changed(ops_test: OpsTest, old_primary: str) -> bool:
         ops_test: The ops test framework instance
         old_primary: The name of the unit that was the primary before.
     """
-    other_unit = [
-        unit.name
-        for unit in ops_test.model.applications[DATABASE_APP_NAME].units
-        if unit.name != old_primary
-    ][0]
-    unit_id = int(other_unit.split("/")[1])
-    primary = await get_primary(ops_test, unit_id)
+    application = old_primary.split("/")[0]
+    primary = await get_primary(ops_test, application, down_unit=old_primary)
     return primary != old_primary
 
 
