@@ -1,6 +1,11 @@
 name: Tests
 on:
   pull_request:
+    paths-ignore:
+      - '.gitignore'
+      - '.jujuignore'
+      - 'LICENSE'
+      - '**.md'
   workflow_call:
 
 jobs:
@@ -9,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install dependencies
         run: python3 -m pip install tox
       - name: Run linters
@@ -20,7 +25,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Install dependencies
         run: python -m pip install tox
       - name: Run tests
@@ -28,10 +33,13 @@ jobs:
 
   integration-test-microk8s-charm:
     name: Integration tests for charm deployment (microk8s)
+    needs:
+      - lint
+      - unit-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup operator environment
         uses: charmed-kubernetes/actions-operator@main
         with:
@@ -43,10 +51,13 @@ jobs:
 
   integration-test-microk8s-database-relation:
     name: Integration tests for database relation (microk8s)
+    needs:
+      - lint
+      - unit-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup operator environment
         uses: charmed-kubernetes/actions-operator@main
         with:
@@ -58,10 +69,13 @@ jobs:
 
   integration-test-microk8s-db-relation:
     name: Integration tests for db relation (microk8s)
+    needs:
+      - lint
+      - unit-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup operator environment
         uses: charmed-kubernetes/actions-operator@main
         with:
@@ -73,10 +87,13 @@ jobs:
 
   integration-test-microk8s-db-admin-relation:
     name: Integration tests for db-admin relation (microk8s)
+    needs:
+      - lint
+      - unit-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup operator environment
         uses: charmed-kubernetes/actions-operator@main
         with:
@@ -88,6 +105,9 @@ jobs:
 
   integration-test-microk8s-ha-self-healing:
     name: Integration tests for high availability self healing (microk8s)
+    needs:
+      - lint
+      - unit-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -103,10 +123,31 @@ jobs:
 
   integration-test-microk8s-password-rotation:
     name: Integration tests for password rotation (microk8s)
+    needs:
+      - lint
+      - unit-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
+      - name: Setup operator environment
+        uses: charmed-kubernetes/actions-operator@main
+        with:
+          provider: microk8s
+          # This is needed until https://bugs.launchpad.net/juju/+bug/1977582 is fixed.
+          bootstrap-options: "--agent-version 2.9.29"
+      - name: Run integration tests
+        run: tox -e ha-self-healing-integration
+
+  integration-test-microk8s-password-rotation:
+    name: Integration tests for password rotation (microk8s)
+    needs:
+      - lint
+      - unit-test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
       - name: Setup operator environment
         uses: charmed-kubernetes/actions-operator@main
         with:
@@ -118,10 +159,13 @@ jobs:
 
   integration-test-microk8s-tls:
     name: Integration tests for TLS (microk8s)
+    needs:
+      - lint
+      - unit-test
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
       - name: Setup operator environment
         uses: charmed-kubernetes/actions-operator@main
         with:

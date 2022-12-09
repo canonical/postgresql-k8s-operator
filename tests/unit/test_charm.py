@@ -4,11 +4,12 @@
 import unittest
 from unittest.mock import MagicMock, Mock, PropertyMock, patch
 
+import ops.testing
 from charms.postgresql_k8s.v0.postgresql import PostgreSQLUpdateUserPasswordError
 from lightkube import codecs
 from lightkube.core.exceptions import ApiError
 from lightkube.resources.core_v1 import Pod
-from ops.model import ActiveStatus, BlockedStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.testing import Harness
 from tenacity import RetryError
 
@@ -42,6 +43,8 @@ class TestCharm(unittest.TestCase):
         self._peer_relation = PEER
         self._postgresql_container = "postgresql"
         self._postgresql_service = "postgresql"
+        ops.testing.SIMULATE_CAN_CONNECT = True
+        self.addCleanup(setattr, ops.testing, "SIMULATE_CAN_CONNECT", False)
 
         self.harness = Harness(PostgresqlOperatorCharm)
         self.addCleanup(self.harness.cleanup)
@@ -117,6 +120,7 @@ class TestCharm(unittest.TestCase):
         _primary_endpoint_ready.side_effect = [False, True]
 
         # Check that the initial plan is empty.
+        self.harness.set_can_connect(self._postgresql_container, True)
         plan = self.harness.get_container_pebble_plan(self._postgresql_container)
         self.assertEqual(plan.to_dict(), {})
 
@@ -143,6 +147,16 @@ class TestCharm(unittest.TestCase):
         container = self.harness.model.unit.get_container(self._postgresql_container)
         self.assertEqual(container.get_service(self._postgresql_service).is_running(), True)
         _push_tls_files_to_workload.assert_called_once()
+
+    def test_on_postgresql_pebble_ready_no_connection(self):
+        mock_event = MagicMock()
+        mock_event.workload = self.harness.model.unit.get_container(self._postgresql_container)
+        self.charm._on_postgresql_pebble_ready(mock_event)
+
+        # Event was deferred and status is still maintenance
+        mock_event.defer.assert_called_once()
+        mock_event.set_results.assert_not_called()
+        self.assertIsInstance(self.harness.model.unit.status, MaintenanceStatus)
 
     def test_on_get_password(self):
         # Create a mock event and set passwords in peer relation data.
@@ -278,6 +292,7 @@ class TestCharm(unittest.TestCase):
         ]
 
         # Test before the PostgreSQL service is available.
+        self.harness.set_can_connect(self._postgresql_container, True)
         self.charm.on.update_status.emit()
         _get_primary.assert_not_called()
 
@@ -301,6 +316,15 @@ class TestCharm(unittest.TestCase):
             ActiveStatus("Primary"),
         )
 
+    @patch("charm.Patroni.get_primary")
+    @patch("ops.model.Container.pebble")
+    def test_on_update_status_no_connection(self, _pebble, _get_primary):
+        self.charm.on.update_status.emit()
+
+        # Exits before calling anything.
+        _pebble.get_services.assert_not_called()
+        _get_primary.assert_not_called()
+
     @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.get_primary")
     @patch("ops.model.Container.pebble")
@@ -309,6 +333,8 @@ class TestCharm(unittest.TestCase):
         _pebble.get_services.return_value = ["service data"]
 
         _get_primary.side_effect = [RetryError("fake error")]
+
+        self.harness.set_can_connect(self._postgresql_container, True)
 
         with self.assertLogs("charm", "ERROR") as logs:
             self.charm.on.update_status.emit()
