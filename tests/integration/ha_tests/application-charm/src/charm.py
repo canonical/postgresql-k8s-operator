@@ -130,10 +130,11 @@ class ApplicationCharm(CharmBase):
         # Store the continuous writes process ID to stop the process later.
         self._stored.continuous_writes_pid = popen.pid
 
-    def _stop_continuous_writes(self) -> Optional[int]:
+    def _stop_continuous_writes(self) -> int:
         """Stops continuous writes to PostgreSQL and returns the last written value."""
+        # If there is no process running, returns -1.
         if self._stored.continuous_writes_pid is None:
-            return None
+            return -1
 
         # Stop the process.
         proc = subprocess.Popen(["pkill", "--signal", "SIGKILL", "-f", "src/continuous_writes.py"])

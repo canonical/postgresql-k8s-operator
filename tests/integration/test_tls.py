@@ -12,6 +12,7 @@ from tests.integration.helpers import (
     check_database_users_existence,
     check_tls,
     check_tls_patroni_api,
+    db_connect,
     deploy_and_relate_application_with_postgresql,
     enable_connections_logging,
     get_password,
@@ -20,7 +21,6 @@ from tests.integration.helpers import (
     primary_changed,
     run_command_on_unit,
 )
-from tests.integration.test_charm import db_connect
 
 MATTERMOST_APP_NAME = "mattermost"
 TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
@@ -50,7 +50,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         )
         # Deploy TLS Certificates operator.
         config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
-        await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="edge", config=config)
+        await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="beta", config=config)
         # Relate it to the PostgreSQL to enable TLS.
         await ops_test.model.relate(DATABASE_APP_NAME, TLS_CERTIFICATES_APP_NAME)
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
