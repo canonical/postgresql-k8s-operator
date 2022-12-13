@@ -1,4 +1,4 @@
-# this workflow requires to provide JIRA webhook URL via JIRA_URL GitHub Secret
+# this workflow requires to provide JIRA webhook URL via JIRA_URL and JIRA_COMPONENT GitHub Secret
 # read more: https://support.atlassian.com/cloud-automation/docs/jira-automation-triggers/#Automationtriggers-Incomingwebhook
 # original code source: https://github.com/beliaev-maksim/github-to-jira-automation
 
@@ -41,6 +41,7 @@ jobs:
                   --arg body "" \
                   --arg type "$ISSUE_TYPE" \
                   --arg action '${{ github.event.action }}' \
-                  '{title: $title, url: $url, submitter: $submitter, body: $body, type: $type, action: $action}' )
+                  --arg component '${{ secrets.JIRA_COMPONENT }}' \
+                  '{title: $title, url: $url, submitter: $submitter, body: $body, type: $type, action: $action, component: $component}' )
 
           curl -X POST -H 'Content-type: application/json' --data "${data}" "${{ secrets.JIRA_URL }}"
