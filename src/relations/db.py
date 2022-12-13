@@ -76,6 +76,9 @@ class DbProvides(Object):
             "cluster_initialised" not in self.charm._peers.data[self.charm.app]
             or not self.charm._patroni.member_started
         ):
+            logger.debug(
+                "Deferring on_relation_changed: Cluster not initialized or patroni not running"
+            )
             event.defer()
             return
 
@@ -100,7 +103,7 @@ class DbProvides(Object):
         # and it doesn't have a database name in it.
         database = event.relation.data[event.app].get("database")
         if not database:
-            logger.warning("No database name provided")
+            logger.warning("Deferring on_relation_changed: No database name provided")
             event.defer()
             return
 
@@ -176,6 +179,9 @@ class DbProvides(Object):
             "cluster_initialised" not in self.charm._peers.data[self.charm.app]
             or not self.charm._patroni.member_started
         ):
+            logger.debug(
+                "Deferring on_relation_departed: Cluster not initialized or patroni not running"
+            )
             event.defer()
             return
 
@@ -204,6 +210,9 @@ class DbProvides(Object):
             "cluster_initialised" not in self.charm._peers.data[self.charm.app]
             or not self.charm._patroni.member_started
         ):
+            logger.debug(
+                "Deferring on_relation_broken: Cluster not initialized or patroni not running"
+            )
             event.defer()
             return
 

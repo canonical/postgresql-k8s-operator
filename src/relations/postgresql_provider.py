@@ -66,6 +66,9 @@ class PostgreSQLProvider(Object):
             "cluster_initialised" not in self.charm._peers.data[self.charm.app]
             or not self.charm._patroni.member_started
         ):
+            logger.debug(
+                "Deferring on_database_requested: Cluster must be initialized before database can be requested"
+            )
             event.defer()
             return
 
@@ -116,6 +119,9 @@ class PostgreSQLProvider(Object):
             "cluster_initialised" not in self.charm._peers.data[self.charm.app]
             or not self.charm._patroni.member_started
         ):
+            logger.debug(
+                "Deferring on_relation_broken: Cluster must be initialized before user can be deleted"
+            )
             event.defer()
             return
 
