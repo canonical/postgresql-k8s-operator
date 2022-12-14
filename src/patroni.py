@@ -69,6 +69,16 @@ class Patroni:
         """Patroni REST API URL."""
         return f"{'https' if self._tls_enabled else 'http'}://{self._endpoint}:8008"
 
+    def _get_alternative_server_url(self, attempt) -> str:
+        if attempt.retry_state.attempt_number > 1:
+            url = self._patroni_url.replace(
+                self._endpoint, list(self._endpoints)[attempt.retry_state.attempt_number - 2]
+            )
+        else:
+            url = self._patroni_url
+        logger.warning(f"url for get primary: {url}")
+        return url
+
     def get_primary(self, unit_name_pattern=False) -> str:
         """Get primary instance.
 
@@ -80,14 +90,17 @@ class Patroni:
         """
         primary = None
         # Request info from cluster endpoint (which returns all members of the cluster).
-        r = requests.get(f"{self._patroni_url}/cluster", verify=self._verify)
-        for member in r.json()["members"]:
-            if member["role"] == "leader":
-                primary = member["name"]
-                if unit_name_pattern:
-                    # Change the last dash to / in order to match unit name pattern.
-                    primary = "/".join(primary.rsplit("-", 1))
-                break
+        for attempt in Retrying(stop=stop_after_attempt(len(self._endpoints) + 1)):
+            with attempt:
+                url = self._get_alternative_server_url(attempt)
+                r = requests.get(f"{url}/cluster", verify=self._verify)
+                for member in r.json()["members"]:
+                    if member["role"] == "leader":
+                        primary = member["name"]
+                        if unit_name_pattern:
+                            # Change the last dash to / in order to match unit name pattern.
+                            primary = "/".join(primary.rsplit("-", 1))
+                        break
         return primary
 
     @property

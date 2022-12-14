@@ -59,6 +59,13 @@ async def test_freeze_db_process(
     # Freeze the database process.
     await send_signal_to_process(ops_test, primary_name, process, "SIGSTOP")
 
+    complete_command = f"ssh --container postgresql {primary_name} ps aux"
+    return_code, stdout, stderr = await ops_test.juju(*complete_command.split())
+    # print(f"stdout: {stdout}")
+    # print(f"stderr: {stderr}")
+    if return_code != 0:
+        raise Exception("Expected command to succeed instead it failed: %s", return_code)
+
     async with ops_test.fast_forward():
         # Verify new writes are continuing by counting the number of writes before and after a
         # 2 minutes wait (a db process freeze takes more time to trigger a fail-over).
@@ -104,7 +111,7 @@ async def test_freeze_db_process(
     ), "secondary not up to date with the cluster after restarting."
 
 
-@pytest.mark.ha_self_healing_tests
+# @pytest.mark.ha_self_healing_tests
 @pytest.mark.parametrize("process", DB_PROCESSES)
 async def test_restart_db_process(
     ops_test: OpsTest, process: str, continuous_writes, master_start_timeout
