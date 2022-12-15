@@ -12,6 +12,7 @@ from typing import List
 import requests
 from jinja2 import Template
 from tenacity import (
+    AttemptManager,
     RetryError,
     Retrying,
     retry,
@@ -69,14 +70,18 @@ class Patroni:
         """Patroni REST API URL."""
         return f"{'https' if self._tls_enabled else 'http'}://{self._endpoint}:8008"
 
-    def _get_alternative_server_url(self, attempt) -> str:
+    def _get_alternative_patroni_url(self, attempt: AttemptManager) -> str:
+        """Get an alternative REST API URL from another member each time.
+
+        When the Patroni process is not running in the current unit it's needed
+        to use a URL from another cluster member REST API to do some operations.
+        """
         if attempt.retry_state.attempt_number > 1:
             url = self._patroni_url.replace(
                 self._endpoint, list(self._endpoints)[attempt.retry_state.attempt_number - 2]
             )
         else:
             url = self._patroni_url
-        logger.warning(f"url for get primary: {url}")
         return url
 
     def get_primary(self, unit_name_pattern=False) -> str:
@@ -92,7 +97,7 @@ class Patroni:
         # Request info from cluster endpoint (which returns all members of the cluster).
         for attempt in Retrying(stop=stop_after_attempt(len(self._endpoints) + 1)):
             with attempt:
-                url = self._get_alternative_server_url(attempt)
+                url = self._get_alternative_patroni_url(attempt)
                 r = requests.get(f"{url}/cluster", verify=self._verify)
                 for member in r.json()["members"]:
                     if member["role"] == "leader":
