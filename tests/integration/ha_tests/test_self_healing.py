@@ -68,15 +68,15 @@ async def test_freeze_db_process(
                 more_writes = await count_writes(ops_test, primary_name)
                 assert more_writes > writes, "writes not continuing to DB"
 
+        # Verify that a new primary gets elected (ie old primary is secondary).
+        new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
+        assert new_primary_name != primary_name
+
         # Un-freeze the old primary.
         await send_signal_to_process(ops_test, primary_name, process, "SIGCONT")
 
         # Verify that the database service got restarted and is ready in the old primary.
         assert await postgresql_ready(ops_test, primary_name)
-
-    # Verify that a new primary gets elected (ie old primary is secondary).
-    new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
-    assert new_primary_name != primary_name
 
     # Verify that the old primary is now a replica.
     assert await is_replica(
