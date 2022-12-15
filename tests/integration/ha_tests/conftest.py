@@ -44,11 +44,11 @@ async def continuous_writes(ops_test: OpsTest) -> None:
         await action.wait()
     yield
     # Stop the continuous writes process and clear the written data at the end.
-    # await stop_continuous_writes(ops_test)
-    # action = await ops_test.model.units.get(f"{APPLICATION_NAME}/0").run_action(
-    #     "clear-continuous-writes"
-    # )
-    # await action.wait()
+    await stop_continuous_writes(ops_test)
+    action = await ops_test.model.units.get(f"{APPLICATION_NAME}/0").run_action(
+        "clear-continuous-writes"
+    )
+    await action.wait()
 
 
 @pytest.fixture()

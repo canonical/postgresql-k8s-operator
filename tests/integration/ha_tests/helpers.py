@@ -1,6 +1,5 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
-import logging
 from pathlib import Path
 from typing import Optional
 
@@ -19,8 +18,6 @@ from tests.integration.helpers import get_password, get_primary, get_unit_addres
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 PORT = 5432
-
-logger = logging.getLogger(__name__)
 
 
 class MemberNotListedOnClusterError(Exception):
@@ -268,66 +265,6 @@ async def send_signal_to_process(
             command,
             response.returncode,
         )
-        # response = stream(
-        #     core_v1_api.CoreV1Api().connect_get_namespaced_pod_exec,
-        #     pod_name,
-        #     ops_test.model.info.name,
-        #     container="postgresql",
-        #     command=command.split(),
-        #     stderr=True,
-        #     stdin=False,
-        #     stdout=True,
-        #     tty=False,
-        #     _preload_content=False,
-        # )
-        # exec_command = ["/bin/sh"]
-        # response = stream(
-        #     core_v1_api.CoreV1Api().connect_get_namespaced_pod_exec,
-        #     pod_name,
-        #     ops_test.model.info.name,
-        #     container="postgresql",
-        #     command=exec_command,
-        #     stderr=True,
-        #     stdin=True,
-        #     stdout=True,
-        #     tty=False,
-        #     _preload_content=False,
-        # )
-        # response.run_forever(timeout=10)
-        # while response.is_open():
-        #     print("before update")
-        #     response.update(timeout=1)
-        #     print("after update")
-        #     if response.peek_stdout():
-        #         print("STDOUT: %s" % response.read_stdout())
-        #     if response.peek_stderr():
-        #         print("STDERR: %s" % response.read_stderr())
-        #     if command != "":
-        #         print(f"running command: {command}")
-        #         response.write_stdin(command + "\n")
-        #         command = ""
-        #     else:
-        #         print("breaking")
-        #         break
-        # complete_command = f"juju run {unit_name} -- {command}"
-        # complete_command = f"ssh --container postgresql {unit_name} {command}"
-        # try:
-        #     return_code, stdout, stderr = await asyncio.wait_for(
-        #         ops_test.juju(*complete_command.split()), timeout=30
-        # print(subprocess.check_output(complete_command.split()))
-        # print(f"return_code: {return_code}")
-    #     print(f"stdout: {stdout}")
-    #     print(f"stderr: {stderr}")
-    #     # if response.returncode != 0:
-    #     if return_code != 0:
-    #         raise ProcessError(
-    #             "Expected command %s to succeed instead it failed: %s",
-    #             command,
-    #             return_code,
-    #             # response.returncode,
-    #         )
-    # except asyncio.TimeoutError as e:
-    #     logger.warning(f"got timeout error when sending signal {signal} to db process {process}")
 
 
 async def stop_continuous_writes(ops_test: OpsTest) -> int:

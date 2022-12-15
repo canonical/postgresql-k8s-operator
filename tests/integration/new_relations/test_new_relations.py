@@ -320,3 +320,41 @@ async def test_relation_broken(ops_test: OpsTest):
         await check_database_users_existence(
             ops_test, [], [relation_user], database_app_name=DATABASE_APP_NAME
         )
+
+
+@pytest.mark.database_relation_tests
+async def test_restablish_relation(ops_test: OpsTest):
+    """Test that a previously broken relation would be functional if restored."""
+    # Relate the charms and wait for them exchanging some connection data.
+    async with ops_test.fast_forward():
+        await ops_test.model.add_relation(
+            f"{APPLICATION_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}", DATABASE_APP_NAME
+        )
+        await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active", raise_on_blocked=True)
+
+    # Get the connection string to connect to the database using the read-only endpoint.
+    connection_string = await build_connection_string(
+        ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME, read_only_endpoint=True
+    )
+
+    # Connect to the database using the read-only endpoint.
+    with psycopg2.connect(connection_string) as connection, connection.cursor() as cursor:
+        # Check that preexisting data is still accessible.
+        cursor.execute("SELECT data FROM test;")
+        data = cursor.fetchone()
+        assert data[0] == "some data"
+
+    # Get the connection string to connect to the database using the read/write endpoint.
+    connection_string = await build_connection_string(
+        ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME
+    )
+
+    # Connect to the database using the read/write endpoint.
+    with psycopg2.connect(connection_string) as connection, connection.cursor() as cursor:
+        # Check that it's possible to write and read data from the database.
+        connection.autocommit = True
+        cursor.execute("DELETE FROM test;")
+        cursor.execute("INSERT INTO test(data) VALUES('other data');")
+        cursor.execute("SELECT data FROM test;")
+        data = cursor.fetchone()
+        assert data[0] == "other data"
