@@ -140,7 +140,6 @@ class TestCharm(unittest.TestCase):
         expected = self.charm._postgresql_layer().to_dict()
         expected.pop("summary", "")
         expected.pop("description", "")
-        expected.pop("checks", "")
         # Check the plan is as expected.
         self.assertEqual(plan.to_dict(), expected)
         self.assertEqual(self.harness.model.unit.status, ActiveStatus())
@@ -422,15 +421,6 @@ class TestCharm(unittest.TestCase):
                         "PATRONI_SCOPE": f"patroni-{self.charm._name}",
                         "PATRONI_REPLICATION_USERNAME": "replication",
                         "PATRONI_SUPERUSER_USERNAME": "operator",
-                    },
-                }
-            },
-            "checks": {
-                "patroni": {
-                    "override": "replace",
-                    "level": "ready",
-                    "http": {
-                        "url": f"{self.charm._patroni._patroni_url}/health",
                     },
                 }
             },

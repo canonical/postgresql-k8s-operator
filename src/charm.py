@@ -708,15 +708,6 @@ class PostgresqlOperatorCharm(CharmBase):
                     },
                 }
             },
-            "checks": {
-                "patroni": {
-                    "override": "replace",
-                    "level": "ready",
-                    "http": {
-                        "url": f"{self._patroni._patroni_url}/health",
-                    },
-                }
-            },
         }
         return Layer(layer_config)
 

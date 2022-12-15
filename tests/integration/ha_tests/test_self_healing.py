@@ -111,7 +111,6 @@ async def test_freeze_db_process(
     ), "secondary not up to date with the cluster after restarting."
 
 
-# @pytest.mark.ha_self_healing_tests
 @pytest.mark.ha_self_healing_tests
 @pytest.mark.parametrize("process", DB_PROCESSES)
 async def test_restart_db_process(
