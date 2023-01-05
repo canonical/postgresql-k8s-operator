@@ -104,7 +104,7 @@ requires:
 ```
 
 Please read usage documentation about
-[database_requires](https://charmhub.io/data-platform-libs/libraries/database_requires) library for
+[data_interfaces](https://charmhub.io/data-platform-libs/libraries/data_interfaces) library for
 more information about how to enable PostgreSQL interface in your application.
 
 Relations to new applications are supported via the `postgresql_client` interface. To create a
