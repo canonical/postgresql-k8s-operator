@@ -7,6 +7,7 @@ import json
 import logging
 from typing import Dict, List, Optional
 
+from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
 from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQL,
     PostgreSQLUpdateUserPasswordError,
@@ -14,6 +15,7 @@ from charms.postgresql_k8s.v0.postgresql import (
 from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from lightkube import ApiError, Client, codecs
+from lightkube.models.core_v1 import ServicePort
 from lightkube.resources.core_v1 import Endpoints, Pod, Service
 from ops.charm import (
     ActionEvent,
@@ -91,6 +93,10 @@ class PostgresqlOperatorCharm(CharmBase):
         self.restart_manager = RollingOpsManager(
             charm=self, relation="restart", callback=self._restart
         )
+
+        port1 = ServicePort(5432, name=f"{self.app.name}")
+        port2 = ServicePort(8008, name=f"{self.app.name}")
+        self.service_patcher = KubernetesServicePatch(self, [port1, port2])
 
     @property
     def app_peer_data(self) -> Dict:
@@ -367,7 +373,9 @@ class PostgresqlOperatorCharm(CharmBase):
         """Create the PostgreSQL data directory."""
         path = f"{self._storage_path}/pgdata"
         if not container.exists(path):
-            container.make_dir(path, user=WORKLOAD_OS_USER, group=WORKLOAD_OS_GROUP)
+            container.make_dir(
+                path, permissions=0o700, user=WORKLOAD_OS_USER, group=WORKLOAD_OS_GROUP
+            )
 
     def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
         """Event handler for PostgreSQL container on PebbleReadyEvent."""
