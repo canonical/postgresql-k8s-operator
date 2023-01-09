@@ -91,7 +91,9 @@ class DbProvides(Object):
         application_relation_databag = event.relation.data[self.charm.app]
 
         # Do not allow apps requesting extensions to be installed.
-        if "extensions" in unit_relation_databag or "extensions" in application_relation_databag:
+        if "extensions" in event.relation.data[
+            event.app
+        ] or "extensions" in event.relation.data.get(event.unit, {}):
             logger.error(
                 "ERROR - `extensions` cannot be requested through relations"
                 " - they should be installed through a database charm config in the future"
@@ -101,7 +103,9 @@ class DbProvides(Object):
 
         # Sometimes a relation changed event is triggered,
         # and it doesn't have a database name in it.
-        database = event.relation.data[event.app].get("database")
+        database = event.relation.data[event.app].get(
+            "database", event.relation.data.get(event.unit, {}).get("database")
+        )
         if not database:
             logger.warning("Deferring on_relation_changed: No database name provided")
             event.defer()
