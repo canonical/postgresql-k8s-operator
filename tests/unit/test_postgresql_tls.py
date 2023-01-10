@@ -60,6 +60,7 @@ class TestPostgreSQLTLS(unittest.TestCase):
         self.charm.set_secret(SCOPE, "cert", "test-cert")
         self.charm.set_secret(SCOPE, "chain", "test-chain")
 
+    @patch("charm.KubernetesServicePatch", lambda x, y: None)
     def setUp(self):
         ops.testing.SIMULATE_CAN_CONNECT = True
         self.harness = Harness(PostgresqlOperatorCharm)
