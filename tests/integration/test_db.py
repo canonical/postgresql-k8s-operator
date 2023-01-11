@@ -111,7 +111,7 @@ async def test_finos_waltz_db(ops_test: OpsTest) -> None:
 
 @pytest.mark.db_relation_tests
 async def test_indico_db_blocked(ops_test: OpsTest) -> None:
-    """Tests if deploying and relating to Indico charm will block due to requested relations."""
+    """Tests if deploying and relating to Indico charm will block due to requested extensions."""
     async with ops_test.fast_forward():
         # Build and deploy the PostgreSQL charm.
         await build_and_deploy(ops_test, 1)
