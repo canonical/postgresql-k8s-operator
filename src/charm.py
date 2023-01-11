@@ -374,7 +374,7 @@ class PostgresqlOperatorCharm(CharmBase):
         path = f"{self._storage_path}/pgdata"
         if not container.exists(path):
             container.make_dir(
-                path, permissions=0o700, user=WORKLOAD_OS_USER, group=WORKLOAD_OS_GROUP
+                path, permissions=0o770, user=WORKLOAD_OS_USER, group=WORKLOAD_OS_GROUP
             )
 
     def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
