@@ -6,9 +6,9 @@ from asyncio import gather
 import pytest as pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.helpers import METADATA
 from tests.integration.helpers import (
     DATABASE_APP_NAME,
+    build_and_deploy,
     check_database_creation,
     check_database_users_existence,
     deploy_and_relate_application_with_postgresql,
@@ -18,33 +18,6 @@ FINOS_WALTZ_APP_NAME = "finos-waltz"
 ANOTHER_FINOS_WALTZ_APP_NAME = "another-finos-waltz"
 APPLICATION_UNITS = 1
 DATABASE_UNITS = 3
-
-charm = None
-
-
-async def build_and_deploy(ops_test: OpsTest, num_units: int) -> None:
-    """Builds the charm and deploys a specified number of units."""
-    global charm
-    if not charm:
-        charm = await ops_test.build_charm(".")
-    resources = {
-        "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
-    }
-    await ops_test.model.deploy(
-        charm,
-        resources=resources,
-        application_name=DATABASE_APP_NAME,
-        trust=True,
-        num_units=num_units,
-    ),
-    # Wait until the PostgreSQL charm is successfully deployed.
-    await ops_test.model.wait_for_idle(
-        apps=[DATABASE_APP_NAME],
-        status="active",
-        raise_on_blocked=True,
-        timeout=1000,
-        wait_for_exact_units=num_units,
-    )
 
 
 @pytest.mark.db_relation_tests
