@@ -518,6 +518,11 @@ class PostgresqlOperatorCharm(CharmBase):
                 self.unit.status = BlockedStatus(f"failed to create services {e}")
                 return
 
+    @property
+    def _has_blocked_status(self) -> bool:
+        """Returns whether the unit is in a blocked state."""
+        return isinstance(self.unit.status, BlockedStatus)
+
     def _on_get_password(self, event: ActionEvent) -> None:
         """Returns the password for a user as an action response.
 
@@ -636,11 +641,17 @@ class PostgresqlOperatorCharm(CharmBase):
         """Display an active status message if the current unit is the primary."""
         container = self.unit.get_container("postgresql")
         if not container.can_connect():
+            logger.debug("on_update_status early exit: Cannot connect to container")
+            return
+
+        if self._has_blocked_status:
+            logger.debug("on_update_status early exit: Unit is in Blocked status")
             return
 
         services = container.pebble.get_services(names=[self._postgresql_service])
         if len(services) == 0:
             # Service has not been added nor started yet, so don't try to check Patroni API.
+            logger.debug("on_update_status early exit: Service has not been added nor started yet")
             return
 
         try:
