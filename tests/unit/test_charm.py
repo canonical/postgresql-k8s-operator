@@ -110,13 +110,13 @@ class TestCharm(unittest.TestCase):
     @patch("charm.PostgresqlOperatorCharm._create_pgdata")
     def test_on_postgresql_pebble_ready(
         self,
+        _create_pgdata,
         _,
         __,
-        ___,
         _push_tls_files_to_workload,
         _member_started,
+        ___,
         ____,
-        _____,
         _primary_endpoint_ready,
     ):
         # Mock the primary endpoint ready property values.
@@ -134,6 +134,7 @@ class TestCharm(unittest.TestCase):
 
         # Check for a Waiting status when the primary k8s endpoint is not ready yet.
         self.harness.container_pebble_ready(self._postgresql_container)
+        _create_pgdata.assert_called_once()
         self.assertTrue(isinstance(self.harness.model.unit.status, WaitingStatus))
 
         # Check for the Active status.
