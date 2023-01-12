@@ -32,7 +32,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 6
+LIBPATCH = 7
 
 
 logger = logging.getLogger(__name__)
@@ -184,6 +184,11 @@ class PostgreSQL:
         Args:
             user: user to be deleted.
         """
+        # First of all, check whether the user exists. Otherwise, do nothing.
+        users = self.list_users()
+        if user not in users:
+            return
+
         # List all databases.
         try:
             with self._connect_to_database() as connection, connection.cursor() as cursor:
