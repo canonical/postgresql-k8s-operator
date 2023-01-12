@@ -38,6 +38,7 @@ class _FakeApiError(ApiError):
 
 
 class TestCharm(unittest.TestCase):
+    @patch("charm.KubernetesServicePatch", lambda x, y: None)
     @patch_network_get(private_address="1.1.1.1")
     def setUp(self):
         self._peer_relation = PEER
@@ -106,8 +107,10 @@ class TestCharm(unittest.TestCase):
     @patch("charm.PostgresqlOperatorCharm.push_tls_files_to_workload")
     @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
     @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
+    @patch("charm.PostgresqlOperatorCharm._create_pgdata")
     def test_on_postgresql_pebble_ready(
         self,
+        _create_pgdata,
         _,
         __,
         _push_tls_files_to_workload,
@@ -131,6 +134,7 @@ class TestCharm(unittest.TestCase):
 
         # Check for a Waiting status when the primary k8s endpoint is not ready yet.
         self.harness.container_pebble_ready(self._postgresql_container)
+        _create_pgdata.assert_called_once()
         self.assertTrue(isinstance(self.harness.model.unit.status, WaitingStatus))
 
         # Check for the Active status.
@@ -147,7 +151,8 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(container.get_service(self._postgresql_service).is_running(), True)
         _push_tls_files_to_workload.assert_called_once()
 
-    def test_on_postgresql_pebble_ready_no_connection(self):
+    @patch("charm.PostgresqlOperatorCharm._create_pgdata")
+    def test_on_postgresql_pebble_ready_no_connection(self, _):
         mock_event = MagicMock()
         mock_event.workload = self.harness.model.unit.get_container(self._postgresql_container)
         self.charm._on_postgresql_pebble_ready(mock_event)

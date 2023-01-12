@@ -7,6 +7,7 @@ import json
 import logging
 from typing import Dict, List, Optional
 
+from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
 from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQL,
     PostgreSQLUpdateUserPasswordError,
@@ -14,6 +15,7 @@ from charms.postgresql_k8s.v0.postgresql import (
 from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
 from charms.rolling_ops.v0.rollingops import RollingOpsManager
 from lightkube import ApiError, Client, codecs
+from lightkube.models.core_v1 import ServicePort
 from lightkube.resources.core_v1 import Endpoints, Pod, Service
 from ops.charm import (
     ActionEvent,
@@ -91,6 +93,10 @@ class PostgresqlOperatorCharm(CharmBase):
         self.restart_manager = RollingOpsManager(
             charm=self, relation="restart", callback=self._restart
         )
+
+        postgresql_db_port = ServicePort(5432, name=f"{self.app.name}")
+        patroni_api_port = ServicePort(8008, name=f"{self.app.name}")
+        self.service_patcher = KubernetesServicePatch(self, [postgresql_db_port, patroni_api_port])
 
     @property
     def app_peer_data(self) -> Dict:
@@ -363,12 +369,25 @@ class PostgresqlOperatorCharm(CharmBase):
         except RetryError:
             pass  # This error can happen in the first leader election, as Patroni is not running yet.
 
+    def _create_pgdata(self, container: Container):
+        """Create the PostgreSQL data directory."""
+        path = f"{self._storage_path}/pgdata"
+        if not container.exists(path):
+            container.make_dir(
+                path, permissions=0o770, user=WORKLOAD_OS_USER, group=WORKLOAD_OS_GROUP
+            )
+
     def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
         """Event handler for PostgreSQL container on PebbleReadyEvent."""
         # TODO: move this code to an "_update_layer" method in order to also utilize it in
         # config-changed hook.
         # Get the postgresql container so we can configure/manipulate it.
         container = event.workload
+
+        # Create the PostgreSQL data directory. This is needed on cloud environments
+        # where the volume is mounted with more restrictive permissions.
+        self._create_pgdata(container)
+
         # Create a new config layer.
         new_layer = self._postgresql_layer()
 

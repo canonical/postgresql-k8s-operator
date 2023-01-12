@@ -6,9 +6,9 @@ from asyncio import gather
 import pytest as pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.helpers import METADATA
 from tests.integration.helpers import (
     DATABASE_APP_NAME,
+    build_and_deploy,
     check_database_creation,
     check_database_users_existence,
     deploy_and_relate_application_with_postgresql,
