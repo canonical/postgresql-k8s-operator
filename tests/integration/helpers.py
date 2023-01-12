@@ -28,6 +28,35 @@ from tenacity import (
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
 
+charm = None
+
+
+async def build_and_deploy(
+    ops_test: OpsTest, num_units: int, app_name: str = DATABASE_APP_NAME, status: str = "active"
+) -> None:
+    """Builds the charm and deploys a specified number of units."""
+    global charm
+    if not charm:
+        charm = await ops_test.build_charm(".")
+    resources = {
+        "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
+    }
+    await ops_test.model.deploy(
+        charm,
+        resources=resources,
+        application_name=app_name,
+        trust=True,
+        num_units=num_units,
+    ),
+    # Wait until the PostgreSQL charm is successfully deployed.
+    await ops_test.model.wait_for_idle(
+        apps=[app_name],
+        status=status,
+        raise_on_blocked=True,
+        timeout=1000,
+        wait_for_exact_units=num_units,
+    )
+
 
 async def check_database_users_existence(
     ops_test: OpsTest,

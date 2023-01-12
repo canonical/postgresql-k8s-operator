@@ -14,6 +14,7 @@ from pytest_operator.plugin import OpsTest
 
 from tests.helpers import METADATA, STORAGE_PATH
 from tests.integration.helpers import (
+    build_and_deploy,
     convert_records_to_dict,
     db_connect,
     get_application_units,
@@ -40,15 +41,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
 
     Assert on the unit status before any relations/configurations take place.
     """
-    # Build and deploy charm from local source folder.
-    charm = await ops_test.build_charm(".")
-    resources = {"postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]}
-    await ops_test.model.deploy(
-        charm, resources=resources, application_name=APP_NAME, num_units=len(UNIT_IDS), trust=True
-    )
-    await ops_test.model.set_config({"update-status-hook-interval": "5s"})
-
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
+    await build_and_deploy(ops_test, len(UNIT_IDS), APP_NAME)
     for unit_id in UNIT_IDS:
         assert ops_test.model.applications[APP_NAME].units[unit_id].workload_status == "active"
 
@@ -321,3 +314,24 @@ async def test_redeploy_charm_same_model(ops_test: OpsTest):
         await ops_test.model.wait_for_idle(
             apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3
         )
+
+
+@pytest.mark.charm_tests
+async def test_storage_with_more_restrictive_permissions(ops_test: OpsTest):
+    """Test that the charm can be deployed with a storage with more restrictive permissions."""
+    app_name = f"test-storage-{APP_NAME}"
+    async with ops_test.fast_forward():
+        # Deploy and wait for the charm to get into the install hook (maintenance status).
+        await build_and_deploy(ops_test, 1, app_name, "maintenance")
+
+        # Restrict the permissions of the storage.
+        command = "chmod 755 /var/lib/postgresql/data"
+        complete_command = f"ssh --container postgresql {app_name}/0 {command}"
+        return_code, _, _ = await ops_test.juju(*complete_command.split())
+        if return_code != 0:
+            raise Exception(
+                "Expected command %s to succeed instead it failed: %s", command, return_code
+            )
+
+        # This check is enough to ensure that the charm/workload is working for this specific test.
+        await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
