@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
+from asyncio import gather
+
 import pytest as pytest
 from pytest_operator.plugin import OpsTest
 
@@ -17,6 +19,33 @@ ANOTHER_FINOS_WALTZ_APP_NAME = "another-finos-waltz"
 APPLICATION_UNITS = 1
 DATABASE_UNITS = 3
 
+charm = None
+
+
+async def build_and_deploy(ops_test: OpsTest, num_units: int) -> None:
+    """Builds the charm and deploys a specified number of units."""
+    global charm
+    if not charm:
+        charm = await ops_test.build_charm(".")
+    resources = {
+        "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
+    }
+    await ops_test.model.deploy(
+        charm,
+        resources=resources,
+        application_name=DATABASE_APP_NAME,
+        trust=True,
+        num_units=num_units,
+    ),
+    # Wait until the PostgreSQL charm is successfully deployed.
+    await ops_test.model.wait_for_idle(
+        apps=[DATABASE_APP_NAME],
+        status="active",
+        raise_on_blocked=True,
+        timeout=1000,
+        wait_for_exact_units=num_units,
+    )
+
 
 @pytest.mark.db_relation_tests
 async def test_finos_waltz_db(ops_test: OpsTest) -> None:
@@ -27,25 +56,8 @@ async def test_finos_waltz_db(ops_test: OpsTest) -> None:
     """
     async with ops_test.fast_forward():
         # Build and deploy the PostgreSQL charm.
-        charm = await ops_test.build_charm(".")
-        resources = {
-            "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
-        }
-        await ops_test.model.deploy(
-            charm,
-            resources=resources,
-            application_name=DATABASE_APP_NAME,
-            trust=True,
-            num_units=DATABASE_UNITS,
-        ),
-        # Wait until the PostgreSQL charm is successfully deployed.
-        await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME],
-            status="active",
-            raise_on_blocked=True,
-            timeout=1000,
-            wait_for_exact_units=DATABASE_UNITS,
-        )
+        await build_and_deploy(ops_test, DATABASE_UNITS)
+
         assert len(ops_test.model.applications[DATABASE_APP_NAME].units) == DATABASE_UNITS
 
         for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
@@ -95,3 +107,46 @@ async def test_finos_waltz_db(ops_test: OpsTest) -> None:
 
         # Remove the PostgreSQL application.
         await ops_test.model.remove_application(DATABASE_APP_NAME, block_until_done=True)
+
+
+@pytest.mark.db_relation_tests
+async def test_indico_db_blocked(ops_test: OpsTest) -> None:
+    """Tests if deploying and relating to Indico charm will block due to requested extensions."""
+    async with ops_test.fast_forward():
+        # Build and deploy the PostgreSQL charm.
+        await build_and_deploy(ops_test, 1)
+
+        await ops_test.model.deploy(
+            "indico",
+            channel="stable",
+            application_name="indico",
+            num_units=APPLICATION_UNITS,
+        )
+
+        # Wait for model to stabilise
+        await ops_test.model.wait_for_idle(
+            apps=["indico"],
+            status="waiting",
+            raise_on_blocked=False,
+            timeout=1000,
+        )
+
+        await ops_test.model.relate(f"{DATABASE_APP_NAME}:db", "indico:db")
+
+        await ops_test.model.wait_for_idle(
+            apps=[DATABASE_APP_NAME],
+            status="blocked",
+            raise_on_blocked=False,
+            timeout=1000,
+        )
+
+        assert (
+            ops_test.model.applications[DATABASE_APP_NAME].units[0].workload_status_message
+            == "extensions requested through relation"
+        )
+
+        # Cleanup
+        await gather(
+            ops_test.model.remove_application(DATABASE_APP_NAME, block_until_done=True),
+            ops_test.model.remove_application("indico", block_until_done=True),
+        )
