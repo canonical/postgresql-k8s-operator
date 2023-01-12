@@ -94,9 +94,9 @@ class PostgresqlOperatorCharm(CharmBase):
             charm=self, relation="restart", callback=self._restart
         )
 
-        port1 = ServicePort(5432, name=f"{self.app.name}")
-        port2 = ServicePort(8008, name=f"{self.app.name}")
-        self.service_patcher = KubernetesServicePatch(self, [port1, port2])
+        postgresql_db_port = ServicePort(5432, name=f"{self.app.name}")
+        patroni_api_port = ServicePort(8008, name=f"{self.app.name}")
+        self.service_patcher = KubernetesServicePatch(self, [postgresql_db_port, patroni_api_port])
 
     @property
     def app_peer_data(self) -> Dict:
