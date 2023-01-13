@@ -28,7 +28,7 @@ flowchart TD
   are_all_members_ready -- yes --> add_unit_to_cluster[Add unit to cluster]
   add_unit_to_cluster --> patch_pod_labels[Patch pod labels of the new cluster member]
   patch_pod_labels --> all_units_on_cluster
-  is_leader -- no --> is_part_of_cluster{Is current unit endpoint \n part of the cluster?}
+  is_leader -- no --> is_part_of_cluster{Is current unit \n part of the cluster?}
   is_part_of_cluster -- no --> rtn([return])
   is_part_of_cluster -- yes --> update_config[Update Patroni and \n PostgreSQL config \n]
   update_config --> restart_postgresql[Restart PostgreSQL \n if TLS is turned on/off]
