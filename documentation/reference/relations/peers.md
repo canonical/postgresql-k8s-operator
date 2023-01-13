@@ -30,8 +30,9 @@ flowchart TD
   patch_pod_labels --> all_units_on_cluster
   is_leader -- no --> is_part_of_cluster{Is current unit endpoint \n part of the cluster?}
   is_part_of_cluster -- no --> rtn([return])
-  is_part_of_cluster -- yes --> update_config[Update Patroni and \n PostgreSQL config \n and restart PostgreSQL \n if TLS is turned on / off]
-  update_config --> has_member_started{Have Patroni and PostgreSQL \n started in the current unit?}
+  is_part_of_cluster -- yes --> update_config[Update Patroni and \n PostgreSQL config \n]
+  update_config --> restart_postgresql[Restart PostgreSQL \n if TLS is turned on/off]
+  restart_postgresql --> has_member_started{Have Patroni and PostgreSQL \n started in the current unit?}
   has_member_started -- no --> defer3>defer]
   
   %% Here also the legacy relations' standby field should be updated.
@@ -39,4 +40,20 @@ flowchart TD
   update_read_only_endpoint --> set_active[Set Active\n Status]
   
   set_active --> rtn2([return])
+```
+
+### Peer Relation Departed Hook
+
+```mermaid
+flowchart TD
+  hook_fired([peer-relation-changed Hook]) --> is_leader_and_is_not_departing{Is leader and \n is not departing?}
+  is_leader_and_is_not_departing -- no --> rtn([return])
+  is_leader_and_is_not_departing -- yes --> has_cluster_initialised{Has cluster\n initialised?}
+  has_cluster_initialised -- no --> defer>defer]
+  
+  %% Here also the legacy relations' standby field should be updated.
+  has_cluster_initialised -- yes --> update_read_only_endpoint[Update the read-only endpoint \n in the database relation]
+  update_read_only_endpoint --> remove_departing_units[Remove departing units \n from the cluster]
+  remove_departing_units --> update_config[Turn on/off PostgreSQL \n synchronous_commit configuration]
+  update_config --> rtn2([return])
 ```
