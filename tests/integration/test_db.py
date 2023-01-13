@@ -89,22 +89,33 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
         # Build and deploy the PostgreSQL charm.
         await build_and_deploy(ops_test, 1)
 
-        await ops_test.model.deploy(
-            "indico",
-            channel="stable",
-            application_name="indico",
-            num_units=APPLICATION_UNITS,
+        await gather(
+            ops_test.model.deploy(
+                "indico",
+                channel="stable",
+                application_name="indico1",
+                num_units=APPLICATION_UNITS,
+            ),
+            ops_test.model.deploy(
+                "indico",
+                channel="stable",
+                application_name="indico2",
+                num_units=APPLICATION_UNITS,
+            ),
         )
 
         # Wait for model to stabilise
         await ops_test.model.wait_for_idle(
-            apps=["indico"],
+            apps=["indico1", "indico2"],
             status="waiting",
             raise_on_blocked=False,
             timeout=1000,
         )
 
-        await ops_test.model.relate(f"{DATABASE_APP_NAME}:db", "indico:db")
+        await gather(
+            ops_test.model.relate(f"{DATABASE_APP_NAME}:db", "indico1:db"),
+            ops_test.model.relate(f"{DATABASE_APP_NAME}:db", "indico2:db"),
+        )
 
         await ops_test.model.wait_for_idle(
             apps=[DATABASE_APP_NAME],
@@ -118,8 +129,38 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
             == "extensions requested through relation"
         )
 
+        await ops_test.model.applications[DATABASE_APP_NAME].destroy_relation(
+            f"{DATABASE_APP_NAME}:db", "indico1:db"
+        )
+
+        await ops_test.model.wait_for_idle(
+            apps=[DATABASE_APP_NAME],
+            status="blocked",
+            raise_on_blocked=False,
+            timeout=1000,
+        )
+
+        # Verify that the charm remains blocked if there are other blocking relations
+        assert (
+            ops_test.model.applications[DATABASE_APP_NAME].units[0].workload_status_message
+            == "extensions requested through relation"
+        )
+
+        await ops_test.model.applications[DATABASE_APP_NAME].destroy_relation(
+            f"{DATABASE_APP_NAME}:db", "indico2:db"
+        )
+
+        # Verify that active status is restored when all blocking relations are gone
+        await ops_test.model.wait_for_idle(
+            apps=[DATABASE_APP_NAME],
+            status="active",
+            raise_on_blocked=False,
+            timeout=1000,
+        )
+
         # Cleanup
         await gather(
             ops_test.model.remove_application(DATABASE_APP_NAME, block_until_done=True),
-            ops_test.model.remove_application("indico", block_until_done=True),
+            ops_test.model.remove_application("indico1", block_until_done=True),
+            ops_test.model.remove_application("indico2", block_until_done=True),
         )

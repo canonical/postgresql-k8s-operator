@@ -20,13 +20,15 @@ from ops.charm import (
     RelationDepartedEvent,
 )
 from ops.framework import Object
-from ops.model import BlockedStatus, Relation, Unit
+from ops.model import ActiveStatus, BlockedStatus, Relation, Unit
 from pgconnstr import ConnectionString
 
 from constants import DATABASE_PORT
 from utils import new_password
 
 logger = logging.getLogger(__name__)
+
+EXTENSIONS_BLOCKING_MESSAGE = "extensions requested through relation"
 
 
 class DbProvides(Object):
@@ -91,14 +93,14 @@ class DbProvides(Object):
         application_relation_databag = event.relation.data[self.charm.app]
 
         # Do not allow apps requesting extensions to be installed.
-        if "extensions" in event.relation.data[
-            event.app
-        ] or "extensions" in event.relation.data.get(event.unit, {}):
+        if "extensions" in event.relation.data.get(
+            event.app, {}
+        ) or "extensions" in event.relation.data.get(event.unit, {}):
             logger.error(
                 "ERROR - `extensions` cannot be requested through relations"
                 " - they should be installed through a database charm config in the future"
             )
-            self.charm.unit.status = BlockedStatus("extensions requested through relation")
+            self.charm.unit.status = BlockedStatus(EXTENSIONS_BLOCKING_MESSAGE)
             return
 
         # Sometimes a relation changed event is triggered,
@@ -173,6 +175,21 @@ class DbProvides(Object):
             )
             return
 
+    def _check_for_blocking_relations(self, relation_id: int) -> bool:
+        """Checks if there are relations with extensions.
+
+        Args:
+            relation_id: current relation to be skipped
+        """
+        for relname in ["db", "db-admin"]:
+            for relation in self.charm.model.relations.get(relname, []):
+                if relation.id == relation_id:
+                    continue
+                for data in relation.data.values():
+                    if "extensions" in data:
+                        return True
+        return False
+
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Handle the departure of legacy db and db-admin relations.
 
@@ -206,6 +223,17 @@ class DbProvides(Object):
         local_app_data["allowed_units"] = local_unit_data["allowed_units"] = " ".join(
             {unit for unit in current_allowed_units.split() if unit != departing_unit}
         )
+
+        # Clean up Blocked status if caused by the departed relation
+        if (
+            self.charm._has_blocked_status
+            and self.charm.unit.status.message == EXTENSIONS_BLOCKING_MESSAGE
+        ):
+            if "extensions" in event.relation.data.get(
+                event.app, {}
+            ) or "extensions" in event.relation.data.get(event.unit, {}):
+                if not self._check_for_blocking_relations(event.relation.id):
+                    self.charm.unit.status = ActiveStatus()
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Remove the user created for this relation."""
