@@ -105,7 +105,7 @@ class DbProvides(Object):
 
         # Sometimes a relation changed event is triggered,
         # and it doesn't have a database name in it.
-        database = event.relation.data[event.app].get(
+        database = event.relation.data.get(event.app, {}).get(
             "database", event.relation.data.get(event.unit, {}).get("database")
         )
         if not database:
