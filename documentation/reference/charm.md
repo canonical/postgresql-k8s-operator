@@ -34,3 +34,28 @@ flowchart TD
 
 ### PostgreSQL Pebble Ready Hook
 
+```mermaid
+flowchart TD
+  hook_fired([leader-elected Hook]) --> create_pgdata{Create data directory}
+  create_pgdata --> is_leader_or_has_cluster_initialised{Is current\nunit leader or \n has the cluster initialised?}
+  is_leader_or_has_cluster_initialised -- no --> defer>defer]
+  is_leader_or_has_cluster_initialised -- yes --> has_pushed_tls_files{Has successfully \n pushed TLS files?}
+  has_pushed_tls_files -- no --> defer2>defer]
+  has_pushed_tls_files -- yes --> has_services_changed{Has pebble services changed?}
+  has_services_changed -- no --> has_member_started
+  has_services_changed -- yes --> update_and_restart_service[Update and restart \n the PostgreSQL service]
+  update_and_restart_service --> has_member_started{Have Patroni and PostgreSQL \n started in the current unit?}
+  has_member_started -- no --> defer3>defer]
+  has_member_started -- yes --> is_leader{Is current\nunit leader?}
+  is_leader -- no --> update_config
+  is_leader -- yes --> has_patched_pod_labels{Has successfully \n patched pod labels of \n the new current unit}
+  has_patched_pod_labels -- no --> set_blocked[Set Blocked\nstatus]
+  set_blocked --> rtn([return])
+  has_patched_pod_labels -- yes --> is_service_redirecting_traffic{Is custom k8s service \n redirecting traffic to \n primary pod?}
+  is_service_redirecting_traffic -- no --> set_waiting[Set Waiting\nstatus]
+  set_waiting --> defer4>defer]
+  is_service_redirecting_traffic -- yes --> mark_cluster_as_initialised[Mark cluster as initialised]
+  mark_cluster_as_initialised--> update_config[Turn on/off PostgreSQL \n synchronous_commit configuration]
+  update_config --> set_active[Set Active\n Status]
+  set_active --> rtn2([return])
+```
