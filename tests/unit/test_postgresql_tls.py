@@ -152,7 +152,7 @@ class TestPostgreSQLTLS(unittest.TestCase):
         _push_tls_files_to_workload.assert_not_called()
 
         # Test providing CSR.
-        self.charm.set_secret(SCOPE, "csr", "test-csr")
+        self.charm.set_secret(SCOPE, "csr", "test-csr\n")
         self.emit_certificate_available_event()
         self.assertEqual(self.charm.get_secret(SCOPE, "ca"), "test-ca")
         self.assertEqual(self.charm.get_secret(SCOPE, "cert"), "test-cert")
@@ -180,7 +180,7 @@ class TestPostgreSQLTLS(unittest.TestCase):
         self.charm.set_secret(
             SCOPE, "key", self.get_content_from_file(filename="tests/unit/key.pem")
         )
-        self.charm.set_secret(SCOPE, "cert", "test-cert")
+        self.charm.set_secret(SCOPE, "cert", "test-cert\n")
         self.charm.set_secret(SCOPE, "csr", "test-csr")
         self.emit_certificate_expiring_event()
         self.assertTrue(self.no_secrets(include_certificate=False))
