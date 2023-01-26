@@ -149,10 +149,10 @@ async def check_patroni(ops_test: OpsTest, unit_name: str, restart_time: float) 
     """
     unit_ip = await get_unit_address(ops_test, unit_name)
     health_info = requests.get(f"http://{unit_ip}:8008/health").json()
-    postmaster_start_time = datetime.strptime(
-        health_info["postmaster_start_time"], "%Y-%m-%d %H:%M:%S.%f%z"
+    postprimary_start_time = datetime.strptime(
+        health_info["postprimary_start_time"], "%Y-%m-%d %H:%M:%S.%f%z"
     ).timestamp()
-    return postmaster_start_time > restart_time and health_info["state"] == "running"
+    return postprimary_start_time > restart_time and health_info["state"] == "running"
 
 
 def convert_records_to_dict(records: List[tuple]) -> dict:

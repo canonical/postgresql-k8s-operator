@@ -2,7 +2,7 @@ kind: Service
 apiVersion: v1
 metadata:
   labels:
-    role: master
+    role: primary
   name: {{ app_name }}-primary
 spec:
   ports:
@@ -14,7 +14,7 @@ spec:
       targetPort: 8008
   selector:
     cluster-name: patroni-{{ app_name }}
-    role: master
+    role: primary
 
 ---
 kind: Service

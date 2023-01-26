@@ -156,7 +156,7 @@ class DbProvides(Object):
                     "allowed-subnets": self._get_allowed_subnets(event.relation),
                     "allowed-units": self._get_allowed_units(event.relation),
                     "host": self.charm.endpoint,
-                    "master": primary,
+                    "primary": primary,
                     "port": DATABASE_PORT,
                     "standbys": standbys,
                     "version": self.charm.postgresql.get_postgresql_version(),
@@ -291,11 +291,11 @@ class DbProvides(Object):
         """Gets the given state for this unit.
 
         Returns:
-            The state of this unit. Can be 'standalone', 'master', or 'standby'.
+            The state of this unit. Can be 'standalone', 'primary', or 'standby'.
         """
         if len(self.charm._peers.units) == 0:
             return "standalone"
         if self.charm._patroni.get_primary(unit_name_pattern=True) == self.charm.unit.name:
-            return "master"
+            return "primary"
         else:
             return "standby"

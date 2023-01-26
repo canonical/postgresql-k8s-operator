@@ -5,7 +5,7 @@
 The Charmed PostgreSQL Kubernetes Operator deploys and operates the
 [PostgreSQL](https://www.postgresql.org/about/) database on Kubernetes clusters.
 
-This operator provides a Postgres database with replication enabled (one master instance and one or
+This operator provides a Postgres database with replication enabled (one primary instance and one or
 more hot standby replicas). The Operator in this repository is a Python script which wraps the LTS
 Postgres versions distributed by [Ubuntu](https://hub.docker.com/r/ubuntu/postgres) and adding
 [Patroni](https://github.com/zalando/patroni) on top of it, providing lifecycle management and

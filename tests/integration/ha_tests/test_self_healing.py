@@ -50,7 +50,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 @pytest.mark.ha_self_healing_tests
 @pytest.mark.parametrize("process", [POSTGRESQL_PROCESS])
 async def test_freeze_db_process(
-    ops_test: OpsTest, process: str, continuous_writes, master_start_timeout
+    ops_test: OpsTest, process: str, continuous_writes, primary_start_timeout
 ) -> None:
     # Locate primary unit.
     app = await app_name(ops_test)
@@ -107,7 +107,7 @@ async def test_freeze_db_process(
 @pytest.mark.ha_self_healing_tests
 @pytest.mark.parametrize("process", DB_PROCESSES)
 async def test_restart_db_process(
-    ops_test: OpsTest, process: str, continuous_writes, master_start_timeout
+    ops_test: OpsTest, process: str, continuous_writes, primary_start_timeout
 ) -> None:
     # Locate primary unit.
     app = await app_name(ops_test)
