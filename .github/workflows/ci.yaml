@@ -31,9 +31,24 @@ jobs:
       - name: Run tests
         run: tox -e unit
 
+  lib-check:
+    name: Check libraries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Check libs
+        uses: canonical/charming-actions/check-libraries@2.2.0
+        with:
+          credentials: "${{ secrets.CHARMHUB_TOKEN }}"
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
   integration-test-microk8s-charm:
     name: Integration tests for charm deployment (microk8s)
     needs:
+      - lib-check
       - lint
       - unit-test
     runs-on: ubuntu-latest
@@ -52,6 +67,7 @@ jobs:
   integration-test-microk8s-database-relation:
     name: Integration tests for database relation (microk8s)
     needs:
+      - lib-check
       - lint
       - unit-test
     runs-on: ubuntu-latest
@@ -70,6 +86,7 @@ jobs:
   integration-test-microk8s-db-relation:
     name: Integration tests for db relation (microk8s)
     needs:
+      - lib-check
       - lint
       - unit-test
     runs-on: ubuntu-latest
@@ -88,6 +105,7 @@ jobs:
   integration-test-microk8s-db-admin-relation:
     name: Integration tests for db-admin relation (microk8s)
     needs:
+      - lib-check
       - lint
       - unit-test
     runs-on: ubuntu-latest
@@ -106,6 +124,7 @@ jobs:
   integration-test-microk8s-ha-self-healing:
     name: Integration tests for high availability self healing (microk8s)
     needs:
+      - lib-check
       - lint
       - unit-test
     runs-on: ubuntu-latest
@@ -124,6 +143,7 @@ jobs:
   integration-test-microk8s-password-rotation:
     name: Integration tests for password rotation (microk8s)
     needs:
+      - lib-check
       - lint
       - unit-test
     runs-on: ubuntu-latest
@@ -142,6 +162,7 @@ jobs:
   integration-test-microk8s-tls:
     name: Integration tests for TLS (microk8s)
     needs:
+      - lib-check
       - lint
       - unit-test
     runs-on: ubuntu-latest
