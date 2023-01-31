@@ -11,7 +11,7 @@ These flowcharts detail the control flow of the hooks in this program. Unless ot
 ```mermaid
 flowchart TD
   hook_fired([leader-elected Hook]) --> generate_passwords{Generate password for charm users?}
-  generate_passwords --> create_k8s_resources[Create k8s resources needed by Patroni]
+  generate_passwords --> create_k8s_resources[Create k8s resources\nneeded by Patroni]
   create_k8s_resources --> is_part_of_cluster{Is current unit \n part of the cluster?}
   is_part_of_cluster -- no --> add_to_cluster[Add current unit \n to the cluster]
   add_to_cluster --> remove_departed_units
