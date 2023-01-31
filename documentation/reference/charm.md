@@ -47,8 +47,8 @@ flowchart TD
   update_and_restart_service --> has_member_started{Have Patroni and \n PostgreSQL  started in \n the current unit?}
   has_member_started -- no --> defer3>defer]
   has_member_started -- yes --> is_leader{Is current\nunit leader?}
-  is_leader -- no --> update_config
   is_leader -- yes --> has_patched_pod_labels{Has successfully \n patched pod labels of \n the new current unit}
+  is_leader -- no --> update_config
   has_patched_pod_labels -- no --> set_blocked[Set Blocked\nstatus]
   set_blocked --> rtn([return])
   has_patched_pod_labels -- yes --> is_service_redirecting_traffic{Is custom k8s service \n redirecting traffic to \n primary pod?}
