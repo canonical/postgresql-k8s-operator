@@ -36,8 +36,8 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  hook_fired([leader-elected Hook]) --> create_pgdata{Create data directory}
-  create_pgdata --> is_leader_or_has_cluster_initialised{Is current\nunit leader or \n has the cluster initialised?}
+  hook_fired([leader-elected Hook]) --> create_pgdata{Create data\n directory}
+  create_pgdata --> is_leader_or_has_cluster_initialised{Is current unit\n leader or has the \n cluster initialised?}
   is_leader_or_has_cluster_initialised -- no --> defer>defer]
   is_leader_or_has_cluster_initialised -- yes --> has_pushed_tls_files{Has successfully \n pushed TLS files?}
   has_pushed_tls_files -- no --> defer2>defer]
