@@ -15,7 +15,7 @@ flowchart TD
   create_k8s_resources --> is_part_of_cluster{Is current unit \n part of the cluster?}
   is_part_of_cluster -- no --> add_to_cluster[Add current unit \n to the cluster]
   add_to_cluster --> remove_departed_units
-  is_part_of_cluster -- yes --> remove_departed_units[Remove from the cluster \n pending departed units]
+  is_part_of_cluster -- yes --> remove_departed_units[Remove pending departed \n units from the cluster]
   remove_departed_units --> has_cluster_initialised{Has cluster\n initialised?}
   has_cluster_initialised -- no --> rtn([return])
   has_cluster_initialised -- yes --> all_units_on_cluster{Are all the units \n part of the cluster?}
