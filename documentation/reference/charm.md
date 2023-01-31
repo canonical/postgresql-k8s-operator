@@ -41,7 +41,7 @@ flowchart TD
   is_leader_or_has_cluster_initialised -- no --> defer>defer]
   is_leader_or_has_cluster_initialised -- yes --> has_pushed_tls_files{Has successfully \n pushed TLS files?}
   has_pushed_tls_files -- no --> defer2>defer]
-  has_pushed_tls_files -- yes --> has_services_changed{Has pebble services changed?}
+  has_pushed_tls_files -- yes --> has_services_changed{Have pebble \n services changed?}
   has_services_changed -- no --> has_member_started
   has_services_changed -- yes --> update_and_restart_service[Update and restart \n the PostgreSQL service]
   update_and_restart_service --> has_member_started{Have Patroni and PostgreSQL \n started in the current unit?}
