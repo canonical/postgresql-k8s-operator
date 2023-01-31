@@ -17,6 +17,7 @@ flowchart TD
   hook_fired([peer-relation-changed Hook]) --> has_cluster_initialised{Has cluster\n initialised?}
   has_cluster_initialised -- no --> defer>defer]
   has_cluster_initialised -- yes --> is_leader{Is current\nunit leader?}
+  is_leader -- no --> is_part_of_cluster{Is current unit \n part of the cluster?}
   is_leader -- yes --> all_units_on_cluster{Are all the units \n part of the cluster?}
   all_units_on_cluster -- yes --> is_part_of_cluster
   all_units_on_cluster -- no --> are_all_members_ready{Are all cluster \n members ready?}
@@ -28,7 +29,6 @@ flowchart TD
   are_all_members_ready -- yes --> add_unit_to_cluster[Add unit to cluster]
   add_unit_to_cluster --> patch_pod_labels[Patch pod labels of the new cluster member]
   patch_pod_labels --> all_units_on_cluster
-  is_leader -- no --> is_part_of_cluster{Is current unit \n part of the cluster?}
   is_part_of_cluster -- no --> rtn([return])
   is_part_of_cluster -- yes --> update_config[Update Patroni and \n PostgreSQL config \n]
   update_config --> restart_postgresql[Restart PostgreSQL \n if TLS is turned on/off]
