@@ -44,7 +44,7 @@ flowchart TD
   has_pushed_tls_files -- yes --> has_services_changed{Have pebble \n services changed?}
   has_services_changed -- no --> has_member_started
   has_services_changed -- yes --> update_and_restart_service[Update and restart \n the PostgreSQL service]
-  update_and_restart_service --> has_member_started{Have Patroni and PostgreSQL \n started in the current unit?}
+  update_and_restart_service --> has_member_started{Have Patroni and \n PostgreSQL  started in \n the current unit?}
   has_member_started -- no --> defer3>defer]
   has_member_started -- yes --> is_leader{Is current\nunit leader?}
   is_leader -- no --> update_config
