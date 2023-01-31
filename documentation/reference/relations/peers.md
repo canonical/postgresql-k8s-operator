@@ -32,7 +32,7 @@ flowchart TD
   is_part_of_cluster -- no --> rtn([return])
   is_part_of_cluster -- yes --> update_config[Update Patroni and \n PostgreSQL config \n]
   update_config --> restart_postgresql[Restart PostgreSQL \n if TLS is turned on/off]
-  restart_postgresql --> has_member_started{Have Patroni and PostgreSQL \n started in the current unit?}
+  restart_postgresql --> has_member_started{Have Patroni and \n PostgreSQL started in \n the current unit?}
   has_member_started -- no --> defer3>defer]
   
   %% Here also the legacy relations' standby field should be updated.
