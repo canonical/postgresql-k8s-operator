@@ -5,7 +5,7 @@ import json
 from typing import Optional
 
 import yaml
-from lightkube.core.client import AsyncClient
+from lightkube.core.async_client import AsyncClient
 from lightkube.resources.core_v1 import Service
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_exponential
