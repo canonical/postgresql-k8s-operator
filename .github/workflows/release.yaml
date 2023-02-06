@@ -8,6 +8,7 @@ on:
 jobs:
   ci-tests:
     uses: ./.github/workflows/ci.yaml
+    secrets: inherit
 
   release-to-charmhub:
     name: Release to CharmHub
