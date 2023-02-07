@@ -89,19 +89,17 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
         # Build and deploy the PostgreSQL charm.
         await build_and_deploy(ops_test, 1)
 
-        await gather(
-            ops_test.model.deploy(
-                "indico",
-                channel="stable",
-                application_name="indico1",
-                num_units=APPLICATION_UNITS,
-            ),
-            ops_test.model.deploy(
-                "indico",
-                channel="stable",
-                application_name="indico2",
-                num_units=APPLICATION_UNITS,
-            ),
+        await ops_test.model.deploy(
+            "indico",
+            channel="stable",
+            application_name="indico1",
+            num_units=APPLICATION_UNITS,
+        )
+        await ops_test.model.deploy(
+            "indico",
+            channel="stable",
+            application_name="indico2",
+            num_units=APPLICATION_UNITS,
         )
 
         # Wait for model to stabilise
