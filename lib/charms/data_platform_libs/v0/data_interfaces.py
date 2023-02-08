@@ -304,7 +304,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 3
+LIBPATCH = 4
 
 logger = logging.getLogger(__name__)
 
@@ -545,6 +545,32 @@ class DataRequires(Object, ABC):
     def relations(self) -> List[Relation]:
         """The list of Relation instances associated with this relation_name."""
         return list(self.charm.model.relations[self.relation_name])
+
+    @staticmethod
+    def _is_resource_created_for_relation(relation: Relation):
+        return (
+            "username" in relation.data[relation.app] and "password" in relation.data[relation.app]
+        )
+
+    def is_resource_created(self, relation_id: Optional[int] = None) -> bool:
+        """Check if the resource has been created.
+
+        This function can be used to check if the Provider answered with data in the charm code
+        when outside an event callback.
+
+        Args:
+            relation_id (int, optional): When provided the check is done only for the relation id
+                provided, otherwise the check is done for all relations
+
+        Returns:
+            True or False
+        """
+        if relation_id:
+            return self._is_resource_created_for_relation(self.relations[relation_id])
+        else:
+            return all(
+                [self._is_resource_created_for_relation(relation) for relation in self.relations]
+            )
 
 
 # General events
