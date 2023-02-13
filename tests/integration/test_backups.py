@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
+import ast
 import logging
 import os
 import uuid
@@ -55,9 +56,6 @@ async def test_backup(ops_test: OpsTest) -> None:
     await ops_test.model.relate(DATABASE_APP_NAME, S3_INTEGRATOR_APP_NAME)
 
     for cloud, config in configs.items():
-        # if cloud == GCP:
-        #     continue
-
         # Configure and set access and secret keys.
         await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config(config)
         action = await ops_test.model.units.get(f"{S3_INTEGRATOR_APP_NAME}/0").run_action(
@@ -81,18 +79,5 @@ async def test_backup(ops_test: OpsTest) -> None:
         )
         await action.wait()
         logger.info(f"list backups results: {action.results}")
+        assert len(ast.literal_eval(action.results["backup-list"])) == 1
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
-
-    await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config(configs[AWS])
-    action = await ops_test.model.units.get(f"{S3_INTEGRATOR_APP_NAME}/0").run_action(
-        "sync-s3-credentials",
-        **credentials[AWS],
-    )
-    await action.wait()
-    await ops_test.model.wait_for_idle(status="active", timeout=1000)
-
-    # Run the "list backups" action.
-    action = await ops_test.model.units.get(f"{DATABASE_APP_NAME}/0").run_action("list-backups")
-    await action.wait()
-    logger.info(f"list backups results: {action.results}")
-    await ops_test.model.wait_for_idle(status="active", timeout=1000)
