@@ -38,6 +38,7 @@ from ops.pebble import Layer, PathError, ProtocolError
 from requests import ConnectionError
 from tenacity import RetryError
 
+from backups import PostgreSQLBackups
 from constants import (
     PEER,
     REPLICATION_PASSWORD_KEY,
@@ -89,6 +90,7 @@ class PostgresqlOperatorCharm(CharmBase):
         self.postgresql_client_relation = PostgreSQLProvider(self)
         self.legacy_db_relation = DbProvides(self, admin=False)
         self.legacy_db_admin_relation = DbProvides(self, admin=True)
+        self.backup = PostgreSQLBackups(self, "s3-parameters")
         self.tls = PostgreSQLTLS(self, PEER, [self.primary_endpoint, self.replicas_endpoint])
         self.restart_manager = RollingOpsManager(
             charm=self, relation="restart", callback=self._restart
@@ -452,9 +454,11 @@ class PostgresqlOperatorCharm(CharmBase):
 
             self._peers.data[self.app]["cluster_initialised"] = "True"
 
-        # Update the replication configuration.
-        self._patroni.render_postgresql_conf_file()
-        self._patroni.reload_patroni_configuration()
+        # if not self.backup.initialise_stanza():
+        #     return
+
+        # Update the archive command and replication configurations.
+        self.update_config()
 
         # All is well, set an ActiveStatus.
         self.unit.status = ActiveStatus()
@@ -800,7 +804,14 @@ class PostgresqlOperatorCharm(CharmBase):
         enable_tls = all(self.tls.get_tls_files())
 
         # Update and reload configuration based on TLS files availability.
-        self._patroni.render_patroni_yml_file(enable_tls=enable_tls)
+        logger.error(
+            f'self._peers.data[self.unit].get("stanza"): {self._peers.data[self.unit].get("stanza")}'
+        )
+        self._patroni.render_patroni_yml_file(
+            enable_tls=enable_tls,
+            stanza=self._peers.data[self.unit].get("stanza"),
+            restoring_backup="restoring-backup" in self._peers.data[self.unit],
+        )
         self._patroni.render_postgresql_conf_file()
         if not self._patroni.member_started:
             return

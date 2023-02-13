@@ -48,6 +48,8 @@ rules:
   - patch
   - update
   - watch
+  - delete
+  - deletecollection
 - apiGroups:
   - ""
   resources:
@@ -59,6 +61,8 @@ rules:
   - create
   - list
   - watch
+  - delete
+  - deletecollection
 - apiGroups:
   - ""
   resources:
