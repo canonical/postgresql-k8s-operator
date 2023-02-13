@@ -1,22 +1,4 @@
 bootstrap:
-  {%- if restoring_backup %}
-  method: pgbackrest
-  pgbackrest:
-    command: /bin/bash -c "pgbackrest --stanza={{ stanza }} --config={{ storage_path }}/pgbackrest.conf --type=immediate restore"
-    keep_existing_recovery_conf: True
-    # no_paramas: False
-    # recovery_conf:
-    #    recovery_target_action: promote
-    #    recovery_target_timeline: latest
-    #    recovery_command: pgbackrest --stanza={{ stanza }} --config={{ storage_path }}/pgbackrest.conf archive-get %f %p
-  {% else %}
-  initdb:
-  - auth-host: md5
-  - auth-local: trust
-  - encoding: UTF8
-  - locale: en_US.UTF-8
-  - data-checksums
-  {%- endif %}
   dcs:
     postgresql:
       use_pg_rewind: true
@@ -25,9 +7,6 @@ bootstrap:
       parameters:
         {%- if enable_pgbackrest %}
         archive_command: 'pgbackrest --stanza={{ stanza }} --config={{ storage_path }}/pgbackrest.conf archive-push %p'
-        #recovery_conf:
-        #  recovery_target_timeline: latest
-        #  restore_command: 'pgbackrest --stanza={{ stanza }} --config={{ storage_path }}/pgbackrest.conf archive-get %f "%p"'
         {% else %}
         archive_command: /bin/true
         {%- endif %}
@@ -37,6 +16,12 @@ bootstrap:
         logging_collector: 'on'
         password_encryption: md5
         wal_level: logical
+  initdb:
+  - auth-host: md5
+  - auth-local: trust
+  - encoding: UTF8
+  - locale: en_US.UTF-8
+  - data-checksums
   pg_hba:
   - local all operator peer
   - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 md5
@@ -68,9 +53,6 @@ postgresql:
   parameters:
     {%- if enable_pgbackrest %}
     archive_command: 'pgbackrest --stanza={{ stanza }} --config={{ storage_path }}/pgbackrest.conf archive-push %p'
-    #recovery_conf:
-    #  recovery_target_timeline: latest
-    #  restore_command: 'pgbackrest --stanza={{ stanza }} --config={{ storage_path }}/pgbackrest.conf archive-get %f "%p"'
     {% else %}
     archive_command: /bin/true
     {%- endif %}

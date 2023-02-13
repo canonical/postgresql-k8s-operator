@@ -83,14 +83,6 @@ async def test_backup(ops_test: OpsTest) -> None:
         logger.info(f"list backups results: {action.results}")
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
-        # # Run the "restore backup" action.
-        # action = await ops_test.model.units.get(f"{DATABASE_APP_NAME}/0").run_action(
-        #     "restore-backup"
-        # )
-        # await action.wait()
-        # logger.info(f"restore results: {action.results}")
-        # await ops_test.model.wait_for_idle(status="active", timeout=1000)
-
     await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config(configs[AWS])
     action = await ops_test.model.units.get(f"{S3_INTEGRATOR_APP_NAME}/0").run_action(
         "sync-s3-credentials",

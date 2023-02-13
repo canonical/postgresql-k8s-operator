@@ -15,11 +15,6 @@ get-password:
         Possible values - backup, operator, replication, rewind.
 list-backups:
   description: Lists backups in s3 storage in AWS.
-restore-backup:
-  description: Restore a backup from s3 storage in AWS.
-  params:
-    backup-id:
-      type: string
 set-password:
   description: Change the system user's password, which is used by charm.
     It is for internal charm users and SHOULD NOT be used by applications.

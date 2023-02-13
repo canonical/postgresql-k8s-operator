@@ -810,7 +810,6 @@ class PostgresqlOperatorCharm(CharmBase):
         self._patroni.render_patroni_yml_file(
             enable_tls=enable_tls,
             stanza=self._peers.data[self.unit].get("stanza"),
-            restoring_backup="restoring-backup" in self._peers.data[self.unit],
         )
         self._patroni.render_postgresql_conf_file()
         if not self._patroni.member_started:
