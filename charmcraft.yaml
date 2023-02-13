@@ -13,5 +13,5 @@ parts:
       - libssl-dev
       - rustc
       - cargo
-    charm-binary-python-packages: [psycopg2-binary==2.9.3]
+    charm-binary-python-packages: [psycopg2-binary==2.9.5]
     charm-python-packages: [setuptools]
