@@ -58,7 +58,7 @@ class PostgreSQLBackups(Object):
             process = container.exec(
                 [
                     "pgbackrest",
-                    "--stanza=main",
+                    f"--stanza={self.charm.cluster_name}",
                     "--type=full",
                     "backup",
                 ],
@@ -74,45 +74,17 @@ class PostgreSQLBackups(Object):
             event.fail(f"Failed to backup PostgreSQL with error: {str(e)}")
 
     def _on_list_backups_action(self, event) -> None:
-        # if self.model.get_relation(self.relation_name) is None:
-        #     event.fail("Relation with s3-integrator charm missing, cannot create backup.")
-        #     return
-
-        # cannot list backups if pbm is resyncing, or has incompatible options or incorrect
-        # credentials
-        # pbm_status = self._get_pbm_status()
-        # self.charm.unit.status = pbm_status
-        # if isinstance(pbm_status, WaitingStatus):
-        #     event.defer()
-        #     logger.debug(
-        #         "Sync-ing configurations needs more time, must wait before listing backups."
-        #     )
-        #     return
-        # if isinstance(pbm_status, BlockedStatus):
-        #     event.fail(f"Cannot list backups: {pbm_status.message}.")
-        #     return
-
         try:
             container = self.charm.unit.get_container("postgresql")
             process = container.exec(
                 [
                     "pgbackrest",
                     "repo-ls",
-                    "backup/main",
-                    # '--filter="(F|D|I)$"',
+                    f"backup/{self.charm.cluster_name}",
                 ],
                 user=WORKLOAD_OS_USER,
                 group=WORKLOAD_OS_GROUP,
             )
-            command = " ".join(
-                [
-                    "pgbackrest",
-                    "repo-ls",
-                    "backup/main",
-                    # "--filter='(F|D|I)$'",
-                ]
-            )
-            logger.error(f"command: {command}")
             output, other = process.wait_output()
             logger.info(f"output list: {output}")
             logger.info(f"other list: {other}")
@@ -142,7 +114,7 @@ class PostgreSQLBackups(Object):
             process = container.exec(
                 [
                     "pgbackrest",
-                    "--stanza=main",
+                    f"--stanza={self.charm.cluster_name}",
                     "stanza-create",
                 ],
                 user=WORKLOAD_OS_USER,
@@ -151,7 +123,7 @@ class PostgreSQLBackups(Object):
             output, other = process.wait_output()
             logger.info(f"output: {output}")
             logger.info(f"other: {other}")
-            self.charm._peers.data[self.charm.unit].update({"stanza": "main"})
+            self.charm._peers.data[self.charm.unit].update({"stanza": self.charm.cluster_name})
             self.charm.update_config()
             logger.error(f"member started: {self.charm._patroni.member_started}")
             process = container.exec(
@@ -172,7 +144,7 @@ class PostgreSQLBackups(Object):
                     process = container.exec(
                         [
                             "pgbackrest",
-                            "--stanza=main",
+                            f"--stanza={self.charm.cluster_name}",
                             "check",
                         ],
                         user=WORKLOAD_OS_USER,
@@ -206,6 +178,7 @@ class PostgreSQLBackups(Object):
             bucket=credentials["bucket"],
             access_key=credentials["access-key"],
             secret_key=credentials["secret-key"],
+            stanza=self.charm.cluster_name,
             user=BACKUP_USER,
         )
         container = self.charm.unit.get_container("postgresql")

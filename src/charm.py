@@ -73,6 +73,7 @@ class PostgresqlOperatorCharm(CharmBase):
         self._name = self.model.app.name
         self._namespace = self.model.name
         self._context = {"namespace": self._namespace, "app_name": self._name}
+        self.cluster_name = f"patroni-{self._name}"
 
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
@@ -496,9 +497,7 @@ class PostgresqlOperatorCharm(CharmBase):
         """
         client = Client()
         patch = {
-            "metadata": {
-                "labels": {"application": "patroni", "cluster-name": f"patroni-{self._name}"}
-            }
+            "metadata": {"labels": {"application": "patroni", "cluster-name": self.cluster_name}}
         }
         client.patch(
             Pod,
@@ -737,11 +736,11 @@ class PostgresqlOperatorCharm(CharmBase):
                     "user": "postgres",
                     "group": "postgres",
                     "environment": {
-                        "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: patroni-{self._name}}}",
+                        "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: {self.cluster_name}}}",
                         "PATRONI_KUBERNETES_NAMESPACE": self._namespace,
                         "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
                         "PATRONI_NAME": pod_name,
-                        "PATRONI_SCOPE": f"patroni-{self._name}",
+                        "PATRONI_SCOPE": self.cluster_name,
                         "PATRONI_REPLICATION_USERNAME": REPLICATION_USER,
                         "PATRONI_SUPERUSER_USERNAME": USER,
                     },
