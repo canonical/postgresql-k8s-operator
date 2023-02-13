@@ -101,6 +101,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("charm.Patroni.primary_endpoint_ready", new_callable=PropertyMock)
     @patch("charm.PostgresqlOperatorCharm.update_config")
+    @patch("charm.PostgresqlOperatorCharm.postgresql")
     @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.member_started")
     @patch("charm.PostgresqlOperatorCharm.push_tls_files_to_workload")
@@ -114,6 +115,7 @@ class TestCharm(unittest.TestCase):
         __,
         _push_tls_files_to_workload,
         _member_started,
+        _postgresql,
         ___,
         _primary_endpoint_ready,
     ):

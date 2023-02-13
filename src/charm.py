@@ -40,6 +40,7 @@ from tenacity import RetryError
 
 from backups import PostgreSQLBackups
 from constants import (
+    BACKUP_USER,
     PEER,
     REPLICATION_PASSWORD_KEY,
     REPLICATION_USER,
@@ -451,6 +452,10 @@ class PostgresqlOperatorCharm(CharmBase):
                 self.unit.status = WaitingStatus("awaiting for primary endpoint to be ready")
                 event.defer()
                 return
+
+            # Create the backup user.
+            if BACKUP_USER not in self.postgresql.list_users():
+                self.postgresql.create_user(BACKUP_USER, new_password(), admin=True)
 
             self._peers.data[self.app]["cluster_initialised"] = "True"
 

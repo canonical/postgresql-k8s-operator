@@ -14,7 +14,7 @@ from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
-from constants import WORKLOAD_OS_GROUP, WORKLOAD_OS_USER
+from constants import BACKUP_USER, WORKLOAD_OS_GROUP, WORKLOAD_OS_USER
 
 logger = logging.getLogger(__name__)
 
@@ -206,6 +206,7 @@ class PostgreSQLBackups(Object):
             bucket=credentials["bucket"],
             access_key=credentials["access-key"],
             secret_key=credentials["secret-key"],
+            user=BACKUP_USER,
         )
         container = self.charm.unit.get_container("postgresql")
         filename = "/etc/pgbackrest.conf"
