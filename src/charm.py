@@ -454,20 +454,26 @@ class PostgresqlOperatorCharm(CharmBase):
                 event.defer()
                 return
 
-            # Create the backup user.
-            if BACKUP_USER not in self.postgresql.list_users():
-                self.postgresql.create_user(BACKUP_USER, new_password(), admin=True)
-
-            self._peers.data[self.app]["cluster_initialised"] = "True"
-
-        # if not self.backup.initialise_stanza():
-        #     return
+            self._initialize_cluster()
 
         # Update the archive command and replication configurations.
         self.update_config()
 
         # All is well, set an ActiveStatus.
         self.unit.status = ActiveStatus()
+
+    def _initialize_cluster(self) -> None:
+        # Create the backup user.
+        if BACKUP_USER not in self.postgresql.list_users():
+            self.postgresql.create_user(BACKUP_USER, new_password(), admin=True)
+
+        # Mark the cluster as initialised.
+        self._peers.data[self.app]["cluster_initialised"] = "True"
+
+    @property
+    def is_blocked(self) -> bool:
+        """Returns whether the unit is in a blocked state."""
+        return isinstance(self.unit.status, BlockedStatus)
 
     def _on_upgrade_charm(self, _) -> None:
         # Recreate k8s resources and add labels required for replication
