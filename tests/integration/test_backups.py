@@ -51,9 +51,12 @@ async def test_backup(ops_test: OpsTest) -> None:
     await build_and_deploy(ops_test, 1, wait_for_idle=False)
     await ops_test.model.deploy(S3_INTEGRATOR_APP_NAME, channel="edge")
 
+    # Relate PostgreSQL to S3 integrator.
+    await ops_test.model.relate(DATABASE_APP_NAME, S3_INTEGRATOR_APP_NAME)
+
     for cloud, config in configs.items():
-        if cloud == GCP:
-            continue
+        # if cloud == GCP:
+        #     continue
 
         # Configure and set access and secret keys.
         await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config(config)
@@ -62,9 +65,6 @@ async def test_backup(ops_test: OpsTest) -> None:
             **credentials[cloud],
         )
         await action.wait()
-
-        # Relate PostgreSQL to S3 integrator.
-        await ops_test.model.relate(DATABASE_APP_NAME, S3_INTEGRATOR_APP_NAME)
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
         # Run the "create backup" action.
@@ -90,3 +90,17 @@ async def test_backup(ops_test: OpsTest) -> None:
         # await action.wait()
         # logger.info(f"restore results: {action.results}")
         # await ops_test.model.wait_for_idle(status="active", timeout=1000)
+
+    await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config(configs[AWS])
+    action = await ops_test.model.units.get(f"{S3_INTEGRATOR_APP_NAME}/0").run_action(
+        "sync-s3-credentials",
+        **credentials[AWS],
+    )
+    await action.wait()
+    await ops_test.model.wait_for_idle(status="active", timeout=1000)
+
+    # Run the "list backups" action.
+    action = await ops_test.model.units.get(f"{DATABASE_APP_NAME}/0").run_action("list-backups")
+    await action.wait()
+    logger.info(f"list backups results: {action.results}")
+    await ops_test.model.wait_for_idle(status="active", timeout=1000)
