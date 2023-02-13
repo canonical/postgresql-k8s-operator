@@ -59,7 +59,6 @@ class PostgreSQLBackups(Object):
                 [
                     "pgbackrest",
                     "--stanza=main",
-                    f"--config={self.charm._storage_path}/pgbackrest.conf",
                     "--type=full",
                     "backup",
                 ],
@@ -98,7 +97,6 @@ class PostgreSQLBackups(Object):
             process = container.exec(
                 [
                     "pgbackrest",
-                    f"--config={self.charm._storage_path}/pgbackrest.conf",
                     "repo-ls",
                     "backup/main",
                     # '--filter="(F|D|I)$"',
@@ -109,7 +107,6 @@ class PostgreSQLBackups(Object):
             command = " ".join(
                 [
                     "pgbackrest",
-                    f"--config={self.charm._storage_path}/pgbackrest.conf",
                     "repo-ls",
                     "backup/main",
                     # "--filter='(F|D|I)$'",
@@ -146,7 +143,6 @@ class PostgreSQLBackups(Object):
                 [
                     "pgbackrest",
                     "--stanza=main",
-                    f"--config={self.charm._storage_path}/pgbackrest.conf",
                     "stanza-create",
                 ],
                 user=WORKLOAD_OS_USER,
@@ -177,7 +173,6 @@ class PostgreSQLBackups(Object):
                         [
                             "pgbackrest",
                             "--stanza=main",
-                            f"--config={self.charm._storage_path}/pgbackrest.conf",
                             "check",
                         ],
                         user=WORKLOAD_OS_USER,
@@ -213,8 +208,10 @@ class PostgreSQLBackups(Object):
             secret_key=credentials["secret-key"],
         )
         container = self.charm.unit.get_container("postgresql")
+        filename = "/etc/pgbackrest.conf"
+        container.remove_path(filename)
         container.push(
-            f"{self.charm._storage_path}/pgbackrest.conf",
+            filename,
             rendered,
             user=WORKLOAD_OS_USER,
             group=WORKLOAD_OS_GROUP,

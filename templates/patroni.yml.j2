@@ -6,7 +6,7 @@ bootstrap:
       remove_data_directory_on_diverged_timelines: true
       parameters:
         {%- if enable_pgbackrest %}
-        archive_command: 'pgbackrest --stanza={{ stanza }} --config={{ storage_path }}/pgbackrest.conf archive-push %p'
+        archive_command: 'pgbackrest --stanza={{ stanza }} archive-push %p'
         {% else %}
         archive_command: /bin/true
         {%- endif %}
@@ -52,7 +52,7 @@ postgresql:
   listen: 0.0.0.0:5432
   parameters:
     {%- if enable_pgbackrest %}
-    archive_command: 'pgbackrest --stanza={{ stanza }} --config={{ storage_path }}/pgbackrest.conf archive-push %p'
+    archive_command: 'pgbackrest --stanza={{ stanza }} archive-push %p'
     {% else %}
     archive_command: /bin/true
     {%- endif %}
