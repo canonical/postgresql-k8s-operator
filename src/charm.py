@@ -814,9 +814,6 @@ class PostgresqlOperatorCharm(CharmBase):
         enable_tls = all(self.tls.get_tls_files())
 
         # Update and reload configuration based on TLS files availability.
-        logger.error(
-            f'self._peers.data[self.unit].get("stanza"): {self._peers.data[self.unit].get("stanza")}'
-        )
         self._patroni.render_patroni_yml_file(
             enable_tls=enable_tls,
             stanza=self._peers.data[self.unit].get("stanza"),
