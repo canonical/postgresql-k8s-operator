@@ -6,7 +6,7 @@
 import logging
 import re
 from datetime import datetime
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from charms.data_platform_libs.v0.s3 import CredentialsChangedEvent, S3Requirer
 from jinja2 import Template
@@ -41,6 +41,13 @@ class PostgreSQLBackups(Object):
         """Validates whether backup settings are OK."""
         if self.model.get_relation(self.relation_name) is None:
             return False, "Relation with s3-integrator charm missing, cannot create backup."
+
+        s3_parameters, missing_parameters = self._retrieve_s3_parameters()
+        if missing_parameters:
+            return False, f"Missing S3 parameters: {missing_parameters}"
+
+        if "stanza" not in self.charm._peers.data[self.charm.unit]:
+            return False, "Stanza was not initialised"
 
         return True, None
 
@@ -123,8 +130,14 @@ class PostgreSQLBackups(Object):
             event.defer()
             return
 
-        connection_info = self.s3_client.get_s3_connection_info()
-        self._render_pgbackrest_conf_file(connection_info)
+        s3_parameters, missing_parameters = self._retrieve_s3_parameters()
+        if missing_parameters:
+            logger.warning(
+                f"Cannot set pgBackRest configurations due to missing S3 parameters: {missing_parameters}"
+            )
+            return
+
+        self._render_pgbackrest_conf_file(s3_parameters)
         self._initialise_stanza()
 
     def _on_create_backup_action(self, event) -> None:
@@ -169,19 +182,19 @@ class PostgreSQLBackups(Object):
             logger.exception(e)
             event.fail(f"Failed to list PostgreSQL backups with error: {str(e)}")
 
-    def _render_pgbackrest_conf_file(self, connection_info: dict) -> None:
+    def _render_pgbackrest_conf_file(self, s3_parameters: dict) -> None:
         """Render the pgBackRest configuration file."""
         # Open the template pgbackrest.conf file.
         with open("templates/pgbackrest.conf.j2", "r") as file:
             template = Template(file.read())
         # Render the template file with the correct values.
         rendered = template.render(
-            path=connection_info["path"],
-            region=connection_info.get("region"),
-            endpoint=connection_info["endpoint"],
-            bucket=connection_info["bucket"],
-            access_key=connection_info["access-key"],
-            secret_key=connection_info["secret-key"],
+            path=s3_parameters["path"],
+            region=s3_parameters.get("region"),
+            endpoint=s3_parameters["endpoint"],
+            bucket=s3_parameters["bucket"],
+            access_key=s3_parameters["access-key"],
+            secret_key=s3_parameters["secret-key"],
             stanza=self.charm.cluster_name,
             user=BACKUP_USER,
         )
@@ -195,3 +208,27 @@ class PostgreSQLBackups(Object):
             user=WORKLOAD_OS_USER,
             group=WORKLOAD_OS_GROUP,
         )
+
+    def _retrieve_s3_parameters(self) -> Tuple[Dict, List[str]]:
+        """Retrieve S3 parameters from the S3 integrator relation."""
+        s3_parameters = self.s3_client.get_s3_connection_info()
+        required_parameters = [
+            "bucket",
+            "access-key",
+            "secret-key",
+        ]
+        missing_required_parameters = [
+            param for param in required_parameters if param not in s3_parameters
+        ]
+        if missing_required_parameters:
+            logger.warning(
+                f"Missing required S3 parameters in relation with S3 integrator: {missing_required_parameters}"
+            )
+            return {}, missing_required_parameters
+
+        # Add some sensible defaults (as expected by the code) for missing optional parameters
+        s3_parameters.setdefault("endpoint", "https://s3.amazonaws.com")
+        s3_parameters.setdefault("region")
+        s3_parameters.setdefault("path", "")
+
+        return s3_parameters, []
