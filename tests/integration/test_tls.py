@@ -19,7 +19,7 @@ from tests.integration.helpers import (
     get_primary,
     get_unit_address,
     primary_changed,
-    run_command_on_unit,
+    run_command_on_unit, CHARM_SERIES,
 )
 
 MATTERMOST_APP_NAME = "mattermost"
@@ -46,6 +46,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
             },
             application_name=DATABASE_APP_NAME,
             num_units=DATABASE_UNITS,
+            series=CHARM_SERIES,
             trust=True,
         )
         # Deploy TLS Certificates operator.

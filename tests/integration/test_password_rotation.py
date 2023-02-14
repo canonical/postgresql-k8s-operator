@@ -11,7 +11,7 @@ from tests.integration.helpers import (
     check_patroni,
     get_password,
     restart_patroni,
-    set_password,
+    set_password, CHARM_SERIES,
 )
 
 APP_NAME = METADATA["name"]
@@ -31,6 +31,7 @@ async def test_deploy_active(ops_test: OpsTest):
             },
             application_name=APP_NAME,
             num_units=3,
+            series=CHARM_SERIES,
             trust=True,
         )
         await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)

@@ -11,7 +11,7 @@ from tests.integration.helpers import (
     DATABASE_APP_NAME,
     check_database_creation,
     check_database_users_existence,
-    get_unit_address,
+    get_unit_address, CHARM_SERIES,
 )
 
 FIRST_DISCOURSE_APP_NAME = "discourse-k8s"
@@ -42,6 +42,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
                 application_name=DATABASE_APP_NAME,
                 trust=True,
                 num_units=DATABASE_UNITS,
+                series=CHARM_SERIES,
             ),
             ops_test.model.deploy(
                 FIRST_DISCOURSE_APP_NAME, application_name=FIRST_DISCOURSE_APP_NAME

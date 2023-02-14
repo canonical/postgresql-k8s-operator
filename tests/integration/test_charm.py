@@ -24,7 +24,7 @@ from tests.integration.helpers import (
     get_password,
     get_primary,
     get_unit_address,
-    scale_application,
+    scale_application, CHARM_SERIES,
 )
 
 logger = logging.getLogger(__name__)
@@ -307,6 +307,7 @@ async def test_redeploy_charm_same_model(ops_test: OpsTest):
             },
             application_name=APP_NAME,
             num_units=3,
+            series=CHARM_SERIES,
             trust=True,
         )
 

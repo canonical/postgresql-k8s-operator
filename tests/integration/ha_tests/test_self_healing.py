@@ -18,7 +18,7 @@ from tests.integration.ha_tests.helpers import (
     send_signal_to_process,
     stop_continuous_writes,
 )
-from tests.integration.helpers import get_unit_address
+from tests.integration.helpers import get_unit_address, CHARM_SERIES
 
 PATRONI_PROCESS = "/usr/local/bin/patroni"
 POSTGRESQL_PROCESS = "postgres"
@@ -42,6 +42,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
                 "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
             },
             num_units=3,
+            series=CHARM_SERIES,
             trust=True,
         )
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
