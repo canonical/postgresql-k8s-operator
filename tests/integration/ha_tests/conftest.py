@@ -22,7 +22,9 @@ async def continuous_writes(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
         if await app_name(ops_test, APPLICATION_NAME) is None:
             charm = await ops_test.build_charm("tests/integration/ha_tests/application-charm")
-            await ops_test.model.deploy(charm, application_name=APPLICATION_NAME, series=CHARM_SERIES)
+            await ops_test.model.deploy(
+                charm, application_name=APPLICATION_NAME, series=CHARM_SERIES
+            )
             await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
     # Start the continuous writes process by relating the application to the database or

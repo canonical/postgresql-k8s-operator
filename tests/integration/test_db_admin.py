@@ -8,10 +8,11 @@ from pytest_operator.plugin import OpsTest
 
 from tests.helpers import METADATA
 from tests.integration.helpers import (
+    CHARM_SERIES,
     DATABASE_APP_NAME,
     check_database_creation,
     check_database_users_existence,
-    get_unit_address, CHARM_SERIES,
+    get_unit_address,
 )
 
 FIRST_DISCOURSE_APP_NAME = "discourse-k8s"

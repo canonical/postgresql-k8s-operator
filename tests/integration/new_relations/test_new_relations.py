@@ -10,7 +10,11 @@ import pytest
 import yaml
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers import check_database_users_existence, scale_application, CHARM_SERIES
+from tests.integration.helpers import (
+    CHARM_SERIES,
+    check_database_users_existence,
+    scale_application,
+)
 from tests.integration.new_relations.helpers import (
     build_connection_string,
     check_relation_data_existence,

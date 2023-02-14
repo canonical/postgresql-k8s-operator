@@ -8,10 +8,11 @@ from pytest_operator.plugin import OpsTest
 
 from tests.helpers import METADATA
 from tests.integration.helpers import (
+    CHARM_SERIES,
     check_patroni,
     get_password,
     restart_patroni,
-    set_password, CHARM_SERIES,
+    set_password,
 )
 
 APP_NAME = METADATA["name"]

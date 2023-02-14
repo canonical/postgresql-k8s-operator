@@ -18,7 +18,7 @@ from tests.integration.ha_tests.helpers import (
     send_signal_to_process,
     stop_continuous_writes,
 )
-from tests.integration.helpers import get_unit_address, CHARM_SERIES
+from tests.integration.helpers import CHARM_SERIES, get_unit_address
 
 PATRONI_PROCESS = "/usr/local/bin/patroni"
 POSTGRESQL_PROCESS = "postgres"

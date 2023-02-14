@@ -7,6 +7,7 @@ from tenacity import Retrying, stop_after_delay, wait_exponential
 
 from tests.helpers import METADATA
 from tests.integration.helpers import (
+    CHARM_SERIES,
     DATABASE_APP_NAME,
     check_database_creation,
     check_database_users_existence,
@@ -19,7 +20,7 @@ from tests.integration.helpers import (
     get_primary,
     get_unit_address,
     primary_changed,
-    run_command_on_unit, CHARM_SERIES,
+    run_command_on_unit,
 )
 
 MATTERMOST_APP_NAME = "mattermost"

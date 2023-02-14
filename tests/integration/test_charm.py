@@ -14,6 +14,7 @@ from pytest_operator.plugin import OpsTest
 
 from tests.helpers import METADATA, STORAGE_PATH
 from tests.integration.helpers import (
+    CHARM_SERIES,
     build_and_deploy,
     convert_records_to_dict,
     db_connect,
@@ -24,7 +25,7 @@ from tests.integration.helpers import (
     get_password,
     get_primary,
     get_unit_address,
-    scale_application, CHARM_SERIES,
+    scale_application,
 )
 
 logger = logging.getLogger(__name__)
