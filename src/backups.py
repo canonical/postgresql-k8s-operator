@@ -97,6 +97,7 @@ class PostgreSQLBackups(Object):
                 ["pgbackrest", f"--stanza={self.charm.cluster_name}", "stanza-create"]
             )
         except pebble.ExecError as e:
+            logger.exception(e)
             self.charm.unit.status = BlockedStatus(
                 f"failed to initialize stanza with error {str(e)}"
             )
@@ -193,6 +194,7 @@ class PostgreSQLBackups(Object):
             region=s3_parameters.get("region"),
             endpoint=s3_parameters["endpoint"],
             bucket=s3_parameters["bucket"],
+            s3_uri_style=s3_parameters["s3-uri-style"],
             access_key=s3_parameters["access-key"],
             secret_key=s3_parameters["secret-key"],
             stanza=self.charm.cluster_name,
@@ -230,5 +232,6 @@ class PostgreSQLBackups(Object):
         s3_parameters.setdefault("endpoint", "https://s3.amazonaws.com")
         s3_parameters.setdefault("region")
         s3_parameters.setdefault("path", "")
+        s3_parameters.setdefault("s3-uri-style", "host")
 
         return s3_parameters, []
