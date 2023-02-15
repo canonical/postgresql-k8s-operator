@@ -41,6 +41,7 @@ requires:
     limit: 1
   s3-parameters:
     interface: s3
+    limit: 1
 
 storage:
   pgdata:
