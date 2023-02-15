@@ -3,16 +3,13 @@
 # See LICENSE file for licensing details.
 import ast
 import logging
-import os
-import uuid
+from typing import Dict, Tuple
 
 import pytest as pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers import DATABASE_APP_NAME, build_and_deploy
 
-AWS = "AWS"
-GCP = "GCP"
 S3_INTEGRATOR_APP_NAME = "s3-integrator"
 
 logger = logging.getLogger(__name__)
@@ -20,34 +17,8 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.abort_on_fail
 @pytest.mark.backup_tests
-async def test_backup(ops_test: OpsTest) -> None:
-    """Build and deploy three unit of PostgreSQL and then test the backup action."""
-    # Define some configurations.
-    configs = {
-        AWS: {
-            "endpoint": "s3.amazonaws.com",
-            "bucket": "canonical-postgres",
-            "path": f"/{uuid.uuid1()}",
-            "region": "us-east-2",
-        },
-        GCP: {
-            "endpoint": "https://storage.googleapis.com",
-            "bucket": "data-charms-testing",
-            "path": f"/postgresql-k8s/{uuid.uuid1()}",
-            "region": "",
-        },
-    }
-    credentials = {
-        AWS: {
-            "access-key": os.environ.get("AWS_ACCESS_KEY"),
-            "secret-key": os.environ.get("AWS_SECRET_KEY"),
-        },
-        GCP: {
-            "access-key": os.environ.get("GCP_ACCESS_KEY"),
-            "secret-key": os.environ.get("GCP_SECRET_KEY"),
-        },
-    }
-
+async def test_backup(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> None:
+    """Build and deploy one unit of PostgreSQL and then test the backup action."""
     # Deploy PostgreSQL and S3 Integrator.
     await build_and_deploy(ops_test, 1, wait_for_idle=False)
     await ops_test.model.deploy(S3_INTEGRATOR_APP_NAME, channel="edge")
@@ -55,12 +26,12 @@ async def test_backup(ops_test: OpsTest) -> None:
     # Relate PostgreSQL to S3 integrator.
     await ops_test.model.relate(DATABASE_APP_NAME, S3_INTEGRATOR_APP_NAME)
 
-    for cloud, config in configs.items():
+    for cloud, config in cloud_configs[0].items():
         # Configure and set access and secret keys.
         await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config(config)
         action = await ops_test.model.units.get(f"{S3_INTEGRATOR_APP_NAME}/0").run_action(
             "sync-s3-credentials",
-            **credentials[cloud],
+            **cloud_configs[1][cloud],
         )
         await action.wait()
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
