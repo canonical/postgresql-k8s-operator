@@ -195,7 +195,7 @@ def construct_endpoint(endpoint: str, region: str) -> str:
     resolver = botocore.regions.EndpointResolver(data)
     endpoint_data = resolver.construct_endpoint("s3", region)
 
-    # Use the built endpoint if it is and AWS endpoint.
+    # Use the built endpoint if it is an AWS endpoint.
     if endpoint_data and endpoint.endswith(endpoint_data["dnsSuffix"]):
         endpoint = f'{endpoint.split("://")[0]}://{endpoint_data["hostname"]}'
 

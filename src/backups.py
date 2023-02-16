@@ -4,10 +4,14 @@
 """Backups implementation."""
 
 import logging
+import os
 import re
+import tempfile
 from datetime import datetime
 from typing import Dict, List, Optional, Tuple
 
+import boto3 as boto3
+import botocore
 from charms.data_platform_libs.v0.s3 import CredentialsChangedEvent, S3Requirer
 from jinja2 import Template
 from ops import pebble
@@ -67,7 +71,29 @@ class PostgreSQLBackups(Object):
 
         return self._are_backup_settings_ok()
 
-    def _execute_command(self, command: List[str]) -> str:
+    def _construct_endpoint(self, s3_parameters: Dict) -> str:
+        """Construct the S3 service endpoint using the region.
+
+        This is needed when the provided endpoint is from AWS, and it doesn't contain the region.
+        """
+        # Use the provided endpoint if a region is not needed.
+        endpoint = s3_parameters["endpoint"]
+
+        # Load endpoints data.
+        loader = botocore.loaders.create_loader()
+        data = loader.load_data("endpoints")
+
+        # Construct the endpoint using the region.
+        resolver = botocore.regions.EndpointResolver(data)
+        endpoint_data = resolver.construct_endpoint("s3", s3_parameters["region"])
+
+        # Use the built endpoint if it is an AWS endpoint.
+        if endpoint_data and endpoint.endswith(endpoint_data["dnsSuffix"]):
+            endpoint = f'{endpoint.split("://")[0]}://{endpoint_data["hostname"]}'
+
+        return endpoint
+
+    def _execute_command(self, command: List[str]) -> Tuple[str, str]:
         """Execute a command in the workload container."""
         container = self.charm.unit.get_container("postgresql")
         process = container.exec(
@@ -75,8 +101,28 @@ class PostgreSQLBackups(Object):
             user=WORKLOAD_OS_USER,
             group=WORKLOAD_OS_GROUP,
         )
-        output, _ = process.wait_output()
-        return output
+        return process.wait_output()
+
+    def _get_backup_ids(self, format_ids: bool = False) -> List[str]:
+        """Return the list of backup ids.
+
+        Args:
+            format_ids: whether to format the ids as (default is False).
+        """
+        backup_ids = []
+        output, _ = self._execute_command(
+            ["pgbackrest", "repo-ls", f"backup/{self.charm.cluster_name}"]
+        )
+        if output:
+            backup_ids = re.findall(r".*[F]$", output, re.MULTILINE)
+            if format_ids:
+                backup_ids = [
+                    datetime.strftime(
+                        datetime.strptime(backup_id[:-1], "%Y%m%d-%H%M%S"), "%Y-%m-%dT%H:%M:%SZ"
+                    )
+                    for backup_id in backup_ids
+                ]
+        return backup_ids
 
     def _initialise_stanza(self) -> None:
         """Initialize the stanza.
@@ -149,14 +195,62 @@ class PostgreSQLBackups(Object):
             event.fail(validation_message)
             return
 
+        # Retrieve the S3 Parameters to use when uploading the backup logs to S3.
+        s3_parameters, _ = self._retrieve_s3_parameters()
+
         try:
             self.charm.unit.status = MaintenanceStatus("creating backup")
-            self._execute_command(
-                ["pgbackrest", f"--stanza={self.charm.cluster_name}", "--type=full", "backup"]
+            stdout, stderr = self._execute_command(
+                [
+                    "pgbackrest",
+                    f"--stanza={self.charm.cluster_name}",
+                    "--log-level-console=debug",
+                    "--type=full",
+                    "backup",
+                ]
             )
-            event.set_results({"backup-status": "backup created"})
+            backup_ids = self._get_backup_ids()
+            backup_id = backup_ids[-1]
         except pebble.ExecError as e:
+            logger.exception(e)
+
+            # Recover the backup id from the logs.
+            backup_label_stdout_line = re.findall(
+                r"(new backup label = )([0-9]{8}[-][0-9]{6}[F])$", e.stdout, re.MULTILINE
+            )
+            if len(backup_label_stdout_line) > 0:
+                backup_id = backup_label_stdout_line[0][1]
+            else:
+                # Generate a backup id from the current date and time if the backup failed before
+                # generating the backup label (our backup id).
+                backup_id = datetime.strftime(datetime.now(), "%Y%m%d-%H%M%SF")
+
+            # Upload the logs to S3.
+            self._upload_logs_to_s3(
+                e.stdout,
+                e.stderr,
+                os.path.join(
+                    s3_parameters["path"],
+                    f"backup/{self.charm.cluster_name}/{backup_id}/backup.log",
+                ),
+                s3_parameters,
+            )
             event.fail(f"Failed to backup PostgreSQL with error: {str(e)}")
+        else:
+            # Upload the logs to S3 and fail the action if it doesn't succeed.
+            if not self._upload_logs_to_s3(
+                stdout,
+                stderr,
+                os.path.join(
+                    s3_parameters["path"],
+                    f"backup/{self.charm.cluster_name}/{backup_id}/backup.log",
+                ),
+                s3_parameters,
+            ):
+                event.fail("Error uploading logs to S3")
+            else:
+                event.set_results({"backup-status": "backup created"})
+
         self.charm.unit.status = ActiveStatus()
 
     def _on_list_backups_action(self, event) -> None:
@@ -168,22 +262,12 @@ class PostgreSQLBackups(Object):
             return
 
         try:
-            output = self._execute_command(
-                ["pgbackrest", "repo-ls", f"backup/{self.charm.cluster_name}"]
-            )
-            backup_ids = re.findall(r".*[F]$", output, re.MULTILINE)
-            backup_ids = [
-                datetime.strftime(
-                    datetime.strptime(backup_id[:-1], "%Y%m%d-%H%M%S"), "%Y-%m-%dT%H:%M:%SZ"
-                )
-                for backup_id in backup_ids
-            ]
-            event.set_results({"backup-list": backup_ids})
+            event.set_results({"backup-list": self._get_backup_ids(format_ids=True)})
         except pebble.ExecError as e:
             logger.exception(e)
             event.fail(f"Failed to list PostgreSQL backups with error: {str(e)}")
 
-    def _render_pgbackrest_conf_file(self, s3_parameters: dict) -> None:
+    def _render_pgbackrest_conf_file(self, s3_parameters: Dict) -> None:
         """Render the pgBackRest configuration file."""
         # Open the template pgbackrest.conf file.
         with open("templates/pgbackrest.conf.j2", "r") as file:
@@ -235,3 +319,44 @@ class PostgreSQLBackups(Object):
         s3_parameters.setdefault("s3-uri-style", "host")
 
         return s3_parameters, []
+
+    def _upload_logs_to_s3(
+        self: str,
+        stdout: str,
+        stderr: str,
+        s3_path: str,
+        s3_parameters: Dict,
+    ) -> bool:
+        """Upload logs as a file to the S3 bucket."""
+        logs = f"""Stdout:
+{stdout}
+
+Stderr:
+{stderr}
+            """
+        logger.debug(f"Output of pgBackRest: {logs}")
+        logger.info("Uploading output of pgBackRest to S3")
+        bucket_name = s3_parameters["bucket"]
+        s3_path = os.path.join(s3_parameters["path"], s3_path).lstrip("/")
+        try:
+            logger.info(f"Uploading content to bucket={bucket_name}, path={s3_path}")
+            session = boto3.session.Session(
+                aws_access_key_id=s3_parameters["access-key"],
+                aws_secret_access_key=s3_parameters["secret-key"],
+                region_name=s3_parameters["region"],
+            )
+
+            s3 = session.resource("s3", endpoint_url=self._construct_endpoint(s3_parameters))
+            bucket = s3.Bucket(bucket_name)
+
+            with tempfile.NamedTemporaryFile() as temp_file:
+                temp_file.write(logs.encode("utf-8"))
+                temp_file.flush()
+                bucket.upload_file(temp_file.name, s3_path)
+        except Exception as e:
+            logger.exception(
+                f"Failed to upload content to S3 bucket={bucket_name}, path={s3_path}", exc_info=e
+            )
+            return False
+
+        return True
