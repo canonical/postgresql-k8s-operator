@@ -58,7 +58,7 @@ async def build_and_deploy(
     """Builds the charm and deploys a specified number of units."""
     # It is possible for users to provide their own cluster for testing. Hence, check if there
     # is a pre-existing cluster.
-    if await app_name(ops_test):
+    if await app_name(ops_test, database_app_name):
         return
 
     global charm

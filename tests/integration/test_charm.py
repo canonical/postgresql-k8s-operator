@@ -41,7 +41,8 @@ async def test_build_and_deploy(ops_test: OpsTest):
 
     Assert on the unit status before any relations/configurations take place.
     """
-    await build_and_deploy(ops_test, len(UNIT_IDS), APP_NAME)
+    async with ops_test.fast_forward():
+        await build_and_deploy(ops_test, len(UNIT_IDS), APP_NAME)
     for unit_id in UNIT_IDS:
         assert ops_test.model.applications[APP_NAME].units[unit_id].workload_status == "active"
 
@@ -322,7 +323,7 @@ async def test_storage_with_more_restrictive_permissions(ops_test: OpsTest):
     app_name = f"test-storage-{APP_NAME}"
     async with ops_test.fast_forward():
         # Deploy and wait for the charm to get into the install hook (maintenance status).
-        await build_and_deploy(ops_test, 1, app_name, "maintenance")
+        await build_and_deploy(ops_test, 1, app_name, status="maintenance")
 
         # Restrict the permissions of the storage.
         command = "chmod 755 /var/lib/postgresql/data"
