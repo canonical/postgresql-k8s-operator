@@ -24,13 +24,11 @@ DB_PROCESSES = [POSTGRESQL_PROCESS, PATRONI_PROCESS]
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.ha_self_healing_tests
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy three unit of PostgreSQL."""
     await build_and_deploy(ops_test, 3)
 
 
-@pytest.mark.ha_self_healing_tests
 @pytest.mark.parametrize("process", [POSTGRESQL_PROCESS])
 async def test_freeze_db_process(
     ops_test: OpsTest, process: str, continuous_writes, master_start_timeout
@@ -87,7 +85,6 @@ async def test_freeze_db_process(
     ), "secondary not up to date with the cluster after restarting."
 
 
-@pytest.mark.ha_self_healing_tests
 @pytest.mark.parametrize("process", DB_PROCESSES)
 async def test_restart_db_process(
     ops_test: OpsTest, process: str, continuous_writes, master_start_timeout
