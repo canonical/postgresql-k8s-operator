@@ -194,11 +194,12 @@ class Patroni:
             # Ignore non existing user error when it wasn't created yet.
             pass
 
-    def render_patroni_yml_file(self, enable_tls: bool = False) -> None:
+    def render_patroni_yml_file(self, enable_tls: bool = False, stanza: str = None) -> None:
         """Render the Patroni configuration file.
 
         Args:
             enable_tls: whether to enable TLS.
+            stanza: name of the stanza created by pgBackRest.
         """
         # Open the template postgresql.conf file.
         with open("templates/patroni.yml.j2", "r") as file:
@@ -214,6 +215,8 @@ class Patroni:
             replication_password=self._replication_password,
             rewind_user=REWIND_USER,
             rewind_password=self._rewind_password,
+            enable_pgbackrest=stanza is not None,
+            stanza=stanza,
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 

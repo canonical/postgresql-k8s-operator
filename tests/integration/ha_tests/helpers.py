@@ -14,7 +14,12 @@ from lightkube.resources.core_v1 import Pod
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
-from tests.integration.helpers import get_password, get_primary, get_unit_address
+from tests.integration.helpers import (
+    app_name,
+    get_password,
+    get_primary,
+    get_unit_address,
+)
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 PORT = 5432
@@ -30,22 +35,6 @@ class MemberNotUpdatedOnClusterError(Exception):
 
 class ProcessError(Exception):
     """Raised when a process fails."""
-
-
-async def app_name(ops_test: OpsTest, application_name: str = "postgresql-k8s") -> Optional[str]:
-    """Returns the name of the cluster running PostgreSQL.
-
-    This is important since not all deployments of the PostgreSQL charm have the application name
-    "postgresql-k8s".
-
-    Note: if multiple clusters are running PostgreSQL this will return the one first found.
-    """
-    status = await ops_test.model.get_status()
-    for app in ops_test.model.applications:
-        if application_name in status["applications"][app]["charm"]:
-            return app
-
-    return None
 
 
 async def change_master_start_timeout(ops_test: OpsTest, seconds: Optional[int]) -> None:

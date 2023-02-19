@@ -38,7 +38,9 @@ from ops.pebble import Layer, PathError, ProtocolError
 from requests import ConnectionError
 from tenacity import RetryError
 
+from backups import PostgreSQLBackups
 from constants import (
+    BACKUP_USER,
     PEER,
     REPLICATION_PASSWORD_KEY,
     REPLICATION_USER,
@@ -71,6 +73,7 @@ class PostgresqlOperatorCharm(CharmBase):
         self._name = self.model.app.name
         self._namespace = self.model.name
         self._context = {"namespace": self._namespace, "app_name": self._name}
+        self.cluster_name = f"patroni-{self._name}"
 
         self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
@@ -89,6 +92,7 @@ class PostgresqlOperatorCharm(CharmBase):
         self.postgresql_client_relation = PostgreSQLProvider(self)
         self.legacy_db_relation = DbProvides(self, admin=False)
         self.legacy_db_admin_relation = DbProvides(self, admin=True)
+        self.backup = PostgreSQLBackups(self, "s3-parameters")
         self.tls = PostgreSQLTLS(self, PEER, [self.primary_endpoint, self.replicas_endpoint])
         self.restart_manager = RollingOpsManager(
             charm=self, relation="restart", callback=self._restart
@@ -450,14 +454,26 @@ class PostgresqlOperatorCharm(CharmBase):
                 event.defer()
                 return
 
-            self._peers.data[self.app]["cluster_initialised"] = "True"
+            self._initialize_cluster()
 
-        # Update the replication configuration.
-        self._patroni.render_postgresql_conf_file()
-        self._patroni.reload_patroni_configuration()
+        # Update the archive command and replication configurations.
+        self.update_config()
 
         # All is well, set an ActiveStatus.
         self.unit.status = ActiveStatus()
+
+    def _initialize_cluster(self) -> None:
+        # Create the backup user.
+        if BACKUP_USER not in self.postgresql.list_users():
+            self.postgresql.create_user(BACKUP_USER, new_password(), admin=True)
+
+        # Mark the cluster as initialised.
+        self._peers.data[self.app]["cluster_initialised"] = "True"
+
+    @property
+    def is_blocked(self) -> bool:
+        """Returns whether the unit is in a blocked state."""
+        return isinstance(self.unit.status, BlockedStatus)
 
     def _on_upgrade_charm(self, _) -> None:
         # Recreate k8s resources and add labels required for replication
@@ -487,9 +503,7 @@ class PostgresqlOperatorCharm(CharmBase):
         """
         client = Client()
         patch = {
-            "metadata": {
-                "labels": {"application": "patroni", "cluster-name": f"patroni-{self._name}"}
-            }
+            "metadata": {"labels": {"application": "patroni", "cluster-name": self.cluster_name}}
         }
         client.patch(
             Pod,
@@ -728,11 +742,11 @@ class PostgresqlOperatorCharm(CharmBase):
                     "user": "postgres",
                     "group": "postgres",
                     "environment": {
-                        "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: patroni-{self._name}}}",
+                        "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: {self.cluster_name}}}",
                         "PATRONI_KUBERNETES_NAMESPACE": self._namespace,
                         "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
                         "PATRONI_NAME": pod_name,
-                        "PATRONI_SCOPE": f"patroni-{self._name}",
+                        "PATRONI_SCOPE": self.cluster_name,
                         "PATRONI_REPLICATION_USERNAME": REPLICATION_USER,
                         "PATRONI_SUPERUSER_USERNAME": USER,
                     },
@@ -800,7 +814,10 @@ class PostgresqlOperatorCharm(CharmBase):
         enable_tls = all(self.tls.get_tls_files())
 
         # Update and reload configuration based on TLS files availability.
-        self._patroni.render_patroni_yml_file(enable_tls=enable_tls)
+        self._patroni.render_patroni_yml_file(
+            enable_tls=enable_tls,
+            stanza=self._peers.data[self.unit].get("stanza"),
+        )
         self._patroni.render_postgresql_conf_file()
         if not self._patroni.member_started:
             return

@@ -7,8 +7,6 @@ from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from tests.integration.ha_tests.helpers import (
-    METADATA,
-    app_name,
     count_writes,
     fetch_cluster_members,
     get_primary,
@@ -18,7 +16,7 @@ from tests.integration.ha_tests.helpers import (
     send_signal_to_process,
     stop_continuous_writes,
 )
-from tests.integration.helpers import get_unit_address
+from tests.integration.helpers import app_name, build_and_deploy, get_unit_address
 
 PATRONI_PROCESS = "/usr/local/bin/patroni"
 POSTGRESQL_PROCESS = "postgres"
@@ -28,22 +26,7 @@ DB_PROCESSES = [POSTGRESQL_PROCESS, PATRONI_PROCESS]
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy three unit of PostgreSQL."""
-    # It is possible for users to provide their own cluster for HA testing. Hence, check if there
-    # is a pre-existing cluster.
-    if await app_name(ops_test):
-        return
-
-    charm = await ops_test.build_charm(".")
-    async with ops_test.fast_forward():
-        await ops_test.model.deploy(
-            charm,
-            resources={
-                "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
-            },
-            num_units=3,
-            trust=True,
-        )
-        await ops_test.model.wait_for_idle(status="active", timeout=1000)
+    await build_and_deploy(ops_test, 3)
 
 
 @pytest.mark.parametrize("process", [POSTGRESQL_PROCESS])
