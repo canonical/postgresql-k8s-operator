@@ -69,7 +69,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("charm.Patroni.reload_patroni_configuration")
     @patch("charm.Patroni.render_postgresql_conf_file")
-    @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
+    @patch("charm.PostgresqlOperatorCharm.patch_pod_labels")
     @patch("charm.PostgresqlOperatorCharm._create_resources")
     def test_on_leader_elected(self, _, __, _render_postgresql_conf_file, ___):
         # Assert that there is no password in the peer relation.
@@ -105,7 +105,7 @@ class TestCharm(unittest.TestCase):
     @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.member_started")
     @patch("charm.PostgresqlOperatorCharm.push_tls_files_to_workload")
-    @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
+    @patch("charm.PostgresqlOperatorCharm.patch_pod_labels")
     @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
     @patch("charm.PostgresqlOperatorCharm._create_pgdata")
     def test_on_postgresql_pebble_ready(
@@ -346,16 +346,16 @@ class TestCharm(unittest.TestCase):
                 "ERROR:charm:failed to get primary with error RetryError[fake error]", logs.output
             )
 
-    @patch("charm.PostgresqlOperatorCharm._patch_pod_labels", side_effect=[_FakeApiError, None])
+    @patch("charm.PostgresqlOperatorCharm.patch_pod_labels", side_effect=[_FakeApiError, None])
     @patch(
         "charm.PostgresqlOperatorCharm._create_resources", side_effect=[_FakeApiError, None, None]
     )
-    def test_on_upgrade_charm(self, _create_resources, _patch_pod_labels):
+    def test_on_upgrade_charm(self, _create_resources, patch_pod_labels):
         # Test with a problem happening when trying to create the k8s resources.
         self.charm.unit.status = ActiveStatus()
         self.charm.on.upgrade_charm.emit()
         _create_resources.assert_called_once()
-        _patch_pod_labels.assert_not_called()
+        patch_pod_labels.assert_not_called()
         self.assertTrue(isinstance(self.charm.unit.status, BlockedStatus))
 
         # Test a successful k8s resources creation, but unsuccessful pod patch operation.
@@ -363,16 +363,16 @@ class TestCharm(unittest.TestCase):
         self.charm.unit.status = ActiveStatus()
         self.charm.on.upgrade_charm.emit()
         _create_resources.assert_called_once()
-        _patch_pod_labels.assert_called_once()
+        patch_pod_labels.assert_called_once()
         self.assertTrue(isinstance(self.charm.unit.status, BlockedStatus))
 
         # Test a successful k8s resources creation and the operation to patch the pod.
         _create_resources.reset_mock()
-        _patch_pod_labels.reset_mock()
+        patch_pod_labels.reset_mock()
         self.charm.unit.status = ActiveStatus()
         self.charm.on.upgrade_charm.emit()
         _create_resources.assert_called_once()
-        _patch_pod_labels.assert_called_once()
+        patch_pod_labels.assert_called_once()
         self.assertFalse(isinstance(self.charm.unit.status, BlockedStatus))
 
     @patch("charm.Client")
@@ -383,10 +383,10 @@ class TestCharm(unittest.TestCase):
                 _client.return_value.create.assert_any_call(obj)
 
     @patch("charm.Client")
-    def test_patch_pod_labels(self, _client):
+    def testpatch_pod_labels(self, _client):
         member = self.charm._unit.replace("/", "-")
 
-        self.charm._patch_pod_labels(member)
+        self.charm.patch_pod_labels(member)
         expected_patch = {
             "metadata": {
                 "labels": {"application": "patroni", "cluster-name": f"patroni-{self.charm._name}"}
@@ -401,7 +401,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("charm.Patroni.reload_patroni_configuration")
     @patch("charm.Patroni.render_postgresql_conf_file")
-    @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
+    @patch("charm.PostgresqlOperatorCharm.patch_pod_labels")
     @patch("charm.PostgresqlOperatorCharm._create_resources")
     def test_postgresql_layer(self, _, __, ___, ____):
         # Test with the already generated password.
