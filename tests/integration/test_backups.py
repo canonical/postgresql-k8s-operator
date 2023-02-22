@@ -16,7 +16,6 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.backup_tests
 async def test_backup(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> None:
     """Build and deploy one unit of PostgreSQL and then test the backup action."""
     # Deploy PostgreSQL and S3 Integrator.

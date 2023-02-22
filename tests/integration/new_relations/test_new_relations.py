@@ -32,7 +32,6 @@ NO_DATABASE_RELATION_NAME = "no-database"
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.database_relation_tests
 async def test_database_relation_with_charm_libraries(
     ops_test: OpsTest, application_charm, database_charm
 ):
@@ -120,7 +119,6 @@ async def test_database_relation_with_charm_libraries(
             cursor.execute("DROP TABLE test;")
 
 
-@pytest.mark.database_relation_tests
 async def test_user_with_extra_roles(ops_test: OpsTest):
     """Test superuser actions and the request for more permissions."""
     # Get the connection string to connect to the database.
@@ -141,7 +139,6 @@ async def test_user_with_extra_roles(ops_test: OpsTest):
     connection.close()
 
 
-@pytest.mark.database_relation_tests
 async def test_two_applications_doesnt_share_the_same_relation_data(
     ops_test: OpsTest, application_charm
 ):
@@ -176,7 +173,6 @@ async def test_two_applications_doesnt_share_the_same_relation_data(
     assert application_connection_string != another_application_connection_string
 
 
-@pytest.mark.database_relation_tests
 async def test_an_application_can_connect_to_multiple_database_clusters(
     ops_test: OpsTest, database_charm
 ):
@@ -209,7 +205,6 @@ async def test_an_application_can_connect_to_multiple_database_clusters(
     assert application_connection_string != another_application_connection_string
 
 
-@pytest.mark.database_relation_tests
 async def test_an_application_can_connect_to_multiple_aliased_database_clusters(
     ops_test: OpsTest, database_charm
 ):
@@ -245,7 +240,6 @@ async def test_an_application_can_connect_to_multiple_aliased_database_clusters(
     assert application_connection_string != another_application_connection_string
 
 
-@pytest.mark.database_relation_tests
 async def test_an_application_can_request_multiple_databases(ops_test: OpsTest, application_charm):
     """Test that an application can request additional databases using the same interface."""
     # Relate the charms using another relation and wait for them exchanging some connection data.
@@ -266,7 +260,6 @@ async def test_an_application_can_request_multiple_databases(ops_test: OpsTest, 
     assert first_database_connection_string != second_database_connection_string
 
 
-@pytest.mark.database_relation_tests
 async def test_no_read_only_endpoint_in_standalone_cluster(ops_test: OpsTest):
     """Test that there is no read-only endpoint in a standalone cluster."""
     async with ops_test.fast_forward():
@@ -284,7 +277,6 @@ async def test_no_read_only_endpoint_in_standalone_cluster(ops_test: OpsTest):
         )
 
 
-@pytest.mark.database_relation_tests
 async def test_read_only_endpoint_in_scaled_up_cluster(ops_test: OpsTest):
     """Test that there is read-only endpoint in a scaled up cluster."""
     async with ops_test.fast_forward():
@@ -302,7 +294,6 @@ async def test_read_only_endpoint_in_scaled_up_cluster(ops_test: OpsTest):
         )
 
 
-@pytest.mark.database_relation_tests
 async def test_relation_broken(ops_test: OpsTest):
     """Test that the user is removed when the relation is broken."""
     async with ops_test.fast_forward():
@@ -323,7 +314,6 @@ async def test_relation_broken(ops_test: OpsTest):
         )
 
 
-@pytest.mark.database_relation_tests
 async def test_restablish_relation(ops_test: OpsTest):
     """Test that a previously broken relation would be functional if restored."""
     # Relate the charms and wait for them exchanging some connection data.
@@ -361,7 +351,6 @@ async def test_restablish_relation(ops_test: OpsTest):
         assert data[0] == "other data"
 
 
-@pytest.mark.database_relation_tests
 async def test_relation_with_no_database_name(ops_test: OpsTest):
     """Test that a relation with no database name doesn't block the charm."""
     async with ops_test.fast_forward():

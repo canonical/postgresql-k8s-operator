@@ -58,7 +58,7 @@ async def build_and_deploy(
     """Builds the charm and deploys a specified number of units."""
     # It is possible for users to provide their own cluster for testing. Hence, check if there
     # is a pre-existing cluster.
-    if await app_name(ops_test):
+    if await app_name(ops_test, database_app_name):
         return
 
     global charm
@@ -195,7 +195,7 @@ def construct_endpoint(endpoint: str, region: str) -> str:
     resolver = botocore.regions.EndpointResolver(data)
     endpoint_data = resolver.construct_endpoint("s3", region)
 
-    # Use the built endpoint if it is an AWS endpoint.
+    # Use the built endpoint if it is and AWS endpoint.
     if endpoint_data and endpoint.endswith(endpoint_data["dnsSuffix"]):
         endpoint = f'{endpoint.split("://")[0]}://{endpoint_data["hostname"]}'
 
