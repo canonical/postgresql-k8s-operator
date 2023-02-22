@@ -151,14 +151,21 @@ class PostgreSQLBackups(Object):
 
         try:
             self.charm.unit.status = MaintenanceStatus("creating backup")
-            self.charm.patch_pod_labels(self.charm.unit.name, add_labels=False)
+
+            # Remove the pod labels to hide this unit from the replicas K8S service.
+            if self.charm.app.planned_units() > 1:
+                self.charm.patch_pod_labels(self.charm.unit.name, add_labels=False)
+
             self._execute_command(
                 ["pgbackrest", f"--stanza={self.charm.cluster_name}", "--type=full", "backup"]
             )
             event.set_results({"backup-status": "backup created"})
         except pebble.ExecError as e:
             event.fail(f"Failed to backup PostgreSQL with error: {str(e)}")
+
+        # Add the labels back to the pod.
         self.charm.patch_pod_labels(self.charm.unit.name)
+
         self.charm.unit.status = ActiveStatus()
 
     def _on_list_backups_action(self, event) -> None:
