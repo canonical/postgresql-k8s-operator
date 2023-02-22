@@ -261,17 +261,7 @@ class PostgreSQLBackups(Object):
             return
 
         try:
-            output = self._execute_command(
-                ["pgbackrest", "repo-ls", f"backup/{self.charm.cluster_name}"]
-            )
-            backup_ids = re.findall(r".*[F]$", output, re.MULTILINE)
-            backup_ids = [
-                datetime.strftime(
-                    datetime.strptime(backup_id[:-1], "%Y%m%d-%H%M%S"), "%Y-%m-%dT%H:%M:%SZ"
-                )
-                for backup_id in backup_ids
-            ]
-            event.set_results({"backup-list": backup_ids})
+            event.set_results({"backup-list": self._get_backup_ids()})
         except pebble.ExecError as e:
             logger.exception(e)
             event.fail(f"Failed to list PostgreSQL backups with error: {str(e)}")
