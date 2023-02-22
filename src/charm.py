@@ -310,7 +310,7 @@ class PostgresqlOperatorCharm(CharmBase):
         # Add the labels needed for replication in this pod.
         # This also enables the member as part of the cluster.
         try:
-            self._patch_pod_labels(member)
+            self.patch_pod_labels(member)
         except ApiError as e:
             logger.error("failed to patch pod")
             self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
@@ -440,7 +440,7 @@ class PostgresqlOperatorCharm(CharmBase):
             # Add the labels needed for replication in this pod.
             # This also enables the member as part of the cluster.
             try:
-                self._patch_pod_labels(self._unit)
+                self.patch_pod_labels(self._unit)
             except ApiError as e:
                 logger.error("failed to patch pod")
                 self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
@@ -486,24 +486,31 @@ class PostgresqlOperatorCharm(CharmBase):
             return
 
         try:
-            self._patch_pod_labels(self.unit.name)
+            self.patch_pod_labels(self.unit.name)
         except ApiError as e:
             logger.error("failed to patch pod")
             self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
             return
 
-    def _patch_pod_labels(self, member: str) -> None:
+    def patch_pod_labels(self, member: str, add_labels: bool = True) -> None:
         """Add labels required for replication to the current pod.
 
         Args:
             member: name of the unit that needs the labels
+            add_labels: whether to add labels (otherwise they're removed)
+
         Raises:
             ApiError when there is any problem communicating
                 to K8s API
         """
         client = Client()
         patch = {
-            "metadata": {"labels": {"application": "patroni", "cluster-name": self.cluster_name}}
+            "metadata": {
+                "labels": {
+                    "application": "patroni" if add_labels else None,
+                    "cluster-name": self.cluster_name if add_labels else None,
+                }
+            }
         }
         client.patch(
             Pod,
