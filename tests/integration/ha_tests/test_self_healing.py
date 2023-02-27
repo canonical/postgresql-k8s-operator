@@ -8,7 +8,6 @@ from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from tests.integration.ha_tests.helpers import (
     METADATA,
-    app_name,
     count_writes,
     fetch_cluster_members,
     get_primary,
@@ -18,7 +17,7 @@ from tests.integration.ha_tests.helpers import (
     send_signal_to_process,
     stop_continuous_writes,
 )
-from tests.integration.helpers import CHARM_SERIES, get_unit_address
+from tests.integration.helpers import CHARM_SERIES, app_name, get_unit_address
 
 PATRONI_PROCESS = "/usr/local/bin/patroni"
 POSTGRESQL_PROCESS = "postgres"
@@ -26,7 +25,6 @@ DB_PROCESSES = [POSTGRESQL_PROCESS, PATRONI_PROCESS]
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.ha_self_healing_tests
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy three unit of PostgreSQL."""
     # It is possible for users to provide their own cluster for HA testing. Hence, check if there
@@ -48,7 +46,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
 
-@pytest.mark.ha_self_healing_tests
 @pytest.mark.parametrize("process", [POSTGRESQL_PROCESS])
 async def test_freeze_db_process(
     ops_test: OpsTest, process: str, continuous_writes, master_start_timeout
@@ -105,7 +102,6 @@ async def test_freeze_db_process(
     ), "secondary not up to date with the cluster after restarting."
 
 
-@pytest.mark.ha_self_healing_tests
 @pytest.mark.parametrize("process", DB_PROCESSES)
 async def test_restart_db_process(
     ops_test: OpsTest, process: str, continuous_writes, master_start_timeout
