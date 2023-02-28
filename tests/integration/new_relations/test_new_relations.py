@@ -10,7 +10,11 @@ import pytest
 import yaml
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers import check_database_users_existence, scale_application
+from tests.integration.helpers import (
+    CHARM_SERIES,
+    check_database_users_existence,
+    scale_application,
+)
 from tests.integration.new_relations.helpers import (
     build_connection_string,
     check_relation_data_existence,
@@ -44,6 +48,7 @@ async def test_database_relation_with_charm_libraries(
                 application_charm,
                 application_name=APPLICATION_APP_NAME,
                 num_units=2,
+                series=CHARM_SERIES,
             ),
             ops_test.model.deploy(
                 database_charm,
@@ -54,6 +59,7 @@ async def test_database_relation_with_charm_libraries(
                 },
                 application_name=DATABASE_APP_NAME,
                 num_units=3,
+                series=CHARM_SERIES,
                 trust=True,
             ),
             ops_test.model.deploy(
@@ -65,6 +71,7 @@ async def test_database_relation_with_charm_libraries(
                 },
                 application_name=ANOTHER_DATABASE_APP_NAME,
                 num_units=3,
+                series=CHARM_SERIES,
                 trust=True,
             ),
         )
@@ -152,6 +159,7 @@ async def test_two_applications_doesnt_share_the_same_relation_data(
     await ops_test.model.deploy(
         application_charm,
         application_name=another_application_app_name,
+        series=CHARM_SERIES,
     )
     await ops_test.model.wait_for_idle(apps=all_app_names, status="active")
 

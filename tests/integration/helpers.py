@@ -26,6 +26,7 @@ from tenacity import (
     wait_exponential,
 )
 
+CHARM_SERIES = "jammy"
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
 
@@ -73,6 +74,7 @@ async def build_and_deploy(
         application_name=database_app_name,
         trust=True,
         num_units=num_units,
+        series=CHARM_SERIES,
     ),
     if wait_for_idle:
         # Wait until the PostgreSQL charm is successfully deployed.

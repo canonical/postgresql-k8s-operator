@@ -8,6 +8,7 @@ from pytest_operator.plugin import OpsTest
 
 from tests.helpers import METADATA
 from tests.integration.helpers import (
+    CHARM_SERIES,
     check_patroni,
     get_password,
     restart_patroni,
@@ -30,6 +31,7 @@ async def test_deploy_active(ops_test: OpsTest):
             },
             application_name=APP_NAME,
             num_units=3,
+            series=CHARM_SERIES,
             trust=True,
         )
         await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)

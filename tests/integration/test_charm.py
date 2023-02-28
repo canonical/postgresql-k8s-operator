@@ -14,6 +14,7 @@ from pytest_operator.plugin import OpsTest
 
 from tests.helpers import METADATA, STORAGE_PATH
 from tests.integration.helpers import (
+    CHARM_SERIES,
     build_and_deploy,
     convert_records_to_dict,
     db_connect,
@@ -296,6 +297,7 @@ async def test_redeploy_charm_same_model(ops_test: OpsTest):
             },
             application_name=APP_NAME,
             num_units=3,
+            series=CHARM_SERIES,
             trust=True,
         )
 

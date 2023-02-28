@@ -6,6 +6,7 @@ from tenacity import Retrying, stop_after_delay, wait_exponential
 
 from tests.helpers import METADATA
 from tests.integration.helpers import (
+    CHARM_SERIES,
     DATABASE_APP_NAME,
     check_database_creation,
     check_database_users_existence,
@@ -44,6 +45,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
             },
             application_name=DATABASE_APP_NAME,
             num_units=DATABASE_UNITS,
+            series=CHARM_SERIES,
             trust=True,
         )
         # Deploy TLS Certificates operator.
