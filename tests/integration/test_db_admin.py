@@ -8,9 +8,11 @@ from pytest_operator.plugin import OpsTest
 
 from tests.helpers import METADATA
 from tests.integration.helpers import (
+    CHARM_SERIES,
     DATABASE_APP_NAME,
     check_database_creation,
     check_database_users_existence,
+    get_primary,
     get_unit_address,
 )
 
@@ -41,6 +43,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
                 application_name=DATABASE_APP_NAME,
                 trust=True,
                 num_units=DATABASE_UNITS,
+                series=CHARM_SERIES,
             ),
             ops_test.model.deploy(
                 FIRST_DISCOURSE_APP_NAME, application_name=FIRST_DISCOURSE_APP_NAME
@@ -50,9 +53,9 @@ async def test_build_and_deploy(ops_test: OpsTest):
         await ops_test.model.wait_for_idle(
             apps=[DATABASE_APP_NAME, REDIS_APP_NAME], status="active", timeout=1000
         )
-        # Discourse becomes blocked waiting for relations.
+        # Discourse waits for relations.
         await ops_test.model.wait_for_idle(
-            apps=[FIRST_DISCOURSE_APP_NAME], status="blocked", timeout=1000
+            apps=[FIRST_DISCOURSE_APP_NAME], status="waiting", timeout=1000
         )
 
 
@@ -60,7 +63,7 @@ async def test_discourse(ops_test: OpsTest):
     # Test the first Discourse charm.
     # Add both relations to Discourse (PostgreSQL and Redis)
     # and wait for it to be ready.
-    relation = await ops_test.model.add_relation(
+    await ops_test.model.add_relation(
         f"{DATABASE_APP_NAME}:db-admin",
         FIRST_DISCOURSE_APP_NAME,
     )
@@ -68,16 +71,22 @@ async def test_discourse(ops_test: OpsTest):
         REDIS_APP_NAME,
         FIRST_DISCOURSE_APP_NAME,
     )
-    await ops_test.model.wait_for_idle(
-        apps=[DATABASE_APP_NAME, FIRST_DISCOURSE_APP_NAME, REDIS_APP_NAME],
-        status="active",
-        timeout=2000,  # Discourse takes a longer time to become active (a lot of setup).
+
+    # Discourse requests extensions through relation, so check that the PostgreSQL charm
+    # becomes blocked.
+    primary_name = await get_primary(ops_test)
+    await ops_test.model.block_until(
+        lambda: ops_test.model.units[primary_name].workload_status == "blocked", timeout=60
+    )
+    assert (
+        ops_test.model.units[primary_name].workload_status_message
+        == "extensions requested through relation"
     )
 
-    # Check for the correct databases and users creation.
-    await check_database_creation(ops_test, "discourse-k8s")
-    discourse_users = [f"relation_id_{relation.id}"]
-    await check_database_users_existence(ops_test, discourse_users, [], admin=True)
+    # Destroy the relation to remove the blocked status.
+    await ops_test.model.applications[DATABASE_APP_NAME].destroy_relation(
+        f"{DATABASE_APP_NAME}:db-admin", FIRST_DISCOURSE_APP_NAME
+    )
 
 
 async def test_discourse_from_discourse_charmers(ops_test: OpsTest):
