@@ -164,7 +164,7 @@ class Patroni:
             allow server time to start up.
         """
         try:
-            for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+            for attempt in Retrying(stop=stop_after_delay(2 * 60), wait=wait_fixed(3)):
                 with attempt:
                     r = requests.get(f"{self._patroni_url}/health", verify=self._verify)
         except RetryError:
@@ -194,12 +194,13 @@ class Patroni:
             # Ignore non existing user error when it wasn't created yet.
             pass
 
-    def render_patroni_yml_file(self, enable_tls: bool = False, stanza: str = None) -> None:
+    def render_patroni_yml_file(self, enable_tls: bool = False, stanza: str = None, restoring_backup: bool = False) -> None:
         """Render the Patroni configuration file.
 
         Args:
             enable_tls: whether to enable TLS.
             stanza: name of the stanza created by pgBackRest.
+            restoring_backup: whether a backup is being restored.
         """
         # Open the template postgresql.conf file.
         with open("templates/patroni.yml.j2", "r") as file:
@@ -216,6 +217,7 @@ class Patroni:
             rewind_user=REWIND_USER,
             rewind_password=self._rewind_password,
             enable_pgbackrest=stanza is not None,
+            restoring_backup=restoring_backup,
             stanza=stanza,
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)

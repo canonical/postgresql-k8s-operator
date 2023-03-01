@@ -14,12 +14,20 @@ import boto3 as boto3
 import botocore
 from charms.data_platform_libs.v0.s3 import CredentialsChangedEvent, S3Requirer
 from jinja2 import Template
+from lightkube import ApiError, Client
+from lightkube.resources.core_v1 import Endpoints
 from ops import pebble
+from ops.charm import ActionEvent
 from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
+from ops.pebble import ChangeError, ExecError
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
-from constants import BACKUP_USER, WORKLOAD_OS_GROUP, WORKLOAD_OS_USER
+from constants import (
+    BACKUP_USER,
+    WORKLOAD_OS_GROUP,
+    WORKLOAD_OS_USER,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -40,11 +48,12 @@ class PostgreSQLBackups(Object):
         )
         self.framework.observe(self.charm.on.create_backup_action, self._on_create_backup_action)
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
+        self.framework.observe(self.charm.on.restore_action, self._on_restore_action)
 
     def _are_backup_settings_ok(self) -> Tuple[bool, Optional[str]]:
         """Validates whether backup settings are OK."""
         if self.model.get_relation(self.relation_name) is None:
-            return False, "Relation with s3-integrator charm missing, cannot create backup."
+            return False, "Relation with s3-integrator charm missing, cannot create/restore backup."
 
         s3_parameters, missing_parameters = self._retrieve_s3_parameters()
         if missing_parameters:
@@ -93,13 +102,35 @@ class PostgreSQLBackups(Object):
 
         return endpoint
 
-    def _execute_command(self, command: List[str]) -> Tuple[str, str]:
+    def _empty_data_files(self) -> None:
+        """Empty the PostgreSQL data directory in preparation of backup restore."""
+        empty_data_files_command = "find /var/lib/postgresql/data/pgdata/ -not -path /var/lib/postgresql/data/pgdata/ -delete".split()
+
+        try:
+            process = self.container.exec(
+                empty_data_files_command,
+                user="postgres",
+                group="postgres",
+            )
+            process.wait_output()
+        except ExecError as e:
+            logger.exception(
+                "Failed to empty data directory in prep for backup restore", exc_info=e
+            )
+            logger.error(f"Stdout: {e.stdout}")
+            logger.error(f"Stderr: {e.stderr}")
+            raise
+
+    def _execute_command(self, command: List[str], environment: Dict[str, str] = None) -> Tuple[str, str]:
         """Execute a command in the workload container."""
+        if environment is None:
+            environment = os.environ.copy()
         container = self.charm.unit.get_container("postgresql")
         process = container.exec(
             command,
             user=WORKLOAD_OS_USER,
             group=WORKLOAD_OS_GROUP,
+            environment=environment,
         )
         return process.wait_output()
 
@@ -266,6 +297,132 @@ class PostgreSQLBackups(Object):
         except pebble.ExecError as e:
             logger.exception(e)
             event.fail(f"Failed to list PostgreSQL backups with error: {str(e)}")
+
+    def _on_restore_action(self, event):
+        if not self._pre_restore_checks(event):
+            return
+
+        backup_id = event.params.get("backup-id")
+        logger.info(f"A restore with backup-id {backup_id} has been requested on unit")
+
+        # Mark the cluster as in a restoring backup state and update the Patroni configuration.
+        self.charm.unit_peer_data.update({"restoring-backup": backup_id})
+        self.charm.update_config()
+
+        # Validate the provided backup id.
+        logger.info("Validating provided backup-id")
+        if backup_id not in self._get_backup_ids(format_ids=True):
+            event.fail(f"Invalid backup-id: {backup_id}")
+            return
+
+        container = self.charm.unit.get_container("postgresql")
+
+        # logger.info(f"Stopping service {POSTGRESQL_SERVICE} in container {CONTAINER_NAME}")
+        try:
+            container.stop(self.charm._postgresql_service)
+        except ChangeError as e:
+            error_message = "Failed to stop service postgresql"
+            logger.exception(error_message, exc_info=e)
+            return False, error_message
+
+        make_temp_dir_command = "mktemp --directory /var/lib/postgresql/data/postgresql_restore_XXXX".split()
+
+        try:
+            process = container.exec(
+                make_temp_dir_command,
+                user="postgres",
+                group="postgres",
+            )
+            tmp_dir, _ = process.wait_output()
+        except ExecError as e:
+            logger.exception("Failed to execute commands prior to running xbcloud get", exc_info=e)
+            return
+
+        try:
+            self._execute_command(
+                [
+                    "pgbackrest",
+                    f"--stanza={self.charm.cluster_name}",
+                    "--type=immediate",
+                    "--target-action=promote",
+                    "--pg1-path=/var/lib/postgresql/data/postgresql_restore_XXXX",
+                    "restore",
+                ]
+            )
+        except pebble.ExecError as e:
+            event.fail(f"Failed to restore backup with error: {str(e)}")
+            self.charm.unit_peer_data.update({"restoring-backup": ""})
+            self.charm.update_config()
+            container.start(self.charm._postgresql_service)
+            return
+
+        try:
+            client = Client()
+            client.delete(
+                Endpoints,
+                name=f"patroni-{self.charm._name}",
+                namespace=self.charm._namespace,
+            )
+            client.delete(
+                Endpoints,
+                name=f"patroni-{self.charm._name}-config",
+                namespace=self.charm._namespace,
+            )
+        except ApiError as e:
+            event.fail(f"Failed to restore backup with error: {str(e)}")
+            logger.error("failed to delete Patroni endpoint and configmap")
+            self.charm.unit_peer_data.update({"restoring-backup": ""})
+            self.charm.update_config()
+            self.charm.unit.status = BlockedStatus(
+                f"failed to delete Patroni endpoint and configmap with error {e}"
+            )
+            return
+
+        # Start the database to start the restore process.
+        container.start(self.charm._postgresql_service)
+
+        if not self.charm._patroni.member_started:
+            event.fail("Failed to restore backup : patroni not started")
+
+            # Remove the restoring backup flag.
+            self.charm.unit_peer_data.update({"restoring-backup": ""})
+            self.charm.update_config()
+            return
+
+        event.set_results({"restore-status": "backup restored"})
+        self.charm.unit.status = ActiveStatus()
+
+        # Remove the restoring backup flag.
+        self.charm.unit_peer_data.update({"restoring-backup": ""})
+        self.charm.update_config()
+
+    def _pre_restore_checks(self, event: ActionEvent) -> bool:
+        """Run some checks before starting the restore.
+
+        Returns:
+            a boolean indicating whether restore should be run.
+        """
+        if not event.params.get("backup-id"):
+            event.fail("Missing backup-id to restore")
+            return False
+
+        logger.info("Checking if cluster is in blocked state")
+        if self.charm.is_blocked:
+            error_message = "Cluster or unit is in a blocking state"
+            logger.warning(error_message)
+            event.fail(error_message)
+            return False
+
+        logger.info("Checking that the cluster does not have more than one unit")
+        if self.charm.app.planned_units() > 1:
+            error_message = (
+                "Unit cannot restore backup as there are more than one unit in the cluster"
+            )
+            logger.warning(error_message)
+            event.fail(error_message)
+            return False
+
+        return True
 
     def _render_pgbackrest_conf_file(self, s3_parameters: Dict) -> None:
         """Render the pgBackRest configuration file."""
