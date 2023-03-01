@@ -13,18 +13,28 @@ bootstrap:
         archive_mode: on
         password_encryption: md5
         wal_level: logical
+  {%- if restoring_backup %}
+  method: pgbackrest
+  pgbackrest:
+    command: cp -R /var/lib/postgresql/data/postgresql_restore_XXXX /var/lib/postgresql/data/pgdata
+    keep_data: True
+    no_params: True
+    keep_existing_recovery_conf: True
+  {% else %}
   initdb:
   - auth-host: md5
   - auth-local: trust
   - encoding: UTF8
   - locale: en_US.UTF-8
   - data-checksums
+  {%- endif %}
   pg_hba:
   - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 md5
   - {{ 'hostssl' if enable_tls else 'host' }} replication replication 127.0.0.1/32 md5
 bypass_api_service: true
 log:
   dir: /var/log/postgresql
+  level: DEBUG
 restapi:
   connect_address: '{{ endpoint }}:8008'
   listen: 0.0.0.0:8008
@@ -51,6 +61,9 @@ postgresql:
     {% else %}
     archive_command: /bin/true
     {%- endif %}
+    log_filename: 'postgresql.log'
+    log_directory: '/var/log/postgresql'
+    logging_collector: 'on'
     {%- if enable_tls %}
     ssl: on
     ssl_ca_file: {{ storage_path }}/ca.pem
