@@ -5,7 +5,7 @@ import json
 from typing import Optional
 
 import yaml
-from lightkube.core.async_client import AsyncClient
+from lightkube import AsyncClient
 from lightkube.resources.core_v1 import Service
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_exponential
@@ -147,7 +147,7 @@ async def get_application_relation_data(
         relation_data = [
             v
             for v in relation_data
-            if json.loads(v["application-data"]["data"])["alias"] == relation_alias
+            if json.loads(v["application-data"]["data"]).get("alias") == relation_alias
         ]
     if len(relation_data) == 0:
         raise ValueError(
