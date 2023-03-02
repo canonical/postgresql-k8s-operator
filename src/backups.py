@@ -16,7 +16,6 @@ from charms.data_platform_libs.v0.s3 import CredentialsChangedEvent, S3Requirer
 from jinja2 import Template
 from lightkube import ApiError, Client
 from lightkube.resources.core_v1 import Endpoints
-from ops import pebble
 from ops.charm import ActionEvent
 from ops.framework import Object
 from ops.jujuversion import JujuVersion
@@ -105,31 +104,25 @@ class PostgreSQLBackups(Object):
 
     def _empty_data_files(self) -> None:
         """Empty the PostgreSQL data directory in preparation of backup restore."""
-        empty_data_files_command = "rm -r /var/lib/postgresql/data/pgdata".split()
-
         try:
-            process = self.container.exec(
-                empty_data_files_command,
+            self.container.exec(
+                "rm -r /var/lib/postgresql/data/pgdata".split(),
                 user="postgres",
                 group="postgres",
-            )
-            process.wait_output()
+            ).wait_output()
         except ExecError as e:
             logger.exception(
                 "Failed to empty data directory in prep for backup restore", exc_info=e
             )
-            logger.error(f"Stdout: {e.stdout}")
-            logger.error(f"Stderr: {e.stderr}")
             raise
 
     def _execute_command(self, command: List[str]) -> Tuple[str, str]:
         """Execute a command in the workload container."""
-        process = self.container.exec(
+        return self.container.exec(
             command,
             user=WORKLOAD_OS_USER,
             group=WORKLOAD_OS_GROUP,
-        )
-        return process.wait_output()
+        ).wait_output()
 
     def _get_backup_ids(self, format_ids: bool = False) -> List[str]:
         """Return the list of backup ids.
@@ -170,7 +163,7 @@ class PostgreSQLBackups(Object):
             self._execute_command(
                 ["pgbackrest", f"--stanza={self.charm.cluster_name}", "stanza-create"]
             )
-        except pebble.ExecError as e:
+        except ExecError as e:
             logger.exception(e)
             self.charm.unit.status = BlockedStatus(
                 f"failed to initialize stanza with error {str(e)}"
@@ -259,7 +252,7 @@ Juju Version: {str(juju_version)}
             )
             backup_ids = self._get_backup_ids()
             backup_id = backup_ids[-1]
-        except pebble.ExecError as e:
+        except ExecError as e:
             logger.exception(e)
 
             # Recover the backup id from the logs.
@@ -321,7 +314,7 @@ Stderr:
 
         try:
             event.set_results({"backup-list": self._get_backup_ids(format_ids=True)})
-        except pebble.ExecError as e:
+        except ExecError as e:
             logger.exception(e)
             event.fail(f"Failed to list PostgreSQL backups with error: {str(e)}")
 
@@ -373,7 +366,7 @@ Stderr:
 
         try:
             self._empty_data_files()
-        except pebble.ExecError as e:
+        except ExecError as e:
             event.fail(f"Failed to restore backup with error: {str(e)}")
             logger.error("failed to delete data files")
             self.charm.unit_peer_data.update({"restoring-backup": ""})
@@ -403,6 +396,12 @@ Stderr:
         """
         if not event.params.get("backup-id"):
             event.fail("Missing backup-id to restore")
+            return False
+
+        if not self.container.can_connect():
+            error_message = "Workload container not ready yet!"
+            logger.warning(error_message)
+            event.fail(error_message)
             return False
 
         logger.info("Checking if cluster is in blocked state")
