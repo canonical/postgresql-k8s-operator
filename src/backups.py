@@ -443,7 +443,6 @@ Stderr:
         )
         # Delete the original file and render the one with the right info.
         filename = "/etc/pgbackrest.conf"
-        self.container.remove_path(filename)
         self.container.push(
             filename,
             rendered,
