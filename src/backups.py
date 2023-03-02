@@ -19,9 +19,9 @@ from lightkube.resources.core_v1 import Endpoints
 from ops import pebble
 from ops.charm import ActionEvent
 from ops.framework import Object
+from ops.jujuversion import JujuVersion
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 from ops.pebble import ChangeError, ExecError
-from ops.jujuversion import JujuVersion
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from constants import BACKUP_USER, WORKLOAD_OS_GROUP, WORKLOAD_OS_USER
