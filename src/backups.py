@@ -333,7 +333,8 @@ Stderr:
 
         self.charm.unit.status = MaintenanceStatus("restoring backup")
 
-        # logger.info(f"Stopping service {POSTGRESQL_SERVICE} in container {CONTAINER_NAME}")
+        # Stop the database service before performing the restore.
+        logger.info(f"Stopping database service")
         try:
             self.container.stop(self.charm._postgresql_service)
         except ChangeError as e:
@@ -341,6 +342,10 @@ Stderr:
             logger.exception(error_message, exc_info=e)
             return False, error_message
 
+        # Delete the K8S endpoints that tracks the cluster information, including its id.
+        # This is the same as "patronictl remove patroni-postgresql-k8s", but the latter doesn't
+        # work after the database service is stopped on Pebble.
+        logger.info(f"Removing previous cluster information")
         try:
             client = Client()
             client.delete(
@@ -364,6 +369,7 @@ Stderr:
             )
             return
 
+        logger.info("Removing the contents of the data directory")
         try:
             self._empty_data_files()
         except ExecError as e:
@@ -376,6 +382,7 @@ Stderr:
             return
 
         # Mark the cluster as in a restoring backup state and update the Patroni configuration.
+        logger.info("Configuring Patroni to restore the backup")
         self.charm.unit_peer_data.update(
             {
                 "restoring-backup": f'{datetime.strftime(datetime.strptime(backup_id, "%Y-%m-%dT%H:%M:%SZ"), "%Y%m%d-%H%M%S")}F'
@@ -384,6 +391,7 @@ Stderr:
         self.charm.update_config()
 
         # Start the database to start the restore process.
+        logger.info("Configuring Patroni to restore the backup")
         self.container.start(self.charm._postgresql_service)
 
         event.set_results({"restore-status": "restore started"})
