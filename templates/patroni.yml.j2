@@ -13,11 +13,6 @@ bootstrap:
         archive_mode: on
         password_encryption: md5
         wal_level: logical
-      {%- if restoring_backup %}
-      recovery_conf:
-        recovery_target_timeline: latest
-        restore_command: pgbackrest --stanza={{ stanza }} archive-get %f "%p"
-      {%- endif %}
   {%- if restoring_backup %}
   method: pgbackrest
   pgbackrest:
