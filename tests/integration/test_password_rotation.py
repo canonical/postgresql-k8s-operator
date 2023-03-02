@@ -8,6 +8,7 @@ from pytest_operator.plugin import OpsTest
 
 from tests.helpers import METADATA
 from tests.integration.helpers import (
+    CHARM_SERIES,
     check_patroni,
     get_password,
     restart_patroni,
@@ -18,7 +19,6 @@ APP_NAME = METADATA["name"]
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.password_rotation_tests
 @pytest.mark.skip_if_deployed
 async def test_deploy_active(ops_test: OpsTest):
     """Build the charm and deploy it."""
@@ -31,12 +31,12 @@ async def test_deploy_active(ops_test: OpsTest):
             },
             application_name=APP_NAME,
             num_units=3,
+            series=CHARM_SERIES,
             trust=True,
         )
         await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
 
-@pytest.mark.password_rotation_tests
 async def test_password_rotation(ops_test: OpsTest):
     """Test password rotation action."""
     # Get the initial passwords set for the system users.

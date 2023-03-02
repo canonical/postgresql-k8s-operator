@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
-import pytest as pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_exponential
 
 from tests.helpers import METADATA
 from tests.integration.helpers import (
+    CHARM_SERIES,
     DATABASE_APP_NAME,
     check_database_creation,
     check_database_users_existence,
@@ -28,7 +28,6 @@ APPLICATION_UNITS = 2
 DATABASE_UNITS = 3
 
 
-@pytest.mark.tls_tests
 async def test_mattermost_db(ops_test: OpsTest) -> None:
     """Deploy Mattermost to test the 'db' relation.
 
@@ -46,6 +45,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
             },
             application_name=DATABASE_APP_NAME,
             num_units=DATABASE_UNITS,
+            series=CHARM_SERIES,
             trust=True,
         )
         # Deploy TLS Certificates operator.

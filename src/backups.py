@@ -21,6 +21,7 @@ from ops.charm import ActionEvent
 from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 from ops.pebble import ChangeError, ExecError
+from ops.jujuversion import JujuVersion
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from constants import BACKUP_USER, WORKLOAD_OS_GROUP, WORKLOAD_OS_USER
@@ -102,24 +103,6 @@ class PostgreSQLBackups(Object):
 
         return endpoint
 
-    def _delete_temp_restore_directory(self) -> None:
-        """Delete the temp restore directory from /var/lib/postgresql."""
-        logger.info("Deleting temp restore directory in /var/lib/postgresql")
-        delete_temp_restore_directory_command = "find /var/lib/postgresql/data -wholename /var/lib/postgresql/data/postgresql_restore_* -delete".split()
-
-        try:
-            process = self.container.exec(
-                delete_temp_restore_directory_command,
-                user="postgres",
-                group="postgres",
-            )
-            process.wait_output()
-        except ExecError as e:
-            logger.exception("Failed to remove temp backup directory", exc_info=e)
-            logger.error(f"Stdout: {e.stdout}")
-            logger.error(f"Stderr: {e.stderr}")
-            raise
-
     def _empty_data_files(self) -> None:
         """Empty the PostgreSQL data directory in preparation of backup restore."""
         empty_data_files_command = "rm -r /var/lib/postgresql/data/pgdata".split()
@@ -139,17 +122,12 @@ class PostgreSQLBackups(Object):
             logger.error(f"Stderr: {e.stderr}")
             raise
 
-    def _execute_command(
-        self, command: List[str], environment: Dict[str, str] = None
-    ) -> Tuple[str, str]:
+    def _execute_command(self, command: List[str]) -> Tuple[str, str]:
         """Execute a command in the workload container."""
-        if environment is None:
-            environment = os.environ.copy()
         process = self.container.exec(
             command,
             user=WORKLOAD_OS_USER,
             group=WORKLOAD_OS_GROUP,
-            environment=environment,
         )
         return process.wait_output()
 
@@ -248,6 +226,26 @@ class PostgreSQLBackups(Object):
         # Retrieve the S3 Parameters to use when uploading the backup logs to S3.
         s3_parameters, _ = self._retrieve_s3_parameters()
 
+        # Test uploading metadata to S3 to test credentials before backup.
+        datetime_backup_requested = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+        juju_version = JujuVersion.from_environ()
+        metadata = f"""Date Backup Requested: {datetime_backup_requested}
+Model Name: {self.model.name}
+Application Name: {self.model.app.name}
+Unit Name: {self.charm.unit.name}
+Juju Version: {str(juju_version)}
+"""
+        if not self._upload_content_to_s3(
+            metadata,
+            os.path.join(
+                s3_parameters["path"],
+                f"backup/{self.charm.cluster_name}/.metadata",
+            ),
+            s3_parameters,
+        ):
+            event.fail("Failed to upload metadata to provided S3")
+            return
+
         try:
             self.charm.unit.status = MaintenanceStatus("creating backup")
             stdout, stderr = self._execute_command(
@@ -276,9 +274,14 @@ class PostgreSQLBackups(Object):
                 backup_id = datetime.strftime(datetime.now(), "%Y%m%d-%H%M%SF")
 
             # Upload the logs to S3.
-            self._upload_logs_to_s3(
-                e.stdout,
-                e.stderr,
+            logs = f"""Stdout:
+{e.stdout}
+
+Stderr:
+{e.stderr}
+"""
+            self._upload_content_to_s3(
+                logs,
                 os.path.join(
                     s3_parameters["path"],
                     f"backup/{self.charm.cluster_name}/{backup_id}/backup.log",
@@ -288,9 +291,14 @@ class PostgreSQLBackups(Object):
             event.fail(f"Failed to backup PostgreSQL with error: {str(e)}")
         else:
             # Upload the logs to S3 and fail the action if it doesn't succeed.
-            if not self._upload_logs_to_s3(
-                stdout,
-                stderr,
+            logs = f"""Stdout:
+{stdout}
+
+Stderr:
+{stderr}
+"""
+            if not self._upload_content_to_s3(
+                logs,
                 os.path.join(
                     s3_parameters["path"],
                     f"backup/{self.charm.cluster_name}/{backup_id}/backup.log",
@@ -467,24 +475,27 @@ class PostgreSQLBackups(Object):
 
         return s3_parameters, []
 
-    def _upload_logs_to_s3(
+    def _upload_content_to_s3(
         self: str,
-        stdout: str,
-        stderr: str,
+        content: str,
         s3_path: str,
         s3_parameters: Dict,
     ) -> bool:
-        """Upload logs as a file to the S3 bucket."""
-        logs = f"""Stdout:
-{stdout}
+        """Uploads the provided contents to the provided S3 bucket.
 
-Stderr:
-{stderr}
-            """
-        logger.debug(f"Output of pgBackRest: {logs}")
-        logger.info("Uploading output of pgBackRest to S3")
+        Args:
+            content: The content to upload to S3
+            s3_path: The path to which to upload the content
+            s3_parameters: A dictionary containing the S3 parameters
+                The following are expected keys in the dictionary: bucket, region,
+                endpoint, access-key and secret-key
+
+        Returns:
+            a boolean indicating success.
+        """
         bucket_name = s3_parameters["bucket"]
         s3_path = os.path.join(s3_parameters["path"], s3_path).lstrip("/")
+        logger.info(f"Uploading content to bucket={s3_parameters['bucket']}, path={s3_path}")
         try:
             logger.info(f"Uploading content to bucket={bucket_name}, path={s3_path}")
             session = boto3.session.Session(
@@ -497,7 +508,7 @@ Stderr:
             bucket = s3.Bucket(bucket_name)
 
             with tempfile.NamedTemporaryFile() as temp_file:
-                temp_file.write(logs.encode("utf-8"))
+                temp_file.write(content.encode("utf-8"))
                 temp_file.flush()
                 bucket.upload_file(temp_file.name, s3_path)
         except Exception as e:

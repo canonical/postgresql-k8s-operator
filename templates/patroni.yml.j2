@@ -6,7 +6,7 @@ bootstrap:
       remove_data_directory_on_diverged_timelines: true
       parameters:
         {%- if enable_pgbackrest %}
-        archive_command: 'cd /var/lib/postgresql/data/pgdata && pgbackrest --stanza={{ stanza }} archive-push %p'
+        archive_command: 'pgbackrest --stanza={{ stanza }} archive-push %p'
         {% else %}
         archive_command: /bin/true
         {%- endif %}
