@@ -34,7 +34,7 @@ from ops.model import (
     Relation,
     WaitingStatus,
 )
-from ops.pebble import Layer, PathError, ProtocolError
+from ops.pebble import Layer, PathError, ProtocolError, ServiceStatus
 from requests import ConnectionError
 from tenacity import RetryError
 
@@ -669,8 +669,13 @@ class PostgresqlOperatorCharm(CharmBase):
             return
 
         if "restoring-backup" in self.unit_peer_data:
+            if services[0].current != ServiceStatus.ACTIVE:
+                self.unit.status = BlockedStatus("Failed to restore backup")
+                return
+
             if not self._patroni.member_started:
                 return
+
             # Remove the restoring backup flag.
             self.unit_peer_data.update({"restoring-backup": ""})
             self.update_config()
