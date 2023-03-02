@@ -332,20 +332,21 @@ Stderr:
             return
 
         self.charm.unit.status = MaintenanceStatus("restoring backup")
+        error_message = "Failed to restore backup"
 
         # Stop the database service before performing the restore.
-        logger.info(f"Stopping database service")
+        logger.info("Stopping database service")
         try:
             self.container.stop(self.charm._postgresql_service)
         except ChangeError as e:
-            error_message = "Failed to stop service postgresql"
-            logger.exception(error_message, exc_info=e)
-            return False, error_message
+            logger.warning(f"Failed to stop database service with error: {str(e)}")
+            event.fail(error_message)
+            return
 
         # Delete the K8S endpoints that tracks the cluster information, including its id.
         # This is the same as "patronictl remove patroni-postgresql-k8s", but the latter doesn't
         # work after the database service is stopped on Pebble.
-        logger.info(f"Removing previous cluster information")
+        logger.info("Removing previous cluster information")
         try:
             client = Client()
             client.delete(
@@ -359,26 +360,18 @@ Stderr:
                 namespace=self.charm._namespace,
             )
         except ApiError as e:
-            event.fail(f"Failed to restore backup with error: {str(e)}")
-            logger.error("failed to delete Patroni endpoint and configmap")
-            self.charm.unit_peer_data.update({"restoring-backup": ""})
-            self.charm.update_config()
-            self.container.start(self.charm._postgresql_service)
-            self.charm.unit.status = BlockedStatus(
-                f"failed to delete Patroni endpoint and configmap with error {e}"
-            )
+            logger.warning(f"Failed to remove previous cluster information with error: {str(e)}")
+            event.fail(error_message)
+            self._restart_database()
             return
 
         logger.info("Removing the contents of the data directory")
         try:
             self._empty_data_files()
         except ExecError as e:
-            event.fail(f"Failed to restore backup with error: {str(e)}")
-            logger.error("failed to delete data files")
-            self.charm.unit_peer_data.update({"restoring-backup": ""})
-            self.charm.update_config()
-            self.container.start(self.charm._postgresql_service)
-            self.charm.unit.status = BlockedStatus(f"failed to delete data files with error {e}")
+            logger.warning(f"Failed to remove contents of the data directory with error: {str(e)}")
+            event.fail(error_message)
+            self._restart_database()
             return
 
         # Mark the cluster as in a restoring backup state and update the Patroni configuration.
@@ -456,6 +449,12 @@ Stderr:
             user=WORKLOAD_OS_USER,
             group=WORKLOAD_OS_GROUP,
         )
+
+    def _restart_database(self) -> None:
+        """Removes the restoring backup flag and restart the database."""
+        self.charm.unit_peer_data.update({"restoring-backup": ""})
+        self.charm.update_config()
+        self.container.start(self.charm._postgresql_service)
 
     def _retrieve_s3_parameters(self) -> Tuple[Dict, List[str]]:
         """Retrieve S3 parameters from the S3 integrator relation."""

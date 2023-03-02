@@ -281,12 +281,14 @@ class TestCharm(unittest.TestCase):
         mock_event.set_results.assert_not_called()
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.Patroni.member_started")
     @patch("charm.Patroni.get_primary")
     @patch("ops.model.Container.pebble")
     def test_on_update_status(
         self,
         _pebble,
         _get_primary,
+        _member_started,
     ):
         # Mock the access to the list of Pebble services.
         _pebble.get_services.side_effect = [
@@ -330,9 +332,12 @@ class TestCharm(unittest.TestCase):
         _get_primary.assert_not_called()
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.Patroni.member_started")
     @patch("charm.Patroni.get_primary")
     @patch("ops.model.Container.pebble")
-    def test_on_update_status_with_error_on_get_primary(self, _pebble, _get_primary):
+    def test_on_update_status_with_error_on_get_primary(
+        self, _pebble, _get_primary, _member_started
+    ):
         # Mock the access to the list of Pebble services.
         _pebble.get_services.return_value = ["service data"]
 
