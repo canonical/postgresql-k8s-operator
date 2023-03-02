@@ -17,7 +17,6 @@ bootstrap:
   method: pgbackrest
   pgbackrest:
     command: pgbackrest --stanza={{ stanza }} --set={{ backup_id }} --type=immediate --target-action=promote restore
-    keep_data: True
     no_params: True
     keep_existing_recovery_conf: True
   {% else %}
