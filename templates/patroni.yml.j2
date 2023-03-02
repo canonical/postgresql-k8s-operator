@@ -34,7 +34,6 @@ bootstrap:
 bypass_api_service: true
 log:
   dir: /var/log/postgresql
-  level: DEBUG
 restapi:
   connect_address: '{{ endpoint }}:8008'
   listen: 0.0.0.0:8008
@@ -61,9 +60,6 @@ postgresql:
     {% else %}
     archive_command: /bin/true
     {%- endif %}
-    log_filename: 'postgresql.log'
-    log_directory: '/var/log/postgresql'
-    logging_collector: 'on'
     {%- if enable_tls %}
     ssl: on
     ssl_ca_file: {{ storage_path }}/ca.pem
