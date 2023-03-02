@@ -6,17 +6,22 @@ bootstrap:
       remove_data_directory_on_diverged_timelines: true
       parameters:
         {%- if enable_pgbackrest %}
-        archive_command: 'pgbackrest --stanza={{ stanza }} archive-push %p'
+        archive_command: 'cd /var/lib/postgresql/data/pgdata && pgbackrest --stanza={{ stanza }} archive-push %p'
         {% else %}
         archive_command: /bin/true
         {%- endif %}
         archive_mode: on
         password_encryption: md5
         wal_level: logical
+      {%- if restoring_backup %}
+      recovery_conf:
+        recovery_target_timeline: latest
+        restore_command: pgbackrest --stanza={{ stanza }} archive-get %f "%p"
+      {%- endif %}
   {%- if restoring_backup %}
   method: pgbackrest
   pgbackrest:
-    command: cp -R /var/lib/postgresql/data/postgresql_restore_XXXX /var/lib/postgresql/data/pgdata
+    command: pgbackrest --stanza={{ stanza }} --type=immediate --target-action=promote restore
     keep_data: True
     no_params: True
     keep_existing_recovery_conf: True
@@ -57,7 +62,7 @@ postgresql:
   listen: 0.0.0.0:5432
   parameters:
     {%- if enable_pgbackrest %}
-    archive_command: 'pgbackrest --stanza={{ stanza }} archive-push %p'
+    archive_command: 'cd /var/lib/postgresql/data/pgdata && pgbackrest --stanza={{ stanza }} archive-push %p'
     {% else %}
     archive_command: /bin/true
     {%- endif %}

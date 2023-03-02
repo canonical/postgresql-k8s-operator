@@ -194,7 +194,9 @@ class Patroni:
             # Ignore non existing user error when it wasn't created yet.
             pass
 
-    def render_patroni_yml_file(self, enable_tls: bool = False, stanza: str = None, restoring_backup: bool = False) -> None:
+    def render_patroni_yml_file(
+        self, enable_tls: bool = False, stanza: str = None, restoring_backup: bool = False
+    ) -> None:
         """Render the Patroni configuration file.
 
         Args:

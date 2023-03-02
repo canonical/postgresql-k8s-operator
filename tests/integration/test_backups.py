@@ -8,8 +8,14 @@ from typing import Dict, Tuple
 import pytest as pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers import DATABASE_APP_NAME, build_and_deploy, get_primary, get_password, get_unit_address, \
-    db_connect
+from tests.integration.helpers import (
+    DATABASE_APP_NAME,
+    build_and_deploy,
+    db_connect,
+    get_password,
+    get_primary,
+    get_unit_address,
+)
 
 S3_INTEGRATOR_APP_NAME = "s3-integrator"
 
@@ -61,13 +67,31 @@ async def test_backup(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> No
         )
         await action.wait()
         logger.info(f"list backups results: {action.results}")
-        assert len(ast.literal_eval(action.results["backup-list"])) == 1
+        backup_list = ast.literal_eval(action.results["backup-list"])
+        logger.info(backup_list)
+        assert len(backup_list) == 1
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
-        # # Run the "restore backup" action.
-        # action = await ops_test.model.units.get(f"{DATABASE_APP_NAME}/0").run_action(
-        #     "restore"
-        # )
-        # await action.wait()
-        # logger.info(f"restore results: {action.results}")
-        # await ops_test.model.wait_for_idle(status="active", timeout=1000)
+        # Write some data.
+        logger.info(f"connecting to primary {primary} on {address}")
+        with db_connect(host=address, password=password) as connection:
+            connection.autocommit = True
+            connection.cursor().execute("CREATE TABLE backup_table_2 (test_collumn INT );")
+        connection.close()
+
+        # Run the "restore backup" action.
+        action = await ops_test.model.units.get(f"{DATABASE_APP_NAME}/0").run_action(
+            "restore", **{"backup-id": backup_list[0]}
+        )
+        await action.wait()
+        logger.info(f"restore results: {action.results}")
+
+        # Wait for the backup to complete.
+        async with ops_test.fast_forward():
+            await ops_test.model.wait_for_idle(status="active", timeout=1000)
+
+        # logger.info(f"connecting to primary {primary} on {address}")
+        # with db_connect(host=address, password=password) as connection:
+        #     connection.autocommit = True
+        #     connection.cursor().execute("CREATE TABLE backup_table_2 (test_collumn INT );")
+        # connection.close()

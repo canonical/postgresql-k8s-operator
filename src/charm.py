@@ -668,6 +668,14 @@ class PostgresqlOperatorCharm(CharmBase):
             logger.debug("on_update_status early exit: Service has not been added nor started yet")
             return
 
+        if "restoring-backup" in self.unit_peer_data:
+            if not self._patroni.member_started:
+                return
+            # Remove the restoring backup flag.
+            self.unit_peer_data.update({"restoring-backup": ""})
+            self.update_config()
+            self.unit.status = ActiveStatus()
+
         try:
             if self._patroni.get_primary(unit_name_pattern=True) == self.unit.name:
                 self.unit.status = ActiveStatus("Primary")

@@ -23,11 +23,7 @@ from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 from ops.pebble import ChangeError, ExecError
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
-from constants import (
-    BACKUP_USER,
-    WORKLOAD_OS_GROUP,
-    WORKLOAD_OS_USER,
-)
+from constants import BACKUP_USER, WORKLOAD_OS_GROUP, WORKLOAD_OS_USER
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +36,7 @@ class PostgreSQLBackups(Object):
         super().__init__(charm, "backup")
         self.charm = charm
         self.relation_name = relation_name
+        self.container = self.charm.unit.get_container("postgresql")
 
         # s3 relation handles the config options for s3 backups
         self.s3_client = S3Requirer(self.charm, self.relation_name)
@@ -53,7 +50,10 @@ class PostgreSQLBackups(Object):
     def _are_backup_settings_ok(self) -> Tuple[bool, Optional[str]]:
         """Validates whether backup settings are OK."""
         if self.model.get_relation(self.relation_name) is None:
-            return False, "Relation with s3-integrator charm missing, cannot create/restore backup."
+            return (
+                False,
+                "Relation with s3-integrator charm missing, cannot create/restore backup.",
+            )
 
         s3_parameters, missing_parameters = self._retrieve_s3_parameters()
         if missing_parameters:
@@ -102,9 +102,27 @@ class PostgreSQLBackups(Object):
 
         return endpoint
 
+    def _delete_temp_restore_directory(self) -> None:
+        """Delete the temp restore directory from /var/lib/postgresql."""
+        logger.info("Deleting temp restore directory in /var/lib/postgresql")
+        delete_temp_restore_directory_command = "find /var/lib/postgresql/data -wholename /var/lib/postgresql/data/postgresql_restore_* -delete".split()
+
+        try:
+            process = self.container.exec(
+                delete_temp_restore_directory_command,
+                user="postgres",
+                group="postgres",
+            )
+            process.wait_output()
+        except ExecError as e:
+            logger.exception("Failed to remove temp backup directory", exc_info=e)
+            logger.error(f"Stdout: {e.stdout}")
+            logger.error(f"Stderr: {e.stderr}")
+            raise
+
     def _empty_data_files(self) -> None:
         """Empty the PostgreSQL data directory in preparation of backup restore."""
-        empty_data_files_command = "find /var/lib/postgresql/data/pgdata/ -not -path /var/lib/postgresql/data/pgdata/ -delete".split()
+        empty_data_files_command = "rm -r /var/lib/postgresql/data/pgdata".split()
 
         try:
             process = self.container.exec(
@@ -121,12 +139,13 @@ class PostgreSQLBackups(Object):
             logger.error(f"Stderr: {e.stderr}")
             raise
 
-    def _execute_command(self, command: List[str], environment: Dict[str, str] = None) -> Tuple[str, str]:
+    def _execute_command(
+        self, command: List[str], environment: Dict[str, str] = None
+    ) -> Tuple[str, str]:
         """Execute a command in the workload container."""
         if environment is None:
             environment = os.environ.copy()
-        container = self.charm.unit.get_container("postgresql")
-        process = container.exec(
+        process = self.container.exec(
             command,
             user=WORKLOAD_OS_USER,
             group=WORKLOAD_OS_GROUP,
@@ -305,56 +324,21 @@ class PostgreSQLBackups(Object):
         backup_id = event.params.get("backup-id")
         logger.info(f"A restore with backup-id {backup_id} has been requested on unit")
 
-        # Mark the cluster as in a restoring backup state and update the Patroni configuration.
-        self.charm.unit_peer_data.update({"restoring-backup": backup_id})
-        self.charm.update_config()
-
         # Validate the provided backup id.
         logger.info("Validating provided backup-id")
         if backup_id not in self._get_backup_ids(format_ids=True):
             event.fail(f"Invalid backup-id: {backup_id}")
             return
 
-        container = self.charm.unit.get_container("postgresql")
+        self.charm.unit.status = MaintenanceStatus("restoring backup")
 
         # logger.info(f"Stopping service {POSTGRESQL_SERVICE} in container {CONTAINER_NAME}")
         try:
-            container.stop(self.charm._postgresql_service)
+            self.container.stop(self.charm._postgresql_service)
         except ChangeError as e:
             error_message = "Failed to stop service postgresql"
             logger.exception(error_message, exc_info=e)
             return False, error_message
-
-        make_temp_dir_command = "mktemp --directory /var/lib/postgresql/data/postgresql_restore_XXXX".split()
-
-        try:
-            process = container.exec(
-                make_temp_dir_command,
-                user="postgres",
-                group="postgres",
-            )
-            tmp_dir, _ = process.wait_output()
-        except ExecError as e:
-            logger.exception("Failed to execute commands prior to running xbcloud get", exc_info=e)
-            return
-
-        try:
-            self._execute_command(
-                [
-                    "pgbackrest",
-                    f"--stanza={self.charm.cluster_name}",
-                    "--type=immediate",
-                    "--target-action=promote",
-                    "--pg1-path=/var/lib/postgresql/data/postgresql_restore_XXXX",
-                    "restore",
-                ]
-            )
-        except pebble.ExecError as e:
-            event.fail(f"Failed to restore backup with error: {str(e)}")
-            self.charm.unit_peer_data.update({"restoring-backup": ""})
-            self.charm.update_config()
-            container.start(self.charm._postgresql_service)
-            return
 
         try:
             client = Client()
@@ -373,28 +357,31 @@ class PostgreSQLBackups(Object):
             logger.error("failed to delete Patroni endpoint and configmap")
             self.charm.unit_peer_data.update({"restoring-backup": ""})
             self.charm.update_config()
+            self.container.start(self.charm._postgresql_service)
             self.charm.unit.status = BlockedStatus(
                 f"failed to delete Patroni endpoint and configmap with error {e}"
             )
             return
 
-        # Start the database to start the restore process.
-        container.start(self.charm._postgresql_service)
-
-        if not self.charm._patroni.member_started:
-            event.fail("Failed to restore backup : patroni not started")
-
-            # Remove the restoring backup flag.
+        try:
+            self._empty_data_files()
+        except pebble.ExecError as e:
+            event.fail(f"Failed to restore backup with error: {str(e)}")
+            logger.error("failed to delete data files")
             self.charm.unit_peer_data.update({"restoring-backup": ""})
             self.charm.update_config()
+            self.container.start(self.charm._postgresql_service)
+            self.charm.unit.status = BlockedStatus(f"failed to delete data files with error {e}")
             return
 
-        event.set_results({"restore-status": "backup restored"})
-        self.charm.unit.status = ActiveStatus()
-
-        # Remove the restoring backup flag.
-        self.charm.unit_peer_data.update({"restoring-backup": ""})
+        # Mark the cluster as in a restoring backup state and update the Patroni configuration.
+        self.charm.unit_peer_data.update({"restoring-backup": "True"})
         self.charm.update_config()
+
+        # Start the database to start the restore process.
+        self.container.start(self.charm._postgresql_service)
+
+        event.set_results({"restore-status": "restore started"})
 
     def _pre_restore_checks(self, event: ActionEvent) -> bool:
         """Run some checks before starting the restore.
@@ -442,10 +429,9 @@ class PostgreSQLBackups(Object):
             user=BACKUP_USER,
         )
         # Delete the original file and render the one with the right info.
-        container = self.charm.unit.get_container("postgresql")
         filename = "/etc/pgbackrest.conf"
-        container.remove_path(filename)
-        container.push(
+        self.container.remove_path(filename)
+        self.container.push(
             filename,
             rendered,
             user=WORKLOAD_OS_USER,
