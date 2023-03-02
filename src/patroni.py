@@ -7,7 +7,7 @@
 import logging
 import os
 import pwd
-from typing import List
+from typing import List, Optional
 
 import requests
 from jinja2 import Template
@@ -195,7 +195,11 @@ class Patroni:
             pass
 
     def render_patroni_yml_file(
-        self, enable_tls: bool = False, stanza: str = None, restoring_backup: bool = False
+        self,
+        enable_tls: bool = False,
+        stanza: str = None,
+        restoring_backup: bool = False,
+        backup_id: Optional[str] = None,
     ) -> None:
         """Render the Patroni configuration file.
 
@@ -203,6 +207,7 @@ class Patroni:
             enable_tls: whether to enable TLS.
             stanza: name of the stanza created by pgBackRest.
             restoring_backup: whether a backup is being restored.
+            backup_id: id of the backup that is being restored.
         """
         # Open the template postgresql.conf file.
         with open("templates/patroni.yml.j2", "r") as file:
@@ -220,6 +225,7 @@ class Patroni:
             rewind_password=self._rewind_password,
             enable_pgbackrest=stanza is not None,
             restoring_backup=restoring_backup,
+            backup_id=backup_id,
             stanza=stanza,
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)

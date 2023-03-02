@@ -375,7 +375,11 @@ class PostgreSQLBackups(Object):
             return
 
         # Mark the cluster as in a restoring backup state and update the Patroni configuration.
-        self.charm.unit_peer_data.update({"restoring-backup": "True"})
+        self.charm.unit_peer_data.update(
+            {
+                "restoring-backup": f'{datetime.strftime(datetime.strptime(backup_id, "%Y-%m-%dT%H:%M:%SZ"), "%Y%m%d-%H%M%S")}F'
+            }
+        )
         self.charm.update_config()
 
         # Start the database to start the restore process.

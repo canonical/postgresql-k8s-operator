@@ -825,6 +825,7 @@ class PostgresqlOperatorCharm(CharmBase):
         self._patroni.render_patroni_yml_file(
             enable_tls=enable_tls,
             restoring_backup="restoring-backup" in self.unit_peer_data,
+            backup_id=self.unit_peer_data.get("restoring-backup"),
             stanza=self._peers.data[self.unit].get("stanza"),
         )
         self._patroni.render_postgresql_conf_file()
