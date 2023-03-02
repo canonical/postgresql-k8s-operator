@@ -164,7 +164,7 @@ class Patroni:
             allow server time to start up.
         """
         try:
-            for attempt in Retrying(stop=stop_after_delay(2 * 60), wait=wait_fixed(3)):
+            for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
                 with attempt:
                     r = requests.get(f"{self._patroni_url}/health", verify=self._verify)
         except RetryError:
