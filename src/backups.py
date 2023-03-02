@@ -319,6 +319,7 @@ Stderr:
             event.fail(f"Failed to list PostgreSQL backups with error: {str(e)}")
 
     def _on_restore_action(self, event):
+        """Request that pgBackRest restores a backup."""
         if not self._pre_restore_checks(event):
             return
 
