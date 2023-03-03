@@ -5,7 +5,6 @@ import socket
 import unittest
 from unittest.mock import MagicMock, patch
 
-import ops.testing
 from ops.pebble import ConnectionError
 from ops.testing import Harness
 
@@ -62,9 +61,7 @@ class TestPostgreSQLTLS(unittest.TestCase):
 
     @patch("charm.KubernetesServicePatch", lambda x, y: None)
     def setUp(self):
-        ops.testing.SIMULATE_CAN_CONNECT = True
         self.harness = Harness(PostgresqlOperatorCharm)
-        self.addCleanup(setattr, ops.testing, "SIMULATE_CAN_CONNECT", False)
         self.addCleanup(self.harness.cleanup)
 
         # Set up the initial relation and hooks.
