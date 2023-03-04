@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Backups implementation."""
-
+import json
 import logging
 import os
 import re
@@ -124,26 +124,46 @@ class PostgreSQLBackups(Object):
             group=WORKLOAD_OS_GROUP,
         ).wait_output()
 
-    def _get_backup_ids(self, format_ids: bool = False) -> List[str]:
-        """Return the list of backup ids.
+    def _format_backup_list(self, backup_list) -> str:
+        """Formats provided list of backups as a table."""
+        backups = ["{:<21s} | {:<12s} | {:s}".format("backup-id", "backup-type", "backup-status")]
+        backups.append("-" * len(backups[0]))
+        for backup_id, backup_type, backup_status in backup_list:
+            backups.append(
+                "{:<21s} | {:<12s} | {:s}".format(backup_id, backup_type, backup_status)
+            )
+        return "\n".join(backups)
 
-        Args:
-            format_ids: whether to format the ids as (default is False).
+    def _generate_backup_list_output(self, format_ids: bool = False) -> str:
+        """Generates a list of backups in a formatted table.
+
+        List contains successful and failed backups in order of ascending time.
         """
-        backup_ids = []
-        output, _ = self._execute_command(
-            ["pgbackrest", "repo-ls", f"backup/{self.charm.cluster_name}"]
-        )
-        if output:
-            backup_ids = re.findall(r".*[F]$", output, re.MULTILINE)
-            if format_ids:
-                backup_ids = [
-                    datetime.strftime(
-                        datetime.strptime(backup_id[:-1], "%Y%m%d-%H%M%S"), "%Y-%m-%dT%H:%M:%SZ"
-                    )
-                    for backup_id in backup_ids
-                ]
-        return backup_ids
+        backup_list = []
+        output, _ = self._execute_command(["pgbackrest", "info", "--output=json"])
+        backups = json.loads(output)[0]["backup"]
+        for backup in backups:
+            backup_id = datetime.strftime(
+                datetime.strptime(backup["label"][:-1], "%Y%m%d-%H%M%S"), "%Y-%m-%dT%H:%M:%SZ"
+            )
+            error = backup["error"]
+            backup_status = "finished"
+            if error:
+                backup_status = f"failed: {error}"
+            backup_list.append((backup_id, "full", backup_status))
+        # Sort by time and return formatted output.
+        return self._format_backup_list(sorted(backup_list, key=lambda pair: pair[0]))
+
+    def _list_backups_ids(self) -> List[str]:
+        """Retrieve the list of backup ids."""
+        output, _ = self._execute_command(["pgbackrest", "info", "--output=json"])
+        backups = json.loads(output)[0]["backup"]
+        return [
+            datetime.strftime(
+                datetime.strptime(backup["label"][:-1], "%Y%m%d-%H%M%S"), "%Y-%m-%dT%H:%M:%SZ"
+            )
+            for backup in backups
+        ]
 
     def _initialise_stanza(self) -> None:
         """Initialize the stanza.
@@ -250,8 +270,7 @@ Juju Version: {str(juju_version)}
                     "backup",
                 ]
             )
-            backup_ids = self._get_backup_ids()
-            backup_id = backup_ids[-1]
+            backup_id = self._list_backups_ids()[-1]
         except ExecError as e:
             logger.exception(e)
 
@@ -313,7 +332,8 @@ Stderr:
             return
 
         try:
-            event.set_results({"backup-list": self._get_backup_ids(format_ids=True)})
+            formatted_list = self._generate_backup_list_output()
+            event.set_results({"backups": formatted_list})
         except ExecError as e:
             logger.exception(e)
             event.fail(f"Failed to list PostgreSQL backups with error: {str(e)}")
@@ -328,7 +348,7 @@ Stderr:
 
         # Validate the provided backup id.
         logger.info("Validating provided backup-id")
-        if backup_id not in self._get_backup_ids(format_ids=True):
+        if backup_id not in self._list_backups_ids():
             event.fail(f"Invalid backup-id: {backup_id}")
             return
 
