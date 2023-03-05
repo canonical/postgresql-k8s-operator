@@ -10,7 +10,7 @@ bootstrap:
         {% else %}
         archive_command: /bin/true
         {%- endif %}
-        archive_mode: on
+        archive_mode: {{ archive_mode }}
         password_encryption: md5
         wal_level: logical
   {%- if restoring_backup %}

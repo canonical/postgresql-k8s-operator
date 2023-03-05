@@ -668,7 +668,7 @@ class PostgresqlOperatorCharm(CharmBase):
             logger.debug("on_update_status early exit: Service has not been added nor started yet")
             return
 
-        if "restoring-backup" in self.unit_peer_data:
+        if "restoring-backup" in self.app_peer_data:
             if services[0].current != ServiceStatus.ACTIVE:
                 self.unit.status = BlockedStatus("Failed to restore backup")
                 return
@@ -678,7 +678,7 @@ class PostgresqlOperatorCharm(CharmBase):
                 return
 
             # Remove the restoring backup flag.
-            self.unit_peer_data.update({"restoring-backup": ""})
+            self.app_peer_data.update({"restoring-backup": ""})
             self.update_config()
 
         self._set_primary_status_message()
@@ -834,10 +834,10 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Update and reload configuration based on TLS files availability.
         self._patroni.render_patroni_yml_file(
+            archive_mode=self.app_peer_data.get("archive-mode", "on"),
             enable_tls=enable_tls,
-            restoring_backup="restoring-backup" in self.unit_peer_data,
-            backup_id=self.unit_peer_data.get("restoring-backup"),
-            stanza=self._peers.data[self.unit].get("stanza"),
+            backup_id=self.app_peer_data.get("restoring-backup"),
+            stanza=self.unit_peer_data.get("stanza"),
         )
         self._patroni.render_postgresql_conf_file()
         if not self._patroni.member_started:
