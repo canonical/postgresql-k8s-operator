@@ -150,7 +150,7 @@ class PostgreSQLBackups(Object):
             backup_status = "finished"
             if error:
                 backup_status = f"failed: {error}"
-            backup_list.append((backup_id, "full", backup_status))
+            backup_list.append((backup_id, "physical", backup_status))
         # Sort by time and return formatted output.
         return self._format_backup_list(sorted(backup_list, key=lambda pair: pair[0]))
 
