@@ -251,7 +251,7 @@ Juju Version: {str(juju_version)}
             metadata,
             os.path.join(
                 s3_parameters["path"],
-                f"backup/{self.charm.cluster_name}/.metadata",
+                f"backup/{self.charm.cluster_name}/latest",
             ),
             s3_parameters,
         ):
