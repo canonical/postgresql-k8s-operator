@@ -134,7 +134,7 @@ class PostgreSQLBackups(Object):
             )
         return "\n".join(backups)
 
-    def _generate_backup_list_output(self, format_ids: bool = False) -> str:
+    def _generate_backup_list_output(self) -> str:
         """Generates a list of backups in a formatted table.
 
         List contains successful and failed backups in order of ascending time.
@@ -151,8 +151,7 @@ class PostgreSQLBackups(Object):
             if error:
                 backup_status = f"failed: {error}"
             backup_list.append((backup_id, "physical", backup_status))
-        # Sort by time and return formatted output.
-        return self._format_backup_list(sorted(backup_list, key=lambda pair: pair[0]))
+        return self._format_backup_list(backup_list)
 
     def _list_backups_ids(self) -> List[str]:
         """Retrieve the list of backup ids."""
