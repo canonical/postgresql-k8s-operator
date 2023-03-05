@@ -49,7 +49,9 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
         logger.info("creating a table in the database")
         with db_connect(host=address, password=password) as connection:
             connection.autocommit = True
-            connection.cursor().execute("CREATE TABLE backup_table_1 (test_collumn INT );")
+            connection.cursor().execute(
+                "CREATE TABLE IF NOT EXISTS backup_table_1 (test_collumn INT );"
+            )
         connection.close()
 
         # Run the "create backup" action.
