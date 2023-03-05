@@ -8,7 +8,14 @@ from typing import Dict, Tuple
 import pytest as pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers import DATABASE_APP_NAME, build_and_deploy
+from tests.integration.helpers import (
+    DATABASE_APP_NAME,
+    build_and_deploy,
+    db_connect,
+    get_password,
+    get_primary,
+    get_unit_address,
+)
 
 S3_INTEGRATOR_APP_NAME = "s3-integrator"
 
@@ -35,6 +42,16 @@ async def test_backup(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> No
         await action.wait()
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
+        # Write some data.
+        primary = await get_primary(ops_test)
+        password = await get_password(ops_test)
+        address = await get_unit_address(ops_test, primary)
+        logger.info(f"connecting to primary {primary} on {address}")
+        with db_connect(host=address, password=password) as connection:
+            connection.autocommit = True
+            connection.cursor().execute("CREATE TABLE backup_table_1 (test_collumn INT );")
+        connection.close()
+
         # Run the "create backup" action.
         action = await ops_test.model.units.get(f"{DATABASE_APP_NAME}/0").run_action(
             "create-backup"
@@ -48,6 +65,26 @@ async def test_backup(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> No
             "list-backups"
         )
         await action.wait()
-        logger.info(f"list backups results: {action.results}")
-        assert len(ast.literal_eval(action.results["backup-list"])) == 1
+        backups = action.results["backups"]
+        assert backups, "backups not outputted"
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
+
+        # Write some data.
+        logger.info(f"connecting to primary {primary} on {address}")
+        with db_connect(host=address, password=password) as connection:
+            connection.autocommit = True
+            connection.cursor().execute("CREATE TABLE backup_table_2 (test_collumn INT );")
+        connection.close()
+
+        # Run the "restore backup" action.
+        most_recent_backup = backups.split("\n")[-1]
+        backup_id = most_recent_backup.split()[0]
+        action = await ops_test.model.units.get(f"{DATABASE_APP_NAME}/0").run_action(
+            "restore", **{"backup-id": backup_id}
+        )
+        await action.wait()
+        logger.info(f"restore results: {action.results}")
+
+        # Wait for the backup to complete.
+        async with ops_test.fast_forward():
+            await ops_test.model.wait_for_idle(status="active", timeout=1000)
