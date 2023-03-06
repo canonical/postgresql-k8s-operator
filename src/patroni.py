@@ -196,7 +196,7 @@ class Patroni:
 
     def render_patroni_yml_file(
         self,
-        archive_mode: bool,
+        archive_mode: str,
         enable_tls: bool = False,
         stanza: str = None,
         backup_id: Optional[str] = None,
