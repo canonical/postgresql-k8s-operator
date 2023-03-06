@@ -13,7 +13,7 @@ import subprocess
 from typing import Optional
 
 import psycopg2
-from charms.data_platform_libs.v0.database_requires import DatabaseRequires
+from charms.data_platform_libs.v0.data_interfaces import DatabaseRequires
 from ops.charm import ActionEvent, CharmBase
 from ops.framework import StoredState
 from ops.main import main
