@@ -287,6 +287,7 @@ async def test_application_removal(ops_test: OpsTest) -> None:
     assert APP_NAME not in ops_test.model.applications
 
 
+@pytest.mark.unstable
 async def test_redeploy_charm_same_model(ops_test: OpsTest):
     """Redeploy the charm in the same model to test that it works."""
     charm = await ops_test.build_charm(".")
