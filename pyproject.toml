@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 [tool.poetry]
-name = "postgesql-k8s"
+name = "postgresql-k8s"
 version = "0.0.1-dev.0"
 description = ""
 authors = []
@@ -22,12 +22,18 @@ jinja2 = "^3.1.2"
 lightkube = "^0.12.0"
 lightkube-models = "^1.26.0.4"
 requests = "^2.28.2"
-boto3 = "^1.26.84"
+boto3 = "^1.26.87"
 # psycopg2 = "^2.9.5" # Injected in charmcraft.yaml
 
-[tool.poetry.group.fmt.dependencies]
+[tool.poetry.group.format]
+optional = true
+
+[tool.poetry.group.format.dependencies]
 black = "^22.12.0"
 isort = "^5.11.4"
+
+[tool.poetry.group.lint]
+optional = true
 
 [tool.poetry.group.lint.dependencies]
 flake8 = "^6.0.0"
@@ -36,12 +42,19 @@ flake8-copyright = "^0.2.4"
 flake8-builtins = "^2.1.0"
 pyproject-flake8 = "^6.0.0.post1"
 pep8-naming = "^0.13.3"
-codespell = "^2.2.2"
+codespell = "^2.2.4"
+
+[tool.poetry.group.unit]
+optional = true
 
 [tool.poetry.group.unit.dependencies]
 coverage = {extras = ["toml"], version = "^7.0.5"}
 pytest = "^7.2.2"
 pytest-asyncio = "^0.20.3"
+psycopg2 = {version = "^2.9.5", extras = ["binary"]}
+
+[tool.poetry.group.integration]
+optional = true
 
 [tool.poetry.group.integration.dependencies]
 lightkube = "^0.12.0"
