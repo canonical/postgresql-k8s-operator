@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 from asyncio import gather
 
+import pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers import (
@@ -80,6 +81,7 @@ async def test_finos_waltz_db(ops_test: OpsTest) -> None:
         await ops_test.model.remove_application(DATABASE_APP_NAME, block_until_done=True)
 
 
+@pytest.mark.unstable
 async def test_indico_db_blocked(ops_test: OpsTest) -> None:
     """Tests if deploying and relating to Indico charm will block due to requested extensions."""
     async with ops_test.fast_forward():

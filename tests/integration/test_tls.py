@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
+import pytest as pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_exponential
 
@@ -28,6 +29,7 @@ APPLICATION_UNITS = 2
 DATABASE_UNITS = 3
 
 
+@pytest.mark.unstable
 async def test_mattermost_db(ops_test: OpsTest) -> None:
     """Deploy Mattermost to test the 'db' relation.
 

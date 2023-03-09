@@ -151,6 +151,7 @@ async def test_cluster_is_stable_after_leader_deletion(ops_test: OpsTest) -> Non
     assert await get_primary(ops_test, down_unit=primary) != "None"
 
 
+@pytest.mark.unstable
 async def test_scale_down_and_up(ops_test: OpsTest):
     """Test data is replicated to new units after a scale up."""
     # Ensure the initial number of units in the application.
