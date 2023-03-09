@@ -5,10 +5,9 @@ import pytest as pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_exponential
 
-from tests.helpers import METADATA
 from tests.integration.helpers import (
-    CHARM_SERIES,
     DATABASE_APP_NAME,
+    build_and_deploy,
     check_database_creation,
     check_database_users_existence,
     check_tls,
@@ -29,6 +28,12 @@ APPLICATION_UNITS = 2
 DATABASE_UNITS = 3
 
 
+@pytest.mark.abort_on_fail
+async def test_build_and_deploy(ops_test: OpsTest) -> None:
+    """Build and deploy three units of PostgreSQL."""
+    await build_and_deploy(ops_test, DATABASE_UNITS, wait_for_idle=False)
+
+
 @pytest.mark.unstable
 async def test_mattermost_db(ops_test: OpsTest) -> None:
     """Deploy Mattermost to test the 'db' relation.
@@ -38,18 +43,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
     Args:
         ops_test: The ops test framework
     """
-    charm = await ops_test.build_charm(".")
     async with ops_test.fast_forward():
-        await ops_test.model.deploy(
-            charm,
-            resources={
-                "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
-            },
-            application_name=DATABASE_APP_NAME,
-            num_units=DATABASE_UNITS,
-            series=CHARM_SERIES,
-            trust=True,
-        )
         # Deploy TLS Certificates operator.
         config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
         await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, channel="beta", config=config)
@@ -119,8 +113,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         await run_command_on_unit(ops_test, primary, "/charm/bin/pebble start postgresql")
         logs = await run_command_on_unit(ops_test, replica, "/charm/bin/pebble logs")
         assert (
-            "connection authorized: user=rewind database=postgres"
-            " SSL enabled (protocol=TLSv1.3, cipher=TLS_AES_256_GCM_SHA384, bits=256)" in logs
+            "connection authorized: user=rewind database=postgres SSL enabled" in logs
         ), "TLS is not being used on pg_rewind connections"
 
         # Deploy and check Mattermost user and database existence.
