@@ -7,7 +7,7 @@
 import logging
 import os
 import pwd
-from typing import List
+from typing import List, Optional
 
 import requests
 from jinja2 import Template
@@ -194,18 +194,27 @@ class Patroni:
             # Ignore non existing user error when it wasn't created yet.
             pass
 
-    def render_patroni_yml_file(self, enable_tls: bool = False, stanza: str = None) -> None:
+    def render_patroni_yml_file(
+        self,
+        archive_mode: str,
+        enable_tls: bool = False,
+        stanza: str = None,
+        backup_id: Optional[str] = None,
+    ) -> None:
         """Render the Patroni configuration file.
 
         Args:
+            archive_mode: PostgreSQL archive mode.
             enable_tls: whether to enable TLS.
             stanza: name of the stanza created by pgBackRest.
+            backup_id: id of the backup that is being restored.
         """
         # Open the template postgresql.conf file.
         with open("templates/patroni.yml.j2", "r") as file:
             template = Template(file.read())
         # Render the template file with the correct values.
         rendered = template.render(
+            archive_mode=archive_mode,
             enable_tls=enable_tls,
             endpoint=self._endpoint,
             endpoints=self._endpoints,
@@ -216,6 +225,8 @@ class Patroni:
             rewind_user=REWIND_USER,
             rewind_password=self._rewind_password,
             enable_pgbackrest=stanza is not None,
+            restoring_backup=backup_id is not None,
+            backup_id=backup_id,
             stanza=stanza,
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)

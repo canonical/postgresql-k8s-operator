@@ -10,15 +10,23 @@ bootstrap:
         {% else %}
         archive_command: /bin/true
         {%- endif %}
-        archive_mode: on
+        archive_mode: {{ archive_mode }}
         password_encryption: md5
         wal_level: logical
+  {%- if restoring_backup %}
+  method: pgbackrest
+  pgbackrest:
+    command: pgbackrest --stanza={{ stanza }} --set={{ backup_id }} --type=immediate --target-action=promote restore
+    no_params: True
+    keep_existing_recovery_conf: True
+  {% else %}
   initdb:
   - auth-host: md5
   - auth-local: trust
   - encoding: UTF8
   - locale: en_US.UTF-8
   - data-checksums
+  {%- endif %}
   pg_hba:
   - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 md5
   - {{ 'hostssl' if enable_tls else 'host' }} replication replication 127.0.0.1/32 md5
