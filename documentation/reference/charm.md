@@ -11,7 +11,7 @@ These flowcharts detail the control flow of the hooks in this program. Unless ot
 ```mermaid
 flowchart TD
   hook_fired([leader-elected Hook]) --> generate_passwords{Generate password for charm users?}
-  generate_passwords --> create_k8s_resources[Create k8s resources\nneeded by Patroni]
+  generate_passwords --> create_k8s_resources[Create k8s resources\n needed by Patroni]
   create_k8s_resources --> is_part_of_cluster{Is current unit \n part of the cluster?}
   is_part_of_cluster -- no --> add_to_cluster[Add current unit \n to the cluster]
   add_to_cluster --> remove_departed_units
@@ -21,11 +21,11 @@ flowchart TD
   has_cluster_initialised -- yes --> all_units_on_cluster{Are all the units \n part of the cluster?}
   all_units_on_cluster -- yes --> update_config[Turn on/off PostgreSQL \n synchronous_commit configuration]
   all_units_on_cluster -- no --> are_all_members_ready{Are all cluster \n members ready?}
-  
+
   %% This defer should have a return after it to stop the execution.
   are_all_members_ready -- no --> defer2>defer]
   defer2 --> update_config
-  
+
   are_all_members_ready -- yes --> add_unit_to_cluster[Add unit to cluster]
   add_unit_to_cluster --> patch_pod_labels[Patch pod labels of the new cluster member]
   patch_pod_labels --> all_units_on_cluster
