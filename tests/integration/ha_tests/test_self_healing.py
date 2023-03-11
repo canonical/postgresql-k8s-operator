@@ -29,6 +29,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await build_and_deploy(ops_test, 3)
 
 
+@pytest.mark.unstable
 @pytest.mark.parametrize("process", [POSTGRESQL_PROCESS])
 async def test_freeze_db_process(
     ops_test: OpsTest, process: str, continuous_writes, master_start_timeout
@@ -85,6 +86,7 @@ async def test_freeze_db_process(
     ), "secondary not up to date with the cluster after restarting."
 
 
+@pytest.mark.unstable
 @pytest.mark.parametrize("process", DB_PROCESSES)
 async def test_restart_db_process(
     ops_test: OpsTest, process: str, continuous_writes, master_start_timeout
