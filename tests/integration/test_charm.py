@@ -151,6 +151,7 @@ async def test_cluster_is_stable_after_leader_deletion(ops_test: OpsTest) -> Non
     assert await get_primary(ops_test, down_unit=primary) != "None"
 
 
+@pytest.mark.unstable
 async def test_scale_down_and_up(ops_test: OpsTest):
     """Test data is replicated to new units after a scale up."""
     # Ensure the initial number of units in the application.
@@ -286,6 +287,7 @@ async def test_application_removal(ops_test: OpsTest) -> None:
     assert APP_NAME not in ops_test.model.applications
 
 
+@pytest.mark.unstable
 async def test_redeploy_charm_same_model(ops_test: OpsTest):
     """Redeploy the charm in the same model to test that it works."""
     charm = await ops_test.build_charm(".")
