@@ -467,7 +467,7 @@ async def get_password(
         if unit.name != down_unit:
             action = await unit.run_action("get-password", **{"username": username})
             result = await action.wait()
-            return result.results[f"{username}-password"]
+            return result.results["password"]
 
 
 @retry(
