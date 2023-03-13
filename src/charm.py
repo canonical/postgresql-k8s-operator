@@ -709,6 +709,11 @@ class PostgresqlOperatorCharm(CharmBase):
         )
 
     @property
+    def is_primary(self) -> bool:
+        """Return whether this unit is the primary instance."""
+        return self._unit == self._patroni.get_primary(unit_name_pattern=True)
+
+    @property
     def _endpoint(self) -> str:
         """Current unit hostname."""
         return self._get_hostname_from_unit(self._unit_name_to_pod_name(self.unit.name))
@@ -837,6 +842,7 @@ class PostgresqlOperatorCharm(CharmBase):
             archive_mode=self.app_peer_data.get("archive-mode", "on"),
             enable_tls=enable_tls,
             backup_id=self.app_peer_data.get("restoring-backup"),
+            creating_backup="creating-backup" in self.unit_peer_data,
             stanza=self.unit_peer_data.get("stanza"),
         )
         self._patroni.render_postgresql_conf_file()

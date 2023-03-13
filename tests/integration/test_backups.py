@@ -12,6 +12,7 @@ from tests.integration.helpers import (
     build_and_deploy,
     db_connect,
     get_password,
+    get_primary,
     get_unit_address,
 )
 
@@ -31,7 +32,7 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
         # as archivo_mode is disabled after restoring the backup).
         database_app_name = f"{DATABASE_APP_NAME}-{cloud.lower()}"
         await build_and_deploy(
-            ops_test, 1, database_app_name=database_app_name, wait_for_idle=False
+            ops_test, 2, database_app_name=database_app_name, wait_for_idle=False
         )
         await ops_test.model.relate(database_app_name, S3_INTEGRATOR_APP_NAME)
 
@@ -58,11 +59,15 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
             )
         connection.close()
 
+        primary = await get_primary(ops_test)
+        for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
+            if unit.name != primary:
+                replica = unit.name
+                break
+
         # Run the "create backup" action.
         logger.info("creating a backup")
-        action = await ops_test.model.units.get(f"{database_app_name}/0").run_action(
-            "create-backup"
-        )
+        action = await ops_test.model.units.get(replica).run_action("create-backup")
         await action.wait()
         logger.info(f"backup results: {action.results}")
         await ops_test.model.wait_for_idle(
@@ -71,9 +76,7 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
 
         # Run the "list backups" action.
         logger.info("listing the available backups")
-        action = await ops_test.model.units.get(f"{database_app_name}/0").run_action(
-            "list-backups"
-        )
+        action = await ops_test.model.units.get(replica).run_action("list-backups")
         await action.wait()
         backups = action.results["backups"]
         assert backups, "backups not outputted"

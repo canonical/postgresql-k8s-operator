@@ -1,4 +1,5 @@
 [global]
+backup-standby=y
 repo1-retention-full=9999999
 repo1-type=s3
 repo1-path={{ path }}
@@ -11,5 +12,10 @@ repo1-s3-key-secret={{ secret_key }}
 start-fast=y
 
 [{{ stanza }}]
-pg1-path=/var/lib/postgresql/data/pgdata
-pg1-user={{ user }}
+{% set ns = namespace(count=1) %}
+{%- for endpoint in endpoints %}
+pg{{ ns.count }}-host={{ endpoint }}
+pg{{ ns.count }}-path=/var/lib/postgresql/data/pgdata
+pg{{ ns.count }}-user={{ user }}
+{% set ns.count = ns.count + 1 %}
+{%- endfor %}

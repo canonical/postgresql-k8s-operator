@@ -47,6 +47,9 @@ class PostgreSQLBackups(Object):
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_action)
 
+    def _add_ssh_key(self, key: str) -> None:
+        pass
+
     def _are_backup_settings_ok(self) -> Tuple[bool, Optional[str]]:
         """Validates whether backup settings are OK."""
         if self.model.get_relation(self.relation_name) is None:
@@ -59,7 +62,7 @@ class PostgreSQLBackups(Object):
         if missing_parameters:
             return False, f"Missing S3 parameters: {missing_parameters}"
 
-        if "stanza" not in self.charm._peers.data[self.charm.unit]:
+        if "stanza" not in self.charm.unit_peer_data:
             return False, "Stanza was not initialised"
 
         return True, None
@@ -69,10 +72,7 @@ class PostgreSQLBackups(Object):
         if self.charm.is_blocked:
             return False, "Unit is in a blocking state"
 
-        if (
-            self.charm.unit.name == self.charm._patroni.get_primary(unit_name_pattern=True)
-            and self.charm.app.planned_units() > 1
-        ):
+        if self.charm.is_primary and self.charm.app.planned_units() > 1:
             return False, "Unit cannot perform backups as it is the cluster primary"
 
         if not self.charm._patroni.member_started:
@@ -190,7 +190,9 @@ class PostgreSQLBackups(Object):
             return
 
         # Store the stanza name to be used in configurations updates.
-        self.charm._peers.data[self.charm.unit].update({"stanza": self.charm.cluster_name})
+        self.charm.unit_peer_data.update({"stanza": self.charm.cluster_name})
+        if self.charm.unit.is_leader():
+            self.charm.app_peer_data.update({"stanza": self.charm.cluster_name})
 
         # Update the configuration to use pgBackRest as the archiving mechanism.
         self.charm.update_config()
@@ -224,8 +226,14 @@ class PostgreSQLBackups(Object):
             )
             return
 
+        # if not self.charm.is_primary and "stanza" not in self.charm.app_peer_data:
+        #     logger.debug("Cannot initialise stanza. Waiting for primary to initialise it first.")
+        #     event.defer()
+        #     return
+
         self._render_pgbackrest_conf_file(s3_parameters)
-        self._initialise_stanza()
+        if self.charm.is_primary:
+            self._initialise_stanza()
 
     def _on_create_backup_action(self, event) -> None:
         """Request that pgBackRest creates a backup."""
@@ -260,6 +268,11 @@ Juju Version: {str(juju_version)}
 
         try:
             self.charm.unit.status = MaintenanceStatus("creating backup")
+
+            # Mark the cluster as in a restoring backup state and update the Patroni configuration.
+            self.charm.unit_peer_data.update({"creating-backup": "True"})
+            self.charm.update_config()
+
             stdout, stderr = self._execute_command(
                 [
                     "pgbackrest",
@@ -319,6 +332,9 @@ Stderr:
                 event.fail("Error uploading logs to S3")
             else:
                 event.set_results({"backup-status": "backup created"})
+
+        # self.charm.unit_peer_data.update({"creating-backup": ""})
+        # self.charm.update_config()
 
         self.charm.unit.status = ActiveStatus()
 
@@ -451,6 +467,7 @@ Stderr:
             template = Template(file.read())
         # Render the template file with the correct values.
         rendered = template.render(
+            endpoints=self.charm._endpoints,
             path=s3_parameters["path"],
             region=s3_parameters.get("region"),
             endpoint=s3_parameters["endpoint"],
