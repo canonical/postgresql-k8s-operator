@@ -75,7 +75,6 @@ class PostgresqlOperatorCharm(CharmBase):
         self._context = {"namespace": self._namespace, "app_name": self._name}
         self.cluster_name = f"patroni-{self._name}"
 
-        self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
@@ -211,7 +210,6 @@ class PostgresqlOperatorCharm(CharmBase):
         self._remove_from_endpoints(endpoints_to_remove)
 
         # Update the replication configuration.
-        self._patroni.render_postgresql_conf_file()
         self._patroni.reload_patroni_configuration()
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent) -> None:
@@ -248,11 +246,6 @@ class PostgresqlOperatorCharm(CharmBase):
         self.postgresql_client_relation.update_read_only_endpoint()
 
         self.unit.status = ActiveStatus()
-
-    def _on_install(self, _) -> None:
-        """Event handler for InstallEvent."""
-        # Creates custom postgresql.conf file.
-        self._patroni.render_postgresql_conf_file()
 
     def _on_config_changed(self, _) -> None:
         """Handle the config-changed event."""
@@ -367,7 +360,6 @@ class PostgresqlOperatorCharm(CharmBase):
         self._add_members(event)
 
         # Update the replication configuration.
-        self._patroni.render_postgresql_conf_file()
         try:
             self._patroni.reload_patroni_configuration()
         except RetryError:
@@ -839,7 +831,6 @@ class PostgresqlOperatorCharm(CharmBase):
             backup_id=self.app_peer_data.get("restoring-backup"),
             stanza=self.unit_peer_data.get("stanza"),
         )
-        self._patroni.render_postgresql_conf_file()
         if not self._patroni.member_started:
             return
 
