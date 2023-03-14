@@ -447,9 +447,11 @@ def get_expected_k8s_resources(namespace: str, application: str) -> set:
         [
             f"Endpoints/patroni-{application}-config",
             f"Endpoints/patroni-{application}",
+            f"Endpoints/{application}",
             f"Endpoints/{application}-primary",
             f"Endpoints/{application}-replicas",
             f"Service/patroni-{application}-config",
+            f"Service/{application}",
         ]
     )
 

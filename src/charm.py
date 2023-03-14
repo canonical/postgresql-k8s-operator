@@ -98,8 +98,8 @@ class PostgresqlOperatorCharm(CharmBase):
             charm=self, relation="restart", callback=self._restart
         )
 
-        postgresql_db_port = ServicePort(5432, name=f"{self.app.name}")
-        patroni_api_port = ServicePort(8008, name=f"{self.app.name}")
+        postgresql_db_port = ServicePort(5432, name="database")
+        patroni_api_port = ServicePort(8008, name="api")
         self.service_patcher = KubernetesServicePatch(self, [postgresql_db_port, patroni_api_port])
 
     @property
