@@ -47,9 +47,6 @@ class PostgreSQLBackups(Object):
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_action)
 
-    def _add_ssh_key(self, key: str) -> None:
-        pass
-
     def _are_backup_settings_ok(self) -> Tuple[bool, Optional[str]]:
         """Validates whether backup settings are OK."""
         if self.model.get_relation(self.relation_name) is None:
@@ -61,9 +58,6 @@ class PostgreSQLBackups(Object):
         s3_parameters, missing_parameters = self._retrieve_s3_parameters()
         if missing_parameters:
             return False, f"Missing S3 parameters: {missing_parameters}"
-
-        if "stanza" not in self.charm.unit_peer_data:
-            return False, "Stanza was not initialised"
 
         return True, None
 
@@ -78,7 +72,28 @@ class PostgreSQLBackups(Object):
         if not self.charm._patroni.member_started:
             return False, "Unit cannot perform backups as it's not in running state"
 
+        if "stanza" not in self.charm.unit_peer_data:
+            return False, "Stanza was not initialised"
+
         return self._are_backup_settings_ok()
+
+    def configure_pgbackrest(self, tls_enabled: bool) -> None:
+        """Configures pgBackRest in this instance."""
+        is_replica = not self.charm.is_primary
+
+        self._render_pgbackrest_conf_file(is_replica, tls_enabled)
+
+        if not self._are_backup_settings_ok():
+            return
+
+        if not is_replica:
+            self._initialise_stanza()
+
+        if not tls_enabled:
+            self.container.stop(self.charm.pgbackrest_server_service)
+            return
+
+        self.container.start(self.charm.pgbackrest_server_service)
 
     def _construct_endpoint(self, s3_parameters: Dict) -> str:
         """Construct the S3 service endpoint using the region.
@@ -219,21 +234,17 @@ class PostgreSQLBackups(Object):
             event.defer()
             return
 
-        s3_parameters, missing_parameters = self._retrieve_s3_parameters()
-        if missing_parameters:
-            logger.warning(
-                f"Cannot set pgBackRest configurations due to missing S3 parameters: {missing_parameters}"
-            )
-            return
-
+        # if not self.charm.is_primary and all(self.charm.tls.get_tls_files()):
+        #     event.defer()
+        #     return
+        #
         # if not self.charm.is_primary and "stanza" not in self.charm.app_peer_data:
         #     logger.debug("Cannot initialise stanza. Waiting for primary to initialise it first.")
         #     event.defer()
         #     return
 
-        self._render_pgbackrest_conf_file(s3_parameters)
-        if self.charm.is_primary:
-            self._initialise_stanza()
+        tls_enabled = all(self.charm.tls.get_tls_files())
+        self.configure_pgbackrest(tls_enabled)
 
     def _on_create_backup_action(self, event) -> None:
         """Request that pgBackRest creates a backup."""
@@ -460,14 +471,23 @@ Stderr:
 
         return True
 
-    def _render_pgbackrest_conf_file(self, s3_parameters: Dict) -> None:
+    def _render_pgbackrest_conf_file(self, is_replica: bool, tls_enabled: bool) -> None:
         """Render the pgBackRest configuration file."""
+        s3_parameters, missing_parameters = self._retrieve_s3_parameters()
+        if missing_parameters:
+            logger.warning(
+                f"Cannot set pgBackRest configurations due to missing S3 parameters: {missing_parameters}"
+            )
+            return
+
         # Open the template pgbackrest.conf file.
         with open("templates/pgbackrest.conf.j2", "r") as file:
             template = Template(file.read())
         # Render the template file with the correct values.
         rendered = template.render(
+            enable_tls=tls_enabled,
             endpoints=self.charm._endpoints,
+            is_replica=is_replica,
             path=s3_parameters["path"],
             region=s3_parameters.get("region"),
             endpoint=s3_parameters["endpoint"],
@@ -476,6 +496,7 @@ Stderr:
             access_key=s3_parameters["access-key"],
             secret_key=s3_parameters["secret-key"],
             stanza=self.charm.cluster_name,
+            storage_path=self.charm._storage_path,
             user=BACKUP_USER,
         )
         # Delete the original file and render the one with the right info.

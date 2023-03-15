@@ -69,6 +69,7 @@ class PostgresqlOperatorCharm(CharmBase):
         super().__init__(*args)
 
         self._postgresql_service = "postgresql"
+        self.pgbackrest_server_service = "pgbackrest server"
         self._unit = self.model.unit.name
         self._name = self.model.app.name
         self._namespace = self.model.name
@@ -457,7 +458,7 @@ class PostgresqlOperatorCharm(CharmBase):
             self._initialize_cluster()
 
         # Update the archive command and replication configurations.
-        self.update_config()
+        self.update_config(reconfigure_pgbackrest=True)
 
         # All is well, set an ActiveStatus.
         self.unit.status = ActiveStatus()
@@ -763,8 +764,8 @@ class PostgresqlOperatorCharm(CharmBase):
                     "summary": "entrypoint of the postgresql + patroni image",
                     "command": f"/usr/bin/python3 /usr/local/bin/patroni {self._storage_path}/patroni.yml",
                     "startup": "enabled",
-                    "user": "postgres",
-                    "group": "postgres",
+                    "user": WORKLOAD_OS_USER,
+                    "group": WORKLOAD_OS_GROUP,
                     "environment": {
                         "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: {self.cluster_name}}}",
                         "PATRONI_KUBERNETES_NAMESPACE": self._namespace,
@@ -774,7 +775,15 @@ class PostgresqlOperatorCharm(CharmBase):
                         "PATRONI_REPLICATION_USERNAME": REPLICATION_USER,
                         "PATRONI_SUPERUSER_USERNAME": USER,
                     },
-                }
+                },
+                self.pgbackrest_server_service: {
+                    "override": "replace",
+                    "summary": "pgBackRest server",
+                    "command": self.pgbackrest_server_service,
+                    "startup": "disabled",
+                    "user": WORKLOAD_OS_USER,
+                    "group": WORKLOAD_OS_GROUP,
+                },
             },
         }
         return Layer(layer_config)
@@ -823,7 +832,10 @@ class PostgresqlOperatorCharm(CharmBase):
                 group=WORKLOAD_OS_GROUP,
             )
 
-        self.update_config()
+        reconfigure_pgbackrest = (
+            "cluster_initialised" in self.app_peer_data and self._patroni.member_started
+        )
+        self.update_config(reconfigure_pgbackrest=reconfigure_pgbackrest)
 
     def _restart(self, _) -> None:
         """Restart PostgreSQL."""
@@ -833,7 +845,7 @@ class PostgresqlOperatorCharm(CharmBase):
             logger.error("failed to restart PostgreSQL")
             self.unit.status = BlockedStatus(f"failed to restart PostgreSQL with error {e}")
 
-    def update_config(self) -> None:
+    def update_config(self, reconfigure_pgbackrest: bool = False) -> None:
         """Updates Patroni config file based on the existence of the TLS files."""
         enable_tls = all(self.tls.get_tls_files())
 
@@ -848,6 +860,9 @@ class PostgresqlOperatorCharm(CharmBase):
         self._patroni.render_postgresql_conf_file()
         if not self._patroni.member_started:
             return
+
+        if reconfigure_pgbackrest:
+            self.backup.configure_pgbackrest(enable_tls)
 
         restart_postgresql = enable_tls != self.postgresql.is_tls_enabled()
         self._patroni.reload_patroni_configuration()

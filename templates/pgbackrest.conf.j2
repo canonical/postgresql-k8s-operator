@@ -1,5 +1,7 @@
 [global]
+{%- if is_replica %}
 backup-standby=y
+{%- endif %}
 repo1-retention-full=9999999
 repo1-type=s3
 repo1-path={{ path }}
@@ -10,12 +12,18 @@ repo1-s3-uri-style={{ s3_uri_style }}
 repo1-s3-key={{ access_key }}
 repo1-s3-key-secret={{ secret_key }}
 start-fast=y
-
-[{{ stanza }}]
-{% set ns = namespace(count=1) %}
+{%- if enable_tls %}
+tls-server-address=*
+{% set ns = namespace(count=0) %}
 {%- for endpoint in endpoints %}
-pg{{ ns.count }}-host={{ endpoint }}
-pg{{ ns.count }}-path=/var/lib/postgresql/data/pgdata
-pg{{ ns.count }}-user={{ user }}
+tls-server-auth={{ stanza }}-{{ ns.count }}={{ stanza }}
 {% set ns.count = ns.count + 1 %}
 {%- endfor %}
+tls-server-ca-file={{ storage_path }}/ca.pem
+tls-server-cert-file={{ storage_path }}/cert.pem
+tls-server-key-file={{ storage_path }}/key.pem
+{%- endif %}
+
+[{{ stanza }}]
+pg1-path={{ storage_path }}/pgdata
+pg1-user={{ user }}
