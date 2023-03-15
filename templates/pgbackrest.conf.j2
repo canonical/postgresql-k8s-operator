@@ -14,10 +14,8 @@ repo1-s3-key-secret={{ secret_key }}
 start-fast=y
 {%- if enable_tls %}
 tls-server-address=*
-{% set ns = namespace(count=0) %}
-{%- for endpoint in endpoints %}
-tls-server-auth={{ stanza }}-{{ ns.count }}={{ stanza }}
-{% set ns.count = ns.count + 1 %}
+{%- for peer_endpoint in peer_endpoints %}
+tls-server-auth={{ peer_endpoint }}={{ stanza }}
 {%- endfor %}
 tls-server-ca-file={{ storage_path }}/ca.pem
 tls-server-cert-file={{ storage_path }}/cert.pem
@@ -27,3 +25,13 @@ tls-server-key-file={{ storage_path }}/key.pem
 [{{ stanza }}]
 pg1-path={{ storage_path }}/pgdata
 pg1-user={{ user }}
+{%- if enable_tls %}
+{% set ns = namespace(count=2) %}
+{%- for peer_endpoint in peer_endpoints %}
+pg{{ ns.count }}-host-type=tls
+pg{{ ns.count }}-host={{ peer_endpoint }}
+pg{{ ns.count }}-path={{ storage_path }}/pgdata
+pg{{ ns.count }}-user={{ user }}
+{% set ns.count = ns.count + 1 %}
+{%- endfor %}
+{%- endif %}

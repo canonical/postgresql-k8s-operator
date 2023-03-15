@@ -484,10 +484,11 @@ Stderr:
         with open("templates/pgbackrest.conf.j2", "r") as file:
             template = Template(file.read())
         # Render the template file with the correct values.
+        peer_endpoints = set(self.charm._endpoints) - set([self.charm._endpoint])
         rendered = template.render(
-            enable_tls=tls_enabled,
-            endpoints=self.charm._endpoints,
+            enable_tls=tls_enabled and len(peer_endpoints) > 0,
             is_replica=is_replica,
+            peer_endpoints=peer_endpoints,
             path=s3_parameters["path"],
             region=s3_parameters.get("region"),
             endpoint=s3_parameters["endpoint"],
