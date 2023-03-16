@@ -8,7 +8,7 @@ import os
 import re
 import tempfile
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import boto3 as boto3
 import botocore
@@ -72,16 +72,17 @@ class PostgreSQLBackups(Object):
         if not self.charm._patroni.member_started:
             return False, "Unit cannot perform backups as it's not in running state"
 
-        if "stanza" not in self.charm.unit_peer_data:
+        if "stanza" not in self.charm.app_peer_data:
             return False, "Stanza was not initialised"
 
         return self._are_backup_settings_ok()
 
     def configure_pgbackrest(self, tls_enabled: bool) -> None:
-        """Configures pgBackRest in this instance."""
+        """Configures pgBackRest in this unit."""
         is_replica = not self.charm.is_primary
 
-        self._render_pgbackrest_conf_file(is_replica, tls_enabled)
+        peer_endpoints = set(self.charm._endpoints) - set([self.charm._endpoint])
+        self._render_pgbackrest_conf_file(is_replica, tls_enabled, peer_endpoints)
 
         if not self._are_backup_settings_ok():
             return
@@ -89,11 +90,11 @@ class PostgreSQLBackups(Object):
         if not is_replica:
             self._initialise_stanza()
 
-        if not tls_enabled:
+        if not tls_enabled or len(peer_endpoints) == 0:
             self.container.stop(self.charm.pgbackrest_server_service)
             return
 
-        self.container.start(self.charm.pgbackrest_server_service)
+        self.container.restart(self.charm.pgbackrest_server_service)
 
     def _construct_endpoint(self, s3_parameters: Dict) -> str:
         """Construct the S3 service endpoint using the region.
@@ -216,7 +217,8 @@ class PostgreSQLBackups(Object):
             # Check that the stanza is correctly configured.
             for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3)):
                 with attempt:
-                    self.charm._patroni.reload_patroni_configuration()
+                    if self.charm._patroni.member_started:
+                        self.charm._patroni.reload_patroni_configuration()
                     self._execute_command(
                         ["pgbackrest", f"--stanza={self.charm.cluster_name}", "check"]
                     )
@@ -471,7 +473,9 @@ Stderr:
 
         return True
 
-    def _render_pgbackrest_conf_file(self, is_replica: bool, tls_enabled: bool) -> None:
+    def _render_pgbackrest_conf_file(
+        self, is_replica: bool, tls_enabled: bool, peer_endpoints: Set[str]
+    ) -> None:
         """Render the pgBackRest configuration file."""
         s3_parameters, missing_parameters = self._retrieve_s3_parameters()
         if missing_parameters:
@@ -484,7 +488,6 @@ Stderr:
         with open("templates/pgbackrest.conf.j2", "r") as file:
             template = Template(file.read())
         # Render the template file with the correct values.
-        peer_endpoints = set(self.charm._endpoints) - set([self.charm._endpoint])
         rendered = template.render(
             enable_tls=tls_enabled and len(peer_endpoints) > 0,
             is_replica=is_replica,

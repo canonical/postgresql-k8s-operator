@@ -101,6 +101,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
         postgresql_db_port = ServicePort(5432, name="database")
         patroni_api_port = ServicePort(8008, name="api")
+        # pgbackrest_tls_port = ServicePort(8008, name="backup")
         self.service_patcher = KubernetesServicePatch(self, [postgresql_db_port, patroni_api_port])
 
     @property
@@ -247,6 +248,16 @@ class PostgresqlOperatorCharm(CharmBase):
             return
 
         self.postgresql_client_relation.update_read_only_endpoint()
+
+        # if event.unit is not None:
+        #     logger.error(f"{event.unit.name} - {self.unit.name}")
+        #     logger.error(f"{str(event.relation.data[event.unit])}")
+        #     relation_data = event.relation.data[event.unit]
+        #     self.push_tls_files_to_workload(
+        #         unit_name=event.unit.name,
+        #         unit_key=relation_data.get("key"),
+        #         unit_cert=relation_data.get("cert"),
+        #     )
 
         self.unit.status = ActiveStatus()
 
@@ -798,15 +809,29 @@ class PostgresqlOperatorCharm(CharmBase):
         """
         return self.model.get_relation(PEER)
 
-    def push_tls_files_to_workload(self, container: Container = None) -> None:
+    def push_tls_files_to_workload(
+        self,
+        container: Container = None,
+        unit_name: str = None,
+        unit_key: str = None,
+        unit_cert: str = None,
+    ) -> None:
         """Uploads TLS files to the workload container."""
         if container is None:
             container = self.unit.get_container("postgresql")
 
-        key, ca, cert = self.tls.get_tls_files()
+        if unit_name is None:
+            prefix = ""
+            key, ca, cert = self.tls.get_tls_files()
+        else:
+            prefix = f"{unit_name.replace('/', '-')}-"
+            key = unit_key
+            ca = None
+            cert = unit_cert
+
         if key is not None:
             container.push(
-                f"{self._storage_path}/{TLS_KEY_FILE}",
+                f"{self._storage_path}/{prefix}{TLS_KEY_FILE}",
                 key,
                 make_dirs=True,
                 permissions=0o400,
@@ -824,7 +849,7 @@ class PostgresqlOperatorCharm(CharmBase):
             )
         if cert is not None:
             container.push(
-                f"{self._storage_path}/{TLS_CERT_FILE}",
+                f"{self._storage_path}/{prefix}{TLS_CERT_FILE}",
                 cert,
                 make_dirs=True,
                 permissions=0o400,
