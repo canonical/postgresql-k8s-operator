@@ -14,6 +14,7 @@ from tests.integration.helpers import (
     get_password,
     get_primary,
     get_unit_address,
+    scale_application,
 )
 
 S3_INTEGRATOR_APP_NAME = "s3-integrator"
@@ -74,6 +75,8 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
         logger.info("creating a backup")
         action = await ops_test.model.units.get(replica).run_action("create-backup")
         await action.wait()
+        logger.info(f"action: {action}")
+        logger.info(f"dir(action): {dir(action)}")
         logger.info(f"backup results: {action.results}")
         await ops_test.model.wait_for_idle(
             apps=[database_app_name, S3_INTEGRATOR_APP_NAME], status="active", timeout=1000
@@ -94,6 +97,9 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
             connection.cursor().execute("CREATE TABLE backup_table_2 (test_collumn INT );")
         connection.close()
 
+        # Scale down to be able to restore.
+        await scale_application(ops_test, database_app_name, 1)
+
         # Run the "restore backup" action.
         logger.info("restoring the backup")
         most_recent_backup = backups.split("\n")[-1]
@@ -110,6 +116,8 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
 
         # Check that the backup was correctly restored by having only the first created table.
         logger.info("checking that the backup was correctly restored")
+        primary = await get_primary(ops_test, database_app_name)
+        address = await get_unit_address(ops_test, primary)
         with db_connect(
             host=address, password=password
         ) as connection, connection.cursor() as cursor:

@@ -68,8 +68,9 @@ postgresql:
   pgpass: /tmp/pgpass
   pg_hba:
   - local all backup peer map=operator
-  {%- if creating_backup %}
+  {%- if not connectivity %}
   - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 reject
+  - {{ 'hostssl' if enable_tls else 'host' }} all all {{ endpoint }}.{{ namespace }}.svc.cluster.local md5
   {% else %}
   - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 md5
   {%- endif %}

@@ -249,16 +249,6 @@ class PostgresqlOperatorCharm(CharmBase):
 
         self.postgresql_client_relation.update_read_only_endpoint()
 
-        # if event.unit is not None:
-        #     logger.error(f"{event.unit.name} - {self.unit.name}")
-        #     logger.error(f"{str(event.relation.data[event.unit])}")
-        #     relation_data = event.relation.data[event.unit]
-        #     self.push_tls_files_to_workload(
-        #         unit_name=event.unit.name,
-        #         unit_key=relation_data.get("key"),
-        #         unit_cert=relation_data.get("cert"),
-        #     )
-
         self.unit.status = ActiveStatus()
 
     def _on_install(self, _) -> None:
@@ -717,7 +707,7 @@ class PostgresqlOperatorCharm(CharmBase):
             self.get_secret("app", USER_PASSWORD_KEY),
             self.get_secret("app", REPLICATION_PASSWORD_KEY),
             self.get_secret("app", REWIND_PASSWORD_KEY),
-            self.postgresql.is_tls_enabled(check_current_host=True),
+            bool(self.unit_peer_data.get("tls")),
         )
 
     @property
@@ -809,29 +799,16 @@ class PostgresqlOperatorCharm(CharmBase):
         """
         return self.model.get_relation(PEER)
 
-    def push_tls_files_to_workload(
-        self,
-        container: Container = None,
-        unit_name: str = None,
-        unit_key: str = None,
-        unit_cert: str = None,
-    ) -> None:
+    def push_tls_files_to_workload(self, container: Container = None) -> None:
         """Uploads TLS files to the workload container."""
         if container is None:
             container = self.unit.get_container("postgresql")
 
-        if unit_name is None:
-            prefix = ""
-            key, ca, cert = self.tls.get_tls_files()
-        else:
-            prefix = f"{unit_name.replace('/', '-')}-"
-            key = unit_key
-            ca = None
-            cert = unit_cert
+        key, ca, cert = self.tls.get_tls_files()
 
         if key is not None:
             container.push(
-                f"{self._storage_path}/{prefix}{TLS_KEY_FILE}",
+                f"{self._storage_path}/{TLS_KEY_FILE}",
                 key,
                 make_dirs=True,
                 permissions=0o400,
@@ -849,7 +826,7 @@ class PostgresqlOperatorCharm(CharmBase):
             )
         if cert is not None:
             container.push(
-                f"{self._storage_path}/{prefix}{TLS_CERT_FILE}",
+                f"{self._storage_path}/{TLS_CERT_FILE}",
                 cert,
                 make_dirs=True,
                 permissions=0o400,
@@ -877,13 +854,18 @@ class PostgresqlOperatorCharm(CharmBase):
         # Update and reload configuration based on TLS files availability.
         self._patroni.render_patroni_yml_file(
             archive_mode=self.app_peer_data.get("archive-mode", "on"),
+            connectivity=self.unit_peer_data.get("connectivity", "on") == "on",
             enable_tls=enable_tls,
             backup_id=self.app_peer_data.get("restoring-backup"),
-            creating_backup="creating-backup" in self.unit_peer_data,
             stanza=self.unit_peer_data.get("stanza"),
         )
         self._patroni.render_postgresql_conf_file()
         if not self._patroni.member_started:
+            # If Patroni/PostgreSQL has not started yet and TLS relations was initialised,
+            # then mark TLS as enabled. This commonly happens when the charm is deployed
+            # in a bundle together with the TLS certificates operator.
+            self.unit_peer_data.update({"tls": "enabled" if enable_tls else ""})
+            logger.debug("Early exit update_config: Patroni not started yet")
             return
 
         if reconfigure_pgbackrest:
@@ -891,6 +873,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
         restart_postgresql = enable_tls != self.postgresql.is_tls_enabled()
         self._patroni.reload_patroni_configuration()
+        self.unit_peer_data.update({"tls": "enabled" if enable_tls else ""})
 
         # Restart PostgreSQL if TLS configuration has changed
         # (so the both old and new connections use the configuration).

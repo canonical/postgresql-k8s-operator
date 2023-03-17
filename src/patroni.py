@@ -197,19 +197,19 @@ class Patroni:
     def render_patroni_yml_file(
         self,
         archive_mode: str,
+        connectivity: bool = False,
         enable_tls: bool = False,
         stanza: str = None,
         backup_id: Optional[str] = None,
-        creating_backup: bool = False,
     ) -> None:
         """Render the Patroni configuration file.
 
         Args:
             archive_mode: PostgreSQL archive mode.
+            connectivity: whether to allow external connections to the database.
             enable_tls: whether to enable TLS.
             stanza: name of the stanza created by pgBackRest.
             backup_id: id of the backup that is being restored.
-            creating_backup: whether a backup is being created.
         """
         # Open the template postgresql.conf file.
         with open("templates/patroni.yml.j2", "r") as file:
@@ -217,6 +217,7 @@ class Patroni:
         # Render the template file with the correct values.
         rendered = template.render(
             archive_mode=archive_mode,
+            connectivity=connectivity,
             enable_tls=enable_tls,
             endpoint=self._endpoint,
             endpoints=self._endpoints,
@@ -229,7 +230,6 @@ class Patroni:
             enable_pgbackrest=stanza is not None,
             restoring_backup=backup_id is not None,
             backup_id=backup_id,
-            creating_backup=creating_backup,
             stanza=stanza,
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)

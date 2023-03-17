@@ -13,6 +13,7 @@ from typing import Dict, List, Optional, Set, Tuple
 import boto3 as boto3
 import botocore
 from charms.data_platform_libs.v0.s3 import CredentialsChangedEvent, S3Requirer
+from charms.postgresql_k8s.v0.postgresql import PostgreSQLListUsersError
 from jinja2 import Template
 from lightkube import ApiError, Client
 from lightkube.resources.core_v1 import Endpoints
@@ -132,6 +133,33 @@ class PostgreSQLBackups(Object):
             )
             raise
 
+    def _change_connectivity_to_database(self, connectivity: bool) -> bool:
+        """Enable or disable the connectivity to the database."""
+        self.charm.unit_peer_data.update({"connectivity": "on" if connectivity else "off"})
+        self.charm.update_config()
+        try:
+            # Check that the connectivity to this unit's database is turned on or off
+            # based on the connectivity parameter.
+            for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3)):
+                with attempt:
+                    # Force an update of the Patroni and PostgreSQL configuration files.
+                    if self.charm._patroni.member_started:
+                        self.charm._patroni.reload_patroni_configuration()
+
+                    # # Check the connectivity to this unit's database.
+                    # try:
+                    #     self.charm.postgresql.list_users()
+                    #     if not connectivity:
+                    #         raise Exception()
+                    # except PostgreSQLListUsersError:
+                    #     if connectivity:
+                    #         raise
+        except RetryError as e:
+            logger.exception(e)
+            return False
+
+        return True
+
     def _execute_command(self, command: List[str]) -> Tuple[str, str]:
         """Execute a command in the workload container."""
         return self.container.exec(
@@ -236,15 +264,6 @@ class PostgreSQLBackups(Object):
             event.defer()
             return
 
-        # if not self.charm.is_primary and all(self.charm.tls.get_tls_files()):
-        #     event.defer()
-        #     return
-        #
-        # if not self.charm.is_primary and "stanza" not in self.charm.app_peer_data:
-        #     logger.debug("Cannot initialise stanza. Waiting for primary to initialise it first.")
-        #     event.defer()
-        #     return
-
         tls_enabled = all(self.charm.tls.get_tls_files())
         self.configure_pgbackrest(tls_enabled)
 
@@ -279,12 +298,14 @@ Juju Version: {str(juju_version)}
             event.fail("Failed to upload metadata to provided S3")
             return
 
-        try:
-            self.charm.unit.status = MaintenanceStatus("creating backup")
+        # Mark the cluster as in a creating backup state and update the Patroni configuration.
+        if not self._change_connectivity_to_database(connectivity=False):
+            event.fail("Failed to disable connections to the database")
+            return
 
-            # Mark the cluster as in a restoring backup state and update the Patroni configuration.
-            self.charm.unit_peer_data.update({"creating-backup": "True"})
-            self.charm.update_config()
+        self.charm.unit.status = MaintenanceStatus("creating backup")
+
+        try:
 
             stdout, stderr = self._execute_command(
                 [
@@ -346,8 +367,14 @@ Stderr:
             else:
                 event.set_results({"backup-status": "backup created"})
 
-        # self.charm.unit_peer_data.update({"creating-backup": ""})
-        # self.charm.update_config()
+        # Remove the flag the marks the cluster as in a creating backup state
+        # and update the Patroni configuration.
+        if not self._change_connectivity_to_database(connectivity=True):
+            event.fail("Failed to re-enable connectivity to the database")
+            self.charm.unit.status = BlockedStatus(
+                "failed to turn on connectivity to the database"
+            )
+            return
 
         self.charm.unit.status = ActiveStatus()
 
@@ -467,6 +494,13 @@ Stderr:
             error_message = (
                 "Unit cannot restore backup as there are more than one unit in the cluster"
             )
+            logger.warning(error_message)
+            event.fail(error_message)
+            return False
+
+        logger.info("Checking that this unit was already elected the leader unit")
+        if not self.charm.unit.is_leader():
+            error_message = "Unit cannot restore backup as it was not elected the leader unit yet"
             logger.warning(error_message)
             event.fail(error_message)
             return False
