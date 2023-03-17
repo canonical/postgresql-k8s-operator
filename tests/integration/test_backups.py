@@ -6,6 +6,7 @@ from typing import Dict, Tuple
 
 import pytest as pytest
 from pytest_operator.plugin import OpsTest
+from tenacity import Retrying, stop_after_attempt, wait_exponential
 
 from tests.integration.helpers import (
     DATABASE_APP_NAME,
@@ -75,9 +76,8 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
         logger.info("creating a backup")
         action = await ops_test.model.units.get(replica).run_action("create-backup")
         await action.wait()
-        logger.info(f"action: {action}")
-        logger.info(f"dir(action): {dir(action)}")
-        logger.info(f"backup results: {action.results}")
+        backup_status = action.results.get("backup-status")
+        assert backup_status, "backup hasn't succeeded"
         await ops_test.model.wait_for_idle(
             apps=[database_app_name, S3_INTEGRATOR_APP_NAME], status="active", timeout=1000
         )
@@ -86,7 +86,7 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
         logger.info("listing the available backups")
         action = await ops_test.model.units.get(replica).run_action("list-backups")
         await action.wait()
-        backups = action.results["backups"]
+        backups = action.results.get("backups")
         assert backups, "backups not outputted"
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
@@ -101,14 +101,19 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
         await scale_application(ops_test, database_app_name, 1)
 
         # Run the "restore backup" action.
-        logger.info("restoring the backup")
-        most_recent_backup = backups.split("\n")[-1]
-        backup_id = most_recent_backup.split()[0]
-        action = await ops_test.model.units.get(f"{database_app_name}/0").run_action(
-            "restore", **{"backup-id": backup_id}
-        )
-        await action.wait()
-        logger.info(f"restore results: {action.results}")
+        for attempt in Retrying(
+            stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
+        ):
+            with attempt:
+                logger.info("restoring the backup")
+                most_recent_backup = backups.split("\n")[-1]
+                backup_id = most_recent_backup.split()[0]
+                action = await ops_test.model.units.get(f"{database_app_name}/0").run_action(
+                    "restore", **{"backup-id": backup_id}
+                )
+                await action.wait()
+                restore_status = action.results.get("restore-status")
+                assert restore_status, "restore hasn't succeeded"
 
         # Wait for the backup to complete.
         async with ops_test.fast_forward():

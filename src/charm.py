@@ -857,7 +857,7 @@ class PostgresqlOperatorCharm(CharmBase):
             connectivity=self.unit_peer_data.get("connectivity", "on") == "on",
             enable_tls=enable_tls,
             backup_id=self.app_peer_data.get("restoring-backup"),
-            stanza=self.unit_peer_data.get("stanza"),
+            stanza=self.app_peer_data.get("stanza"),
         )
         self._patroni.render_postgresql_conf_file()
         if not self._patroni.member_started:

@@ -13,7 +13,8 @@ from typing import Dict, List, Optional, Set, Tuple
 import boto3 as boto3
 import botocore
 from charms.data_platform_libs.v0.s3 import CredentialsChangedEvent, S3Requirer
-from charms.postgresql_k8s.v0.postgresql import PostgreSQLListUsersError
+
+# from charms.postgresql_k8s.v0.postgresql import PostgreSQLListUsersError
 from jinja2 import Template
 from lightkube import ApiError, Client
 from lightkube.resources.core_v1 import Endpoints
