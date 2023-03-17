@@ -153,8 +153,16 @@ class PostgreSQLBackups(Object):
             backup_list.append((backup_id, "physical", backup_status))
         return self._format_backup_list(backup_list)
 
-    def _list_backups_ids(self) -> List[str]:
-        """Retrieve the list of backup ids."""
+    def _list_backups_ids(self, show_failed: bool) -> List[str]:
+        """Retrieve the list of backup ids.
+
+        Args:
+            show_failed: whether to also return the failed backups.
+
+        Returns:
+            the list of previously created backups or an empty list if there is no backups
+                in the S3 bucket.
+        """
         output, _ = self._execute_command(["pgbackrest", "info", "--output=json"])
         backups = json.loads(output)[0]["backup"]
         return [
@@ -162,6 +170,7 @@ class PostgreSQLBackups(Object):
                 datetime.strptime(backup["label"][:-1], "%Y%m%d-%H%M%S"), "%Y-%m-%dT%H:%M:%SZ"
             )
             for backup in backups
+            if show_failed or not backup["error"]
         ]
 
     def _initialise_stanza(self) -> None:
@@ -269,7 +278,7 @@ Juju Version: {str(juju_version)}
                     "backup",
                 ]
             )
-            backup_id = self._list_backups_ids()[-1]
+            backup_id = self._list_backups_ids(show_failed=True)[-1]
         except ExecError as e:
             logger.exception(e)
 
@@ -347,7 +356,7 @@ Stderr:
 
         # Validate the provided backup id.
         logger.info("Validating provided backup-id")
-        if backup_id not in self._list_backups_ids():
+        if backup_id not in self._list_backups_ids(show_failed=False):
             event.fail(f"Invalid backup-id: {backup_id}")
             return
 
