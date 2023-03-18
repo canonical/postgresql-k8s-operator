@@ -34,7 +34,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await build_and_deploy(ops_test, DATABASE_UNITS, wait_for_idle=False)
 
 
-@pytest.mark.unstable
 async def test_mattermost_db(ops_test: OpsTest) -> None:
     """Deploy Mattermost to test the 'db' relation.
 
