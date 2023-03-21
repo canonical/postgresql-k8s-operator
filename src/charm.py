@@ -101,7 +101,6 @@ class PostgresqlOperatorCharm(CharmBase):
 
         postgresql_db_port = ServicePort(5432, name="database")
         patroni_api_port = ServicePort(8008, name="api")
-        # pgbackrest_tls_port = ServicePort(8008, name="backup")
         self.service_patcher = KubernetesServicePatch(self, [postgresql_db_port, patroni_api_port])
 
     @property
