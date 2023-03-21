@@ -86,7 +86,8 @@ class PostgreSQLBackups(Object):
         peer_endpoints = set(self.charm._endpoints) - set([self.charm._endpoint])
         self._render_pgbackrest_conf_file(is_replica, tls_enabled, peer_endpoints)
 
-        if not self._are_backup_settings_ok():
+        are_backup_settings_ok, _ = self._are_backup_settings_ok()
+        if not are_backup_settings_ok:
             return
 
         if not is_replica:
