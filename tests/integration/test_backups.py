@@ -78,9 +78,8 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
         await action.wait()
         backup_status = action.results.get("backup-status")
         assert backup_status, "backup hasn't succeeded"
-        await ops_test.model.wait_for_idle(
-            apps=[database_app_name, S3_INTEGRATOR_APP_NAME], status="active", timeout=1000
-        )
+        async with ops_test.fast_forward():
+            await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
         # Run the "list backups" action.
         logger.info("listing the available backups")

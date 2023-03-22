@@ -248,6 +248,16 @@ class PostgresqlOperatorCharm(CharmBase):
 
         self.postgresql_client_relation.update_read_only_endpoint()
 
+        # Start or stop the pgBackRest TLS server service when TLS certificate change.
+        logger.error("called 1.0")
+        if not self.backup.start_stop_pgbackrest_service():
+            logger.error("called 1")
+            logger.debug(
+                "Deferring on_peer_relation_changed: awaiting for TLS server service to start on primary"
+            )
+            event.defer()
+            return
+
         self.unit.status = ActiveStatus()
 
     def _on_install(self, _) -> None:
@@ -458,7 +468,7 @@ class PostgresqlOperatorCharm(CharmBase):
             self._initialize_cluster()
 
         # Update the archive command and replication configurations.
-        self.update_config(reconfigure_pgbackrest=True)
+        self.update_config()
 
         # All is well, set an ActiveStatus.
         self.unit.status = ActiveStatus()
@@ -715,6 +725,11 @@ class PostgresqlOperatorCharm(CharmBase):
         return self._unit == self._patroni.get_primary(unit_name_pattern=True)
 
     @property
+    def is_tls_enabled(self) -> bool:
+        """Return whether TLS is enabled."""
+        return all(self.tls.get_tls_files())
+
+    @property
     def _endpoint(self) -> str:
         """Current unit hostname."""
         return self._get_hostname_from_unit(self._unit_name_to_pod_name(self.unit.name))
@@ -727,6 +742,20 @@ class PostgresqlOperatorCharm(CharmBase):
         else:
             # If the peer relations was not created yet, return only the current member hostname.
             return [self._endpoint]
+
+    @property
+    def peer_members_endpoints(self) -> List[str]:
+        """Fetch current list of peer members endpoints.
+
+        Returns:
+            A list of peer members addresses (strings).
+        """
+        # Get all members endpoints and remove the current unit endpoint from the list.
+        endpoints = self._endpoints
+        current_unit_endpoint = self.endpoint
+        if current_unit_endpoint in endpoints:
+            endpoints.remove(current_unit_endpoint)
+        return endpoints
 
     def _add_to_endpoints(self, endpoint) -> None:
         """Add one endpoint to the members list."""
@@ -833,20 +862,24 @@ class PostgresqlOperatorCharm(CharmBase):
                 group=WORKLOAD_OS_GROUP,
             )
 
-        reconfigure_pgbackrest = (
-            "cluster_initialised" in self.app_peer_data and self._patroni.member_started
-        )
-        self.update_config(reconfigure_pgbackrest=reconfigure_pgbackrest)
+        self.update_config()
 
     def _restart(self, _) -> None:
         """Restart PostgreSQL."""
         try:
             self._patroni.restart_postgresql()
-        except RetryError as e:
-            logger.error("failed to restart PostgreSQL")
-            self.unit.status = BlockedStatus(f"failed to restart PostgreSQL with error {e}")
+            self.unit_peer_data.update({"postgresql_restarted": "True"})
+        except RetryError:
+            error_message = "failed to restart PostgreSQL"
+            logger.exception(error_message)
+            self.unit.status = BlockedStatus(error_message)
+            return
 
-    def update_config(self, reconfigure_pgbackrest: bool = False) -> None:
+        # Start or stop the pgBackRest TLS server service when TLS certificate change.
+        self.backup.start_stop_pgbackrest_service()
+        logger.error("called 2")
+
+    def update_config(self) -> None:
         """Updates Patroni config file based on the existence of the TLS files."""
         enable_tls = all(self.tls.get_tls_files())
 
@@ -867,9 +900,6 @@ class PostgresqlOperatorCharm(CharmBase):
             logger.debug("Early exit update_config: Patroni not started yet")
             return
 
-        if reconfigure_pgbackrest:
-            self.backup.configure_pgbackrest(enable_tls)
-
         restart_postgresql = enable_tls != self.postgresql.is_tls_enabled()
         self._patroni.reload_patroni_configuration()
         self.unit_peer_data.update({"tls": "enabled" if enable_tls else ""})
@@ -877,6 +907,7 @@ class PostgresqlOperatorCharm(CharmBase):
         # Restart PostgreSQL if TLS configuration has changed
         # (so the both old and new connections use the configuration).
         if restart_postgresql:
+            self.unit_peer_data.pop("postgresql_restarted", None)
             self.on[self.restart_manager.name].acquire_lock.emit()
 
     def _unit_name_to_pod_name(self, unit_name: str) -> str:

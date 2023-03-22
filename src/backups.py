@@ -8,13 +8,11 @@ import os
 import re
 import tempfile
 from datetime import datetime
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import boto3 as boto3
 import botocore
 from charms.data_platform_libs.v0.s3 import CredentialsChangedEvent, S3Requirer
-
-# from charms.postgresql_k8s.v0.postgresql import PostgreSQLListUsersError
 from jinja2 import Template
 from lightkube import ApiError, Client
 from lightkube.resources.core_v1 import Endpoints
@@ -88,26 +86,6 @@ class PostgreSQLBackups(Object):
 
         return self._are_backup_settings_ok()
 
-    def configure_pgbackrest(self, tls_enabled: bool) -> None:
-        """Configures pgBackRest in this unit."""
-        is_replica = not self.charm.is_primary
-
-        peer_endpoints = set(self.charm._endpoints) - set([self.charm._endpoint])
-        self._render_pgbackrest_conf_file(is_replica, tls_enabled, peer_endpoints)
-
-        are_backup_settings_ok, _ = self._are_backup_settings_ok()
-        if not are_backup_settings_ok:
-            return
-
-        if not is_replica:
-            self._initialise_stanza()
-
-        if not tls_enabled or len(peer_endpoints) == 0:
-            self.container.stop(self.charm.pgbackrest_server_service)
-            return
-
-        self.container.restart(self.charm.pgbackrest_server_service)
-
     def _construct_endpoint(self, s3_parameters: Dict) -> str:
         """Construct the S3 service endpoint using the region.
 
@@ -144,32 +122,10 @@ class PostgreSQLBackups(Object):
             )
             raise
 
-    def _change_connectivity_to_database(self, connectivity: bool) -> bool:
+    def _change_connectivity_to_database(self, connectivity: bool) -> None:
         """Enable or disable the connectivity to the database."""
         self.charm.unit_peer_data.update({"connectivity": "on" if connectivity else "off"})
         self.charm.update_config()
-        try:
-            # Check that the connectivity to this unit's database is turned on or off
-            # based on the connectivity parameter.
-            for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3)):
-                with attempt:
-                    # Force an update of the Patroni and PostgreSQL configuration files.
-                    if self.charm._patroni.member_started:
-                        self.charm._patroni.reload_patroni_configuration()
-
-                    # # Check the connectivity to this unit's database.
-                    # try:
-                    #     self.charm.postgresql.list_users()
-                    #     if not connectivity:
-                    #         raise Exception()
-                    # except PostgreSQLListUsersError:
-                    #     if connectivity:
-                    #         raise
-        except RetryError as e:
-            logger.exception(e)
-            return False
-
-        return True
 
     def _execute_command(self, command: List[str]) -> Tuple[str, str]:
         """Execute a command in the workload container."""
@@ -235,6 +191,9 @@ class PostgreSQLBackups(Object):
         located, how it will be backed up, archiving options, etc. (more info in
         https://pgbackrest.org/user-guide.html#quickstart/configure-stanza).
         """
+        if not self.charm.unit.is_leader():
+            return
+
         if self.charm.is_blocked:
             logger.warning("couldn't initialize stanza due to a blocked status")
             return
@@ -254,9 +213,7 @@ class PostgreSQLBackups(Object):
             return
 
         # Store the stanza name to be used in configurations updates.
-        self.charm.unit_peer_data.update({"stanza": self.charm.cluster_name})
-        if self.charm.unit.is_leader():
-            self.charm.app_peer_data.update({"stanza": self.charm.cluster_name})
+        self.charm.app_peer_data.update({"stanza": self.charm.cluster_name})
 
         # Update the configuration to use pgBackRest as the archiving mechanism.
         self.charm.update_config()
@@ -276,6 +233,31 @@ class PostgreSQLBackups(Object):
             self.charm.unit.status = BlockedStatus(
                 f"failed to initialize stanza with error {str(e)}"
             )
+            return
+
+        return
+
+    @property
+    def _is_primary_pgbackrest_service_running(self) -> bool:
+        try:
+            primary = self.charm._patroni.get_primary()
+        except (RetryError, ConnectionError) as e:
+            logger.error(f"failed to get primary with error {str(e)}")
+            return False
+
+        primary_endpoint = self.charm._get_hostname_from_unit(primary)
+
+        try:
+            self._execute_command(
+                ["pgbackrest", "server-ping", "--io-timeout=10", primary_endpoint]
+            )
+        except ExecError as e:
+            logger.warning(
+                f"Failed to contact pgBackRest TLS server on {primary_endpoint} with error {str(e)}"
+            )
+            return False
+
+        return True
 
     def _on_s3_credential_changed(self, event: CredentialsChangedEvent):
         """Call the stanza initialization when the credentials or the connection info change."""
@@ -284,8 +266,15 @@ class PostgreSQLBackups(Object):
             event.defer()
             return
 
-        tls_enabled = all(self.charm.tls.get_tls_files())
-        self.configure_pgbackrest(tls_enabled)
+        logger.error("called 3.0")
+        if not self._render_pgbackrest_conf_file():
+            logger.debug("Cannot set pgBackRest configurations, missing configurations.")
+            return
+
+        self._initialise_stanza()
+
+        self.start_stop_pgbackrest_service()
+        logger.error("called 3")
 
     def _on_create_backup_action(self, event) -> None:
         """Request that pgBackRest creates a backup."""
@@ -318,15 +307,13 @@ Juju Version: {str(juju_version)}
             event.fail("Failed to upload metadata to provided S3")
             return
 
-        # Mark the cluster as in a creating backup state and update the Patroni configuration.
-        if not self._change_connectivity_to_database(connectivity=False):
-            event.fail("Failed to disable connections to the database")
-            return
+        # Create a rule to mark the cluster as in a creating backup state and update
+        # the Patroni configuration.
+        self._change_connectivity_to_database(connectivity=False)
 
         self.charm.unit.status = MaintenanceStatus("creating backup")
 
         try:
-
             stdout, stderr = self._execute_command(
                 [
                     "pgbackrest",
@@ -387,14 +374,9 @@ Stderr:
             else:
                 event.set_results({"backup-status": "backup created"})
 
-        # Remove the flag the marks the cluster as in a creating backup state
+        # Remove the rule the marks the cluster as in a creating backup state
         # and update the Patroni configuration.
-        if not self._change_connectivity_to_database(connectivity=True):
-            event.fail("Failed to re-enable connectivity to the database")
-            self.charm.unit.status = BlockedStatus(
-                "failed to turn on connectivity to the database"
-            )
-            return
+        self._change_connectivity_to_database(connectivity=True)
 
         self.charm.unit.status = ActiveStatus()
 
@@ -527,25 +509,25 @@ Stderr:
 
         return True
 
-    def _render_pgbackrest_conf_file(
-        self, is_replica: bool, tls_enabled: bool, peer_endpoints: Set[str]
-    ) -> None:
+    def _render_pgbackrest_conf_file(self) -> bool:
         """Render the pgBackRest configuration file."""
         s3_parameters, missing_parameters = self._retrieve_s3_parameters()
         if missing_parameters:
             logger.warning(
                 f"Cannot set pgBackRest configurations due to missing S3 parameters: {missing_parameters}"
             )
-            return
+            return False
 
         # Open the template pgbackrest.conf file.
         with open("templates/pgbackrest.conf.j2", "r") as file:
             template = Template(file.read())
         # Render the template file with the correct values.
+        logger.error(f"self.charm.is_tls_enabled: {self.charm.is_tls_enabled}")
+        logger.error(f"self.charm.peer_members_endpoints: {self.charm.peer_members_endpoints}")
         rendered = template.render(
-            enable_tls=tls_enabled and len(peer_endpoints) > 0,
-            is_replica=is_replica,
-            peer_endpoints=peer_endpoints,
+            enable_tls=self.charm.is_tls_enabled and len(self.charm.peer_members_endpoints) > 0,
+            is_replica=not self.charm.is_primary,
+            peer_endpoints=self.charm.peer_members_endpoints,
             path=s3_parameters["path"],
             region=s3_parameters.get("region"),
             endpoint=s3_parameters["endpoint"],
@@ -565,6 +547,8 @@ Stderr:
             user=WORKLOAD_OS_USER,
             group=WORKLOAD_OS_GROUP,
         )
+
+        return True
 
     def _restart_database(self) -> None:
         """Removes the restoring backup flag and restart the database."""
@@ -596,6 +580,34 @@ Stderr:
         s3_parameters.setdefault("s3-uri-style", "host")
 
         return s3_parameters, []
+
+    def start_stop_pgbackrest_service(self) -> bool:
+        """Start or stop the pgBackRest TLS server service.
+
+        Returns:
+            a boolean indicating whether the operation succeeded.
+        """
+        # Ignore this operation if backups settings aren't ok.
+        are_backup_settings_ok, _ = self._are_backup_settings_ok()
+        if not are_backup_settings_ok:
+            return True
+
+        # Update pgBackRest configuration (to update the TLS settings).
+        if not self._render_pgbackrest_conf_file():
+            return False
+
+        # Stop the service if TLS is not enabled or there are no replicas.
+        if not self.charm.is_tls_enabled or len(self.charm.peer_members_endpoints) == 0:
+            self.container.stop(self.charm.pgbackrest_server_service)
+            return True
+
+        # Don't start the service if the service hasn't started yet in the primary.
+        if not self.charm.is_primary and not self._is_primary_pgbackrest_service_running:
+            return False
+
+        # Start the service.
+        self.container.restart(self.charm.pgbackrest_server_service)
+        return True
 
     def _upload_content_to_s3(
         self: str,
