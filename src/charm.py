@@ -251,12 +251,16 @@ class PostgresqlOperatorCharm(CharmBase):
         # Start or stop the pgBackRest TLS server service when TLS certificate change.
         logger.error("called 1.0")
         if not self.backup.start_stop_pgbackrest_service():
+            # Ping primary to start its TLS server.
+            self.unit_peer_data.update({"start-tls-server": "True"})
             logger.error("called 1")
             logger.debug(
                 "Deferring on_peer_relation_changed: awaiting for TLS server service to start on primary"
             )
             event.defer()
             return
+        else:
+            self.unit_peer_data.pop("start-tls.server", None)
 
         self.unit.status = ActiveStatus()
 
@@ -752,7 +756,9 @@ class PostgresqlOperatorCharm(CharmBase):
         """
         # Get all members endpoints and remove the current unit endpoint from the list.
         endpoints = self._endpoints
-        current_unit_endpoint = self.endpoint
+        current_unit_endpoint = self._get_hostname_from_unit(
+            self._unit_name_to_pod_name(self._unit)
+        )
         if current_unit_endpoint in endpoints:
             endpoints.remove(current_unit_endpoint)
         return endpoints
@@ -868,7 +874,6 @@ class PostgresqlOperatorCharm(CharmBase):
         """Restart PostgreSQL."""
         try:
             self._patroni.restart_postgresql()
-            self.unit_peer_data.update({"postgresql_restarted": "True"})
         except RetryError:
             error_message = "failed to restart PostgreSQL"
             logger.exception(error_message)
@@ -907,7 +912,6 @@ class PostgresqlOperatorCharm(CharmBase):
         # Restart PostgreSQL if TLS configuration has changed
         # (so the both old and new connections use the configuration).
         if restart_postgresql:
-            self.unit_peer_data.pop("postgresql_restarted", None)
             self.on[self.restart_manager.name].acquire_lock.emit()
 
     def _unit_name_to_pod_name(self, unit_name: str) -> str:
