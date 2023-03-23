@@ -347,7 +347,12 @@ class PostgresqlOperatorCharm(CharmBase):
             self.set_secret("app", REWIND_PASSWORD_KEY, new_password())
 
         # Create resources and add labels needed for replication.
-        self._create_resources()
+        try:
+            self._create_resources()
+        except ApiError:
+            logger.exception("failed to create k8s resources")
+            self.unit.status = BlockedStatus("failed to create k8s resources")
+            return
 
         # Add this unit to the list of cluster members
         # (the cluster should start with only this member).
@@ -428,25 +433,8 @@ class PostgresqlOperatorCharm(CharmBase):
             event.defer()
             return
 
-        if self.unit.is_leader():
-            # Add the labels needed for replication in this pod.
-            # This also enables the member as part of the cluster.
-            try:
-                self._patch_pod_labels(self._unit)
-            except ApiError as e:
-                logger.error("failed to patch pod")
-                self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
-                return
-
-            if not self._patroni.primary_endpoint_ready:
-                logger.debug(
-                    "Deferring on_postgresql_pebble_ready: Waiting for primary endpoint to be ready"
-                )
-                self.unit.status = WaitingStatus("awaiting for primary endpoint to be ready")
-                event.defer()
-                return
-
-            self._initialize_cluster()
+        if self.unit.is_leader() and not self._initialize_cluster(event):
+            return
 
         # Update the archive command and replication configurations.
         self.update_config()
@@ -454,13 +442,40 @@ class PostgresqlOperatorCharm(CharmBase):
         # All is well, set an ActiveStatus.
         self.unit.status = ActiveStatus()
 
-    def _initialize_cluster(self) -> None:
+    def _initialize_cluster(self, event: WorkloadEvent) -> bool:
+        # Add the labels needed for replication in this pod.
+        # This also enables the member as part of the cluster.
+        try:
+            self._patch_pod_labels(self._unit)
+        except ApiError as e:
+            logger.error("failed to patch pod")
+            self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
+            return False
+
+        # Create resources and add labels needed for replication
+        try:
+            self._create_resources()
+        except ApiError:
+            logger.exception("failed to create k8s resources")
+            self.unit.status = BlockedStatus("failed to create k8s resources")
+            return False
+
+        if not self._patroni.primary_endpoint_ready:
+            logger.debug(
+                "Deferring on_postgresql_pebble_ready: Waiting for primary endpoint to be ready"
+            )
+            self.unit.status = WaitingStatus("awaiting for primary endpoint to be ready")
+            event.defer()
+            return False
+
         # Create the backup user.
         if BACKUP_USER not in self.postgresql.list_users():
             self.postgresql.create_user(BACKUP_USER, new_password(), admin=True)
 
         # Mark the cluster as initialised.
         self._peers.data[self.app]["cluster_initialised"] = "True"
+
+        return True
 
     @property
     def is_blocked(self) -> bool:
@@ -521,13 +536,17 @@ class PostgresqlOperatorCharm(CharmBase):
                 client.replace(resource)
             else:
                 logger.error("failed to create resource: %s.", str(resource.to_dict()))
-                self.unit.status = BlockedStatus(f"failed to create services {e}")
-                return
+                raise e
 
     @property
     def _has_blocked_status(self) -> bool:
         """Returns whether the unit is in a blocked state."""
         return isinstance(self.unit.status, BlockedStatus)
+
+    @property
+    def _has_waiting_status(self) -> bool:
+        """Returns whether the unit is in a waiting state."""
+        return isinstance(self.unit.status, WaitingStatus)
 
     def _on_get_password(self, event: ActionEvent) -> None:
         """Returns the password for a user as an action response.
@@ -650,8 +669,8 @@ class PostgresqlOperatorCharm(CharmBase):
             logger.debug("on_update_status early exit: Cannot connect to container")
             return
 
-        if self._has_blocked_status:
-            logger.debug("on_update_status early exit: Unit is in Blocked status")
+        if self._has_blocked_status or self._has_waiting_status:
+            logger.debug("on_update_status early exit: Unit is in Blocked/Waiting status")
             return
 
         services = container.pebble.get_services(names=[self._postgresql_service])
