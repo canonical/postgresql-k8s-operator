@@ -249,11 +249,9 @@ class PostgresqlOperatorCharm(CharmBase):
         self.postgresql_client_relation.update_read_only_endpoint()
 
         # Start or stop the pgBackRest TLS server service when TLS certificate change.
-        logger.error("called 1.0")
         if not self.backup.start_stop_pgbackrest_service():
             # Ping primary to start its TLS server.
             self.unit_peer_data.update({"start-tls-server": "True"})
-            logger.error("called 1")
             logger.debug(
                 "Deferring on_peer_relation_changed: awaiting for TLS server service to start on primary"
             )
@@ -882,7 +880,6 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Start or stop the pgBackRest TLS server service when TLS certificate change.
         self.backup.start_stop_pgbackrest_service()
-        logger.error("called 2")
 
     def update_config(self) -> None:
         """Updates Patroni config file based on the existence of the TLS files."""

@@ -239,6 +239,7 @@ class PostgreSQLBackups(Object):
 
     @property
     def _is_primary_pgbackrest_service_running(self) -> bool:
+        """Returns whether the pgBackRest TLS server is running in the primary unit."""
         try:
             primary = self.charm._patroni.get_primary()
         except (RetryError, ConnectionError) as e:
@@ -266,7 +267,6 @@ class PostgreSQLBackups(Object):
             event.defer()
             return
 
-        logger.error("called 3.0")
         if not self._render_pgbackrest_conf_file():
             logger.debug("Cannot set pgBackRest configurations, missing configurations.")
             return
@@ -274,7 +274,6 @@ class PostgreSQLBackups(Object):
         self._initialise_stanza()
 
         self.start_stop_pgbackrest_service()
-        logger.error("called 3")
 
     def _on_create_backup_action(self, event) -> None:
         """Request that pgBackRest creates a backup."""
@@ -522,8 +521,6 @@ Stderr:
         with open("templates/pgbackrest.conf.j2", "r") as file:
             template = Template(file.read())
         # Render the template file with the correct values.
-        logger.error(f"self.charm.is_tls_enabled: {self.charm.is_tls_enabled}")
-        logger.error(f"self.charm.peer_members_endpoints: {self.charm.peer_members_endpoints}")
         rendered = template.render(
             enable_tls=self.charm.is_tls_enabled and len(self.charm.peer_members_endpoints) > 0,
             is_replica=not self.charm.is_primary,
