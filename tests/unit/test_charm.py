@@ -99,6 +99,9 @@ class TestCharm(unittest.TestCase):
     @patch("charm.Patroni.primary_endpoint_ready", new_callable=PropertyMock)
     @patch("charm.PostgresqlOperatorCharm.update_config")
     @patch("charm.PostgresqlOperatorCharm.postgresql")
+    @patch(
+        "charm.PostgresqlOperatorCharm._create_resources", side_effect=[None, _FakeApiError, None]
+    )
     @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.member_started")
     @patch("charm.PostgresqlOperatorCharm.push_tls_files_to_workload")
@@ -112,6 +115,7 @@ class TestCharm(unittest.TestCase):
         __,
         _push_tls_files_to_workload,
         _member_started,
+        _create_resources,
         _postgresql,
         ___,
         _primary_endpoint_ready,
@@ -133,6 +137,10 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready(self._postgresql_container)
         _create_pgdata.assert_called_once()
         self.assertTrue(isinstance(self.harness.model.unit.status, WaitingStatus))
+
+        # Check for a Blocked status when a failure happens .
+        self.harness.container_pebble_ready(self._postgresql_container)
+        self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
 
         # Check for the Active status.
         _push_tls_files_to_workload.reset_mock()
