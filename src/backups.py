@@ -306,9 +306,10 @@ Juju Version: {str(juju_version)}
             event.fail("Failed to upload metadata to provided S3")
             return
 
-        # Create a rule to mark the cluster as in a creating backup state and update
-        # the Patroni configuration.
-        self._change_connectivity_to_database(connectivity=False)
+        if not self.charm.is_primary:
+            # Create a rule to mark the cluster as in a creating backup state and update
+            # the Patroni configuration.
+            self._change_connectivity_to_database(connectivity=False)
 
         self.charm.unit.status = MaintenanceStatus("creating backup")
 
@@ -373,9 +374,10 @@ Stderr:
             else:
                 event.set_results({"backup-status": "backup created"})
 
-        # Remove the rule the marks the cluster as in a creating backup state
-        # and update the Patroni configuration.
-        self._change_connectivity_to_database(connectivity=True)
+        if not self.charm.is_primary:
+            # Remove the rule the marks the cluster as in a creating backup state
+            # and update the Patroni configuration.
+            self._change_connectivity_to_database(connectivity=True)
 
         self.charm.unit.status = ActiveStatus()
 
