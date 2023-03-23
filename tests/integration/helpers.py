@@ -447,9 +447,11 @@ def get_expected_k8s_resources(namespace: str, application: str) -> set:
         [
             f"Endpoints/patroni-{application}-config",
             f"Endpoints/patroni-{application}",
+            f"Endpoints/{application}",
             f"Endpoints/{application}-primary",
             f"Endpoints/{application}-replicas",
             f"Service/patroni-{application}-config",
+            f"Service/{application}",
         ]
     )
 
@@ -467,7 +469,7 @@ async def get_password(
         if unit.name != down_unit:
             action = await unit.run_action("get-password", **{"username": username})
             result = await action.wait()
-            return result.results[f"{username}-password"]
+            return result.results["password"]
 
 
 @retry(

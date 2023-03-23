@@ -97,8 +97,8 @@ class PostgresqlOperatorCharm(CharmBase):
             charm=self, relation="restart", callback=self._restart
         )
 
-        postgresql_db_port = ServicePort(5432, name=f"{self.app.name}")
-        patroni_api_port = ServicePort(8008, name=f"{self.app.name}")
+        postgresql_db_port = ServicePort(5432, name="database")
+        patroni_api_port = ServicePort(8008, name="api")
         self.service_patcher = KubernetesServicePatch(self, [postgresql_db_port, patroni_api_port])
 
     @property
@@ -541,7 +541,7 @@ class PostgresqlOperatorCharm(CharmBase):
                 f" {', '.join(SYSTEM_USERS)} not {username}"
             )
             return
-        event.set_results({f"{username}-password": self.get_secret("app", f"{username}-password")})
+        event.set_results({"password": self.get_secret("app", f"{username}-password")})
 
     def _on_set_password(self, event: ActionEvent) -> None:
         """Set the password for the specified user."""
@@ -564,7 +564,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
         if password == self.get_secret("app", f"{username}-password"):
             event.log("The old and new passwords are equal.")
-            event.set_results({f"{username}-password": password})
+            event.set_results({"password": password})
             return
 
         # Ensure all members are ready before trying to reload Patroni
@@ -593,7 +593,7 @@ class PostgresqlOperatorCharm(CharmBase):
         # Other units Patroni configuration will be reloaded in the peer relation changed event.
         self.update_config()
 
-        event.set_results({f"{username}-password": password})
+        event.set_results({"password": password})
 
     def _on_get_primary(self, event: ActionEvent) -> None:
         """Get primary instance."""
