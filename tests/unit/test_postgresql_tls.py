@@ -194,6 +194,7 @@ class TestPostgreSQLTLS(unittest.TestCase):
                     "postgresql-k8s-0",
                     "postgresql-k8s-0.postgresql-k8s-endpoints",
                     socket.getfqdn(),
+                    "1.1.1.1",
                     "postgresql-k8s-primary.None.svc.cluster.local",
                     "postgresql-k8s-replicas.None.svc.cluster.local",
                 ],
