@@ -314,15 +314,18 @@ Juju Version: {str(juju_version)}
         self.charm.unit.status = MaintenanceStatus("creating backup")
 
         try:
-            stdout, stderr = self._execute_command(
-                [
-                    "pgbackrest",
-                    f"--stanza={self.charm.cluster_name}",
-                    "--log-level-console=debug",
-                    "--type=full",
-                    "backup",
-                ]
-            )
+            command = [
+                "pgbackrest",
+                f"--stanza={self.charm.cluster_name}",
+                "--log-level-console=debug",
+                "--type=full",
+                "backup",
+            ]
+            if self.charm.is_primary:
+                # Force the backup to run in the primary if it's not possible to run it
+                # on the replicas (that happens when TLS is not enabled).
+                command.append("--no-backup-standby")
+            stdout, stderr = self._execute_command(command)
             backup_id = self._list_backups_ids(show_failed=True)[-1]
         except ExecError as e:
             logger.exception(e)
@@ -525,7 +528,6 @@ Stderr:
         # Render the template file with the correct values.
         rendered = template.render(
             enable_tls=self.charm.is_tls_enabled and len(self.charm.peer_members_endpoints) > 0,
-            is_replica=not self.charm.is_primary,
             peer_endpoints=self.charm.peer_members_endpoints,
             path=s3_parameters["path"],
             region=s3_parameters.get("region"),
