@@ -524,7 +524,7 @@ Stderr:
             template = Template(file.read())
         # Render the template file with the correct values.
         rendered = template.render(
-            enable_tls=self.charm.is_tls_enabled and len(self.charm.peer_members_endpoints) > 0,
+            enable_tls=self.charm.is_tls_enabled and self.charm.app.planned_units() > 1,
             is_replica=not self.charm.is_primary,
             peer_endpoints=self.charm.peer_members_endpoints,
             path=s3_parameters["path"],
@@ -596,7 +596,7 @@ Stderr:
             return False
 
         # Stop the service if TLS is not enabled or there are no replicas.
-        if not self.charm.is_tls_enabled or len(self.charm.peer_members_endpoints) == 0:
+        if not self.charm.is_tls_enabled or self.charm.app.planned_units() == 1:
             self.container.stop(self.charm.pgbackrest_server_service)
             return True
 
