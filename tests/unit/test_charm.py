@@ -43,6 +43,7 @@ class TestCharm(unittest.TestCase):
         self._peer_relation = PEER
         self._postgresql_container = "postgresql"
         self._postgresql_service = "postgresql"
+        self.pgbackrest_server_service = "pgbackrest server"
 
         self.harness = Harness(PostgresqlOperatorCharm)
         self.addCleanup(self.harness.cleanup)
@@ -435,7 +436,15 @@ class TestCharm(unittest.TestCase):
                         "PATRONI_REPLICATION_USERNAME": "replication",
                         "PATRONI_SUPERUSER_USERNAME": "operator",
                     },
-                }
+                },
+                self.pgbackrest_server_service: {
+                    "override": "replace",
+                    "summary": "pgBackRest server",
+                    "command": self.pgbackrest_server_service,
+                    "startup": "disabled",
+                    "user": "postgres",
+                    "group": "postgres",
+                },
             },
         }
         self.assertDictEqual(plan, expected)
