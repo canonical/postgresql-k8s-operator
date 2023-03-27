@@ -231,6 +231,7 @@ class Patroni:
             restoring_backup=backup_id is not None,
             backup_id=backup_id,
             stanza=stanza,
+            version="14",
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 

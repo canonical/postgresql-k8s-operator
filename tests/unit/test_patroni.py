@@ -92,6 +92,7 @@ class TestPatroni(unittest.TestCase):
             replication_password=self.patroni._replication_password,
             rewind_user=REWIND_USER,
             rewind_password=self.patroni._rewind_password,
+            version="14",
         )
 
         # Setup a mock for the `open` method, set returned data to postgresql.conf template.
@@ -125,6 +126,7 @@ class TestPatroni(unittest.TestCase):
             replication_password=self.patroni._replication_password,
             rewind_user=REWIND_USER,
             rewind_password=self.patroni._rewind_password,
+            version="14",
         )
         self.assertNotEqual(expected_content_with_tls, expected_content)
 
