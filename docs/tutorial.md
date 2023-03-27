@@ -20,7 +20,6 @@ Before we start, make sure your machine meets the following requirements:
 - At least 20GB of available storage.
 - Access to the internet for downloading the required snaps and charms.
 
-
 ## Multipass environment
 [Multipass](https://multipass.run/) is a quick and easy way to launch virtual machines running Ubuntu. It uses "[cloud-init](https://cloud-init.io/)" standard to install and configure all the necessary parts automatically.
 
