@@ -69,6 +69,7 @@ class PostgresqlOperatorCharm(CharmBase):
         super().__init__(*args)
 
         self._postgresql_service = "postgresql"
+        self.pgbackrest_server_service = "pgbackrest server"
         self._unit = self.model.unit.name
         self._name = self.model.app.name
         self._namespace = self.model.name
@@ -244,6 +245,18 @@ class PostgresqlOperatorCharm(CharmBase):
             return
 
         self.postgresql_client_relation.update_read_only_endpoint()
+
+        # Start or stop the pgBackRest TLS server service when TLS certificate change.
+        if not self.backup.start_stop_pgbackrest_service():
+            # Ping primary to start its TLS server.
+            self.unit_peer_data.update({"start-tls-server": "True"})
+            logger.debug(
+                "Deferring on_peer_relation_changed: awaiting for TLS server service to start on primary"
+            )
+            event.defer()
+            return
+        else:
+            self.unit_peer_data.pop("start-tls.server", None)
 
         self.unit.status = ActiveStatus()
 
@@ -716,8 +729,18 @@ class PostgresqlOperatorCharm(CharmBase):
             self.get_secret("app", USER_PASSWORD_KEY),
             self.get_secret("app", REPLICATION_PASSWORD_KEY),
             self.get_secret("app", REWIND_PASSWORD_KEY),
-            self.postgresql.is_tls_enabled(check_current_host=True),
+            bool(self.unit_peer_data.get("tls")),
         )
+
+    @property
+    def is_primary(self) -> bool:
+        """Return whether this unit is the primary instance."""
+        return self._unit == self._patroni.get_primary(unit_name_pattern=True)
+
+    @property
+    def is_tls_enabled(self) -> bool:
+        """Return whether TLS is enabled."""
+        return all(self.tls.get_tls_files())
 
     @property
     def _endpoint(self) -> str:
@@ -732,6 +755,22 @@ class PostgresqlOperatorCharm(CharmBase):
         else:
             # If the peer relations was not created yet, return only the current member hostname.
             return [self._endpoint]
+
+    @property
+    def peer_members_endpoints(self) -> List[str]:
+        """Fetch current list of peer members endpoints.
+
+        Returns:
+            A list of peer members addresses (strings).
+        """
+        # Get all members endpoints and remove the current unit endpoint from the list.
+        endpoints = self._endpoints
+        current_unit_endpoint = self._get_hostname_from_unit(
+            self._unit_name_to_pod_name(self._unit)
+        )
+        if current_unit_endpoint in endpoints:
+            endpoints.remove(current_unit_endpoint)
+        return endpoints
 
     def _add_to_endpoints(self, endpoint) -> None:
         """Add one endpoint to the members list."""
@@ -769,8 +808,8 @@ class PostgresqlOperatorCharm(CharmBase):
                     "summary": "entrypoint of the postgresql + patroni image",
                     "command": f"/usr/bin/python3 /usr/local/bin/patroni {self._storage_path}/patroni.yml",
                     "startup": "enabled",
-                    "user": "postgres",
-                    "group": "postgres",
+                    "user": WORKLOAD_OS_USER,
+                    "group": WORKLOAD_OS_GROUP,
                     "environment": {
                         "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: {self.cluster_name}}}",
                         "PATRONI_KUBERNETES_NAMESPACE": self._namespace,
@@ -780,7 +819,15 @@ class PostgresqlOperatorCharm(CharmBase):
                         "PATRONI_REPLICATION_USERNAME": REPLICATION_USER,
                         "PATRONI_SUPERUSER_USERNAME": USER,
                     },
-                }
+                },
+                self.pgbackrest_server_service: {
+                    "override": "replace",
+                    "summary": "pgBackRest server",
+                    "command": self.pgbackrest_server_service,
+                    "startup": "disabled",
+                    "user": WORKLOAD_OS_USER,
+                    "group": WORKLOAD_OS_GROUP,
+                },
             },
         }
         return Layer(layer_config)
@@ -801,6 +848,7 @@ class PostgresqlOperatorCharm(CharmBase):
             container = self.unit.get_container("postgresql")
 
         key, ca, cert = self.tls.get_tls_files()
+
         if key is not None:
             container.push(
                 f"{self._storage_path}/{TLS_KEY_FILE}",
@@ -835,9 +883,14 @@ class PostgresqlOperatorCharm(CharmBase):
         """Restart PostgreSQL."""
         try:
             self._patroni.restart_postgresql()
-        except RetryError as e:
-            logger.error("failed to restart PostgreSQL")
-            self.unit.status = BlockedStatus(f"failed to restart PostgreSQL with error {e}")
+        except RetryError:
+            error_message = "failed to restart PostgreSQL"
+            logger.exception(error_message)
+            self.unit.status = BlockedStatus(error_message)
+            return
+
+        # Start or stop the pgBackRest TLS server service when TLS certificate change.
+        self.backup.start_stop_pgbackrest_service()
 
     def update_config(self) -> None:
         """Updates Patroni config file based on the existence of the TLS files."""
@@ -846,15 +899,23 @@ class PostgresqlOperatorCharm(CharmBase):
         # Update and reload configuration based on TLS files availability.
         self._patroni.render_patroni_yml_file(
             archive_mode=self.app_peer_data.get("archive-mode", "on"),
+            connectivity=self.unit_peer_data.get("connectivity", "on") == "on",
             enable_tls=enable_tls,
             backup_id=self.app_peer_data.get("restoring-backup"),
-            stanza=self.unit_peer_data.get("stanza"),
+            stanza=self.app_peer_data.get("stanza"),
         )
         if not self._patroni.member_started:
+            # If Patroni/PostgreSQL has not started yet and TLS relations was initialised,
+            # then mark TLS as enabled. This commonly happens when the charm is deployed
+            # in a bundle together with the TLS certificates operator. This flag is used to
+            # know when to call the Patroni API using HTTP or HTTPS.
+            self.unit_peer_data.update({"tls": "enabled" if enable_tls else ""})
+            logger.debug("Early exit update_config: Patroni not started yet")
             return
 
         restart_postgresql = enable_tls != self.postgresql.is_tls_enabled()
         self._patroni.reload_patroni_configuration()
+        self.unit_peer_data.update({"tls": "enabled" if enable_tls else ""})
 
         # Restart PostgreSQL if TLS configuration has changed
         # (so the both old and new connections use the configuration).
