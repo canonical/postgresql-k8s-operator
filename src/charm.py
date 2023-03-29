@@ -406,6 +406,11 @@ class PostgresqlOperatorCharm(CharmBase):
         # Get the postgresql container so we can configure/manipulate it.
         container = event.workload
 
+        # TODO remove once certs are present in the image
+        container.exec("apt update".split()).wait_output()
+        container.exec("apt install -y ca-certificates".split()).wait_output()
+        # TODO remove once certs are present in the image
+
         # Create the PostgreSQL data directory. This is needed on cloud environments
         # where the volume is mounted with more restrictive permissions.
         self._create_pgdata(container)
