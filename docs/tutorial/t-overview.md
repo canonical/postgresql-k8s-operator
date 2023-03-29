@@ -17,10 +17,10 @@ While this tutorial intends to guide and teach you as you deploy Charmed Postgre
 
 Here’s an overview of the steps required with links to our separate tutorials that deal with each individual step:
 * [Set up the environment](/t/charmed-postgresql-k8s-tutorial-setup-environment/9297?channel=edge)
-* [Deploy MongoDB](/t/charmed-postgresql-k8s-tutorial-deploy/9298?channel=dpe/edge)
+* [Deploy PostgreSQL](/t/charmed-postgresql-k8s-tutorial-deploy/9298?channel=dpe/edge)
 * [Managing your units](/t/charmed-postgresql-k8s-tutorial-managing-units/9299?channel=dpe/edge)
 * [Manage passwords](/t/charmed-postgresql-k8s-tutorial-manage-passwords/9300?channel=dpe/edge)
-* [Relate your MongoDB to other applications](/t/charmed-postgresql-k8s-tutorial-integrations/9301?channel=dpe/edge)
+* [Relate your PostgreSQL to other applications](/t/charmed-postgresql-k8s-tutorial-integrations/9301?channel=dpe/edge)
 * [Enable security](/t/charmed-postgresql-k8s-tutorial-enable-security/9302?channel=dpe/edge)
 * [Cleanup your environment](/t/charmed-postgresql-k8s-tutorial-cleanup/9303?channel=dpe/edge)
 
