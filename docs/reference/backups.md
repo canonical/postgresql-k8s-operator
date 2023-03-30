@@ -39,16 +39,41 @@ flowchart TD
 
 ```mermaid
 flowchart TD
+  hook_fired([create-backup Hook]) --> 
 ```
 
 ### On List Backups Hook
 
 ```mermaid
 flowchart TD
+  hook_fired([list-backups Hook]) --> 
 ```
 
 ### On Restore Hook
 
 ```mermaid
 flowchart TD
+  hook_fired([restore Hook]) --> has_user_provided_backup_id{Has user provided\na backup id?}
+  has_user_provided_backup_id -- no --> fail_action([fail action])
+  has_user_provided_backup_id -- yes --> is_workload_container_accessible{Is workload\ncontainer accessible?}
+  is_workload_container_accessible -- no --> fail_action
+  is_workload_container_accessible -- yes --> is_blocked{Is unit in\nblocked state?}
+  is_blocked -- yes --> fail_action
+  is_blocked -- no --> is_single_unit_cluster{Is single\nunit cluster?}
+  is_single_unit_cluster -- no --> fail_action
+  is_single_unit_cluster -- yes --> is_leader{Is current\nunit leader?} 
+  is_leader -- no --> fail_action
+  is_leader -- yes -->  is_backup_id_valid{Is backup id\nvalid?}
+  is_backup_id_valid -- no --> fail_action
+  is_backup_id_valid -- yes --> has_database_stopped{Has database\nstopped?}
+  has_database_stopped -- no --> fail_action
+  has_database_stopped -- yes --> was_previous_cluster_info_removed{Was previous cluster\ninfo removed?}
+  was_previous_cluster_info_removed -- no --> start_database_again[Start database again]
+  start_database_again --> fail_action
+  was_previous_cluster_info_removed -- yes --> was_data_directory_emptied{Was the data\ndirectory emptied?}
+  was_data_directory_emptied --> no --> start_database_again
+  was_data_directory_emptied --> yes --> configure_restore[Configure Patroni to restore the backup]
+  configure_restore --> start_database[Start the database]
+  start_database --> finish_action[restore started]
+  
 ```
