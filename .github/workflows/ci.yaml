@@ -70,16 +70,23 @@ jobs:
       fail-fast: false
       matrix:
         tox-environments:
-          - backup-integration
-          - charm-integration
-          - database-relation-integration
-          - db-relation-integration
-          - db-admin-relation-integration
-          - ha-self-healing-integration
           - password-rotation-integration
           - tls-integration
         agents-version: ["2.9.42"]  # renovate: latest
-    name: ${{ matrix.tox-environments }}
+        include:
+          - tox-environments: backup-integration
+            agents-version: "2.9.29"
+          - tox-environments: charm-integration
+            agents-version: "2.9.29"
+          - tox-environments: database-relation-integration
+            agents-version: "2.9.29"
+          - tox-environments: db-relation-integration
+            agents-version: "2.9.29"
+          - tox-environments: db-admin-relation-integration
+            agents-version: "2.9.29"
+          - tox-environments: ha-self-healing-integration
+            agents-version: "2.9.29"
+    name: ${{ matrix.tox-environments }} | ${{ matrix.agents-version }}
     needs:
       - lib-check
       - lint
