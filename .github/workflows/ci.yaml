@@ -78,6 +78,7 @@ jobs:
           - ha-self-healing-integration
           - password-rotation-integration
           - tls-integration
+        agents-version: ["2.9.42"]  # renovate: latest
     name: ${{ matrix.tox-environments }}
     needs:
       - lib-check
@@ -94,8 +95,7 @@ jobs:
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: microk8s
-          # This is needed until https://bugs.launchpad.net/juju/+bug/1977582 is fixed
-          bootstrap-options: "--agent-version 2.9.29"
+          bootstrap-options: "--agent-version ${{ matrix.agents-version }}"
       - name: Download packed charm(s)
         uses: actions/download-artifact@v3
         with:
