@@ -1,15 +1,17 @@
 This is a How-To for restoring a backup that was made from the a *different* cluster, (i.e. cluster migration via restore). To perform a basic restore please reference the [Restore How-To](/t/cluster-migration-via-restore/TODO)
 
 Restoring a backup from a previous cluster to a current cluster requires that you:
-- Have a replica set with [at least three-nodes deployed](/t/charmed-postgresql-tutorial-managing-units/TODO)
+- Have a single unit Charmed PostgreSQL deployed and running
 - Access to S3 storage
 - [Have configured settings for S3 storage](/t/configuring-settings-for-s3/TODO)
 - Have the backups from the previous cluster in your S3-storage
-- Have the password from your previous cluster
+- Have the passwords from your previous cluster
 
 When you restore a backup from an old cluster, it will restore the password from the previous cluster to your current cluster. Set the password of your current cluster to the previous cluster’s password:
 ```shell
-juju run-action postgresql-k8s/leader set-password password=<previous cluster password> --wait
+juju run-action postgresql-k8s/leader set-password username=operator password=<previous cluster password> --wait
+juju run-action postgresql-k8s/leader set-password username=replication password=<previous cluster password> --wait
+juju run-action postgresql-k8s/leader set-password username=rewind password=<previous cluster password> --wait
 ```
 
 To view the available backups to restore you can enter the command `list-backups`:

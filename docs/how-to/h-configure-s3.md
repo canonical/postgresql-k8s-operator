@@ -1,6 +1,4 @@
-Configuring S3-storage requires that you have a cluster with at least three-nodes deployed and access to S3 storage.  If you don't have a three node replica set read the [Managing Units How-To](/t/charmed-postgresql-tutorial-managing-units/TODO). 
-
-Once you have a three-node cluster deployed, you can configure your settings for S3. Configurations are managed with the [s3-integrator charm](https://charmhub.io/s3-integrator).  Deploy and configure the s3-integrator charm:
+Charmed PostgreSQL backup can be stored on any S3 compatible storage. The S3 access and configurations are managed with the [s3-integrator charm](https://charmhub.io/s3-integrator). Deploy and configure the s3-integrator charm:
 ```
 juju deploy s3-integrator --channel=edge
 juju run-action s3-integrator/leader sync-s3-credentials access-key=<access-key-here> secret-key=<secret-key-here> --wait
