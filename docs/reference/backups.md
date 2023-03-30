@@ -46,7 +46,13 @@ flowchart TD
 
 ```mermaid
 flowchart TD
-  hook_fired([list-backups Hook]) --> 
+  hook_fired([list-backups Hook]) --> is_s3_relation_established{Is S3 relation\nestablished?}
+  is_s3_relation_established -- no --> fail_action([fail action])
+  is_s3_relation_established -- yes --> has_missing_s3_parameters{Has missing S3 parameters?}
+  has_missing_s3_parameters -- yes --> fail_action
+  has_missing_s3_parameters -- no --> does_pgbackrest_returned_backups_list{Does pgBackRest\nreturned the\nbackups list?}
+  does_pgbackrest_returned_backups_list -- no --> fail_action
+  does_pgbackrest_returned_backups_list -- yes --> return_formatted_backup_list[Return formatted\nbackup list]
 ```
 
 ### On Restore Hook
@@ -75,5 +81,4 @@ flowchart TD
   was_data_directory_emptied --> yes --> configure_restore[Configure Patroni to restore the backup]
   configure_restore --> start_database[Start the database]
   start_database --> finish_action[restore started]
-  
 ```
