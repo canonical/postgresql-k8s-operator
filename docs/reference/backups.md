@@ -109,3 +109,6 @@ flowchart TD
   configure_restore --> start_database[Start the database]
   start_database --> finish_action[restore started]
 ```
+
+The unit status becomes `Active` or `Blocked` after a, respectively, successful or failed restore
+is detected in the update status hook. 
