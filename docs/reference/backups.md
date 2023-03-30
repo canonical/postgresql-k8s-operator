@@ -34,6 +34,9 @@ flowchart TD
   start_pgbackrest_tls_server --> rtn
 ```
 
+When certificates are received from TLS certificates operator through the `certificates` relation (or the relation is
+removed) the steps starting from `Is TLS disabled or single unit cluster` are also executed.
+
 ### On Create Backup Hook
 
 ```mermaid
