@@ -22,7 +22,7 @@ We have also added support for the database legacy relation from the [original v
 juju relate postgresql-k8s:db mattermost-k8s:db
 ```
 
-Also extended permissions can be reuqested using `db-admin` edpoint:
+Also extended permissions can be requested using `db-admin` edpoint:
 ```shell
 juju relate postgresql-k8s:db-admin mattermost-k8s:db
 ```
