@@ -729,6 +729,7 @@ class PostgresqlOperatorCharm(CharmBase):
     def _patroni(self):
         """Returns an instance of the Patroni object."""
         return Patroni(
+            self,
             self._endpoint,
             self._endpoints,
             self.primary_endpoint,

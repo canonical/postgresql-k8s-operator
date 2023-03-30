@@ -3,20 +3,30 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import mock_open, patch
+from unittest.mock import PropertyMock, mock_open, patch
 
 from jinja2 import Template
+from ops.testing import Harness
 from tenacity import RetryError
 
+from charm import PostgresqlOperatorCharm
 from constants import REWIND_USER
 from patroni import Patroni
-from tests.helpers import STORAGE_PATH
+from tests.helpers import STORAGE_PATH, patch_network_get
 
 
 class TestPatroni(unittest.TestCase):
+    @patch("charm.KubernetesServicePatch", lambda x, y: None)
+    @patch_network_get(private_address="1.1.1.1")
     def setUp(self):
+        self.harness = Harness(PostgresqlOperatorCharm)
+        self.addCleanup(self.harness.cleanup)
+        self.harness.begin()
+        self.charm = self.harness.charm
+
         # Setup Patroni wrapper.
         self.patroni = Patroni(
+            self.charm,
             "postgresql-k8s-0",
             ["postgresql-k8s-0"],
             "postgresql-k8s-primary.dev.svc.cluster.local",
@@ -77,8 +87,11 @@ class TestPatroni(unittest.TestCase):
         # Ensure the file is chown'd correctly.
         _chown.assert_called_with(filename, uid=35, gid=35)
 
+    @patch("charm.Patroni.rock_postgresql_version", new_callable=PropertyMock)
     @patch("charm.Patroni._render_file")
-    def test_render_patroni_yml_file(self, _render_file):
+    def test_render_patroni_yml_file(self, _render_file, _rock_postgresql_version):
+        _rock_postgresql_version.return_value = "14.7"
+
         # Get the expected content from a file.
         with open("templates/patroni.yml.j2") as file:
             template = Template(file.read())
@@ -182,6 +195,7 @@ class TestPatroni(unittest.TestCase):
 
         # Also test with multiple planned units (synchronous_commit is turned on).
         self.patroni = Patroni(
+            self.charm,
             "postgresql-k8s-0",
             ["postgresql-k8s-0", "postgresql-k8s-1"],
             "postgresql-k8s-primary.dev.svc.cluster.local",
