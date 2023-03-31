@@ -446,6 +446,7 @@ def get_expected_k8s_resources(namespace: str, application: str) -> set:
     resources.update(
         [
             f"Endpoints/patroni-{application}-config",
+            f"Endpoints/patroni-{application}-sync",
             f"Endpoints/patroni-{application}",
             f"Endpoints/{application}",
             f"Endpoints/{application}-primary",
