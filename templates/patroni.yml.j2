@@ -54,7 +54,6 @@ ctl:
 pod_ip: '{{ endpoint }}'
 postgresql:
   connect_address: '{{ endpoint }}:5432'
-  custom_conf: {{ storage_path }}/postgresql-k8s-operator.conf
   data_dir: {{ storage_path }}/pgdata
   listen: 0.0.0.0:5432
   parameters:
