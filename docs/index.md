@@ -20,25 +20,32 @@ Charmed PostgreSQL K8s is an official distribution of PostgreSQL. It’s an open
 
 # Navigation
 
-| Level | Path                  | Navlink                                                                                                |
-| ----- |-----------------------|--------------------------------------------------------------------------------------------------------|
-| 1 | tutorial              | [Tutorial]()                                                                                           |
-| 2 | t-overview            | [1. Introduction](/t/charmed-postgresql-k8s-tutorial-overview/9296)                                    |
-| 2 | t-setup-environment   | [2. Set up the environment](/t/charmed-postgresql-k8s-tutorial-setup-environment/9297)                  |
-| 2 | t-deploy-postgresql   | [3. Deploy PostgreSQL](/t/charmed-postgresql-k8s-tutorial-deploy/9298)                                  |
-| 2 | t-managing-units      | [4. Manage your units](/t/charmed-postgresql-k8s-tutorial-managing-units/9299)                         |
-| 2 | t-manage-passwords    | [5. Manage passwords](/t/charmed-postgresql-k8s-tutorial-manage-passwords/9300)                        |
-| 2 | t-integrations        | [6. Relate your PostgreSQL to other applications](/t/charmed-postgresql-k8s-tutorial-integrations/9301) |
-| 2 | t-enable-security     | [7. Enable security](/t/charmed-postgresql-k8s-tutorial-enable-security/9302)                          |
-| 2 | t-cleanup-environment | [8. Cleanup your environment](/t/charmed-postgresql-k8s-tutorial-cleanup/9303)                         |
-| 1 | reference             | [Reference]()                                                                                          |
-| 2 | r-requirements        | [Requirements](/t/charmed-postgresql-k8s-reference-requirements/9304)                                  |
-| 2 | r-charm               | [Charm API](/t/charmed-postgresql-k8s-reference-charm-api/9305)                                        |
-| 2 | r-peers               | [Peer Relation](/t/charmed-postgresql-k8s-reference-peer-relation/9306)                                |
-| 2 | r-actions             | [Actions](https://charmhub.io/postgresql-k8s/actions)                                                  |
-| 2 | r-configurations      | [Configurations](https://charmhub.io/postgresql-k8s/configure)                                         |
-| 2 | r-libraries           | [Libraries](https://charmhub.io/postgresql-k8s/libraries/helpers)                                      |
-
+| Level | Path                          | Navlink                                                                                                           |
+| ----- |-------------------------------|-------------------------------------------------------------------------------------------------------------------|
+| 1 | tutorial                      | [Tutorial]()                                                                                                      |
+| 2 | t-overview                    | [1. Introduction](/t/charmed-postgresql-k8s-tutorial-overview/9296)                                               |
+| 2 | t-setup-environment           | [2. Set up the environment](/t/charmed-postgresql-k8s-tutorial-setup-environment/9297)                            |
+| 2 | t-deploy-postgresql           | [3. Deploy PostgreSQL](/t/charmed-postgresql-k8s-tutorial-deploy/9298)                                            |
+| 2 | t-managing-units              | [4. Manage your units](/t/charmed-postgresql-k8s-tutorial-managing-units/9299)                                    |
+| 2 | t-manage-passwords            | [5. Manage passwords](/t/charmed-postgresql-k8s-tutorial-manage-passwords/9300)                                   |
+| 2 | t-integrations                | [6. Relate your PostgreSQL to other applications](/t/charmed-postgresql-k8s-tutorial-integrations/9301)           |
+| 2 | t-enable-security             | [7. Enable security](/t/charmed-postgresql-k8s-tutorial-enable-security/9302)                                     |
+| 2 | t-cleanup-environment         | [8. Cleanup your environment](/t/charmed-postgresql-k8s-tutorial-cleanup/9303)                                    |
+| 1 | how-to                        | [How To]()                                                                                                        |
+| 2 | h-manage-units                | [Manage units](/t/charmed-postgresql-k8s-how-to-manage-units/9592)                                                |
+| 2 | h-enable-encryption           | [Enable encryption](/t/charmed-postgresql-k8s-how-to-enable-encryption/9593)                                      |
+| 2 | h-manage-app                  | [Manage applications](/t/charmed-postgresql-k8s-how-to-manage-applications/9594)                                  |
+| 2 | h-configure-s3                | [Configure S3](/t/charmed-postgresql-k8s-how-to-configure-s3/9595)                                                |
+| 2 | h-create-and-list-backups     | [Create and List Backups](/t/charmed-postgresql-k8s-how-to-create-and-list-backups/9596)                          |
+| 2 | h-restore-backup              | [Restore a Backup](/t/charmed-postgresql-k8s-how-to-restore-backups/9597)                                         |
+| 2 | h-migrate-cluster-via-restore | [Cluster Migration with Restore](/t/charmed-postgresql-k8s-how-to-migrate-clusters/9598)                          |
+| 1 | reference                     | [Reference]()                                                                                                     |
+| 2 | r-requirements                | [Requirements](/t/charmed-postgresql-k8s-reference-requirements/9304)                                             |
+| 2 | r-charm                       | [Charm API](/t/charmed-postgresql-k8s-reference-charm-api/9305)                                                   |
+| 2 | r-peers                       | [Peer Relation](/t/charmed-postgresql-k8s-reference-peer-relation/9306)                                           |
+| 2 | r-actions                     | [Actions](https://charmhub.io/postgresql-k8s/actions)                                                             |
+| 2 | r-configurations              | [Configurations](https://charmhub.io/postgresql-k8s/configure)                                                    |
+| 2 | r-libraries                   | [Libraries](https://charmhub.io/postgresql-k8s/libraries/helpers)                                                 |
 
 # Redirects
 
