@@ -5,6 +5,7 @@ name: postgresql-k8s
 display-name: PostgreSQL K8s
 description: |
   Charm to operate the PostgreSQL database on Kubernetes clusters
+docs: https://discourse.charmhub.io/t/charmed-postgresql-k8s-documenation/9307
 summary: |
   Charm to operate the PostgreSQL database on Kubernetes clusters
 
