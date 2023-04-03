@@ -1,3 +1,5 @@
+# How to migrate cluster using backups
+
 This is a How-To for restoring a backup that was made from the a *different* cluster, (i.e. cluster migration via restore). To perform a basic restore please reference the [Restore How-To](/t/cluster-migration-via-restore/TODO)
 
 Restoring a backup from a previous cluster to a current cluster requires that you:

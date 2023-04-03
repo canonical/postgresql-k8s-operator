@@ -1,3 +1,5 @@
+# How to restore backups 
+
 This is a How-To for performing a basic restore (restoring a locally made backup).
 To restore a backup that was made from the a *different* cluster, (i.e. cluster migration via restore), please reference the [Cluster Migration via Restore How-To](/t/cluster-migration-via-restore/TODO):
 

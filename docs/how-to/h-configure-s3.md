@@ -1,3 +1,5 @@
+# How to configure S3 to work with Charmed PostgreSQL 
+
 Charmed PostgreSQL backup can be stored on any S3 compatible storage. The S3 access and configurations are managed with the [s3-integrator charm](https://charmhub.io/s3-integrator). Deploy and configure the s3-integrator charm:
 ```
 juju deploy s3-integrator --channel=edge

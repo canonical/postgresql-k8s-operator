@@ -33,7 +33,7 @@ More info on logging at [juju logs](https://juju.is/docs/olm/juju-logs).
 ## Access PostgreSQL
 > **!** *Disclaimer: this part of the tutorial accesses PostgreSQL via the `operator` user. **Do not** directly interface with this user in a production environment. In a production environment always create a separate user using [Data Integrator](https://charmhub.io/data-integrator) and connect to PostgreSQL with that user instead. Later in the section covering Relations we will cover how to access PostgreSQL without the `operator` user.*
 
-The first action most users take after installing PostgreSQL is accessing PostgreSQL. The easiest way to do this is via the [PostgreSQL interactive terminal](https://www.postgresql-k8s.org/docs/14/app-psql.html) `psql`. Connecting to the database requires that you know the values for `host`, `username` and `password`. To retrieve the necessary fields please run Charmed PostgreSQL K8s action `get-password`:
+The first action most users take after installing PostgreSQL is accessing PostgreSQL. The easiest way to do this is via the [PostgreSQL interactive terminal](https://www.postgresql.org/docs/14/app-psql.html) `psql`. Connecting to the database requires that you know the values for `host`, `username` and `password`. To retrieve the necessary fields please run Charmed PostgreSQL K8s action `get-password`:
 ```shell
 juju run-action postgresql-k8s/leader get-password --wait
 ```
