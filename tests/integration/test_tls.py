@@ -110,10 +110,16 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
 
         # Restart the initial primary and check the logs to ensure TLS is being used by pg_rewind.
         await run_command_on_unit(ops_test, primary, "/charm/bin/pebble start postgresql")
-        logs = await run_command_on_unit(ops_test, replica, "/charm/bin/pebble logs")
-        assert (
-            "connection authorized: user=rewind database=postgres SSL enabled" in logs
-        ), "TLS is not being used on pg_rewind connections"
+        for attempt in Retrying(
+            stop=stop_after_delay(60 * 3), wait=wait_exponential(multiplier=1, min=2, max=30)
+        ):
+            with attempt:
+                logs = await run_command_on_unit(
+                    ops_test, replica, "cat /var/log/postgresql/postgresql.log"
+                )
+                assert (
+                    "connection authorized: user=rewind database=postgres SSL enabled" in logs
+                ), "TLS is not being used on pg_rewind connections"
 
         # Deploy and check Mattermost user and database existence.
         relation_id = await deploy_and_relate_application_with_postgresql(
