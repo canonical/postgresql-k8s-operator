@@ -4,10 +4,10 @@ anyio==3.6.2 ; python_full_version >= "3.8.10" and python_full_version < "4.0.0"
 attrs==22.2.0 ; python_full_version >= "3.8.10" and python_full_version < "4.0.0" \
     --hash=sha256:29e95c7f6778868dbd49170f98f8818f78f3dc5e0e37c0b1f474e3561b240836 \
     --hash=sha256:c9227bfc2f01993c03f68db37d1d15c9690188323c067c641f1a35ca58185f99
-boto3==1.26.106; python_full_version >= "3.8.10" and python_full_version < "4.0.0" \
+boto3==1.26.106 ; python_full_version >= "3.8.10" and python_full_version < "4.0.0" \
     --hash=sha256:53d449bc3445da0a8812857f3e24e143dc56573bc365f36a5610900b09d06faf \
     --hash=sha256:bdabab7ad27ae86de22a8687cbf55d8a152c6d6f178ffb452e560bac0be957a7
-botocore==1.29.106; python_full_version >= "3.8.10" and python_full_version < "4.0.0" \
+botocore==1.29.106 ; python_full_version >= "3.8.10" and python_full_version < "4.0.0" \
     --hash=sha256:d50df9a39da1b0e475727c6c2ba141b44d9df527d3dc1936b264ee4cb1525ab7 \
     --hash=sha256:eaaa669fe33a0ef2e9d345a98ed0befac1ea33395d63620913c1bb738c387d4d
 certifi==2022.12.7 ; python_full_version >= "3.8.10" and python_version < "4" \
@@ -177,9 +177,9 @@ cryptography==40.0.1 ; python_full_version >= "3.8.10" and python_full_version <
 h11==0.14.0 ; python_full_version >= "3.8.10" and python_full_version < "4.0.0" \
     --hash=sha256:8f19fbbe99e72420ff35c00b27a34cb9937e902a8b810e2c88300c6f0a3b699d \
     --hash=sha256:e3fe4ac4b851c468cc8363d500db52c2ead036020723024a109d37346efaa761
-httpcore==0.17.0; python_full_version >= "3.8.10" and python_full_version < "4.0.0" \
-    --hash=sha256:0fdfea45e94f0c9fd96eab9286077f9ff788dd186635ae61b312693e4d943599 \
-    --hash=sha256:cc045a3241afbf60ce056202301b4d8b6af08845e3294055eb26b09913ef903c
+httpcore==0.16.3 ; python_full_version >= "3.8.10" and python_full_version < "4.0.0" \
+    --hash=sha256:c5d6f04e2fc530f39e0c077e6a30caa53f1451096120f1f38b954afd0b17c0cb \
+    --hash=sha256:da1fb708784a938aa084bde4feb8317056c55037247c787bd7e19eb2c2949dc0
 httpx==0.23.3 ; python_full_version >= "3.8.10" and python_full_version < "4.0.0" \
     --hash=sha256:9818458eb565bb54898ccb9b8b251a28785dd4a55afbc23d0eb410754fe7d0f9 \
     --hash=sha256:a211fcce9b1254ea24f0cd6af9869b3d29aba40154e947d2a07bb499b3e310d6

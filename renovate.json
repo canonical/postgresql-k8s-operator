@@ -42,5 +42,5 @@
     }
   ],
   "ignorePaths": [],
-  "ignoreDeps": ["rfc3986"]
+  "ignoreDeps": ["rfc3986", "httpcore"]
 }
