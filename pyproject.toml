@@ -22,7 +22,7 @@ jinja2 = "3.1.2"
 lightkube = "0.12.0"
 lightkube-models = "1.26.0.4"
 requests = "2.28.2"
-boto3 = "1.26.102"
+boto3 = "1.26.106"
 # psycopg2 = "^2.9.5" # Injected in charmcraft.yaml
 
 [tool.poetry.group.format]
@@ -50,8 +50,8 @@ optional = true
 [tool.poetry.group.unit.dependencies]
 coverage = {extras = ["toml"], version = "7.2.2"}
 pytest = "7.2.2"
-pytest-asyncio = "0.20.3"
-psycopg2 = {version = "2.9.5", extras = ["binary"]}
+pytest-asyncio = "0.21.0"
+psycopg2 = {version = "2.9.6", extras = ["binary"]}
 
 [tool.poetry.group.integration]
 optional = true
@@ -59,9 +59,9 @@ optional = true
 [tool.poetry.group.integration.dependencies]
 lightkube = "^0.12.0"
 pytest = "7.2.2"
-pytest-operator = "0.23.0"
+pytest-operator = "0.26.0"
 juju = "2.9.42.1" # Latest juju 2
-psycopg2 = {version = "2.9.5", extras = ["binary"]}
+psycopg2 = {version = "2.9.6", extras = ["binary"]}
 
 [tool.poetry.group.ha_charm]
 optional = true
