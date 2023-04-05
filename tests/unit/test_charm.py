@@ -139,6 +139,7 @@ class TestCharm(unittest.TestCase):
         expected = self.charm._postgresql_layer().to_dict()
         expected.pop("summary", "")
         expected.pop("description", "")
+        expected.pop("checks", "")
         # Check the plan is as expected.
         self.assertEqual(plan.to_dict(), expected)
         self.assertEqual(self.harness.model.unit.status, ActiveStatus())
@@ -433,6 +434,15 @@ class TestCharm(unittest.TestCase):
                     "user": "postgres",
                     "group": "postgres",
                 },
+            },
+            "checks": {
+                self._postgresql_service: {
+                    "override": "replace",
+                    "level": "ready",
+                    "http": {
+                        "url": "http://postgresql-k8s-0.postgresql-k8s-endpoints:8008/health",
+                    },
+                }
             },
         }
         self.assertDictEqual(plan, expected)
