@@ -246,19 +246,6 @@ async def send_signal_to_process(
         await ops_test.model.applications[app].add_unit(count=1)
         await ops_test.model.wait_for_idle(apps=[app], status="active", timeout=1000)
 
-    # if signal == "SIGCONT":
-    #     command = f"ssh {unit_name} pkill --signal {signal} -f {process}"
-    #     return_code, _, _ = await ops_test.juju(*command.split())
-    #
-    #     if return_code != 0:
-    #         raise ProcessError(
-    #             "Expected command %s to succeed instead it failed: %s",
-    #             command,
-    #             return_code,
-    #         )
-    #
-    #     return
-
     # Load Kubernetes configuration to connect to the cluster.
     config.load_kube_config()
 
