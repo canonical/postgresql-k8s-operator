@@ -7,7 +7,7 @@
 import logging
 import os
 import pwd
-from typing import List
+from typing import List, Optional
 
 import requests
 from jinja2 import Template
@@ -194,17 +194,30 @@ class Patroni:
             # Ignore non existing user error when it wasn't created yet.
             pass
 
-    def render_patroni_yml_file(self, enable_tls: bool = False) -> None:
+    def render_patroni_yml_file(
+        self,
+        archive_mode: str,
+        connectivity: bool = False,
+        enable_tls: bool = False,
+        stanza: str = None,
+        backup_id: Optional[str] = None,
+    ) -> None:
         """Render the Patroni configuration file.
 
         Args:
+            archive_mode: PostgreSQL archive mode.
+            connectivity: whether to allow external connections to the database.
             enable_tls: whether to enable TLS.
+            stanza: name of the stanza created by pgBackRest.
+            backup_id: id of the backup that is being restored.
         """
-        # Open the template postgresql.conf file.
+        # Open the template patroni.yml file.
         with open("templates/patroni.yml.j2", "r") as file:
             template = Template(file.read())
         # Render the template file with the correct values.
         rendered = template.render(
+            archive_mode=archive_mode,
+            connectivity=connectivity,
             enable_tls=enable_tls,
             endpoint=self._endpoint,
             endpoints=self._endpoints,
@@ -214,22 +227,13 @@ class Patroni:
             replication_password=self._replication_password,
             rewind_user=REWIND_USER,
             rewind_password=self._rewind_password,
+            enable_pgbackrest=stanza is not None,
+            restoring_backup=backup_id is not None,
+            backup_id=backup_id,
+            stanza=stanza,
+            minority_count=self._members_count // 2,
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
-
-    def render_postgresql_conf_file(self) -> None:
-        """Render the PostgreSQL configuration file."""
-        # Open the template postgresql.conf file.
-        with open("templates/postgresql.conf.j2", "r") as file:
-            template = Template(file.read())
-        # Render the template file with the correct values.
-        # TODO: add extra configurations here later.
-        rendered = template.render(
-            logging_collector="on",
-            synchronous_commit="on" if self._members_count > 1 else "off",
-            synchronous_standby_names="*",
-        )
-        self._render_file(f"{self._storage_path}/postgresql-k8s-operator.conf", rendered, 0o644)
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def reload_patroni_configuration(self) -> None:

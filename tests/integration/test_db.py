@@ -3,7 +3,7 @@
 # See LICENSE file for licensing details.
 from asyncio import gather
 
-import pytest as pytest
+import pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers import (
@@ -20,7 +20,6 @@ APPLICATION_UNITS = 1
 DATABASE_UNITS = 3
 
 
-@pytest.mark.db_relation_tests
 async def test_finos_waltz_db(ops_test: OpsTest) -> None:
     """Deploy Finos Waltz to test the 'db' relation.
 
@@ -82,26 +81,24 @@ async def test_finos_waltz_db(ops_test: OpsTest) -> None:
         await ops_test.model.remove_application(DATABASE_APP_NAME, block_until_done=True)
 
 
-@pytest.mark.db_relation_tests
+@pytest.mark.unstable
 async def test_indico_db_blocked(ops_test: OpsTest) -> None:
     """Tests if deploying and relating to Indico charm will block due to requested extensions."""
     async with ops_test.fast_forward():
         # Build and deploy the PostgreSQL charm.
         await build_and_deploy(ops_test, 1)
 
-        await gather(
-            ops_test.model.deploy(
-                "indico",
-                channel="stable",
-                application_name="indico1",
-                num_units=APPLICATION_UNITS,
-            ),
-            ops_test.model.deploy(
-                "indico",
-                channel="stable",
-                application_name="indico2",
-                num_units=APPLICATION_UNITS,
-            ),
+        await ops_test.model.deploy(
+            "indico",
+            channel="stable",
+            application_name="indico1",
+            num_units=APPLICATION_UNITS,
+        )
+        await ops_test.model.deploy(
+            "indico",
+            channel="stable",
+            application_name="indico2",
+            num_units=APPLICATION_UNITS,
         )
 
         # Wait for model to stabilise

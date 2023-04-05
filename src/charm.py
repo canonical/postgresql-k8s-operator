@@ -34,11 +34,13 @@ from ops.model import (
     Relation,
     WaitingStatus,
 )
-from ops.pebble import Layer, PathError, ProtocolError
+from ops.pebble import Layer, PathError, ProtocolError, ServiceStatus
 from requests import ConnectionError
 from tenacity import RetryError
 
+from backups import PostgreSQLBackups
 from constants import (
+    BACKUP_USER,
     PEER,
     REPLICATION_PASSWORD_KEY,
     REPLICATION_USER,
@@ -67,12 +69,13 @@ class PostgresqlOperatorCharm(CharmBase):
         super().__init__(*args)
 
         self._postgresql_service = "postgresql"
+        self.pgbackrest_server_service = "pgbackrest server"
         self._unit = self.model.unit.name
         self._name = self.model.app.name
         self._namespace = self.model.name
         self._context = {"namespace": self._namespace, "app_name": self._name}
+        self.cluster_name = f"patroni-{self._name}"
 
-        self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
@@ -89,13 +92,14 @@ class PostgresqlOperatorCharm(CharmBase):
         self.postgresql_client_relation = PostgreSQLProvider(self)
         self.legacy_db_relation = DbProvides(self, admin=False)
         self.legacy_db_admin_relation = DbProvides(self, admin=True)
+        self.backup = PostgreSQLBackups(self, "s3-parameters")
         self.tls = PostgreSQLTLS(self, PEER, [self.primary_endpoint, self.replicas_endpoint])
         self.restart_manager = RollingOpsManager(
             charm=self, relation="restart", callback=self._restart
         )
 
-        postgresql_db_port = ServicePort(5432, name=f"{self.app.name}")
-        patroni_api_port = ServicePort(8008, name=f"{self.app.name}")
+        postgresql_db_port = ServicePort(5432, name="database")
+        patroni_api_port = ServicePort(8008, name="api")
         self.service_patcher = KubernetesServicePatch(self, [postgresql_db_port, patroni_api_port])
 
     @property
@@ -207,7 +211,6 @@ class PostgresqlOperatorCharm(CharmBase):
         self._remove_from_endpoints(endpoints_to_remove)
 
         # Update the replication configuration.
-        self._patroni.render_postgresql_conf_file()
         self._patroni.reload_patroni_configuration()
 
     def _on_peer_relation_changed(self, event: RelationChangedEvent) -> None:
@@ -243,12 +246,19 @@ class PostgresqlOperatorCharm(CharmBase):
 
         self.postgresql_client_relation.update_read_only_endpoint()
 
-        self.unit.status = ActiveStatus()
+        # Start or stop the pgBackRest TLS server service when TLS certificate change.
+        if not self.backup.start_stop_pgbackrest_service():
+            # Ping primary to start its TLS server.
+            self.unit_peer_data.update({"start-tls-server": "True"})
+            logger.debug(
+                "Deferring on_peer_relation_changed: awaiting for TLS server service to start on primary"
+            )
+            event.defer()
+            return
+        else:
+            self.unit_peer_data.pop("start-tls.server", None)
 
-    def _on_install(self, _) -> None:
-        """Event handler for InstallEvent."""
-        # Creates custom postgresql.conf file.
-        self._patroni.render_postgresql_conf_file()
+        self.unit.status = ActiveStatus()
 
     def _on_config_changed(self, _) -> None:
         """Handle the config-changed event."""
@@ -350,7 +360,12 @@ class PostgresqlOperatorCharm(CharmBase):
             self.set_secret("app", REWIND_PASSWORD_KEY, new_password())
 
         # Create resources and add labels needed for replication.
-        self._create_resources()
+        try:
+            self._create_resources()
+        except ApiError:
+            logger.exception("failed to create k8s resources")
+            self.unit.status = BlockedStatus("failed to create k8s resources")
+            return
 
         # Add this unit to the list of cluster members
         # (the cluster should start with only this member).
@@ -363,7 +378,6 @@ class PostgresqlOperatorCharm(CharmBase):
         self._add_members(event)
 
         # Update the replication configuration.
-        self._patroni.render_postgresql_conf_file()
         try:
             self._patroni.reload_patroni_configuration()
         except RetryError:
@@ -432,32 +446,54 @@ class PostgresqlOperatorCharm(CharmBase):
             event.defer()
             return
 
-        if self.unit.is_leader():
-            # Add the labels needed for replication in this pod.
-            # This also enables the member as part of the cluster.
-            try:
-                self._patch_pod_labels(self._unit)
-            except ApiError as e:
-                logger.error("failed to patch pod")
-                self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
-                return
+        if self.unit.is_leader() and not self._initialize_cluster(event):
+            return
 
-            if not self._patroni.primary_endpoint_ready:
-                logger.debug(
-                    "Deferring on_postgresql_pebble_ready: Waiting for primary endpoint to be ready"
-                )
-                self.unit.status = WaitingStatus("awaiting for primary endpoint to be ready")
-                event.defer()
-                return
-
-            self._peers.data[self.app]["cluster_initialised"] = "True"
-
-        # Update the replication configuration.
-        self._patroni.render_postgresql_conf_file()
-        self._patroni.reload_patroni_configuration()
+        # Update the archive command and replication configurations.
+        self.update_config()
 
         # All is well, set an ActiveStatus.
         self.unit.status = ActiveStatus()
+
+    def _initialize_cluster(self, event: WorkloadEvent) -> bool:
+        # Add the labels needed for replication in this pod.
+        # This also enables the member as part of the cluster.
+        try:
+            self._patch_pod_labels(self._unit)
+        except ApiError as e:
+            logger.error("failed to patch pod")
+            self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
+            return False
+
+        # Create resources and add labels needed for replication
+        try:
+            self._create_resources()
+        except ApiError:
+            logger.exception("failed to create k8s resources")
+            self.unit.status = BlockedStatus("failed to create k8s resources")
+            return False
+
+        if not self._patroni.primary_endpoint_ready:
+            logger.debug(
+                "Deferring on_postgresql_pebble_ready: Waiting for primary endpoint to be ready"
+            )
+            self.unit.status = WaitingStatus("awaiting for primary endpoint to be ready")
+            event.defer()
+            return False
+
+        # Create the backup user.
+        if BACKUP_USER not in self.postgresql.list_users():
+            self.postgresql.create_user(BACKUP_USER, new_password(), admin=True)
+
+        # Mark the cluster as initialised.
+        self._peers.data[self.app]["cluster_initialised"] = "True"
+
+        return True
+
+    @property
+    def is_blocked(self) -> bool:
+        """Returns whether the unit is in a blocked state."""
+        return isinstance(self.unit.status, BlockedStatus)
 
     def _on_upgrade_charm(self, _) -> None:
         # Recreate k8s resources and add labels required for replication
@@ -487,9 +523,7 @@ class PostgresqlOperatorCharm(CharmBase):
         """
         client = Client()
         patch = {
-            "metadata": {
-                "labels": {"application": "patroni", "cluster-name": f"patroni-{self._name}"}
-            }
+            "metadata": {"labels": {"application": "patroni", "cluster-name": self.cluster_name}}
         }
         client.patch(
             Pod,
@@ -515,13 +549,17 @@ class PostgresqlOperatorCharm(CharmBase):
                 client.replace(resource)
             else:
                 logger.error("failed to create resource: %s.", str(resource.to_dict()))
-                self.unit.status = BlockedStatus(f"failed to create services {e}")
-                return
+                raise e
 
     @property
     def _has_blocked_status(self) -> bool:
         """Returns whether the unit is in a blocked state."""
         return isinstance(self.unit.status, BlockedStatus)
+
+    @property
+    def _has_waiting_status(self) -> bool:
+        """Returns whether the unit is in a waiting state."""
+        return isinstance(self.unit.status, WaitingStatus)
 
     def _on_get_password(self, event: ActionEvent) -> None:
         """Returns the password for a user as an action response.
@@ -535,7 +573,7 @@ class PostgresqlOperatorCharm(CharmBase):
                 f" {', '.join(SYSTEM_USERS)} not {username}"
             )
             return
-        event.set_results({f"{username}-password": self.get_secret("app", f"{username}-password")})
+        event.set_results({"password": self.get_secret("app", f"{username}-password")})
 
     def _on_set_password(self, event: ActionEvent) -> None:
         """Set the password for the specified user."""
@@ -558,7 +596,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
         if password == self.get_secret("app", f"{username}-password"):
             event.log("The old and new passwords are equal.")
-            event.set_results({f"{username}-password": password})
+            event.set_results({"password": password})
             return
 
         # Ensure all members are ready before trying to reload Patroni
@@ -587,7 +625,7 @@ class PostgresqlOperatorCharm(CharmBase):
         # Other units Patroni configuration will be reloaded in the peer relation changed event.
         self.update_config()
 
-        event.set_results({f"{username}-password": password})
+        event.set_results({"password": password})
 
     def _on_get_primary(self, event: ActionEvent) -> None:
         """Get primary instance."""
@@ -638,14 +676,14 @@ class PostgresqlOperatorCharm(CharmBase):
                     logger.error(f"failed to delete resource: {resource}.")
 
     def _on_update_status(self, _) -> None:
-        """Display an active status message if the current unit is the primary."""
+        """Update the unit status message."""
         container = self.unit.get_container("postgresql")
         if not container.can_connect():
             logger.debug("on_update_status early exit: Cannot connect to container")
             return
 
-        if self._has_blocked_status:
-            logger.debug("on_update_status early exit: Unit is in Blocked status")
+        if self._has_blocked_status or self._has_waiting_status:
+            logger.debug("on_update_status early exit: Unit is in Blocked/Waiting status")
             return
 
         services = container.pebble.get_services(names=[self._postgresql_service])
@@ -654,9 +692,28 @@ class PostgresqlOperatorCharm(CharmBase):
             logger.debug("on_update_status early exit: Service has not been added nor started yet")
             return
 
+        if "restoring-backup" in self.app_peer_data:
+            if services[0].current != ServiceStatus.ACTIVE:
+                self.unit.status = BlockedStatus("Failed to restore backup")
+                return
+
+            if not self._patroni.member_started:
+                logger.debug("on_update_status early exit: Patroni has not started yet")
+                return
+
+            # Remove the restoring backup flag.
+            self.app_peer_data.update({"restoring-backup": ""})
+            self.update_config()
+
+        self._set_primary_status_message()
+
+    def _set_primary_status_message(self) -> None:
+        """Display 'Primary' in the unit status message if the current unit is the primary."""
         try:
             if self._patroni.get_primary(unit_name_pattern=True) == self.unit.name:
                 self.unit.status = ActiveStatus("Primary")
+            elif self._patroni.member_started:
+                self.unit.status = ActiveStatus()
         except (RetryError, ConnectionError) as e:
             logger.error(f"failed to get primary with error {e}")
 
@@ -672,8 +729,18 @@ class PostgresqlOperatorCharm(CharmBase):
             self.get_secret("app", USER_PASSWORD_KEY),
             self.get_secret("app", REPLICATION_PASSWORD_KEY),
             self.get_secret("app", REWIND_PASSWORD_KEY),
-            self.postgresql.is_tls_enabled(check_current_host=True),
+            bool(self.unit_peer_data.get("tls")),
         )
+
+    @property
+    def is_primary(self) -> bool:
+        """Return whether this unit is the primary instance."""
+        return self._unit == self._patroni.get_primary(unit_name_pattern=True)
+
+    @property
+    def is_tls_enabled(self) -> bool:
+        """Return whether TLS is enabled."""
+        return all(self.tls.get_tls_files())
 
     @property
     def _endpoint(self) -> str:
@@ -688,6 +755,22 @@ class PostgresqlOperatorCharm(CharmBase):
         else:
             # If the peer relations was not created yet, return only the current member hostname.
             return [self._endpoint]
+
+    @property
+    def peer_members_endpoints(self) -> List[str]:
+        """Fetch current list of peer members endpoints.
+
+        Returns:
+            A list of peer members addresses (strings).
+        """
+        # Get all members endpoints and remove the current unit endpoint from the list.
+        endpoints = self._endpoints
+        current_unit_endpoint = self._get_hostname_from_unit(
+            self._unit_name_to_pod_name(self._unit)
+        )
+        if current_unit_endpoint in endpoints:
+            endpoints.remove(current_unit_endpoint)
+        return endpoints
 
     def _add_to_endpoints(self, endpoint) -> None:
         """Add one endpoint to the members list."""
@@ -725,16 +808,33 @@ class PostgresqlOperatorCharm(CharmBase):
                     "summary": "entrypoint of the postgresql + patroni image",
                     "command": f"/usr/bin/python3 /usr/local/bin/patroni {self._storage_path}/patroni.yml",
                     "startup": "enabled",
-                    "user": "postgres",
-                    "group": "postgres",
+                    "user": WORKLOAD_OS_USER,
+                    "group": WORKLOAD_OS_GROUP,
                     "environment": {
-                        "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: patroni-{self._name}}}",
+                        "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: {self.cluster_name}}}",
                         "PATRONI_KUBERNETES_NAMESPACE": self._namespace,
                         "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
                         "PATRONI_NAME": pod_name,
-                        "PATRONI_SCOPE": f"patroni-{self._name}",
+                        "PATRONI_SCOPE": self.cluster_name,
                         "PATRONI_REPLICATION_USERNAME": REPLICATION_USER,
                         "PATRONI_SUPERUSER_USERNAME": USER,
+                    },
+                },
+                self.pgbackrest_server_service: {
+                    "override": "replace",
+                    "summary": "pgBackRest server",
+                    "command": self.pgbackrest_server_service,
+                    "startup": "disabled",
+                    "user": WORKLOAD_OS_USER,
+                    "group": WORKLOAD_OS_GROUP,
+                },
+            },
+            "checks": {
+                self._postgresql_service: {
+                    "override": "replace",
+                    "level": "ready",
+                    "http": {
+                        "url": f"{self._patroni._patroni_url}/health",
                     },
                 }
             },
@@ -757,6 +857,7 @@ class PostgresqlOperatorCharm(CharmBase):
             container = self.unit.get_container("postgresql")
 
         key, ca, cert = self.tls.get_tls_files()
+
         if key is not None:
             container.push(
                 f"{self._storage_path}/{TLS_KEY_FILE}",
@@ -791,22 +892,39 @@ class PostgresqlOperatorCharm(CharmBase):
         """Restart PostgreSQL."""
         try:
             self._patroni.restart_postgresql()
-        except RetryError as e:
-            logger.error("failed to restart PostgreSQL")
-            self.unit.status = BlockedStatus(f"failed to restart PostgreSQL with error {e}")
+        except RetryError:
+            error_message = "failed to restart PostgreSQL"
+            logger.exception(error_message)
+            self.unit.status = BlockedStatus(error_message)
+            return
+
+        # Start or stop the pgBackRest TLS server service when TLS certificate change.
+        self.backup.start_stop_pgbackrest_service()
 
     def update_config(self) -> None:
         """Updates Patroni config file based on the existence of the TLS files."""
         enable_tls = all(self.tls.get_tls_files())
 
         # Update and reload configuration based on TLS files availability.
-        self._patroni.render_patroni_yml_file(enable_tls=enable_tls)
-        self._patroni.render_postgresql_conf_file()
+        self._patroni.render_patroni_yml_file(
+            archive_mode=self.app_peer_data.get("archive-mode", "on"),
+            connectivity=self.unit_peer_data.get("connectivity", "on") == "on",
+            enable_tls=enable_tls,
+            backup_id=self.app_peer_data.get("restoring-backup"),
+            stanza=self.app_peer_data.get("stanza"),
+        )
         if not self._patroni.member_started:
+            # If Patroni/PostgreSQL has not started yet and TLS relations was initialised,
+            # then mark TLS as enabled. This commonly happens when the charm is deployed
+            # in a bundle together with the TLS certificates operator. This flag is used to
+            # know when to call the Patroni API using HTTP or HTTPS.
+            self.unit_peer_data.update({"tls": "enabled" if enable_tls else ""})
+            logger.debug("Early exit update_config: Patroni not started yet")
             return
 
         restart_postgresql = enable_tls != self.postgresql.is_tls_enabled()
         self._patroni.reload_patroni_configuration()
+        self.unit_peer_data.update({"tls": "enabled" if enable_tls else ""})
 
         # Restart PostgreSQL if TLS configuration has changed
         # (so the both old and new connections use the configuration).

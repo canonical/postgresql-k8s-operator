@@ -2,10 +2,10 @@ type: "charm"
 bases:
   - build-on:
     - name: "ubuntu"
-      channel: "20.04"
+      channel: "22.04"
     run-on:
     - name: "ubuntu"
-      channel: "20.04"
+      channel: "22.04"
 parts:
   charm:
     build-packages:
@@ -13,5 +13,5 @@ parts:
       - libssl-dev
       - rustc
       - cargo
-    charm-binary-python-packages: [psycopg2-binary==2.9.3]
-    charm-python-packages: [setuptools]
+    charm-binary-python-packages:
+      - psycopg2-binary==2.9.5  # renovate

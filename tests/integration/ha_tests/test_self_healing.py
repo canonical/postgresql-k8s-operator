@@ -6,11 +6,13 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
+from tests.integration.ha_tests.conftest import APPLICATION_NAME
 from tests.integration.ha_tests.helpers import (
     METADATA,
     app_name,
     change_master_start_timeout,
     change_wal_settings,
+    check_writes,
     count_writes,
     fetch_cluster_members,
     get_master_start_timeout,
@@ -20,69 +22,79 @@ from tests.integration.ha_tests.helpers import (
     postgresql_ready,
     secondary_up_to_date,
     send_signal_to_process,
+    start_continuous_writes,
     stop_continuous_writes,
 )
 from tests.integration.helpers import (
+    CHARM_SERIES,
+    build_and_deploy,
     db_connect,
     get_password,
     get_unit_address,
     run_command_on_unit,
 )
 
+APP_NAME = METADATA["name"]
 PATRONI_PROCESS = "/usr/local/bin/patroni"
 POSTGRESQL_PROCESS = "postgres"
 DB_PROCESSES = [POSTGRESQL_PROCESS, PATRONI_PROCESS]
 
 
 @pytest.mark.abort_on_fail
-@pytest.mark.ha_self_healing_tests
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy three unit of PostgreSQL."""
+    wait_for_apps = False
     # It is possible for users to provide their own cluster for HA testing. Hence, check if there
     # is a pre-existing cluster.
-    if await app_name(ops_test):
-        return
+    if not await app_name(ops_test):
+        wait_for_apps = True
+        await build_and_deploy(ops_test, 3, wait_for_idle=False)
+    # Deploy the continuous writes application charm if it wasn't already deployed.
+    if not await app_name(ops_test, APPLICATION_NAME):
+        wait_for_apps = True
+        async with ops_test.fast_forward():
+            charm = await ops_test.build_charm("tests/integration/ha_tests/application-charm")
+            await ops_test.model.deploy(
+                charm, application_name=APPLICATION_NAME, series=CHARM_SERIES
+            )
 
-    charm = await ops_test.build_charm(".")
-    async with ops_test.fast_forward():
-        await ops_test.model.deploy(
-            charm,
-            resources={
-                "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
-            },
-            num_units=3,
-            trust=True,
-        )
-        await ops_test.model.wait_for_idle(status="active", timeout=1000)
+    if wait_for_apps:
+        async with ops_test.fast_forward():
+            await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
 
-@pytest.mark.ha_self_healing_tests
 @pytest.mark.parametrize("process", [POSTGRESQL_PROCESS])
-async def test_freeze_db_process(
-    ops_test: OpsTest, process: str, continuous_writes, master_start_timeout
-) -> None:
+async def test_freeze_db_process(ops_test: OpsTest, process: str, continuous_writes) -> None:
     # Locate primary unit.
     app = await app_name(ops_test)
     primary_name = await get_primary(ops_test, app)
+
+    # Start an application that continuously writes data to the database.
+    await start_continuous_writes(ops_test, app)
 
     # Freeze the database process.
     await send_signal_to_process(ops_test, primary_name, process, "SIGSTOP")
 
     async with ops_test.fast_forward():
         # Verify new writes are continuing by counting the number of writes before and after a
-        # 2 minutes wait (a db process freeze takes more time to trigger a fail-over).
-        writes = await count_writes(ops_test, primary_name)
-        for attempt in Retrying(stop=stop_after_delay(60 * 2), wait=wait_fixed(3)):
-            with attempt:
-                more_writes = await count_writes(ops_test, primary_name)
-                assert more_writes > writes, "writes not continuing to DB"
+        # 3 minutes wait (a db process freeze takes more time to trigger a fail-over).
+        try:
+            writes = await count_writes(ops_test, primary_name)
+            for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
+                with attempt:
+                    more_writes = await count_writes(ops_test, primary_name)
+                    assert more_writes > writes, "writes not continuing to DB"
 
-        # Verify that a new primary gets elected (ie old primary is secondary).
-        new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
-        assert new_primary_name != primary_name
-
-        # Un-freeze the old primary.
-        await send_signal_to_process(ops_test, primary_name, process, "SIGCONT")
+            # Verify that a new primary gets elected (ie old primary is secondary).
+            for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
+                with attempt:
+                    new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
+                    assert new_primary_name != primary_name
+        finally:
+            # Un-freeze the old primary.
+            if process != PATRONI_PROCESS:
+                await send_signal_to_process(ops_test, primary_name, PATRONI_PROCESS, "SIGCONT")
+            await send_signal_to_process(ops_test, primary_name, process, "SIGCONT")
 
         # Verify that the database service got restarted and is ready in the old primary.
         assert await postgresql_ready(ops_test, primary_name)
@@ -101,11 +113,7 @@ async def test_freeze_db_process(
     assert set(member_ips) == set(ip_addresses), "not all units are part of the same cluster."
 
     # Verify that no writes to the database were missed after stopping the writes.
-    total_expected_writes = await stop_continuous_writes(ops_test)
-    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
-        with attempt:
-            actual_writes = await count_writes(ops_test)
-            assert total_expected_writes == actual_writes, "writes to the db were missed."
+    total_expected_writes = await check_writes(ops_test)
 
     # Verify that old primary is up-to-date.
     assert await secondary_up_to_date(
@@ -113,14 +121,14 @@ async def test_freeze_db_process(
     ), "secondary not up to date with the cluster after restarting."
 
 
-@pytest.mark.ha_self_healing_tests
 @pytest.mark.parametrize("process", DB_PROCESSES)
-async def test_restart_db_process(
-    ops_test: OpsTest, process: str, continuous_writes, master_start_timeout
-) -> None:
+async def test_restart_db_process(ops_test: OpsTest, process: str, continuous_writes) -> None:
     # Locate primary unit.
     app = await app_name(ops_test)
     primary_name = await get_primary(ops_test, app)
+
+    # Start an application that continuously writes data to the database.
+    await start_continuous_writes(ops_test, app)
 
     # Restart the database process.
     await send_signal_to_process(ops_test, primary_name, process, "SIGTERM")
@@ -155,11 +163,7 @@ async def test_restart_db_process(
     assert set(member_ips) == set(ip_addresses), "not all units are part of the same cluster."
 
     # Verify that no writes to the database were missed after stopping the writes.
-    total_expected_writes = await stop_continuous_writes(ops_test)
-    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
-        with attempt:
-            actual_writes = await count_writes(ops_test)
-            assert total_expected_writes == actual_writes, "writes to the db were missed."
+    total_expected_writes = await check_writes(ops_test)
 
     # Verify that old primary is up-to-date.
     assert await secondary_up_to_date(

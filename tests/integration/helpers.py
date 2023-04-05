@@ -4,8 +4,9 @@
 import itertools
 from datetime import datetime
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
+import botocore
 import psycopg2
 import requests
 import yaml
@@ -25,16 +26,42 @@ from tenacity import (
     wait_exponential,
 )
 
+CHARM_SERIES = "jammy"
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
 
 charm = None
 
 
+async def app_name(ops_test: OpsTest, application_name: str = "postgresql-k8s") -> Optional[str]:
+    """Returns the name of the cluster running PostgreSQL.
+
+    This is important since not all deployments of the PostgreSQL charm have the application name
+    "postgresql-k8s".
+
+    Note: if multiple clusters are running PostgreSQL this will return the one first found.
+    """
+    status = await ops_test.model.get_status()
+    for app in ops_test.model.applications:
+        if application_name in status["applications"][app]["charm"]:
+            return app
+
+    return None
+
+
 async def build_and_deploy(
-    ops_test: OpsTest, num_units: int, app_name: str = DATABASE_APP_NAME, status: str = "active"
+    ops_test: OpsTest,
+    num_units: int,
+    database_app_name: str = DATABASE_APP_NAME,
+    wait_for_idle: bool = True,
+    status: str = "active",
 ) -> None:
     """Builds the charm and deploys a specified number of units."""
+    # It is possible for users to provide their own cluster for testing. Hence, check if there
+    # is a pre-existing cluster.
+    if await app_name(ops_test, database_app_name):
+        return
+
     global charm
     if not charm:
         charm = await ops_test.build_charm(".")
@@ -44,18 +71,20 @@ async def build_and_deploy(
     await ops_test.model.deploy(
         charm,
         resources=resources,
-        application_name=app_name,
+        application_name=database_app_name,
         trust=True,
         num_units=num_units,
+        series=CHARM_SERIES,
     ),
-    # Wait until the PostgreSQL charm is successfully deployed.
-    await ops_test.model.wait_for_idle(
-        apps=[app_name],
-        status=status,
-        raise_on_blocked=True,
-        timeout=1000,
-        wait_for_exact_units=num_units,
-    )
+    if wait_for_idle:
+        # Wait until the PostgreSQL charm is successfully deployed.
+        await ops_test.model.wait_for_idle(
+            apps=[database_app_name],
+            status=status,
+            raise_on_blocked=True,
+            timeout=1000,
+            wait_for_exact_units=num_units,
+        )
 
 
 async def check_database_users_existence(
@@ -153,6 +182,26 @@ async def check_patroni(ops_test: OpsTest, unit_name: str, restart_time: float) 
         health_info["postmaster_start_time"], "%Y-%m-%d %H:%M:%S.%f%z"
     ).timestamp()
     return postmaster_start_time > restart_time and health_info["state"] == "running"
+
+
+def construct_endpoint(endpoint: str, region: str) -> str:
+    """Construct the S3 service endpoint using the region.
+
+    This is needed when the provided endpoint is from AWS, and it doesn't contain the region.
+    """
+    # Load endpoints data.
+    loader = botocore.loaders.create_loader()
+    data = loader.load_data("endpoints")
+
+    # Construct the endpoint using the region.
+    resolver = botocore.regions.EndpointResolver(data)
+    endpoint_data = resolver.construct_endpoint("s3", region)
+
+    # Use the built endpoint if it is an AWS endpoint.
+    if endpoint_data and endpoint.endswith(endpoint_data["dnsSuffix"]):
+        endpoint = f'{endpoint.split("://")[0]}://{endpoint_data["hostname"]}'
+
+    return endpoint
 
 
 def convert_records_to_dict(records: List[tuple]) -> dict:
@@ -397,10 +446,13 @@ def get_expected_k8s_resources(namespace: str, application: str) -> set:
     resources.update(
         [
             f"Endpoints/patroni-{application}-config",
+            f"Endpoints/patroni-{application}-sync",
             f"Endpoints/patroni-{application}",
+            f"Endpoints/{application}",
             f"Endpoints/{application}-primary",
             f"Endpoints/{application}-replicas",
             f"Service/patroni-{application}-config",
+            f"Service/{application}",
         ]
     )
 
@@ -418,7 +470,7 @@ async def get_password(
         if unit.name != down_unit:
             action = await unit.run_action("get-password", **{"username": username})
             result = await action.wait()
-            return result.results[f"{username}-password"]
+            return result.results["password"]
 
 
 @retry(

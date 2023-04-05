@@ -1,6 +1,85 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+[tool.poetry]
+name = "postgresql-k8s"
+version = "0.0.1-dev.0"
+description = ""
+authors = []
+license = "Apache-2.0"
+readme = "README.md"
+homepage = "https://charmhub.io/postgresql-k8s"
+repository = "https://github.com/canonical/postgresql-k8s-operator"
+
+[tool.poetry.dependencies]
+python = "^3.8.10"
+ops = "2.2.0"
+pgconnstr = "1.0.1"
+tenacity = "8.2.2"
+cryptography = "39.0.2"
+jsonschema = "4.17.3"
+jinja2 = "3.1.2"
+lightkube = "0.12.0"
+lightkube-models = "1.26.0.4"
+requests = "2.28.2"
+boto3 = "1.26.102"
+# psycopg2 = "^2.9.5" # Injected in charmcraft.yaml
+
+[tool.poetry.group.format]
+optional = true
+
+[tool.poetry.group.format.dependencies]
+black = "22.12.0"
+isort = "5.12.0"
+
+[tool.poetry.group.lint]
+optional = true
+
+[tool.poetry.group.lint.dependencies]
+flake8 = "6.0.0"
+flake8-docstrings = "1.7.0"
+flake8-copyright = "0.2.4"
+flake8-builtins = "2.1.0"
+pyproject-flake8 = "6.0.0.post1"
+pep8-naming = "^0.13.3"
+codespell = "2.2.4"
+
+[tool.poetry.group.unit]
+optional = true
+
+[tool.poetry.group.unit.dependencies]
+coverage = {extras = ["toml"], version = "7.2.2"}
+pytest = "7.2.2"
+pytest-asyncio = "0.20.3"
+psycopg2 = {version = "2.9.5", extras = ["binary"]}
+
+[tool.poetry.group.integration]
+optional = true
+
+[tool.poetry.group.integration.dependencies]
+lightkube = "^0.12.0"
+pytest = "7.2.2"
+pytest-operator = "0.23.0"
+juju = "2.9.42.1" # Latest juju 2
+psycopg2 = {version = "2.9.5", extras = ["binary"]}
+
+[tool.poetry.group.ha_charm]
+optional = true
+
+[tool.poetry.group.ha_charm.dependencies]
+ops = "2.2.0"
+tenacity = "8.2.2"
+
+[tool.poetry.group.relation_charm]
+optional = true
+
+[tool.poetry.group.relation_charm.dependencies]
+ops = "2.2.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
 # Testing tools configuration
 [tool.coverage.run]
 branch = true
@@ -12,15 +91,7 @@ show_missing = true
 minversion = "6.0"
 log_cli_level = "INFO"
 asyncio_mode = "auto"
-markers = [
-    "charm_tests",
-    "database_relation_tests",
-    "db_relation_tests",
-    "db_admin_relation_tests",
-    "ha_self_healing_tests",
-    "password_rotation_tests",
-    "tls_tests",
-]
+markers = ["unstable"]
 
 # Formatting tools configuration
 [tool.black]
