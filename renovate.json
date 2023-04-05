@@ -24,6 +24,12 @@
     }, {
       "matchPackageNames": ["juju"],
       "allowedVersions": "<3.0.0"
+    }, {
+      "matchPackageNames": ["httpcore"],
+      "allowedVersions": "<0.17.0"
+    }, {
+      "matchPackageNames": ["rfc3986"],
+      "allowedVersions": "<2.0.0"
     }
   ],
   "regexManagers": [
@@ -42,5 +48,5 @@
     }
   ],
   "ignorePaths": [],
-  "ignoreDeps": ["rfc3986", "httpcore"]
+  "ignoreDeps": []
 }
