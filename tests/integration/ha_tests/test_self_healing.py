@@ -115,7 +115,6 @@ async def test_freeze_db_process(ops_test: OpsTest, process: str, continuous_wri
 
 @pytest.mark.parametrize("process", DB_PROCESSES)
 async def test_restart_db_process(ops_test: OpsTest, process: str, continuous_writes) -> None:
-    return
     # Locate primary unit.
     app = await app_name(ops_test)
     primary_name = await get_primary(ops_test, app)

@@ -84,7 +84,6 @@ async def count_writes(ops_test: OpsTest, down_unit: str = None) -> int:
             host = member["host"]
 
     # Translate the service hostname to an IP address.
-    print(host)
     model = ops_test.model.info
     client = Client(namespace=model.name)
     service = client.get(Pod, name=host.split(".")[0])
@@ -99,7 +98,6 @@ async def count_writes(ops_test: OpsTest, down_unit: str = None) -> int:
         cursor.execute("SELECT COUNT(number) FROM continuous_writes;")
         count = cursor.fetchone()[0]
     connection.close()
-    print(count)
     return count
 
 
