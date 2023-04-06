@@ -729,6 +729,7 @@ class PostgresqlOperatorCharm(CharmBase):
     def _patroni(self):
         """Returns an instance of the Patroni object."""
         return Patroni(
+            self,
             self._endpoint,
             self._endpoints,
             self.primary_endpoint,
@@ -814,7 +815,7 @@ class PostgresqlOperatorCharm(CharmBase):
                 self._postgresql_service: {
                     "override": "replace",
                     "summary": "entrypoint of the postgresql + patroni image",
-                    "command": f"/usr/bin/python3 /usr/local/bin/patroni {self._storage_path}/patroni.yml",
+                    "command": f"patroni {self._storage_path}/patroni.yml",
                     "startup": "enabled",
                     "user": WORKLOAD_OS_USER,
                     "group": WORKLOAD_OS_GROUP,

@@ -10,6 +10,7 @@ import pwd
 from typing import List, Optional
 
 import requests
+import yaml
 from jinja2 import Template
 from tenacity import (
     AttemptManager,
@@ -40,6 +41,7 @@ class Patroni:
 
     def __init__(
         self,
+        charm,
         endpoint: str,
         endpoints: List[str],
         primary_endpoint: str,
@@ -50,6 +52,7 @@ class Patroni:
         rewind_password: str,
         tls_enabled: bool,
     ):
+        self._charm = charm
         self._endpoint = endpoint
         self._endpoints = endpoints
         self._primary_endpoint = primary_endpoint
@@ -69,6 +72,16 @@ class Patroni:
     def _patroni_url(self) -> str:
         """Patroni REST API URL."""
         return f"{'https' if self._tls_enabled else 'http'}://{self._endpoint}:8008"
+
+    @property
+    def rock_postgresql_version(self) -> Optional[str]:
+        """Version of Postgresql installed in the Rock image."""
+        container = self._charm.unit.get_container("postgresql")
+        if not container.can_connect():
+            logger.debug("Cannot get Postgresql version from Rock. Container inaccessible")
+            return
+        snap_meta = container.pull("/meta.charmed-postgresql/snap.yaml")
+        return yaml.safe_load(snap_meta)["version"]
 
     def _get_alternative_patroni_url(self, attempt: AttemptManager) -> str:
         """Get an alternative REST API URL from another member each time.
@@ -231,6 +244,7 @@ class Patroni:
             restoring_backup=backup_id is not None,
             backup_id=backup_id,
             stanza=stanza,
+            version=self.rock_postgresql_version.split(".")[0],
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 
