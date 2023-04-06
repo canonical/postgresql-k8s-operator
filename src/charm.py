@@ -405,6 +405,8 @@ class PostgresqlOperatorCharm(CharmBase):
         # Create a new config layer.
         new_layer = self._postgresql_layer()
 
+        self.unit.set_workload_version(self._patroni.rock_postgresql_version)
+
         # Defer the initialization of the workload in the replicas
         # if the cluster hasn't been bootstrap on the primary yet.
         # Otherwise, each unit will create a different cluster and
@@ -721,6 +723,7 @@ class PostgresqlOperatorCharm(CharmBase):
     def _patroni(self):
         """Returns an instance of the Patroni object."""
         return Patroni(
+            self,
             self._endpoint,
             self._endpoints,
             self.primary_endpoint,
@@ -806,7 +809,7 @@ class PostgresqlOperatorCharm(CharmBase):
                 self._postgresql_service: {
                     "override": "replace",
                     "summary": "entrypoint of the postgresql + patroni image",
-                    "command": f"/usr/bin/python3 /usr/local/bin/patroni {self._storage_path}/patroni.yml",
+                    "command": f"patroni {self._storage_path}/patroni.yml",
                     "startup": "enabled",
                     "user": WORKLOAD_OS_USER,
                     "group": WORKLOAD_OS_GROUP,

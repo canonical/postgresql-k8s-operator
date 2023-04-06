@@ -6,6 +6,7 @@ bootstrap:
       use_pg_rewind: true
       remove_data_directory_on_rewind_failure: true
       remove_data_directory_on_diverged_timelines: true
+      bin_dir: /usr/lib/postgresql/{{ version }}/bin
       parameters:
         synchronous_commit: on
         synchronous_standby_names: "*"
@@ -28,7 +29,6 @@ bootstrap:
   - auth-host: md5
   - auth-local: trust
   - encoding: UTF8
-  - locale: en_US.UTF-8
   - data-checksums
   {%- endif %}
   pg_hba:
@@ -55,6 +55,7 @@ pod_ip: '{{ endpoint }}'
 postgresql:
   connect_address: '{{ endpoint }}:5432'
   data_dir: {{ storage_path }}/pgdata
+  bin_dir: /usr/lib/postgresql/{{ version }}/bin
   listen: 0.0.0.0:5432
   parameters:
     {%- if enable_pgbackrest %}
