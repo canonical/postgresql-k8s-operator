@@ -97,6 +97,7 @@ class TestCharm(unittest.TestCase):
             replication_password,
         )
 
+    @patch("charm.Patroni.rock_postgresql_version", new_callable=PropertyMock)
     @patch("charm.Patroni.primary_endpoint_ready", new_callable=PropertyMock)
     @patch("charm.PostgresqlOperatorCharm.update_config")
     @patch("charm.PostgresqlOperatorCharm.postgresql")
@@ -120,7 +121,10 @@ class TestCharm(unittest.TestCase):
         _postgresql,
         ___,
         _primary_endpoint_ready,
+        _rock_postgresql_version,
     ):
+        _rock_postgresql_version.return_value = "14.7"
+
         # Mock the primary endpoint ready property values.
         _primary_endpoint_ready.side_effect = [False, True]
 
@@ -157,10 +161,13 @@ class TestCharm(unittest.TestCase):
         self.assertEqual(container.get_service(self._postgresql_service).is_running(), True)
         _push_tls_files_to_workload.assert_called_once()
 
+    @patch("charm.Patroni.rock_postgresql_version", new_callable=PropertyMock)
     @patch("charm.PostgresqlOperatorCharm._create_pgdata")
-    def test_on_postgresql_pebble_ready_no_connection(self, _):
+    def test_on_postgresql_pebble_ready_no_connection(self, _, _rock_postgresql_version):
         mock_event = MagicMock()
         mock_event.workload = self.harness.model.unit.get_container(self._postgresql_container)
+        _rock_postgresql_version.return_value = "14.7"
+
         self.charm._on_postgresql_pebble_ready(mock_event)
 
         # Event was deferred and status is still maintenance

@@ -413,6 +413,8 @@ class PostgresqlOperatorCharm(CharmBase):
         # Create a new config layer.
         new_layer = self._postgresql_layer()
 
+        self.unit.set_workload_version(self._patroni.rock_postgresql_version)
+
         # Defer the initialization of the workload in the replicas
         # if the cluster hasn't been bootstrap on the primary yet.
         # Otherwise, each unit will create a different cluster and
