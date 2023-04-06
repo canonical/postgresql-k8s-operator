@@ -13,5 +13,6 @@ parts:
       - libssl-dev
       - rustc
       - cargo
+      - pkg-config
     charm-binary-python-packages:
-      - psycopg2-binary==2.9.5  # renovate
+      - psycopg2-binary==2.9.6  # renovate
