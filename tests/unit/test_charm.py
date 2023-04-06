@@ -423,7 +423,7 @@ class TestCharm(unittest.TestCase):
                 self._postgresql_service: {
                     "override": "replace",
                     "summary": "entrypoint of the postgresql + patroni image",
-                    "command": "/usr/bin/python3 /usr/local/bin/patroni /var/lib/postgresql/data/patroni.yml",
+                    "command": "patroni /var/lib/postgresql/data/patroni.yml",
                     "startup": "enabled",
                     "user": "postgres",
                     "group": "postgres",
