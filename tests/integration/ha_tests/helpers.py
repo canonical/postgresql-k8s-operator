@@ -1,6 +1,9 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 import os
+import string
+import subprocess
+import tempfile
 from pathlib import Path
 from tempfile import mkstemp
 from typing import Dict, Optional
@@ -130,6 +133,43 @@ async def count_writes(ops_test: OpsTest, down_unit: str = None) -> int:
     return count
 
 
+def deploy_chaos_mesh(namespace: str) -> None:
+    """Deploy chaos mesh to the provided namespace.
+
+    Args:
+        namespace: The namespace to deploy chaos mesh to
+    """
+    env = os.environ
+    env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
+
+    subprocess.check_output(
+        " ".join(
+            [
+                "tests/integration/ha_tests/scripts/deploy_chaos_mesh.sh",
+                namespace,
+            ]
+        ),
+        shell=True,
+        env=env,
+    )
+
+
+def destroy_chaos_mesh(namespace: str) -> None:
+    """Remove chaos mesh from the provided namespace.
+
+    Args:
+        namespace: The namespace to deploy chaos mesh to
+    """
+    env = os.environ
+    env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
+
+    subprocess.check_output(
+        f"tests/integration/ha_tests/scripts/destroy_chaos_mesh.sh {namespace}",
+        shell=True,
+        env=env,
+    )
+
+
 async def fetch_cluster_members(ops_test: OpsTest):
     """Fetches the IPs listed by Patroni as cluster members.
 
@@ -209,6 +249,28 @@ async def is_replica(ops_test: OpsTest, unit_name: str) -> bool:
         return False
 
 
+def isolate_instance_from_cluster(ops_test: OpsTest, unit_name: str) -> None:
+    """Apply a NetworkChaos file to use chaos-mesh to simulate a network cut."""
+    with tempfile.NamedTemporaryFile() as temp_file:
+        with open(
+            "tests/integration/ha_tests/manifests/chaos_network_loss.yml", "r"
+        ) as chaos_network_loss_file:
+            template = string.Template(chaos_network_loss_file.read())
+            chaos_network_loss = template.substitute(
+                namespace=ops_test.model.info.name,
+                pod=unit_name.replace("/", "-"),
+            )
+
+            temp_file.write(str.encode(chaos_network_loss))
+            temp_file.flush()
+
+        env = os.environ
+        env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
+        subprocess.check_output(
+            " ".join(["kubectl", "apply", "-f", temp_file.name]), shell=True, env=env
+        )
+
+
 async def postgresql_ready(ops_test, unit_name: str) -> bool:
     """Verifies a PostgreSQL instance is running and available."""
     unit_ip = await get_unit_address(ops_test, unit_name)
@@ -221,6 +283,17 @@ async def postgresql_ready(ops_test, unit_name: str) -> bool:
         return False
 
     return True
+
+
+def remove_instance_isolation(ops_test: OpsTest) -> None:
+    """Delete the NetworkChaos that is isolating the primary unit of the cluster."""
+    env = os.environ
+    env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
+    subprocess.check_output(
+        f"kubectl -n {ops_test.model.info.name} delete networkchaos network-loss-primary",
+        shell=True,
+        env=env,
+    )
 
 
 async def secondary_up_to_date(ops_test: OpsTest, unit_name: str, expected_writes: int) -> bool:

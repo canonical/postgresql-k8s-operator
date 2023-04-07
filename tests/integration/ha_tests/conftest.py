@@ -11,12 +11,24 @@ from tests.integration.ha_tests.helpers import (
     ORIGINAL_RESTART_CONDITION,
     RESTART_CONDITION,
     change_master_start_timeout,
+    deploy_chaos_mesh,
+    destroy_chaos_mesh,
     get_master_start_timeout,
     update_restart_condition,
 )
 from tests.integration.helpers import app_name
 
 APPLICATION_NAME = "application"
+
+
+@pytest.fixture()
+async def chaos_mesh(ops_test: OpsTest) -> None:
+    """Deploys chaos mesh to the namespace and uninstalls it at the end."""
+    deploy_chaos_mesh(ops_test.model.info.name)
+
+    yield
+
+    destroy_chaos_mesh(ops_test.model.info.name)
 
 
 @pytest.fixture()
