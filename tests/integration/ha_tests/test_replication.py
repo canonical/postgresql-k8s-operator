@@ -4,14 +4,23 @@
 
 import pytest
 from pytest_operator.plugin import OpsTest
+from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from tests.integration.ha_tests.conftest import APPLICATION_NAME
-from tests.integration.ha_tests.helpers import METADATA
+from tests.integration.ha_tests.helpers import (
+    METADATA,
+    check_writes,
+    fetch_cluster_members,
+    secondary_up_to_date,
+    start_continuous_writes,
+)
 from tests.integration.helpers import (
     CHARM_SERIES,
     app_name,
     build_and_deploy,
     get_primary,
+    get_unit_address,
+    scale_application,
 )
 
 APP_NAME = METADATA["name"]
@@ -47,18 +56,44 @@ async def test_reelection(ops_test: OpsTest, continuous_writes) -> None:
     """Kill primary unit, check reelection."""
     app = await app_name(ops_test)
     if len(ops_test.model.applications[app].units) < 2:
-        await ops_test.model.applications[app].add_unit(count=1)
-        await ops_test.model.wait_for_idle(apps=[app], status="active", timeout=1000)
+        await scale_application(ops_test, app, 2)
+
+    # Start an application that continuously writes data to the database.
+    await start_continuous_writes(ops_test, app)
 
     primary_name = await get_primary(ops_test)
     await ops_test.model.applications[app].remove_unit(primary_name)
 
-    new_primary_name = await get_primary(ops_test, down_unit=primary_name)
-    assert new_primary_name != primary_name, "primary reelection haven't happened"
+    # Verify that a new primary gets elected (ie old primary is secondary).
+    for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
+        with attempt:
+            new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
+            assert new_primary_name != primary_name, "primary reelection haven't happened"
+
+    # Verify that all units are part of the same cluster.
+    member_ips = await fetch_cluster_members(ops_test)
+    ip_addresses = [
+        await get_unit_address(ops_test, unit.name)
+        for unit in ops_test.model.applications[app].units
+    ]
+    assert set(member_ips) == set(ip_addresses), "not all units are part of the same cluster."
+
+    # Verify that no writes to the database were missed after stopping the writes.
+    total_expected_writes = await check_writes(ops_test)
+
+    # Verify that replica is up-to-date.
+    for unit in ops_test.model.applications[app].units:
+        if unit.name != new_primary_name:
+            assert await secondary_up_to_date(
+                ops_test, unit.name, total_expected_writes
+            ), "secondary not up to date with the cluster after restarting."
 
 
 async def test_consistency(ops_test: OpsTest, continuous_writes) -> None:
     """Write to primary, read data from secondaries (check consistency)."""
+    app = await app_name(ops_test)
+    if len(ops_test.model.applications[app].units) < 2:
+        await scale_application(ops_test, app, 2)
 
 
 async def test_no_data_replicated_between_clusters(ops_test: OpsTest, continuous_writes) -> None:
