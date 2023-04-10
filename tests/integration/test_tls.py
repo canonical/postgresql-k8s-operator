@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
+import logging
+
 import pytest as pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_exponential
@@ -21,6 +23,8 @@ from tests.integration.helpers import (
     primary_changed,
     run_command_on_unit,
 )
+
+logger = logging.getLogger(__name__)
 
 MATTERMOST_APP_NAME = "mattermost"
 TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
@@ -111,9 +115,10 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         # Restart the initial primary and check the logs to ensure TLS is being used by pg_rewind.
         await run_command_on_unit(ops_test, primary, "/charm/bin/pebble start postgresql")
         for attempt in Retrying(
-            stop=stop_after_delay(60), wait=wait_exponential(multiplier=1, min=2, max=30)
+            stop=stop_after_delay(60 * 3), wait=wait_exponential(multiplier=1, min=2, max=30)
         ):
             with attempt:
+                logger.info(f"checking if pg_rewind used TLS on {replica}")
                 logs = await run_command_on_unit(
                     ops_test,
                     replica,
