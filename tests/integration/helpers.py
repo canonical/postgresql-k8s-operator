@@ -588,7 +588,7 @@ async def primary_changed(ops_test: OpsTest, old_primary: str) -> bool:
     """
     application = old_primary.split("/")[0]
     primary = await get_primary(ops_test, application, down_unit=old_primary)
-    return primary != old_primary
+    return primary != old_primary and primary != "None"
 
 
 async def restart_patroni(ops_test: OpsTest, unit_name: str) -> None:

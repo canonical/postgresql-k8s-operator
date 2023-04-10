@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
+import logging
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -26,8 +27,10 @@ from tests.integration.helpers import (
     get_unit_address,
 )
 
+logger = logging.getLogger(__name__)
+
 APP_NAME = METADATA["name"]
-PATRONI_PROCESS = "/usr/local/bin/patroni"
+PATRONI_PROCESS = "/usr/bin/patroni"
 POSTGRESQL_PROCESS = "postgres"
 DB_PROCESSES = [POSTGRESQL_PROCESS, PATRONI_PROCESS]
 
@@ -84,9 +87,21 @@ async def test_freeze_db_process(ops_test: OpsTest, process: str, continuous_wri
                     assert new_primary_name != primary_name
         finally:
             # Un-freeze the old primary.
+            for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
+                with attempt:
+                    use_ssh = (attempt.retry_state.attempt_number % 2) == 0
+                    logger.info(f"unfreezing {process}")
+                    await send_signal_to_process(
+                        ops_test, primary_name, process, "SIGCONT", use_ssh
+                    )
             if process != PATRONI_PROCESS:
-                await send_signal_to_process(ops_test, primary_name, PATRONI_PROCESS, "SIGCONT")
-            await send_signal_to_process(ops_test, primary_name, process, "SIGCONT")
+                for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
+                    with attempt:
+                        use_ssh = (attempt.retry_state.attempt_number % 2) == 0
+                        logger.info(f"unfreezing {PATRONI_PROCESS}")
+                        await send_signal_to_process(
+                            ops_test, primary_name, PATRONI_PROCESS, "SIGCONT", use_ssh
+                        )
 
         # Verify that the database service got restarted and is ready in the old primary.
         assert await postgresql_ready(ops_test, primary_name)

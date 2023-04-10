@@ -1,5 +1,6 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
+import asyncio
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -226,7 +227,7 @@ async def secondary_up_to_date(ops_test: OpsTest, unit_name: str, expected_write
 
 
 async def send_signal_to_process(
-    ops_test: OpsTest, unit_name: str, process: str, signal: str
+    ops_test: OpsTest, unit_name: str, process: str, signal: str, use_ssh: bool = False
 ) -> None:
     """Send a signal to an OS process on a specific unit.
 
@@ -246,12 +247,24 @@ async def send_signal_to_process(
         await ops_test.model.applications[app].add_unit(count=1)
         await ops_test.model.wait_for_idle(apps=[app], status="active", timeout=1000)
 
+    pod_name = unit_name.replace("/", "-")
+    command = f"pkill --signal {signal} -f {process}"
+
+    if use_ssh:
+        kill_cmd = f"ssh {unit_name} {command}"
+        return_code, _, _ = await asyncio.wait_for(ops_test.juju(*kill_cmd.split()), 10)
+        if return_code != 0:
+            raise ProcessError(
+                "Expected command %s to succeed instead it failed: %s",
+                command,
+                return_code,
+            )
+        return
+
     # Load Kubernetes configuration to connect to the cluster.
     config.load_kube_config()
 
     # Send the signal.
-    pod_name = unit_name.replace("/", "-")
-    command = f"pkill --signal {signal} -f {process}"
     response = stream(
         core_v1_api.CoreV1Api().connect_get_namespaced_pod_exec,
         pod_name,
