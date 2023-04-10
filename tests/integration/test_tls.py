@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
+import logging
+
 import pytest as pytest
+import requests
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_exponential
 
@@ -21,6 +24,8 @@ from tests.integration.helpers import (
     primary_changed,
     run_command_on_unit,
 )
+
+logger = logging.getLogger(__name__)
 
 MATTERMOST_APP_NAME = "mattermost"
 TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
@@ -57,13 +62,15 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
 
         # Test TLS being used by pg_rewind. To accomplish that, get the primary unit
         # and a replica that will be promoted to primary (this should trigger a rewind
-        # operation when the old primary is started again).
+        # operation when the old primary is started again). 'verify=False' is used here
+        # because the unit IP that is used in the test doesn't match the certificate
+        # hostname (that is a k8s hostname).
         primary = await get_primary(ops_test)
-        replica = [
-            unit.name
-            for unit in ops_test.model.applications[DATABASE_APP_NAME].units
-            if unit.name != primary
-        ][0]
+        primary_address = await get_unit_address(ops_test, primary)
+        cluster_info = requests.get(f"https://{primary_address}:8008/cluster", verify=False)
+        for member in cluster_info.json()["members"]:
+            if member["role"] == "replica":
+                replica = "/".join(member["name"].rsplit("-", 1))
 
         # Enable additional logs on the PostgreSQL instance to check TLS
         # being used in a later step.
@@ -103,19 +110,24 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         connection.close()
 
         # Stop the initial primary.
+        logger.info(f"stopping database on {primary}")
         await run_command_on_unit(ops_test, primary, "/charm/bin/pebble stop postgresql")
 
         # Check that the primary changed.
         assert await primary_changed(ops_test, primary), "primary not changed"
 
         # Restart the initial primary and check the logs to ensure TLS is being used by pg_rewind.
+        logger.info(f"starting database on {primary}")
         await run_command_on_unit(ops_test, primary, "/charm/bin/pebble start postgresql")
         for attempt in Retrying(
             stop=stop_after_delay(60 * 3), wait=wait_exponential(multiplier=1, min=2, max=30)
         ):
             with attempt:
+                logger.info(f"checking if pg_rewind used TLS on {replica}")
                 logs = await run_command_on_unit(
-                    ops_test, replica, "cat /var/log/postgresql/postgresql.log"
+                    ops_test,
+                    replica,
+                    'bash -c "cat /var/log/postgresql/postgresql.log | grep rewind"',
                 )
                 assert (
                     "connection authorized: user=rewind database=postgres SSL enabled" in logs
