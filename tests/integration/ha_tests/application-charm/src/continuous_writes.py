@@ -17,10 +17,6 @@ def sigterm_handler(_signo, _stack_frame):
     run = False
 
 
-def sighup_handler(_signo, _stack_frame):
-    read_config_file()
-
-
 def read_config_file():
     with open("/tmp/continuous_writes_config") as fd:
         global connection_string
@@ -76,5 +72,4 @@ def main():
 
 if __name__ == "__main__":
     signal.signal(signal.SIGTERM, sigterm_handler)
-    signal.signal(signal.SIGHUP, sighup_handler)
     main()

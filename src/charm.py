@@ -210,9 +210,6 @@ class PostgresqlOperatorCharm(CharmBase):
         self.postgresql_client_relation.update_read_only_endpoint()
         self._remove_from_endpoints(endpoints_to_remove)
 
-        # Update the replication configuration.
-        self._patroni.reload_patroni_configuration()
-
     def _on_peer_relation_changed(self, event: RelationChangedEvent) -> None:
         """Reconfigure cluster members."""
         # The cluster must be initialized first in the leader unit
@@ -376,12 +373,6 @@ class PostgresqlOperatorCharm(CharmBase):
         self._remove_from_endpoints(self._get_endpoints_to_remove())
 
         self._add_members(event)
-
-        # Update the replication configuration.
-        try:
-            self._patroni.reload_patroni_configuration()
-        except RetryError:
-            pass  # This error can happen in the first leader election, as Patroni is not running yet.
 
     def _create_pgdata(self, container: Container):
         """Create the PostgreSQL data directory."""
@@ -819,16 +810,21 @@ class PostgresqlOperatorCharm(CharmBase):
                     "group": WORKLOAD_OS_GROUP,
                 },
             },
-            "checks": {
-                self._postgresql_service: {
-                    "override": "replace",
-                    "level": "ready",
-                    "http": {
-                        "url": f"{self._patroni._patroni_url}/health",
-                    },
-                }
-            },
         }
+        if "tls" not in self.unit_peer_data:
+            layer_config.update(
+                {
+                    "checks": {
+                        self._postgresql_service: {
+                            "override": "replace",
+                            "level": "ready",
+                            "http": {
+                                "url": f"{self._patroni._patroni_url}/health",
+                            },
+                        }
+                    }
+                }
+            )
         return Layer(layer_config)
 
     @property

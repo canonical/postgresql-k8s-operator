@@ -54,7 +54,6 @@ class ApplicationCharm(CharmBase):
         # Events related to the database that is requested.
         self.database_name = "application"
         self.database = DatabaseRequires(self, "database", self.database_name)
-        self.framework.observe(self.database.on.endpoints_changed, self._on_endpoints_changed)
         self.framework.observe(
             self.on.clear_continuous_writes_action, self._on_clear_continuous_writes_action
         )
@@ -88,26 +87,6 @@ class ApplicationCharm(CharmBase):
     def _on_start(self, _) -> None:
         """Only sets an Active status."""
         self.unit.status = ActiveStatus()
-
-    def _on_endpoints_changed(self, _) -> None:
-        """Event triggered when the read/write endpoints of the database change."""
-        if self._connection_string is None:
-            return
-
-        if not self.app_peer_data.get(PROC_PID_KEY):
-            return None
-
-        with open(CONFIG_FILE, "w") as fd:
-            fd.write(self._connection_string)
-            os.fsync(fd)
-
-        try:
-            os.kill(int(self.app_peer_data[PROC_PID_KEY]), signal.SIGKILL)
-        except ProcessLookupError:
-            del self.app_peer_data[PROC_PID_KEY]
-            return
-        count = self._count_writes()
-        self._start_continuous_writes(count + 1)
 
     def _count_writes(self) -> int:
         """Count the number of records in the continuous_writes table."""
