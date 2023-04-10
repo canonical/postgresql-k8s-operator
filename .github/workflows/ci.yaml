@@ -84,6 +84,8 @@ jobs:
             agents-version: "2.9.29"
           - tox-environments: db-admin-relation-integration
             agents-version: "2.9.29"
+          - tox-environments: ha-replication-integration
+            agents-version: "2.9.29"
           - tox-environments: ha-self-healing-integration
             agents-version: "2.9.29"
     name: ${{ matrix.tox-environments }} | ${{ matrix.agents-version }}
