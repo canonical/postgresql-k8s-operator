@@ -832,6 +832,26 @@ class PostgresqlOperatorCharm(CharmBase):
                     "group": WORKLOAD_OS_GROUP,
                 },
             },
+            "checks": {
+                "patroni": {
+                    "override": "replace",
+                    "level": "ready",
+                    "exec": {
+                        "command": f"patronictl -c {self._storage_path}/patroni.yml list {self.cluster_name}",
+                        "user": WORKLOAD_OS_USER,
+                        "group": WORKLOAD_OS_GROUP,
+                        "environment": {
+                            "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: {self.cluster_name}}}",
+                            "PATRONI_KUBERNETES_NAMESPACE": self._namespace,
+                            "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
+                            "PATRONI_NAME": pod_name,
+                            "PATRONI_SCOPE": self.cluster_name,
+                            "PATRONI_REPLICATION_USERNAME": REPLICATION_USER,
+                            "PATRONI_SUPERUSER_USERNAME": USER,
+                        },
+                    },
+                }
+            },
         }
         return Layer(layer_config)
 
