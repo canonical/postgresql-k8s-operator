@@ -442,15 +442,6 @@ class TestCharm(unittest.TestCase):
                     "group": "postgres",
                 },
             },
-            "checks": {
-                self._postgresql_service: {
-                    "override": "replace",
-                    "level": "ready",
-                    "http": {
-                        "url": "http://postgresql-k8s-0.postgresql-k8s-endpoints:8008/health",
-                    },
-                }
-            },
         }
         self.assertDictEqual(plan, expected)
 
