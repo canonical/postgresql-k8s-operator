@@ -443,22 +443,11 @@ class TestCharm(unittest.TestCase):
                 },
             },
             "checks": {
-                "patroni": {
+                self._postgresql_service: {
                     "override": "replace",
                     "level": "ready",
-                    "exec": {
-                        "command": f"patronictl -c /var/lib/postgresql/data/patroni.yml list patroni-{self.charm._name}",
-                        "user": "postgres",
-                        "group": "postgres",
-                        "environment": {
-                            "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: patroni-{self.charm._name}}}",
-                            "PATRONI_KUBERNETES_NAMESPACE": self.charm._namespace,
-                            "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
-                            "PATRONI_NAME": "postgresql-k8s-0",
-                            "PATRONI_SCOPE": f"patroni-{self.charm._name}",
-                            "PATRONI_REPLICATION_USERNAME": "replication",
-                            "PATRONI_SUPERUSER_USERNAME": "operator",
-                        },
+                    "http": {
+                        "url": "http://postgresql-k8s-0.postgresql-k8s-endpoints:8008/health",
                     },
                 }
             },

@@ -1,5 +1,6 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
+import asyncio
 from pathlib import Path
 from typing import Dict, Optional
 
@@ -251,9 +252,8 @@ async def send_signal_to_process(
 
     if use_ssh:
         kill_cmd = f"ssh {unit_name} {command}"
-        return_code, _, stderr = await ops_test.juju(*kill_cmd.split())
+        return_code, _, _ = await asyncio.wait_for(ops_test.juju(*kill_cmd.split()), 10)
         if return_code != 0:
-            print(stderr)
             raise ProcessError(
                 "Expected command %s to succeed instead it failed: %s",
                 command,
