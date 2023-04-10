@@ -13,7 +13,7 @@ from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQLUpdateUserPasswordError,
 )
 from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
-from charms.rolling_ops.v0.rollingops import RollingOpsManager
+from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
 from lightkube import ApiError, Client, codecs
 from lightkube.models.core_v1 import ServicePort
 from lightkube.resources.core_v1 import Endpoints, Pod, Service
@@ -402,9 +402,6 @@ class PostgresqlOperatorCharm(CharmBase):
         # where the volume is mounted with more restrictive permissions.
         self._create_pgdata(container)
 
-        # Create a new config layer.
-        new_layer = self._postgresql_layer()
-
         self.unit.set_workload_version(self._patroni.rock_postgresql_version)
 
         # Defer the initialization of the workload in the replicas
@@ -428,18 +425,8 @@ class PostgresqlOperatorCharm(CharmBase):
             event.defer()
             return
 
-        # Get the current layer.
-        current_layer = container.get_plan()
-        # Check if there are any changes to layer services.
-        if current_layer.services != new_layer.services:
-            # Changes were made, add the new layer.
-            container.add_layer(self._postgresql_service, new_layer, combine=True)
-            logging.info("Added updated layer 'postgresql' to Pebble plan")
-            # TODO: move this file generation to on config changed hook
-            # when adding configs to this charm.
-            # Restart it and report a new status to Juju.
-            container.restart(self._postgresql_service)
-            logging.info("Restarted postgresql service")
+        # Start the database service.
+        self._update_pebble_layers()
 
         # Ensure the member is up and running before marking the cluster as initialised.
         if not self._patroni.member_started:
@@ -891,8 +878,13 @@ class PostgresqlOperatorCharm(CharmBase):
 
         self.update_config()
 
-    def _restart(self, _) -> None:
+    def _restart(self, event: RunWithLock) -> None:
         """Restart PostgreSQL."""
+        if not self._patroni.are_all_members_ready():
+            logger.debug("Early exit _restart: not all members ready yet")
+            event.defer()
+            return
+
         try:
             self._patroni.restart_postgresql()
         except RetryError:
@@ -900,6 +892,9 @@ class PostgresqlOperatorCharm(CharmBase):
             logger.exception(error_message)
             self.unit.status = BlockedStatus(error_message)
             return
+
+        # Update health check URL.
+        self._update_pebble_layers()
 
         # Start or stop the pgBackRest TLS server service when TLS certificate change.
         self.backup.start_stop_pgbackrest_service()
@@ -933,6 +928,28 @@ class PostgresqlOperatorCharm(CharmBase):
         # (so the both old and new connections use the configuration).
         if restart_postgresql:
             self.on[self.restart_manager.name].acquire_lock.emit()
+
+    def _update_pebble_layers(self) -> None:
+        """Update the pebble layers to keep the health check URL up-to-date."""
+        container = self.unit.get_container("postgresql")
+
+        # Get the current layer.
+        current_layer = container.get_plan()
+
+        # Create a new config layer.
+        new_layer = self._postgresql_layer()
+
+        # Check if there are any changes to layer services.
+        if current_layer.services != new_layer.services:
+            # Changes were made, add the new layer.
+            container.add_layer(self._postgresql_service, new_layer, combine=True)
+            logging.info("Added updated layer 'postgresql' to Pebble plan")
+            container.restart(self._postgresql_service)
+            logging.info("Restarted postgresql service")
+        if current_layer.checks != new_layer.checks:
+            # Changes were made, add the new layer.
+            container.add_layer(self._postgresql_service, new_layer, combine=True)
+            logging.info("Updated health checks")
 
     def _unit_name_to_pod_name(self, unit_name: str) -> str:
         """Converts unit name to pod name.

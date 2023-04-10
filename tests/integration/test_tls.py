@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
+import logging
+
 import pytest as pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_exponential
@@ -21,6 +23,8 @@ from tests.integration.helpers import (
     primary_changed,
     run_command_on_unit,
 )
+
+logger = logging.getLogger(__name__)
 
 MATTERMOST_APP_NAME = "mattermost"
 TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
@@ -114,8 +118,11 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
             stop=stop_after_delay(60 * 3), wait=wait_exponential(multiplier=1, min=2, max=30)
         ):
             with attempt:
+                logger.info(f"checking if pg_rewind used TLS on {replica}")
                 logs = await run_command_on_unit(
-                    ops_test, replica, "cat /var/log/postgresql/postgresql.log"
+                    ops_test,
+                    replica,
+                    'bash -c "cat /var/log/postgresql/postgresql.log | grep rewind"',
                 )
                 assert (
                     "connection authorized: user=rewind database=postgres SSL enabled" in logs
