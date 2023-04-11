@@ -2,6 +2,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 import logging
+from time import sleep
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -31,8 +32,9 @@ logger = logging.getLogger(__name__)
 
 APP_NAME = METADATA["name"]
 PATRONI_PROCESS = "/usr/bin/patroni"
-POSTGRESQL_PROCESS = "postgres"
+POSTGRESQL_PROCESS = "/usr/lib/postgresql/14/bin/postgres"
 DB_PROCESSES = [POSTGRESQL_PROCESS, PATRONI_PROCESS]
+MEDIAN_ELECTION_TIME = 10
 
 
 @pytest.mark.abort_on_fail
@@ -58,8 +60,10 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
 
-@pytest.mark.parametrize("process", [POSTGRESQL_PROCESS])
-async def test_freeze_db_process(ops_test: OpsTest, process: str, continuous_writes) -> None:
+@pytest.mark.parametrize("process", [PATRONI_PROCESS])
+async def test_freeze_db_process(
+    ops_test: OpsTest, process: str, continuous_writes, primary_start_timeout
+) -> None:
     # Locate primary unit.
     app = await app_name(ops_test)
     primary_name = await get_primary(ops_test, app)
@@ -69,6 +73,9 @@ async def test_freeze_db_process(ops_test: OpsTest, process: str, continuous_wri
 
     # Freeze the database process.
     await send_signal_to_process(ops_test, primary_name, process, "SIGSTOP")
+
+    # Wait some time to elect a new primary.
+    sleep(MEDIAN_ELECTION_TIME * 2)
 
     async with ops_test.fast_forward():
         try:
@@ -123,16 +130,27 @@ async def test_freeze_db_process(ops_test: OpsTest, process: str, continuous_wri
 
 
 @pytest.mark.parametrize("process", DB_PROCESSES)
-async def test_restart_db_process(ops_test: OpsTest, process: str, continuous_writes) -> None:
+async def test_restart_db_process(
+    ops_test: OpsTest, process: str, continuous_writes, primary_start_timeout
+) -> None:
+    # Set signal based on the process
+    if process == PATRONI_PROCESS:
+        signal = "SIGTERM"
+    else:
+        signal = "SIGINT"
+
     # Locate primary unit.
     app = await app_name(ops_test)
     primary_name = await get_primary(ops_test, app)
+
+    # Wait some time to elect a new primary.
+    sleep(MEDIAN_ELECTION_TIME * 2)
 
     # Start an application that continuously writes data to the database.
     await start_continuous_writes(ops_test, app)
 
     # Restart the database process.
-    await send_signal_to_process(ops_test, primary_name, process, "SIGTERM")
+    await send_signal_to_process(ops_test, primary_name, process, signal)
 
     async with ops_test.fast_forward():
         await check_writes_are_increasing(ops_test, primary_name)
