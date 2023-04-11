@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 import asyncio
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
 import psycopg2
 import requests
@@ -64,12 +64,15 @@ async def change_master_start_timeout(ops_test: OpsTest, seconds: Optional[int])
 async def check_writes(ops_test) -> int:
     """Gets the total writes from the test charm and compares to the writes from db."""
     total_expected_writes = await stop_continuous_writes(ops_test)
-    actual_writes = await count_writes(ops_test)
+    actual_writes, max_number_written = await count_writes(ops_test)
+    assert (
+        actual_writes == max_number_written
+    ), "writes to the db were missed: count of actual writes different from the max number written."
     assert total_expected_writes == actual_writes, "writes to the db were missed."
     return total_expected_writes
 
 
-async def count_writes(ops_test: OpsTest, down_unit: str = None) -> int:
+async def count_writes(ops_test: OpsTest, down_unit: str = None) -> Tuple[int, int]:
     """Count the number of writes in the database."""
     app = await app_name(ops_test)
     password = await get_password(ops_test, database_app_name=app, down_unit=down_unit)
@@ -96,10 +99,12 @@ async def count_writes(ops_test: OpsTest, down_unit: str = None) -> int:
     )
 
     with psycopg2.connect(connection_string) as connection, connection.cursor() as cursor:
-        cursor.execute("SELECT COUNT(number) FROM continuous_writes;")
-        count = cursor.fetchone()[0]
+        cursor.execute("SELECT COUNT(number), MAX(number) FROM continuous_writes;")
+        results = cursor.fetchone()
+        count = results[0]
+        max = results[1]
     connection.close()
-    return count
+    return count, max
 
 
 async def fetch_cluster_members(ops_test: OpsTest):

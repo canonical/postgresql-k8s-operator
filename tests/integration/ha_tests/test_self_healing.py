@@ -74,10 +74,10 @@ async def test_freeze_db_process(ops_test: OpsTest, process: str, continuous_wri
         # Verify new writes are continuing by counting the number of writes before and after a
         # 3 minutes wait (a db process freeze takes more time to trigger a fail-over).
         try:
-            writes = await count_writes(ops_test, primary_name)
+            writes, _ = await count_writes(ops_test, primary_name)
             for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
                 with attempt:
-                    more_writes = await count_writes(ops_test, primary_name)
+                    more_writes, _ = await count_writes(ops_test, primary_name)
                     assert more_writes > writes, "writes not continuing to DB"
 
             # Verify that a new primary gets elected (ie old primary is secondary).
@@ -143,10 +143,10 @@ async def test_restart_db_process(ops_test: OpsTest, process: str, continuous_wr
     async with ops_test.fast_forward():
         # Verify new writes are continuing by counting the number of writes before and after a
         # 2 minutes wait (a db process freeze takes more time to trigger a fail-over).
-        writes = await count_writes(ops_test, primary_name)
+        writes, _ = await count_writes(ops_test, primary_name)
         for attempt in Retrying(stop=stop_after_delay(60 * 2), wait=wait_fixed(3)):
             with attempt:
-                more_writes = await count_writes(ops_test, primary_name)
+                more_writes, _ = await count_writes(ops_test, primary_name)
                 assert more_writes > writes, "writes not continuing to DB"
 
         # Verify that the database service got restarted and is ready in the old primary.
