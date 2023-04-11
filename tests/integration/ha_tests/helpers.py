@@ -4,7 +4,7 @@ import asyncio
 import os
 from pathlib import Path
 from tempfile import mkstemp
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 import psycopg2
 import requests
@@ -17,7 +17,12 @@ from lightkube.resources.core_v1 import Pod
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
-from tests.integration.helpers import app_name, get_password, get_unit_address
+from tests.integration.helpers import (
+    app_name,
+    get_password,
+    get_primary,
+    get_unit_address,
+)
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 PORT = 5432
@@ -65,6 +70,24 @@ async def all_db_processes_down(ops_test: OpsTest, process: str) -> bool:
 def get_patroni_cluster(unit_ip: str) -> Dict[str, str]:
     resp = requests.get(f"http://{unit_ip}:8008/cluster")
     return resp.json()
+
+
+async def change_primary_start_timeout(ops_test: OpsTest, seconds: Optional[int]) -> None:
+    """Change primary start timeout configuration.
+
+    Args:
+        ops_test: ops_test instance.
+        seconds: number of seconds to set in primary_start_timeout configuration.
+    """
+    for attempt in Retrying(stop=stop_after_delay(30 * 2), wait=wait_fixed(3)):
+        with attempt:
+            app = await app_name(ops_test)
+            primary_name = await get_primary(ops_test, app)
+            unit_ip = await get_unit_address(ops_test, primary_name)
+            requests.patch(
+                f"http://{unit_ip}:8008/config",
+                json={"primary_start_timeout": seconds},
+            )
 
 
 async def check_writes(ops_test) -> int:
@@ -156,6 +179,25 @@ async def fetch_cluster_members(ops_test: OpsTest):
         else:
             member_ips = {get_host_ip(member["host"]) for member in cluster_info.json()["members"]}
     return member_ips
+
+
+async def get_primary_start_timeout(ops_test: OpsTest) -> Optional[int]:
+    """Get the primary start timeout configuration.
+
+    Args:
+        ops_test: ops_test instance.
+
+    Returns:
+        primary start timeout in seconds or None if it's using the default value.
+    """
+    for attempt in Retrying(stop=stop_after_delay(30 * 2), wait=wait_fixed(3)):
+        with attempt:
+            app = await app_name(ops_test)
+            primary_name = await get_primary(ops_test, app)
+            unit_ip = await get_unit_address(ops_test, primary_name)
+            configuration_info = requests.get(f"http://{unit_ip}:8008/config")
+            primary_start_timeout = configuration_info.json().get("primary_start_timeout")
+            return int(primary_start_timeout) if primary_start_timeout is not None else None
 
 
 async def is_replica(ops_test: OpsTest, unit_name: str) -> bool:
