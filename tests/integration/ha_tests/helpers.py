@@ -65,14 +65,27 @@ async def check_writes(ops_test) -> int:
     """Gets the total writes from the test charm and compares to the writes from db."""
     total_expected_writes = await stop_continuous_writes(ops_test)
     actual_writes, max_number_written = await count_writes(ops_test)
-    assert (
-        actual_writes == max_number_written
-    ), "writes to the db were missed: count of actual writes different from the max number written."
-    assert total_expected_writes == actual_writes, "writes to the db were missed."
+    for member, count in actual_writes.items():
+        assert (
+            count == max_number_written[member]
+        ), f"{member}: writes to the db were missed: count of actual writes different from the max number written."
+        assert total_expected_writes == count, f"{member}: writes to the db were missed."
     return total_expected_writes
 
 
-async def count_writes(ops_test: OpsTest, down_unit: str = None) -> Tuple[int, int]:
+async def check_writes_are_increasing(ops_test, down_unit: str) -> None:
+    """Verify new writes are continuing by counting the number of writes."""
+    writes, _ = await count_writes(ops_test, down_unit=down_unit)
+    for member, count in writes.items():
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+            with attempt:
+                more_writes, _ = await count_writes(ops_test, down_unit=down_unit)
+                assert more_writes[member] > count, f"{member}: writes not continuing to DB"
+
+
+async def count_writes(
+    ops_test: OpsTest, down_unit: str = None
+) -> Tuple[Dict[str, int], Dict[str, int]]:
     """Count the number of writes in the database."""
     app = await app_name(ops_test)
     password = await get_password(ops_test, database_app_name=app, down_unit=down_unit)
@@ -81,29 +94,31 @@ async def count_writes(ops_test: OpsTest, down_unit: str = None) -> Tuple[int, i
         if unit_name != down_unit:
             cluster = get_patroni_cluster(unit["address"])
             break
+    count = {}
+    max = {}
     for member in cluster["members"]:
         if member["role"] != "replica" and member["host"].split(".")[0] != (
             down_unit or ""
         ).replace("/", "-"):
             host = member["host"]
 
-    # Translate the service hostname to an IP address.
-    model = ops_test.model.info
-    client = Client(namespace=model.name)
-    service = client.get(Pod, name=host.split(".")[0])
-    ip = service.status.podIP
+            # Translate the service hostname to an IP address.
+            model = ops_test.model.info
+            client = Client(namespace=model.name)
+            service = client.get(Pod, name=host.split(".")[0])
+            ip = service.status.podIP
 
-    connection_string = (
-        f"dbname='application' user='operator'"
-        f" host='{ip}' password='{password}' connect_timeout=10"
-    )
+            connection_string = (
+                f"dbname='application' user='operator'"
+                f" host='{ip}' password='{password}' connect_timeout=10"
+            )
 
-    with psycopg2.connect(connection_string) as connection, connection.cursor() as cursor:
-        cursor.execute("SELECT COUNT(number), MAX(number) FROM continuous_writes;")
-        results = cursor.fetchone()
-        count = results[0]
-        max = results[1]
-    connection.close()
+            with psycopg2.connect(connection_string) as connection, connection.cursor() as cursor:
+                cursor.execute("SELECT COUNT(number), MAX(number) FROM continuous_writes;")
+                results = cursor.fetchone()
+                count[member["name"]] = results[0]
+                max[member["name"]] = results[1]
+            connection.close()
     return count, max
 
 

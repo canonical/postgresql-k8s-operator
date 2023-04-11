@@ -11,7 +11,7 @@ from tests.integration.ha_tests.conftest import APPLICATION_NAME
 from tests.integration.ha_tests.helpers import (
     METADATA,
     check_writes,
-    count_writes,
+    check_writes_are_increasing,
     fetch_cluster_members,
     get_primary,
     is_replica,
@@ -71,14 +71,8 @@ async def test_freeze_db_process(ops_test: OpsTest, process: str, continuous_wri
     await send_signal_to_process(ops_test, primary_name, process, "SIGSTOP")
 
     async with ops_test.fast_forward():
-        # Verify new writes are continuing by counting the number of writes before and after a
-        # 3 minutes wait (a db process freeze takes more time to trigger a fail-over).
         try:
-            writes, _ = await count_writes(ops_test, primary_name)
-            for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
-                with attempt:
-                    more_writes, _ = await count_writes(ops_test, primary_name)
-                    assert more_writes > writes, "writes not continuing to DB"
+            await check_writes_are_increasing(ops_test, primary_name)
 
             # Verify that a new primary gets elected (ie old primary is secondary).
             for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
@@ -141,13 +135,7 @@ async def test_restart_db_process(ops_test: OpsTest, process: str, continuous_wr
     await send_signal_to_process(ops_test, primary_name, process, "SIGTERM")
 
     async with ops_test.fast_forward():
-        # Verify new writes are continuing by counting the number of writes before and after a
-        # 2 minutes wait (a db process freeze takes more time to trigger a fail-over).
-        writes, _ = await count_writes(ops_test, primary_name)
-        for attempt in Retrying(stop=stop_after_delay(60 * 2), wait=wait_fixed(3)):
-            with attempt:
-                more_writes, _ = await count_writes(ops_test, primary_name)
-                assert more_writes > writes, "writes not continuing to DB"
+        await check_writes_are_increasing(ops_test, primary_name)
 
         # Verify that the database service got restarted and is ready in the old primary.
         assert await postgresql_ready(ops_test, primary_name)
