@@ -127,7 +127,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
                 logs = await run_command_on_unit(
                     ops_test,
                     replica,
-                    'bash -c "cat /var/log/postgresql/postgresql.log | grep rewind"',
+                    "grep rewind /var/log/postgresql/postgresql.log",
                 )
                 assert (
                     "connection authorized: user=rewind database=postgres SSL enabled" in logs
