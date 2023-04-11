@@ -95,14 +95,6 @@ async def test_freeze_db_process(
                     await send_signal_to_process(
                         ops_test, primary_name, process, "SIGCONT", use_ssh
                     )
-            if process != PATRONI_PROCESS:
-                for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
-                    with attempt:
-                        use_ssh = (attempt.retry_state.attempt_number % 2) == 0
-                        logger.info(f"unfreezing {PATRONI_PROCESS}")
-                        await send_signal_to_process(
-                            ops_test, primary_name, PATRONI_PROCESS, "SIGCONT", use_ssh
-                        )
 
         # Verify that the database service got restarted and is ready in the old primary.
         assert await postgresql_ready(ops_test, primary_name)
