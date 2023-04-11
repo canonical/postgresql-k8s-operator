@@ -5,6 +5,11 @@ import pytest as pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
+from tests.integration.ha_tests.helpers import (
+    change_master_start_timeout,
+    get_master_start_timeout,
+)
+
 APPLICATION_NAME = "application"
 
 
@@ -22,3 +27,14 @@ async def continuous_writes(ops_test: OpsTest) -> None:
             )
             await action.wait()
             assert action.results["result"] == "True", "Unable to clear up continuous_writes table"
+
+
+@pytest.fixture(scope="module")
+async def master_start_timeout(ops_test: OpsTest) -> None:
+    """Temporary change the master start timeout configuration."""
+    # Change the parameter that makes the primary reelection faster.
+    initial_master_start_timeout = await get_master_start_timeout(ops_test)
+    await change_master_start_timeout(ops_test, 0)
+    yield
+    # Rollback to the initial configuration.
+    await change_master_start_timeout(ops_test, initial_master_start_timeout)
