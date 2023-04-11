@@ -13,7 +13,6 @@ from tests.integration.ha_tests.helpers import (
     check_writes,
     check_writes_are_increasing,
     fetch_cluster_members,
-    get_primary,
     is_replica,
     postgresql_ready,
     secondary_up_to_date,
@@ -24,6 +23,7 @@ from tests.integration.helpers import (
     CHARM_SERIES,
     app_name,
     build_and_deploy,
+    get_primary,
     get_unit_address,
 )
 
