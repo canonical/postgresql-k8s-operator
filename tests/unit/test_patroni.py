@@ -105,6 +105,7 @@ class TestPatroni(unittest.TestCase):
             replication_password=self.patroni._replication_password,
             rewind_user=REWIND_USER,
             rewind_password=self.patroni._rewind_password,
+            minority_count=self.patroni._members_count // 2,
             version="14",
         )
 
@@ -139,6 +140,7 @@ class TestPatroni(unittest.TestCase):
             replication_password=self.patroni._replication_password,
             rewind_user=REWIND_USER,
             rewind_password=self.patroni._rewind_password,
+            minority_count=self.patroni._members_count // 2,
             version="14",
         )
         self.assertNotEqual(expected_content_with_tls, expected_content)
@@ -163,66 +165,6 @@ class TestPatroni(unittest.TestCase):
             "ssl_cert_file: /var/lib/postgresql/data/cert.pem", expected_content_with_tls
         )
         self.assertIn("ssl_key_file: /var/lib/postgresql/data/key.pem", expected_content_with_tls)
-
-    @patch("charm.Patroni._render_file")
-    def test_render_postgresql_conf_file(self, _render_file):
-        # Get the expected content from a file.
-        with open("templates/postgresql.conf.j2") as file:
-            template = Template(file.read())
-        expected_content = template.render(
-            logging_collector="on",
-            synchronous_commit="off",
-            synchronous_standby_names="*",
-        )
-
-        # Setup a mock for the `open` method, set returned data to postgresql.conf template.
-        with open("templates/postgresql.conf.j2", "r") as f:
-            mock = mock_open(read_data=f.read())
-
-        # Patch the `open` method with our mock.
-        with patch("builtins.open", mock, create=True):
-            # Call the method
-            self.patroni.render_postgresql_conf_file()
-
-        # Check the template is opened read-only in the call to open.
-        self.assertEqual(mock.call_args_list[0][0], ("templates/postgresql.conf.j2", "r"))
-        # Ensure the correct rendered template is sent to _render_file method.
-        _render_file.assert_called_once_with(
-            f"{STORAGE_PATH}/postgresql-k8s-operator.conf",
-            expected_content,
-            0o644,
-        )
-
-        # Also test with multiple planned units (synchronous_commit is turned on).
-        self.patroni = Patroni(
-            self.charm,
-            "postgresql-k8s-0",
-            ["postgresql-k8s-0", "postgresql-k8s-1"],
-            "postgresql-k8s-primary.dev.svc.cluster.local",
-            "test-model",
-            STORAGE_PATH,
-            "superuser-password",
-            "replication-password",
-            "rewind-password",
-            False,
-        )
-        expected_content = template.render(
-            logging_collector="on",
-            synchronous_commit="on",
-            synchronous_standby_names="*",
-        )
-
-        # Patch the `open` method with our mock.
-        with patch("builtins.open", mock, create=True):
-            # Call the method
-            self.patroni.render_postgresql_conf_file()
-
-        # Ensure the correct rendered template is sent to _render_file method.
-        _render_file.assert_called_with(
-            f"{STORAGE_PATH}/postgresql-k8s-operator.conf",
-            expected_content,
-            0o644,
-        )
 
     @patch("requests.get")
     def test_primary_endpoint_ready(self, _get):
