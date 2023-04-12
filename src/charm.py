@@ -810,6 +810,15 @@ class PostgresqlOperatorCharm(CharmBase):
                     "group": WORKLOAD_OS_GROUP,
                 },
             },
+            "checks": {
+                self._postgresql_service: {
+                    "override": "replace",
+                    "level": "ready",
+                    "http": {
+                        "url": f"{self._patroni._patroni_url}/health",
+                    },
+                }
+            },
         }
         if "tls" not in self.unit_peer_data:
             layer_config.update(
@@ -862,6 +871,15 @@ class PostgresqlOperatorCharm(CharmBase):
                 user=WORKLOAD_OS_USER,
                 group=WORKLOAD_OS_GROUP,
             )
+            container.push(
+                "/usr/local/share/ca-certificates/ca.crt",
+                ca,
+                make_dirs=True,
+                permissions=0o400,
+                user=WORKLOAD_OS_USER,
+                group=WORKLOAD_OS_GROUP,
+            )
+            container.exec(["update-ca-certificates"]).wait()
         if cert is not None:
             container.push(
                 f"{self._storage_path}/{TLS_CERT_FILE}",

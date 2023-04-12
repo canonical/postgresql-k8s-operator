@@ -2,6 +2,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 import logging
+from time import sleep
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -11,7 +12,7 @@ from tests.integration.ha_tests.conftest import APPLICATION_NAME
 from tests.integration.ha_tests.helpers import (
     METADATA,
     check_writes,
-    count_writes,
+    check_writes_are_increasing,
     fetch_cluster_members,
     get_primary,
     is_replica,
@@ -31,8 +32,9 @@ logger = logging.getLogger(__name__)
 
 APP_NAME = METADATA["name"]
 PATRONI_PROCESS = "/usr/bin/patroni"
-POSTGRESQL_PROCESS = "postgres"
+POSTGRESQL_PROCESS = "/usr/lib/postgresql/14/bin/postgres"
 DB_PROCESSES = [POSTGRESQL_PROCESS, PATRONI_PROCESS]
+MEDIAN_ELECTION_TIME = 10
 
 
 @pytest.mark.abort_on_fail
@@ -58,8 +60,10 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
 
-@pytest.mark.parametrize("process", [POSTGRESQL_PROCESS])
-async def test_freeze_db_process(ops_test: OpsTest, process: str, continuous_writes) -> None:
+@pytest.mark.parametrize("process", [PATRONI_PROCESS])
+async def test_freeze_db_process(
+    ops_test: OpsTest, process: str, continuous_writes, primary_start_timeout
+) -> None:
     # Locate primary unit.
     app = await app_name(ops_test)
     primary_name = await get_primary(ops_test, app)
@@ -70,15 +74,12 @@ async def test_freeze_db_process(ops_test: OpsTest, process: str, continuous_wri
     # Freeze the database process.
     await send_signal_to_process(ops_test, primary_name, process, "SIGSTOP")
 
+    # Wait some time to elect a new primary.
+    sleep(MEDIAN_ELECTION_TIME * 2)
+
     async with ops_test.fast_forward():
-        # Verify new writes are continuing by counting the number of writes before and after a
-        # 3 minutes wait (a db process freeze takes more time to trigger a fail-over).
         try:
-            writes = await count_writes(ops_test, primary_name)
-            for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
-                with attempt:
-                    more_writes = await count_writes(ops_test, primary_name)
-                    assert more_writes > writes, "writes not continuing to DB"
+            await check_writes_are_increasing(ops_test, primary_name)
 
             # Verify that a new primary gets elected (ie old primary is secondary).
             for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
@@ -94,14 +95,6 @@ async def test_freeze_db_process(ops_test: OpsTest, process: str, continuous_wri
                     await send_signal_to_process(
                         ops_test, primary_name, process, "SIGCONT", use_ssh
                     )
-            if process != PATRONI_PROCESS:
-                for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
-                    with attempt:
-                        use_ssh = (attempt.retry_state.attempt_number % 2) == 0
-                        logger.info(f"unfreezing {PATRONI_PROCESS}")
-                        await send_signal_to_process(
-                            ops_test, primary_name, PATRONI_PROCESS, "SIGCONT", use_ssh
-                        )
 
         # Verify that the database service got restarted and is ready in the old primary.
         assert await postgresql_ready(ops_test, primary_name)
@@ -128,8 +121,15 @@ async def test_freeze_db_process(ops_test: OpsTest, process: str, continuous_wri
     ), "secondary not up to date with the cluster after restarting."
 
 
-@pytest.mark.parametrize("process", DB_PROCESSES)
-async def test_restart_db_process(ops_test: OpsTest, process: str, continuous_writes) -> None:
+async def test_restart_db_process(
+    ops_test: OpsTest, process: str, continuous_writes, primary_start_timeout
+) -> None:
+    # Set signal based on the process
+    if process == PATRONI_PROCESS:
+        signal = "SIGTERM"
+    else:
+        signal = "SIGINT"
+
     # Locate primary unit.
     app = await app_name(ops_test)
     primary_name = await get_primary(ops_test, app)
@@ -138,16 +138,13 @@ async def test_restart_db_process(ops_test: OpsTest, process: str, continuous_wr
     await start_continuous_writes(ops_test, app)
 
     # Restart the database process.
-    await send_signal_to_process(ops_test, primary_name, process, "SIGTERM")
+    await send_signal_to_process(ops_test, primary_name, process, signal)
+
+    # Wait some time to elect a new primary.
+    sleep(MEDIAN_ELECTION_TIME * 2)
 
     async with ops_test.fast_forward():
-        # Verify new writes are continuing by counting the number of writes before and after a
-        # 2 minutes wait (a db process freeze takes more time to trigger a fail-over).
-        writes = await count_writes(ops_test, primary_name)
-        for attempt in Retrying(stop=stop_after_delay(60 * 2), wait=wait_fixed(3)):
-            with attempt:
-                more_writes = await count_writes(ops_test, primary_name)
-                assert more_writes > writes, "writes not continuing to DB"
+        await check_writes_are_increasing(ops_test, primary_name)
 
         # Verify that the database service got restarted and is ready in the old primary.
         assert await postgresql_ready(ops_test, primary_name)
