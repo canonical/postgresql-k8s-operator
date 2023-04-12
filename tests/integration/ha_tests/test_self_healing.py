@@ -11,24 +11,16 @@ from tenacity import Retrying, stop_after_delay, wait_fixed
 from tests.integration.ha_tests.conftest import APPLICATION_NAME
 from tests.integration.ha_tests.helpers import (
     METADATA,
-    check_writes,
+    check_cluster_is_updated,
     check_writes_are_increasing,
-    fetch_cluster_members,
     get_primary,
-    is_replica,
     isolate_instance_from_cluster,
     postgresql_ready,
     remove_instance_isolation,
-    secondary_up_to_date,
     send_signal_to_process,
     start_continuous_writes,
 )
-from tests.integration.helpers import (
-    CHARM_SERIES,
-    app_name,
-    build_and_deploy,
-    get_unit_address,
-)
+from tests.integration.helpers import CHARM_SERIES, app_name, build_and_deploy
 
 logger = logging.getLogger(__name__)
 
@@ -89,26 +81,7 @@ async def test_kill_db_process(
     new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
     assert new_primary_name != primary_name
 
-    # Verify that the old primary is now a replica.
-    assert await is_replica(
-        ops_test, primary_name
-    ), "there are more than one primary in the cluster."
-
-    # Verify that all units are part of the same cluster.
-    member_ips = await fetch_cluster_members(ops_test)
-    ip_addresses = [
-        await get_unit_address(ops_test, unit.name)
-        for unit in ops_test.model.applications[app].units
-    ]
-    assert set(member_ips) == set(ip_addresses), "not all units are part of the same cluster."
-
-    # Verify that no writes to the database were missed after stopping the writes.
-    total_expected_writes = await check_writes(ops_test)
-
-    # Verify that old primary is up-to-date.
-    assert await secondary_up_to_date(
-        ops_test, primary_name, total_expected_writes
-    ), "secondary not up to date with the cluster after restarting."
+    await check_cluster_is_updated(ops_test, primary_name)
 
 
 @pytest.mark.parametrize("process", [PATRONI_PROCESS])
@@ -150,26 +123,7 @@ async def test_freeze_db_process(
         # Verify that the database service got restarted and is ready in the old primary.
         assert await postgresql_ready(ops_test, primary_name)
 
-    # Verify that the old primary is now a replica.
-    assert await is_replica(
-        ops_test, primary_name
-    ), "there are more than one primary in the cluster."
-
-    # Verify that all units are part of the same cluster.
-    member_ips = await fetch_cluster_members(ops_test)
-    ip_addresses = [
-        await get_unit_address(ops_test, unit.name)
-        for unit in ops_test.model.applications[app].units
-    ]
-    assert set(member_ips) == set(ip_addresses), "not all units are part of the same cluster."
-
-    # Verify that no writes to the database were missed after stopping the writes.
-    total_expected_writes = await check_writes(ops_test)
-
-    # Verify that old primary is up-to-date.
-    assert await secondary_up_to_date(
-        ops_test, primary_name, total_expected_writes
-    ), "secondary not up to date with the cluster after restarting."
+    await check_cluster_is_updated(ops_test, primary_name)
 
 
 @pytest.mark.parametrize("process", DB_PROCESSES)
@@ -199,29 +153,11 @@ async def test_restart_db_process(
     new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
     assert new_primary_name != primary_name
 
-    # Verify that the old primary is now a replica.
-    assert await is_replica(
-        ops_test, primary_name
-    ), "there are more than one primary in the cluster."
-
-    # Verify that all units are part of the same cluster.
-    member_ips = await fetch_cluster_members(ops_test)
-    ip_addresses = [
-        await get_unit_address(ops_test, unit.name)
-        for unit in ops_test.model.applications[app].units
-    ]
-    assert set(member_ips) == set(ip_addresses), "not all units are part of the same cluster."
-
-    # Verify that no writes to the database were missed after stopping the writes.
-    total_expected_writes = await check_writes(ops_test)
-
-    # Verify that old primary is up-to-date.
-    assert await secondary_up_to_date(
-        ops_test, primary_name, total_expected_writes
-    ), "secondary not up to date with the cluster after restarting."
+    await check_cluster_is_updated(ops_test, primary_name)
 
 
-async def test_network_cut(ops_test: OpsTest, continuous_writes) -> None:
+async def test_network_cut(ops_test: OpsTest, continuous_writes, chaos_mesh) -> None:
+    """Test for a network cut affecting an instance."""
     # Locate primary unit.
     app = await app_name(ops_test)
     primary_name = await get_primary(ops_test, app)
@@ -232,34 +168,20 @@ async def test_network_cut(ops_test: OpsTest, continuous_writes) -> None:
     # Create network chaos policy to isolate instance from cluster
     isolate_instance_from_cluster(ops_test, primary_name)
 
+    # Wait some time to elect a new primary.
+    sleep(MEDIAN_ELECTION_TIME * 2)
+
     units = ops_test.model.applications[app].units
-    remaining_units = [unit for unit in units if unit.name != primary_name]
+    remaining_units = [unit.name for unit in units if unit.name != primary_name]
     logger.info(f"remaining_units: {remaining_units}")
 
     # Verify that a new primary gets elected (ie old primary is secondary).
-    new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
-    assert new_primary_name != primary_name
+    for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
+        with attempt:
+            new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
+            assert new_primary_name != primary_name
 
     # Remove network chaos policy isolating instance from cluster
     remove_instance_isolation(ops_test)
 
-    # Verify that the old primary is now a replica.
-    assert await is_replica(
-        ops_test, primary_name
-    ), "there are more than one primary in the cluster."
-
-    # Verify that all units are part of the same cluster.
-    member_ips = await fetch_cluster_members(ops_test)
-    ip_addresses = [
-        await get_unit_address(ops_test, unit.name)
-        for unit in ops_test.model.applications[app].units
-    ]
-    assert set(member_ips) == set(ip_addresses), "not all units are part of the same cluster."
-
-    # Verify that no writes to the database were missed after stopping the writes.
-    total_expected_writes = await check_writes(ops_test)
-
-    # Verify that old primary is up-to-date.
-    assert await secondary_up_to_date(
-        ops_test, primary_name, total_expected_writes
-    ), "secondary not up to date with the cluster after restarting."
+    await check_cluster_is_updated(ops_test, primary_name)
