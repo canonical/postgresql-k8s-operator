@@ -13,14 +13,13 @@ from tests.integration.ha_tests.conftest import APPLICATION_NAME
 from tests.integration.ha_tests.helpers import (
     METADATA,
     all_db_processes_down,
+    check_cluster_is_updated,
     check_writes,
     check_writes_are_increasing,
     fetch_cluster_members,
     get_primary,
-    is_replica,
     modify_pebble_restart_delay,
     postgresql_ready,
-    secondary_up_to_date,
     send_signal_to_process,
     start_continuous_writes,
 )
@@ -90,26 +89,7 @@ async def test_kill_db_process(
     new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
     assert new_primary_name != primary_name
 
-    # Verify that the old primary is now a replica.
-    assert await is_replica(
-        ops_test, primary_name
-    ), "there are more than one primary in the cluster."
-
-    # Verify that all units are part of the same cluster.
-    member_ips = await fetch_cluster_members(ops_test)
-    ip_addresses = [
-        await get_unit_address(ops_test, unit.name)
-        for unit in ops_test.model.applications[app].units
-    ]
-    assert set(member_ips) == set(ip_addresses), "not all units are part of the same cluster."
-
-    # Verify that no writes to the database were missed after stopping the writes.
-    total_expected_writes = await check_writes(ops_test)
-
-    # Verify that old primary is up-to-date.
-    assert await secondary_up_to_date(
-        ops_test, primary_name, total_expected_writes
-    ), "secondary not up to date with the cluster after restarting."
+    await check_cluster_is_updated(ops_test, primary_name)
 
 
 @pytest.mark.parametrize("process", [PATRONI_PROCESS])
@@ -151,26 +131,7 @@ async def test_freeze_db_process(
         # Verify that the database service got restarted and is ready in the old primary.
         assert await postgresql_ready(ops_test, primary_name)
 
-    # Verify that the old primary is now a replica.
-    assert await is_replica(
-        ops_test, primary_name
-    ), "there are more than one primary in the cluster."
-
-    # Verify that all units are part of the same cluster.
-    member_ips = await fetch_cluster_members(ops_test)
-    ip_addresses = [
-        await get_unit_address(ops_test, unit.name)
-        for unit in ops_test.model.applications[app].units
-    ]
-    assert set(member_ips) == set(ip_addresses), "not all units are part of the same cluster."
-
-    # Verify that no writes to the database were missed after stopping the writes.
-    total_expected_writes = await check_writes(ops_test)
-
-    # Verify that old primary is up-to-date.
-    assert await secondary_up_to_date(
-        ops_test, primary_name, total_expected_writes
-    ), "secondary not up to date with the cluster after restarting."
+    await check_cluster_is_updated(ops_test, primary_name)
 
 
 @pytest.mark.parametrize("process", DB_PROCESSES)
@@ -200,26 +161,7 @@ async def test_restart_db_process(
     new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
     assert new_primary_name != primary_name
 
-    # Verify that the old primary is now a replica.
-    assert await is_replica(
-        ops_test, primary_name
-    ), "there are more than one primary in the cluster."
-
-    # Verify that all units are part of the same cluster.
-    member_ips = await fetch_cluster_members(ops_test)
-    ip_addresses = [
-        await get_unit_address(ops_test, unit.name)
-        for unit in ops_test.model.applications[app].units
-    ]
-    assert set(member_ips) == set(ip_addresses), "not all units are part of the same cluster."
-
-    # Verify that no writes to the database were missed after stopping the writes.
-    total_expected_writes = await check_writes(ops_test)
-
-    # Verify that old primary is up-to-date.
-    assert await secondary_up_to_date(
-        ops_test, primary_name, total_expected_writes
-    ), "secondary not up to date with the cluster after restarting."
+    await check_cluster_is_updated(ops_test, primary_name)
 
 
 @pytest.mark.parametrize("process", DB_PROCESSES)
