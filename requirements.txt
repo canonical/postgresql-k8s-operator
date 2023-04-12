@@ -4,12 +4,12 @@ anyio==3.6.2 ; python_full_version >= "3.8.10" and python_full_version < "4.0.0"
 attrs==22.2.0 ; python_full_version >= "3.8.10" and python_full_version < "4.0.0" \
     --hash=sha256:29e95c7f6778868dbd49170f98f8818f78f3dc5e0e37c0b1f474e3561b240836 \
     --hash=sha256:c9227bfc2f01993c03f68db37d1d15c9690188323c067c641f1a35ca58185f99
-boto3==1.26.109; python_full_version >= "3.8.10" and python_full_version < "4.0.0" \
-    --hash=sha256:a1c48674c2ff25ddced599c51d14ba7a6dbe9fd51641e8d63a6887bebd9712d7 \
-    --hash=sha256:d388cb7f54f1a3056f91ffcfb5cf18b226454204e5df7a5c10774718c3fbb166
-botocore==1.29.109; python_full_version >= "3.8.10" and python_full_version < "4.0.0" \
-    --hash=sha256:2e449525f0ccedb31fdb962a77caac48b4c486c23515b84c5989a39a1823a024 \
-    --hash=sha256:cf43dddb7e2ba5425fe19fad68b10043307b61d9103d06566f1ab6034e38b8db
+boto3==1.26.111; python_full_version >= "3.8.10" and python_full_version < "4.0.0" \
+    --hash=sha256:6cb601c4232537aca2dd216282ff4383a7277f6a150b2c8947eda0c3933d0223 \
+    --hash=sha256:db8733f0a723c4548b6565d8665b876e93f28837d8d6bae40cc03a6e597cd6a6
+botocore==1.29.111; python_full_version >= "3.8.10" and python_full_version < "4.0.0" \
+    --hash=sha256:baa6442df9b539c5c4e622bd22b47bc3594a0428f280587a359a9298e73a6e48 \
+    --hash=sha256:c3a51d80ceac0945969f94894651c4728525c7cf2df7d7838063c3516f5ee9e3
 certifi==2022.12.7 ; python_full_version >= "3.8.10" and python_version < "4" \
     --hash=sha256:35824b4c3a97115964b408844d64aa14db1cc518f6562e8d7261699d1350a9e3 \
     --hash=sha256:4ad3232f5e926d6718ec31cfc1fcadfde020920e278684144551c91769c7bc18
@@ -180,9 +180,9 @@ h11==0.14.0 ; python_full_version >= "3.8.10" and python_full_version < "4.0.0" 
 httpcore==0.16.3 ; python_full_version >= "3.8.10" and python_full_version < "4.0.0" \
     --hash=sha256:c5d6f04e2fc530f39e0c077e6a30caa53f1451096120f1f38b954afd0b17c0cb \
     --hash=sha256:da1fb708784a938aa084bde4feb8317056c55037247c787bd7e19eb2c2949dc0
-httpx==0.23.3 ; python_full_version >= "3.8.10" and python_full_version < "4.0.0" \
-    --hash=sha256:9818458eb565bb54898ccb9b8b251a28785dd4a55afbc23d0eb410754fe7d0f9 \
-    --hash=sha256:a211fcce9b1254ea24f0cd6af9869b3d29aba40154e947d2a07bb499b3e310d6
+httpx==0.24.0; python_full_version >= "3.8.10" and python_full_version < "4.0.0" \
+    --hash=sha256:447556b50c1921c351ea54b4fe79d91b724ed2b027462ab9a329465d147d5a4e \
+    --hash=sha256:507d676fc3e26110d41df7d35ebd8b3b8585052450f4097401c9be59d928c63e
 idna==3.4 ; python_full_version >= "3.8.10" and python_version < "4" \
     --hash=sha256:814f528e8dead7d329833b91c5faa87d60bf71824cd12a7530b5526063d02cb4 \
     --hash=sha256:90b77e79eaa3eba6de819a0c442c0b4ceefc341a7a2ab77d7562bf49f425c5c2
