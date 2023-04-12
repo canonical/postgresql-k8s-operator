@@ -1,11 +1,13 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 import asyncio
-import os
+import tarfile
+import tempfile
+from datetime import datetime
 from pathlib import Path
-from tempfile import mkstemp
 from typing import Dict, Optional, Tuple
 
+import kubernetes as kubernetes
 import psycopg2
 import requests
 import yaml
@@ -26,10 +28,6 @@ from tests.integration.helpers import (
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 PORT = 5432
-SERVICE_NAME = "snap.charmed-postgresql.patroni.service"
-PATRONI_SERVICE_DEFAULT_PATH = f"/etc/systemd/system/{SERVICE_NAME}"
-RESTART_CONDITION = "no"
-ORIGINAL_RESTART_CONDITION = "always"
 
 
 class MemberNotListedOnClusterError(Exception):
@@ -56,7 +54,9 @@ async def all_db_processes_down(ops_test: OpsTest, process: str) -> bool:
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
             with attempt:
                 for unit in ops_test.model.applications[app].units:
-                    _, raw_pid, _ = await ops_test.juju("ssh", unit.name, "pgrep", "-f", process)
+                    _, raw_pid, _ = await ops_test.juju(
+                        "ssh", "--container", "postgresql", unit.name, "pgrep", "-x", process
+                    )
 
                     # If something was returned, there is a running process.
                     if len(raw_pid) > 0:
@@ -110,6 +110,62 @@ async def check_writes_are_increasing(ops_test, down_unit: str = None) -> None:
             with attempt:
                 more_writes, _ = await count_writes(ops_test, down_unit=down_unit)
                 assert more_writes[member] > count, f"{member}: writes not continuing to DB"
+
+
+def copy_file_into_pod(
+    client: kubernetes.client.api.core_v1_api.CoreV1Api,
+    namespace: str,
+    pod_name: str,
+    container_name: str,
+    destination_path: str,
+    source_path: str,
+) -> None:
+    """Copy file contents into pod.
+
+    Args:
+        client: The kubernetes CoreV1Api client
+        namespace: The namespace of the pod to copy files to
+        pod_name: The name of the pod to copy files to
+        container_name: The name of the pod container to copy files to
+        destination_path: The path to which the file should be copied over
+        source_path: The path of the file which needs to be copied over
+    """
+    try:
+        exec_command = ["tar", "xvf", "-", "-C", "/"]
+
+        api_response = kubernetes.stream.stream(
+            client.connect_get_namespaced_pod_exec,
+            pod_name,
+            namespace,
+            container=container_name,
+            command=exec_command,
+            stdin=True,
+            stdout=True,
+            stderr=True,
+            tty=False,
+            _preload_content=False,
+        )
+
+        with tempfile.TemporaryFile() as tar_buffer:
+            with tarfile.open(fileobj=tar_buffer, mode="w") as tar:
+                tar.add(source_path, destination_path)
+
+            tar_buffer.seek(0)
+            commands = []
+            commands.append(tar_buffer.read())
+
+            while api_response.is_open():
+                api_response.update(timeout=1)
+
+                if commands:
+                    command = commands.pop(0)
+                    api_response.write_stdin(command.decode())
+                else:
+                    break
+
+            api_response.close()
+    except kubernetes.client.rest.ApiException:
+        assert False
 
 
 async def count_writes(
@@ -230,6 +286,76 @@ async def is_replica(ops_test: OpsTest, unit_name: str) -> bool:
         return False
 
 
+def modify_pebble_restart_delay(
+    ops_test: OpsTest,
+    unit_name: str,
+    pebble_plan_path: str,
+) -> None:
+    """Modify the pebble restart delay of the underlying process.
+
+    Args:
+        ops_test: The ops test framework
+        unit_name: The name of unit to extend the pebble restart delay for
+        pebble_plan_path: Path to the file with the modified pebble plan
+    """
+    kubernetes.config.load_kube_config()
+    client = kubernetes.client.api.core_v1_api.CoreV1Api()
+
+    pod_name = unit_name.replace("/", "-")
+    container_name = "postgresql"
+    service_name = "postgresql"
+    now = datetime.now().isoformat()
+
+    copy_file_into_pod(
+        client,
+        ops_test.model.info.name,
+        pod_name,
+        container_name,
+        f"/tmp/pebble_plan_{now}.yml",
+        pebble_plan_path,
+    )
+
+    add_to_pebble_layer_commands = (
+        f"/charm/bin/pebble add --combine {service_name} /tmp/pebble_plan_{now}.yml"
+    )
+    response = kubernetes.stream.stream(
+        client.connect_get_namespaced_pod_exec,
+        pod_name,
+        ops_test.model.info.name,
+        container=container_name,
+        command=add_to_pebble_layer_commands.split(),
+        stdin=False,
+        stdout=True,
+        stderr=True,
+        tty=False,
+        _preload_content=False,
+    )
+    response.run_forever(timeout=5)
+    assert (
+        response.returncode == 0
+    ), f"Failed to add to pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
+
+    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+        with attempt:
+            replan_pebble_layer_commands = "/charm/bin/pebble replan"
+            response = kubernetes.stream.stream(
+                client.connect_get_namespaced_pod_exec,
+                pod_name,
+                ops_test.model.info.name,
+                container=container_name,
+                command=replan_pebble_layer_commands.split(),
+                stdin=False,
+                stdout=True,
+                stderr=True,
+                tty=False,
+                _preload_content=False,
+            )
+            response.run_forever(timeout=30)
+            assert (
+                response.returncode == 0
+            ), f"Failed to replan pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
+
+
 async def postgresql_ready(ops_test, unit_name: str) -> bool:
     """Verifies a PostgreSQL instance is running and available."""
     unit_ip = await get_unit_address(ops_test, unit_name)
@@ -286,6 +412,7 @@ async def send_signal_to_process(
         process: OS process name
         signal: Signal that will be sent to the OS process
             (examples: SIGKILL, SIGTERM, SIGSTOP, SIGCONT)
+        use_ssh: whether to use juju ssh instead of kubernetes client.
 
     Returns:
         the command output if it succeeds, otherwise raises an exception.
@@ -297,7 +424,7 @@ async def send_signal_to_process(
         await ops_test.model.wait_for_idle(apps=[app], status="active", timeout=1000)
 
     pod_name = unit_name.replace("/", "-")
-    command = f"pkill --signal {signal} -f {process}"
+    command = f"pkill --signal {signal} -x {process}"
 
     if use_ssh:
         kill_cmd = f"ssh {unit_name} {command}"
@@ -374,46 +501,3 @@ async def stop_continuous_writes(ops_test: OpsTest) -> int:
     action = await ops_test.model.units.get("application/0").run_action("stop-continuous-writes")
     action = await action.wait()
     return int(action.results["writes"])
-
-
-async def update_restart_condition(ops_test: OpsTest, unit, condition: str):
-    """Updates the restart condition in the DB service file.
-
-    When the DB service fails it will now wait for `delay` number of seconds.
-    """
-    # Load the service file from the unit and update it with the new delay.
-    _, temp_path = mkstemp()
-    await unit.scp_from(source=PATRONI_SERVICE_DEFAULT_PATH, destination=temp_path)
-    with open(temp_path, "r") as patroni_service_file:
-        patroni_service = patroni_service_file.readlines()
-
-    for index, line in enumerate(patroni_service):
-        if "Restart=" in line:
-            patroni_service[index] = f"Restart={condition}\n"
-
-    with open(temp_path, "w") as service_file:
-        service_file.writelines(patroni_service)
-
-    # Upload the changed file back to the unit, we cannot scp this file directly to
-    # PATRONI_SERVICE_DEFAULT_PATH since this directory has strict permissions, instead we scp it
-    # elsewhere and then move it to PATRONI_SERVICE_DEFAULT_PATH.
-    await unit.scp_to(source=temp_path, destination="patroni.service")
-    mv_cmd = (
-        f"run --unit {unit.name} mv /home/ubuntu/patroni.service {PATRONI_SERVICE_DEFAULT_PATH}"
-    )
-    return_code, _, _ = await ops_test.juju(*mv_cmd.split())
-    if return_code != 0:
-        raise ProcessError("Command: %s failed on unit: %s.", mv_cmd, unit.name)
-
-    # Remove temporary file from machine.
-    os.remove(temp_path)
-
-    # Reload the daemon for systemd otherwise changes are not saved.
-    reload_cmd = f"run --unit {unit.name} systemctl daemon-reload"
-    return_code, _, _ = await ops_test.juju(*reload_cmd.split())
-    if return_code != 0:
-        raise ProcessError("Command: %s failed on unit: %s.", reload_cmd, unit.name)
-    start_cmd = f"run --unit {unit.name} systemctl start {SERVICE_NAME}"
-    await ops_test.juju(*start_cmd.split())
-
-    await postgresql_ready(ops_test, unit.name)
