@@ -63,7 +63,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
 
-@pytest.mark.parametrize("process", [PATRONI_PROCESS])
+@pytest.mark.parametrize("process", [POSTGRESQL_PROCESS])
 async def test_kill_db_process(
     ops_test: OpsTest, process: str, continuous_writes, primary_start_timeout
 ) -> None:
