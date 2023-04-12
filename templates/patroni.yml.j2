@@ -1,17 +1,24 @@
 bootstrap:
   dcs:
+    synchronous_mode: true
+    synchronous_node_count: {{ minority_count }}
     postgresql:
       use_pg_rewind: true
       remove_data_directory_on_rewind_failure: true
       remove_data_directory_on_diverged_timelines: true
       bin_dir: /usr/lib/postgresql/{{ version }}/bin
       parameters:
+        synchronous_commit: on
+        synchronous_standby_names: "*"
         {%- if enable_pgbackrest %}
         archive_command: 'pgbackrest --stanza={{ stanza }} archive-push %p'
         {% else %}
         archive_command: /bin/true
         {%- endif %}
         archive_mode: {{ archive_mode }}
+        log_filename: 'postgresql.log'
+        log_directory: '/var/log/postgresql'
+        logging_collector: 'on'
         password_encryption: md5
         wal_level: logical
   {%- if restoring_backup %}
@@ -50,7 +57,6 @@ ctl:
 pod_ip: '{{ endpoint }}'
 postgresql:
   connect_address: '{{ endpoint }}:5432'
-  custom_conf: {{ storage_path }}/postgresql-k8s-operator.conf
   data_dir: {{ storage_path }}/pgdata
   bin_dir: /usr/lib/postgresql/{{ version }}/bin
   listen: 0.0.0.0:5432

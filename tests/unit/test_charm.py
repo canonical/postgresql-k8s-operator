@@ -56,20 +56,10 @@ class TestCharm(unittest.TestCase):
 
         self.rel_id = self.harness.add_relation(self._peer_relation, self.charm.app.name)
 
-    @patch_network_get(private_address="1.1.1.1")
-    @patch("charm.Patroni.render_postgresql_conf_file")
-    def test_on_install(
-        self,
-        _render_postgresql_conf_file,
-    ):
-        self.charm.on.install.emit()
-        _render_postgresql_conf_file.assert_called_once()
-
     @patch("charm.Patroni.reload_patroni_configuration")
-    @patch("charm.Patroni.render_postgresql_conf_file")
     @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
     @patch("charm.PostgresqlOperatorCharm._create_resources")
-    def test_on_leader_elected(self, _, __, _render_postgresql_conf_file, ___):
+    def test_on_leader_elected(self, _, __, ___):
         # Assert that there is no password in the peer relation.
         self.assertIsNone(self.charm._peers.data[self.charm.app].get("postgres-password", None))
         self.assertIsNone(self.charm._peers.data[self.charm.app].get("replication-password", None))
@@ -83,7 +73,6 @@ class TestCharm(unittest.TestCase):
             "replication-password", None
         )
         self.assertIsNotNone(replication_password)
-        _render_postgresql_conf_file.assert_called_once()
 
         # Trigger a new leader election and check that the password is still the same.
         self.harness.set_leader(False)
@@ -154,6 +143,7 @@ class TestCharm(unittest.TestCase):
         expected = self.charm._postgresql_layer().to_dict()
         expected.pop("summary", "")
         expected.pop("description", "")
+        expected.pop("checks", "")
         # Check the plan is as expected.
         self.assertEqual(plan.to_dict(), expected)
         self.assertEqual(self.harness.model.unit.status, ActiveStatus())
@@ -416,10 +406,9 @@ class TestCharm(unittest.TestCase):
         )
 
     @patch("charm.Patroni.reload_patroni_configuration")
-    @patch("charm.Patroni.render_postgresql_conf_file")
     @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
     @patch("charm.PostgresqlOperatorCharm._create_resources")
-    def test_postgresql_layer(self, _, __, ___, ____):
+    def test_postgresql_layer(self, _, __, ___):
         # Test with the already generated password.
         self.harness.set_leader()
         plan = self.charm._postgresql_layer().to_dict()
@@ -453,13 +442,21 @@ class TestCharm(unittest.TestCase):
                     "group": "postgres",
                 },
             },
+            "checks": {
+                self._postgresql_service: {
+                    "override": "replace",
+                    "level": "ready",
+                    "http": {
+                        "url": "http://postgresql-k8s-0.postgresql-k8s-endpoints:8008/health",
+                    },
+                }
+            },
         }
         self.assertDictEqual(plan, expected)
 
     @patch("charm.Patroni.reload_patroni_configuration")
-    @patch("charm.Patroni.render_postgresql_conf_file")
     @patch("charm.PostgresqlOperatorCharm._create_resources")
-    def test_get_secret(self, _, __, ___):
+    def test_get_secret(self, _, __):
         self.harness.set_leader()
 
         # Test application scope.
@@ -477,9 +474,8 @@ class TestCharm(unittest.TestCase):
         assert self.charm.get_secret("unit", "password") == "test-password"
 
     @patch("charm.Patroni.reload_patroni_configuration")
-    @patch("charm.Patroni.render_postgresql_conf_file")
     @patch("charm.PostgresqlOperatorCharm._create_resources")
-    def test_set_secret(self, _, __, ___):
+    def test_set_secret(self, _, __):
         self.harness.set_leader()
 
         # Test application scope.
