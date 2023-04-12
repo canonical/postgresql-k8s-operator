@@ -63,7 +63,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
 
-@pytest.mark.parametrize("process", [POSTGRESQL_PROCESS])
+@pytest.mark.parametrize("process", [PATRONI_PROCESS])
 async def test_kill_db_process(
     ops_test: OpsTest, process: str, continuous_writes, primary_start_timeout
 ) -> None:
@@ -74,7 +74,7 @@ async def test_kill_db_process(
     # Start an application that continuously writes data to the database.
     await start_continuous_writes(ops_test, app)
 
-    # Restart the database process.
+    # Kill the database process.
     await send_signal_to_process(ops_test, primary_name, process, "SIGKILL")
 
     # Wait some time to elect a new primary.
