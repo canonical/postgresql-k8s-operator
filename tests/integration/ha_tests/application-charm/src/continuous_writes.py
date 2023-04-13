@@ -38,8 +38,9 @@ def continuous_writes(starting_number: int):
     # Continuously write the record to the database (incrementing it at each iteration).
     while run:
         try:
-            with psycopg2.connect(connection_string) as connection, connection.cursor() as cursor:
-                connection.autocommit = True
+            connection = psycopg2.connect(connection_string)
+            connection.autocommit = True
+            with connection.cursor() as cursor:
                 cursor.execute(f"INSERT INTO continuous_writes(number) VALUES({write_value});")
         except (
             psycopg2.InterfaceError,
