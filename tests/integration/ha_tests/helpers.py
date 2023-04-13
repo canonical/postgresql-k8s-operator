@@ -362,7 +362,7 @@ async def send_signal_to_process(
         await ops_test.model.wait_for_idle(apps=[app], status="active", timeout=1000)
 
     pod_name = unit_name.replace("/", "-")
-    command = f"pkill --signal {signal} -f {process}"
+    command = f"pkill --signal {signal} -x {process}"
 
     if use_ssh:
         kill_cmd = f"ssh {unit_name} {command}"
