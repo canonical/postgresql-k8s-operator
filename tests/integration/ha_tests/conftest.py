@@ -65,19 +65,3 @@ async def restart_policy(ops_test: OpsTest) -> None:
             )
 
     yield
-
-    for unit in ops_test.model.applications[app].units:
-        modify_pebble_restart_delay(
-            ops_test,
-            unit.name,
-            "tests/integration/ha_tests/manifests/restore_pebble_restart_delay.yml",
-        )
-
-        async with ops_test.fast_forward():
-            await ops_test.model.wait_for_idle(
-                apps=[app],
-                status="active",
-                raise_on_blocked=True,
-                timeout=5 * 60,
-                idle_period=30,
-            )

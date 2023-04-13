@@ -107,7 +107,7 @@ async def test_freeze_db_process(
     await send_signal_to_process(ops_test, primary_name, process, "SIGSTOP")
 
     # Wait some time to elect a new primary.
-    sleep(MEDIAN_ELECTION_TIME * 2)
+    sleep(MEDIAN_ELECTION_TIME * 6)
 
     async with ops_test.fast_forward():
         try:
@@ -190,8 +190,11 @@ async def test_full_cluster_restart(
     # This test serves to verify behavior when all replicas are down at the same time that when
     # they come back online they operate as expected. This check verifies that we meet the criteria
     # of all replicas being down at the same time.
-    assert await all_db_processes_down(ops_test, process), "Not all units down at the same time."
-    if process == PATRONI_PROCESS:
+    try:
+        assert await all_db_processes_down(
+            ops_test, process
+        ), "Not all units down at the same time."
+    finally:
         for unit in ops_test.model.applications[app].units:
             modify_pebble_restart_delay(
                 ops_test,
