@@ -1,7 +1,8 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
+import asyncio
 from pathlib import Path
-from typing import Dict, Optional, Set
+from typing import Dict, Optional, Set, Tuple
 
 import psycopg2
 import requests
@@ -42,12 +43,12 @@ def get_patroni_cluster(unit_ip: str) -> Dict[str, str]:
     return resp.json()
 
 
-async def change_master_start_timeout(ops_test: OpsTest, seconds: Optional[int]) -> None:
-    """Change master start timeout configuration.
+async def change_primary_start_timeout(ops_test: OpsTest, seconds: Optional[int]) -> None:
+    """Change primary start timeout configuration.
 
     Args:
         ops_test: ops_test instance.
-        seconds: number of seconds to set in master_start_timeout configuration.
+        seconds: number of seconds to set in primary_start_timeout configuration.
     """
     for attempt in Retrying(stop=stop_after_delay(30 * 2), wait=wait_fixed(3)):
         with attempt:
@@ -56,7 +57,7 @@ async def change_master_start_timeout(ops_test: OpsTest, seconds: Optional[int])
             unit_ip = await get_unit_address(ops_test, primary_name)
             requests.patch(
                 f"http://{unit_ip}:8008/config",
-                json={"master_start_timeout": seconds},
+                json={"primary_start_timeout": seconds},
             )
 
 
@@ -89,15 +90,55 @@ async def change_wal_settings(
             )
 
 
+async def check_cluster_is_updated(ops_test: OpsTest, primary_name: str) -> None:
+    # Verify that the old primary is now a replica.
+    assert await is_replica(
+        ops_test, primary_name
+    ), "there are more than one primary in the cluster."
+
+    # Verify that all units are part of the same cluster.
+    member_ips = await fetch_cluster_members(ops_test)
+    app = primary_name.split("/")[0]
+    ip_addresses = [
+        await get_unit_address(ops_test, unit.name)
+        for unit in ops_test.model.applications[app].units
+    ]
+    assert set(member_ips) == set(ip_addresses), "not all units are part of the same cluster."
+
+    # Verify that no writes to the database were missed after stopping the writes.
+    total_expected_writes = await check_writes(ops_test)
+
+    # Verify that old primary is up-to-date.
+    assert await secondary_up_to_date(
+        ops_test, primary_name, total_expected_writes
+    ), "secondary not up to date with the cluster after restarting."
+
+
 async def check_writes(ops_test) -> int:
     """Gets the total writes from the test charm and compares to the writes from db."""
     total_expected_writes = await stop_continuous_writes(ops_test)
-    actual_writes = await count_writes(ops_test)
-    assert total_expected_writes == actual_writes, "writes to the db were missed."
+    actual_writes, max_number_written = await count_writes(ops_test)
+    for member, count in actual_writes.items():
+        assert (
+            count == max_number_written[member]
+        ), f"{member}: writes to the db were missed: count of actual writes different from the max number written."
+        assert total_expected_writes == count, f"{member}: writes to the db were missed."
     return total_expected_writes
 
 
-async def count_writes(ops_test: OpsTest, down_unit: str = None) -> int:
+async def check_writes_are_increasing(ops_test, down_unit: str) -> None:
+    """Verify new writes are continuing by counting the number of writes."""
+    writes, _ = await count_writes(ops_test, down_unit=down_unit)
+    for member, count in writes.items():
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+            with attempt:
+                more_writes, _ = await count_writes(ops_test, down_unit=down_unit)
+                assert more_writes[member] > count, f"{member}: writes not continuing to DB"
+
+
+async def count_writes(
+    ops_test: OpsTest, down_unit: str = None
+) -> Tuple[Dict[str, int], Dict[str, int]]:
     """Count the number of writes in the database."""
     app = await app_name(ops_test)
     password = await get_password(ops_test, database_app_name=app, down_unit=down_unit)
@@ -106,28 +147,32 @@ async def count_writes(ops_test: OpsTest, down_unit: str = None) -> int:
         if unit_name != down_unit:
             cluster = get_patroni_cluster(unit["address"])
             break
+    count = {}
+    max = {}
     for member in cluster["members"]:
         if member["role"] != "replica" and member["host"].split(".")[0] != (
             down_unit or ""
         ).replace("/", "-"):
             host = member["host"]
 
-    # Translate the service hostname to an IP address.
-    model = ops_test.model.info
-    client = Client(namespace=model.name)
-    service = client.get(Pod, name=host.split(".")[0])
-    ip = service.status.podIP
+            # Translate the service hostname to an IP address.
+            model = ops_test.model.info
+            client = Client(namespace=model.name)
+            service = client.get(Pod, name=host.split(".")[0])
+            ip = service.status.podIP
 
-    connection_string = (
-        f"dbname='application' user='operator'"
-        f" host='{ip}' password='{password}' connect_timeout=10"
-    )
+            connection_string = (
+                f"dbname='application' user='operator'"
+                f" host='{ip}' password='{password}' connect_timeout=10"
+            )
 
-    with psycopg2.connect(connection_string) as connection, connection.cursor() as cursor:
-        cursor.execute("SELECT COUNT(number) FROM continuous_writes;")
-        count = cursor.fetchone()[0]
-    connection.close()
-    return count
+            with psycopg2.connect(connection_string) as connection, connection.cursor() as cursor:
+                cursor.execute("SELECT COUNT(number), MAX(number) FROM continuous_writes;")
+                results = cursor.fetchone()
+                count[member["name"]] = results[0]
+                max[member["name"]] = results[1]
+            connection.close()
+    return count, max
 
 
 async def fetch_cluster_members(ops_test: OpsTest):
@@ -160,14 +205,14 @@ async def fetch_cluster_members(ops_test: OpsTest):
     return member_ips
 
 
-async def get_master_start_timeout(ops_test: OpsTest) -> Optional[int]:
-    """Get the master start timeout configuration.
+async def get_primary_start_timeout(ops_test: OpsTest) -> Optional[int]:
+    """Get the primary start timeout configuration.
 
     Args:
         ops_test: ops_test instance.
 
     Returns:
-        master start timeout in seconds or None if it's using the default value.
+        primary start timeout in seconds or None if it's using the default value.
     """
     for attempt in Retrying(stop=stop_after_delay(30 * 2), wait=wait_fixed(3)):
         with attempt:
@@ -175,8 +220,8 @@ async def get_master_start_timeout(ops_test: OpsTest) -> Optional[int]:
             primary_name = await get_primary(ops_test, app)
             unit_ip = await get_unit_address(ops_test, primary_name)
             configuration_info = requests.get(f"http://{unit_ip}:8008/config")
-            master_start_timeout = configuration_info.json().get("master_start_timeout")
-            return int(master_start_timeout) if master_start_timeout is not None else None
+            primary_start_timeout = configuration_info.json().get("primary_start_timeout")
+            return int(primary_start_timeout) if primary_start_timeout is not None else None
 
 
 async def get_postgresql_parameter(ops_test: OpsTest, parameter_name: str) -> Optional[int]:
@@ -296,7 +341,7 @@ async def secondary_up_to_date(ops_test: OpsTest, unit_name: str, expected_write
 
 
 async def send_signal_to_process(
-    ops_test: OpsTest, unit_name: str, process: str, signal: str
+    ops_test: OpsTest, unit_name: str, process: str, signal: str, use_ssh: bool = False
 ) -> None:
     """Send a signal to an OS process on a specific unit.
 
@@ -316,12 +361,24 @@ async def send_signal_to_process(
         await ops_test.model.applications[app].add_unit(count=1)
         await ops_test.model.wait_for_idle(apps=[app], status="active", timeout=1000)
 
+    pod_name = unit_name.replace("/", "-")
+    command = f"pkill --signal {signal} -f {process}"
+
+    if use_ssh:
+        kill_cmd = f"ssh {unit_name} {command}"
+        return_code, _, _ = await asyncio.wait_for(ops_test.juju(*kill_cmd.split()), 10)
+        if return_code != 0:
+            raise ProcessError(
+                "Expected command %s to succeed instead it failed: %s",
+                command,
+                return_code,
+            )
+        return
+
     # Load Kubernetes configuration to connect to the cluster.
     config.load_kube_config()
 
     # Send the signal.
-    pod_name = unit_name.replace("/", "-")
-    command = f"pkill --signal {signal} -f {process}"
     response = stream(
         core_v1_api.CoreV1Api().connect_get_namespaced_pod_exec,
         pod_name,

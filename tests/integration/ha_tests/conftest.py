@@ -6,10 +6,10 @@ from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from tests.integration.ha_tests.helpers import (
-    change_master_start_timeout,
+    change_primary_start_timeout,
     change_wal_settings,
-    get_master_start_timeout,
     get_postgresql_parameter,
+    get_primary_start_timeout,
 )
 from tests.integration.helpers import app_name
 
@@ -33,14 +33,14 @@ async def continuous_writes(ops_test: OpsTest) -> None:
 
 
 @pytest.fixture(scope="module")
-async def master_start_timeout(ops_test: OpsTest) -> None:
-    """Temporary change the master start timeout configuration."""
+async def primary_start_timeout(ops_test: OpsTest) -> None:
+    """Temporary change the primary start timeout configuration."""
     # Change the parameter that makes the primary reelection faster.
-    initial_master_start_timeout = await get_master_start_timeout(ops_test)
-    await change_master_start_timeout(ops_test, 0)
+    initial_primary_start_timeout = await get_primary_start_timeout(ops_test)
+    await change_primary_start_timeout(ops_test, 0)
     yield
     # Rollback to the initial configuration.
-    await change_master_start_timeout(ops_test, initial_master_start_timeout)
+    await change_primary_start_timeout(ops_test, initial_primary_start_timeout)
 
 
 @pytest.fixture()
