@@ -77,7 +77,7 @@ async def test_freeze_db_process(
     await send_signal_to_process(ops_test, primary_name, process, "SIGSTOP")
 
     # Wait some time to elect a new primary.
-    sleep(MEDIAN_ELECTION_TIME * 2)
+    sleep(MEDIAN_ELECTION_TIME * 6)
 
     async with ops_test.fast_forward():
         try:

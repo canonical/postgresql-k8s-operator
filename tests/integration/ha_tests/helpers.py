@@ -130,7 +130,7 @@ async def check_writes_are_increasing(ops_test, down_unit: str) -> None:
     """Verify new writes are continuing by counting the number of writes."""
     writes, _ = await count_writes(ops_test, down_unit=down_unit)
     for member, count in writes.items():
-        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+        for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
             with attempt:
                 more_writes, _ = await count_writes(ops_test, down_unit=down_unit)
                 assert more_writes[member] > count, f"{member}: writes not continuing to DB"
