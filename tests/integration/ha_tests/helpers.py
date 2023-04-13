@@ -374,7 +374,7 @@ def modify_pebble_restart_delay(
                 tty=False,
                 _preload_content=False,
             )
-            response.run_forever(timeout=30)
+            response.run_forever(timeout=60)
             assert (
                 response.returncode == 0
             ), f"Failed to replan pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
