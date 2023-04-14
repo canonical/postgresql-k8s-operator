@@ -1,137 +1,97 @@
-# Charmed PostgreSQL K8s Operator
+# Charmed PostgreSQL K8s operator
 
 ## Description
 
-This repository contains a [Juju K8s Charm](https://charmhub.io/postgresql-k8s) for deploying [PostgreSQL](https://www.postgresql.org/about/) on Kubernetes.
-To deploy on virtual machines, please use [Charmed PostgreSQL Operator](https://charmhub.io/postgresql).
+This repository contains a [Juju Charm](https://charmhub.io/postgresql-k8s) for deploying [PostgreSQL](https://www.postgresql.org/about/) on Kubernetes.
 
-This operator provides a PostgreSQL database with replication enabled: one primary instance and one (or more) hot standby replicas. The Operator in this repository is a Python script which wraps PostgreSQL versions distributed by Ubuntu Jammy series and adding [Patroni](https://github.com/zalando/patroni) on top of it, providing lifecycle management and handling events (install, configure, integrate, remove, etc).
+To deploy on virtual machines, please use [Charmed PostgreSQL operator](https://charmhub.io/postgresql).
 
 ## Usage
 
-Bootstrap a Kubernetes (e.g. [Multipass-based MicroK8s](https://discourse.charmhub.io/t/charmed-environment-charm-dev-with-canonical-multipass/8886)) and create a new Juju model:
+Bootstrap a Kubernetes (e.g. [Multipass-based MicroK8s](https://discourse.charmhub.io/t/charmed-environment-charm-dev-with-canonical-multipass/8886)) and create a new model using Juju 2.9+:
 
 ```shell
-juju add-model postgresql
+juju add-model postgresql-k8s
+juju deploy postgresql-k8s --channel 14 --trust
 ```
 
-### Basic Usage
-To deploy a single unit of PostgreSQL using its default configuration.
+**Note:** the `--trust` flag is required because the charm and Patroni need to create some K8s resources.
+
+**Note:** the above model must be created on K8s environment. Use [another](https://charmhub.io/postgresql) charm for VMs!
+
+To confirm the deployment, you can run:
 
 ```shell
-juju deploy postgresql-k8s --channel edge --trust
+juju status --watch 1s
 ```
-Note: `--trust` is required because the charm and Patroni need to create some K8s resources.
 
-It is customary to use PostgreSQL with replication. Hence usually more than one unit (preferably an odd number to prohibit a "split-brain" scenario) is deployed. To deploy PostgreSQL with multiple replicas, specify the number of desired units with the `-n` option.
+Once PostgreSQL starts up, it will be running on the default port (5432).
+
+If required, you can remove the deployment completely by running:
 
 ```shell
-juju deploy postgresql-k8s --channel edge -n <number_of_units> --trust
+juju destroy-model postgresql-k8s --destroy-storage --yes
 ```
 
-To retrieve primary replica one can use the action `get-primary` on any of the units running PostgreSQL.
-```shell
-juju run-action postgresql-k8s/leader get-primary --wait
-```
+**Note:** the `--destroy-storage` will delete any data persisted by PostgreSQL.
 
-Similarly, the primary replica is displayed as a status message in `juju status`, however one
-should note that this hook gets called on regular time intervals and the primary may be outdated if
-the status hook has not been called recently.
+## Documentation
 
-### Replication
-#### Adding Replicas
+This operator provides a PostgreSQL database with replication enabled: one primary instance and one (or more) hot standby replicas. The Operator in this repository is a Python-based framework which wraps PostgreSQL distributed by Ubuntu Jammy and adding [Patroni](https://github.com/zalando/patroni) on top of it, providing lifecycle management and handling events (install, configure, integrate, remove, etc).
 
-To add more replicas one can use the `juju add-unit` functionality i.e.
-```shell
-juju add-unit postgresql-k8s -n <number_of_units>
-```
-The implementation of `add-unit` allows the operator to add more than one unit, but functions internally by adding one replica at a time, avoiding multiple replicas syncing from the primary at the same time.
+Please follow the [tutorial guide](https://discourse.charmhub.io/t/charmed-postgresql-k8s-documenation/9307) with detailed explanation how to access DB, configure cluster, change credentials and/or enable TLS.
 
-#### Removing Replicas
+## Integrations ([relations](https://juju.is/docs/olm/relations))
 
-Similarly to scale down the number of replicas the `juju remove-unit` functionality may be used i.e.
-```shell
-juju remove-unit postgresql-k8s -n <number_of_units>
-```
-The implementation of `remove-unit` allows the operator to remove more than one unit. The functionality of `remove-unit` functions by removing one replica at a time to avoid downtime.
+The charm supports modern `postgresql_client` and legacy `pgsql` interfaces (in a backward compatible mode).
 
-### Password rotation
+**Note:** do NOT relate both modern and legacy interfaces simultaneously!
 
-#### Charm users
 
-For users used internally by the Charmed PostgreSQL K8s Operator an action can be used to rotate their passwords.
-```shell
-juju run-action postgresql-k8s/leader set-password username=<username> password=<password> --wait
-```
-Note: currently, the users used by the operator are `operator` and `replication`. Those users should not be used outside the operator.
+### Modern interfaces
 
-#### Related applications users
+This charm provides modern ['postgresql_client' interface](https://github.com/canonical/charm-relation-interfaces). Applications can easily connect PostgreSQL using ['data_interfaces' library](https://charmhub.io/data-platform-libs/libraries/data_interfaces) from ['data-platform-libs'](https://github.com/canonical/data-platform-libs/).
 
-To rotate the passwords of users created for related applications the relation should be removed and the application should be related again to the Charmed PostgreSQL K8s Operator. That process will generate a new user and password for the application (removing the old user).
+#### Modern `postgresql_client` interface (`database` endpoint):
 
-## Integrations (Relations)
-
-Supported [relations](https://juju.is/docs/olm/relations):
-
-#### New `postgresql_client` interface:
-
-Current charm relies on [Data Platform libraries](https://charmhub.io/data-platform-libs). Your
-application should define an interface in `metadata.yaml`:
-
-```yaml
-requires:
-  database:
-    interface: postgresql_client
-```
-
-Please read usage documentation about
-[data_interfaces](https://charmhub.io/data-platform-libs/libraries/data_interfaces) library for
-more information about how to enable PostgreSQL interface in your application.
-
-Relations to new applications are supported via the `postgresql_client` interface. To create a
-relation:
-
-juju v2.x:
+Adding a relation is accomplished with `juju relate` (or `juju integrate` for Juju 3.x) via endpoint `database`. Example:
 
 ```shell
-juju relate postgresql-k8s application
+# Deploy Charmed PostgreSQL cluster with 3 nodes
+juju deploy postgresql-k8s -n 3 --trust --channel 14
+
+# Deploy the relevant application charms
+juju deploy mycharm
+
+# Relate PostgreSQL with your application
+juju relate postgresql-k8s:database mycharm:database
+
+# Check established relation (using postgresql_client interface):
+juju status --relations
+
+# Example of the properly established relation:
+# > Relation provider          Requirer          Interface          Type
+# > postgresql-k8s:database    mycharm:database  postgresql_client  regular
 ```
 
-juju v3.x
+### Legacy interfaces
+
+**Note:** Legacy relations are deprecated and will be discontinued on future releases. Usage should be avoided.
+
+#### Legacy `pgsql` interface (`db` and `db-admin` endpoints):
+
+This charm supports legacy interface `pgsql` from the previous [PostgreSQL charm](https://launchpad.net/postgresql-charm):
 
 ```shell
-juju integrate postgresql-k8s application
-```
-
-To remove a relation:
-```shell
-juju remove-relation postgresql-k8s application
-```
-
-#### Legacy `pgsql` interface:
-We have also added support for the two database legacy relations from the [original version](https://launchpad.net/postgresql-charm) of the charm via the `pgsql` interface. Please note that these relations will be deprecated.
-```shell
+juju deploy postgresql-k8s --trust --channel 14
+juju deploy finos-waltz-k8s --channel edge
 juju relate postgresql-k8s:db finos-waltz-k8s
-juju relate postgresql-k8s:db-admin discourse-k8s
 ```
 
-#### `tls-certificates` interface:
+**Note:** The endpoint `db-admin` provides the same legacy interface `pgsql` with PostgreSQL admin-level privileges. It is NOT recommended to use it from security point of view.
 
-The Charmed PostgreSQL K8s Operator also supports TLS encryption on internal and external
-connections. To enable TLS:
-
-```shell
-# Deploy the TLS Certificates Operator. 
-juju deploy tls-certificates-operator --channel=edge
-# Add the necessary configurations for TLS.
-juju config tls-certificates-operator generate-self-signed-certificates="true" ca-common-name="Test CA" 
-# Enable TLS via relation.
-juju relate postgresql-k8s tls-certificates-operator
-# Disable TLS by removing relation.
-juju remove-relation postgresql-k8s tls-certificates-operator
-```
-
-Note: The TLS settings shown here are for self-signed-certificates, which are not recommended for production clusters. The TLS Certificates Operator offers a variety of configurations. Read more on the TLS Certificates Operator [here](https://charmhub.io/tls-certificates-operator).
+## OCI Images
+This charm uses pinned and tested version of the [charmed-postgresql](https://github.com/canonical/charmed-postgresql-rock/pkgs/container/charmed-postgresql) ROCK image.
 
 ## Security
 Security issues in the Charmed PostgreSQL K8s Operator can be reported through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). Please do not file GitHub issues about security issues.
@@ -140,7 +100,9 @@ Security issues in the Charmed PostgreSQL K8s Operator can be reported through [
 Please see the [Juju SDK docs](https://juju.is/docs/sdk) for guidelines on enhancements to this charm following best practice guidelines, and [CONTRIBUTING.md](https://github.com/canonical/postgresql-k8s-operator/blob/main/CONTRIBUTING.md) for developer guidance.
 
 ## License
-The Charmed PostgreSQL K8s Operator [is distributed](https://github.com/canonical/postgresql-k8s-operator/blob/main/LICENSE) under the Apache Software License, version 2.0. It installs/operates/depends on [PostgreSQL](https://www.postgresql.org/ftp/source/), which [is licensed](https://www.postgresql.org/about/licence/) under PostgreSQL License, a liberal Open Source license, similar to the BSD or MIT licenses.
+The Charmed PostgreSQL K8s Operator [is distributed](https://github.com/canonical/postgresql-k8s-operator/blob/main/LICENSE) under the Apache Software License, version 2.0.
+It installs/operates/depends on [PostgreSQL](https://www.postgresql.org/ftp/source/), which [is licensed](https://www.postgresql.org/about/licence/) under PostgreSQL License, a liberal Open Source license, similar to the BSD or MIT licenses.
 
 ## Trademark Notice
-PostgreSQL is a trademark or registered trademark of PostgreSQL Global Development Group. Other trademarks are property of their respective owners.
+PostgreSQL is a trademark or registered trademark of PostgreSQL Global Development Group.
+Other trademarks are property of their respective owners.
