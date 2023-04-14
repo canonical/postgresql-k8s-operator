@@ -24,6 +24,7 @@ from tests.integration.helpers import (
     get_password,
     get_primary,
     get_unit_address,
+    run_command_on_unit,
 )
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
@@ -60,6 +61,12 @@ async def all_db_processes_down(ops_test: OpsTest, process: str) -> bool:
 
                     # If something was returned, there is a running process.
                     if len(raw_pid) > 0:
+                        processes = await run_command_on_unit(
+                            ops_test,
+                            unit.name,
+                            "ps aux",
+                        )
+                        print(f"unit name: {unit.name}\nprocesses: {processes}")
                         raise ProcessRunningError
     except RetryError:
         return False
@@ -72,12 +79,13 @@ def get_patroni_cluster(unit_ip: str) -> Dict[str, str]:
     return resp.json()
 
 
-async def change_primary_start_timeout(ops_test: OpsTest, seconds: Optional[int]) -> None:
-    """Change primary start timeout configuration.
+async def change_patroni_setting(ops_test: OpsTest, setting: str, value: int) -> None:
+    """Change the value of one of the Patroni settings.
 
     Args:
         ops_test: ops_test instance.
-        seconds: number of seconds to set in primary_start_timeout configuration.
+        setting: the name of the setting.
+        value: the value to assign to the setting.
     """
     for attempt in Retrying(stop=stop_after_delay(30 * 2), wait=wait_fixed(3)):
         with attempt:
@@ -86,7 +94,7 @@ async def change_primary_start_timeout(ops_test: OpsTest, seconds: Optional[int]
             unit_ip = await get_unit_address(ops_test, primary_name)
             requests.patch(
                 f"http://{unit_ip}:8008/config",
-                json={"primary_start_timeout": seconds},
+                json={setting: value},
             )
 
 
@@ -263,14 +271,15 @@ async def fetch_cluster_members(ops_test: OpsTest):
     return member_ips
 
 
-async def get_primary_start_timeout(ops_test: OpsTest) -> Optional[int]:
-    """Get the primary start timeout configuration.
+async def get_patroni_setting(ops_test: OpsTest, setting: str) -> Optional[int]:
+    """Get the value of one of the integer Patroni settings.
 
     Args:
         ops_test: ops_test instance.
+        setting: the name of the setting.
 
     Returns:
-        primary start timeout in seconds or None if it's using the default value.
+        the value of the configuration or None if it's using the default value.
     """
     for attempt in Retrying(stop=stop_after_delay(30 * 2), wait=wait_fixed(3)):
         with attempt:
@@ -278,7 +287,7 @@ async def get_primary_start_timeout(ops_test: OpsTest) -> Optional[int]:
             primary_name = await get_primary(ops_test, app)
             unit_ip = await get_unit_address(ops_test, primary_name)
             configuration_info = requests.get(f"http://{unit_ip}:8008/config")
-            primary_start_timeout = configuration_info.json().get("primary_start_timeout")
+            primary_start_timeout = configuration_info.json().get(setting)
             return int(primary_start_timeout) if primary_start_timeout is not None else None
 
 
@@ -381,6 +390,12 @@ def modify_pebble_restart_delay(
                 response.returncode == 0
             ), f"Failed to replan pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
 
+    # for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+    #     with attempt:
+    #         plan = await run_command_on_unit(ops_test, unit_name, "/charm/bin/pebble plan")
+    #         print(f"unit name: {unit_name}\nplan: {plan}")
+    #         assert plan
+
 
 async def postgresql_ready(ops_test, unit_name: str) -> bool:
     """Verifies a PostgreSQL instance is running and available."""
@@ -452,6 +467,18 @@ async def send_signal_to_process(
     pod_name = unit_name.replace("/", "-")
     command = f"pkill --signal {signal} -x {process}"
 
+    plan = await run_command_on_unit(
+        ops_test,
+        unit_name,
+        "/charm/bin/pebble plan",
+    )
+    services = await run_command_on_unit(
+        ops_test,
+        unit_name,
+        "/charm/bin/pebble services",
+    )
+    print(f"unit name 1: {unit_name}\nplan: {plan}\nservices: {services}")
+
     if use_ssh:
         kill_cmd = f"ssh {unit_name} {command}"
         return_code, _, _ = await asyncio.wait_for(ops_test.juju(*kill_cmd.split()), 10)
@@ -461,33 +488,68 @@ async def send_signal_to_process(
                 command,
                 return_code,
             )
+        plan = await run_command_on_unit(
+            ops_test,
+            unit_name,
+            "/charm/bin/pebble plan",
+        )
+        services = await run_command_on_unit(
+            ops_test,
+            unit_name,
+            "/charm/bin/pebble services",
+        )
+        print(f"unit name 2: {unit_name}\nplan: {plan}\nservices: {services}")
         return
 
     # Load Kubernetes configuration to connect to the cluster.
     config.load_kube_config()
 
-    # Send the signal.
-    response = stream(
-        core_v1_api.CoreV1Api().connect_get_namespaced_pod_exec,
-        pod_name,
-        ops_test.model.info.name,
-        container="postgresql",
-        command=command.split(),
-        stderr=True,
-        stdin=False,
-        stdout=True,
-        tty=False,
-        _preload_content=False,
-    )
+    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+        with attempt:
+            # Send the signal.
+            response = stream(
+                core_v1_api.CoreV1Api().connect_get_namespaced_pod_exec,
+                pod_name,
+                ops_test.model.info.name,
+                container="postgresql",
+                command=command.split(),
+                stderr=True,
+                stdin=False,
+                stdout=True,
+                tty=False,
+                _preload_content=False,
+            )
 
-    response.run_forever(timeout=10)
+            response.run_forever(timeout=10)
 
-    if response.returncode != 0:
-        raise ProcessError(
-            "Expected command %s to succeed instead it failed: %s",
-            command,
-            response.returncode,
-        )
+            if response.returncode != 0:
+                raise ProcessError(
+                    "Expected command %s to succeed instead it failed: %s",
+                    command,
+                    response.returncode,
+                )
+
+            _, raw_pid, _ = await ops_test.juju(
+                "ssh", "--container", "postgresql", unit_name, "pgrep", "-x", process
+            )
+
+            plan = await run_command_on_unit(
+                ops_test,
+                unit_name,
+                "/charm/bin/pebble plan",
+            )
+            services = await run_command_on_unit(
+                ops_test,
+                unit_name,
+                "/charm/bin/pebble services",
+            )
+            print(
+                f"attempt: {attempt.retry_state.attempt_number}\nraw_pid: {raw_pid}\nunit name 2: {unit_name}\nplan: {plan}\nservices: {services}"
+            )
+
+            # If something was returned, there is a running process.
+            if len(raw_pid) > 0:
+                raise ProcessRunningError
 
 
 async def start_continuous_writes(ops_test: OpsTest, app: str) -> None:

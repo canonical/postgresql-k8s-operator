@@ -7,8 +7,8 @@ from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from tests.integration.ha_tests.helpers import (
-    change_primary_start_timeout,
-    get_primary_start_timeout,
+    change_patroni_setting,
+    get_patroni_setting,
     modify_pebble_restart_delay,
 )
 from tests.integration.helpers import app_name
@@ -32,15 +32,26 @@ async def continuous_writes(ops_test: OpsTest) -> None:
             assert action.results["result"] == "True", "Unable to clear up continuous_writes table"
 
 
+@pytest.fixture()
+async def loop_wait(ops_test: OpsTest) -> None:
+    """Temporary change the loop wait configuration."""
+    # Change the parameter that makes Patroni wait for some more time before restarting PostgreSQL.
+    initial_loop_wait = await get_patroni_setting(ops_test, "loop_wait")
+    await change_patroni_setting(ops_test, "loop_wait", 300)
+    yield
+    # Rollback to the initial configuration.
+    await change_patroni_setting(ops_test, "loop_wait", initial_loop_wait)
+
+
 @pytest.fixture(scope="module")
 async def primary_start_timeout(ops_test: OpsTest) -> None:
     """Temporary change the primary start timeout configuration."""
     # Change the parameter that makes the primary reelection faster.
-    initial_primary_start_timeout = await get_primary_start_timeout(ops_test)
-    await change_primary_start_timeout(ops_test, 0)
+    initial_primary_start_timeout = await get_patroni_setting(ops_test, "primary_start_timeout")
+    await change_patroni_setting(ops_test, "primary_start_timeout", 0)
     yield
     # Rollback to the initial configuration.
-    await change_primary_start_timeout(ops_test, initial_primary_start_timeout)
+    await change_patroni_setting(ops_test, "primary_start_timeout", initial_primary_start_timeout)
 
 
 @pytest.fixture()
