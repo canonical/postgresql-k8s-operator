@@ -3,6 +3,7 @@
 
 """This file is meant to run in the background continuously writing entries to PostgreSQL."""
 import multiprocessing
+import os
 import signal
 import sys
 from time import sleep
@@ -45,6 +46,10 @@ def continuous_writes(starting_number: int):
             process.terminate()
         else:
             write_value = write_value + 1
+
+    with open("/tmp/last_written_value", "w") as fd:
+        fd.write(str(write_value - 1))
+        os.fsync(fd)
 
 
 def write(write_value: int) -> None:
