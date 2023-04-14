@@ -167,7 +167,7 @@ async def test_restart_db_process(
 @pytest.mark.parametrize("process", DB_PROCESSES)
 @pytest.mark.parametrize("signal", ["SIGTERM", "SIGKILL"])
 async def test_full_cluster_restart(
-    ops_test: OpsTest, process: str, signal: str, continuous_writes, restart_policy
+    ops_test: OpsTest, process: str, signal: str, continuous_writes, restart_policy, loop_wait
 ) -> None:
     """This tests checks that a cluster recovers from a full cluster restart.
 

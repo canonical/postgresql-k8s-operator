@@ -529,27 +529,28 @@ async def send_signal_to_process(
                     response.returncode,
                 )
 
-            _, raw_pid, _ = await ops_test.juju(
-                "ssh", "--container", "postgresql", unit_name, "pgrep", "-x", process
-            )
+            if signal not in ["SIGSTOP", "SIGCONT"]:
+                _, raw_pid, _ = await ops_test.juju(
+                    "ssh", "--container", "postgresql", unit_name, "pgrep", "-x", process
+                )
 
-            plan = await run_command_on_unit(
-                ops_test,
-                unit_name,
-                "/charm/bin/pebble plan",
-            )
-            services = await run_command_on_unit(
-                ops_test,
-                unit_name,
-                "/charm/bin/pebble services",
-            )
-            print(
-                f"attempt: {attempt.retry_state.attempt_number}\nraw_pid: {raw_pid}\nunit name 2: {unit_name}\nplan: {plan}\nservices: {services}"
-            )
+                plan = await run_command_on_unit(
+                    ops_test,
+                    unit_name,
+                    "/charm/bin/pebble plan",
+                )
+                services = await run_command_on_unit(
+                    ops_test,
+                    unit_name,
+                    "/charm/bin/pebble services",
+                )
+                print(
+                    f"attempt: {attempt.retry_state.attempt_number}\nraw_pid: {raw_pid}\nunit name 2: {unit_name}\nplan: {plan}\nservices: {services}"
+                )
 
-            # If something was returned, there is a running process.
-            if len(raw_pid) > 0:
-                raise ProcessRunningError
+                # If something was returned, there is a running process.
+                if len(raw_pid) > 0:
+                    raise ProcessRunningError
 
 
 async def start_continuous_writes(ops_test: OpsTest, app: str) -> None:
