@@ -122,6 +122,8 @@ async def check_writes(ops_test) -> int:
         assert (
             count == max_number_written[member]
         ), f"{member}: writes to the db were missed: count of actual writes different from the max number written."
+        print(f"total_expected_writes: {total_expected_writes}")
+        print(f"count: {count}")
         assert total_expected_writes == count, f"{member}: writes to the db were missed."
     return total_expected_writes
 
