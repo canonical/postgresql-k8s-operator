@@ -13,10 +13,12 @@ from tests.integration.ha_tests.conftest import APPLICATION_NAME
 from tests.integration.ha_tests.helpers import (
     METADATA,
     all_db_processes_down,
+    change_patroni_setting,
     check_cluster_is_updated,
     check_writes,
     check_writes_are_increasing,
     fetch_cluster_members,
+    get_patroni_setting,
     get_primary,
     modify_pebble_restart_delay,
     postgresql_ready,
@@ -179,6 +181,10 @@ async def test_full_cluster_restart(
     app = await app_name(ops_test)
     await start_continuous_writes(ops_test, app)
 
+    # Change the loop wait setting to make Patroni wait more time before restarting PostgreSQL.
+    initial_loop_wait = await get_patroni_setting(ops_test, "loop_wait")
+    await change_patroni_setting(ops_test, "loop_wait", 300)
+
     # Restart all units "simultaneously".
     await asyncio.gather(
         *[
@@ -201,6 +207,7 @@ async def test_full_cluster_restart(
                 unit.name,
                 "tests/integration/ha_tests/manifests/restore_pebble_restart_delay.yml",
             )
+        await change_patroni_setting(ops_test, "loop_wait", initial_loop_wait)
 
     # Verify all units are up and running.
     for unit in ops_test.model.applications[app].units:

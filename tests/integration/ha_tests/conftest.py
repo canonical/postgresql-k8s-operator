@@ -37,7 +37,6 @@ async def loop_wait(ops_test: OpsTest) -> None:
     """Temporary change the loop wait configuration."""
     # Change the parameter that makes Patroni wait for some more time before restarting PostgreSQL.
     initial_loop_wait = await get_patroni_setting(ops_test, "loop_wait")
-    await change_patroni_setting(ops_test, "loop_wait", 300)
     yield
     # Rollback to the initial configuration.
     await change_patroni_setting(ops_test, "loop_wait", initial_loop_wait)
