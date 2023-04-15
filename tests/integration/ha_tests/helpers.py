@@ -484,13 +484,6 @@ async def send_signal_to_process(
 
             response.run_forever(timeout=10)
 
-            if response.returncode != 0:
-                raise ProcessError(
-                    "Expected command %s to succeed instead it failed: %s",
-                    command,
-                    response.returncode,
-                )
-
             if signal not in ["SIGSTOP", "SIGCONT"]:
                 _, raw_pid, _ = await ops_test.juju(
                     "ssh", "--container", "postgresql", unit_name, "pgrep", "-x", process
@@ -499,6 +492,12 @@ async def send_signal_to_process(
                 # If something was returned, there is a running process.
                 if len(raw_pid) > 0:
                     raise ProcessRunningError
+            elif response.returncode != 0:
+                raise ProcessError(
+                    "Expected command %s to succeed instead it failed: %s",
+                    command,
+                    response.returncode,
+                )
 
 
 async def start_continuous_writes(ops_test: OpsTest, app: str) -> None:
