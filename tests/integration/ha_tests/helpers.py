@@ -5,6 +5,7 @@ import tarfile
 import tempfile
 from datetime import datetime
 from pathlib import Path
+from time import sleep
 from typing import Dict, Optional, Tuple
 
 import kubernetes as kubernetes
@@ -528,6 +529,9 @@ async def send_signal_to_process(
                     command,
                     response.returncode,
                 )
+
+            # Wait some time to finish the process.
+            sleep(10)
 
             if signal not in ["SIGSTOP", "SIGCONT"]:
                 _, raw_pid, _ = await ops_test.juju(
