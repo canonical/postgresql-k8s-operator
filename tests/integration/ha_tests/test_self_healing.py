@@ -177,13 +177,14 @@ async def test_full_cluster_restart(
     is SIGKILL.
     """
     # Locate primary unit.
-    # Start an application that continuously writes data to the database.
     app = await app_name(ops_test)
-    await start_continuous_writes(ops_test, app)
 
     # Change the loop wait setting to make Patroni wait more time before restarting PostgreSQL.
     initial_loop_wait = await get_patroni_setting(ops_test, "loop_wait")
     await change_patroni_setting(ops_test, "loop_wait", 300)
+
+    # Start an application that continuously writes data to the database.
+    await start_continuous_writes(ops_test, app)
 
     # Restart all units "simultaneously".
     await asyncio.gather(
