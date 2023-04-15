@@ -295,8 +295,7 @@ async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
         # Error raised when the connection is not possible.
         return False
     finally:
-        # connection.close()
-        pass
+        connection.close()
 
 
 async def is_replica(ops_test: OpsTest, unit_name: str) -> bool:
