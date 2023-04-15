@@ -51,10 +51,6 @@ class ProcessError(Exception):
     """Raised when a process fails."""
 
 
-class ProcessRunningError(Exception):
-    """Raised when a process is running when it is not expected to be."""
-
-
 def get_patroni_cluster(unit_ip: str) -> Dict[str, str]:
     resp = requests.get(f"http://{unit_ip}:8008/cluster")
     return resp.json()
