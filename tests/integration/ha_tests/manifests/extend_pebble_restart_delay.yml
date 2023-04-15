@@ -1,5 +1,5 @@
 services:
   postgresql:
     override: merge
-    backoff-delay: 300s
-    backoff-limit: 300s
+    backoff-delay: 150s
+    backoff-limit: 150s
