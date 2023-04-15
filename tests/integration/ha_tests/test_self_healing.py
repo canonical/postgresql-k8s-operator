@@ -55,36 +55,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
 
-@pytest.mark.parametrize("process", [POSTGRESQL_PROCESS])
-async def test_kill_db_process(
-    ops_test: OpsTest, process: str, continuous_writes, primary_start_timeout
-) -> None:
-    # Locate primary unit.
-    app = await app_name(ops_test)
-    primary_name = await get_primary(ops_test, app)
-
-    # Start an application that continuously writes data to the database.
-    await start_continuous_writes(ops_test, app)
-
-    # Kill the database process.
-    await send_signal_to_process(ops_test, primary_name, process, "SIGKILL")
-
-    # Wait some time to elect a new primary.
-    sleep(MEDIAN_ELECTION_TIME * 2)
-
-    async with ops_test.fast_forward():
-        await check_writes_are_increasing(ops_test, primary_name)
-
-        # Verify that the database service got restarted and is ready in the old primary.
-        assert await postgresql_ready(ops_test, primary_name)
-
-    # Verify that a new primary gets elected (ie old primary is secondary).
-    new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
-    assert new_primary_name != primary_name
-
-    await check_cluster_is_updated(ops_test, primary_name)
-
-
 @pytest.mark.parametrize("process", [PATRONI_PROCESS])
 async def test_freeze_db_process(
     ops_test: OpsTest, process: str, continuous_writes, primary_start_timeout

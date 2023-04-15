@@ -6,7 +6,6 @@ import string
 import subprocess
 import tempfile
 from pathlib import Path
-from tempfile import mkstemp
 from time import sleep
 from typing import Dict, Optional, Tuple
 
@@ -38,10 +37,6 @@ from tests.integration.helpers import (
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 PORT = 5432
-SERVICE_NAME = "snap.charmed-postgresql.patroni.service"
-PATRONI_SERVICE_DEFAULT_PATH = f"/etc/systemd/system/{SERVICE_NAME}"
-RESTART_CONDITION = "no"
-ORIGINAL_RESTART_CONDITION = "always"
 
 
 class MemberNotListedOnClusterError(Exception):
@@ -58,25 +53,6 @@ class ProcessError(Exception):
 
 class ProcessRunningError(Exception):
     """Raised when a process is running when it is not expected to be."""
-
-
-async def all_db_processes_down(ops_test: OpsTest, process: str) -> bool:
-    """Verifies that all units of the charm do not have the DB process running."""
-    app = await app_name(ops_test)
-
-    try:
-        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
-            with attempt:
-                for unit in ops_test.model.applications[app].units:
-                    _, raw_pid, _ = await ops_test.juju("ssh", unit.name, "pgrep", "-f", process)
-
-                    # If something was returned, there is a running process.
-                    if len(raw_pid) > 0:
-                        raise ProcessRunningError
-    except RetryError:
-        return False
-
-    return True
 
 
 def get_patroni_cluster(unit_ip: str) -> Dict[str, str]:
@@ -530,46 +506,3 @@ async def stop_continuous_writes(ops_test: OpsTest) -> int:
     action = await ops_test.model.units.get("application/0").run_action("stop-continuous-writes")
     action = await action.wait()
     return int(action.results["writes"])
-
-
-async def update_restart_condition(ops_test: OpsTest, unit, condition: str):
-    """Updates the restart condition in the DB service file.
-
-    When the DB service fails it will now wait for `delay` number of seconds.
-    """
-    # Load the service file from the unit and update it with the new delay.
-    _, temp_path = mkstemp()
-    await unit.scp_from(source=PATRONI_SERVICE_DEFAULT_PATH, destination=temp_path)
-    with open(temp_path, "r") as patroni_service_file:
-        patroni_service = patroni_service_file.readlines()
-
-    for index, line in enumerate(patroni_service):
-        if "Restart=" in line:
-            patroni_service[index] = f"Restart={condition}\n"
-
-    with open(temp_path, "w") as service_file:
-        service_file.writelines(patroni_service)
-
-    # Upload the changed file back to the unit, we cannot scp this file directly to
-    # PATRONI_SERVICE_DEFAULT_PATH since this directory has strict permissions, instead we scp it
-    # elsewhere and then move it to PATRONI_SERVICE_DEFAULT_PATH.
-    await unit.scp_to(source=temp_path, destination="patroni.service")
-    mv_cmd = (
-        f"run --unit {unit.name} mv /home/ubuntu/patroni.service {PATRONI_SERVICE_DEFAULT_PATH}"
-    )
-    return_code, _, _ = await ops_test.juju(*mv_cmd.split())
-    if return_code != 0:
-        raise ProcessError("Command: %s failed on unit: %s.", mv_cmd, unit.name)
-
-    # Remove temporary file from machine.
-    os.remove(temp_path)
-
-    # Reload the daemon for systemd otherwise changes are not saved.
-    reload_cmd = f"run --unit {unit.name} systemctl daemon-reload"
-    return_code, _, _ = await ops_test.juju(*reload_cmd.split())
-    if return_code != 0:
-        raise ProcessError("Command: %s failed on unit: %s.", reload_cmd, unit.name)
-    start_cmd = f"run --unit {unit.name} systemctl start {SERVICE_NAME}"
-    await ops_test.juju(*start_cmd.split())
-
-    await postgresql_ready(ops_test, unit.name)

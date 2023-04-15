@@ -820,20 +820,6 @@ class PostgresqlOperatorCharm(CharmBase):
                 }
             },
         }
-        if "tls" not in self.unit_peer_data:
-            layer_config.update(
-                {
-                    "checks": {
-                        self._postgresql_service: {
-                            "override": "replace",
-                            "level": "ready",
-                            "http": {
-                                "url": f"{self._patroni._patroni_url}/health",
-                            },
-                        }
-                    }
-                }
-            )
         return Layer(layer_config)
 
     @property
