@@ -10,6 +10,7 @@ from tests.integration.ha_tests.helpers import (
     deploy_chaos_mesh,
     destroy_chaos_mesh,
     get_primary_start_timeout,
+    remove_instance_isolation,
 )
 
 APPLICATION_NAME = "application"
@@ -22,6 +23,7 @@ async def chaos_mesh(ops_test: OpsTest) -> None:
 
     yield
 
+    remove_instance_isolation(ops_test)
     destroy_chaos_mesh(ops_test.model.info.name)
 
 

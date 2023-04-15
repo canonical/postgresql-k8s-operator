@@ -184,18 +184,24 @@ async def test_network_cut(
         ops_test, primary_name
     ), "Connection is possible after network cut"
 
+    logger.info("checking whether writes are increasing")
     await check_writes_are_increasing(ops_test, primary_name)
 
+    logger.info("checking whether a new primary was elected")
     async with ops_test.fast_forward():
         # Verify that a new primary gets elected (ie old primary is secondary).
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
             with attempt:
-                new_primary_name = await get_primary(ops_test, app)
+                new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
                 assert new_primary_name != primary_name
 
     # Remove network chaos policy isolating instance from cluster.
     logger.info(f"Restoring network for {primary_name}")
     remove_instance_isolation(ops_test)
+
+    # Verify that the database service got restarted and is ready in the old primary.
+    logger.info("waiting for the database service to restart")
+    assert await postgresql_ready(ops_test, primary_name)
 
     # Verify that connection is possible.
     logger.info("checking whether the connectivity to the database is working")

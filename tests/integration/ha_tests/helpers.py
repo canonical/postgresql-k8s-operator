@@ -7,6 +7,7 @@ import subprocess
 import tempfile
 from pathlib import Path
 from tempfile import mkstemp
+from time import sleep
 from typing import Dict, Optional, Tuple
 
 import psycopg2
@@ -123,6 +124,35 @@ async def check_cluster_is_updated(ops_test: OpsTest, primary_name: str) -> None
     assert await secondary_up_to_date(
         ops_test, primary_name, total_expected_writes
     ), "secondary not up to date with the cluster after restarting."
+
+
+def get_member_lag(cluster: Dict, member_name: str) -> int:
+    for member in cluster["members"]:
+        if member["name"] == member_name:
+            return member.get("lag", 0)
+    return 0
+
+
+def check_member_is_isolated(ops_test: OpsTest, unit_ip: str, isolated_member: str) -> bool:
+    """Check whether the member is isolated from the cluster."""
+    try:
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+            with attempt:
+                cluster_info = get_patroni_cluster(unit_ip)
+                lag = get_member_lag(cluster_info, isolated_member)
+                assert lag > 1000
+    except RetryError:
+        return False
+
+    for i in range(3):
+        sleep(5)
+        cluster_info = get_patroni_cluster(unit_ip)
+        new_lag = get_member_lag(cluster_info, isolated_member)
+        if new_lag <= lag:
+            return False
+        lag = new_lag
+
+    return True
 
 
 async def check_writes(ops_test) -> int:
@@ -277,7 +307,7 @@ async def get_primary_start_timeout(ops_test: OpsTest) -> Optional[int]:
 async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
     """Test a connection to a PostgreSQL server."""
     app = unit_name.split("/")[0]
-    password = await get_password(ops_test, app, unit_name)
+    password = await get_password(ops_test, database_app_name=app, down_unit=unit_name)
     address = await get_unit_address(ops_test, unit_name)
     try:
         with db_connect(
