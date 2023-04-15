@@ -25,7 +25,6 @@ from tests.integration.helpers import (
     get_password,
     get_primary,
     get_unit_address,
-    run_command_on_unit,
 )
 
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
@@ -62,12 +61,6 @@ async def all_db_processes_down(ops_test: OpsTest, process: str) -> bool:
 
                     # If something was returned, there is a running process.
                     if len(raw_pid) > 0:
-                        processes = await run_command_on_unit(
-                            ops_test,
-                            unit.name,
-                            "ps aux",
-                        )
-                        print(f"unit name: {unit.name}\nprocesses: {processes}")
                         raise ProcessRunningError
     except RetryError:
         return False
@@ -131,8 +124,6 @@ async def check_writes(ops_test) -> int:
         assert (
             count == max_number_written[member]
         ), f"{member}: writes to the db were missed: count of actual writes different from the max number written."
-        print(f"total_expected_writes: {total_expected_writes}")
-        print(f"count: {count}")
         assert total_expected_writes == count, f"{member}: writes to the db were missed."
     return total_expected_writes
 
@@ -391,12 +382,6 @@ def modify_pebble_restart_delay(
                 response.returncode == 0
             ), f"Failed to replan pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
 
-    # for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
-    #     with attempt:
-    #         plan = await run_command_on_unit(ops_test, unit_name, "/charm/bin/pebble plan")
-    #         print(f"unit name: {unit_name}\nplan: {plan}")
-    #         assert plan
-
 
 async def postgresql_ready(ops_test, unit_name: str) -> bool:
     """Verifies a PostgreSQL instance is running and available."""
@@ -468,18 +453,6 @@ async def send_signal_to_process(
     pod_name = unit_name.replace("/", "-")
     command = f"pkill --signal {signal} -x {process}"
 
-    plan = await run_command_on_unit(
-        ops_test,
-        unit_name,
-        "/charm/bin/pebble plan",
-    )
-    services = await run_command_on_unit(
-        ops_test,
-        unit_name,
-        "/charm/bin/pebble services",
-    )
-    print(f"unit name 1: {unit_name}\nplan: {plan}\nservices: {services}")
-
     if use_ssh:
         kill_cmd = f"ssh {unit_name} {command}"
         return_code, _, _ = await asyncio.wait_for(ops_test.juju(*kill_cmd.split()), 10)
@@ -489,17 +462,6 @@ async def send_signal_to_process(
                 command,
                 return_code,
             )
-        plan = await run_command_on_unit(
-            ops_test,
-            unit_name,
-            "/charm/bin/pebble plan",
-        )
-        services = await run_command_on_unit(
-            ops_test,
-            unit_name,
-            "/charm/bin/pebble services",
-        )
-        print(f"unit name 2: {unit_name}\nplan: {plan}\nservices: {services}")
         return
 
     # Load Kubernetes configuration to connect to the cluster.
@@ -536,20 +498,6 @@ async def send_signal_to_process(
             if signal not in ["SIGSTOP", "SIGCONT"]:
                 _, raw_pid, _ = await ops_test.juju(
                     "ssh", "--container", "postgresql", unit_name, "pgrep", "-x", process
-                )
-
-                plan = await run_command_on_unit(
-                    ops_test,
-                    unit_name,
-                    "/charm/bin/pebble plan",
-                )
-                services = await run_command_on_unit(
-                    ops_test,
-                    unit_name,
-                    "/charm/bin/pebble services",
-                )
-                print(
-                    f"attempt: {attempt.retry_state.attempt_number}\nraw_pid: {raw_pid}\nunit name 2: {unit_name}\nplan: {plan}\nservices: {services}"
                 )
 
                 # If something was returned, there is a running process.
