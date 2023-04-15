@@ -6,7 +6,6 @@ import string
 import subprocess
 import tempfile
 from pathlib import Path
-from time import sleep
 from typing import Dict, Optional, Tuple
 
 import psycopg2
@@ -99,14 +98,19 @@ async def check_cluster_is_updated(ops_test: OpsTest, primary_name: str) -> None
 
 
 def get_member_lag(cluster: Dict, member_name: str) -> int:
+    """Return the lag of a specific member."""
     for member in cluster["members"]:
-        if member["name"] == member_name:
+        if member["name"] == member_name.replace("/", "-"):
             return member.get("lag", 0)
     return 0
 
 
-def check_member_is_isolated(ops_test: OpsTest, unit_ip: str, isolated_member: str) -> bool:
+async def check_member_is_isolated(
+    ops_test: OpsTest, not_isolated_member: str, isolated_member: str
+) -> bool:
     """Check whether the member is isolated from the cluster."""
+    # Check if the lag is too high.
+    unit_ip = await get_unit_address(ops_test, not_isolated_member)
     try:
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
             with attempt:
@@ -115,14 +119,6 @@ def check_member_is_isolated(ops_test: OpsTest, unit_ip: str, isolated_member: s
                 assert lag > 1000
     except RetryError:
         return False
-
-    for i in range(3):
-        sleep(5)
-        cluster_info = get_patroni_cluster(unit_ip)
-        new_lag = get_member_lag(cluster_info, isolated_member)
-        if new_lag <= lag:
-            return False
-        lag = new_lag
 
     return True
 
@@ -286,12 +282,12 @@ async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
             host=address, password=password
         ) as connection, connection.cursor() as cursor:
             cursor.execute("SELECT 1;")
-            return cursor.fetchone()[0] == 1
+            success = cursor.fetchone()[0] == 1
+        connection.close()
+        return success
     except psycopg2.Error:
         # Error raised when the connection is not possible.
         return False
-    finally:
-        connection.close()
 
 
 async def is_replica(ops_test: OpsTest, unit_name: str) -> bool:

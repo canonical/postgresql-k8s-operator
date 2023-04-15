@@ -12,6 +12,7 @@ from tests.integration.ha_tests.conftest import APPLICATION_NAME
 from tests.integration.ha_tests.helpers import (
     METADATA,
     check_cluster_is_updated,
+    check_member_is_isolated,
     check_writes_are_increasing,
     get_primary,
     is_connection_possible,
@@ -144,6 +145,10 @@ async def test_network_cut(
         ops_test, primary_name
     ), f"Connection {primary_name} is not possible"
 
+    # Confirm that the primary is not isolated from the cluster.
+    logger.info("confirming that the primary is not isolated from the cluster")
+    assert not await check_member_is_isolated(ops_test, primary_name, primary_name)
+
     # Create network chaos policy to isolate instance from cluster
     logger.info(f"Cutting network for {primary_name}")
     isolate_instance_from_cluster(ops_test, primary_name)
@@ -164,6 +169,10 @@ async def test_network_cut(
             with attempt:
                 new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
                 assert new_primary_name != primary_name
+
+    # Confirm that the former primary is isolated from the cluster.
+    logger.info("confirming that the former primary is isolated from the cluster")
+    assert await check_member_is_isolated(ops_test, new_primary_name, primary_name)
 
     # Remove network chaos policy isolating instance from cluster.
     logger.info(f"Restoring network for {primary_name}")
