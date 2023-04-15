@@ -18,10 +18,18 @@ from kubernetes.stream import stream
 from lightkube.core.client import Client
 from lightkube.resources.core_v1 import Pod
 from pytest_operator.plugin import OpsTest
-from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
+from tenacity import (
+    RetryError,
+    Retrying,
+    retry,
+    stop_after_attempt,
+    stop_after_delay,
+    wait_fixed,
+)
 
 from tests.integration.helpers import (
     app_name,
+    db_connect,
     get_password,
     get_primary,
     get_unit_address,
@@ -265,6 +273,26 @@ async def get_primary_start_timeout(ops_test: OpsTest) -> Optional[int]:
             return int(primary_start_timeout) if primary_start_timeout is not None else None
 
 
+@retry(stop=stop_after_attempt(8), wait=wait_fixed(15), reraise=True)
+async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
+    """Test a connection to a PostgreSQL server."""
+    app = unit_name.split("/")[0]
+    password = await get_password(ops_test, app, unit_name)
+    address = await get_unit_address(ops_test, unit_name)
+    try:
+        with db_connect(
+            host=address, password=password
+        ) as connection, connection.cursor() as cursor:
+            cursor.execute("SELECT 1;")
+            return cursor.fetchone()[0] == 1
+    except psycopg2.Error:
+        # Error raised when the connection is not possible.
+        return False
+    finally:
+        # connection.close()
+        pass
+
+
 async def is_replica(ops_test: OpsTest, unit_name: str) -> bool:
     """Returns whether the unit a replica in the cluster."""
     unit_ip = await get_unit_address(ops_test, unit_name)
@@ -336,7 +364,7 @@ def remove_instance_isolation(ops_test: OpsTest) -> None:
     env = os.environ
     env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
     subprocess.check_output(
-        f"kubectl -n {ops_test.model.info.name} delete networkchaos network-loss-primary",
+        f"kubectl -n {ops_test.model.info.name} delete --ignore-not-found=true networkchaos network-loss-primary",
         shell=True,
         env=env,
     )

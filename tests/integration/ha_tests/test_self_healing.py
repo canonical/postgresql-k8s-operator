@@ -14,6 +14,7 @@ from tests.integration.ha_tests.helpers import (
     check_cluster_is_updated,
     check_writes_are_increasing,
     get_primary,
+    is_connection_possible,
     isolate_instance_from_cluster,
     postgresql_ready,
     remove_instance_isolation,
@@ -156,8 +157,10 @@ async def test_restart_db_process(
     await check_cluster_is_updated(ops_test, primary_name)
 
 
-async def test_network_cut(ops_test: OpsTest, continuous_writes, chaos_mesh) -> None:
-    """Test for a network cut affecting an instance."""
+async def test_network_cut(
+    ops_test: OpsTest, continuous_writes, primary_start_timeout, chaos_mesh
+) -> None:
+    """Completely cut and restore network."""
     # Locate primary unit.
     app = await app_name(ops_test)
     primary_name = await get_primary(ops_test, app)
@@ -165,23 +168,39 @@ async def test_network_cut(ops_test: OpsTest, continuous_writes, chaos_mesh) -> 
     # Start an application that continuously writes data to the database.
     await start_continuous_writes(ops_test, app)
 
+    # Verify that connection is possible.
+    logger.info("checking whether the connectivity to the database is working")
+    assert await is_connection_possible(
+        ops_test, primary_name
+    ), f"Connection {primary_name} is not possible"
+
     # Create network chaos policy to isolate instance from cluster
+    logger.info(f"Cutting network for {primary_name}")
     isolate_instance_from_cluster(ops_test, primary_name)
 
-    # Wait some time to elect a new primary.
-    sleep(MEDIAN_ELECTION_TIME * 2)
+    # Verify that connection is not possible.
+    logger.info("checking whether the connectivity to the database is not working")
+    assert not await is_connection_possible(
+        ops_test, primary_name
+    ), "Connection is possible after network cut"
 
-    units = ops_test.model.applications[app].units
-    remaining_units = [unit.name for unit in units if unit.name != primary_name]
-    logger.info(f"remaining_units: {remaining_units}")
+    await check_writes_are_increasing(ops_test, primary_name)
 
-    # Verify that a new primary gets elected (ie old primary is secondary).
-    for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
-        with attempt:
-            new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
-            assert new_primary_name != primary_name
+    async with ops_test.fast_forward():
+        # Verify that a new primary gets elected (ie old primary is secondary).
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+            with attempt:
+                new_primary_name = await get_primary(ops_test, app)
+                assert new_primary_name != primary_name
 
-    # Remove network chaos policy isolating instance from cluster
+    # Remove network chaos policy isolating instance from cluster.
+    logger.info(f"Restoring network for {primary_name}")
     remove_instance_isolation(ops_test)
+
+    # Verify that connection is possible.
+    logger.info("checking whether the connectivity to the database is working")
+    assert await is_connection_possible(
+        ops_test, primary_name
+    ), "Connection is not possible after network restore"
 
     await check_cluster_is_updated(ops_test, primary_name)
