@@ -446,6 +446,7 @@ def get_expected_k8s_resources(namespace: str, application: str) -> set:
     resources.update(
         [
             f"Endpoints/patroni-{application}-config",
+            f"Endpoints/patroni-{application}-sync",
             f"Endpoints/patroni-{application}",
             f"Endpoints/{application}",
             f"Endpoints/{application}-primary",
@@ -587,7 +588,7 @@ async def primary_changed(ops_test: OpsTest, old_primary: str) -> bool:
     """
     application = old_primary.split("/")[0]
     primary = await get_primary(ops_test, application, down_unit=old_primary)
-    return primary != old_primary
+    return primary != old_primary and primary != "None"
 
 
 async def restart_patroni(ops_test: OpsTest, unit_name: str) -> None:
