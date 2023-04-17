@@ -24,6 +24,7 @@ lightkube-models = "1.26.0.4"
 requests = "2.28.2"
 boto3 = "1.26.114"
 # psycopg2 = "^2.9.5" # Injected in charmcraft.yaml
+packaging = "23.1"
 
 [tool.poetry.group.format]
 optional = true
