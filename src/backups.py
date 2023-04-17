@@ -31,31 +31,43 @@ logger = logging.getLogger(__name__)
 class PostgreSQLBackups(Object):
     """In this class, we manage PostgreSQL backups."""
 
-    def __init__(self, charm, relation_name: str):
+    def __init__(self, charm, backup_relation_name: str, restore_relation_name: str):
         """Manager of PostgreSQL backups."""
         super().__init__(charm, "backup")
         self.charm = charm
-        self.relation_name = relation_name
+        self.backup_relation_name = backup_relation_name
+        self.restore_relation_name = restore_relation_name
         self.container = self.charm.unit.get_container("postgresql")
 
         # s3 relation handles the config options for s3 backups
-        self.s3_client = S3Requirer(self.charm, self.relation_name)
+        self.backup_s3_client = S3Requirer(self.charm, self.backup_relation_name)
         self.framework.observe(
-            self.s3_client.on.credentials_changed, self._on_s3_credential_changed
+            self.backup_s3_client.on.credentials_changed, self._on_backup_s3_credential_changed
+        )
+        self.restore_s3_client = S3Requirer(self.charm, self.restore_relation_name)
+        self.framework.observe(
+            self.restore_s3_client.on.credentials_changed, self._on_restore_s3_credential_changed
         )
         self.framework.observe(self.charm.on.create_backup_action, self._on_create_backup_action)
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_action)
 
-    def _are_backup_settings_ok(self) -> Tuple[bool, Optional[str]]:
+    def _are_s3_parameters_ok(
+        self, restore_parameters: bool = False
+    ) -> Tuple[bool, Optional[str]]:
         """Validates whether backup settings are OK."""
-        if self.model.get_relation(self.relation_name) is None:
+        if (
+            self.model.get_relation(
+                self.restore_relation_name if restore_parameters else self.backup_relation_name
+            )
+            is None
+        ):
             return (
                 False,
                 "Relation with s3-integrator charm missing, cannot create/restore backup.",
             )
 
-        s3_parameters, missing_parameters = self._retrieve_s3_parameters()
+        s3_parameters, missing_parameters = self._retrieve_s3_parameters(restore_parameters)
         if missing_parameters:
             return False, f"Missing S3 parameters: {missing_parameters}"
 
@@ -84,7 +96,7 @@ class PostgreSQLBackups(Object):
         if "stanza" not in self.charm.app_peer_data:
             return False, "Stanza was not initialised"
 
-        return self._are_backup_settings_ok()
+        return self._are_s3_parameters_ok()
 
     def _construct_endpoint(self, s3_parameters: Dict) -> str:
         """Construct the S3 service endpoint using the region.
@@ -151,7 +163,7 @@ class PostgreSQLBackups(Object):
         List contains successful and failed backups in order of ascending time.
         """
         backup_list = []
-        output, _ = self._execute_command(["pgbackrest", "info", "--output=json"])
+        output, _ = self._execute_command(["pgbackrest", "info", "--repo=2", "--output=json"])
         backups = json.loads(output)[0]["backup"]
         for backup in backups:
             backup_id = datetime.strftime(
@@ -164,7 +176,7 @@ class PostgreSQLBackups(Object):
             backup_list.append((backup_id, "physical", backup_status))
         return self._format_backup_list(backup_list)
 
-    def _list_backups_ids(self, show_failed: bool) -> List[str]:
+    def _list_backups_ids(self, show_failed: bool, restore_stanza: bool = False) -> List[str]:
         """Retrieve the list of backup ids.
 
         Args:
@@ -174,7 +186,9 @@ class PostgreSQLBackups(Object):
             the list of previously created backups or an empty list if there is no backups
                 in the S3 bucket.
         """
-        output, _ = self._execute_command(["pgbackrest", "info", "--output=json"])
+        output, _ = self._execute_command(
+            ["pgbackrest", "info", "--output=json", f"--repo={2 if restore_stanza else 1}"]
+        )
         backups = json.loads(output)[0]["backup"]
         return [
             datetime.strftime(
@@ -260,7 +274,7 @@ class PostgreSQLBackups(Object):
 
         return True
 
-    def _on_s3_credential_changed(self, event: CredentialsChangedEvent):
+    def _on_backup_s3_credential_changed(self, event: CredentialsChangedEvent):
         """Call the stanza initialization when the credentials or the connection info change."""
         if "cluster_initialised" not in self.charm.app_peer_data:
             logger.debug("Cannot set pgBackRest configurations, PostgreSQL has not yet started.")
@@ -274,6 +288,19 @@ class PostgreSQLBackups(Object):
         self._initialise_stanza()
 
         self.start_stop_pgbackrest_service()
+
+    def _on_restore_s3_credential_changed(self, event: CredentialsChangedEvent):
+        """Call the stanza initialization when the credentials or the connection info change."""
+        if "cluster_initialised" not in self.charm.app_peer_data:
+            logger.debug(
+                "Cannot set pgBackRest restore configurations, PostgreSQL has not yet started."
+            )
+            event.defer()
+            return
+
+        if not self._render_pgbackrest_conf_file():
+            logger.debug("Cannot set pgBackRest configurations, missing configurations.")
+            return
 
     def _on_create_backup_action(self, event) -> None:
         """Request that pgBackRest creates a backup."""
@@ -386,7 +413,9 @@ Stderr:
 
     def _on_list_backups_action(self, event) -> None:
         """List the previously created backups."""
-        are_backup_settings_ok, validation_message = self._are_backup_settings_ok()
+        are_backup_settings_ok, validation_message = self._are_s3_parameters_ok(
+            restore_parameters=True
+        )
         if not are_backup_settings_ok:
             logger.warning(validation_message)
             event.fail(validation_message)
@@ -409,7 +438,7 @@ Stderr:
 
         # Validate the provided backup id.
         logger.info("Validating provided backup-id")
-        if backup_id not in self._list_backups_ids(show_failed=False):
+        if backup_id not in self._list_backups_ids(show_failed=False, restore_stanza=True):
             event.fail(f"Invalid backup-id: {backup_id}")
             return
 
@@ -478,6 +507,14 @@ Stderr:
         Returns:
             a boolean indicating whether restore should be run.
         """
+        are_backup_settings_ok, validation_message = self._are_s3_parameters_ok(
+            restore_parameters=True
+        )
+        if not are_backup_settings_ok:
+            logger.warning(validation_message)
+            event.fail(validation_message)
+            return False
+
         if not event.params.get("backup-id"):
             event.fail("Missing backup-id to restore")
             return False
@@ -515,11 +552,25 @@ Stderr:
 
     def _render_pgbackrest_conf_file(self) -> bool:
         """Render the pgBackRest configuration file."""
-        s3_parameters, missing_parameters = self._retrieve_s3_parameters()
+        backup = True
+        backup_s3_parameters, missing_parameters = self._retrieve_s3_parameters()
         if missing_parameters:
             logger.warning(
-                f"Cannot set pgBackRest configurations due to missing S3 parameters: {missing_parameters}"
+                f"Cannot set pgBackRest backup configurations due to missing S3 parameters: {missing_parameters}"
             )
+            backup = False
+
+        restore = True
+        restore_s3_parameters, missing_parameters = self._retrieve_s3_parameters(
+            restore_parameters=True
+        )
+        if missing_parameters:
+            logger.warning(
+                f"Cannot set pgBackRest restore configurations due to missing S3 parameters: {missing_parameters}"
+            )
+            restore = False
+
+        if not backup and not restore:
             return False
 
         # Open the template pgbackrest.conf file.
@@ -529,14 +580,23 @@ Stderr:
         rendered = template.render(
             enable_tls=self.charm.is_tls_enabled and len(self.charm.peer_members_endpoints) > 0,
             peer_endpoints=self.charm.peer_members_endpoints,
-            path=s3_parameters["path"],
-            region=s3_parameters.get("region"),
-            endpoint=s3_parameters["endpoint"],
-            bucket=s3_parameters["bucket"],
-            s3_uri_style=s3_parameters["s3-uri-style"],
-            access_key=s3_parameters["access-key"],
-            secret_key=s3_parameters["secret-key"],
+            backup=backup,
+            path=backup_s3_parameters.get("path"),
+            region=backup_s3_parameters.get("region"),
+            endpoint=backup_s3_parameters.get("endpoint"),
+            bucket=backup_s3_parameters.get("bucket"),
+            s3_uri_style=backup_s3_parameters.get("s3-uri-style"),
+            access_key=backup_s3_parameters.get("access-key"),
+            secret_key=backup_s3_parameters.get("secret-key"),
             stanza=self.charm.cluster_name,
+            restore=restore,
+            restore_path=restore_s3_parameters.get("path"),
+            restore_region=restore_s3_parameters.get("region"),
+            restore_endpoint=restore_s3_parameters.get("endpoint"),
+            restore_bucket=restore_s3_parameters.get("bucket"),
+            restore_s3_uri_style=restore_s3_parameters.get("s3-uri-style"),
+            restore_access_key=restore_s3_parameters.get("access-key"),
+            restore_secret_key=restore_s3_parameters.get("secret-key"),
             storage_path=self.charm._storage_path,
             user=BACKUP_USER,
         )
@@ -557,9 +617,10 @@ Stderr:
         self.charm.update_config()
         self.container.start(self.charm._postgresql_service)
 
-    def _retrieve_s3_parameters(self) -> Tuple[Dict, List[str]]:
+    def _retrieve_s3_parameters(self, restore_parameters: bool = False) -> Tuple[Dict, List[str]]:
         """Retrieve S3 parameters from the S3 integrator relation."""
-        s3_parameters = self.s3_client.get_s3_connection_info()
+        client = self.restore_s3_client if restore_parameters else self.backup_s3_client
+        s3_parameters = client.get_s3_connection_info()
         required_parameters = [
             "bucket",
             "access-key",
@@ -589,7 +650,7 @@ Stderr:
             a boolean indicating whether the operation succeeded.
         """
         # Ignore this operation if backups settings aren't ok.
-        are_backup_settings_ok, _ = self._are_backup_settings_ok()
+        are_backup_settings_ok, _ = self._are_s3_parameters_ok()
         if not are_backup_settings_ok:
             return True
 
