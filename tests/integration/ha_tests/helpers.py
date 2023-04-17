@@ -4,10 +4,13 @@ import asyncio
 import os
 import string
 import subprocess
+import tarfile
 import tempfile
+from datetime import datetime
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
+import kubernetes as kubernetes
 import psycopg2
 import requests
 import yaml
@@ -50,17 +53,43 @@ class ProcessError(Exception):
     """Raised when a process fails."""
 
 
+class ProcessRunningError(Exception):
+    """Raised when a process is running when it is not expected to be."""
+
+
+async def are_all_db_processes_down(ops_test: OpsTest, process: str) -> bool:
+    """Verifies that all units of the charm do not have the DB process running."""
+    app = await app_name(ops_test)
+
+    try:
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+            with attempt:
+                for unit in ops_test.model.applications[app].units:
+                    _, raw_pid, _ = await ops_test.juju(
+                        "ssh", "--container", "postgresql", unit.name, "pgrep", "-x", process
+                    )
+
+                    # If something was returned, there is a running process.
+                    if len(raw_pid) > 0:
+                        raise ProcessRunningError
+    except RetryError:
+        return False
+
+    return True
+
+
 def get_patroni_cluster(unit_ip: str) -> Dict[str, str]:
     resp = requests.get(f"http://{unit_ip}:8008/cluster")
     return resp.json()
 
 
-async def change_primary_start_timeout(ops_test: OpsTest, seconds: Optional[int]) -> None:
-    """Change primary start timeout configuration.
+async def change_patroni_setting(ops_test: OpsTest, setting: str, value: int) -> None:
+    """Change the value of one of the Patroni settings.
 
     Args:
         ops_test: ops_test instance.
-        seconds: number of seconds to set in primary_start_timeout configuration.
+        setting: the name of the setting.
+        value: the value to assign to the setting.
     """
     for attempt in Retrying(stop=stop_after_delay(30 * 2), wait=wait_fixed(3)):
         with attempt:
@@ -69,11 +98,11 @@ async def change_primary_start_timeout(ops_test: OpsTest, seconds: Optional[int]
             unit_ip = await get_unit_address(ops_test, primary_name)
             requests.patch(
                 f"http://{unit_ip}:8008/config",
-                json={"primary_start_timeout": seconds},
+                json={setting: value},
             )
 
 
-async def check_cluster_is_updated(ops_test: OpsTest, primary_name: str) -> None:
+async def is_cluster_updated(ops_test: OpsTest, primary_name: str) -> None:
     # Verify that the old primary is now a replica.
     assert await is_replica(
         ops_test, primary_name
@@ -92,7 +121,7 @@ async def check_cluster_is_updated(ops_test: OpsTest, primary_name: str) -> None
     total_expected_writes = await check_writes(ops_test)
 
     # Verify that old primary is up-to-date.
-    assert await secondary_up_to_date(
+    assert await is_secondary_up_to_date(
         ops_test, primary_name, total_expected_writes
     ), "secondary not up to date with the cluster after restarting."
 
@@ -105,7 +134,7 @@ def get_member_lag(cluster: Dict, member_name: str) -> int:
     return 0
 
 
-async def check_member_is_isolated(
+async def is_member_isolated(
     ops_test: OpsTest, not_isolated_member: str, isolated_member: str
 ) -> bool:
     """Check whether the member is isolated from the cluster."""
@@ -135,7 +164,7 @@ async def check_writes(ops_test) -> int:
     return total_expected_writes
 
 
-async def check_writes_are_increasing(ops_test, down_unit: str) -> None:
+async def are_writes_increasing(ops_test, down_unit: str = None) -> None:
     """Verify new writes are continuing by counting the number of writes."""
     writes, _ = await count_writes(ops_test, down_unit=down_unit)
     for member, count in writes.items():
@@ -143,6 +172,62 @@ async def check_writes_are_increasing(ops_test, down_unit: str) -> None:
             with attempt:
                 more_writes, _ = await count_writes(ops_test, down_unit=down_unit)
                 assert more_writes[member] > count, f"{member}: writes not continuing to DB"
+
+
+def copy_file_into_pod(
+    client: kubernetes.client.api.core_v1_api.CoreV1Api,
+    namespace: str,
+    pod_name: str,
+    container_name: str,
+    destination_path: str,
+    source_path: str,
+) -> None:
+    """Copy file contents into pod.
+
+    Args:
+        client: The kubernetes CoreV1Api client
+        namespace: The namespace of the pod to copy files to
+        pod_name: The name of the pod to copy files to
+        container_name: The name of the pod container to copy files to
+        destination_path: The path to which the file should be copied over
+        source_path: The path of the file which needs to be copied over
+    """
+    try:
+        exec_command = ["tar", "xvf", "-", "-C", "/"]
+
+        api_response = kubernetes.stream.stream(
+            client.connect_get_namespaced_pod_exec,
+            pod_name,
+            namespace,
+            container=container_name,
+            command=exec_command,
+            stdin=True,
+            stdout=True,
+            stderr=True,
+            tty=False,
+            _preload_content=False,
+        )
+
+        with tempfile.TemporaryFile() as tar_buffer:
+            with tarfile.open(fileobj=tar_buffer, mode="w") as tar:
+                tar.add(source_path, destination_path)
+
+            tar_buffer.seek(0)
+            commands = []
+            commands.append(tar_buffer.read())
+
+            while api_response.is_open():
+                api_response.update(timeout=1)
+
+                if commands:
+                    command = commands.pop(0)
+                    api_response.write_stdin(command.decode())
+                else:
+                    break
+
+            api_response.close()
+    except kubernetes.client.rest.ApiException:
+        assert False
 
 
 async def count_writes(
@@ -252,14 +337,15 @@ async def fetch_cluster_members(ops_test: OpsTest):
     return member_ips
 
 
-async def get_primary_start_timeout(ops_test: OpsTest) -> Optional[int]:
-    """Get the primary start timeout configuration.
+async def get_patroni_setting(ops_test: OpsTest, setting: str) -> Optional[int]:
+    """Get the value of one of the integer Patroni settings.
 
     Args:
         ops_test: ops_test instance.
+        setting: the name of the setting.
 
     Returns:
-        primary start timeout in seconds or None if it's using the default value.
+        the value of the configuration or None if it's using the default value.
     """
     for attempt in Retrying(stop=stop_after_delay(30 * 2), wait=wait_fixed(3)):
         with attempt:
@@ -267,7 +353,7 @@ async def get_primary_start_timeout(ops_test: OpsTest) -> Optional[int]:
             primary_name = await get_primary(ops_test, app)
             unit_ip = await get_unit_address(ops_test, primary_name)
             configuration_info = requests.get(f"http://{unit_ip}:8008/config")
-            primary_start_timeout = configuration_info.json().get("primary_start_timeout")
+            primary_start_timeout = configuration_info.json().get(setting)
             return int(primary_start_timeout) if primary_start_timeout is not None else None
 
 
@@ -342,7 +428,77 @@ def isolate_instance_from_cluster(ops_test: OpsTest, unit_name: str) -> None:
         )
 
 
-async def postgresql_ready(ops_test, unit_name: str) -> bool:
+def modify_pebble_restart_delay(
+    ops_test: OpsTest,
+    unit_name: str,
+    pebble_plan_path: str,
+) -> None:
+    """Modify the pebble restart delay of the underlying process.
+
+    Args:
+        ops_test: The ops test framework
+        unit_name: The name of unit to extend the pebble restart delay for
+        pebble_plan_path: Path to the file with the modified pebble plan
+    """
+    kubernetes.config.load_kube_config()
+    client = kubernetes.client.api.core_v1_api.CoreV1Api()
+
+    pod_name = unit_name.replace("/", "-")
+    container_name = "postgresql"
+    service_name = "postgresql"
+    now = datetime.now().isoformat()
+
+    copy_file_into_pod(
+        client,
+        ops_test.model.info.name,
+        pod_name,
+        container_name,
+        f"/tmp/pebble_plan_{now}.yml",
+        pebble_plan_path,
+    )
+
+    add_to_pebble_layer_commands = (
+        f"/charm/bin/pebble add --combine {service_name} /tmp/pebble_plan_{now}.yml"
+    )
+    response = kubernetes.stream.stream(
+        client.connect_get_namespaced_pod_exec,
+        pod_name,
+        ops_test.model.info.name,
+        container=container_name,
+        command=add_to_pebble_layer_commands.split(),
+        stdin=False,
+        stdout=True,
+        stderr=True,
+        tty=False,
+        _preload_content=False,
+    )
+    response.run_forever(timeout=5)
+    assert (
+        response.returncode == 0
+    ), f"Failed to add to pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
+
+    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+        with attempt:
+            replan_pebble_layer_commands = "/charm/bin/pebble replan"
+            response = kubernetes.stream.stream(
+                client.connect_get_namespaced_pod_exec,
+                pod_name,
+                ops_test.model.info.name,
+                container=container_name,
+                command=replan_pebble_layer_commands.split(),
+                stdin=False,
+                stdout=True,
+                stderr=True,
+                tty=False,
+                _preload_content=False,
+            )
+            response.run_forever(timeout=60)
+            assert (
+                response.returncode == 0
+            ), f"Failed to replan pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
+
+
+async def is_postgresql_ready(ops_test, unit_name: str) -> bool:
     """Verifies a PostgreSQL instance is running and available."""
     unit_ip = await get_unit_address(ops_test, unit_name)
     try:
@@ -367,7 +523,7 @@ def remove_instance_isolation(ops_test: OpsTest) -> None:
     )
 
 
-async def secondary_up_to_date(ops_test: OpsTest, unit_name: str, expected_writes: int) -> bool:
+async def is_secondary_up_to_date(ops_test: OpsTest, unit_name: str, expected_writes: int) -> bool:
     """Checks if secondary is up-to-date with the cluster.
 
     Retries over the period of one minute to give secondary adequate time to copy over data.
@@ -409,6 +565,7 @@ async def send_signal_to_process(
         process: OS process name
         signal: Signal that will be sent to the OS process
             (examples: SIGKILL, SIGTERM, SIGSTOP, SIGCONT)
+        use_ssh: whether to use juju ssh instead of kubernetes client.
 
     Returns:
         the command output if it succeeds, otherwise raises an exception.
@@ -436,28 +593,38 @@ async def send_signal_to_process(
     # Load Kubernetes configuration to connect to the cluster.
     config.load_kube_config()
 
-    # Send the signal.
-    response = stream(
-        core_v1_api.CoreV1Api().connect_get_namespaced_pod_exec,
-        pod_name,
-        ops_test.model.info.name,
-        container="postgresql",
-        command=command.split(),
-        stderr=True,
-        stdin=False,
-        stdout=True,
-        tty=False,
-        _preload_content=False,
-    )
+    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+        with attempt:
+            # Send the signal.
+            response = stream(
+                core_v1_api.CoreV1Api().connect_get_namespaced_pod_exec,
+                pod_name,
+                ops_test.model.info.name,
+                container="postgresql",
+                command=command.split(),
+                stderr=True,
+                stdin=False,
+                stdout=True,
+                tty=False,
+                _preload_content=False,
+            )
 
-    response.run_forever(timeout=10)
+            response.run_forever(timeout=10)
 
-    if response.returncode != 0:
-        raise ProcessError(
-            "Expected command %s to succeed instead it failed: %s",
-            command,
-            response.returncode,
-        )
+            if signal not in ["SIGSTOP", "SIGCONT"]:
+                _, raw_pid, _ = await ops_test.juju(
+                    "ssh", "--container", "postgresql", unit_name, "pgrep", "-x", process
+                )
+
+                # If something was returned, there is a running process.
+                if len(raw_pid) > 0:
+                    raise ProcessRunningError
+            elif response.returncode != 0:
+                raise ProcessError(
+                    "Expected command %s to succeed instead it failed: %s",
+                    command,
+                    response.returncode,
+                )
 
 
 async def start_continuous_writes(ops_test: OpsTest, app: str) -> None:
