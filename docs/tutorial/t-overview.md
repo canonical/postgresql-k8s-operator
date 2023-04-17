@@ -17,12 +17,12 @@ While this tutorial intends to guide and teach you as you deploy Charmed Postgre
 
 Here’s an overview of the steps required with links to our separate tutorials that deal with each individual step:
 * [Set up the environment](/t/charmed-postgresql-k8s-tutorial-setup-environment/9297?channel=edge)
-* [Deploy PostgreSQL](/t/charmed-postgresql-k8s-tutorial-deploy/9298?channel=dpe/edge)
-* [Managing your units](/t/charmed-postgresql-k8s-tutorial-managing-units/9299?channel=dpe/edge)
-* [Manage passwords](/t/charmed-postgresql-k8s-tutorial-manage-passwords/9300?channel=dpe/edge)
-* [Relate your PostgreSQL to other applications](/t/charmed-postgresql-k8s-tutorial-integrations/9301?channel=dpe/edge)
-* [Enable security](/t/charmed-postgresql-k8s-tutorial-enable-security/9302?channel=dpe/edge)
-* [Cleanup your environment](/t/charmed-postgresql-k8s-tutorial-cleanup/9303?channel=dpe/edge)
+* [Deploy PostgreSQL](/t/charmed-postgresql-k8s-tutorial-deploy/9298?channel=14/edge)
+* [Managing your units](/t/charmed-postgresql-k8s-tutorial-managing-units/9299?channel=14/edge)
+* [Manage passwords](/t/charmed-postgresql-k8s-tutorial-manage-passwords/9300?channel=14/edge)
+* [Relate your PostgreSQL to other applications](/t/charmed-postgresql-k8s-tutorial-integrations/9301?channel=14/edge)
+* [Enable security](/t/charmed-postgresql-k8s-tutorial-enable-security/9302?channel=14/edge)
+* [Cleanup your environment](/t/charmed-postgresql-k8s-tutorial-cleanup/9303?channel=14/edge)
 
 # License:
 The Charmed PostgreSQL K8s Operator [is distributed](https://github.com/canonical/postgresql-k8s-operator/blob/main/LICENSE) under the Apache Software License, version 2.0. It installs/operates/depends on [PostgreSQL](https://www.postgresql-k8s.org/ftp/source/), which [is licensed](https://www.postgresql-k8s.org/about/licence/) under PostgreSQL License, a liberal Open Source license, similar to the BSD or MIT licenses..
