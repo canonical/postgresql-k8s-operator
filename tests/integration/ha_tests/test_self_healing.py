@@ -12,16 +12,16 @@ from tenacity import Retrying, stop_after_delay, wait_fixed
 from tests.integration.ha_tests.conftest import APPLICATION_NAME
 from tests.integration.ha_tests.helpers import (
     METADATA,
-    all_db_processes_down,
+    are_all_db_processes_down,
+    are_all_writes_in_db,
+    are_writes_increasing,
     change_patroni_setting,
-    check_cluster_is_updated,
-    check_writes,
-    check_writes_are_increasing,
     fetch_cluster_members,
     get_patroni_setting,
     get_primary,
+    is_cluster_updated,
+    is_postgresql_ready,
     modify_pebble_restart_delay,
-    postgresql_ready,
     send_signal_to_process,
     start_continuous_writes,
 )
@@ -82,16 +82,16 @@ async def test_kill_db_process(
     sleep(MEDIAN_ELECTION_TIME * 2)
 
     async with ops_test.fast_forward():
-        await check_writes_are_increasing(ops_test, primary_name)
+        await are_writes_increasing(ops_test, primary_name)
 
         # Verify that the database service got restarted and is ready in the old primary.
-        assert await postgresql_ready(ops_test, primary_name)
+        assert await is_postgresql_ready(ops_test, primary_name)
 
     # Verify that a new primary gets elected (ie old primary is secondary).
     new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
     assert new_primary_name != primary_name
 
-    await check_cluster_is_updated(ops_test, primary_name)
+    await is_cluster_updated(ops_test, primary_name)
 
 
 @pytest.mark.parametrize("process", [PATRONI_PROCESS])
@@ -113,7 +113,7 @@ async def test_freeze_db_process(
 
     async with ops_test.fast_forward():
         try:
-            await check_writes_are_increasing(ops_test, primary_name)
+            await are_writes_increasing(ops_test, primary_name)
 
             # Verify that a new primary gets elected (ie old primary is secondary).
             for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
@@ -131,9 +131,9 @@ async def test_freeze_db_process(
                     )
 
         # Verify that the database service got restarted and is ready in the old primary.
-        assert await postgresql_ready(ops_test, primary_name)
+        assert await is_postgresql_ready(ops_test, primary_name)
 
-    await check_cluster_is_updated(ops_test, primary_name)
+    await is_cluster_updated(ops_test, primary_name)
 
 
 @pytest.mark.parametrize("process", DB_PROCESSES)
@@ -154,16 +154,16 @@ async def test_restart_db_process(
     sleep(MEDIAN_ELECTION_TIME * 2)
 
     async with ops_test.fast_forward():
-        await check_writes_are_increasing(ops_test, primary_name)
+        await are_writes_increasing(ops_test, primary_name)
 
         # Verify that the database service got restarted and is ready in the old primary.
-        assert await postgresql_ready(ops_test, primary_name)
+        assert await is_postgresql_ready(ops_test, primary_name)
 
     # Verify that a new primary gets elected (ie old primary is secondary).
     new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
     assert new_primary_name != primary_name
 
-    await check_cluster_is_updated(ops_test, primary_name)
+    await is_cluster_updated(ops_test, primary_name)
 
 
 @pytest.mark.parametrize("process", DB_PROCESSES)
@@ -198,7 +198,7 @@ async def test_full_cluster_restart(
     # they come back online they operate as expected. This check verifies that we meet the criteria
     # of all replicas being down at the same time.
     try:
-        assert await all_db_processes_down(
+        assert await are_all_db_processes_down(
             ops_test, process
         ), "Not all units down at the same time."
     finally:
@@ -212,11 +212,11 @@ async def test_full_cluster_restart(
 
     # Verify all units are up and running.
     for unit in ops_test.model.applications[app].units:
-        assert await postgresql_ready(
+        assert await is_postgresql_ready(
             ops_test, unit.name
         ), f"unit {unit.name} not restarted after cluster restart."
 
-    await check_writes_are_increasing(ops_test)
+    await are_writes_increasing(ops_test)
 
     # Verify that all units are part of the same cluster.
     member_ips = await fetch_cluster_members(ops_test)
@@ -227,4 +227,4 @@ async def test_full_cluster_restart(
     assert set(member_ips) == set(ip_addresses), "not all units are part of the same cluster."
 
     # Verify that no writes to the database were missed after stopping the writes.
-    await check_writes(ops_test)
+    await are_all_writes_in_db(ops_test)

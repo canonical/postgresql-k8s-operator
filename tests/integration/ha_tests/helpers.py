@@ -46,7 +46,7 @@ class ProcessRunningError(Exception):
     """Raised when a process is running when it is not expected to be."""
 
 
-async def all_db_processes_down(ops_test: OpsTest, process: str) -> bool:
+async def are_all_db_processes_down(ops_test: OpsTest, process: str) -> bool:
     """Verifies that all units of the charm do not have the DB process running."""
     app = await app_name(ops_test)
 
@@ -91,7 +91,7 @@ async def change_patroni_setting(ops_test: OpsTest, setting: str, value: int) ->
             )
 
 
-async def check_cluster_is_updated(ops_test: OpsTest, primary_name: str) -> None:
+async def is_cluster_updated(ops_test: OpsTest, primary_name: str) -> None:
     # Verify that the old primary is now a replica.
     assert await is_replica(
         ops_test, primary_name
@@ -107,15 +107,15 @@ async def check_cluster_is_updated(ops_test: OpsTest, primary_name: str) -> None
     assert set(member_ips) == set(ip_addresses), "not all units are part of the same cluster."
 
     # Verify that no writes to the database were missed after stopping the writes.
-    total_expected_writes = await check_writes(ops_test)
+    total_expected_writes = await are_all_writes_in_db(ops_test)
 
     # Verify that old primary is up-to-date.
-    assert await secondary_up_to_date(
+    assert await is_secondary_up_to_date(
         ops_test, primary_name, total_expected_writes
     ), "secondary not up to date with the cluster after restarting."
 
 
-async def check_writes(ops_test) -> int:
+async def are_all_writes_in_db(ops_test) -> int:
     """Gets the total writes from the test charm and compares to the writes from db."""
     total_expected_writes = await stop_continuous_writes(ops_test)
     actual_writes, max_number_written = await count_writes(ops_test)
@@ -127,7 +127,7 @@ async def check_writes(ops_test) -> int:
     return total_expected_writes
 
 
-async def check_writes_are_increasing(ops_test, down_unit: str = None) -> None:
+async def are_writes_increasing(ops_test, down_unit: str = None) -> None:
     """Verify new writes are continuing by counting the number of writes."""
     writes, _ = await count_writes(ops_test, down_unit=down_unit)
     for member, count in writes.items():
@@ -382,7 +382,7 @@ def modify_pebble_restart_delay(
             ), f"Failed to replan pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
 
 
-async def postgresql_ready(ops_test, unit_name: str) -> bool:
+async def is_postgresql_ready(ops_test, unit_name: str) -> bool:
     """Verifies a PostgreSQL instance is running and available."""
     unit_ip = await get_unit_address(ops_test, unit_name)
     try:
@@ -396,7 +396,7 @@ async def postgresql_ready(ops_test, unit_name: str) -> bool:
     return True
 
 
-async def secondary_up_to_date(ops_test: OpsTest, unit_name: str, expected_writes: int) -> bool:
+async def is_secondary_up_to_date(ops_test: OpsTest, unit_name: str, expected_writes: int) -> bool:
     """Checks if secondary is up-to-date with the cluster.
 
     Retries over the period of one minute to give secondary adequate time to copy over data.
