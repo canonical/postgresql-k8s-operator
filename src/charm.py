@@ -681,8 +681,8 @@ class PostgresqlOperatorCharm(CharmBase):
                 logger.debug("on_update_status early exit: Patroni has not started yet")
                 return
 
-            # Remove the restoring backup flag.
-            self.app_peer_data.update({"restoring-backup": ""})
+            # Remove the restoring backup flag and the restore stanza name.
+            self.app_peer_data.update({"restoring-backup": "", "restore-stanza": ""})
             self.update_config()
 
         self._set_primary_status_message()
@@ -910,6 +910,7 @@ class PostgresqlOperatorCharm(CharmBase):
             enable_tls=enable_tls,
             backup_id=self.app_peer_data.get("restoring-backup"),
             stanza=self.app_peer_data.get("stanza"),
+            restore_stanza=self.app_peer_data.get("restore-stanza"),
         )
         if not self._patroni.member_started:
             # If Patroni/PostgreSQL has not started yet and TLS relations was initialised,

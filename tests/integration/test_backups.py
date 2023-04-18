@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 @pytest.mark.abort_on_fail
 async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> None:
-    """Build and deploy one unit of PostgreSQL and then test the backup and restore actions."""
+    """Build and deploy two units of PostgreSQL and then test the backup and restore actions."""
     # Deploy S3 Integrator and TLS Certificates Operator.
     await ops_test.model.deploy(S3_INTEGRATOR_APP_NAME, channel="edge")
     config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}

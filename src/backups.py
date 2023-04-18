@@ -27,6 +27,8 @@ from constants import BACKUP_USER, WORKLOAD_OS_GROUP, WORKLOAD_OS_USER
 
 logger = logging.getLogger(__name__)
 
+FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE = "failed to initialize stanza"
+
 
 class PostgreSQLBackups(Object):
     """In this class, we manage PostgreSQL backups."""
@@ -176,27 +178,28 @@ class PostgreSQLBackups(Object):
             backup_list.append((backup_id, "physical", backup_status))
         return self._format_backup_list(backup_list)
 
-    def _list_backups_ids(self, show_failed: bool, restore_stanza: bool = False) -> List[str]:
-        """Retrieve the list of backup ids.
+    def _list_backups(self, show_failed: bool, restore_stanza: bool = False) -> Dict[str, str]:
+        """Retrieve the list of backups.
 
         Args:
             show_failed: whether to also return the failed backups.
 
         Returns:
-            the list of previously created backups or an empty list if there is no backups
-                in the S3 bucket.
+            the list of previously created backups (id + stanza name) or an empty list
+                if there is no backups in the S3 bucket.
         """
         output, _ = self._execute_command(
             ["pgbackrest", "info", "--output=json", f"--repo={2 if restore_stanza else 1}"]
         )
         backups = json.loads(output)[0]["backup"]
-        return [
+        logger.error(f"backups: {backups}")
+        return {
             datetime.strftime(
                 datetime.strptime(backup["label"][:-1], "%Y%m%d-%H%M%S"), "%Y-%m-%dT%H:%M:%SZ"
-            )
+            ): "patroni-postgresql-k8s-aws"
             for backup in backups
             if show_failed or not backup["error"]
-        ]
+        }
 
     def _initialise_stanza(self) -> None:
         """Initialize the stanza.
@@ -208,7 +211,10 @@ class PostgreSQLBackups(Object):
         if not self.charm.unit.is_leader():
             return
 
-        if self.charm.is_blocked:
+        if (
+            self.charm.is_blocked
+            and self.charm.unit.status.message != FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE
+        ):
             logger.warning("couldn't initialize stanza due to a blocked status")
             return
 
@@ -221,9 +227,7 @@ class PostgreSQLBackups(Object):
             )
         except ExecError as e:
             logger.exception(e)
-            self.charm.unit.status = BlockedStatus(
-                f"failed to initialize stanza with error {str(e)}"
-            )
+            self.charm.unit.status = BlockedStatus(FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE)
             return
 
         # Store the stanza name to be used in configurations updates.
@@ -244,9 +248,7 @@ class PostgreSQLBackups(Object):
             self.charm.unit.status = ActiveStatus()
         except RetryError as e:
             logger.exception(e)
-            self.charm.unit.status = BlockedStatus(
-                f"failed to initialize stanza with error {str(e)}"
-            )
+            self.charm.unit.status = BlockedStatus(FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE)
             return
 
         return
@@ -353,7 +355,7 @@ Juju Version: {str(juju_version)}
                 # on the replicas (that happens when TLS is not enabled).
                 command.append("--no-backup-standby")
             stdout, stderr = self._execute_command(command)
-            backup_id = self._list_backups_ids(show_failed=True)[-1]
+            backup_id = list(self._list_backups(show_failed=True).keys())[-1]
         except ExecError as e:
             logger.exception(e)
 
@@ -438,7 +440,8 @@ Stderr:
 
         # Validate the provided backup id.
         logger.info("Validating provided backup-id")
-        if backup_id not in self._list_backups_ids(show_failed=False, restore_stanza=True):
+        backups = self._list_backups(show_failed=False, restore_stanza=True)
+        if backup_id not in backups.keys():
             event.fail(f"Invalid backup-id: {backup_id}")
             return
 
@@ -491,6 +494,7 @@ Stderr:
             {
                 "archive-mode": "off",
                 "restoring-backup": f'{datetime.strftime(datetime.strptime(backup_id, "%Y-%m-%dT%H:%M:%SZ"), "%Y%m%d-%H%M%S")}F',
+                "restore-stanza": backups[backup_id],
             }
         )
         self.charm.update_config()
