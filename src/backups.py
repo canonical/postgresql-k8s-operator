@@ -185,7 +185,7 @@ class PostgreSQLBackups(Object):
             show_failed: whether to also return the failed backups.
 
         Returns:
-            the list of previously created backups (id + stanza name) or an empty list
+            a dict of previously created backups (id + stanza name) or an empty list
                 if there is no backups in the S3 bucket.
         """
         output, _ = self._execute_command(
@@ -193,9 +193,7 @@ class PostgreSQLBackups(Object):
         )
         repository_info = json.loads(output)[0]
         backups = repository_info["backup"]
-        logger.error(f"backups: {backups}")
         stanza_name = repository_info["name"]
-        logger.error(f"stanza_name: {stanza_name}")
         return {
             datetime.strftime(
                 datetime.strptime(backup["label"][:-1], "%Y%m%d-%H%M%S"), "%Y-%m-%dT%H:%M:%SZ"
