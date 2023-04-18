@@ -267,10 +267,7 @@ async def test_forceful_restart_without_data_and_transaction_logs(
     return_code, _, _ = await ops_test.juju(
         "ssh",
         primary_name,
-        "chmod",
-        "+x",
-        "/tmp/clean-data-dir.sh",
-        "&&",
+        "bash",
         "/tmp/clean-data-dir.sh",
     )
     assert return_code == 0, "Failed to remove data directory"
@@ -288,7 +285,7 @@ async def test_forceful_restart_without_data_and_transaction_logs(
                 new_primary_name = await get_primary(ops_test, app)
                 assert new_primary_name != primary_name
 
-        # Change some settings to enable WAL rotation.
+        # Change some settings to enable WAL rotation and remove the old WAL files.
         for unit in ops_test.model.applications[app].units:
             if unit.name == primary_name:
                 continue
