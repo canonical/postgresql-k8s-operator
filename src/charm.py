@@ -233,8 +233,13 @@ class PostgresqlOperatorCharm(CharmBase):
         # Update the list of the cluster members in the replicas to make them know each other.
         # Update the cluster members in this unit (updating patroni configuration).
         container = self.unit.get_container("postgresql")
-        if container.can_connect():
-            self.update_config()
+        if not container.can_connect():
+            logger.debug(
+                "Deferring on_peer_relation_changed: Waiting for container to become available"
+            )
+            event.defer()
+            return
+        self.update_config()
 
         # Validate the status of the member before setting an ActiveStatus.
         if not self._patroni.member_started:
