@@ -17,6 +17,7 @@ from tests.integration.ha_tests.helpers import (
     change_patroni_setting,
     change_wal_settings,
     check_writes,
+    fetch_cluster_members,
     get_patroni_setting,
     get_primary,
     is_cluster_updated,
@@ -225,6 +226,16 @@ async def test_full_cluster_restart(
 
     await are_writes_increasing(ops_test)
 
+    # Verify that all units are part of the same cluster.
+    member_ips = await fetch_cluster_members(ops_test)
+    ip_addresses = [
+        await get_unit_address(ops_test, unit.name)
+        for unit in ops_test.model.applications[app].units
+    ]
+    assert set(member_ips) == set(ip_addresses), "not all units are part of the same cluster."
+
+    await check_writes(ops_test)
+
 
 @pytest.mark.ha_self_healing_tests
 async def test_forceful_restart_without_data_and_transaction_logs(
@@ -309,7 +320,7 @@ async def test_forceful_restart_without_data_and_transaction_logs(
         # Verify that the database service got restarted and is ready in the old primary.
         assert await is_postgresql_ready(ops_test, primary_name)
 
-    await check_writes(ops_test)
+    await is_cluster_updated(ops_test, primary_name)
 
 
 async def test_network_cut(
