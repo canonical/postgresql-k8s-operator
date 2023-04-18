@@ -1,6 +1,9 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 import asyncio
+import os
+import string
+import subprocess
 import tarfile
 import tempfile
 from datetime import datetime
@@ -17,10 +20,18 @@ from kubernetes.stream import stream
 from lightkube.core.client import Client
 from lightkube.resources.core_v1 import Pod
 from pytest_operator.plugin import OpsTest
-from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
+from tenacity import (
+    RetryError,
+    Retrying,
+    retry,
+    stop_after_attempt,
+    stop_after_delay,
+    wait_fixed,
+)
 
 from tests.integration.helpers import (
     app_name,
+    db_connect,
     get_password,
     get_primary,
     get_unit_address,
@@ -107,7 +118,7 @@ async def is_cluster_updated(ops_test: OpsTest, primary_name: str) -> None:
     assert set(member_ips) == set(ip_addresses), "not all units are part of the same cluster."
 
     # Verify that no writes to the database were missed after stopping the writes.
-    total_expected_writes = await are_all_writes_in_db(ops_test)
+    total_expected_writes = await check_writes(ops_test)
 
     # Verify that old primary is up-to-date.
     assert await is_secondary_up_to_date(
@@ -115,7 +126,33 @@ async def is_cluster_updated(ops_test: OpsTest, primary_name: str) -> None:
     ), "secondary not up to date with the cluster after restarting."
 
 
-async def are_all_writes_in_db(ops_test) -> int:
+def get_member_lag(cluster: Dict, member_name: str) -> int:
+    """Return the lag of a specific member."""
+    for member in cluster["members"]:
+        if member["name"] == member_name.replace("/", "-"):
+            return member.get("lag", 0)
+    return 0
+
+
+async def is_member_isolated(
+    ops_test: OpsTest, not_isolated_member: str, isolated_member: str
+) -> bool:
+    """Check whether the member is isolated from the cluster."""
+    # Check if the lag is too high.
+    unit_ip = await get_unit_address(ops_test, not_isolated_member)
+    try:
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+            with attempt:
+                cluster_info = get_patroni_cluster(unit_ip)
+                lag = get_member_lag(cluster_info, isolated_member)
+                assert lag > 1000
+    except RetryError:
+        return False
+
+    return True
+
+
+async def check_writes(ops_test) -> int:
     """Gets the total writes from the test charm and compares to the writes from db."""
     total_expected_writes = await stop_continuous_writes(ops_test)
     actual_writes, max_number_written = await count_writes(ops_test)
@@ -204,6 +241,7 @@ async def count_writes(
         if unit_name != down_unit:
             cluster = get_patroni_cluster(unit["address"])
             break
+
     count = {}
     max = {}
     for member in cluster["members"]:
@@ -230,6 +268,43 @@ async def count_writes(
                 max[member["name"]] = results[1]
             connection.close()
     return count, max
+
+
+def deploy_chaos_mesh(namespace: str) -> None:
+    """Deploy chaos mesh to the provided namespace.
+
+    Args:
+        namespace: The namespace to deploy chaos mesh to
+    """
+    env = os.environ
+    env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
+
+    subprocess.check_output(
+        " ".join(
+            [
+                "tests/integration/ha_tests/scripts/deploy_chaos_mesh.sh",
+                namespace,
+            ]
+        ),
+        shell=True,
+        env=env,
+    )
+
+
+def destroy_chaos_mesh(namespace: str) -> None:
+    """Remove chaos mesh from the provided namespace.
+
+    Args:
+        namespace: The namespace to deploy chaos mesh to
+    """
+    env = os.environ
+    env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
+
+    subprocess.check_output(
+        f"tests/integration/ha_tests/scripts/destroy_chaos_mesh.sh {namespace}",
+        shell=True,
+        env=env,
+    )
 
 
 async def fetch_cluster_members(ops_test: OpsTest):
@@ -282,6 +357,25 @@ async def get_patroni_setting(ops_test: OpsTest, setting: str) -> Optional[int]:
             return int(primary_start_timeout) if primary_start_timeout is not None else None
 
 
+@retry(stop=stop_after_attempt(8), wait=wait_fixed(15), reraise=True)
+async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
+    """Test a connection to a PostgreSQL server."""
+    app = unit_name.split("/")[0]
+    password = await get_password(ops_test, database_app_name=app, down_unit=unit_name)
+    address = await get_unit_address(ops_test, unit_name)
+    try:
+        with db_connect(
+            host=address, password=password
+        ) as connection, connection.cursor() as cursor:
+            cursor.execute("SELECT 1;")
+            success = cursor.fetchone()[0] == 1
+        connection.close()
+        return success
+    except psycopg2.Error:
+        # Error raised when the connection is not possible.
+        return False
+
+
 async def is_replica(ops_test: OpsTest, unit_name: str) -> bool:
     """Returns whether the unit a replica in the cluster."""
     unit_ip = await get_unit_address(ops_test, unit_name)
@@ -310,6 +404,28 @@ async def is_replica(ops_test: OpsTest, unit_name: str) -> bool:
                     raise MemberNotUpdatedOnClusterError()
     except RetryError:
         return False
+
+
+def isolate_instance_from_cluster(ops_test: OpsTest, unit_name: str) -> None:
+    """Apply a NetworkChaos file to use chaos-mesh to simulate a network cut."""
+    with tempfile.NamedTemporaryFile() as temp_file:
+        with open(
+            "tests/integration/ha_tests/manifests/chaos_network_loss.yml", "r"
+        ) as chaos_network_loss_file:
+            template = string.Template(chaos_network_loss_file.read())
+            chaos_network_loss = template.substitute(
+                namespace=ops_test.model.info.name,
+                pod=unit_name.replace("/", "-"),
+            )
+
+            temp_file.write(str.encode(chaos_network_loss))
+            temp_file.flush()
+
+        env = os.environ
+        env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
+        subprocess.check_output(
+            " ".join(["kubectl", "apply", "-f", temp_file.name]), shell=True, env=env
+        )
 
 
 def modify_pebble_restart_delay(
@@ -394,6 +510,17 @@ async def is_postgresql_ready(ops_test, unit_name: str) -> bool:
         return False
 
     return True
+
+
+def remove_instance_isolation(ops_test: OpsTest) -> None:
+    """Delete the NetworkChaos that is isolating the primary unit of the cluster."""
+    env = os.environ
+    env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
+    subprocess.check_output(
+        f"kubectl -n {ops_test.model.info.name} delete --ignore-not-found=true networkchaos network-loss-primary",
+        shell=True,
+        env=env,
+    )
 
 
 async def is_secondary_up_to_date(ops_test: OpsTest, unit_name: str, expected_writes: int) -> bool:

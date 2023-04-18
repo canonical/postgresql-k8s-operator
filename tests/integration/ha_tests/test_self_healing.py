@@ -13,15 +13,19 @@ from tests.integration.ha_tests.conftest import APPLICATION_NAME
 from tests.integration.ha_tests.helpers import (
     METADATA,
     are_all_db_processes_down,
-    are_all_writes_in_db,
     are_writes_increasing,
     change_patroni_setting,
+    check_writes,
     fetch_cluster_members,
     get_patroni_setting,
     get_primary,
     is_cluster_updated,
+    is_connection_possible,
+    is_member_isolated,
     is_postgresql_ready,
+    isolate_instance_from_cluster,
     modify_pebble_restart_delay,
+    remove_instance_isolation,
     send_signal_to_process,
     start_continuous_writes,
 )
@@ -227,4 +231,67 @@ async def test_full_cluster_restart(
     assert set(member_ips) == set(ip_addresses), "not all units are part of the same cluster."
 
     # Verify that no writes to the database were missed after stopping the writes.
-    await are_all_writes_in_db(ops_test)
+    await check_writes(ops_test)
+
+
+async def test_network_cut(
+    ops_test: OpsTest, continuous_writes, primary_start_timeout, chaos_mesh
+) -> None:
+    """Completely cut and restore network."""
+    # Locate primary unit.
+    app = await app_name(ops_test)
+    primary_name = await get_primary(ops_test, app)
+
+    # Start an application that continuously writes data to the database.
+    await start_continuous_writes(ops_test, app)
+
+    # Verify that connection is possible.
+    logger.info("checking whether the connectivity to the database is working")
+    assert await is_connection_possible(
+        ops_test, primary_name
+    ), f"Connection {primary_name} is not possible"
+
+    # Confirm that the primary is not isolated from the cluster.
+    logger.info("confirming that the primary is not isolated from the cluster")
+    assert not await is_member_isolated(ops_test, primary_name, primary_name)
+
+    # Create network chaos policy to isolate instance from cluster
+    logger.info(f"Cutting network for {primary_name}")
+    isolate_instance_from_cluster(ops_test, primary_name)
+
+    # Verify that connection is not possible.
+    logger.info("checking whether the connectivity to the database is not working")
+    assert not await is_connection_possible(
+        ops_test, primary_name
+    ), "Connection is possible after network cut"
+
+    logger.info("checking whether writes are increasing")
+    await are_writes_increasing(ops_test, primary_name)
+
+    logger.info("checking whether a new primary was elected")
+    async with ops_test.fast_forward():
+        # Verify that a new primary gets elected (ie old primary is secondary).
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+            with attempt:
+                new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
+                assert new_primary_name != primary_name
+
+    # Confirm that the former primary is isolated from the cluster.
+    logger.info("confirming that the former primary is isolated from the cluster")
+    assert await is_member_isolated(ops_test, new_primary_name, primary_name)
+
+    # Remove network chaos policy isolating instance from cluster.
+    logger.info(f"Restoring network for {primary_name}")
+    remove_instance_isolation(ops_test)
+
+    # Verify that the database service got restarted and is ready in the old primary.
+    logger.info("waiting for the database service to restart")
+    assert await is_postgresql_ready(ops_test, primary_name)
+
+    # Verify that connection is possible.
+    logger.info("checking whether the connectivity to the database is working")
+    assert await is_connection_possible(
+        ops_test, primary_name
+    ), "Connection is not possible after network restore"
+
+    await is_cluster_updated(ops_test, primary_name)
