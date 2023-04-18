@@ -5,7 +5,7 @@ set -Eeuo pipefail
 chaos_mesh_ns=$1
 
 if [ -z "${chaos_mesh_ns}" ]; then
-  echo "Error: missing mandatory argument. Aborting" >&2
+	echo "Error: missing mandatory argument. Aborting" >&2
 	exit 1
 fi
 
