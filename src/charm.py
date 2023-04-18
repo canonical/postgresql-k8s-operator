@@ -232,7 +232,9 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Update the list of the cluster members in the replicas to make them know each other.
         # Update the cluster members in this unit (updating patroni configuration).
-        self.update_config()
+        container = self.unit.get_container("postgresql")
+        if container.can_connect():
+            self.update_config()
 
         # Validate the status of the member before setting an ActiveStatus.
         if not self._patroni.member_started:
