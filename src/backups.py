@@ -191,12 +191,15 @@ class PostgreSQLBackups(Object):
         output, _ = self._execute_command(
             ["pgbackrest", "info", "--output=json", f"--repo={2 if restore_stanza else 1}"]
         )
-        backups = json.loads(output)[0]["backup"]
+        repository_info = json.loads(output)[0]
+        backups = repository_info["backup"]
         logger.error(f"backups: {backups}")
+        stanza_name = repository_info["name"]
+        logger.error(f"stanza_name: {stanza_name}")
         return {
             datetime.strftime(
                 datetime.strptime(backup["label"][:-1], "%Y%m%d-%H%M%S"), "%Y-%m-%dT%H:%M:%SZ"
-            ): "patroni-postgresql-k8s-aws"
+            ): stanza_name
             for backup in backups
             if show_failed or not backup["error"]
         }
