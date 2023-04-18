@@ -234,6 +234,7 @@ async def test_full_cluster_restart(
     ]
     assert set(member_ips) == set(ip_addresses), "not all units are part of the same cluster."
 
+    # Verify that no writes to the database were missed after stopping the writes.
     await check_writes(ops_test)
 
 
