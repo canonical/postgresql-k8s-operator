@@ -140,6 +140,7 @@ async def test_freeze_db_process(
     await is_cluster_updated(ops_test, primary_name)
 
 
+@pytest.mark.parametrize("process", DB_PROCESSES)
 async def test_restart_db_process(
     ops_test: OpsTest, process: str, continuous_writes, primary_start_timeout
 ) -> None:
