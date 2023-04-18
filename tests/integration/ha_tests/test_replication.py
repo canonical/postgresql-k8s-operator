@@ -9,7 +9,6 @@ from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from tests.integration.ha_tests.conftest import APPLICATION_NAME
 from tests.integration.ha_tests.helpers import (
-    METADATA,
     are_writes_increasing,
     check_writes,
     is_cluster_updated,
@@ -25,11 +24,6 @@ from tests.integration.helpers import (
     get_unit_address,
     scale_application,
 )
-
-APP_NAME = METADATA["name"]
-PATRONI_PROCESS = "/usr/local/bin/patroni"
-POSTGRESQL_PROCESS = "postgres"
-DB_PROCESSES = [POSTGRESQL_PROCESS, PATRONI_PROCESS]
 
 
 @pytest.mark.abort_on_fail
@@ -71,7 +65,7 @@ async def test_reelection(ops_test: OpsTest, continuous_writes, primary_start_ti
 
     # Wait and get the primary again (which can be any unit, including the previous primary).
     async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active")
+        await ops_test.model.wait_for_idle(apps=[app], status="active")
 
     # Check whether writes are increasing.
     await are_writes_increasing(ops_test, primary_name)
