@@ -8,12 +8,26 @@ from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from tests.integration.ha_tests.helpers import (
     change_patroni_setting,
+    deploy_chaos_mesh,
+    destroy_chaos_mesh,
     get_patroni_setting,
     modify_pebble_restart_delay,
+    remove_instance_isolation,
 )
 from tests.integration.helpers import app_name
 
 APPLICATION_NAME = "application"
+
+
+@pytest.fixture()
+async def chaos_mesh(ops_test: OpsTest) -> None:
+    """Deploys chaos mesh to the namespace and uninstalls it at the end."""
+    deploy_chaos_mesh(ops_test.model.info.name)
+
+    yield
+
+    remove_instance_isolation(ops_test)
+    destroy_chaos_mesh(ops_test.model.info.name)
 
 
 @pytest.fixture()
