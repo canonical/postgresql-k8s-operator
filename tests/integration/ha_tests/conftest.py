@@ -8,12 +8,28 @@ from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from tests.integration.ha_tests.helpers import (
     change_patroni_setting,
+    change_wal_settings,
+    deploy_chaos_mesh,
+    destroy_chaos_mesh,
     get_patroni_setting,
+    get_postgresql_parameter,
     modify_pebble_restart_delay,
+    remove_instance_isolation,
 )
 from tests.integration.helpers import app_name
 
 APPLICATION_NAME = "application"
+
+
+@pytest.fixture()
+async def chaos_mesh(ops_test: OpsTest) -> None:
+    """Deploys chaos mesh to the namespace and uninstalls it at the end."""
+    deploy_chaos_mesh(ops_test.model.info.name)
+
+    yield
+
+    remove_instance_isolation(ops_test)
+    destroy_chaos_mesh(ops_test.model.info.name)
 
 
 @pytest.fixture()
@@ -51,6 +67,26 @@ async def primary_start_timeout(ops_test: OpsTest) -> None:
     yield
     # Rollback to the initial configuration.
     await change_patroni_setting(ops_test, "primary_start_timeout", initial_primary_start_timeout)
+
+
+@pytest.fixture()
+async def wal_settings(ops_test: OpsTest) -> None:
+    """Restore the WAL settings to the initial values."""
+    # Get the value for each setting.
+    initial_max_wal_size = await get_postgresql_parameter(ops_test, "max_wal_size")
+    initial_min_wal_size = await get_postgresql_parameter(ops_test, "min_wal_size")
+    initial_wal_keep_segments = await get_postgresql_parameter(ops_test, "wal_keep_segments")
+    yield
+    # Rollback to the initial settings.
+    app = await app_name(ops_test)
+    for unit in ops_test.model.applications[app].units:
+        await change_wal_settings(
+            ops_test,
+            unit.name,
+            initial_max_wal_size,
+            initial_min_wal_size,
+            initial_wal_keep_segments,
+        )
 
 
 @pytest.fixture()
