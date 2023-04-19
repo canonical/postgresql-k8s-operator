@@ -493,7 +493,6 @@ Stderr:
         logger.info("Configuring Patroni to restore the backup")
         self.charm.app_peer_data.update(
             {
-                "archive-mode": "off",
                 "restoring-backup": f'{datetime.strftime(datetime.strptime(backup_id, "%Y-%m-%dT%H:%M:%SZ"), "%Y%m%d-%H%M%S")}F',
                 "restore-stanza": backups[backup_id],
             }
@@ -618,7 +617,7 @@ Stderr:
 
     def _restart_database(self) -> None:
         """Removes the restoring backup flag and restart the database."""
-        self.charm.app_peer_data.update({"archive-mode": "", "restoring-backup": ""})
+        self.charm.app_peer_data.update({"restoring-backup": ""})
         self.charm.update_config()
         self.container.start(self.charm._postgresql_service)
 

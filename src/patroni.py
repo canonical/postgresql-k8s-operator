@@ -209,7 +209,6 @@ class Patroni:
 
     def render_patroni_yml_file(
         self,
-        archive_mode: str,
         connectivity: bool = False,
         enable_tls: bool = False,
         stanza: str = None,
@@ -219,7 +218,6 @@ class Patroni:
         """Render the Patroni configuration file.
 
         Args:
-            archive_mode: PostgreSQL archive mode.
             connectivity: whether to allow external connections to the database.
             enable_tls: whether to enable TLS.
             stanza: name of the stanza created by pgBackRest.
@@ -231,7 +229,6 @@ class Patroni:
             template = Template(file.read())
         # Render the template file with the correct values.
         rendered = template.render(
-            archive_mode=archive_mode,
             connectivity=connectivity,
             enable_tls=enable_tls,
             endpoint=self._endpoint,

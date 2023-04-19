@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
+import asyncio
 import logging
 from typing import Dict, Tuple
 
@@ -8,6 +9,7 @@ import pytest as pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_exponential
 
+from tests.integration.conftest import AWS
 from tests.integration.helpers import (
     DATABASE_APP_NAME,
     build_and_deploy,
@@ -152,68 +154,106 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
     await ops_test.model.remove_application(TLS_CERTIFICATES_APP_NAME, block_until_done=True)
 
 
-async def test_restore_on_new_cluster(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> None:
-    for cloud, config in cloud_configs[0].items():
-        # Deploy and relate PostgreSQL to S3 integrator (one database app for each cloud for now
-        # as archivo_mode is disabled after restoring the backup) and to TLS Certificates Operator
-        # (to be able to create backups from replicas).
-        database_app_name = f"new-{DATABASE_APP_NAME}-{cloud.lower()}"
-        await build_and_deploy(
-            ops_test, 1, database_app_name=database_app_name, wait_for_idle=False
+async def test_restore_on_new_cluster(ops_test: OpsTest) -> None:
+    """Test that is possible to restore a backup to another PostgreSQL cluster."""
+    database_app_name = f"new-{DATABASE_APP_NAME}"
+    await build_and_deploy(ops_test, 1, database_app_name=database_app_name, wait_for_idle=False)
+    await ops_test.model.relate(
+        f"{database_app_name}:restore-s3-parameters", S3_INTEGRATOR_APP_NAME
+    )
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(
+            apps=[database_app_name, S3_INTEGRATOR_APP_NAME], status="active", timeout=1000
         )
-        await ops_test.model.relate(
-            f"{database_app_name}:restore-s3-parameters", S3_INTEGRATOR_APP_NAME
-        )
-        async with ops_test.fast_forward():
-            await ops_test.model.wait_for_idle(
-                apps=[database_app_name, S3_INTEGRATOR_APP_NAME], status="active", timeout=1000
-            )
 
-        # Run the "list backups" action.
-        unit_name = f"{database_app_name}/0"
-        logger.info("listing the available backups")
-        action = await ops_test.model.units.get(unit_name).run_action("list-backups")
-        await action.wait()
-        backups = action.results.get("backups")
-        print(f"backups: {backups}")
-        assert backups, "backups not outputted"
+    # Run the "list backups" action.
+    unit_name = f"{database_app_name}/0"
+    logger.info("listing the available backups")
+    action = await ops_test.model.units.get(unit_name).run_action("list-backups")
+    await action.wait()
+    backups = action.results.get("backups")
+    print(f"backups: {backups}")
+    assert backups, "backups not outputted"
+    await ops_test.model.wait_for_idle(status="active", timeout=1000)
+
+    # Run the "restore backup" action.
+    for attempt in Retrying(
+        stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
+    ):
+        with attempt:
+            logger.info("restoring the backup")
+            most_recent_backup = backups.split("\n")[-1]
+            backup_id = most_recent_backup.split()[0]
+            action = await ops_test.model.units.get(f"{database_app_name}/0").run_action(
+                "restore", **{"backup-id": backup_id}
+            )
+            await action.wait()
+            restore_status = action.results.get("restore-status")
+            print(f"restore_status: {restore_status}")
+            assert restore_status, "restore hasn't succeeded"
+
+    # Wait for the restore to complete.
+    async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
-        # Run the "restore backup" action.
-        for attempt in Retrying(
-            stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
-        ):
-            with attempt:
-                logger.info("restoring the backup")
-                most_recent_backup = backups.split("\n")[-1]
-                backup_id = most_recent_backup.split()[0]
-                action = await ops_test.model.units.get(f"{database_app_name}/0").run_action(
-                    "restore", **{"backup-id": backup_id}
-                )
-                await action.wait()
-                restore_status = action.results.get("restore-status")
-                print(f"restore_status: {restore_status}")
-                assert restore_status, "restore hasn't succeeded"
+    # Check that the backup was correctly restored by having only the first created table.
+    password = await get_password(ops_test, database_app_name=database_app_name)
+    address = await get_unit_address(ops_test, unit_name)
+    logger.info("checking that the backup was correctly restored")
+    with db_connect(host=address, password=password) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT EXISTS (SELECT FROM information_schema.tables"
+            " WHERE table_schema = 'public' AND table_name = 'backup_table_1');"
+        )
+        assert cursor.fetchone()[
+            0
+        ], "backup wasn't correctly restored: table 'backup_table_1' doesn't exist"
+    connection.close()
 
-        # Wait for the restore to complete.
-        async with ops_test.fast_forward():
-            await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
-        # Check that the backup was correctly restored by having only the first created table.
-        password = await get_password(ops_test, database_app_name=database_app_name)
-        address = await get_unit_address(ops_test, unit_name)
-        logger.info("checking that the backup was correctly restored")
-        with db_connect(
-            host=address, password=password
-        ) as connection, connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT EXISTS (SELECT FROM information_schema.tables"
-                " WHERE table_schema = 'public' AND table_name = 'backup_table_1');"
-            )
-            assert cursor.fetchone()[
-                0
-            ], "backup wasn't correctly restored: table 'backup_table_1' doesn't exist"
-        connection.close()
+async def test_invalid_config_and_recovery_after_fixing_it(
+    ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]
+) -> None:
+    """Test that the charm can handle invalid and valid backup configurations."""
+    database_app_name = f"new-{DATABASE_APP_NAME}"
 
-        # Remove the database app.
-        # await ops_test.model.applications[database_app_name].remove()
+    # Provide invalid backup configurations.
+    logger.info("configuring S3 integrator for an invalid cloud")
+    await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config(
+        {
+            "endpoint": "invalid",
+            "bucket": "invalid",
+            "path": "invalid",
+            "region": "invalid",
+        }
+    )
+    action = await ops_test.model.units.get(f"{S3_INTEGRATOR_APP_NAME}/0").run_action(
+        "sync-s3-credentials",
+        **{
+            "access-key": "invalid",
+            "secret-key": "invalid",
+        },
+    )
+    await action.wait()
+    # Relate the backup endpoint.
+    await ops_test.model.relate(
+        f"{database_app_name}:backup-s3-parameters", S3_INTEGRATOR_APP_NAME
+    )
+    await asyncio.gather(
+        ops_test.model.wait_for_idle(apps=[S3_INTEGRATOR_APP_NAME], status="active", timeout=1000),
+        ops_test.model.wait_for_idle(
+            apps=[database_app_name], status="blocked", timeout=1000, raise_on_blocked=False
+        ),
+    )
+
+    # Provide valid backup configurations.
+    logger.info("configuring S3 integrator for a valid cloud")
+    await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config(cloud_configs[0][AWS])
+    action = await ops_test.model.units.get(f"{S3_INTEGRATOR_APP_NAME}/0").run_action(
+        "sync-s3-credentials",
+        **cloud_configs[1][AWS],
+    )
+    await action.wait()
+    await ops_test.model.wait_for_idle(
+        apps=[database_app_name, S3_INTEGRATOR_APP_NAME], status="active", timeout=1000
+    )
