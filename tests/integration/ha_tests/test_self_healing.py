@@ -15,6 +15,7 @@ from tests.integration.ha_tests.helpers import (
     are_all_db_processes_down,
     are_writes_increasing,
     change_patroni_setting,
+    change_wal_settings,
     check_writes,
     fetch_cluster_members,
     get_patroni_setting,
@@ -24,6 +25,7 @@ from tests.integration.ha_tests.helpers import (
     is_member_isolated,
     is_postgresql_ready,
     isolate_instance_from_cluster,
+    list_wal_files,
     modify_pebble_restart_delay,
     remove_instance_isolation,
     send_signal_to_process,
@@ -33,7 +35,10 @@ from tests.integration.helpers import (
     CHARM_SERIES,
     app_name,
     build_and_deploy,
+    db_connect,
+    get_password,
     get_unit_address,
+    run_command_on_unit,
 )
 
 logger = logging.getLogger(__name__)
@@ -133,7 +138,6 @@ async def test_freeze_db_process(
                     await send_signal_to_process(
                         ops_test, primary_name, process, "SIGCONT", use_ssh
                     )
-
         # Verify that the database service got restarted and is ready in the old primary.
         assert await is_postgresql_ready(ops_test, primary_name)
 
@@ -232,6 +236,89 @@ async def test_full_cluster_restart(
 
     # Verify that no writes to the database were missed after stopping the writes.
     await check_writes(ops_test)
+
+
+@pytest.mark.ha_self_healing_tests
+async def test_forceful_restart_without_data_and_transaction_logs(
+    ops_test: OpsTest,
+    continuous_writes,
+    primary_start_timeout,
+    wal_settings,
+) -> None:
+    """A forceful restart with deleted data and without transaction logs (forced clone)."""
+    # Locate primary unit.
+    app = await app_name(ops_test)
+    primary_name = await get_primary(ops_test, app)
+
+    # Start an application that continuously writes data to the database.
+    await start_continuous_writes(ops_test, app)
+
+    # Copy data dir content removal script.
+    await ops_test.juju(
+        "scp", "tests/integration/ha_tests/clean-data-dir.sh", f"{primary_name}:/tmp"
+    )
+
+    # Stop the systemd service on the primary unit.
+    logger.info(f"stopping database from {primary_name}")
+    await run_command_on_unit(ops_test, primary_name, "/charm/bin/pebble stop postgresql")
+
+    # Data removal runs within a script, so it allows `*` expansion.
+    logger.info(f"removing data from {primary_name}")
+    return_code, _, _ = await ops_test.juju(
+        "ssh",
+        primary_name,
+        "bash",
+        "/tmp/clean-data-dir.sh",
+    )
+    assert return_code == 0, "Failed to remove data directory"
+
+    # Wait some time to elect a new primary.
+    sleep(MEDIAN_ELECTION_TIME * 2)
+
+    async with ops_test.fast_forward():
+        await are_writes_increasing(ops_test, primary_name)
+
+        # Verify that a new primary gets elected (ie old primary is secondary).
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+            with attempt:
+                logger.info("checking whether a new primary was elected")
+                new_primary_name = await get_primary(ops_test, app)
+                assert new_primary_name != primary_name
+
+        # Change some settings to enable WAL rotation and remove the old WAL files.
+        for unit in ops_test.model.applications[app].units:
+            if unit.name == primary_name:
+                continue
+            logger.info(f"enabling WAL rotation on {primary_name}")
+            await change_wal_settings(ops_test, unit.name, 32, 32, 1)
+
+        # Rotate the WAL segments.
+        files = await list_wal_files(ops_test, app)
+        host = await get_unit_address(ops_test, new_primary_name)
+        password = await get_password(ops_test, down_unit=primary_name)
+        with db_connect(host, password) as connection:
+            connection.autocommit = True
+            with connection.cursor() as cursor:
+                # Run some commands to make PostgreSQL do WAL rotation.
+                cursor.execute("SELECT pg_switch_wal();")
+                cursor.execute("CHECKPOINT;")
+                cursor.execute("SELECT pg_switch_wal();")
+        connection.close()
+        new_files = await list_wal_files(ops_test, app)
+        # Check that the WAL was correctly rotated.
+        for unit_name in files:
+            assert not files[unit_name].intersection(
+                new_files
+            ), "WAL segments weren't correctly rotated"
+
+        # Start the systemd service in the old primary.
+        logger.info(f"starting database on {primary_name}")
+        await run_command_on_unit(ops_test, primary_name, "/charm/bin/pebble start postgresql")
+
+        # Verify that the database service got restarted and is ready in the old primary.
+        assert await is_postgresql_ready(ops_test, primary_name)
+
+    await is_cluster_updated(ops_test, primary_name)
 
 
 async def test_network_cut(

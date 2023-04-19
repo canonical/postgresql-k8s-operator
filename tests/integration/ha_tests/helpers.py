@@ -8,7 +8,7 @@ import tarfile
 import tempfile
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional, Set, Tuple
 
 import kubernetes as kubernetes
 import psycopg2
@@ -102,6 +102,35 @@ async def change_patroni_setting(ops_test: OpsTest, setting: str, value: int) ->
             )
 
 
+async def change_wal_settings(
+    ops_test: OpsTest, unit_name: str, max_wal_size: int, min_wal_size, wal_keep_segments
+) -> None:
+    """Change WAL settings in the unit.
+
+    Args:
+        ops_test: ops_test instance.
+        unit_name: name of the unit to change the WAL settings.
+        max_wal_size: maximum amount of WAL to keep (MB).
+        min_wal_size: minimum amount of WAL to keep (MB).
+        wal_keep_segments: number of WAL segments to keep.
+    """
+    for attempt in Retrying(stop=stop_after_delay(30 * 2), wait=wait_fixed(3)):
+        with attempt:
+            unit_ip = await get_unit_address(ops_test, unit_name)
+            requests.patch(
+                f"http://{unit_ip}:8008/config",
+                json={
+                    "postgresql": {
+                        "parameters": {
+                            "max_wal_size": max_wal_size,
+                            "min_wal_size": min_wal_size,
+                            "wal_keep_segments": wal_keep_segments,
+                        }
+                    }
+                },
+            )
+
+
 async def is_cluster_updated(ops_test: OpsTest, primary_name: str) -> None:
     # Verify that the old primary is now a replica.
     assert await is_replica(
@@ -168,7 +197,7 @@ async def are_writes_increasing(ops_test, down_unit: str = None) -> None:
     """Verify new writes are continuing by counting the number of writes."""
     writes, _ = await count_writes(ops_test, down_unit=down_unit)
     for member, count in writes.items():
-        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+        for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
             with attempt:
                 more_writes, _ = await count_writes(ops_test, down_unit=down_unit)
                 assert more_writes[member] > count, f"{member}: writes not continuing to DB"
@@ -357,6 +386,32 @@ async def get_patroni_setting(ops_test: OpsTest, setting: str) -> Optional[int]:
             return int(primary_start_timeout) if primary_start_timeout is not None else None
 
 
+async def get_postgresql_parameter(ops_test: OpsTest, parameter_name: str) -> Optional[int]:
+    """Get the value of a PostgreSQL parameter from Patroni API.
+
+    Args:
+        ops_test: ops_test instance.
+        parameter_name: the name of the parameter to get the value for.
+
+    Returns:
+        the value of the requested PostgreSQL parameter.
+    """
+    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+        with attempt:
+            app = await app_name(ops_test)
+            primary_name = await get_primary(ops_test, app)
+            unit_ip = await get_unit_address(ops_test, primary_name)
+            configuration_info = requests.get(f"http://{unit_ip}:8008/config")
+            postgresql_dict = configuration_info.json().get("postgresql")
+            if postgresql_dict is None:
+                return None
+            parameters = postgresql_dict.get("parameters")
+            if parameters is None:
+                return None
+            parameter_value = parameters.get(parameter_name)
+            return parameter_value
+
+
 @retry(stop=stop_after_attempt(8), wait=wait_fixed(15), reraise=True)
 async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
     """Test a connection to a PostgreSQL server."""
@@ -404,6 +459,21 @@ async def is_replica(ops_test: OpsTest, unit_name: str) -> bool:
                     raise MemberNotUpdatedOnClusterError()
     except RetryError:
         return False
+
+
+async def list_wal_files(ops_test: OpsTest, app: str) -> Set:
+    """Returns the list of WAL segment files in each unit."""
+    units = [unit.name for unit in ops_test.model.applications[app].units]
+    command = "ls -1 /var/lib/postgresql/data/pgdata/pg_wal/"
+    files = {}
+    for unit in units:
+        complete_command = f"run --unit {unit} -- {command}"
+        return_code, stdout, stderr = await ops_test.juju(*complete_command.split())
+        files[unit] = stdout.splitlines()
+        files[unit] = {
+            i for i in files[unit] if ".history" not in i and i != "" and i != "archive_status"
+        }
+    return files
 
 
 def isolate_instance_from_cluster(ops_test: OpsTest, unit_name: str) -> None:
