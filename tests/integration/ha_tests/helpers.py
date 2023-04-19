@@ -477,6 +477,21 @@ def modify_pebble_restart_delay(
         response.returncode == 0
     ), f"Failed to add to pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
 
+    replan_pebble_layer_commands = "/charm/bin/pebble replan"
+    response = kubernetes.stream.stream(
+        client.connect_get_namespaced_pod_exec,
+        pod_name,
+        ops_test.model.info.name,
+        container=container_name,
+        command=replan_pebble_layer_commands.split(),
+        stdin=False,
+        stdout=True,
+        stderr=True,
+        tty=False,
+        _preload_content=False,
+    )
+    response.run_forever(timeout=60)
+
 
 async def is_postgresql_ready(ops_test, unit_name: str) -> bool:
     """Verifies a PostgreSQL instance is running and available."""
