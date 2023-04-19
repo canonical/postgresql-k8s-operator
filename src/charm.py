@@ -255,7 +255,8 @@ class PostgresqlOperatorCharm(CharmBase):
         else:
             self.unit_peer_data.pop("start-tls.server", None)
 
-        self.unit.status = ActiveStatus()
+        if not self.is_blocked:
+            self.unit.status = ActiveStatus()
 
     def _on_config_changed(self, _) -> None:
         """Handle the config-changed event."""

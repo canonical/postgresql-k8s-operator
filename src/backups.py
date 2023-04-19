@@ -27,7 +27,8 @@ from constants import BACKUP_USER, WORKLOAD_OS_GROUP, WORKLOAD_OS_USER
 
 logger = logging.getLogger(__name__)
 
-FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE = "failed to initialize stanza"
+ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE = "the S3 repository has backups from another cluster"
+FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE = "failed to initialize stanza, check your S3 settings"
 
 
 class PostgreSQLBackups(Object):
@@ -141,13 +142,19 @@ class PostgreSQLBackups(Object):
         self.charm.unit_peer_data.update({"connectivity": "on" if connectivity else "off"})
         self.charm.update_config()
 
-    def _execute_command(self, command: List[str]) -> Tuple[str, str]:
+    def _execute_command(
+        self, command: List[str], timeout: float = None
+    ) -> Tuple[Optional[str], Optional[str]]:
         """Execute a command in the workload container."""
-        return self.container.exec(
-            command,
-            user=WORKLOAD_OS_USER,
-            group=WORKLOAD_OS_GROUP,
-        ).wait_output()
+        try:
+            return self.container.exec(
+                command,
+                user=WORKLOAD_OS_USER,
+                group=WORKLOAD_OS_GROUP,
+                timeout=timeout,
+            ).wait_output()
+        except ChangeError:
+            return None, None
 
     def _format_backup_list(self, backup_list) -> str:
         """Formats provided list of backups as a table."""
@@ -191,7 +198,12 @@ class PostgreSQLBackups(Object):
         output, _ = self._execute_command(
             ["pgbackrest", "info", "--output=json", f"--repo={2 if restore_stanza else 1}"]
         )
-        repository_info = json.loads(output)[0]
+        repository_info = next(iter(json.loads(output)), None)
+
+        # If there are no backups, returns an empty dict.
+        if repository_info is None:
+            return {}
+
         backups = repository_info["backup"]
         stanza_name = repository_info["name"]
         return {
@@ -212,10 +224,12 @@ class PostgreSQLBackups(Object):
         if not self.charm.unit.is_leader():
             return
 
-        if (
-            self.charm.is_blocked
-            and self.charm.unit.status.message != FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE
-        ):
+        # Enable stanza initialisation if the backup settings were fixed after being invalid
+        # or pointing to a repository where there are backups from another cluster.
+        if self.charm.is_blocked and self.charm.unit.status.message not in [
+            ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE,
+            FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE,
+        ]:
             logger.warning("couldn't initialize stanza due to a blocked status")
             return
 
@@ -287,6 +301,26 @@ class PostgreSQLBackups(Object):
         if not self._render_pgbackrest_conf_file():
             logger.debug("Cannot set pgBackRest configurations, missing configurations.")
             return
+
+        # Prevent creating backups and storing in another cluster repository.
+        output, _ = self._execute_command(["pgbackrest", "info", "--output=json"], timeout=30)
+        if output is None:
+            # Block the charm.
+            self.charm.unit.status = BlockedStatus(FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE)
+            return
+
+        for stanza in json.loads(output):
+            if stanza.get("name") != self.charm.app_peer_data.get(
+                "stanza", self.charm.cluster_name
+            ):
+                # Prevent archiving of WAL files.
+                self.charm.app_peer_data.update({"stanza": ""})
+                self.charm.update_config()
+                if self.charm._patroni.member_started:
+                    self.charm._patroni.reload_patroni_configuration()
+                # Block the charm.
+                self.charm.unit.status = BlockedStatus(ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE)
+                return
 
         self._initialise_stanza()
 
@@ -580,12 +614,21 @@ Stderr:
         # Open the template pgbackrest.conf file.
         with open("templates/pgbackrest.conf.j2", "r") as file:
             template = Template(file.read())
+
+        # Retrieve the backup path (and add a "/" before the path if it doesn't contain that).
+        backup_path = backup_s3_parameters.get("path", "")
+        backup_path = f"/{backup_path}" if not backup_path.startswith("/") else backup_path
+
+        # Retrieve the restore path (and add a "/" before the path if it doesn't contain that).
+        restore_path = restore_s3_parameters.get("path", "")
+        restore_path = f"/{restore_path}" if not restore_path.startswith("/") else restore_path
+
         # Render the template file with the correct values.
         rendered = template.render(
             enable_tls=self.charm.is_tls_enabled and len(self.charm.peer_members_endpoints) > 0,
             peer_endpoints=self.charm.peer_members_endpoints,
             backup=backup,
-            path=backup_s3_parameters.get("path"),
+            path=backup_path,
             region=backup_s3_parameters.get("region"),
             endpoint=backup_s3_parameters.get("endpoint"),
             bucket=backup_s3_parameters.get("bucket"),
@@ -594,7 +637,7 @@ Stderr:
             secret_key=backup_s3_parameters.get("secret-key"),
             stanza=self.charm.cluster_name,
             restore=restore,
-            restore_path=restore_s3_parameters.get("path"),
+            restore_path=restore_path,
             restore_region=restore_s3_parameters.get("region"),
             restore_endpoint=restore_s3_parameters.get("endpoint"),
             restore_bucket=restore_s3_parameters.get("bucket"),

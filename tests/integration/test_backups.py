@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 import asyncio
 import logging
+import uuid
 from typing import Dict, Tuple
 
 import pytest as pytest
@@ -172,7 +173,6 @@ async def test_restore_on_new_cluster(ops_test: OpsTest) -> None:
     action = await ops_test.model.units.get(unit_name).run_action("list-backups")
     await action.wait()
     backups = action.results.get("backups")
-    print(f"backups: {backups}")
     assert backups, "backups not outputted"
     await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
@@ -189,7 +189,6 @@ async def test_restore_on_new_cluster(ops_test: OpsTest) -> None:
             )
             await action.wait()
             restore_status = action.results.get("restore-status")
-            print(f"restore_status: {restore_status}")
             assert restore_status, "restore hasn't succeeded"
 
     # Wait for the restore to complete.
@@ -221,17 +220,17 @@ async def test_invalid_config_and_recovery_after_fixing_it(
     logger.info("configuring S3 integrator for an invalid cloud")
     await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config(
         {
-            "endpoint": "invalid",
-            "bucket": "invalid",
-            "path": "invalid",
-            "region": "invalid",
+            "endpoint": "endpoint",
+            "bucket": "bucket",
+            "path": "path",
+            "region": "region",
         }
     )
     action = await ops_test.model.units.get(f"{S3_INTEGRATOR_APP_NAME}/0").run_action(
         "sync-s3-credentials",
         **{
-            "access-key": "invalid",
-            "secret-key": "invalid",
+            "access-key": "access-key",
+            "secret-key": "secret-key",
         },
     )
     await action.wait()
@@ -239,21 +238,47 @@ async def test_invalid_config_and_recovery_after_fixing_it(
     await ops_test.model.relate(
         f"{database_app_name}:backup-s3-parameters", S3_INTEGRATOR_APP_NAME
     )
+    logger.info("waiting for the database charm to become blocked")
+    unit = ops_test.model.units.get(f"{database_app_name}/0")
     await asyncio.gather(
-        ops_test.model.wait_for_idle(apps=[S3_INTEGRATOR_APP_NAME], status="active", timeout=1000),
+        ops_test.model.wait_for_idle(apps=[S3_INTEGRATOR_APP_NAME], status="active"),
         ops_test.model.wait_for_idle(
-            apps=[database_app_name], status="blocked", timeout=1000, raise_on_blocked=False
+            apps=[database_app_name], status="blocked", raise_on_blocked=False
+        ),
+        ops_test.model.block_until(
+            lambda: unit.workload_status_message
+            == "failed to initialize stanza, check your S3 settings"
         ),
     )
 
-    # Provide valid backup configurations.
-    logger.info("configuring S3 integrator for a valid cloud")
+    # Provide valid backup configurations, but from another cluster repository.
+    logger.info(
+        "configuring S3 integrator for a valid cloud, but with the path of another cluster repository"
+    )
     await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config(cloud_configs[0][AWS])
     action = await ops_test.model.units.get(f"{S3_INTEGRATOR_APP_NAME}/0").run_action(
         "sync-s3-credentials",
         **cloud_configs[1][AWS],
     )
     await action.wait()
+    logger.info("waiting for the database charm to become blocked")
+    await asyncio.gather(
+        ops_test.model.wait_for_idle(apps=[S3_INTEGRATOR_APP_NAME], status="active"),
+        ops_test.model.wait_for_idle(
+            apps=[database_app_name], status="blocked", raise_on_blocked=False
+        ),
+        ops_test.model.block_until(
+            lambda: unit.workload_status_message
+            == "the S3 repository has backups from another cluster"
+        ),
+    )
+
+    # Provide valid backup configurations, with another path in the S3 bucket.
+    logger.info("configuring S3 integrator for a valid cloud")
+    config = cloud_configs[0][AWS].copy()
+    config["path"] = f"/postgresql-k8s/{uuid.uuid1()}"
+    await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config(config)
+    logger.info("waiting for the database charm to become active")
     await ops_test.model.wait_for_idle(
-        apps=[database_app_name, S3_INTEGRATOR_APP_NAME], status="active", timeout=1000
+        apps=[database_app_name, S3_INTEGRATOR_APP_NAME], status="active"
     )
