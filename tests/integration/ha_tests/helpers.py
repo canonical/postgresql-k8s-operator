@@ -432,6 +432,7 @@ def modify_pebble_restart_delay(
     ops_test: OpsTest,
     unit_name: str,
     pebble_plan_path: str,
+    ensure_replan: bool = False,
 ) -> None:
     """Modify the pebble restart delay of the underlying process.
 
@@ -439,6 +440,7 @@ def modify_pebble_restart_delay(
         ops_test: The ops test framework
         unit_name: The name of unit to extend the pebble restart delay for
         pebble_plan_path: Path to the file with the modified pebble plan
+        ensure_replan: Whether to check that the replan command succeeded
     """
     kubernetes.config.load_kube_config()
     client = kubernetes.client.api.core_v1_api.CoreV1Api()
@@ -477,20 +479,26 @@ def modify_pebble_restart_delay(
         response.returncode == 0
     ), f"Failed to add to pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
 
-    replan_pebble_layer_commands = "/charm/bin/pebble replan"
-    response = kubernetes.stream.stream(
-        client.connect_get_namespaced_pod_exec,
-        pod_name,
-        ops_test.model.info.name,
-        container=container_name,
-        command=replan_pebble_layer_commands.split(),
-        stdin=False,
-        stdout=True,
-        stderr=True,
-        tty=False,
-        _preload_content=False,
-    )
-    response.run_forever(timeout=60)
+    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+        with attempt:
+            replan_pebble_layer_commands = "/charm/bin/pebble replan"
+            response = kubernetes.stream.stream(
+                client.connect_get_namespaced_pod_exec,
+                pod_name,
+                ops_test.model.info.name,
+                container=container_name,
+                command=replan_pebble_layer_commands.split(),
+                stdin=False,
+                stdout=True,
+                stderr=True,
+                tty=False,
+                _preload_content=False,
+            )
+            response.run_forever(timeout=60)
+            if ensure_replan:
+                assert (
+                    response.returncode == 0
+                ), f"Failed to replan pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
 
 
 async def is_postgresql_ready(ops_test, unit_name: str) -> bool:

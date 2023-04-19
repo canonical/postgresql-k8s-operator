@@ -211,6 +211,7 @@ async def test_full_cluster_restart(
                 ops_test,
                 unit.name,
                 "tests/integration/ha_tests/manifests/restore_pebble_restart_delay.yml",
+                ensure_replan=True,
             )
         await change_patroni_setting(ops_test, "loop_wait", initial_loop_wait)
 
