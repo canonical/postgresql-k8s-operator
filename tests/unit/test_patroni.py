@@ -96,7 +96,6 @@ class TestPatroni(unittest.TestCase):
         with open("templates/patroni.yml.j2") as file:
             template = Template(file.read())
         expected_content = template.render(
-            archive_mode="on",
             endpoint=self.patroni._endpoint,
             endpoints=self.patroni._endpoints,
             namespace=self.patroni._namespace,
@@ -116,7 +115,7 @@ class TestPatroni(unittest.TestCase):
         # Patch the `open` method with our mock.
         with patch("builtins.open", mock, create=True):
             # Call the method
-            self.patroni.render_patroni_yml_file(archive_mode="on", enable_tls=False)
+            self.patroni.render_patroni_yml_file(enable_tls=False)
 
         # Check the template is opened read-only in the call to open.
         self.assertEqual(mock.call_args_list[0][0], ("templates/patroni.yml.j2", "r"))
@@ -130,7 +129,6 @@ class TestPatroni(unittest.TestCase):
         # Then test the rendering of the file with TLS enabled.
         _render_file.reset_mock()
         expected_content_with_tls = template.render(
-            archive_mode="on",
             enable_tls=True,
             endpoint=self.patroni._endpoint,
             endpoints=self.patroni._endpoints,
@@ -148,7 +146,7 @@ class TestPatroni(unittest.TestCase):
         # Patch the `open` method with our mock.
         with patch("builtins.open", mock, create=True):
             # Call the method
-            self.patroni.render_patroni_yml_file(archive_mode="on", enable_tls=True)
+            self.patroni.render_patroni_yml_file(enable_tls=True)
 
         # Ensure the correct rendered template is sent to _render_file method.
         _render_file.assert_called_once_with(
