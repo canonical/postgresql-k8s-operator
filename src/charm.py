@@ -237,7 +237,6 @@ class PostgresqlOperatorCharm(CharmBase):
             logger.debug(
                 "Early exit on_peer_relation_changed: Waiting for container to become available"
             )
-            event.defer()
             return
 
         # Validate the status of the member before setting an ActiveStatus.
