@@ -309,18 +309,21 @@ class PostgreSQLBackups(Object):
             self.charm.unit.status = BlockedStatus(FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE)
             return
 
-        for stanza in json.loads(output):
-            if stanza.get("name") != self.charm.app_peer_data.get(
-                "stanza", self.charm.cluster_name
-            ):
-                # Prevent archiving of WAL files.
-                self.charm.app_peer_data.update({"stanza": ""})
-                self.charm.update_config()
-                if self.charm._patroni.member_started:
-                    self.charm._patroni.reload_patroni_configuration()
-                # Block the charm.
-                self.charm.unit.status = BlockedStatus(ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE)
-                return
+        if self.charm.unit.is_leader():
+            for stanza in json.loads(output):
+                if stanza.get("name") != self.charm.app_peer_data.get(
+                    "stanza", self.charm.cluster_name
+                ):
+                    # Prevent archiving of WAL files.
+                    self.charm.app_peer_data.update({"stanza": ""})
+                    self.charm.update_config()
+                    if self.charm._patroni.member_started:
+                        self.charm._patroni.reload_patroni_configuration()
+                    # Block the charm.
+                    self.charm.unit.status = BlockedStatus(
+                        ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE
+                    )
+                    return
 
         self._initialise_stanza()
 
