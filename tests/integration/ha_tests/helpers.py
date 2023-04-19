@@ -17,6 +17,7 @@ import yaml
 from kubernetes import config
 from kubernetes.client.api import core_v1_api
 from kubernetes.stream import stream
+from kubernetes.stream.ws_client import ERROR_CHANNEL
 from lightkube.core.client import Client
 from lightkube.resources.core_v1 import Pod
 from pytest_operator.plugin import OpsTest
@@ -493,9 +494,10 @@ def modify_pebble_restart_delay(
                 _preload_content=False,
             )
             response.run_forever(timeout=60)
+            error = response.read_channel(ERROR_CHANNEL)
             assert (
-                response.returncode == 0
-            ), f"Failed to replan pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
+                yaml.safe_load(error)["status"] == "Success"
+            ), f"Failed to replan pebble layer, unit={unit_name}, container={container_name}, service={service_name}, error={error}"
 
 
 async def is_postgresql_ready(ops_test, unit_name: str) -> bool:
