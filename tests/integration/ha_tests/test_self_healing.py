@@ -170,6 +170,7 @@ async def test_restart_db_process(
     await is_cluster_updated(ops_test, primary_name)
 
 
+@pytest.mark.unstable
 @pytest.mark.parametrize("process", DB_PROCESSES)
 @pytest.mark.parametrize("signal", ["SIGTERM", "SIGKILL"])
 async def test_full_cluster_restart(
