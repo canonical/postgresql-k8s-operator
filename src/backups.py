@@ -89,6 +89,27 @@ class PostgreSQLBackups(Object):
 
         return self._are_backup_settings_ok()
 
+    def can_use_s3_repository(self) -> Tuple[bool, Optional[str]]:
+        """Returns whether the charm was configured to use another cluster repository."""
+        # Prevent creating backups and storing in another cluster repository.
+        output, _ = self._execute_command(["pgbackrest", "info", "--output=json"], timeout=30)
+        if output is None:
+            return False, FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE
+
+        if self.charm.unit.is_leader():
+            for stanza in json.loads(output):
+                if stanza.get("name") != self.charm.app_peer_data.get(
+                    "stanza", self.charm.cluster_name
+                ):
+                    # Prevent archiving of WAL files.
+                    self.charm.app_peer_data.update({"stanza": ""})
+                    self.charm.update_config()
+                    if self.charm._patroni.member_started:
+                        self.charm._patroni.reload_patroni_configuration()
+                    return False, ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE
+
+        return True, None
+
     def _construct_endpoint(self, s3_parameters: Dict) -> str:
         """Construct the S3 service endpoint using the region.
 
@@ -288,28 +309,10 @@ class PostgreSQLBackups(Object):
             logger.debug("Cannot set pgBackRest configurations, missing configurations.")
             return
 
-        # Prevent creating backups and storing in another cluster repository.
-        output, _ = self._execute_command(["pgbackrest", "info", "--output=json"], timeout=30)
-        if output is None:
-            # Block the charm.
-            self.charm.unit.status = BlockedStatus(FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE)
+        can_use_s3_repository, validation_message = self.can_use_s3_repository()
+        if not can_use_s3_repository:
+            self.charm.unit.status = BlockedStatus(validation_message)
             return
-
-        if self.charm.unit.is_leader():
-            for stanza in json.loads(output):
-                if stanza.get("name") != self.charm.app_peer_data.get(
-                    "stanza", self.charm.cluster_name
-                ):
-                    # Prevent archiving of WAL files.
-                    self.charm.app_peer_data.update({"stanza": ""})
-                    self.charm.update_config()
-                    if self.charm._patroni.member_started:
-                        self.charm._patroni.reload_patroni_configuration()
-                    # Block the charm.
-                    self.charm.unit.status = BlockedStatus(
-                        ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE
-                    )
-                    return
 
         self._initialise_stanza()
 
