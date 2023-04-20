@@ -546,9 +546,9 @@ async def is_secondary_up_to_date(ops_test: OpsTest, unit_name: str, expected_wr
                 with psycopg2.connect(
                     connection_string
                 ) as connection, connection.cursor() as cursor:
-                    cursor.execute("SELECT COUNT(number) FROM continuous_writes;")
-                    secondary_writes = cursor.fetchone()[0]
-                    assert secondary_writes == expected_writes
+                    cursor.execute("SELECT COUNT(number), MAX(number) FROM continuous_writes;")
+                    results = cursor.fetchone()
+                    assert results[0] == expected_writes and results[1] == expected_writes
     except RetryError:
         return False
     finally:
