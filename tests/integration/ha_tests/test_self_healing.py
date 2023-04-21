@@ -73,7 +73,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
 
-@pytest.mark.parametrize("process", [POSTGRESQL_PROCESS])
+@pytest.mark.parametrize("process", DB_PROCESSES)
 async def test_kill_db_process(
     ops_test: OpsTest, process: str, continuous_writes, primary_start_timeout
 ) -> None:
@@ -103,7 +103,7 @@ async def test_kill_db_process(
     await is_cluster_updated(ops_test, primary_name)
 
 
-@pytest.mark.parametrize("process", [PATRONI_PROCESS])
+@pytest.mark.parametrize("process", DB_PROCESSES)
 async def test_freeze_db_process(
     ops_test: OpsTest, process: str, continuous_writes, primary_start_timeout
 ) -> None:
@@ -174,6 +174,7 @@ async def test_restart_db_process(
     await is_cluster_updated(ops_test, primary_name)
 
 
+@pytest.mark.unstable
 @pytest.mark.parametrize("process", DB_PROCESSES)
 @pytest.mark.parametrize("signal", ["SIGTERM", "SIGKILL"])
 async def test_full_cluster_restart(
@@ -215,6 +216,7 @@ async def test_full_cluster_restart(
                 ops_test,
                 unit.name,
                 "tests/integration/ha_tests/manifests/restore_pebble_restart_delay.yml",
+                ensure_replan=True,
             )
         await change_patroni_setting(ops_test, "loop_wait", initial_loop_wait)
 
