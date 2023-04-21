@@ -238,6 +238,7 @@ class PostgresqlOperatorCharm(CharmBase):
                 "Early exit on_peer_relation_changed: Waiting for container to become available"
             )
             return
+        self.update_config()
 
         # Validate the status of the member before setting an ActiveStatus.
         if not self._patroni.member_started:
