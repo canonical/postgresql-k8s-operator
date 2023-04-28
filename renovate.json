@@ -30,6 +30,9 @@
     }, {
       "matchPackageNames": ["packaging"],
       "allowedVersions": "<23.0.1"
+    }, {
+      "matchPackageNames": ["urllib3"],
+      "allowedVersions": "<2.0.0"
     }
   ],
   "regexManagers": [
