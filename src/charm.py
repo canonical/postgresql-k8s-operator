@@ -34,7 +34,7 @@ from ops.model import (
     Relation,
     WaitingStatus,
 )
-from ops.pebble import Layer, PathError, ProtocolError, ServiceStatus
+from ops.pebble import ChangeError, Layer, PathError, ProtocolError, ServiceStatus
 from requests import ConnectionError
 from tenacity import RetryError
 
@@ -232,6 +232,12 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Update the list of the cluster members in the replicas to make them know each other.
         # Update the cluster members in this unit (updating patroni configuration).
+        container = self.unit.get_container("postgresql")
+        if not container.can_connect():
+            logger.debug(
+                "Early exit on_peer_relation_changed: Waiting for container to become available"
+            )
+            return
         self.update_config()
 
         # Validate the status of the member before setting an ActiveStatus.
@@ -691,7 +697,32 @@ class PostgresqlOperatorCharm(CharmBase):
                 self.unit.status = BlockedStatus(validation_message)
                 return
 
+        if self._handle_processes_failures():
+            return
+
         self._set_primary_status_message()
+
+    def _handle_processes_failures(self) -> bool:
+        """Handle Patroni and PostgreSQL OS processes failures.
+
+        Returns:
+            a bool indicating whether the charm performed any action.
+        """
+        container = self.unit.get_container("postgresql")
+
+        # Restart the Patroni process if it was killed (in that case, the PostgreSQL
+        # process is still running). This is needed until
+        # https://github.com/canonical/pebble/issues/149 is resolved.
+        if not self._patroni.member_started and self._patroni.is_database_running:
+            try:
+                container.restart(self._postgresql_service)
+                logger.info("restarted Patroni because it was not running")
+            except ChangeError:
+                logger.error("failed to restart Patroni after checking that it was not running")
+                return False
+            return True
+
+        return False
 
     def _set_primary_status_message(self) -> None:
         """Display 'Primary' in the unit status message if the current unit is the primary."""

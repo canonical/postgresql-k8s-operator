@@ -496,7 +496,10 @@ async def get_primary(
         if unit.name != down_unit:
             action = await unit.run_action("get-primary")
             action = await action.wait()
-            return action.results["primary"]
+            primary = action.results.get("primary", "None")
+            if primary == "None":
+                continue
+            return primary
 
 
 async def get_unit_address(ops_test: OpsTest, unit_name: str) -> str:

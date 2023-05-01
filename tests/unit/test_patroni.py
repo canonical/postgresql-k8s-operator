@@ -7,7 +7,7 @@ from unittest.mock import PropertyMock, mock_open, patch
 
 from jinja2 import Template
 from ops.testing import Harness
-from tenacity import RetryError
+from tenacity import RetryError, stop_after_delay, wait_fixed
 
 from charm import PostgresqlOperatorCharm
 from constants import REWIND_USER
@@ -164,8 +164,10 @@ class TestPatroni(unittest.TestCase):
         )
         self.assertIn("ssl_key_file: /var/lib/postgresql/data/key.pem", expected_content_with_tls)
 
+    @patch("patroni.stop_after_delay", return_value=stop_after_delay(0))
+    @patch("patroni.wait_fixed", return_value=wait_fixed(0))
     @patch("requests.get")
-    def test_primary_endpoint_ready(self, _get):
+    def test_primary_endpoint_ready(self, _get, _, __):
         # Test with an issue when trying to connect to the Patroni API.
         _get.side_effect = RetryError
         self.assertFalse(self.patroni.primary_endpoint_ready)

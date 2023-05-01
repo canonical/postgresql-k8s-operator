@@ -185,6 +185,19 @@ class Patroni:
 
         return r.json()["state"] == "running"
 
+    @property
+    def is_database_running(self) -> bool:
+        """Returns whether the PostgreSQL database process is running (and isn't frozen)."""
+        container = self._charm.unit.get_container("postgresql")
+        output = container.exec(["ps", "aux"]).wait_output()
+        postgresql_processes = [
+            process
+            for process in output[0].split("/n")
+            if "/usr/lib/postgresql/14/bin/postgres" in process
+        ]
+        # Check whether the PostgreSQL process has a state equal to T (frozen).
+        return any([process for process in postgresql_processes if process.split()[7] != "T"])
+
     def _render_file(self, path: str, content: str, mode: int) -> None:
         """Write a content rendered from a template to a file.
 
