@@ -16,7 +16,7 @@ from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
 from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
 from lightkube import ApiError, Client, codecs
 from lightkube.models.core_v1 import ServicePort
-from lightkube.resources.core_v1 import Endpoints, Pod, Service
+from lightkube.resources.core_v1 import Pod
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -81,7 +81,6 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
         self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
-        self.framework.observe(self.on.stop, self._on_stop)
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(self.on.get_password_action, self._on_get_password)
         self.framework.observe(self.on.set_password_action, self._on_set_password)
@@ -620,46 +619,6 @@ class PostgresqlOperatorCharm(CharmBase):
             event.set_results({"primary": primary})
         except RetryError as e:
             logger.error(f"failed to get primary with error {e}")
-
-    def _on_stop(self, _) -> None:
-        """Remove k8s resources created by the charm and Patroni."""
-        client = Client()
-
-        # Get the k8s resources created by the charm.
-        with open("src/resources.yaml") as f:
-            resources = codecs.load_all_yaml(f, context=self._context)
-            # Ignore the service resources, which will be retrieved in the next step.
-            resources_to_delete = list(
-                filter(
-                    lambda x: not isinstance(x, Service),
-                    resources,
-                )
-            )
-
-        # Get the k8s resources created by the charm and Patroni.
-        for kind in [Endpoints, Service]:
-            resources_to_delete.extend(
-                client.list(
-                    kind,
-                    namespace=self._namespace,
-                    labels={"app.juju.is/created-by": f"{self._name}"},
-                )
-            )
-
-        # Delete the resources.
-        for resource in resources_to_delete:
-            try:
-                client.delete(
-                    type(resource),
-                    name=resource.metadata.name,
-                    namespace=resource.metadata.namespace,
-                )
-            except ApiError as e:
-                if (
-                    e.status.code != 404
-                ):  # 404 means that the resource was already deleted by other unit.
-                    # Only log a message, as the charm is being stopped.
-                    logger.error(f"failed to delete resource: {resource}.")
 
     def _on_update_status(self, _) -> None:
         """Update the unit status message."""
