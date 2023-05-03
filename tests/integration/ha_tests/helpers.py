@@ -61,12 +61,17 @@ async def are_all_db_processes_down(ops_test: OpsTest, process: str) -> bool:
     """Verifies that all units of the charm do not have the DB process running."""
     app = await app_name(ops_test)
 
+    if "/" in process:
+        pgrep_cmd = ("pgrep", "-f", process)
+    else:
+        pgrep_cmd = ("pgrep", "-x", process)
+
     try:
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
             with attempt:
                 for unit in ops_test.model.applications[app].units:
                     _, raw_pid, _ = await ops_test.juju(
-                        "ssh", "--container", "postgresql", unit.name, "pgrep", "-x", process
+                        "ssh", "--container", "postgresql", unit.name, *pgrep_cmd
                     )
 
                     # If something was returned, there is a running process.
@@ -650,7 +655,12 @@ async def send_signal_to_process(
         await ops_test.model.wait_for_idle(apps=[app], status="active", timeout=1000)
 
     pod_name = unit_name.replace("/", "-")
-    command = f"pkill --signal {signal} -x {process}"
+    if "/" in process:
+        opt = "-f"
+    else:
+        opt = "-x"
+
+    command = f"pkill --signal {signal} {opt} {process}"
 
     if use_ssh:
         kill_cmd = f"ssh {unit_name} {command}"
@@ -684,9 +694,14 @@ async def send_signal_to_process(
 
             response.run_forever(timeout=10)
 
+            if "/" in process:
+                pgrep_cmd = ("pgrep", "-f", process)
+            else:
+                pgrep_cmd = ("pgrep", "-x", process)
+
             if signal not in ["SIGSTOP", "SIGCONT"]:
                 _, raw_pid, _ = await ops_test.juju(
-                    "ssh", "--container", "postgresql", unit_name, "pgrep", "-x", process
+                    "ssh", "--container", "postgresql", unit_name, *pgrep_cmd
                 )
 
                 # If something was returned, there is a running process.
