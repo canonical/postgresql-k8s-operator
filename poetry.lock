@@ -169,18 +169,18 @@ uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
 name = "boto3"
-version = "1.26.115"
+version = "1.26.122"
 description = "The AWS SDK for Python"
 category = "main"
 optional = false
 python-versions = ">= 3.7"
 files = [
-    {file = "boto3-1.26.115-py3-none-any.whl", hash = "sha256:deb53ad15ff0e75ae0be6d7115a2d34e4bafb0541484485f0feb61dabdfb5513"},
-    {file = "boto3-1.26.115.tar.gz", hash = "sha256:2272a060005bf8299f7342cbf1344304eb44b7060cddba6784f676e3bc737bb8"},
+    {file = "boto3-1.26.122-py3-none-any.whl", hash = "sha256:4d575c180312bec6108852bae12e6396b9d1bb404154d652c57ee849c62fbb83"},
+    {file = "boto3-1.26.122.tar.gz", hash = "sha256:38ca632be379963f2a2749b5f63a81fe1679913b954914f470ad282c77674bbc"},
 ]
 
 [package.dependencies]
-botocore = ">=1.29.115,<1.30.0"
+botocore = ">=1.29.122,<1.30.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.6.0,<0.7.0"
 
@@ -189,14 +189,14 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.29.115"
+version = "1.29.122"
 description = "Low-level, data-driven core of boto 3."
 category = "main"
 optional = false
 python-versions = ">= 3.7"
 files = [
-    {file = "botocore-1.29.115-py3-none-any.whl", hash = "sha256:dff327977d7c9f98f2dc54b51b8f70326952dd50ae23b885fdfa8bfeec014b76"},
-    {file = "botocore-1.29.115.tar.gz", hash = "sha256:58eee8cf8f4f3e515df29f6dc535dd86ed3f4cea40999c5bc74640ff40bdc71f"},
+    {file = "botocore-1.29.122-py3-none-any.whl", hash = "sha256:c3b41078d235761b9c5dc22f534a76952622ef96787b96bbd10242ec4d73f2a5"},
+    {file = "botocore-1.29.122.tar.gz", hash = "sha256:9e4984a9e9777c6b949aa1e98323fa35480d9f99d447af7e179ae611f7ed5af9"},
 ]
 
 [package.dependencies]
@@ -998,31 +998,31 @@ adal = ["adal (>=1.0.2)"]
 
 [[package]]
 name = "lightkube"
-version = "0.12.0"
+version = "0.13.0"
 description = "Lightweight kubernetes client library"
 category = "main"
 optional = false
 python-versions = "*"
 files = [
-    {file = "lightkube-0.12.0-py3-none-any.whl", hash = "sha256:ddb9455fd5241682349cec6cb1abec6707cdf9f934580af3a942cade76b60ef5"},
-    {file = "lightkube-0.12.0.tar.gz", hash = "sha256:32692b6ac1b3fee0c89662c9dd72eec6fff6ea602275fff94ed9a9d91eb5f9e6"},
+    {file = "lightkube-0.13.0-py3-none-any.whl", hash = "sha256:1ca46d3b9fae83858149c95af09cd92e34eed611a54c42d1034b02c73ce683d9"},
+    {file = "lightkube-0.13.0.tar.gz", hash = "sha256:9eea3f2e123c672aaba7eca90af9cec1b39b97b318e07aec3ad0fe1a14cf5a31"},
 ]
 
 [package.dependencies]
-httpx = ">=0.20.0"
+httpx = ">=0.24.0"
 lightkube-models = ">=1.15.12.0"
 PyYAML = "*"
 
 [[package]]
 name = "lightkube-models"
-version = "1.26.0.4"
+version = "1.27.1.4"
 description = "Models and Resources for lightkube module"
 category = "main"
 optional = false
 python-versions = "*"
 files = [
-    {file = "lightkube-models-1.26.0.4.tar.gz", hash = "sha256:4fcd4aea095fa204b16e0dac214dcb78f83c548d71e618ddca954e2ec59eb43f"},
-    {file = "lightkube_models-1.26.0.4-py3-none-any.whl", hash = "sha256:d10c798e4e7e2465a89d3ca637543f4be4eb4f8d41be626e5da2406c7034173c"},
+    {file = "lightkube-models-1.27.1.4.tar.gz", hash = "sha256:5caa97ed46bde5ae8a4313ebf3fa3d0135388d0aea0752261d4720e24d982fb0"},
+    {file = "lightkube_models-1.27.1.4-py3-none-any.whl", hash = "sha256:206abb6d184a07ed84c20fbabe494847e892de2c38ed302f39a87b4ed1f7bcd9"},
 ]
 
 [[package]]
@@ -1686,14 +1686,14 @@ testing = ["coverage (>=6.2)", "flaky (>=3.5.0)", "hypothesis (>=5.7.1)", "mypy 
 
 [[package]]
 name = "pytest-operator"
-version = "0.26.0"
+version = "0.27.0"
 description = "Fixtures for Operators"
 category = "dev"
 optional = false
 python-versions = "*"
 files = [
-    {file = "pytest-operator-0.26.0.tar.gz", hash = "sha256:eda39d058c0152fa2b2b4a733836c3b187a8d5688ba386926fe06fab51d61725"},
-    {file = "pytest_operator-0.26.0-py3-none-any.whl", hash = "sha256:43216ec874ad07a270bff1c166723461c4be01500ee455e0c7724c8b12349611"},
+    {file = "pytest-operator-0.27.0.tar.gz", hash = "sha256:d02ae9ef071c77238647f2ec5261331ddd0832b3f6ded3e2c49e8faef36c8738"},
+    {file = "pytest_operator-0.27.0-py3-none-any.whl", hash = "sha256:a7ca56c0142fc4e04f12a3da3ac2a14834f900a8584ea46cef5d474fef44a2a5"},
 ]
 
 [package.dependencies]
@@ -1783,14 +1783,14 @@ files = [
 
 [[package]]
 name = "requests"
-version = "2.28.2"
+version = "2.29.0"
 description = "Python HTTP for Humans."
 category = "main"
 optional = false
-python-versions = ">=3.7, <4"
+python-versions = ">=3.7"
 files = [
-    {file = "requests-2.28.2-py3-none-any.whl", hash = "sha256:64299f4909223da747622c030b781c0d7811e359c37124b4bd368fb8c6518baa"},
-    {file = "requests-2.28.2.tar.gz", hash = "sha256:98b1b2782e3c6c4904938b84c0eb932721069dfdb9134313beff7c83c2df24bf"},
+    {file = "requests-2.29.0-py3-none-any.whl", hash = "sha256:e8f3c9be120d3333921d213eef078af392fba3933ab7ed2d1cba3b56f2568c3b"},
+    {file = "requests-2.29.0.tar.gz", hash = "sha256:f2e34a75f4749019bb0e3effb66683630e4ffeaf75819fb51bebef1bf5aef059"},
 ]
 
 [package.dependencies]
@@ -2235,4 +2235,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8.10"
-content-hash = "bdfaedfff372332349ef634fdbbb25342552bfa3a209726b02eacbf7c4dd1727"
+content-hash = "37e90184d789eb0e5dcc3ed2d7277616ed0d56d9124591008e9b1e012edabc85"
