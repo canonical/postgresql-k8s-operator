@@ -575,10 +575,6 @@ Stderr:
             )
             return False
 
-        # Retrieve the backup path (and add a "/" before the path if it doesn't contain that).
-        backup_path = s3_parameters.get("path", "")
-        backup_path = f"/{backup_path}" if not backup_path.startswith("/") else backup_path
-
         # Open the template pgbackrest.conf file.
         with open("templates/pgbackrest.conf.j2", "r") as file:
             template = Template(file.read())
@@ -586,7 +582,7 @@ Stderr:
         rendered = template.render(
             enable_tls=self.charm.is_tls_enabled and len(self.charm.peer_members_endpoints) > 0,
             peer_endpoints=self.charm.peer_members_endpoints,
-            path=backup_path,
+            path=s3_parameters["path"],
             region=s3_parameters.get("region"),
             endpoint=s3_parameters["endpoint"],
             bucket=s3_parameters["bucket"],
@@ -630,6 +626,9 @@ Stderr:
                 f"Missing required S3 parameters in relation with S3 integrator: {missing_required_parameters}"
             )
             return {}, missing_required_parameters
+
+        # Retrieve the backup path, strip its slashes and add a "/" in the beginning of the path.
+        s3_parameters["path"] = f'/{s3_parameters["path"].split("/")}'
 
         # Add some sensible defaults (as expected by the code) for missing optional parameters
         s3_parameters.setdefault("endpoint", "https://s3.amazonaws.com")
