@@ -694,14 +694,9 @@ async def send_signal_to_process(
 
             response.run_forever(timeout=10)
 
-            if "/" in process:
-                pgrep_cmd = ("pgrep", "-f", process)
-            else:
-                pgrep_cmd = ("pgrep", "-x", process)
-
             if signal not in ["SIGSTOP", "SIGCONT"]:
                 _, raw_pid, _ = await ops_test.juju(
-                    "ssh", "--container", "postgresql", unit_name, *pgrep_cmd
+                    "ssh", "--container", "postgresql", unit_name, "pgrep", opt, process
                 )
 
                 # If something was returned, there is a running process.
