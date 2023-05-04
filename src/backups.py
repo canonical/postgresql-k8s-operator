@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Tuple
 
 import boto3 as boto3
 import botocore
+from botocore.exceptions import ClientError
 from charms.data_platform_libs.v0.s3 import CredentialsChangedEvent, S3Requirer
 from jinja2 import Template
 from lightkube import ApiError, Client
@@ -28,6 +29,9 @@ from constants import BACKUP_USER, WORKLOAD_OS_GROUP, WORKLOAD_OS_USER
 logger = logging.getLogger(__name__)
 
 ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE = "the S3 repository has backups from another cluster"
+FAILED_TO_ACCESS_CREATE_BUCKET_ERROR_MESSAGE = (
+    "failed to access/create the bucket, check your S3 settings"
+)
 FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE = "failed to initialize stanza, check your S3 settings"
 
 
@@ -132,6 +136,45 @@ class PostgreSQLBackups(Object):
 
         return endpoint
 
+    def _create_bucket_if_not_exists(self) -> None:
+        s3_parameters, missing_parameters = self._retrieve_s3_parameters()
+        if missing_parameters:
+            return
+
+        bucket_name = s3_parameters["bucket"]
+        region = s3_parameters.get("region")
+        session = boto3.session.Session(
+            aws_access_key_id=s3_parameters["access-key"],
+            aws_secret_access_key=s3_parameters["secret-key"],
+            region_name=s3_parameters["region"],
+        )
+
+        logger.error(f"s3_parameters: {s3_parameters}")
+        try:
+            s3 = session.resource("s3", endpoint_url=self._construct_endpoint(s3_parameters))
+        except ValueError as e:
+            logger.exception("Failed to create a session '%s' in region=%s.", bucket_name, region)
+            raise e
+        bucket = s3.Bucket(bucket_name)
+        try:
+            bucket.meta.client.head_bucket(Bucket=bucket_name)
+            logger.info("Bucket %s exists.", bucket_name)
+            exists = True
+        except ClientError:
+            logger.warning("Bucket %s doesn't exist or you don't have access to it.", bucket_name)
+            exists = False
+        if not exists:
+            try:
+                bucket.create(CreateBucketConfiguration={"LocationConstraint": region})
+
+                bucket.wait_until_exists()
+                logger.info("Created bucket '%s' in region=%s", bucket_name, region)
+            except ClientError as error:
+                logger.exception(
+                    "Couldn't create bucket named '%s' in region=%s.", bucket_name, region
+                )
+                raise error
+
     def _empty_data_files(self) -> None:
         """Empty the PostgreSQL data directory in preparation of backup restore."""
         try:
@@ -235,6 +278,7 @@ class PostgreSQLBackups(Object):
         # or pointing to a repository where there are backups from another cluster.
         if self.charm.is_blocked and self.charm.unit.status.message not in [
             ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE,
+            FAILED_TO_ACCESS_CREATE_BUCKET_ERROR_MESSAGE,
             FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE,
         ]:
             logger.warning("couldn't initialize stanza due to a blocked status")
@@ -307,6 +351,12 @@ class PostgreSQLBackups(Object):
 
         if not self._render_pgbackrest_conf_file():
             logger.debug("Cannot set pgBackRest configurations, missing configurations.")
+            return
+
+        try:
+            self._create_bucket_if_not_exists()
+        except (ClientError, ValueError):
+            self.charm.unit.status = BlockedStatus(FAILED_TO_ACCESS_CREATE_BUCKET_ERROR_MESSAGE)
             return
 
         can_use_s3_repository, validation_message = self.can_use_s3_repository()
