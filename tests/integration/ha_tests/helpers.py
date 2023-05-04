@@ -660,6 +660,11 @@ async def send_signal_to_process(
     else:
         opt = "-x"
 
+    if signal not in ["SIGSTOP", "SIGCONT"]:
+        _, old_pid, _ = await ops_test.juju(
+            "ssh", "--container", "postgresql", unit_name, "pgrep", opt, process
+        )
+
     command = f"pkill --signal {signal} {opt} {process}"
 
     if use_ssh:
@@ -699,8 +704,8 @@ async def send_signal_to_process(
                     "ssh", "--container", "postgresql", unit_name, "pgrep", opt, process
                 )
 
-                # If something was returned, there is a running process.
-                if len(raw_pid) > 0:
+                # If the same output was returned, process was not restarted.
+                if raw_pid == old_pid:
                     raise ProcessRunningError
             elif response.returncode != 0:
                 raise ProcessError(
