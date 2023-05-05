@@ -44,7 +44,7 @@ from tests.integration.helpers import (
 logger = logging.getLogger(__name__)
 
 APP_NAME = METADATA["name"]
-PATRONI_PROCESS = "patroni"
+PATRONI_PROCESS = "/usr/bin/patroni"
 POSTGRESQL_PROCESS = "postgres"
 DB_PROCESSES = [POSTGRESQL_PROCESS, PATRONI_PROCESS]
 MEDIAN_ELECTION_TIME = 10
