@@ -54,6 +54,11 @@ class PostgreSQLBackups(Object):
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_action)
 
+    @property
+    def stanza_name(self) -> str:
+        """Stanza name, composed by model and cluster name."""
+        return f"{self.model.name}.{self.charm.cluster_name}"
+
     def _are_backup_settings_ok(self) -> Tuple[bool, Optional[str]]:
         """Validates whether backup settings are OK."""
         if self.model.get_relation(self.relation_name) is None:
@@ -102,9 +107,7 @@ class PostgreSQLBackups(Object):
 
         if self.charm.unit.is_leader():
             for stanza in json.loads(output):
-                if stanza.get("name") != self.charm.app_peer_data.get(
-                    "stanza", self.charm.cluster_name
-                ):
+                if stanza.get("name") != self.charm.app_peer_data.get("stanza", self.stanza_name):
                     # Prevent archiving of WAL files.
                     self.charm.app_peer_data.update({"stanza": ""})
                     self.charm.update_config()
@@ -288,16 +291,14 @@ class PostgreSQLBackups(Object):
 
         try:
             # Create the stanza.
-            self._execute_command(
-                ["pgbackrest", f"--stanza={self.charm.cluster_name}", "stanza-create"]
-            )
+            self._execute_command(["pgbackrest", f"--stanza={self.stanza_name}", "stanza-create"])
         except ExecError as e:
             logger.exception(e)
             self.charm.unit.status = BlockedStatus(FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE)
             return
 
         # Store the stanza name to be used in configurations updates.
-        self.charm.app_peer_data.update({"stanza": self.charm.cluster_name})
+        self.charm.app_peer_data.update({"stanza": self.stanza_name})
 
         # Update the configuration to use pgBackRest as the archiving mechanism.
         self.charm.update_config()
@@ -308,9 +309,7 @@ class PostgreSQLBackups(Object):
                 with attempt:
                     if self.charm._patroni.member_started:
                         self.charm._patroni.reload_patroni_configuration()
-                    self._execute_command(
-                        ["pgbackrest", f"--stanza={self.charm.cluster_name}", "check"]
-                    )
+                    self._execute_command(["pgbackrest", f"--stanza={self.stanza_name}", "check"])
             self.charm.unit.status = ActiveStatus()
         except RetryError as e:
             logger.exception(e)
@@ -392,7 +391,7 @@ Juju Version: {str(juju_version)}
             metadata,
             os.path.join(
                 s3_parameters["path"],
-                f"backup/{self.charm.cluster_name}/latest",
+                f"backup/{self.stanza_name}/latest",
             ),
             s3_parameters,
         ):
@@ -409,7 +408,7 @@ Juju Version: {str(juju_version)}
         try:
             command = [
                 "pgbackrest",
-                f"--stanza={self.charm.cluster_name}",
+                f"--stanza={self.stanza_name}",
                 "--log-level-console=debug",
                 "--type=full",
                 "backup",
@@ -445,7 +444,7 @@ Stderr:
                 logs,
                 os.path.join(
                     s3_parameters["path"],
-                    f"backup/{self.charm.cluster_name}/{backup_id}/backup.log",
+                    f"backup/{self.stanza_name}/{backup_id}/backup.log",
                 ),
                 s3_parameters,
             )
@@ -462,7 +461,7 @@ Stderr:
                 logs,
                 os.path.join(
                     s3_parameters["path"],
-                    f"backup/{self.charm.cluster_name}/{backup_id}/backup.log",
+                    f"backup/{self.stanza_name}/{backup_id}/backup.log",
                 ),
                 s3_parameters,
             ):
@@ -639,7 +638,7 @@ Stderr:
             s3_uri_style=s3_parameters["s3-uri-style"],
             access_key=s3_parameters["access-key"],
             secret_key=s3_parameters["secret-key"],
-            stanza=self.charm.cluster_name,
+            stanza=self.stanza_name,
             storage_path=self.charm._storage_path,
             user=BACKUP_USER,
         )
@@ -678,7 +677,7 @@ Stderr:
             return {}, missing_required_parameters
 
         # Retrieve the backup path, strip its slashes and add a "/" in the beginning of the path.
-        s3_parameters["path"] = f'/{s3_parameters["path"].split("/")}'
+        s3_parameters["path"] = f'/{s3_parameters["path"].strip("/")}'
 
         # Add some sensible defaults (as expected by the code) for missing optional parameters
         s3_parameters.setdefault("endpoint", "https://s3.amazonaws.com")
