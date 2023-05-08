@@ -20,10 +20,13 @@ from tests.helpers import patch_network_get
 class _FakeResponse:
     """Used to fake an httpx response during testing only."""
 
+    def __init__(self, status_code: int):
+        self.status_code = status_code
+
     def json(self):
         return {
             "apiVersion": 1,
-            "code": "400",
+            "code": self.status_code,
             "message": "broken",
             "reason": "",
         }
@@ -32,8 +35,8 @@ class _FakeResponse:
 class _FakeApiError(ApiError):
     """Used to simulate an ApiError during testing."""
 
-    def __init__(self):
-        super().__init__(response=_FakeResponse())
+    def __init__(self, status_code: int = 400):
+        super().__init__(response=_FakeResponse(status_code))
 
 
 class TestCharm(unittest.TestCase):
@@ -383,10 +386,29 @@ class TestCharm(unittest.TestCase):
 
     @patch("charm.Client")
     def test_create_resources(self, _client):
+        # Test the successful creation of the resources.
         self.charm._create_resources()
         with open("src/resources.yaml") as f:
             for obj in codecs.load_all_yaml(f, context=self._context):
+                # Assert that only custom services (used maily in relations) are created.
+                assert obj.metadata.name in [
+                    f"{self.charm._name}-primary",
+                    f"{self.charm._name}-replicas",
+                ]
                 _client.return_value.create.assert_any_call(obj)
+
+        # Test when a resource already exists.
+        _client.return_value.create.reset_mock()
+        _client.return_value.create.side_effect = _FakeApiError(409)
+        self.charm._create_resources()
+        _client.return_value.create.assert_called_once()
+
+        # Test when another error happens.
+        _client.return_value.create.reset_mock()
+        _client.return_value.create.side_effect = _FakeApiError
+        with self.assertRaises(_FakeApiError):
+            self.charm._create_resources()
+        _client.return_value.create.assert_called_once()
 
     @patch("charm.Client")
     def test_patch_pod_labels(self, _client):
