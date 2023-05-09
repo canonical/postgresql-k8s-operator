@@ -312,6 +312,11 @@ class PostgreSQLBackups(Object):
                     self._execute_command(["pgbackrest", f"--stanza={self.stanza_name}", "check"])
             self.charm.unit.status = ActiveStatus()
         except RetryError as e:
+            # If the check command doesn't succeed, remove the stanza name
+            # and rollback the configuration.
+            self.charm.app_peer_data.update({"stanza": self.stanza_name})
+            self.charm.update_config()
+
             logger.exception(e)
             self.charm.unit.status = BlockedStatus(FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE)
             return
