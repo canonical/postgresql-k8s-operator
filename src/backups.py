@@ -8,7 +8,7 @@ import os
 import re
 import tempfile
 from datetime import datetime
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, OrderedDict, Tuple
 
 import boto3 as boto3
 import botocore
@@ -239,7 +239,7 @@ class PostgreSQLBackups(Object):
             backup_list.append((backup_id, "physical", backup_status))
         return self._format_backup_list(backup_list)
 
-    def _list_backups(self, show_failed: bool) -> Dict[str, str]:
+    def _list_backups(self, show_failed: bool) -> OrderedDict[str, str]:
         """Retrieve the list of backups.
 
         Args:
@@ -254,17 +254,20 @@ class PostgreSQLBackups(Object):
 
         # If there are no backups, returns an empty dict.
         if repository_info is None:
-            return {}
+            return OrderedDict[str, str]()
 
         backups = repository_info["backup"]
         stanza_name = repository_info["name"]
-        return {
-            datetime.strftime(
-                datetime.strptime(backup["label"][:-1], "%Y%m%d-%H%M%S"), "%Y-%m-%dT%H:%M:%SZ"
-            ): stanza_name
+        return OrderedDict[str, str](
+            (
+                datetime.strftime(
+                    datetime.strptime(backup["label"][:-1], "%Y%m%d-%H%M%S"), "%Y-%m-%dT%H:%M:%SZ"
+                ),
+                stanza_name,
+            )
             for backup in backups
             if show_failed or not backup["error"]
-        }
+        )
 
     def _initialise_stanza(self) -> None:
         """Initialize the stanza.
