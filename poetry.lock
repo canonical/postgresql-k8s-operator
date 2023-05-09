@@ -169,18 +169,18 @@ uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
 name = "boto3"
-version = "1.26.127"
+version = "1.26.130"
 description = "The AWS SDK for Python"
 category = "main"
 optional = false
 python-versions = ">= 3.7"
 files = [
-    {file = "boto3-1.26.127-py3-none-any.whl", hash = "sha256:ded836536be41de9f9bd6a75e9feeb74d61b8c58ed7dc4ea89095082d7a616af"},
-    {file = "boto3-1.26.127.tar.gz", hash = "sha256:ed31b2d35aad31418bd8093c5732c6296f785cc234333330df6b81396424d93b"},
+    {file = "boto3-1.26.130-py3-none-any.whl", hash = "sha256:d6f9c6ebf417260ea5fa7a227e7bce9451f1f5010be05ac4075596356f584455"},
+    {file = "boto3-1.26.130.tar.gz", hash = "sha256:3ae2b34921bb08a1d7ce52db9ec1a25159fca779648e596ede37e1049ed77de8"},
 ]
 
 [package.dependencies]
-botocore = ">=1.29.127,<1.30.0"
+botocore = ">=1.29.130,<1.30.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.6.0,<0.7.0"
 
@@ -189,14 +189,14 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.29.127"
+version = "1.29.130"
 description = "Low-level, data-driven core of boto 3."
 category = "main"
 optional = false
 python-versions = ">= 3.7"
 files = [
-    {file = "botocore-1.29.127-py3-none-any.whl", hash = "sha256:cf41d871b2a17d40bd579ce44dace18c875659ac13139a66680540fdf6f1c304"},
-    {file = "botocore-1.29.127.tar.gz", hash = "sha256:d2f9d00df16058cb4a3572a66bb1831e846e5aaa7c0a3033dd47f9a80e2dd58b"},
+    {file = "botocore-1.29.130-py3-none-any.whl", hash = "sha256:56d1f54c3f8e140f965e5300d1cc5b565cb758134d9213fb05e91e1bb160330e"},
+    {file = "botocore-1.29.130.tar.gz", hash = "sha256:3a31293b84ecfe5f5f2c4b7dc85a77d7b890b468a376b593fde15cacc76862dd"},
 ]
 
 [package.dependencies]
@@ -2235,4 +2235,4 @@ testing = ["big-O", "flake8 (<5)", "jaraco.functools", "jaraco.itertools", "more
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.8.10"
-content-hash = "b4cf2d30944fd5b2fa5e8c20a55fe21571659338e78f5d3b51232b8abc925da3"
+content-hash = "b29bc137298a69193bba46b7910b532f034a787c6276b03364847afd8fa4040a"
