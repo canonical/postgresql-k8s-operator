@@ -152,7 +152,6 @@ class PostgreSQLBackups(Object):
             region_name=s3_parameters["region"],
         )
 
-        logger.error(f"s3_parameters: {s3_parameters}")
         try:
             s3 = session.resource("s3", endpoint_url=self._construct_endpoint(s3_parameters))
         except ValueError as e:
