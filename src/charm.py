@@ -14,9 +14,10 @@ from charms.postgresql_k8s.v0.postgresql import (
 )
 from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
 from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
-from lightkube import ApiError, Client, codecs
-from lightkube.models.core_v1 import ServicePort
-from lightkube.resources.core_v1 import Pod
+from lightkube import ApiError, Client
+from lightkube.models.core_v1 import ServicePort, ServiceSpec
+from lightkube.models.meta_v1 import ObjectMeta
+from lightkube.resources.core_v1 import Endpoints, Pod, Service
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -363,10 +364,10 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Create resources and add labels needed for replication.
         try:
-            self._create_resources()
+            self._create_services()
         except ApiError:
-            logger.exception("failed to create k8s resources")
-            self.unit.status = BlockedStatus("failed to create k8s resources")
+            logger.exception("failed to create k8s services")
+            self.unit.status = BlockedStatus("failed to create k8s services")
             return
 
         # Add this unit to the list of cluster members
@@ -452,10 +453,10 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Create resources and add labels needed for replication
         try:
-            self._create_resources()
+            self._create_services()
         except ApiError:
-            logger.exception("failed to create k8s resources")
-            self.unit.status = BlockedStatus("failed to create k8s resources")
+            logger.exception("failed to create k8s services")
+            self.unit.status = BlockedStatus("failed to create k8s services")
             return False
 
         if not self._patroni.primary_endpoint_ready:
@@ -484,10 +485,10 @@ class PostgresqlOperatorCharm(CharmBase):
         # Recreate k8s resources and add labels required for replication
         # when the pod loses them (like when it's deleted).
         try:
-            self._create_resources()
+            self._create_services()
         except ApiError:
-            logger.exception("failed to create k8s resources")
-            self.unit.status = BlockedStatus("failed to create k8s resources")
+            logger.exception("failed to create k8s services")
+            self.unit.status = BlockedStatus("failed to create k8s services")
             return
 
         try:
@@ -517,24 +518,95 @@ class PostgresqlOperatorCharm(CharmBase):
             obj=patch,
         )
 
-    def _create_resources(self) -> None:
-        """Create kubernetes resources needed for Patroni."""
-        client = Client()
+    def _create_services(self) -> None:
+        """Create kubernetes services for primary and replicas endpoints."""
+        client = Client(field_manager="kubectl")
+
         try:
-            with open("src/resources.yaml") as f:
-                for resource in codecs.load_all_yaml(f, context=self._context):
-                    client.create(resource)
-                    logger.debug(f"created {str(resource)}")
+            pod0 = client.get(
+                res=Pod,
+                name=f"{self.app.name}-0",
+                namespace=self.model.name,
+            )
+        except ApiError as e:
+            logger.error("failed to get first pod to use as service owner reference")
+            raise e
+
+        try:
+            services = {
+                "primary": "master",
+                "replicas": "replica",
+            }
+            for service_name_suffix, role_selector in services.items():
+                service = Service(
+                    metadata=ObjectMeta(
+                        name=f"{self._name}-{service_name_suffix}",
+                        namespace=self.model.name,
+                        ownerReferences=pod0.metadata.ownerReferences,
+                        labels={
+                            "app.kubernetes.io/name": self.app.name,
+                        },
+                    ),
+                    spec=ServiceSpec(
+                        ports=[
+                            ServicePort(
+                                name="api",
+                                port=8008,
+                                targetPort=8008,
+                            ),
+                            ServicePort(
+                                name="database",
+                                port=5432,
+                                targetPort=5432,
+                            ),
+                        ],
+                        selector={
+                            "app.kubernetes.io/name": self.app.name,
+                            "cluster-name": f"patroni-{self.app.name}",
+                            "role": role_selector,
+                        },
+                    ),
+                )
+                client.apply(
+                    obj=service,
+                    name=service.metadata.name,
+                    namespace=service.metadata.namespace,
+                    force=True,
+                    field_manager=self.model.app.name,
+                )
+            # Get the k8s resources created by the charm and Patroni.
+            for kind in [Endpoints]:
+                resources_to_patch = client.list(
+                    kind,
+                    namespace=self._namespace,
+                    labels={"app.juju.is/created-by": f"{self._name}"},
+                )
+
+            # Patch the resources.
+            for resource in resources_to_patch:
+                if resource.metadata.name in [self._name, f"{self._name}-endpoints"]:
+                    continue
+                logger.error(f"resource.metadata.name: {resource.metadata.name}")
+                resource.metadata.ownerReferences = pod0.metadata.ownerReferences
+                logger.error(f"resource.metadata.managedFields: {resource.metadata.managedFields}")
+                resource.metadata.managedFields = None
+                client.apply(
+                    # res=type(resource),
+                    obj=resource,
+                    name=resource.metadata.name,
+                    namespace=resource.metadata.namespace,
+                    force=True,
+                    # field_manager=self.model.app.name,
+                )
         except ApiError as e:
             # The 409 error code means that the resource was already created
-            # or has a higher version. This can happen if Patroni creates a
-            # resource that the charm is expected to create.
-            if e.status.code == 409:
-                logger.debug("replacing resource: %s.", str(resource.to_dict()))
-                client.replace(resource)
-            else:
-                logger.error("failed to create resource: %s.", str(resource.to_dict()))
+            # or has a higher version. This can happen when multiple calls are
+            # made to this function.
+            if e.status.code != 409:
+                # logger.error("failed to create service: %s.", str(service.to_dict()))
                 raise e
+            else:
+                logger.error("trying to replace resource")
 
     @property
     def _has_blocked_status(self) -> bool:
