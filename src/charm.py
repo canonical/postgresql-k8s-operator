@@ -522,91 +522,80 @@ class PostgresqlOperatorCharm(CharmBase):
         """Create kubernetes services for primary and replicas endpoints."""
         client = Client(field_manager="kubectl")
 
-        try:
-            pod0 = client.get(
-                res=Pod,
-                name=f"{self.app.name}-0",
-                namespace=self.model.name,
+        pod0 = client.get(
+            res=Pod,
+            name=f"{self.app.name}-0",
+            namespace=self.model.name,
+        )
+
+        services = {
+            "primary": "master",
+            "replicas": "replica",
+        }
+        for service_name_suffix, role_selector in services.items():
+            service = Service(
+                metadata=ObjectMeta(
+                    name=f"{self._name}-{service_name_suffix}",
+                    namespace=self.model.name,
+                    ownerReferences=pod0.metadata.ownerReferences,
+                    labels={
+                        "app.kubernetes.io/name": self.app.name,
+                    },
+                ),
+                spec=ServiceSpec(
+                    ports=[
+                        ServicePort(
+                            name="api",
+                            port=8008,
+                            targetPort=8008,
+                        ),
+                        ServicePort(
+                            name="database",
+                            port=5432,
+                            targetPort=5432,
+                        ),
+                    ],
+                    selector={
+                        "app.kubernetes.io/name": self.app.name,
+                        "cluster-name": f"patroni-{self.app.name}",
+                        "role": role_selector,
+                    },
+                ),
             )
-        except ApiError as e:
-            logger.error("failed to get first pod to use as service owner reference")
-            raise e
+            client.apply(
+                obj=service,
+                name=service.metadata.name,
+                namespace=service.metadata.namespace,
+                force=True,
+                field_manager=self.model.app.name,
+            )
 
-        try:
-            services = {
-                "primary": "master",
-                "replicas": "replica",
-            }
-            for service_name_suffix, role_selector in services.items():
-                service = Service(
-                    metadata=ObjectMeta(
-                        name=f"{self._name}-{service_name_suffix}",
-                        namespace=self.model.name,
-                        ownerReferences=pod0.metadata.ownerReferences,
-                        labels={
-                            "app.kubernetes.io/name": self.app.name,
-                        },
-                    ),
-                    spec=ServiceSpec(
-                        ports=[
-                            ServicePort(
-                                name="api",
-                                port=8008,
-                                targetPort=8008,
-                            ),
-                            ServicePort(
-                                name="database",
-                                port=5432,
-                                targetPort=5432,
-                            ),
-                        ],
-                        selector={
-                            "app.kubernetes.io/name": self.app.name,
-                            "cluster-name": f"patroni-{self.app.name}",
-                            "role": role_selector,
-                        },
-                    ),
-                )
-                client.apply(
-                    obj=service,
-                    name=service.metadata.name,
-                    namespace=service.metadata.namespace,
-                    force=True,
-                    field_manager=self.model.app.name,
-                )
-            # Get the k8s resources created by the charm and Patroni.
-            for kind in [Endpoints]:
-                resources_to_patch = client.list(
-                    kind,
-                    namespace=self._namespace,
-                    labels={"app.juju.is/created-by": f"{self._name}"},
-                )
+        # Get the k8s resources created by the charm and Patroni.
+        for kind in [Endpoints, Service]:
+            resources_to_patch = client.list(
+                kind,
+                namespace=self._namespace,
+                labels={"app.juju.is/created-by": f"{self._name}"},
+            )
 
-            # Patch the resources.
-            for resource in resources_to_patch:
-                if resource.metadata.name in [self._name, f"{self._name}-endpoints"]:
-                    continue
-                logger.error(f"resource.metadata.name: {resource.metadata.name}")
-                resource.metadata.ownerReferences = pod0.metadata.ownerReferences
-                logger.error(f"resource.metadata.managedFields: {resource.metadata.managedFields}")
-                resource.metadata.managedFields = None
-                client.apply(
-                    # res=type(resource),
-                    obj=resource,
-                    name=resource.metadata.name,
-                    namespace=resource.metadata.namespace,
-                    force=True,
-                    # field_manager=self.model.app.name,
-                )
-        except ApiError as e:
-            # The 409 error code means that the resource was already created
-            # or has a higher version. This can happen when multiple calls are
-            # made to this function.
-            if e.status.code != 409:
-                # logger.error("failed to create service: %s.", str(service.to_dict()))
-                raise e
-            else:
-                logger.error("trying to replace resource")
+        # Patch the resources.
+        for resource in resources_to_patch:
+            if resource.metadata.name in [
+                self._name,
+                f"{self._name}-endpoints",
+                f"{self._name}-primary",
+                f"{self._name}-replicas",
+            ]:
+                continue
+            logger.error(resource.metadata.name)
+            resource.metadata.ownerReferences = pod0.metadata.ownerReferences
+            resource.metadata.managedFields = None
+            client.apply(
+                obj=resource,
+                name=resource.metadata.name,
+                namespace=resource.metadata.namespace,
+                force=True,
+            )
 
     @property
     def _has_blocked_status(self) -> bool:
