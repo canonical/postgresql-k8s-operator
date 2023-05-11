@@ -83,6 +83,7 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
+        self.framework.observe(self.on.stop, self._on_stop)
         self.framework.observe(self.on.get_password_action, self._on_get_password)
         self.framework.observe(self.on.set_password_action, self._on_set_password)
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
@@ -101,6 +102,15 @@ class PostgresqlOperatorCharm(CharmBase):
         postgresql_db_port = ServicePort(5432, name="database")
         patroni_api_port = ServicePort(8008, name="api")
         self.service_patcher = KubernetesServicePatch(self, [postgresql_db_port, patroni_api_port])
+
+    def _on_stop(self, _):
+        # Patch the services to remove them when the StatefulSet is deleted
+        # (i.e. application is removed).
+        try:
+            self._patch_resources()
+        except ApiError:
+            # Only log the exception.
+            logger.exception("failed to patch k8s resources")
 
     @property
     def app_peer_data(self) -> Dict:
@@ -520,7 +530,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _create_services(self) -> None:
         """Create kubernetes services for primary and replicas endpoints."""
-        client = Client(field_manager="kubectl")
+        client = Client()
 
         pod0 = client.get(
             res=Pod,
@@ -570,24 +580,39 @@ class PostgresqlOperatorCharm(CharmBase):
                 field_manager=self.model.app.name,
             )
 
+    def _patch_resources(self) -> None:
+        """Patch kubernetes resources."""
+        client = Client(field_manager="kubectl")
+
+        pod0 = client.get(
+            res=Pod,
+            name=f"{self.app.name}-0",
+            namespace=self.model.name,
+        )
+
         # Get the k8s resources created by the charm and Patroni.
+        resources_to_patch = []
         for kind in [Endpoints, Service]:
-            resources_to_patch = client.list(
-                kind,
-                namespace=self._namespace,
-                labels={"app.juju.is/created-by": f"{self._name}"},
+            resources_to_patch.extend(
+                client.list(
+                    kind,
+                    namespace=self._namespace,
+                    labels={"app.juju.is/created-by": f"{self._name}"},
+                )
             )
 
         # Patch the resources.
         for resource in resources_to_patch:
-            if resource.metadata.name in [
+            logger.error(f"entry for {type(resource)} - {resource.metadata.name}")
+            if type(resource) == Service and resource.metadata.name in [
                 self._name,
                 f"{self._name}-endpoints",
                 f"{self._name}-primary",
                 f"{self._name}-replicas",
             ]:
+                logger.error("NOT doing")
                 continue
-            logger.error(resource.metadata.name)
+            logger.error("doing")
             resource.metadata.ownerReferences = pod0.metadata.ownerReferences
             resource.metadata.managedFields = None
             client.apply(

@@ -10,7 +10,6 @@ import botocore
 import psycopg2
 import requests
 import yaml
-from lightkube import codecs
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
 from lightkube.generic_resource import GenericNamespacedResource

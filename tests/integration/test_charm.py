@@ -130,137 +130,137 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
     assert settings["postgresql"]["remove_data_directory_on_diverged_timelines"]
 
 
-# async def test_cluster_is_stable_after_leader_deletion(ops_test: OpsTest) -> None:
-#     """Tests that the cluster maintains a primary after the primary is deleted."""
-#     # Find the current primary unit.
-#     primary = await get_primary(ops_test)
-#
-#     # Delete the primary pod.
-#     model = ops_test.model.info
-#     client = AsyncClient(namespace=model.name)
-#     await client.delete(Pod, name=primary.replace("/", "-"))
-#     logger.info(f"deleted pod {primary}")
-#
-#     # Wait and get the primary again (which can be any unit, including the previous primary).
-#     await ops_test.model.wait_for_idle(
-#         apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3
-#     )
-#     primary = await get_primary(ops_test)
-#
-#     # We also need to check that a replica can see the leader
-#     # to make sure that the cluster is stable again.
-#     assert await get_primary(ops_test, down_unit=primary) != "None"
-#
-#
-# @pytest.mark.unstable
-# async def test_scale_down_and_up(ops_test: OpsTest):
-#     """Test data is replicated to new units after a scale up."""
-#     # Ensure the initial number of units in the application.
-#     initial_scale = len(UNIT_IDS)
-#     await scale_application(ops_test, APP_NAME, initial_scale)
-#
-#     # Scale down the application.
-#     await scale_application(ops_test, APP_NAME, initial_scale - 1)
-#
-#     # Ensure the member was correctly removed from the cluster
-#     # (by comparing the cluster members and the current units).
-#     primary = await get_primary(ops_test)
-#     address = await get_unit_address(ops_test, primary)
-#     assert get_cluster_members(address) == get_application_units(ops_test, APP_NAME)
-#
-#     # Scale up the application (2 more units than the current scale).
-#     await scale_application(ops_test, APP_NAME, initial_scale + 1)
-#
-#     # Ensure the new members were added to the cluster.
-#     assert get_cluster_members(address) == get_application_units(ops_test, APP_NAME)
-#
-#     # Scale the application to the initial scale.
-#     await scale_application(ops_test, APP_NAME, initial_scale)
-#
-#
-# async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
-#     """Test data persists through a graceful restart."""
-#     primary = await get_primary(ops_test)
-#     password = await get_password(ops_test)
-#     address = await get_unit_address(ops_test, primary)
-#
-#     # Write data to primary IP.
-#     logger.info(f"connecting to primary {primary} on {address}")
-#     with db_connect(host=address, password=password) as connection:
-#         connection.autocommit = True
-#         connection.cursor().execute("CREATE TABLE gracetest (testcol INT );")
-#
-#     # Restart all nodes by scaling to 0, then back up
-#     # These have to run sequentially for the test to be valid/stable.
-#     await ops_test.model.applications[APP_NAME].scale(0)
-#     await ops_test.model.applications[APP_NAME].scale(3)
-#     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
-#
-#     # Testing write occurred to every postgres instance by reading from them
-#     status = await ops_test.model.get_status()  # noqa: F821
-#     for unit in status["applications"][APP_NAME]["units"].values():
-#         host = unit["address"]
-#         logger.info("connecting to the database host: %s", host)
-#         with db_connect(host=host, password=password) as connection:
-#             # Ensure we can read from "gracetest" table
-#             connection.cursor().execute("SELECT * FROM gracetest;")
-#
-#
-# async def test_persist_data_through_failure(ops_test: OpsTest):
-#     """Test data persists through a failure."""
-#     primary = await get_primary(ops_test)
-#     password = await get_password(ops_test)
-#     address = await get_unit_address(ops_test, primary)
-#
-#     # Write data to primary IP.
-#     logger.info(f"connecting to primary {primary} on {address}")
-#     with db_connect(host=address, password=password) as connection:
-#         connection.autocommit = True
-#         connection.cursor().execute("CREATE TABLE failtest (testcol INT );")
-#
-#     # Cause a machine failure by killing a unit in k8s
-#     model = ops_test.model.info
-#     client = AsyncClient(namespace=model.name)
-#     await client.delete(Pod, name=primary.replace("/", "-"))
-#     logger.info("primary pod deleted")
-#
-#     # Wait for juju to notice one of the pods is gone and fix it
-#     logger.info("wait for juju to reset postgres container")
-#     await ops_test.model.wait_for_idle(
-#         apps=[APP_NAME],
-#         status="active",
-#         timeout=1000,
-#         wait_for_exact_units=3,
-#         check_freq=2,
-#         idle_period=45,
-#     )
-#     logger.info("juju has reset postgres container")
-#
-#     # Testing write occurred to every postgres instance by reading from them
-#     status = await ops_test.model.get_status()  # noqa: F821
-#     for unit in status["applications"][APP_NAME]["units"].values():
-#         host = unit["address"]
-#         logger.info("connecting to the database host: %s", host)
-#         with db_connect(host=host, password=password) as connection:
-#             # Ensure we can read from "failtest" table
-#             connection.cursor().execute("SELECT * FROM failtest;")
-#
-#
-# async def test_automatic_failover_after_leader_issue(ops_test: OpsTest) -> None:
-#     """Tests that an automatic failover is triggered after an issue happens in the leader."""
-#     # Find the current primary unit.
-#     primary = await get_primary(ops_test)
-#
-#     # Crash PostgreSQL by removing the data directory.
-#     await ops_test.model.units.get(primary).run(f"rm -rf {STORAGE_PATH}/pgdata")
-#
-#     # Wait for charm to stabilise
-#     await ops_test.model.wait_for_idle(
-#         apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3
-#     )
-#
-#     # Primary doesn't have to be different, but it does have to exist.
-#     assert await get_primary(ops_test) != "None"
+async def test_cluster_is_stable_after_leader_deletion(ops_test: OpsTest) -> None:
+    """Tests that the cluster maintains a primary after the primary is deleted."""
+    # Find the current primary unit.
+    primary = await get_primary(ops_test)
+
+    # Delete the primary pod.
+    model = ops_test.model.info
+    client = AsyncClient(namespace=model.name)
+    await client.delete(Pod, name=primary.replace("/", "-"))
+    logger.info(f"deleted pod {primary}")
+
+    # Wait and get the primary again (which can be any unit, including the previous primary).
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3
+    )
+    primary = await get_primary(ops_test)
+
+    # We also need to check that a replica can see the leader
+    # to make sure that the cluster is stable again.
+    assert await get_primary(ops_test, down_unit=primary) != "None"
+
+
+@pytest.mark.unstable
+async def test_scale_down_and_up(ops_test: OpsTest):
+    """Test data is replicated to new units after a scale up."""
+    # Ensure the initial number of units in the application.
+    initial_scale = len(UNIT_IDS)
+    await scale_application(ops_test, APP_NAME, initial_scale)
+
+    # Scale down the application.
+    await scale_application(ops_test, APP_NAME, initial_scale - 1)
+
+    # Ensure the member was correctly removed from the cluster
+    # (by comparing the cluster members and the current units).
+    primary = await get_primary(ops_test)
+    address = await get_unit_address(ops_test, primary)
+    assert get_cluster_members(address) == get_application_units(ops_test, APP_NAME)
+
+    # Scale up the application (2 more units than the current scale).
+    await scale_application(ops_test, APP_NAME, initial_scale + 1)
+
+    # Ensure the new members were added to the cluster.
+    assert get_cluster_members(address) == get_application_units(ops_test, APP_NAME)
+
+    # Scale the application to the initial scale.
+    await scale_application(ops_test, APP_NAME, initial_scale)
+
+
+async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
+    """Test data persists through a graceful restart."""
+    primary = await get_primary(ops_test)
+    password = await get_password(ops_test)
+    address = await get_unit_address(ops_test, primary)
+
+    # Write data to primary IP.
+    logger.info(f"connecting to primary {primary} on {address}")
+    with db_connect(host=address, password=password) as connection:
+        connection.autocommit = True
+        connection.cursor().execute("CREATE TABLE gracetest (testcol INT );")
+
+    # Restart all nodes by scaling to 0, then back up
+    # These have to run sequentially for the test to be valid/stable.
+    await ops_test.model.applications[APP_NAME].scale(0)
+    await ops_test.model.applications[APP_NAME].scale(3)
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
+
+    # Testing write occurred to every postgres instance by reading from them
+    status = await ops_test.model.get_status()  # noqa: F821
+    for unit in status["applications"][APP_NAME]["units"].values():
+        host = unit["address"]
+        logger.info("connecting to the database host: %s", host)
+        with db_connect(host=host, password=password) as connection:
+            # Ensure we can read from "gracetest" table
+            connection.cursor().execute("SELECT * FROM gracetest;")
+
+
+async def test_persist_data_through_failure(ops_test: OpsTest):
+    """Test data persists through a failure."""
+    primary = await get_primary(ops_test)
+    password = await get_password(ops_test)
+    address = await get_unit_address(ops_test, primary)
+
+    # Write data to primary IP.
+    logger.info(f"connecting to primary {primary} on {address}")
+    with db_connect(host=address, password=password) as connection:
+        connection.autocommit = True
+        connection.cursor().execute("CREATE TABLE failtest (testcol INT );")
+
+    # Cause a machine failure by killing a unit in k8s
+    model = ops_test.model.info
+    client = AsyncClient(namespace=model.name)
+    await client.delete(Pod, name=primary.replace("/", "-"))
+    logger.info("primary pod deleted")
+
+    # Wait for juju to notice one of the pods is gone and fix it
+    logger.info("wait for juju to reset postgres container")
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME],
+        status="active",
+        timeout=1000,
+        wait_for_exact_units=3,
+        check_freq=2,
+        idle_period=45,
+    )
+    logger.info("juju has reset postgres container")
+
+    # Testing write occurred to every postgres instance by reading from them
+    status = await ops_test.model.get_status()  # noqa: F821
+    for unit in status["applications"][APP_NAME]["units"].values():
+        host = unit["address"]
+        logger.info("connecting to the database host: %s", host)
+        with db_connect(host=host, password=password) as connection:
+            # Ensure we can read from "failtest" table
+            connection.cursor().execute("SELECT * FROM failtest;")
+
+
+async def test_automatic_failover_after_leader_issue(ops_test: OpsTest) -> None:
+    """Tests that an automatic failover is triggered after an issue happens in the leader."""
+    # Find the current primary unit.
+    primary = await get_primary(ops_test)
+
+    # Crash PostgreSQL by removing the data directory.
+    await ops_test.model.units.get(primary).run(f"rm -rf {STORAGE_PATH}/pgdata")
+
+    # Wait for charm to stabilise
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3
+    )
+
+    # Primary doesn't have to be different, but it does have to exist.
+    assert await get_primary(ops_test) != "None"
 
 
 async def test_application_removal(ops_test: OpsTest) -> None:
@@ -312,21 +312,21 @@ async def test_redeploy_charm_same_model(ops_test: OpsTest):
         )
 
 
-# async def test_storage_with_more_restrictive_permissions(ops_test: OpsTest):
-#     """Test that the charm can be deployed with a storage with more restrictive permissions."""
-#     app_name = f"test-storage-{APP_NAME}"
-#     async with ops_test.fast_forward():
-#         # Deploy and wait for the charm to get into the install hook (maintenance status).
-#         await build_and_deploy(ops_test, 1, app_name, status="maintenance")
-#
-#         # Restrict the permissions of the storage.
-#         command = "chmod 755 /var/lib/postgresql/data"
-#         complete_command = f"ssh --container postgresql {app_name}/0 {command}"
-#         return_code, _, _ = await ops_test.juju(*complete_command.split())
-#         if return_code != 0:
-#             raise Exception(
-#                 "Expected command %s to succeed instead it failed: %s", command, return_code
-#             )
-#
-#         # This check is enough to ensure that the charm/workload is working for this specific test.
-#         await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
+async def test_storage_with_more_restrictive_permissions(ops_test: OpsTest):
+    """Test that the charm can be deployed with a storage with more restrictive permissions."""
+    app_name = f"test-storage-{APP_NAME}"
+    async with ops_test.fast_forward():
+        # Deploy and wait for the charm to get into the install hook (maintenance status).
+        await build_and_deploy(ops_test, 1, app_name, status="maintenance")
+
+        # Restrict the permissions of the storage.
+        command = "chmod 755 /var/lib/postgresql/data"
+        complete_command = f"ssh --container postgresql {app_name}/0 {command}"
+        return_code, _, _ = await ops_test.juju(*complete_command.split())
+        if return_code != 0:
+            raise Exception(
+                "Expected command %s to succeed instead it failed: %s", command, return_code
+            )
+
+        # This check is enough to ensure that the charm/workload is working for this specific test.
+        await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
