@@ -32,7 +32,7 @@ from tests.integration.helpers import (
 logger = logging.getLogger(__name__)
 
 APP_NAME = METADATA["name"]
-UNIT_IDS = [0, 1]
+UNIT_IDS = [0, 1, 2]
 
 
 @pytest.mark.abort_on_fail
