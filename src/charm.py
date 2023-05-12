@@ -82,8 +82,8 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
         self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
-        self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(self.on.stop, self._on_stop)
+        self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(self.on.get_password_action, self._on_get_password)
         self.framework.observe(self.on.set_password_action, self._on_set_password)
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
@@ -102,15 +102,6 @@ class PostgresqlOperatorCharm(CharmBase):
         postgresql_db_port = ServicePort(5432, name="database")
         patroni_api_port = ServicePort(8008, name="api")
         self.service_patcher = KubernetesServicePatch(self, [postgresql_db_port, patroni_api_port])
-
-    def _on_stop(self, _):
-        # Patch the services to remove them when the StatefulSet is deleted
-        # (i.e. application is removed).
-        try:
-            self._patch_resources()
-        except ApiError:
-            # Only log the exception.
-            logger.exception("failed to patch k8s resources")
 
     @property
     def app_peer_data(self) -> Dict:
@@ -271,7 +262,8 @@ class PostgresqlOperatorCharm(CharmBase):
         else:
             self.unit_peer_data.pop("start-tls.server", None)
 
-        self.unit.status = ActiveStatus()
+        if not self.is_blocked:
+            self.unit.status = ActiveStatus()
 
     def _on_config_changed(self, _) -> None:
         """Handle the config-changed event."""
@@ -580,48 +572,6 @@ class PostgresqlOperatorCharm(CharmBase):
                 field_manager=self.model.app.name,
             )
 
-    def _patch_resources(self) -> None:
-        """Patch kubernetes resources."""
-        client = Client(field_manager="kubectl")
-
-        pod0 = client.get(
-            res=Pod,
-            name=f"{self.app.name}-0",
-            namespace=self.model.name,
-        )
-
-        # Get the k8s resources created by the charm and Patroni.
-        resources_to_patch = []
-        for kind in [Endpoints, Service]:
-            resources_to_patch.extend(
-                client.list(
-                    kind,
-                    namespace=self._namespace,
-                    labels={"app.juju.is/created-by": f"{self._name}"},
-                )
-            )
-
-        # Patch the resources.
-        for resource in resources_to_patch:
-            logger.error(f"entry for {type(resource)} - {resource.metadata.name}")
-            if type(resource) == Service and resource.metadata.name in [
-                self._name,
-                f"{self._name}-endpoints",
-                f"{self._name}-primary",
-                f"{self._name}-replicas",
-            ]:
-                logger.error("NOT doing")
-                continue
-            logger.error("doing")
-            resource.metadata.ownerReferences = pod0.metadata.ownerReferences
-            resource.metadata.managedFields = None
-            client.apply(
-                obj=resource,
-                name=resource.metadata.name,
-                namespace=resource.metadata.namespace,
-                force=True,
-            )
-
     @property
     def _has_blocked_status(self) -> bool:
         """Returns whether the unit is in a blocked state."""
@@ -706,6 +656,62 @@ class PostgresqlOperatorCharm(CharmBase):
         except RetryError as e:
             logger.error(f"failed to get primary with error {e}")
 
+    def _on_stop(self, _):
+        # Patch the services to remove them when the StatefulSet is deleted
+        # (i.e. application is removed).
+        try:
+            client = Client(field_manager="kubectl")
+
+            pod0 = client.get(
+                res=Pod,
+                name=f"{self.app.name}-0",
+                namespace=self.model.name,
+            )
+        except ApiError:
+            # Only log the exception.
+            logger.exception("failed to patch k8s resources")
+            return
+
+        try:
+            # Get the k8s resources created by the charm and Patroni.
+            resources_to_patch = []
+            for kind in [Endpoints, Service]:
+                resources_to_patch.extend(
+                    client.list(
+                        kind,
+                        namespace=self._namespace,
+                        labels={"app.juju.is/created-by": f"{self._name}"},
+                    )
+                )
+        except ApiError:
+            # Only log the exception.
+            logger.exception("failed to get the k8s resources created by the charm and Patroni")
+            return
+
+        for resource in resources_to_patch:
+            # Ignore resources created by Juju or the charm
+            # (which are already patched).
+            if type(resource) == Service and resource.metadata.name in [
+                self._name,
+                f"{self._name}-endpoints",
+                f"{self._name}-primary",
+                f"{self._name}-replicas",
+            ]:
+                continue
+            # Patch the resource.
+            try:
+                resource.metadata.ownerReferences = pod0.metadata.ownerReferences
+                resource.metadata.managedFields = None
+                client.apply(
+                    obj=resource,
+                    name=resource.metadata.name,
+                    namespace=resource.metadata.namespace,
+                    force=True,
+                )
+            except ApiError:
+                # Only log the exception.
+                logger.exception(f"failed to patch k8s {type(resource)} {resource.metadata.name}")
+
     def _on_update_status(self, _) -> None:
         """Update the unit status message."""
         container = self.unit.get_container("postgresql")
@@ -732,9 +738,14 @@ class PostgresqlOperatorCharm(CharmBase):
                 logger.debug("on_update_status early exit: Patroni has not started yet")
                 return
 
-            # Remove the restoring backup flag.
-            self.app_peer_data.update({"restoring-backup": ""})
+            # Remove the restoring backup flag and the restore stanza name.
+            self.app_peer_data.update({"restoring-backup": "", "restore-stanza": ""})
             self.update_config()
+
+            can_use_s3_repository, validation_message = self.backup.can_use_s3_repository()
+            if not can_use_s3_repository:
+                self.unit.status = BlockedStatus(validation_message)
+                return
 
         if self._handle_processes_failures():
             return
@@ -981,11 +992,11 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Update and reload configuration based on TLS files availability.
         self._patroni.render_patroni_yml_file(
-            archive_mode=self.app_peer_data.get("archive-mode", "on"),
             connectivity=self.unit_peer_data.get("connectivity", "on") == "on",
             enable_tls=enable_tls,
             backup_id=self.app_peer_data.get("restoring-backup"),
             stanza=self.app_peer_data.get("stanza"),
+            restore_stanza=self.app_peer_data.get("restore-stanza"),
         )
         if not self._patroni.member_started:
             # If Patroni/PostgreSQL has not started yet and TLS relations was initialised,

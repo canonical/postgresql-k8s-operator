@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
+import asyncio
 import itertools
 from datetime import datetime
 from pathlib import Path
@@ -621,3 +622,21 @@ async def set_password(
     action = await unit.run_action("set-password", **parameters)
     result = await action.wait()
     return result.results
+
+
+async def wait_for_idle_on_blocked(
+    ops_test: OpsTest,
+    database_app_name: str,
+    unit_number: int,
+    other_app_name: str,
+    status_message: str,
+):
+    """Wait for specific applications becoming idle and blocked together."""
+    unit = ops_test.model.units.get(f"{database_app_name}/{unit_number}")
+    await asyncio.gather(
+        ops_test.model.wait_for_idle(apps=[other_app_name], status="active"),
+        ops_test.model.wait_for_idle(
+            apps=[database_app_name], status="blocked", raise_on_blocked=False
+        ),
+        ops_test.model.block_until(lambda: unit.workload_status_message == status_message),
+    )
