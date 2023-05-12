@@ -261,7 +261,8 @@ class PostgresqlOperatorCharm(CharmBase):
         else:
             self.unit_peer_data.pop("start-tls.server", None)
 
-        self.unit.status = ActiveStatus()
+        if not self.is_blocked:
+            self.unit.status = ActiveStatus()
 
     def _on_config_changed(self, _) -> None:
         """Handle the config-changed event."""
@@ -684,9 +685,14 @@ class PostgresqlOperatorCharm(CharmBase):
                 logger.debug("on_update_status early exit: Patroni has not started yet")
                 return
 
-            # Remove the restoring backup flag.
-            self.app_peer_data.update({"restoring-backup": ""})
+            # Remove the restoring backup flag and the restore stanza name.
+            self.app_peer_data.update({"restoring-backup": "", "restore-stanza": ""})
             self.update_config()
+
+            can_use_s3_repository, validation_message = self.backup.can_use_s3_repository()
+            if not can_use_s3_repository:
+                self.unit.status = BlockedStatus(validation_message)
+                return
 
         if self._handle_processes_failures():
             return
@@ -933,11 +939,11 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Update and reload configuration based on TLS files availability.
         self._patroni.render_patroni_yml_file(
-            archive_mode=self.app_peer_data.get("archive-mode", "on"),
             connectivity=self.unit_peer_data.get("connectivity", "on") == "on",
             enable_tls=enable_tls,
             backup_id=self.app_peer_data.get("restoring-backup"),
             stanza=self.app_peer_data.get("stanza"),
+            restore_stanza=self.app_peer_data.get("restore-stanza"),
         )
         if not self._patroni.member_started:
             # If Patroni/PostgreSQL has not started yet and TLS relations was initialised,

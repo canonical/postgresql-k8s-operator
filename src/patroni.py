@@ -222,19 +222,19 @@ class Patroni:
 
     def render_patroni_yml_file(
         self,
-        archive_mode: str,
         connectivity: bool = False,
         enable_tls: bool = False,
         stanza: str = None,
+        restore_stanza: Optional[str] = None,
         backup_id: Optional[str] = None,
     ) -> None:
         """Render the Patroni configuration file.
 
         Args:
-            archive_mode: PostgreSQL archive mode.
             connectivity: whether to allow external connections to the database.
             enable_tls: whether to enable TLS.
             stanza: name of the stanza created by pgBackRest.
+            restore_stanza: name of the stanza used when restoring a backup.
             backup_id: id of the backup that is being restored.
         """
         # Open the template patroni.yml file.
@@ -242,7 +242,6 @@ class Patroni:
             template = Template(file.read())
         # Render the template file with the correct values.
         rendered = template.render(
-            archive_mode=archive_mode,
             connectivity=connectivity,
             enable_tls=enable_tls,
             endpoint=self._endpoint,
@@ -257,6 +256,7 @@ class Patroni:
             restoring_backup=backup_id is not None,
             backup_id=backup_id,
             stanza=stanza,
+            restore_stanza=restore_stanza,
             minority_count=self._members_count // 2,
             version=self.rock_postgresql_version.split(".")[0],
         )
