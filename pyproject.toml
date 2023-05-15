@@ -22,7 +22,7 @@ jinja2 = "3.1.2"
 lightkube = "0.13.0"
 lightkube-models = "1.27.1.4"
 requests = "2.30.0"
-boto3 = "1.26.132"
+boto3 = "1.26.134"
 # psycopg2 = "^2.9.5" # Injected in charmcraft.yaml
 packaging = "23.1"
 
@@ -61,7 +61,7 @@ optional = true
 lightkube = "^0.13.0"
 pytest = "7.3.1"
 pytest-operator = "0.27.0"
-juju = "2.9.42.1" # Latest juju 2
+juju = "2.9.42.2" # Latest juju 2
 psycopg2 = {version = "2.9.6", extras = ["binary"]}
 
 [tool.poetry.group.ha_charm]
