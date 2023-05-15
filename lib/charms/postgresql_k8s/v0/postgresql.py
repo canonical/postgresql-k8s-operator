@@ -32,7 +32,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 8
+LIBPATCH = 9
 
 
 logger = logging.getLogger(__name__)
@@ -48,6 +48,10 @@ class PostgreSQLCreateUserError(Exception):
 
 class PostgreSQLDeleteUserError(Exception):
     """Exception raised when deleting a user fails."""
+
+
+class PostgreSQLEnableDisableExtensionError(Exception):
+    """Exception raised when enabling/disabling an extension fails."""
 
 
 class PostgreSQLGetPostgreSQLVersionError(Exception):
@@ -236,6 +240,31 @@ class PostgreSQL:
         except psycopg2.Error as e:
             logger.error(f"Failed to delete user: {e}")
             raise PostgreSQLDeleteUserError()
+
+    def enable_disable_extension(self, extension: str, enable: bool) -> None:
+        """Enables or disables a PostgreSQL extension.
+
+        Args:
+            extension: the name of the extensions.
+            enable: whether the extension should be enabled or disabled.
+
+        Raises:
+            PostgreSQLEnableDisableExtensionError if the operation fails.
+        """
+        statement = (
+            f"CREATE EXTENSION IF NOT EXISTS {extension};"
+            if enable
+            else f"DROP EXTENSION IF EXISTS {extension};"
+        )
+        try:
+            with self._connect_to_database() as connection, connection.cursor() as cursor:
+                cursor.execute(statement)
+        except psycopg2.Error as e:
+            logger.error(f"Failed to update user password: {e}")
+            raise PostgreSQLEnableDisableExtensionError()
+        finally:
+            if connection is not None:
+                connection.close()
 
     def get_postgresql_version(self) -> str:
         """Returns the PostgreSQL version.
