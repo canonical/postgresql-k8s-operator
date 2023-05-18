@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, Mock, PropertyMock, patch
 
 from charms.postgresql_k8s.v0.postgresql import PostgreSQLUpdateUserPasswordError
 from lightkube.core.exceptions import ApiError
-from lightkube.resources.core_v1 import Pod
+from lightkube.resources.core_v1 import Endpoints, Pod, Service
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.testing import Harness
 from tenacity import RetryError
@@ -512,3 +512,69 @@ class TestCharm(unittest.TestCase):
             self.harness.get_relation_data(self.rel_id, self.charm.unit.name)["password"]
             == "test-password"
         )
+
+    @patch("charm.Client")
+    def test_on_stop(self, _client):
+        # Test a successful run of the hook.
+        with self.assertNoLogs("charm", "ERROR"):
+            _client.return_value.get.return_value = MagicMock(
+                metadata=MagicMock(ownerReferences="fakeOwnerReferences")
+            )
+            _client.return_value.list.side_effect = [
+                [MagicMock(metadata=MagicMock(name="fakeName1", namespace="fakeNamespace"))],
+                [MagicMock(metadata=MagicMock(name="fakeName2", namespace="fakeNamespace"))],
+            ]
+            self.charm.on.stop.emit()
+            _client.return_value.get.assert_called_once_with(
+                res=Pod, name="postgresql-k8s-0", namespace=self.charm.model.name
+            )
+            for kind in [Endpoints, Service]:
+                _client.return_value.list.assert_any_call(
+                    kind,
+                    namespace=self.charm.model.name,
+                    labels={"app.juju.is/created-by": self.charm.app.name},
+                )
+            self.assertEqual(_client.return_value.apply.call_count, 2)
+
+        # Test when the charm fails to get first pod info.
+        _client.reset_mock()
+        _client.return_value.get.side_effect = _FakeApiError
+        with self.assertLogs("charm", "ERROR") as logs:
+            self.charm.on.stop.emit()
+            _client.return_value.get.assert_called_once_with(
+                res=Pod, name="postgresql-k8s-0", namespace=self.charm.model.name
+            )
+            _client.return_value.list.assert_not_called()
+            _client.return_value.apply.assert_not_called()
+            self.assertIn("failed to get first pod info", "".join(logs.output))
+
+        # Test when the charm fails to get the k8s resources created by the charm and Patroni.
+        _client.return_value.get.side_effect = None
+        _client.return_value.list.side_effect = [[], _FakeApiError]
+        with self.assertLogs("charm", "ERROR") as logs:
+            self.charm.on.stop.emit()
+            for kind in [Endpoints, Service]:
+                _client.return_value.list.assert_any_call(
+                    kind,
+                    namespace=self.charm.model.name,
+                    labels={"app.juju.is/created-by": self.charm.app.name},
+                )
+            _client.return_value.apply.assert_not_called()
+            self.assertIn(
+                "failed to get the k8s resources created by the charm and Patroni",
+                "".join(logs.output),
+            )
+
+        # Test when the charm fails to patch a k8s resource.
+        _client.return_value.get.return_value = MagicMock(
+            metadata=MagicMock(ownerReferences="fakeOwnerReferences")
+        )
+        _client.return_value.list.side_effect = [
+            [MagicMock(metadata=MagicMock(name="fakeName1", namespace="fakeNamespace"))],
+            [MagicMock(metadata=MagicMock(name="fakeName2", namespace="fakeNamespace"))],
+        ]
+        _client.return_value.apply.side_effect = [None, _FakeApiError]
+        with self.assertLogs("charm", "ERROR") as logs:
+            self.charm.on.stop.emit()
+            self.assertEqual(_client.return_value.apply.call_count, 2)
+            self.assertIn("failed to patch k8s MagicMock", "".join(logs.output))

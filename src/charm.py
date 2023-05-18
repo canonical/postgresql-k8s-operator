@@ -669,7 +669,7 @@ class PostgresqlOperatorCharm(CharmBase):
             )
         except ApiError:
             # Only log the exception.
-            logger.exception("failed to patch k8s resources")
+            logger.exception("failed to get first pod info")
             return
 
         try:
@@ -710,7 +710,9 @@ class PostgresqlOperatorCharm(CharmBase):
                 )
             except ApiError:
                 # Only log the exception.
-                logger.exception(f"failed to patch k8s {type(resource)} {resource.metadata.name}")
+                logger.exception(
+                    f"failed to patch k8s {type(resource).__name__} {resource.metadata.name}"
+                )
 
     def _on_update_status(self, _) -> None:
         """Update the unit status message."""
