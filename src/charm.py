@@ -691,17 +691,19 @@ class PostgresqlOperatorCharm(CharmBase):
         for resource in resources_to_patch:
             # Ignore resources created by Juju or the charm
             # (which are already patched).
-            if type(resource) == Service and resource.metadata.name in [
-                self._name,
-                f"{self._name}-endpoints",
-                f"{self._name}-primary",
-                f"{self._name}-replicas",
-            ]:
+            if (
+                type(resource) == Service
+                and resource.metadata.name
+                in [
+                    self._name,
+                    f"{self._name}-endpoints",
+                    f"{self._name}-primary",
+                    f"{self._name}-replicas",
+                ]
+            ) or resource.metadata.ownerReferences == pod0.metadata.ownerReferences:
                 continue
             # Patch the resource.
             try:
-                if resource.metadata.ownerReferences == pod0.metadata.ownerReferences:
-                    continue
                 resource.metadata.ownerReferences = pod0.metadata.ownerReferences
                 resource.metadata.managedFields = None
                 client.apply(
