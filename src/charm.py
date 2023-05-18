@@ -660,7 +660,7 @@ class PostgresqlOperatorCharm(CharmBase):
         # Patch the services to remove them when the StatefulSet is deleted
         # (i.e. application is removed).
         try:
-            client = Client(field_manager="kubectl")
+            client = Client(field_manager=self.model.app.name)
 
             pod0 = client.get(
                 res=Pod,
