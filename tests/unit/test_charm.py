@@ -383,29 +383,39 @@ class TestCharm(unittest.TestCase):
         _patch_pod_labels.assert_called_once()
         self.assertFalse(isinstance(self.charm.unit.status, BlockedStatus))
 
-    # @patch("charm.Client")
-    # def test_create_services(self, _client):
-    #     # Test the successful creation of the resources.
-    #     self.charm._create_resources()
-    #     # Assert that only custom services (used maily in relations) are created.
-    #     # assert obj.metadata.name in [
-    #     #     f"{self.charm._name}-primary",
-    #     #     f"{self.charm._name}-replicas",
-    #     # ]
-    #     # _client.return_value.create.assert_any_call(obj)
-    #
-    #     # Test when a resource already exists.
-    #     _client.return_value.create.reset_mock()
-    #     _client.return_value.create.side_effect = _FakeApiError(409)
-    #     self.charm._create_resources()
-    #     _client.return_value.create.assert_called_once()
-    #
-    #     # Test when another error happens.
-    #     _client.return_value.create.reset_mock()
-    #     _client.return_value.create.side_effect = _FakeApiError
-    #     with self.assertRaises(_FakeApiError):
-    #         self.charm._create_resources()
-    #     _client.return_value.create.assert_called_once()
+    @patch("charm.Client")
+    def test_create_services(self, _client):
+        # Test the successful creation of the resources.
+        _client.return_value.get.return_value = MagicMock(
+            metadata=MagicMock(ownerReferences="fakeOwnerReferences")
+        )
+        self.charm._create_services()
+        _client.return_value.get.assert_called_once_with(
+            res=Pod, name="postgresql-k8s-0", namespace=self.charm.model.name
+        )
+        self.assertEqual(_client.return_value.apply.call_count, 2)
+
+        # Test when the charm fails to get first pod info.
+        _client.reset_mock()
+        _client.return_value.get.side_effect = _FakeApiError
+        with self.assertRaises(_FakeApiError):
+            self.charm._create_services()
+            _client.return_value.get.assert_called_once_with(
+                res=Pod, name="postgresql-k8s-0", namespace=self.charm.model.name
+            )
+            _client.return_value.apply.assert_not_called()
+
+        # Test when the charm fails to create a k8s service.
+        _client.return_value.get.return_value = MagicMock(
+            metadata=MagicMock(ownerReferences="fakeOwnerReferences")
+        )
+        _client.return_value.apply.side_effect = [None, _FakeApiError]
+        with self.assertRaises(_FakeApiError):
+            self.charm._create_services()
+            _client.return_value.get.assert_called_once_with(
+                res=Pod, name="postgresql-k8s-0", namespace=self.charm.model.name
+            )
+            self.assertEqual(_client.return_value.apply.call_count, 2)
 
     @patch("charm.Client")
     def test_patch_pod_labels(self, _client):
