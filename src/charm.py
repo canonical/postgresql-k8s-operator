@@ -700,6 +700,8 @@ class PostgresqlOperatorCharm(CharmBase):
                 continue
             # Patch the resource.
             try:
+                if resource.metadata.ownerReferences == pod0.metadata.ownerReferences:
+                    continue
                 resource.metadata.ownerReferences = pod0.metadata.ownerReferences
                 resource.metadata.managedFields = None
                 client.apply(
