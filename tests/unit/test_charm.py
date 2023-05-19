@@ -5,9 +5,8 @@ import unittest
 from unittest.mock import MagicMock, Mock, PropertyMock, patch
 
 from charms.postgresql_k8s.v0.postgresql import PostgreSQLUpdateUserPasswordError
-from lightkube import codecs
 from lightkube.core.exceptions import ApiError
-from lightkube.resources.core_v1 import Pod
+from lightkube.resources.core_v1 import Endpoints, Pod, Service
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
 from ops.testing import Harness
 from tenacity import RetryError
@@ -61,7 +60,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("charm.Patroni.reload_patroni_configuration")
     @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
-    @patch("charm.PostgresqlOperatorCharm._create_resources")
+    @patch("charm.PostgresqlOperatorCharm._create_services")
     def test_on_leader_elected(self, _, __, ___):
         # Assert that there is no password in the peer relation.
         self.assertIsNone(self.charm._peers.data[self.charm.app].get("postgres-password", None))
@@ -94,7 +93,7 @@ class TestCharm(unittest.TestCase):
     @patch("charm.PostgresqlOperatorCharm.update_config")
     @patch("charm.PostgresqlOperatorCharm.postgresql")
     @patch(
-        "charm.PostgresqlOperatorCharm._create_resources", side_effect=[None, _FakeApiError, None]
+        "charm.PostgresqlOperatorCharm._create_services", side_effect=[None, _FakeApiError, None]
     )
     @patch_network_get(private_address="1.1.1.1")
     @patch("charm.Patroni.member_started")
@@ -109,7 +108,7 @@ class TestCharm(unittest.TestCase):
         __,
         _push_tls_files_to_workload,
         _member_started,
-        _create_resources,
+        _create_services,
         _postgresql,
         ___,
         _primary_endpoint_ready,
@@ -357,58 +356,66 @@ class TestCharm(unittest.TestCase):
 
     @patch("charm.PostgresqlOperatorCharm._patch_pod_labels", side_effect=[_FakeApiError, None])
     @patch(
-        "charm.PostgresqlOperatorCharm._create_resources", side_effect=[_FakeApiError, None, None]
+        "charm.PostgresqlOperatorCharm._create_services", side_effect=[_FakeApiError, None, None]
     )
-    def test_on_upgrade_charm(self, _create_resources, _patch_pod_labels):
+    def test_on_upgrade_charm(self, _create_services, _patch_pod_labels):
         # Test with a problem happening when trying to create the k8s resources.
         self.charm.unit.status = ActiveStatus()
         self.charm.on.upgrade_charm.emit()
-        _create_resources.assert_called_once()
+        _create_services.assert_called_once()
         _patch_pod_labels.assert_not_called()
         self.assertTrue(isinstance(self.charm.unit.status, BlockedStatus))
 
         # Test a successful k8s resources creation, but unsuccessful pod patch operation.
-        _create_resources.reset_mock()
+        _create_services.reset_mock()
         self.charm.unit.status = ActiveStatus()
         self.charm.on.upgrade_charm.emit()
-        _create_resources.assert_called_once()
+        _create_services.assert_called_once()
         _patch_pod_labels.assert_called_once()
         self.assertTrue(isinstance(self.charm.unit.status, BlockedStatus))
 
         # Test a successful k8s resources creation and the operation to patch the pod.
-        _create_resources.reset_mock()
+        _create_services.reset_mock()
         _patch_pod_labels.reset_mock()
         self.charm.unit.status = ActiveStatus()
         self.charm.on.upgrade_charm.emit()
-        _create_resources.assert_called_once()
+        _create_services.assert_called_once()
         _patch_pod_labels.assert_called_once()
         self.assertFalse(isinstance(self.charm.unit.status, BlockedStatus))
 
     @patch("charm.Client")
-    def test_create_resources(self, _client):
+    def test_create_services(self, _client):
         # Test the successful creation of the resources.
-        self.charm._create_resources()
-        with open("src/resources.yaml") as f:
-            for obj in codecs.load_all_yaml(f, context=self._context):
-                # Assert that only custom services (used maily in relations) are created.
-                assert obj.metadata.name in [
-                    f"{self.charm._name}-primary",
-                    f"{self.charm._name}-replicas",
-                ]
-                _client.return_value.create.assert_any_call(obj)
+        _client.return_value.get.return_value = MagicMock(
+            metadata=MagicMock(ownerReferences="fakeOwnerReferences")
+        )
+        self.charm._create_services()
+        _client.return_value.get.assert_called_once_with(
+            res=Pod, name="postgresql-k8s-0", namespace=self.charm.model.name
+        )
+        self.assertEqual(_client.return_value.apply.call_count, 2)
 
-        # Test when a resource already exists.
-        _client.return_value.create.reset_mock()
-        _client.return_value.create.side_effect = _FakeApiError(409)
-        self.charm._create_resources()
-        _client.return_value.create.assert_called_once()
-
-        # Test when another error happens.
-        _client.return_value.create.reset_mock()
-        _client.return_value.create.side_effect = _FakeApiError
+        # Test when the charm fails to get first pod info.
+        _client.reset_mock()
+        _client.return_value.get.side_effect = _FakeApiError
         with self.assertRaises(_FakeApiError):
-            self.charm._create_resources()
-        _client.return_value.create.assert_called_once()
+            self.charm._create_services()
+            _client.return_value.get.assert_called_once_with(
+                res=Pod, name="postgresql-k8s-0", namespace=self.charm.model.name
+            )
+            _client.return_value.apply.assert_not_called()
+
+        # Test when the charm fails to create a k8s service.
+        _client.return_value.get.return_value = MagicMock(
+            metadata=MagicMock(ownerReferences="fakeOwnerReferences")
+        )
+        _client.return_value.apply.side_effect = [None, _FakeApiError]
+        with self.assertRaises(_FakeApiError):
+            self.charm._create_services()
+            _client.return_value.get.assert_called_once_with(
+                res=Pod, name="postgresql-k8s-0", namespace=self.charm.model.name
+            )
+            self.assertEqual(_client.return_value.apply.call_count, 2)
 
     @patch("charm.Client")
     def test_patch_pod_labels(self, _client):
@@ -429,7 +436,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("charm.Patroni.reload_patroni_configuration")
     @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
-    @patch("charm.PostgresqlOperatorCharm._create_resources")
+    @patch("charm.PostgresqlOperatorCharm._create_services")
     def test_postgresql_layer(self, _, __, ___):
         # Test with the already generated password.
         self.harness.set_leader()
@@ -477,7 +484,7 @@ class TestCharm(unittest.TestCase):
         self.assertDictEqual(plan, expected)
 
     @patch("charm.Patroni.reload_patroni_configuration")
-    @patch("charm.PostgresqlOperatorCharm._create_resources")
+    @patch("charm.PostgresqlOperatorCharm._create_services")
     def test_get_secret(self, _, __):
         self.harness.set_leader()
 
@@ -496,7 +503,7 @@ class TestCharm(unittest.TestCase):
         assert self.charm.get_secret("unit", "password") == "test-password"
 
     @patch("charm.Patroni.reload_patroni_configuration")
-    @patch("charm.PostgresqlOperatorCharm._create_resources")
+    @patch("charm.PostgresqlOperatorCharm._create_services")
     def test_set_secret(self, _, __):
         self.harness.set_leader()
 
@@ -515,3 +522,69 @@ class TestCharm(unittest.TestCase):
             self.harness.get_relation_data(self.rel_id, self.charm.unit.name)["password"]
             == "test-password"
         )
+
+    @patch("charm.Client")
+    def test_on_stop(self, _client):
+        # Test a successful run of the hook.
+        with self.assertNoLogs("charm", "ERROR"):
+            _client.return_value.get.return_value = MagicMock(
+                metadata=MagicMock(ownerReferences="fakeOwnerReferences")
+            )
+            _client.return_value.list.side_effect = [
+                [MagicMock(metadata=MagicMock(name="fakeName1", namespace="fakeNamespace"))],
+                [MagicMock(metadata=MagicMock(name="fakeName2", namespace="fakeNamespace"))],
+            ]
+            self.charm.on.stop.emit()
+            _client.return_value.get.assert_called_once_with(
+                res=Pod, name="postgresql-k8s-0", namespace=self.charm.model.name
+            )
+            for kind in [Endpoints, Service]:
+                _client.return_value.list.assert_any_call(
+                    kind,
+                    namespace=self.charm.model.name,
+                    labels={"app.juju.is/created-by": self.charm.app.name},
+                )
+            self.assertEqual(_client.return_value.apply.call_count, 2)
+
+        # Test when the charm fails to get first pod info.
+        _client.reset_mock()
+        _client.return_value.get.side_effect = _FakeApiError
+        with self.assertLogs("charm", "ERROR") as logs:
+            self.charm.on.stop.emit()
+            _client.return_value.get.assert_called_once_with(
+                res=Pod, name="postgresql-k8s-0", namespace=self.charm.model.name
+            )
+            _client.return_value.list.assert_not_called()
+            _client.return_value.apply.assert_not_called()
+            self.assertIn("failed to get first pod info", "".join(logs.output))
+
+        # Test when the charm fails to get the k8s resources created by the charm and Patroni.
+        _client.return_value.get.side_effect = None
+        _client.return_value.list.side_effect = [[], _FakeApiError]
+        with self.assertLogs("charm", "ERROR") as logs:
+            self.charm.on.stop.emit()
+            for kind in [Endpoints, Service]:
+                _client.return_value.list.assert_any_call(
+                    kind,
+                    namespace=self.charm.model.name,
+                    labels={"app.juju.is/created-by": self.charm.app.name},
+                )
+            _client.return_value.apply.assert_not_called()
+            self.assertIn(
+                "failed to get the k8s resources created by the charm and Patroni",
+                "".join(logs.output),
+            )
+
+        # Test when the charm fails to patch a k8s resource.
+        _client.return_value.get.return_value = MagicMock(
+            metadata=MagicMock(ownerReferences="fakeOwnerReferences")
+        )
+        _client.return_value.list.side_effect = [
+            [MagicMock(metadata=MagicMock(name="fakeName1", namespace="fakeNamespace"))],
+            [MagicMock(metadata=MagicMock(name="fakeName2", namespace="fakeNamespace"))],
+        ]
+        _client.return_value.apply.side_effect = [None, _FakeApiError]
+        with self.assertLogs("charm", "ERROR") as logs:
+            self.charm.on.stop.emit()
+            self.assertEqual(_client.return_value.apply.call_count, 2)
+            self.assertIn("failed to patch k8s MagicMock", "".join(logs.output))

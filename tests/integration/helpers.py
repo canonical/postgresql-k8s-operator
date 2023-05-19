@@ -11,7 +11,6 @@ import botocore
 import psycopg2
 import requests
 import yaml
-from lightkube import codecs
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
 from lightkube.generic_resource import GenericNamespacedResource
@@ -353,25 +352,6 @@ def get_application_units(ops_test: OpsTest, application_name: str) -> List[str]
     ]
 
 
-def get_charm_resources(namespace: str, application: str) -> List[GenericNamespacedResource]:
-    """Return the list of k8s resources from resources.yaml file.
-
-    Args:
-        namespace: namespace related to the model where
-            the charm was deployed.
-        application: application name.
-
-    Returns:
-        list of existing charm/Patroni specific k8s resources.
-    """
-    # Define the context needed for the k8s resources lists load.
-    context = {"namespace": namespace, "app_name": application}
-
-    # Load the list of the resources from resources.yaml.
-    with open("src/resources.yaml") as f:
-        return codecs.load_all_yaml(f, context=context)
-
-
 def get_existing_k8s_resources(namespace: str, application: str) -> set:
     """Return the list of k8s resources that were created by the charm and Patroni.
 
@@ -381,27 +361,13 @@ def get_existing_k8s_resources(namespace: str, application: str) -> set:
         application: application name.
 
     Returns:
-        list of existing charm/Patroni specific k8s resources.
+        set of existing charm/Patroni specific k8s resources.
     """
     # Create a k8s API client instance.
     client = Client(namespace=namespace)
 
-    # Retrieve the k8s resources the charm should create.
-    charm_resources = get_charm_resources(namespace, application)
-
-    # Add only the resources that currently exist.
-    resources = set(
-        map(
-            # Build an identifier for each resource (using its type and name).
-            lambda x: f"{type(x).__name__}/{x.metadata.name}",
-            filter(
-                lambda x: (resource_exists(client, x)),
-                charm_resources,
-            ),
-        )
-    )
-
-    # Include the resources created by the charm and Patroni.
+    # Retrieve the resources created by the charm and Patroni.
+    resources = set()
     for kind in [Endpoints, Service]:
         extra_resources = client.list(
             kind,
@@ -421,43 +387,28 @@ def get_existing_k8s_resources(namespace: str, application: str) -> set:
     return resources
 
 
-def get_expected_k8s_resources(namespace: str, application: str) -> set:
+def get_expected_k8s_resources(application: str) -> set:
     """Return the list of expected k8s resources when the charm is deployed.
 
     Args:
-        namespace: namespace related to the model where
-            the charm was deployed.
         application: application name.
 
     Returns:
-        list of existing charm/Patroni specific k8s resources.
+        set of existing charm/Patroni specific k8s resources.
     """
-    # Retrieve the k8s resources created by the charm.
-    charm_resources = get_charm_resources(namespace, application)
-
-    # Build an identifier for each resource (using its type and name).
-    resources = set(
-        map(
-            lambda x: f"{type(x).__name__}/{x.metadata.name}",
-            charm_resources,
-        )
-    )
-
-    # Include the resources created by the charm and Patroni.
-    resources.update(
-        [
-            f"Endpoints/patroni-{application}-config",
-            f"Endpoints/patroni-{application}-sync",
-            f"Endpoints/patroni-{application}",
-            f"Endpoints/{application}",
-            f"Endpoints/{application}-primary",
-            f"Endpoints/{application}-replicas",
-            f"Service/patroni-{application}-config",
-            f"Service/{application}",
-        ]
-    )
-
-    return resources
+    # Return the resources that should have been created by the charm and Patroni.
+    return {
+        f"Endpoints/patroni-{application}",
+        f"Endpoints/patroni-{application}-config",
+        f"Endpoints/patroni-{application}-sync",
+        f"Endpoints/{application}",
+        f"Endpoints/{application}-primary",
+        f"Endpoints/{application}-replicas",
+        f"Service/patroni-{application}-config",
+        f"Service/{application}",
+        f"Service/{application}-primary",
+        f"Service/{application}-replicas",
+    }
 
 
 async def get_password(
