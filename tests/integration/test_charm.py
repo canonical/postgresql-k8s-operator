@@ -11,6 +11,7 @@ from lightkube import AsyncClient
 from lightkube.resources.core_v1 import Pod
 from psycopg2 import sql
 from pytest_operator.plugin import OpsTest
+from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from tests.helpers import METADATA, STORAGE_PATH
 from tests.integration.helpers import (
@@ -52,7 +53,7 @@ async def test_application_created_required_resources(ops_test: OpsTest) -> None
     # the currently created k8s resources.
     namespace = ops_test.model.info.name
     existing_resources = get_existing_k8s_resources(namespace, APP_NAME)
-    expected_resources = get_expected_k8s_resources(namespace, APP_NAME)
+    expected_resources = get_expected_k8s_resources(APP_NAME)
     assert set(existing_resources) == set(expected_resources)
 
 
@@ -279,15 +280,17 @@ async def test_application_removal(ops_test: OpsTest) -> None:
 
     # Check that all k8s resources created by the charm and Patroni were removed.
     namespace = ops_test.model.info.name
-    existing_resources = get_existing_k8s_resources(namespace, APP_NAME)
-    assert set(existing_resources) == set()
+    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+        with attempt:
+            existing_resources = get_existing_k8s_resources(namespace, APP_NAME)
+            logger.info(f"existing_resources: {existing_resources}")
+            assert set(existing_resources) == set()
 
     # Check whether the application is gone
     # (in that situation, the units aren't in an error state).
     assert APP_NAME not in ops_test.model.applications
 
 
-@pytest.mark.unstable
 async def test_redeploy_charm_same_model(ops_test: OpsTest):
     """Redeploy the charm in the same model to test that it works."""
     charm = await ops_test.build_charm(".")
@@ -298,14 +301,14 @@ async def test_redeploy_charm_same_model(ops_test: OpsTest):
                 "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
             },
             application_name=APP_NAME,
-            num_units=3,
+            num_units=len(UNIT_IDS),
             series=CHARM_SERIES,
             trust=True,
         )
 
         # This check is enough to ensure that the charm/workload is working for this specific test.
         await ops_test.model.wait_for_idle(
-            apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=3
+            apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=len(UNIT_IDS)
         )
 
 

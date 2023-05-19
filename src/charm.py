@@ -14,8 +14,9 @@ from charms.postgresql_k8s.v0.postgresql import (
 )
 from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
 from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
-from lightkube import ApiError, Client, codecs
-from lightkube.models.core_v1 import ServicePort
+from lightkube import ApiError, Client
+from lightkube.models.core_v1 import ServicePort, ServiceSpec
+from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Endpoints, Pod, Service
 from ops.charm import (
     ActionEvent,
@@ -365,10 +366,10 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Create resources and add labels needed for replication.
         try:
-            self._create_resources()
+            self._create_services()
         except ApiError:
-            logger.exception("failed to create k8s resources")
-            self.unit.status = BlockedStatus("failed to create k8s resources")
+            logger.exception("failed to create k8s services")
+            self.unit.status = BlockedStatus("failed to create k8s services")
             return
 
         # Add this unit to the list of cluster members
@@ -454,10 +455,10 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Create resources and add labels needed for replication
         try:
-            self._create_resources()
+            self._create_services()
         except ApiError:
-            logger.exception("failed to create k8s resources")
-            self.unit.status = BlockedStatus("failed to create k8s resources")
+            logger.exception("failed to create k8s services")
+            self.unit.status = BlockedStatus("failed to create k8s services")
             return False
 
         if not self._patroni.primary_endpoint_ready:
@@ -486,10 +487,10 @@ class PostgresqlOperatorCharm(CharmBase):
         # Recreate k8s resources and add labels required for replication
         # when the pod loses them (like when it's deleted).
         try:
-            self._create_resources()
+            self._create_services()
         except ApiError:
-            logger.exception("failed to create k8s resources")
-            self.unit.status = BlockedStatus("failed to create k8s resources")
+            logger.exception("failed to create k8s services")
+            self.unit.status = BlockedStatus("failed to create k8s services")
             return
 
         try:
@@ -519,21 +520,57 @@ class PostgresqlOperatorCharm(CharmBase):
             obj=patch,
         )
 
-    def _create_resources(self) -> None:
-        """Create kubernetes resources needed for Patroni."""
+    def _create_services(self) -> None:
+        """Create kubernetes services for primary and replicas endpoints."""
         client = Client()
-        try:
-            with open("src/resources.yaml") as f:
-                for resource in codecs.load_all_yaml(f, context=self._context):
-                    client.create(resource)
-                    logger.debug(f"created {str(resource)}")
-        except ApiError as e:
-            # The 409 error code means that the resource was already created
-            # or has a higher version. This can happen when multiple calls are
-            # made to this function.
-            if e.status.code != 409:
-                logger.error("failed to create resource: %s.", str(resource.to_dict()))
-                raise e
+
+        pod0 = client.get(
+            res=Pod,
+            name=f"{self.app.name}-0",
+            namespace=self.model.name,
+        )
+
+        services = {
+            "primary": "master",
+            "replicas": "replica",
+        }
+        for service_name_suffix, role_selector in services.items():
+            service = Service(
+                metadata=ObjectMeta(
+                    name=f"{self._name}-{service_name_suffix}",
+                    namespace=self.model.name,
+                    ownerReferences=pod0.metadata.ownerReferences,
+                    labels={
+                        "app.kubernetes.io/name": self.app.name,
+                    },
+                ),
+                spec=ServiceSpec(
+                    ports=[
+                        ServicePort(
+                            name="api",
+                            port=8008,
+                            targetPort=8008,
+                        ),
+                        ServicePort(
+                            name="database",
+                            port=5432,
+                            targetPort=5432,
+                        ),
+                    ],
+                    selector={
+                        "app.kubernetes.io/name": self.app.name,
+                        "cluster-name": f"patroni-{self.app.name}",
+                        "role": role_selector,
+                    },
+                ),
+            )
+            client.apply(
+                obj=service,
+                name=service.metadata.name,
+                namespace=service.metadata.namespace,
+                force=True,
+                field_manager=self.model.app.name,
+            )
 
     @property
     def _has_blocked_status(self) -> bool:
@@ -619,45 +656,67 @@ class PostgresqlOperatorCharm(CharmBase):
         except RetryError as e:
             logger.error(f"failed to get primary with error {e}")
 
-    def _on_stop(self, _) -> None:
-        """Remove k8s resources created by the charm and Patroni."""
-        client = Client()
+    def _on_stop(self, _):
+        # Patch the services to remove them when the StatefulSet is deleted
+        # (i.e. application is removed).
+        try:
+            client = Client(field_manager=self.model.app.name)
 
-        # Get the k8s resources created by the charm.
-        with open("src/resources.yaml") as f:
-            resources = codecs.load_all_yaml(f, context=self._context)
-            # Ignore the service resources, which will be retrieved in the next step.
-            resources_to_delete = list(
-                filter(
-                    lambda x: not isinstance(x, Service),
-                    resources,
-                )
+            pod0 = client.get(
+                res=Pod,
+                name=f"{self.app.name}-0",
+                namespace=self.model.name,
             )
+        except ApiError:
+            # Only log the exception.
+            logger.exception("failed to get first pod info")
+            return
 
-        # Get the k8s resources created by the charm and Patroni.
-        for kind in [Endpoints, Service]:
-            resources_to_delete.extend(
-                client.list(
-                    kind,
-                    namespace=self._namespace,
-                    labels={"app.juju.is/created-by": f"{self._name}"},
+        try:
+            # Get the k8s resources created by the charm and Patroni.
+            resources_to_patch = []
+            for kind in [Endpoints, Service]:
+                resources_to_patch.extend(
+                    client.list(
+                        kind,
+                        namespace=self._namespace,
+                        labels={"app.juju.is/created-by": f"{self._name}"},
+                    )
                 )
-            )
+        except ApiError:
+            # Only log the exception.
+            logger.exception("failed to get the k8s resources created by the charm and Patroni")
+            return
 
-        # Delete the resources.
-        for resource in resources_to_delete:
+        for resource in resources_to_patch:
+            # Ignore resources created by Juju or the charm
+            # (which are already patched).
+            if (
+                type(resource) == Service
+                and resource.metadata.name
+                in [
+                    self._name,
+                    f"{self._name}-endpoints",
+                    f"{self._name}-primary",
+                    f"{self._name}-replicas",
+                ]
+            ) or resource.metadata.ownerReferences == pod0.metadata.ownerReferences:
+                continue
+            # Patch the resource.
             try:
-                client.delete(
-                    type(resource),
+                resource.metadata.ownerReferences = pod0.metadata.ownerReferences
+                resource.metadata.managedFields = None
+                client.apply(
+                    obj=resource,
                     name=resource.metadata.name,
                     namespace=resource.metadata.namespace,
+                    force=True,
                 )
-            except ApiError as e:
-                if (
-                    e.status.code != 404
-                ):  # 404 means that the resource was already deleted by other unit.
-                    # Only log a message, as the charm is being stopped.
-                    logger.error(f"failed to delete resource: {resource}.")
+            except ApiError:
+                # Only log the exception.
+                logger.exception(
+                    f"failed to patch k8s {type(resource).__name__} {resource.metadata.name}"
+                )
 
     def _on_update_status(self, _) -> None:
         """Update the unit status message."""
