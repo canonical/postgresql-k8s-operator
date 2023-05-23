@@ -41,6 +41,10 @@ provides:
     interface: pgsql
   db-admin:
     interface: pgsql
+  metrics-endpoint:
+    interface: prometheus_scrape
+  grafana-dashboard:
+    interface: grafana_dashboard
 
 requires:
   certificates:
@@ -49,6 +53,10 @@ requires:
     optional: true
   s3-parameters:
     interface: s3
+    limit: 1
+    optional: true
+  logging:
+    interface: loki_push_api
     limit: 1
     optional: true
 
