@@ -1,12 +1,11 @@
-# Backups.py Reference Documentation
-
-This file contains functions for related to backups management, including its major hooks. This file can be found at [src/backpus.py](../../../src/backups.py).
+# Backup flowcharts
+This document contains backups management flowchart, including all major hooks. This sources can be found at [src/backups.py](https://github.com/canonical/postgresql-k8s-operator/blob/main/src/backups.py).
 
 ## Hook Handler Flowcharts
-
 These flowcharts detail the control flow of the hooks in this program. Unless otherwise stated, **a hook deferral is always followed by a return**.
 
-### On S3 Credentials Changed Hook
+## On S3 Credentials Changed Hook
+[Click to navigate the mermaid diagram on GitHub](https://github.com/canonical/postgresql-k8s-operator/blob/main/docs/explanation/e-backups.md).
 
 ```mermaid
 flowchart TD
@@ -16,7 +15,7 @@ flowchart TD
   has_cluster_initialised -- yes --> are_all_required_settings_provided{Are all required\nS3 settings provided?}
   are_all_required_settings_provided -- no --> rtn
   are_all_required_settings_provided -- yes --> render_pgbackrest_config[Update backup settings]
-  render_pgbackrest_config --> is_leader{Is current\nunit leader?} 
+  render_pgbackrest_config --> is_leader{Is current\nunit leader?}
   is_leader -- no --> rtn
   is_leader -- yes -->  is_blocked{Is unit in\nblocked state?}
   is_blocked -- yes --> rtn
@@ -28,16 +27,16 @@ flowchart TD
   is_wal_archiving_to_s3_working -- yes --> is_tls_disabled_or_single_unit_cluster{Is TLS disabled or\nsingle unit cluster}
   is_tls_disabled_or_single_unit_cluster -- yes --> stop_pgbackrest_tls_server[Stop pgBackRest\nTLS server]
   is_tls_disabled_or_single_unit_cluster -- no --> is_replica_and_tls_server_not_running_on_primary{Is current\nunit a replica\nand TLS server isn't\nrunning on primary?}
-  is_replica_and_tls_server_not_running_on_primary -- yes --> rtn 
+  is_replica_and_tls_server_not_running_on_primary -- yes --> rtn
   stop_pgbackrest_tls_server --> rtn
   is_replica_and_tls_server_not_running_on_primary -- no --> start_pgbackrest_tls_server[Start pgBackRest\nTLS server]
   start_pgbackrest_tls_server --> rtn
 ```
 
-When certificates are received from TLS certificates operator through the `certificates` relation (or the relation is
-removed) the steps starting from `Is TLS disabled or single unit cluster` are also executed.
+When certificates are received from TLS certificates operator through the `certificates` relation (or the relation is removed) the steps starting from `Is TLS disabled or single unit cluster` are also executed.
 
-### On Create Backup Hook
+## On Create Backup Hook
+[Click to navigate the mermaid diagram on GitHub](https://github.com/canonical/postgresql-k8s-operator/blob/main/docs/explanation/e-backups.md).
 
 ```mermaid
 flowchart TD
@@ -71,7 +70,8 @@ flowchart TD
   finish_action --> is_replica2
 ```
 
-### On List Backups Hook
+## On List Backups Hook
+[Click to navigate the mermaid diagram on GitHub](https://github.com/canonical/postgresql-k8s-operator/blob/main/docs/explanation/e-backups.md).
 
 ```mermaid
 flowchart TD
@@ -84,7 +84,8 @@ flowchart TD
   does_pgbackrest_returned_backups_list -- yes --> return_formatted_backup_list[Return formatted\nbackup list]
 ```
 
-### On Restore Hook
+## On Restore Hook
+[Click to navigate the mermaid diagram on GitHub](https://github.com/canonical/postgresql-k8s-operator/blob/main/docs/explanation/e-backups.md).
 
 ```mermaid
 flowchart TD
@@ -114,4 +115,4 @@ flowchart TD
 ```
 
 The unit status becomes `Active` or `Blocked` after a, respectively, successful or failed restore
-is detected in the update status hook. 
+is detected in the update status hook.

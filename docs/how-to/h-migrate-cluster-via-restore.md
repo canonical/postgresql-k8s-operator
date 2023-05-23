@@ -1,11 +1,11 @@
 # How to migrate cluster using backups
 
-This is a How-To for restoring a backup that was made from the a *different* cluster, (i.e. cluster migration via restore). To perform a basic restore please reference the [Restore How-To](/t/charmed-postgresql-k8s-how-to-restore-backups/9597?channel=edge)
+This is a How-To for restoring a backup that was made from the a *different* cluster, (i.e. cluster migration via restore). To perform a basic restore please reference the [Restore How-To](/t/charmed-postgresql-k8s-how-to-restore-backups/9597?channel=14/stable)
 
 Restoring a backup from a previous cluster to a current cluster requires that you:
 - Have a single unit Charmed PostgreSQL deployed and running
 - Access to S3 storage
-- [Have configured settings for S3 storage](/t/charmed-postgresql-k8s-how-to-configure-s3/9595?channel=edge)
+- [Have configured settings for S3 storage](/t/charmed-postgresql-k8s-how-to-configure-s3/9595?channel=14/stable)
 - Have the backups from the previous cluster in your S3-storage
 - Have the passwords from your previous cluster
 
