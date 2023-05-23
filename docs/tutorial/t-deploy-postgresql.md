@@ -1,12 +1,12 @@
 # Get a Charmed PostgreSQL up and running
 
-This is part of the [Charmed PostgreSQL Tutorial](/t/charmed-postgresql-k8s-tutorial-overview/9296). Please refer to this page for more information and the overview of the content.
+This is part of the [Charmed PostgreSQL Tutorial](/t/charmed-postgresql-k8s-tutorial-overview/9296?channel=14/stable). Please refer to this page for more information and the overview of the content.
 
 ## Deploy
 
-To deploy Charmed PostgreSQL K8s, all you need to do is run the following command, which will fetch the charm from [Charmhub](https://charmhub.io/postgresql-k8s?channel=edge) and deploy it to your model:
+To deploy Charmed PostgreSQL K8s, all you need to do is run the following command, which will fetch the charm from [Charmhub](https://charmhub.io/postgresql-k8s?channel=14/stable) and deploy it to your model:
 ```shell
-juju deploy postgresql-k8s --channel edge --trust
+juju deploy postgresql-k8s --channel 14/stable --trust
 ```
 Note: `--trust` is required because the charm and Patroni need to create some K8s resources.
 
@@ -20,8 +20,8 @@ This command is useful for checking the status of Charmed PostgreSQL K8s and gat
 Model     Controller  Cloud/Region        Version  SLA          Timestamp
 tutorial  charm-dev   microk8s/localhost  2.9.42   unsupported  12:00:43+01:00
 
-App             Version  Status  Scale  Charm           Channel  Rev  Address         Exposed  Message
-postgresql-k8s           active      1  postgresql-k8s  edge      56  10.152.183.167  no
+App             Version  Status  Scale  Charm           Channel    Rev  Address         Exposed  Message
+postgresql-k8s           active      1  postgresql-k8s  14/stable  56   10.152.183.167  no
 
 Unit               Workload  Agent  Address       Ports  Message
 postgresql-k8s/0*  active    idle   10.1.188.206

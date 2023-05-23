@@ -1,5 +1,3 @@
-## Charmed PostgreSQL K8s Documentation
-
 The Charmed PostgreSQL K8s Operator delivers automated operations management from day 0 to day 2 on the [PostgreSQL Database Management System](https://www.postgresql.org/). It is an open source, end-to-end, production-ready data platform on top of [Juju](https://juju.is/).
 
 PostgreSQL is a powerful, open source object-relational database system that uses and extends the SQL language combined with many features that safely store and scale the most complicated data workloads.
@@ -15,8 +13,8 @@ Charmed PostgreSQL K8s is an official distribution of PostgreSQL. It’s an open
 ## In this documentation
 | | |
 |--|--|
-|  [Tutorials -- Coming Soon]()</br>  Get started - a hands-on introduction to using Charmed PostgreSQL K8s operator for new users </br> |  [How-to guides -- Coming Soon]() </br> Step-by-step guides covering key operations and common tasks |
-| [Reference -- Coming Soon]() </br> Technical information - specifications, APIs, architecture | [Explanation -- Coming Soon]() </br> Concepts - discussion and clarification of key topics  |
+|  [Tutorial](/t/charmed-postgresql-k8s-tutorial-overview/9296?channel=14/stable) </br>  Get started - a hands-on introduction to using Charmed PostgreSQL K8s operator for new users </br> |  [How-to guides](/t/charmed-postgresql-k8s-how-to-manage-units/9592?channel=14/stable) </br> Step-by-step guides covering key operations and common tasks |
+| [Reference](https://charmhub.io/postgresql-k8s/actions?channel=14/stable) </br> Technical information - specifications, APIs, architecture | [Explanation](/t/charmed-postgresql-k8s-explanations-interfaces-endpoints/10252?channel=14/stable) </br> Concepts - discussion and clarification of key topics  |
 
 # Navigation
 
@@ -35,17 +33,21 @@ Charmed PostgreSQL K8s is an official distribution of PostgreSQL. It’s an open
 | 2 | h-manage-units                | [Manage units](/t/charmed-postgresql-k8s-how-to-manage-units/9592)                                                |
 | 2 | h-enable-encryption           | [Enable encryption](/t/charmed-postgresql-k8s-how-to-enable-encryption/9593)                                      |
 | 2 | h-manage-app                  | [Manage applications](/t/charmed-postgresql-k8s-how-to-manage-applications/9594)                                  |
-| 2 | h-configure-s3                | [Configure S3](/t/charmed-postgresql-k8s-how-to-configure-s3/9595)                                                |
+| 2 | h-configure-s3-aws                | [Configure S3 AWS](/t/charmed-postgresql-k8s-how-to-configure-s3-for-aws/9595)                                                |
+| 2 | h-configure-s3-radosgw                | [Configure S3 RadosGW](/t/charmed-postgresql-k8s-how-to-configure-s3-for-radosgw/10316)                                                |
 | 2 | h-create-and-list-backups     | [Create and List Backups](/t/charmed-postgresql-k8s-how-to-create-and-list-backups/9596)                          |
 | 2 | h-restore-backup              | [Restore a Backup](/t/charmed-postgresql-k8s-how-to-restore-backups/9597)                                         |
 | 2 | h-migrate-cluster-via-restore | [Cluster Migration with Restore](/t/charmed-postgresql-k8s-how-to-migrate-clusters/9598)                          |
 | 1 | reference                     | [Reference]()                                                                                                     |
-| 2 | r-requirements                | [Requirements](/t/charmed-postgresql-k8s-reference-requirements/9304)                                             |
-| 2 | r-charm                       | [Charm API](/t/charmed-postgresql-k8s-reference-charm-api/9305)                                                   |
-| 2 | r-peers                       | [Peer Relation](/t/charmed-postgresql-k8s-reference-peer-relation/9306)                                           |
 | 2 | r-actions                     | [Actions](https://charmhub.io/postgresql-k8s/actions)                                                             |
 | 2 | r-configurations              | [Configurations](https://charmhub.io/postgresql-k8s/configure)                                                    |
-| 2 | r-libraries                   | [Libraries](https://charmhub.io/postgresql-k8s/libraries/helpers)                                                 |
+| 2 | r-libraries                   | [Libraries](https://charmhub.io/postgresql-k8s/libraries)                                                 |
+| 2 | r-integrations                   | [Integrations](https://charmhub.io/postgresql-k8s/integrations)                                                 |
+| 1 | explanation                     | [Explanation]()                                                                                                     |
+| 2 | e-interfaces                       | [Interfaces/endpoints](/t/charmed-postgresql-k8s-explanations-interfaces-endpoints/10252)                                                   |
+| 2 | e-charm                       | [Charm flowcharts](/t/charmed-postgresql-k8s-reference-charm-api/9305)                                                   |
+| 2 | e-peers                       | [Relations flowcharts](/t/charmed-postgresql-k8s-reference-peer-relation/9306)                                           |
+| 2 | e-backups                  | [Backups flowcharts](/t/charmed-postgresql-k8s-explanations-backup-flowcharts/10248)                                           |
 
 # Redirects
 

@@ -1,6 +1,6 @@
 # Integrating your Charmed PostgreSQL
 
-This is part of the [Charmed PostgreSQL Tutorial](/t/charmed-postgresql-k8s-tutorial-overview/9296). Please refer to this page for more information and the overview of the content.
+This is part of the [Charmed PostgreSQL Tutorial](/t/charmed-postgresql-k8s-tutorial-overview/9296?channel=14/stable). Please refer to this page for more information and the overview of the content.
 
 ## Integrations (Relations for Juju 2.9)
 Relations, or what Juju 3.0+ documentation [describes as an Integration](https://juju.is/docs/sdk/integration), are the easiest way to create a user for PostgreSQL in Charmed PostgreSQL K8s. Relations automatically create a username, password, and database for the desired user/application. As mentioned earlier in the [Access PostgreSQL section](#access-PostgreSQL) it is a better practice to connect to PostgreSQL via a specific user rather than the admin user.
@@ -22,9 +22,9 @@ Checking the deployment progress using `juju status` will show you the `blocked`
 Model     Controller  Cloud/Region        Version  SLA          Timestamp
 tutorial  charm-dev   microk8s/localhost  2.9.42   unsupported  12:11:53+01:00
 
-App              Version  Status   Scale  Charm            Channel  Rev  Address         Exposed  Message
-data-integrator           waiting      1  data-integrator  edge       6  10.152.183.66   no       installing agent
-postgresql-k8s            active       2  postgresql-k8s   edge      56  10.152.183.167  no
+App              Version  Status   Scale  Charm            Channel    Rev  Address         Exposed  Message
+data-integrator           waiting      1  data-integrator  edge       6    10.152.183.66   no       installing agent
+postgresql-k8s            active       2  postgresql-k8s   14/stable  56   10.152.183.167  no
 
 Unit                Workload    Agent  Address       Ports  Message
 data-integrator/0*  blocked     idle   10.1.188.211         Please relate the data-integrator with the desired product
@@ -43,9 +43,9 @@ Wait for `juju status --watch 1s` to show all applications/units as `active`:
 Model     Controller  Cloud/Region        Version  SLA          Timestamp
 tutorial  charm-dev   microk8s/localhost  2.9.42   unsupported  12:12:12+01:00
 
-App              Version  Status   Scale  Charm            Channel  Rev  Address         Exposed  Message
-data-integrator           waiting      1  data-integrator  edge       6  10.152.183.66   no       installing agent
-postgresql-k8s            active       2  postgresql-k8s   edge      56  10.152.183.167  no
+App              Version  Status   Scale  Charm            Channel    Rev  Address         Exposed  Message
+data-integrator           waiting      1  data-integrator  edge        6   10.152.183.66   no       installing agent
+postgresql-k8s            active       2  postgresql-k8s   14/stable  56   10.152.183.167  no
 
 Unit                Workload    Agent  Address       Ports  Message
 data-integrator/0*  active      idle   10.1.188.211

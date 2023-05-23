@@ -1,6 +1,6 @@
 # Enable Security in your PostgreSQL deployment 
 
-This is part of the [Charmed PostgreSQL Tutorial](/t/charmed-postgresql-k8s-tutorial-overview/9296). Please refer to this page for more information and the overview of the content.
+This is part of the [Charmed PostgreSQL Tutorial](/t/charmed-postgresql-k8s-tutorial-overview/9296?channel=14/stable). Please refer to this page for more information and the overview of the content.
 
 ## Transport Layer Security (TLS)
 [TLS](https://en.wikipedia.org/wiki/Transport_Layer_Security) is used to encrypt data exchanged between two applications; it secures data transmitted over the network. Typically, enabling TLS within a highly available database, and between a highly available database and client/server applications, requires domain-specific knowledge and a high level of expertise. Fortunately, the domain-specific knowledge has been encoded into Charmed PostgreSQL K8s. This means (re-)configuring TLS on Charmed PostgreSQL K8s is readily available and requires minimal effort on your end.
@@ -11,7 +11,7 @@ Again, relations come in handy here as TLS is enabled via relations; i.e. by rel
 ### Configure TLS
 Before enabling TLS on Charmed PostgreSQL K8s we must first deploy the `tls-certificates-operator` charm:
 ```shell
-juju deploy tls-certificates-operator --channel=edge --config generate-self-signed-certificates="true" --config ca-common-name="Tutorial CA"
+juju deploy tls-certificates-operator --config generate-self-signed-certificates="true" --config ca-common-name="Tutorial CA"
 ```
 
 Wait until the `tls-certificates-operator` is up and active, use `juju status --watch 1s` to monitor the progress:
@@ -19,9 +19,9 @@ Wait until the `tls-certificates-operator` is up and active, use `juju status --
 Model     Controller  Cloud/Region        Version  SLA          Timestamp
 tutorial  charm-dev   microk8s/localhost  2.9.42   unsupported  12:18:05+01:00
 
-App                        Version  Status   Scale  Charm                      Channel  Rev  Address         Exposed  Message
-postgresql-k8s                      active       2  postgresql-k8s             edge      56  10.152.183.167  no
-tls-certificates-operator           waiting      1  tls-certificates-operator  edge      22  10.152.183.138  no       installing agent
+App                        Version  Status   Scale  Charm                      Channel    Rev  Address         Exposed  Message
+postgresql-k8s                      active       2  postgresql-k8s             14/stable  56   10.152.183.167  no
+tls-certificates-operator           waiting      1  tls-certificates-operator  stable     22   10.152.183.138  no       installing agent
 
 Unit                          Workload    Agent  Address       Ports  Message
 postgresql-k8s/0*             active      idle   10.1.188.206         Primary
