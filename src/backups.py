@@ -683,14 +683,14 @@ Stderr:
             )
             return {}, missing_required_parameters
 
-        # Retrieve the backup path, strip its slashes and add a "/" in the beginning of the path.
-        s3_parameters["path"] = f'/{s3_parameters["path"].strip("/")}'
-
         # Add some sensible defaults (as expected by the code) for missing optional parameters
         s3_parameters.setdefault("endpoint", "https://s3.amazonaws.com")
         s3_parameters.setdefault("region")
         s3_parameters.setdefault("path", "")
         s3_parameters.setdefault("s3-uri-style", "host")
+
+        # Retrieve the backup path, strip its slashes and add a "/" in the beginning of the path.
+        s3_parameters["path"] = f'/{s3_parameters["path"].strip("/")}'
 
         return s3_parameters, []
 
