@@ -78,7 +78,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
         self._postgresql_service = "postgresql"
         self.pgbackrest_server_service = "pgbackrest server"
-        self._metrics_service = "metrics server"
+        self._metrics_service = "metrics_server"
         self._unit = self.model.unit.name
         self._name = self.model.app.name
         self._namespace = self.model.name
@@ -935,16 +935,16 @@ class PostgresqlOperatorCharm(CharmBase):
                 },
                 self._metrics_service: {
                     "override": "replace",
-                    "summary": "postgresql exporter",
+                    "summary": "postgresql metrics exporter",
                     "command": "/start-exporter.sh",
                     "startup": "enabled",
                     "user": WORKLOAD_OS_USER,
                     "group": WORKLOAD_OS_GROUP,
                     "environment": {
                         "DATA_SOURCE_NAME": (
-                            f"user=${MONITORING_USER} "
-                            f"password=${self.get_secret('app', MONITORING_PASSWORD_KEY)} "
-                            "host=/tmp port=5432 database=postgres"
+                            f"user={MONITORING_USER} "
+                            f"password={self.get_secret('app', MONITORING_PASSWORD_KEY)} "
+                            "host=/var/run/postgresql port=5432 database=postgres"
                         ),
                     }
                 }
