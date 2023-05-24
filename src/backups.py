@@ -2,12 +2,12 @@
 # See LICENSE file for licensing details.
 
 """Backups implementation."""
+import datetime
 import json
 import logging
 import os
 import re
 import tempfile
-from datetime import datetime
 from typing import Dict, List, Optional, OrderedDict, Tuple
 
 import boto3 as boto3
@@ -229,8 +229,9 @@ class PostgreSQLBackups(Object):
         output, _ = self._execute_command(["pgbackrest", "info", "--output=json"])
         backups = json.loads(output)[0]["backup"]
         for backup in backups:
-            backup_id = datetime.strftime(
-                datetime.strptime(backup["label"][:-1], "%Y%m%d-%H%M%S"), "%Y-%m-%dT%H:%M:%SZ"
+            backup_id = datetime.datetime.strftime(
+                datetime.datetime.strptime(backup["label"][:-1], "%Y%m%d-%H%M%S"),
+                "%Y-%m-%dT%H:%M:%SZ",
             )
             error = backup["error"]
             backup_status = "finished"
@@ -260,8 +261,9 @@ class PostgreSQLBackups(Object):
         stanza_name = repository_info["name"]
         return OrderedDict[str, str](
             (
-                datetime.strftime(
-                    datetime.strptime(backup["label"][:-1], "%Y%m%d-%H%M%S"), "%Y-%m-%dT%H:%M:%SZ"
+                datetime.datetime.strftime(
+                    datetime.datetime.strptime(backup["label"][:-1], "%Y%m%d-%H%M%S"),
+                    "%Y-%m-%dT%H:%M:%SZ",
                 ),
                 stanza_name,
             )
@@ -386,7 +388,7 @@ class PostgreSQLBackups(Object):
         s3_parameters, _ = self._retrieve_s3_parameters()
 
         # Test uploading metadata to S3 to test credentials before backup.
-        datetime_backup_requested = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
+        datetime_backup_requested = datetime.datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
         juju_version = JujuVersion.from_environ()
         metadata = f"""Date Backup Requested: {datetime_backup_requested}
 Model Name: {self.model.name}
@@ -438,7 +440,7 @@ Juju Version: {str(juju_version)}
             else:
                 # Generate a backup id from the current date and time if the backup failed before
                 # generating the backup label (our backup id).
-                backup_id = datetime.strftime(datetime.now(), "%Y%m%d-%H%M%SF")
+                backup_id = datetime.datetime.strftime(datetime.datetime.now(), "%Y%m%d-%H%M%SF")
 
             # Upload the logs to S3.
             logs = f"""Stdout:
@@ -560,7 +562,7 @@ Stderr:
         logger.info("Configuring Patroni to restore the backup")
         self.charm.app_peer_data.update(
             {
-                "restoring-backup": f'{datetime.strftime(datetime.strptime(backup_id, "%Y-%m-%dT%H:%M:%SZ"), "%Y%m%d-%H%M%S")}F',
+                "restoring-backup": f'{datetime.datetime.strftime(datetime.datetime.strptime(backup_id, "%Y-%m-%dT%H:%M:%SZ"), "%Y%m%d-%H%M%S")}F',
                 "restore-stanza": backups[backup_id],
             }
         )
