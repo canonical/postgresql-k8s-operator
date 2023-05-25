@@ -153,7 +153,7 @@ class TestPostgreSQLBackups(unittest.TestCase):
     @patch("charm.PostgreSQLBackups._execute_command")
     @patch("charm.PostgresqlOperatorCharm.is_primary", new_callable=PropertyMock)
     @patch("charm.PostgreSQLBackups._upload_content_to_s3")
-    @patch("datetime.datetime")
+    @patch("backups.datetime")
     @patch("ops.JujuVersion.from_environ")
     @patch("charm.PostgreSQLBackups._retrieve_s3_parameters")
     @patch("charm.PostgreSQLBackups._can_unit_perform_backup")
