@@ -5,37 +5,16 @@ import unittest
 from unittest.mock import MagicMock, Mock, PropertyMock, patch
 
 from charms.postgresql_k8s.v0.postgresql import PostgreSQLUpdateUserPasswordError
-from lightkube.core.exceptions import ApiError
 from lightkube.resources.core_v1 import Endpoints, Pod, Service
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.pebble import ServiceStatus
 from ops.testing import Harness
 from tenacity import RetryError
 
 from charm import PostgresqlOperatorCharm
 from constants import PEER
 from tests.helpers import patch_network_get
-
-
-class _FakeResponse:
-    """Used to fake an httpx response during testing only."""
-
-    def __init__(self, status_code: int):
-        self.status_code = status_code
-
-    def json(self):
-        return {
-            "apiVersion": 1,
-            "code": self.status_code,
-            "message": "broken",
-            "reason": "",
-        }
-
-
-class _FakeApiError(ApiError):
-    """Used to simulate an ApiError during testing."""
-
-    def __init__(self, status_code: int = 400):
-        super().__init__(response=_FakeResponse(status_code))
+from tests.unit.helpers import _FakeApiError
 
 
 class TestCharm(unittest.TestCase):
@@ -353,6 +332,89 @@ class TestCharm(unittest.TestCase):
             self.assertIn(
                 "ERROR:charm:failed to get primary with error RetryError[fake error]", logs.output
             )
+
+    @patch("charm.PostgresqlOperatorCharm._set_primary_status_message")
+    @patch("charm.PostgresqlOperatorCharm._handle_processes_failures")
+    @patch("charm.PostgreSQLBackups.can_use_s3_repository")
+    @patch("charm.PostgresqlOperatorCharm.update_config")
+    @patch("charm.Patroni.member_started", new_callable=PropertyMock)
+    @patch("ops.model.Container.pebble")
+    def test_on_update_status_after_restore_operation(
+        self,
+        _pebble,
+        _member_started,
+        _update_config,
+        _can_use_s3_repository,
+        _handle_processes_failures,
+        _set_primary_status_message,
+    ):
+        # Mock the access to the list of Pebble services to test a failed restore.
+        _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.INACTIVE)]
+
+        # Test when the restore operation fails.
+        with self.harness.hooks_disabled():
+            self.harness.set_leader()
+            self.harness.update_relation_data(
+                self.rel_id,
+                self.charm.app.name,
+                {"restoring-backup": "2023-01-01T09:00:00Z"},
+            )
+        self.harness.set_can_connect(self._postgresql_container, True)
+        self.charm.on.update_status.emit()
+        _update_config.assert_not_called()
+        _handle_processes_failures.assert_not_called()
+        _set_primary_status_message.assert_not_called()
+        self.assertIsInstance(self.charm.unit.status, BlockedStatus)
+
+        # Test when the restore operation hasn't finished yet.
+        self.charm.unit.status = ActiveStatus()
+        _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.ACTIVE)]
+        _member_started.return_value = False
+        self.charm.on.update_status.emit()
+        _update_config.assert_not_called()
+        _handle_processes_failures.assert_not_called()
+        _set_primary_status_message.assert_not_called()
+        self.assertIsInstance(self.charm.unit.status, ActiveStatus)
+
+        # Assert that the backup id is still in the application relation databag.
+        self.assertEqual(
+            self.harness.get_relation_data(self.rel_id, self.charm.app),
+            {"restoring-backup": "2023-01-01T09:00:00Z"},
+        )
+
+        # Test when the restore operation finished successfully.
+        _member_started.return_value = True
+        _can_use_s3_repository.return_value = (True, None)
+        _handle_processes_failures.return_value = False
+        self.charm.on.update_status.emit()
+        _update_config.assert_called_once()
+        _handle_processes_failures.assert_called_once()
+        _set_primary_status_message.assert_called_once()
+        self.assertIsInstance(self.charm.unit.status, ActiveStatus)
+
+        # Assert that the backup id is not in the application relation databag anymore.
+        self.assertEqual(self.harness.get_relation_data(self.rel_id, self.charm.app), {})
+
+        # Test when it's not possible to use the configured S3 repository.
+        _update_config.reset_mock()
+        _handle_processes_failures.reset_mock()
+        _set_primary_status_message.reset_mock()
+        with self.harness.hooks_disabled():
+            self.harness.update_relation_data(
+                self.rel_id,
+                self.charm.app.name,
+                {"restoring-backup": "2023-01-01T09:00:00Z"},
+            )
+        _can_use_s3_repository.return_value = (False, "fake validation message")
+        self.charm.on.update_status.emit()
+        _update_config.assert_called_once()
+        _handle_processes_failures.assert_not_called()
+        _set_primary_status_message.assert_not_called()
+        self.assertIsInstance(self.charm.unit.status, BlockedStatus)
+        self.assertEqual(self.charm.unit.status.message, "fake validation message")
+
+        # Assert that the backup id is not in the application relation databag anymore.
+        self.assertEqual(self.harness.get_relation_data(self.rel_id, self.charm.app), {})
 
     @patch("charm.PostgresqlOperatorCharm._patch_pod_labels", side_effect=[_FakeApiError, None])
     @patch(
