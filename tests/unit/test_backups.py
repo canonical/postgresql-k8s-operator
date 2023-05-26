@@ -1157,13 +1157,13 @@ Juju Version: test-juju-version
 
         # Test when all parameters are provided.
         _get_s3_connection_info.return_value = {
-            "bucket": "test-bucket",
-            "access-key": "test-access-key",
-            "secret-key": "test-secret-key",
-            "endpoint": "https://storage.googleapis.com",
-            "path": "test-path/",
-            "region": "us-east-1",
-            "s3-uri-style": "path",
+            "bucket": " /test-bucket/ ",
+            "access-key": " test-access-key ",
+            "secret-key": " test-secret-key ",
+            "endpoint": " https://storage.googleapis.com// ",
+            "path": " test-path/ ",
+            "region": " us-east-1 ",
+            "s3-uri-style": " path ",
         }
         self.assertEqual(
             self.charm.backup._retrieve_s3_parameters(),
