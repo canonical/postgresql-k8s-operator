@@ -938,6 +938,7 @@ class PostgresqlOperatorCharm(CharmBase):
                     "summary": "postgresql metrics exporter",
                     "command": "/start-exporter.sh",
                     "startup": "enabled",
+                    "after": [self._postgresql_service],
                     "user": WORKLOAD_OS_USER,
                     "group": WORKLOAD_OS_GROUP,
                     "environment": {
@@ -1083,7 +1084,7 @@ class PostgresqlOperatorCharm(CharmBase):
             # Changes were made, add the new layer.
             container.add_layer(self._postgresql_service, new_layer, combine=True)
             logging.info("Added updated layer 'postgresql' to Pebble plan")
-            container.restart(self._postgresql_service)
+            container.replan()
             logging.info("Restarted postgresql service")
         if current_layer.checks != new_layer.checks:
             # Changes were made, add the new layer.
