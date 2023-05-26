@@ -45,10 +45,10 @@ from tenacity import RetryError
 from backups import PostgreSQLBackups
 from constants import (
     BACKUP_USER,
+    METRICS_PORT,
     MONITORING_PASSWORD_KEY,
     MONITORING_USER,
     PEER,
-    METRICS_PORT,
     POSTGRES_LOG_FILES,
     REPLICATION_PASSWORD_KEY,
     REPLICATION_USER,
@@ -947,8 +947,8 @@ class PostgresqlOperatorCharm(CharmBase):
                             f"password={self.get_secret('app', MONITORING_PASSWORD_KEY)} "
                             "host=/var/run/postgresql port=5432 database=postgres"
                         ),
-                    }
-                }
+                    },
+                },
             },
             "checks": {
                 self._postgresql_service: {
