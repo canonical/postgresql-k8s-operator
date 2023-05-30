@@ -89,34 +89,49 @@ class DbProvides(Object):
 
         logger.warning(f"DEPRECATION WARNING - `{self.relation_name}` is a legacy interface")
 
-        unit_relation_databag = event.relation.data[self.charm.unit]
-        application_relation_databag = event.relation.data[self.charm.app]
+        # Do not allow apps requesting extensions to be installed
+        # (let them now about config options).
+        extensions = set(event.relation.data.get(event.app, {}).get("extensions", "").split(","))
+        for unit in event.relation.units:
+            extensions.update(event.relation.data.get(unit, {}).get("extensions", "").split(","))
+        if extensions:
+            disabled_extensions = set()
+            for extension in extensions:
+                extension_name = extension.split(":")[0]
+                logger.error(f"extension_name: {extension_name}")
+                if not self.charm.model.config.get(f"plugin_{extension_name}_enable"):
+                    disabled_extensions.add(extension_name)
+            if disabled_extensions:
+                logger.error(
+                    f"ERROR - `extensions` ({', '.join(disabled_extensions)}) cannot be requested through relations"
+                    " - they should be enabled through a database charm config"
+                )
+                self.charm.unit.status = BlockedStatus(EXTENSIONS_BLOCKING_MESSAGE)
+                return
 
-        # Do not allow apps requesting extensions to be installed.
-        if "extensions" in event.relation.data.get(
-            event.app, {}
-        ) or "extensions" in event.relation.data.get(event.unit, {}):
-            logger.error(
-                "ERROR - `extensions` cannot be requested through relations"
-                " - they should be installed through a database charm config in the future"
-            )
-            self.charm.unit.status = BlockedStatus(EXTENSIONS_BLOCKING_MESSAGE)
-            return
+        self._set_up_relation(event.relation, extensions)
 
-        # Sometimes a relation changed event is triggered,
-        # and it doesn't have a database name in it.
-        database = event.relation.data.get(event.app, {}).get(
-            "database", event.relation.data.get(event.unit, {}).get("database")
-        )
+    def _set_up_relation(self, relation: Relation, extensions) -> None:
+        """Set up the relation to be used by the application charm."""
+        database = relation.data.get(relation.app, {}).get("database")
         if not database:
-            logger.warning("Deferring on_relation_changed: No database name provided")
-            event.defer()
+            for unit in relation.units:
+                unit_database = relation.data.get(unit, {}).get("database")
+                if unit_database:
+                    database = unit_database
+                    break
+
+        if not database:
+            logger.warning("Early exit on_relation_changed: No database name provided")
             return
 
         try:
+            unit_relation_databag = relation.data[self.charm.unit]
+            application_relation_databag = relation.data[self.charm.app]
+
             # Creates the user and the database for this specific relation if it was not already
             # created in a previous relation changed event.
-            user = f"relation_id_{event.relation.id}"
+            user = f"relation_id_{relation.id}"
             password = unit_relation_databag.get("password", new_password())
             self.charm.postgresql.create_user(user, password, self.admin)
             self.charm.postgresql.create_database(database, user)
@@ -129,7 +144,7 @@ class DbProvides(Object):
                     port=DATABASE_PORT,
                     user=user,
                     password=password,
-                    fallback_application_name=event.app.name,
+                    fallback_application_name=relation.app.name,
                 )
             )
 
@@ -141,7 +156,7 @@ class DbProvides(Object):
                     port=DATABASE_PORT,
                     user=user,
                     password=password,
-                    fallback_application_name=event.app.name,
+                    fallback_application_name=relation.app.name,
                 )
             )
 
@@ -153,8 +168,8 @@ class DbProvides(Object):
             # application and this charm will not work.
             for databag in [application_relation_databag, unit_relation_databag]:
                 updates = {
-                    "allowed-subnets": self._get_allowed_subnets(event.relation),
-                    "allowed-units": self._get_allowed_units(event.relation),
+                    "allowed-subnets": self._get_allowed_subnets(relation),
+                    "allowed-units": self._get_allowed_units(relation),
                     "host": self.charm.endpoint,
                     "master": primary,
                     "port": DATABASE_PORT,

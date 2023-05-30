@@ -155,6 +155,18 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
             timeout=1000,
         )
 
+        # Verify that the charm doesn't block when the extensions are enabled.
+        config = {"plugin_pg_trgm_enable": "True", "plugin_unaccent_enable": "True"}
+        await ops_test.model.applications[DATABASE_APP_NAME].set_config(config)
+        await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active")
+        await ops_test.model.relate(f"{DATABASE_APP_NAME}:db", "indico1:db")
+        await ops_test.model.wait_for_idle(
+            apps=[DATABASE_APP_NAME],
+            status="active",
+            raise_on_blocked=False,
+            timeout=1000,
+        )
+
         # Cleanup
         await gather(
             ops_test.model.remove_application(DATABASE_APP_NAME, block_until_done=True),
