@@ -92,6 +92,7 @@ class DbProvides(Object):
         self.set_up_relation(event.relation)
 
     def _get_extensions(self, relation: Relation) -> Tuple[Set, Set]:
+        """Returns the list of requested and disabled extensions."""
         requested_extensions = set(
             relation.data.get(relation.app, {}).get("extensions", "").split(",")
         )
@@ -100,7 +101,7 @@ class DbProvides(Object):
                 relation.data.get(unit, {}).get("extensions", "").split(",")
             )
         disabled_extensions = set()
-        if requested_extensions:
+        if requested_extensions != {""}:
             for extension in requested_extensions:
                 extension_name = extension.split(":")[0]
                 if not self.charm.model.config.get(f"plugin_{extension_name}_enable"):

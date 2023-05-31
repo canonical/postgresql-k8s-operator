@@ -204,10 +204,10 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
         )
 
         # Cleanup
-        # await gather(
-        #     ops_test.model.remove_application(DATABASE_APP_NAME, block_until_done=True),
-        #     ops_test.model.remove_application("indico1", block_until_done=True),
-        #     ops_test.model.remove_application("indico2", block_until_done=True),
-        #     ops_test.model.remove_application("redis-broker", block_until_done=True),
-        #     ops_test.model.remove_application("redis-cache", block_until_done=True),
-        # )
+        await gather(
+            ops_test.model.remove_application(DATABASE_APP_NAME, block_until_done=True),
+            ops_test.model.remove_application("indico1", block_until_done=True),
+            ops_test.model.remove_application("indico2", block_until_done=True),
+            ops_test.model.remove_application("redis-broker", block_until_done=True),
+            ops_test.model.remove_application("redis-cache", block_until_done=True),
+        )
