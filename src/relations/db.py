@@ -5,7 +5,7 @@
 
 
 import logging
-from typing import Iterable
+from typing import Iterable, Set, Tuple
 
 from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQLCreateDatabaseError,
@@ -89,30 +89,37 @@ class DbProvides(Object):
 
         logger.warning(f"DEPRECATION WARNING - `{self.relation_name}` is a legacy interface")
 
-        # Do not allow apps requesting extensions to be installed
-        # (let them now about config options).
-        extensions = set(event.relation.data.get(event.app, {}).get("extensions", "").split(","))
-        for unit in event.relation.units:
-            extensions.update(event.relation.data.get(unit, {}).get("extensions", "").split(","))
-        if extensions:
-            disabled_extensions = set()
-            for extension in extensions:
+        self.set_up_relation(event.relation)
+
+    def _get_extensions(self, relation: Relation) -> Tuple[Set, Set]:
+        requested_extensions = set(
+            relation.data.get(relation.app, {}).get("extensions", "").split(",")
+        )
+        for unit in relation.units:
+            requested_extensions.update(
+                relation.data.get(unit, {}).get("extensions", "").split(",")
+            )
+        disabled_extensions = set()
+        if requested_extensions:
+            for extension in requested_extensions:
                 extension_name = extension.split(":")[0]
-                logger.error(f"extension_name: {extension_name}")
                 if not self.charm.model.config.get(f"plugin_{extension_name}_enable"):
                     disabled_extensions.add(extension_name)
-            if disabled_extensions:
-                logger.error(
-                    f"ERROR - `extensions` ({', '.join(disabled_extensions)}) cannot be requested through relations"
-                    " - they should be enabled through a database charm config"
-                )
-                self.charm.unit.status = BlockedStatus(EXTENSIONS_BLOCKING_MESSAGE)
-                return
+        return requested_extensions, disabled_extensions
 
-        self._set_up_relation(event.relation, extensions)
-
-    def _set_up_relation(self, relation: Relation, extensions) -> None:
+    def set_up_relation(self, relation: Relation) -> bool:
         """Set up the relation to be used by the application charm."""
+        # Do not allow apps requesting extensions to be installed
+        # (let them now about config options).
+        requested_extensions, disabled_extensions = self._get_extensions(relation)
+        if disabled_extensions:
+            logger.error(
+                f"ERROR - `extensions` ({', '.join(disabled_extensions)}) cannot be requested through relations"
+                " - they should be enabled through a database charm config"
+            )
+            self.charm.unit.status = BlockedStatus(EXTENSIONS_BLOCKING_MESSAGE)
+            return False
+
         database = relation.data.get(relation.app, {}).get("database")
         if not database:
             for unit in relation.units:
@@ -123,7 +130,7 @@ class DbProvides(Object):
 
         if not database:
             logger.warning("Early exit on_relation_changed: No database name provided")
-            return
+            return False
 
         try:
             unit_relation_databag = relation.data[self.charm.unit]
@@ -178,6 +185,7 @@ class DbProvides(Object):
                     "user": user,
                     "password": password,
                     "database": database,
+                    "extensions": ",".join(requested_extensions),
                 }
                 databag.update(updates)
         except (
@@ -188,7 +196,9 @@ class DbProvides(Object):
             self.charm.unit.status = BlockedStatus(
                 f"Failed to initialize {self.relation_name} relation"
             )
-            return
+            return False
+
+        return True
 
     def _check_for_blocking_relations(self, relation_id: int) -> bool:
         """Checks if there are relations with extensions.

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
+import logging
 from asyncio import gather
 
 import pytest
@@ -14,10 +15,13 @@ from tests.integration.helpers import (
     deploy_and_relate_application_with_postgresql,
 )
 
+EXTENSIONS_BLOCKING_MESSAGE = "extensions requested through relation"
 FINOS_WALTZ_APP_NAME = "finos-waltz"
 ANOTHER_FINOS_WALTZ_APP_NAME = "another-finos-waltz"
 APPLICATION_UNITS = 1
 DATABASE_UNITS = 3
+
+logger = logging.getLogger(__name__)
 
 
 async def test_finos_waltz_db(ops_test: OpsTest) -> None:
@@ -100,6 +104,12 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
             application_name="indico2",
             num_units=APPLICATION_UNITS,
         )
+        await ops_test.model.deploy("redis-k8s", channel="stable", application_name="redis-broker")
+        await ops_test.model.deploy("redis-k8s", channel="stable", application_name="redis-cache")
+        await gather(
+            ops_test.model.relate("redis-broker", "indico1"),
+            ops_test.model.relate("redis-cache", "indico1"),
+        )
 
         # Wait for model to stabilise
         await ops_test.model.wait_for_idle(
@@ -123,7 +133,7 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
 
         assert (
             ops_test.model.applications[DATABASE_APP_NAME].units[0].workload_status_message
-            == "extensions requested through relation"
+            == EXTENSIONS_BLOCKING_MESSAGE
         )
 
         await ops_test.model.applications[DATABASE_APP_NAME].destroy_relation(
@@ -140,7 +150,7 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
         # Verify that the charm remains blocked if there are other blocking relations
         assert (
             ops_test.model.applications[DATABASE_APP_NAME].units[0].workload_status_message
-            == "extensions requested through relation"
+            == EXTENSIONS_BLOCKING_MESSAGE
         )
 
         await ops_test.model.applications[DATABASE_APP_NAME].destroy_relation(
@@ -156,20 +166,48 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
         )
 
         # Verify that the charm doesn't block when the extensions are enabled.
+        logger.info("Verifying that the charm doesn't block when the extensions are enabled")
         config = {"plugin_pg_trgm_enable": "True", "plugin_unaccent_enable": "True"}
         await ops_test.model.applications[DATABASE_APP_NAME].set_config(config)
         await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active")
         await ops_test.model.relate(f"{DATABASE_APP_NAME}:db", "indico1:db")
         await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME],
+            apps=[DATABASE_APP_NAME, "indico1"],
             status="active",
             raise_on_blocked=False,
-            timeout=1000,
+            timeout=600,
+        )
+
+        # Verify that the charm unblocks when the extensions are enabled after being blocked
+        # due to disabled extensions.
+        logger.info("Verifying that the charm unblocks when the extensions are enabled")
+        config = {"plugin_pg_trgm_enable": "False", "plugin_unaccent_enable": "False"}
+        await ops_test.model.applications[DATABASE_APP_NAME].set_config(config)
+        await ops_test.model.applications[DATABASE_APP_NAME].destroy_relation(
+            f"{DATABASE_APP_NAME}:db", "indico1:db"
+        )
+        await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active")
+
+        await ops_test.model.relate(f"{DATABASE_APP_NAME}:db", "indico1:db")
+        unit = next(iter(ops_test.model.units.values()))
+        ops_test.model.block_until(
+            lambda: unit.workload_status_message == EXTENSIONS_BLOCKING_MESSAGE, timeout=600
+        )
+
+        config = {"plugin_pg_trgm_enable": "True", "plugin_unaccent_enable": "True"}
+        await ops_test.model.applications[DATABASE_APP_NAME].set_config(config)
+        await ops_test.model.wait_for_idle(
+            apps=[DATABASE_APP_NAME, "indico1"],
+            status="active",
+            raise_on_blocked=False,
+            timeout=600,
         )
 
         # Cleanup
-        await gather(
-            ops_test.model.remove_application(DATABASE_APP_NAME, block_until_done=True),
-            ops_test.model.remove_application("indico1", block_until_done=True),
-            ops_test.model.remove_application("indico2", block_until_done=True),
-        )
+        # await gather(
+        #     ops_test.model.remove_application(DATABASE_APP_NAME, block_until_done=True),
+        #     ops_test.model.remove_application("indico1", block_until_done=True),
+        #     ops_test.model.remove_application("indico2", block_until_done=True),
+        #     ops_test.model.remove_application("redis-broker", block_until_done=True),
+        #     ops_test.model.remove_application("redis-cache", block_until_done=True),
+        # )
