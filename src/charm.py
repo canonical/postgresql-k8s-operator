@@ -288,17 +288,13 @@ class PostgresqlOperatorCharm(CharmBase):
         if self.unit.status.message != EXTENSIONS_BLOCKING_MESSAGE:
             return
 
-        for relation in self.model.relations.get("db", []):
+        for relation in [
+            *self.model.relations.get("db", []),
+            *self.model.relations.get("db-admin", []),
+        ]:
             if not self.legacy_db_relation.set_up_relation(relation):
                 logger.debug(
-                    "Early exit on_config_changed: db relation requested extensions that are still disabled"
-                )
-                return
-
-        for relation in self.model.relations.get("db-admin", []):
-            if not self.legacy_db_admin_relation.set_up_relation(relation):
-                logger.debug(
-                    "Early exit on_config_changed: db-admin relation requested extensions that are still disabled"
+                    "Early exit on_config_changed: legacy relation requested extensions that are still disabled"
                 )
                 return
 

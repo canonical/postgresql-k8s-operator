@@ -116,7 +116,7 @@ class DbProvides(Object):
         if disabled_extensions:
             logger.error(
                 f"ERROR - `extensions` ({', '.join(disabled_extensions)}) cannot be requested through relations"
-                " - they should be enabled through a database charm config"
+                " - Please enable extensions through `juju config` and add the relation again."
             )
             self.charm.unit.status = BlockedStatus(EXTENSIONS_BLOCKING_MESSAGE)
             return False
