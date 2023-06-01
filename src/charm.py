@@ -7,12 +7,15 @@ import json
 import logging
 from typing import Dict, List, Optional
 
+from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
+from charms.loki_k8s.v0.loki_push_api import LogProxyConsumer
 from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
 from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQL,
     PostgreSQLUpdateUserPasswordError,
 )
 from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
+from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
 from lightkube import ApiError, Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
@@ -42,7 +45,11 @@ from tenacity import RetryError
 from backups import PostgreSQLBackups
 from constants import (
     BACKUP_USER,
+    METRICS_PORT,
+    MONITORING_PASSWORD_KEY,
+    MONITORING_USER,
     PEER,
+    POSTGRES_LOG_FILES,
     REPLICATION_PASSWORD_KEY,
     REPLICATION_USER,
     REWIND_PASSWORD_KEY,
@@ -71,6 +78,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
         self._postgresql_service = "postgresql"
         self.pgbackrest_server_service = "pgbackrest server"
+        self._metrics_service = "metrics_server"
         self._unit = self.model.unit.name
         self._name = self.model.app.name
         self._namespace = self.model.name
@@ -97,6 +105,18 @@ class PostgresqlOperatorCharm(CharmBase):
         self.tls = PostgreSQLTLS(self, PEER, [self.primary_endpoint, self.replicas_endpoint])
         self.restart_manager = RollingOpsManager(
             charm=self, relation="restart", callback=self._restart
+        )
+        self.grafana_dashboards = GrafanaDashboardProvider(self)
+        self.metrics_endpoint = MetricsEndpointProvider(
+            self,
+            refresh_event=self.on.start,
+            jobs=[{"static_configs": [{"targets": [f"*:{METRICS_PORT}"]}]}],
+        )
+        self.loki_push = LogProxyConsumer(
+            self,
+            log_files=POSTGRES_LOG_FILES,
+            relation_name="logging",
+            container_name="postgresql",
         )
 
         postgresql_db_port = ServicePort(5432, name="database")
@@ -364,6 +384,9 @@ class PostgresqlOperatorCharm(CharmBase):
         if self.get_secret("app", REWIND_PASSWORD_KEY) is None:
             self.set_secret("app", REWIND_PASSWORD_KEY, new_password())
 
+        if self.get_secret("app", MONITORING_PASSWORD_KEY) is None:
+            self.set_secret("app", MONITORING_PASSWORD_KEY, new_password())
+
         # Create resources and add labels needed for replication.
         try:
             self._create_services()
@@ -469,9 +492,17 @@ class PostgresqlOperatorCharm(CharmBase):
             event.defer()
             return False
 
+        pg_users = self.postgresql.list_users()
         # Create the backup user.
-        if BACKUP_USER not in self.postgresql.list_users():
+        if BACKUP_USER not in pg_users:
             self.postgresql.create_user(BACKUP_USER, new_password(), admin=True)
+        # Create the monitoring user.
+        if MONITORING_USER not in pg_users:
+            self.postgresql.create_user(
+                MONITORING_USER,
+                self.get_secret("app", MONITORING_PASSWORD_KEY),
+                extra_user_roles="pg_monitor",
+            )
 
         # Mark the cluster as initialised.
         self._peers.data[self.app]["cluster_initialised"] = "True"
@@ -902,6 +933,22 @@ class PostgresqlOperatorCharm(CharmBase):
                     "user": WORKLOAD_OS_USER,
                     "group": WORKLOAD_OS_GROUP,
                 },
+                self._metrics_service: {
+                    "override": "replace",
+                    "summary": "postgresql metrics exporter",
+                    "command": "/start-exporter.sh",
+                    "startup": "enabled",
+                    "after": [self._postgresql_service],
+                    "user": WORKLOAD_OS_USER,
+                    "group": WORKLOAD_OS_GROUP,
+                    "environment": {
+                        "DATA_SOURCE_NAME": (
+                            f"user={MONITORING_USER} "
+                            f"password={self.get_secret('app', MONITORING_PASSWORD_KEY)} "
+                            "host=/var/run/postgresql port=5432 database=postgres"
+                        ),
+                    },
+                },
             },
             "checks": {
                 self._postgresql_service: {
@@ -1037,7 +1084,7 @@ class PostgresqlOperatorCharm(CharmBase):
             # Changes were made, add the new layer.
             container.add_layer(self._postgresql_service, new_layer, combine=True)
             logging.info("Added updated layer 'postgresql' to Pebble plan")
-            container.restart(self._postgresql_service)
+            container.replan()
             logging.info("Restarted postgresql service")
         if current_layer.checks != new_layer.checks:
             # Changes were made, add the new layer.
