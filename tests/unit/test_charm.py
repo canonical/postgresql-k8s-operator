@@ -24,6 +24,7 @@ class TestCharm(unittest.TestCase):
         self._peer_relation = PEER
         self._postgresql_container = "postgresql"
         self._postgresql_service = "postgresql"
+        self._metrics_service = "metrics_server"
         self.pgbackrest_server_service = "pgbackrest server"
 
         self.harness = Harness(PostgresqlOperatorCharm)
@@ -522,6 +523,22 @@ class TestCharm(unittest.TestCase):
                         "PATRONI_SCOPE": f"patroni-{self.charm._name}",
                         "PATRONI_REPLICATION_USERNAME": "replication",
                         "PATRONI_SUPERUSER_USERNAME": "operator",
+                    },
+                },
+                self._metrics_service: {
+                    "override": "replace",
+                    "summary": "postgresql metrics exporter",
+                    "command": "/start-exporter.sh",
+                    "startup": "enabled",
+                    "after": [self._postgresql_service],
+                    "user": "postgres",
+                    "group": "postgres",
+                    "environment": {
+                        "DATA_SOURCE_NAME": (
+                            f"user=monitoring "
+                            f"password={self.charm.get_secret('app', 'monitoring-password')} "
+                            "host=/var/run/postgresql port=5432 database=postgres"
+                        ),
                     },
                 },
                 self.pgbackrest_server_service: {
