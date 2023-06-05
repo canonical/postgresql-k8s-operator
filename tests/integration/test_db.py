@@ -12,6 +12,7 @@ from tests.integration.helpers import (
     check_database_creation,
     check_database_users_existence,
     deploy_and_relate_application_with_postgresql,
+    wait_for_relation_removed_between,
 )
 
 EXTENSIONS_BLOCKING_MESSAGE = "extensions requested through relation"
@@ -193,6 +194,7 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
         await ops_test.model.applications[database_application_name].destroy_relation(
             f"{database_application_name}:db", "indico1:db"
         )
+        wait_for_relation_removed_between(ops_test, database_application_name, "indico1")
         await ops_test.model.wait_for_idle(
             apps=[database_application_name], status="active", idle_period=15, timeout=2000
         )
