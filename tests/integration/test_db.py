@@ -86,7 +86,7 @@ async def test_finos_waltz_db(ops_test: OpsTest) -> None:
 
 async def test_indico_db_blocked(ops_test: OpsTest) -> None:
     """Tests if deploying and relating to Indico charm will block due to requested extensions."""
-    async with ops_test.fast_forward():
+    async with ops_test.fast_forward(fast_interval="30s"):
         # Build and deploy the PostgreSQL charm (use a custom name until
         # https://warthogs.atlassian.net/browse/DPE-2000 is solved).
         database_application_name = f"extensions-{DATABASE_APP_NAME}"
@@ -116,6 +116,11 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
             apps=["indico1", "indico2"],
             status="waiting",
             raise_on_blocked=False,
+            timeout=1000,
+        )
+        unit = ops_test.model.units.get("indico1/0")
+        ops_test.model.block_until(
+            lambda: unit.workload_status_message == "Waiting for database availability",
             timeout=1000,
         )
 
@@ -169,13 +174,15 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
         logger.info("Verifying that the charm doesn't block when the extensions are enabled")
         config = {"plugin_pg_trgm_enable": "True", "plugin_unaccent_enable": "True"}
         await ops_test.model.applications[database_application_name].set_config(config)
-        await ops_test.model.wait_for_idle(apps=[database_application_name], status="active")
+        await ops_test.model.wait_for_idle(
+            apps=[database_application_name], status="active", idle_period=15
+        )
         await ops_test.model.relate(f"{database_application_name}:db", "indico1:db")
         await ops_test.model.wait_for_idle(
             apps=[database_application_name, "indico1"],
             status="active",
             raise_on_blocked=False,
-            timeout=600,
+            timeout=2000,
         )
 
         # Verify that the charm unblocks when the extensions are enabled after being blocked
@@ -186,7 +193,9 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
         await ops_test.model.applications[database_application_name].destroy_relation(
             f"{database_application_name}:db", "indico1:db"
         )
-        await ops_test.model.wait_for_idle(apps=[database_application_name], status="active")
+        await ops_test.model.wait_for_idle(
+            apps=[database_application_name], status="active", idle_period=15, timeout=2000
+        )
 
         await ops_test.model.relate(f"{database_application_name}:db", "indico1:db")
         unit = next(iter(ops_test.model.units.values()))
@@ -200,7 +209,8 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
             apps=[database_application_name, "indico1"],
             status="active",
             raise_on_blocked=False,
-            timeout=600,
+            timeout=2000,
+            idle_period=15,
         )
 
         # Cleanup

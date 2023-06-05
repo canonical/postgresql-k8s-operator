@@ -100,8 +100,9 @@ class DbProvides(Object):
             requested_extensions.update(
                 relation.data.get(unit, {}).get("extensions", "").split(",")
             )
+        requested_extensions = set(filter(len, requested_extensions))
         disabled_extensions = set()
-        if requested_extensions != {""}:
+        if requested_extensions:
             for extension in requested_extensions:
                 extension_name = extension.split(":")[0]
                 if not self.charm.model.config.get(f"plugin_{extension_name}_enable"):
