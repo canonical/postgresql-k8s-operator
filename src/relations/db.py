@@ -201,6 +201,8 @@ class DbProvides(Object):
             )
             return False
 
+        self._update_unit_status(relation)
+
         return True
 
     def _check_for_blocking_relations(self, relation_id: int) -> bool:
@@ -277,12 +279,15 @@ class DbProvides(Object):
                 f"Failed to delete user during {self.relation_name} relation broken event"
             )
 
-        # Clean up Blocked status if caused by the departed relation
+        self._update_unit_status(event.relation)
+
+    def _update_unit_status(self, relation: Relation) -> None:
+        """# Clean up Blocked status if it's due to extensions request."""
         if (
             self.charm._has_blocked_status
             and self.charm.unit.status.message == EXTENSIONS_BLOCKING_MESSAGE
         ):
-            if not self._check_for_blocking_relations(event.relation.id):
+            if not self._check_for_blocking_relations(relation.id):
                 self.charm.unit.status = ActiveStatus()
 
     def _get_allowed_subnets(self, relation: Relation) -> str:

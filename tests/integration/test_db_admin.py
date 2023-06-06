@@ -51,7 +51,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
             ops_test.model.deploy(REDIS_APP_NAME, application_name=REDIS_APP_NAME),
         )
         await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME, REDIS_APP_NAME], status="active", timeout=1000
+            apps=[DATABASE_APP_NAME, REDIS_APP_NAME], status="active", timeout=1500
         )
         # Discourse waits for relations.
         await ops_test.model.wait_for_idle(
@@ -63,7 +63,7 @@ async def test_discourse(ops_test: OpsTest):
     # Test the first Discourse charm.
     # Add both relations to Discourse (PostgreSQL and Redis)
     # and wait for it to be ready.
-    await ops_test.model.add_relation(
+    relation = await ops_test.model.add_relation(
         f"{DATABASE_APP_NAME}:db-admin",
         FIRST_DISCOURSE_APP_NAME,
     )
@@ -83,10 +83,19 @@ async def test_discourse(ops_test: OpsTest):
         == "extensions requested through relation"
     )
 
-    # Destroy the relation to remove the blocked status.
-    await ops_test.model.applications[DATABASE_APP_NAME].destroy_relation(
-        f"{DATABASE_APP_NAME}:db-admin", FIRST_DISCOURSE_APP_NAME
+    # Enable the plugins/extensions required by Discourse.
+    config = {"plugin_hstore_enable": "True", "plugin_pg_trgm_enable": "True"}
+    await ops_test.model.applications[DATABASE_APP_NAME].set_config(config)
+    await ops_test.model.wait_for_idle(
+        apps=[DATABASE_APP_NAME, FIRST_DISCOURSE_APP_NAME, REDIS_APP_NAME],
+        status="active",
+        timeout=2000,  # Discourse takes a longer time to become active (a lot of setup).
     )
+
+    # Check for the correct databases and users creation.
+    await check_database_creation(ops_test, "discourse")
+    discourse_users = [f"relation_id_{relation.id}"]
+    await check_database_users_existence(ops_test, discourse_users, [], admin=True)
 
 
 async def test_discourse_from_discourse_charmers(ops_test: OpsTest):
