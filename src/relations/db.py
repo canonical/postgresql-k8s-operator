@@ -5,7 +5,7 @@
 
 
 import logging
-from typing import Iterable
+from typing import Iterable, List, Set, Tuple
 
 from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQLCreateDatabaseError,
@@ -89,34 +89,59 @@ class DbProvides(Object):
 
         logger.warning(f"DEPRECATION WARNING - `{self.relation_name}` is a legacy interface")
 
-        unit_relation_databag = event.relation.data[self.charm.unit]
-        application_relation_databag = event.relation.data[self.charm.app]
+        self.set_up_relation(event.relation)
 
-        # Do not allow apps requesting extensions to be installed.
-        if "extensions" in event.relation.data.get(
-            event.app, {}
-        ) or "extensions" in event.relation.data.get(event.unit, {}):
+    def _get_extensions(self, relation: Relation) -> Tuple[List, Set]:
+        """Returns the list of required and disabled extensions."""
+        requested_extensions = relation.data.get(relation.app, {}).get("extensions", "").split(",")
+        for unit in relation.units:
+            requested_extensions.extend(
+                relation.data.get(unit, {}).get("extensions", "").split(",")
+            )
+        required_extensions = []
+        for extension in requested_extensions:
+            if extension != "" and extension not in required_extensions:
+                required_extensions.append(extension)
+        disabled_extensions = set()
+        if required_extensions:
+            for extension in required_extensions:
+                extension_name = extension.split(":")[0]
+                if not self.charm.model.config.get(f"plugin_{extension_name}_enable"):
+                    disabled_extensions.add(extension_name)
+        return required_extensions, disabled_extensions
+
+    def set_up_relation(self, relation: Relation) -> bool:
+        """Set up the relation to be used by the application charm."""
+        # Do not allow apps requesting extensions to be installed
+        # (let them now about config options).
+        required_extensions, disabled_extensions = self._get_extensions(relation)
+        if disabled_extensions:
             logger.error(
-                "ERROR - `extensions` cannot be requested through relations"
-                " - they should be installed through a database charm config in the future"
+                f"ERROR - `extensions` ({', '.join(disabled_extensions)}) cannot be requested through relations"
+                " - Please enable extensions through `juju config` and add the relation again."
             )
             self.charm.unit.status = BlockedStatus(EXTENSIONS_BLOCKING_MESSAGE)
-            return
+            return False
 
-        # Sometimes a relation changed event is triggered,
-        # and it doesn't have a database name in it.
-        database = event.relation.data.get(event.app, {}).get(
-            "database", event.relation.data.get(event.unit, {}).get("database")
-        )
+        database = relation.data.get(relation.app, {}).get("database")
         if not database:
-            logger.warning("Deferring on_relation_changed: No database name provided")
-            event.defer()
-            return
+            for unit in relation.units:
+                unit_database = relation.data.get(unit, {}).get("database")
+                if unit_database:
+                    database = unit_database
+                    break
+
+        if not database:
+            logger.warning("Early exit on_relation_changed: No database name provided")
+            return False
 
         try:
+            unit_relation_databag = relation.data[self.charm.unit]
+            application_relation_databag = relation.data[self.charm.app]
+
             # Creates the user and the database for this specific relation if it was not already
             # created in a previous relation changed event.
-            user = f"relation_id_{event.relation.id}"
+            user = f"relation_id_{relation.id}"
             password = unit_relation_databag.get("password", new_password())
             self.charm.postgresql.create_user(user, password, self.admin)
             self.charm.postgresql.create_database(database, user)
@@ -129,7 +154,7 @@ class DbProvides(Object):
                     port=DATABASE_PORT,
                     user=user,
                     password=password,
-                    fallback_application_name=event.app.name,
+                    fallback_application_name=relation.app.name,
                 )
             )
 
@@ -141,7 +166,7 @@ class DbProvides(Object):
                     port=DATABASE_PORT,
                     user=user,
                     password=password,
-                    fallback_application_name=event.app.name,
+                    fallback_application_name=relation.app.name,
                 )
             )
 
@@ -153,8 +178,8 @@ class DbProvides(Object):
             # application and this charm will not work.
             for databag in [application_relation_databag, unit_relation_databag]:
                 updates = {
-                    "allowed-subnets": self._get_allowed_subnets(event.relation),
-                    "allowed-units": self._get_allowed_units(event.relation),
+                    "allowed-subnets": self._get_allowed_subnets(relation),
+                    "allowed-units": self._get_allowed_units(relation),
                     "host": self.charm.endpoint,
                     "master": primary,
                     "port": DATABASE_PORT,
@@ -163,6 +188,7 @@ class DbProvides(Object):
                     "user": user,
                     "password": password,
                     "database": database,
+                    "extensions": ",".join(required_extensions),
                 }
                 databag.update(updates)
         except (
@@ -173,7 +199,9 @@ class DbProvides(Object):
             self.charm.unit.status = BlockedStatus(
                 f"Failed to initialize {self.relation_name} relation"
             )
-            return
+            return False
+
+        return True
 
     def _check_for_blocking_relations(self, relation_id: int) -> bool:
         """Checks if there are relations with extensions.

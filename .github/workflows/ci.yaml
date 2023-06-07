@@ -71,6 +71,7 @@ jobs:
       matrix:
         tox-environments:
           - password-rotation-integration
+          - plugins-integration
           - tls-integration
         agents-version: ["2.9.42"]  # renovate: latest
         include:

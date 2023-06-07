@@ -12,6 +12,7 @@ from charms.loki_k8s.v0.loki_push_api import LogProxyConsumer
 from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
 from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQL,
+    PostgreSQLEnableDisableExtensionError,
     PostgreSQLUpdateUserPasswordError,
 )
 from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
@@ -63,7 +64,7 @@ from constants import (
     WORKLOAD_OS_USER,
 )
 from patroni import NotReadyError, Patroni
-from relations.db import DbProvides
+from relations.db import EXTENSIONS_BLOCKING_MESSAGE, DbProvides
 from relations.postgresql_provider import PostgreSQLProvider
 from utils import new_password
 
@@ -164,6 +165,11 @@ class PostgresqlOperatorCharm(CharmBase):
             self.app_peer_data.update({key: value})
         else:
             raise RuntimeError("Unknown secret scope.")
+
+    @property
+    def is_cluster_initialised(self) -> bool:
+        """Returns whether the cluster is already initialised."""
+        return "cluster_initialised" in self.app_peer_data
 
     @property
     def postgresql(self) -> PostgreSQL:
@@ -286,9 +292,51 @@ class PostgresqlOperatorCharm(CharmBase):
             self.unit.status = ActiveStatus()
 
     def _on_config_changed(self, _) -> None:
-        """Handle the config-changed event."""
-        # TODO: placeholder method to implement logic specific to configuration change.
-        pass
+        """Handle configuration changes, like enabling plugins."""
+        if not self.is_cluster_initialised:
+            logger.debug("Early exit on_config_changed: cluster not initialised yet")
+            return
+
+        if not self.unit.is_leader():
+            return
+
+        # Enable and/or disable the extensions.
+        self.enable_disable_extensions()
+
+        # Unblock the charm after extensions are enabled (only if it's blocked due to application
+        # charms requesting extensions).
+        if self.unit.status.message != EXTENSIONS_BLOCKING_MESSAGE:
+            return
+
+        for relation in [
+            *self.model.relations.get("db", []),
+            *self.model.relations.get("db-admin", []),
+        ]:
+            if not self.legacy_db_relation.set_up_relation(relation):
+                logger.debug(
+                    "Early exit on_config_changed: legacy relation requested extensions that are still disabled"
+                )
+                return
+
+    def enable_disable_extensions(self, database: str = None) -> None:
+        """Enable/disable PostgreSQL extensions set through config options.
+
+        Args:
+            database: optional database where to enable/disable the extension.
+        """
+        for config, enable in self.model.config.items():
+            # Filter config option not related to plugins.
+            if not config.startswith("plugin_"):
+                continue
+
+            # Enable or disable the plugin/extension.
+            extension = "_".join(config.split("_")[1:-1])
+            try:
+                self.postgresql.enable_disable_extension(extension, enable, database)
+            except PostgreSQLEnableDisableExtensionError as e:
+                logger.exception(
+                    f"failed to {'enable' if enable else 'disable'} {extension} plugin: %s", str(e)
+                )
 
     def _add_members(self, event) -> None:
         """Add new cluster members.
@@ -462,6 +510,10 @@ class PostgresqlOperatorCharm(CharmBase):
 
         # Update the archive command and replication configurations.
         self.update_config()
+
+        # Enable/disable PostgreSQL extensions if they were set before the cluster
+        # was fully initialised.
+        self.enable_disable_extensions()
 
         # All is well, set an ActiveStatus.
         self.unit.status = ActiveStatus()
