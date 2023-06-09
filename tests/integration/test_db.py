@@ -198,8 +198,11 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
             f"{database_application_name}:db", "indico1:db"
         )
         wait_for_relation_removed_between(ops_test, database_application_name, "indico1")
-        await ops_test.model.wait_for_idle(
-            apps=[database_application_name], status="active", idle_period=15, timeout=2000
+        await gather(
+            ops_test.model.wait_for_idle(
+                apps=[database_application_name], status="active", idle_period=15
+            ),
+            ops_test.model.wait_for_idle(apps=["indico1"], status="waiting", idle_period=15),
         )
 
         await ops_test.model.relate(f"{database_application_name}:db", "indico1:db")
