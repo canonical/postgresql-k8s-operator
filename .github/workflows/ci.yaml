@@ -73,7 +73,7 @@ jobs:
           - password-rotation-integration
           - plugins-integration
           - tls-integration
-        agents-version: ["2.9.42"]  # renovate: latest
+        agents-version: ["2.9.43"]  # renovate: latest
         include:
           - tox-environments: backup-integration
             agents-version: "2.9.29"
