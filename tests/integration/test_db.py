@@ -12,12 +12,15 @@ from tests.integration.helpers import (
     check_database_creation,
     check_database_users_existence,
     deploy_and_relate_application_with_postgresql,
+    get_primary,
     wait_for_relation_removed_between,
 )
 
 EXTENSIONS_BLOCKING_MESSAGE = "extensions requested through relation"
 FINOS_WALTZ_APP_NAME = "finos-waltz"
 ANOTHER_FINOS_WALTZ_APP_NAME = "another-finos-waltz"
+DISCOURSE_APP_NAME = "discourse-k8s"
+REDIS_APP_NAME = "redis-k8s"
 APPLICATION_UNITS = 1
 DATABASE_UNITS = 3
 
@@ -196,7 +199,7 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
         )
         wait_for_relation_removed_between(ops_test, database_application_name, "indico1")
         await ops_test.model.wait_for_idle(
-            apps=[database_application_name], status="active", idle_period=15, timeout=2000
+            apps=[database_application_name, "indico1"], status="active", idle_period=15
         )
 
         await ops_test.model.relate(f"{database_application_name}:db", "indico1:db")
@@ -217,9 +220,62 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
 
         # Cleanup
         await gather(
-            ops_test.model.remove_application(database_application_name, block_until_done=True),
             ops_test.model.remove_application("indico1", block_until_done=True),
             ops_test.model.remove_application("indico2", block_until_done=True),
             ops_test.model.remove_application("redis-broker", block_until_done=True),
             ops_test.model.remove_application("redis-cache", block_until_done=True),
+        )
+
+
+async def test_discourse(ops_test: OpsTest):
+    database_application_name = f"extensions-{DATABASE_APP_NAME}"
+
+    # Deploy Discourse and Redis.
+    await gather(
+        ops_test.model.deploy(DISCOURSE_APP_NAME, application_name=DISCOURSE_APP_NAME),
+        ops_test.model.deploy(REDIS_APP_NAME, application_name=REDIS_APP_NAME),
+    )
+
+    # Add both relations to Discourse (PostgreSQL and Redis)
+    # and wait for it to be ready.
+    relation = await ops_test.model.add_relation(
+        f"{database_application_name}:db",
+        DISCOURSE_APP_NAME,
+    )
+    await ops_test.model.add_relation(
+        REDIS_APP_NAME,
+        DISCOURSE_APP_NAME,
+    )
+
+    # Discourse requests extensions through relation, so check that the PostgreSQL charm
+    # becomes blocked.
+    primary_name = await get_primary(ops_test, database_app_name=database_application_name)
+    async with ops_test.fast_forward():
+        await gather(
+            ops_test.model.block_until(
+                lambda: ops_test.model.units[primary_name].workload_status == "blocked", timeout=60
+            ),
+            ops_test.model.wait_for_idle(
+                apps=[REDIS_APP_NAME], status="active", timeout=2000
+            ),  # Redis sometimes takes a longer time to become active.
+        )
+        assert (
+            ops_test.model.units[primary_name].workload_status_message
+            == EXTENSIONS_BLOCKING_MESSAGE
+        )
+
+        # Enable the plugins/extensions required by Discourse.
+        config = {"plugin_hstore_enable": "True", "plugin_pg_trgm_enable": "True"}
+        await ops_test.model.applications[database_application_name].set_config(config)
+        await ops_test.model.wait_for_idle(
+            apps=[database_application_name, DISCOURSE_APP_NAME, REDIS_APP_NAME], status="active"
+        )
+
+        # Check for the correct databases and users creation.
+        await check_database_creation(
+            ops_test, "discourse", database_app_name=database_application_name
+        )
+        discourse_users = [f"relation_id_{relation.id}"]
+        await check_database_users_existence(
+            ops_test, discourse_users, [], database_app_name=database_application_name
         )

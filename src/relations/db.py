@@ -146,6 +146,9 @@ class DbProvides(Object):
             self.charm.postgresql.create_user(user, password, self.admin)
             self.charm.postgresql.create_database(database, user)
 
+            # Enable/disable extensions in the new database.
+            self.charm.enable_disable_extensions(database)
+
             # Build the primary's connection string.
             primary = str(
                 ConnectionString(
@@ -200,6 +203,8 @@ class DbProvides(Object):
                 f"Failed to initialize {self.relation_name} relation"
             )
             return False
+
+        self._update_unit_status(relation)
 
         return True
 
@@ -277,12 +282,15 @@ class DbProvides(Object):
                 f"Failed to delete user during {self.relation_name} relation broken event"
             )
 
-        # Clean up Blocked status if caused by the departed relation
+        self._update_unit_status(event.relation)
+
+    def _update_unit_status(self, relation: Relation) -> None:
+        """# Clean up Blocked status if it's due to extensions request."""
         if (
             self.charm._has_blocked_status
             and self.charm.unit.status.message == EXTENSIONS_BLOCKING_MESSAGE
         ):
-            if not self._check_for_blocking_relations(event.relation.id):
+            if not self._check_for_blocking_relations(relation.id):
                 self.charm.unit.status = ActiveStatus()
 
     def _get_allowed_subnets(self, relation: Relation) -> str:

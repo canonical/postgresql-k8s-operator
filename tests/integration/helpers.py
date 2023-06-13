@@ -132,16 +132,19 @@ async def check_database_users_existence(
         assert user not in output
 
 
-async def check_database_creation(ops_test: OpsTest, database: str) -> None:
+async def check_database_creation(
+    ops_test: OpsTest, database: str, database_app_name: str = DATABASE_APP_NAME
+) -> None:
     """Checks that database and tables are successfully created for the application.
 
     Args:
         ops_test: The ops test framework
         database: Name of the database that should have been created
+        database_app_name: Application name of the database charm
     """
-    password = await get_password(ops_test)
+    password = await get_password(ops_test, database_app_name=database_app_name)
 
-    for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
+    for unit in ops_test.model.applications[database_app_name].units:
         unit_address = await get_unit_address(ops_test, unit.name)
 
         # Ensure database exists in PostgreSQL.
