@@ -111,7 +111,7 @@ class PostgresqlOperatorCharm(CharmBase):
         self.metrics_endpoint = MetricsEndpointProvider(
             self,
             refresh_event=self.on.start,
-            jobs=[{"static_configs": [{"targets": [f"*:{METRICS_PORT}"]}]}],
+            jobs=[{"static_configs": [{"targets": [f"*:{METRICS_PORT}", "*:8008"]}]}],
         )
         self.loki_push = LogProxyConsumer(
             self,
