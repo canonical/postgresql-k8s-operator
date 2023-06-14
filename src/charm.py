@@ -127,11 +127,12 @@ class PostgresqlOperatorCharm(CharmBase):
     def _generate_metrics_jobs(self, enable_tls: bool) -> Dict:
         """Generate spec for Prometheus scraping."""
         return [
+            {"static_configs": [{"targets": [f"*:{METRICS_PORT}"]}]},
             {
-                "static_configs": [{"targets": [f"*:{METRICS_PORT}", "*:8008"]}],
+                "static_configs": [{"targets": ["*:8008"]}],
                 "scheme": "https" if enable_tls else "http",
                 "tls_config": {"insecure_skip_verify": True},
-            }
+            },
         ]
 
     @property
