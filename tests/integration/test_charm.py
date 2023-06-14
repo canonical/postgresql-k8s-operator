@@ -329,16 +329,33 @@ async def test_storage_with_more_restrictive_permissions(ops_test: OpsTest):
     app_name = f"test-storage-{APP_NAME}"
     async with ops_test.fast_forward():
         # Deploy and wait for the charm to get into the install hook (maintenance status).
-        await build_and_deploy(ops_test, 1, app_name, status="maintenance")
+        charm = await ops_test.build_charm(".")
+        async with ops_test.fast_forward():
+            await ops_test.model.deploy(
+                charm,
+                resources={
+                    "postgresql-image": METADATA["resources"]["postgresql-image"][
+                        "upstream-source"
+                    ]
+                },
+                application_name=app_name,
+                num_units=1,
+                series=CHARM_SERIES,
+                trust=True,
+            )
 
         # Restrict the permissions of the storage.
         command = "chmod 755 /var/lib/postgresql/data"
         complete_command = f"ssh --container postgresql {app_name}/0 {command}"
-        return_code, _, _ = await ops_test.juju(*complete_command.split())
-        if return_code != 0:
-            raise Exception(
-                "Expected command %s to succeed instead it failed: %s", command, return_code
-            )
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
+            with attempt:
+                return_code, _, _ = await ops_test.juju(*complete_command.split())
+                if return_code != 0:
+                    raise Exception(
+                        "Expected command %s to succeed instead it failed: %s",
+                        command,
+                        return_code,
+                    )
 
         # This check is enough to ensure that the charm/workload is working for this specific test.
         await ops_test.model.wait_for_idle(apps=[app_name], status="active", timeout=1000)
