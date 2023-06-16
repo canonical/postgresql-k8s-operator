@@ -110,8 +110,8 @@ class PostgresqlOperatorCharm(CharmBase):
         self.grafana_dashboards = GrafanaDashboardProvider(self)
         self.metrics_endpoint = MetricsEndpointProvider(
             self,
-            refresh_event=self.on.start,
-            jobs=[{"static_configs": [{"targets": [f"*:{METRICS_PORT}"]}]}],
+            refresh_event=[self.on.start],
+            jobs=self._generate_metrics_jobs(self.is_tls_enabled),
         )
         self.loki_push = LogProxyConsumer(
             self,
@@ -123,6 +123,19 @@ class PostgresqlOperatorCharm(CharmBase):
         postgresql_db_port = ServicePort(5432, name="database")
         patroni_api_port = ServicePort(8008, name="api")
         self.service_patcher = KubernetesServicePatch(self, [postgresql_db_port, patroni_api_port])
+
+    def _generate_metrics_jobs(self, enable_tls: bool) -> Dict:
+        """Generate spec for Prometheus scraping."""
+        return [
+            {"static_configs": [{"targets": [f"*:{METRICS_PORT}"]}]},
+            {
+                "static_configs": [
+                    {"targets": [f"{self.get_hostname_by_unit(self.unit.name)}:8008"]}
+                ],
+                "scheme": "https" if enable_tls else "http",
+                "tls_config": {"insecure_skip_verify": True},
+            },
+        ]
 
     @property
     def app_peer_data(self) -> Dict:
@@ -1095,12 +1108,10 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def update_config(self) -> None:
         """Updates Patroni config file based on the existence of the TLS files."""
-        enable_tls = all(self.tls.get_tls_files())
-
         # Update and reload configuration based on TLS files availability.
         self._patroni.render_patroni_yml_file(
             connectivity=self.unit_peer_data.get("connectivity", "on") == "on",
-            enable_tls=enable_tls,
+            enable_tls=self.is_tls_enabled,
             backup_id=self.app_peer_data.get("restoring-backup"),
             stanza=self.app_peer_data.get("stanza"),
             restore_stanza=self.app_peer_data.get("restore-stanza"),
@@ -1110,17 +1121,20 @@ class PostgresqlOperatorCharm(CharmBase):
             # then mark TLS as enabled. This commonly happens when the charm is deployed
             # in a bundle together with the TLS certificates operator. This flag is used to
             # know when to call the Patroni API using HTTP or HTTPS.
-            self.unit_peer_data.update({"tls": "enabled" if enable_tls else ""})
+            self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
             logger.debug("Early exit update_config: Patroni not started yet")
             return
 
-        restart_postgresql = enable_tls != self.postgresql.is_tls_enabled()
+        restart_postgresql = self.is_tls_enabled != self.postgresql.is_tls_enabled()
         self._patroni.reload_patroni_configuration()
-        self.unit_peer_data.update({"tls": "enabled" if enable_tls else ""})
+        self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
 
         # Restart PostgreSQL if TLS configuration has changed
         # (so the both old and new connections use the configuration).
         if restart_postgresql:
+            self.metrics_endpoint.update_scrape_job_spec(
+                self._generate_metrics_jobs(self.is_tls_enabled)
+            )
             self.on[self.restart_manager.name].acquire_lock.emit()
 
     def _update_pebble_layers(self) -> None:
