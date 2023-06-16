@@ -129,7 +129,9 @@ class PostgresqlOperatorCharm(CharmBase):
         return [
             {"static_configs": [{"targets": [f"*:{METRICS_PORT}"]}]},
             {
-                "static_configs": [{"targets": ["*:8008"]}],
+                "static_configs": [
+                    {"targets": [f"{self.get_hostname_by_unit(self.unit.name)}:8008"]}
+                ],
                 "scheme": "https" if enable_tls else "http",
                 "tls_config": {"insecure_skip_verify": True},
             },
