@@ -8,6 +8,7 @@ on:
       - main
     paths-ignore:
       - 'tests/**'
+      - 'docs/**'
       - renovate.json
       - poetry.lock
       - pyproject.toml
