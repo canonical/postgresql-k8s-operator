@@ -20,10 +20,13 @@ from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
 from lightkube import ApiError, Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
+from lightkube.resources.apps_v1 import StatefulSet
 from lightkube.resources.core_v1 import Endpoints, Pod, Service
+from ops import EventBase, EventSource
 from ops.charm import (
     ActionEvent,
     CharmBase,
+    CharmEvents,
     LeaderElectedEvent,
     RelationChangedEvent,
     RelationDepartedEvent,
@@ -70,8 +73,18 @@ from utils import new_password
 logger = logging.getLogger(__name__)
 
 
+class UpgradePreCommitEvent(EventBase):
+    pass
+
+
+class UpgradeCharmEvents(CharmEvents):
+    upgrade_pre_commit = EventSource(UpgradePreCommitEvent)
+
+
 class PostgresqlOperatorCharm(CharmBase):
     """Charmed Operator for the PostgreSQL database."""
+
+    on = UpgradeCharmEvents()
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -90,7 +103,9 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
         self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
+        self.framework.observe(self.on.pgdata_storage_detaching, self._on_pgdata_storage_detaching)
         self.framework.observe(self.on.stop, self._on_stop)
+        self.framework.observe(self.on.upgrade_pre_commit, self._on_upgrade_pre_commit)
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(self.on.get_password_action, self._on_get_password)
         self.framework.observe(self.on.set_password_action, self._on_set_password)
@@ -405,6 +420,8 @@ class PostgresqlOperatorCharm(CharmBase):
 
         self._add_members(event)
 
+        self._patch_statefulset()
+
     def _create_pgdata(self, container: Container):
         """Create the PostgreSQL data directory."""
         path = f"{self._storage_path}/pgdata"
@@ -551,6 +568,16 @@ class PostgresqlOperatorCharm(CharmBase):
             obj=patch,
         )
 
+    def _patch_statefulset(self) -> None:
+        client = Client()
+        patch = {"spec": {"updateStrategy": {"type": "OnDelete", "rollingUpdate": None}}}
+        client.patch(
+            StatefulSet,
+            name=self._name,
+            namespace=self._namespace,
+            obj=patch,
+        )
+
     def _create_services(self) -> None:
         """Create kubernetes services for primary and replicas endpoints."""
         client = Client()
@@ -687,7 +714,40 @@ class PostgresqlOperatorCharm(CharmBase):
         except RetryError as e:
             logger.error(f"failed to get primary with error {e}")
 
-    def _on_stop(self, _):
+    def _on_pgdata_storage_detaching(self, _):
+        self.unit_peer_data.update({"dying": "True"})
+
+    def _on_stop(self, _) -> None:
+        if "dying" in self.unit_peer_data:
+            self.unit_peer_data.update({"dying": ""})
+            self._setup_cleanup()
+            return
+
+        # Instead of running the pre commit or other hook here, create an child process like
+        # the one from https://github.com/canonical/postgresql-operator/pull/58 to check when
+        # --charm-modified-version changes in the StatefulSet description (which means the charm
+        # was refreshed, but the pod was not deleted yet, i.e. the ondelete update strategy
+        # prevented that).
+        logger.error("doing an upgrade...")
+        self.on.upgrade_pre_commit.emit()
+
+    def _on_upgrade_pre_commit(self, event: UpgradePreCommitEvent) -> None:
+        logger.error("called _on_upgrade_pre_commit")
+
+        order_of_restarts = json.loads(self.app_peer_data.get("order_of_restarts", "[]"))
+        if self.unit.is_leader() and not order_of_restarts:
+            order_of_restarts.append(self.unit.name)
+            self.app_peer_data.update({"order_of_restarts": json.dumps(order_of_restarts)})
+        elif not order_of_restarts:
+            # Try again later.
+            event.defer()
+            return
+
+        # if next(order_of_restarts, "") == self.unit.name:
+        #     client = Client()
+        #     client.delete(Pod, self._unit_name_to_pod_name(self.unit.name))
+
+    def _setup_cleanup(self) -> None:
         # Patch the services to remove them when the StatefulSet is deleted
         # (i.e. application is removed).
         try:
