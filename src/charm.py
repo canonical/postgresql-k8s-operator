@@ -1106,6 +1106,19 @@ class PostgresqlOperatorCharm(CharmBase):
         # Start or stop the pgBackRest TLS server service when TLS certificate change.
         self.backup.start_stop_pgbackrest_service()
 
+    @property
+    def _is_workload_running(self) -> bool:
+        """Returns whether the workload is running (in an active state)."""
+        container = self.unit.get_container("postgresql")
+        if not container.can_connect():
+            return False
+
+        services = container.pebble.get_services(names=[self._postgresql_service])
+        if len(services) == 0:
+            return False
+
+        return services[0].current == ServiceStatus.ACTIVE
+
     def update_config(self) -> None:
         """Updates Patroni config file based on the existence of the TLS files."""
         # Update and reload configuration based on TLS files availability.
@@ -1116,7 +1129,7 @@ class PostgresqlOperatorCharm(CharmBase):
             stanza=self.app_peer_data.get("stanza"),
             restore_stanza=self.app_peer_data.get("restore-stanza"),
         )
-        if not self._patroni.member_started:
+        if not self._is_workload_running:
             # If Patroni/PostgreSQL has not started yet and TLS relations was initialised,
             # then mark TLS as enabled. This commonly happens when the charm is deployed
             # in a bundle together with the TLS certificates operator. This flag is used to
