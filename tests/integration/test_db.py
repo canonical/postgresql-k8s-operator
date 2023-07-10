@@ -233,7 +233,7 @@ async def test_discourse(ops_test: OpsTest):
     # Deploy Discourse and Redis.
     await gather(
         ops_test.model.deploy(DISCOURSE_APP_NAME, application_name=DISCOURSE_APP_NAME),
-        ops_test.model.deploy(REDIS_APP_NAME, application_name=REDIS_APP_NAME),
+        ops_test.model.deploy(REDIS_APP_NAME, application_name=REDIS_APP_NAME, channel="edge"),
     )
 
     # Add both relations to Discourse (PostgreSQL and Redis)
