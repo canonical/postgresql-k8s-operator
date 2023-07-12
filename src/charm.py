@@ -193,6 +193,7 @@ class PostgresqlOperatorCharm(CharmBase):
             user=USER,
             password=self.get_secret("app", f"{USER}-password"),
             database="postgres",
+            system_users=SYSTEM_USERS,
         )
 
     @property
@@ -568,6 +569,8 @@ class PostgresqlOperatorCharm(CharmBase):
                 self.get_secret("app", MONITORING_PASSWORD_KEY),
                 extra_user_roles="pg_monitor",
             )
+
+        self.postgresql.set_up_database()
 
         # Mark the cluster as initialised.
         self._peers.data[self.app]["cluster_initialised"] = "True"
