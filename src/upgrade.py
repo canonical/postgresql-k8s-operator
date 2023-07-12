@@ -64,6 +64,7 @@ class PostgreSQLUpgrade(DataUpgrade):
 
     def _on_upgrade_changed(self, event: RelationChangedEvent) -> None:
         if not self.peer_relation:
+            event.defer()
             return
 
         self._set_min_ordinal_sync_standbys()
@@ -75,28 +76,29 @@ class PostgreSQLUpgrade(DataUpgrade):
         Continue the upgrade by setting the partition to the next unit.
         """
         fail_message = "Nothing to resume, upgrade stack unset"
-        if self.upgrade_stack:
-            try:
-                next_partition = self.upgrade_stack[-1]
+        try:
+            next_partition = self._get_rolling_update_partition() - 1
+            if next_partition >= 0:
                 self._set_rolling_update_partition(partition=next_partition)
                 event.set_results({"message": f"Upgrade will resume on unit {next_partition}"})
-            except IndexError:
-                fail_message = "Nothing to resume, empty upgrade stack"
-            except ApiError:
-                fail_message = "Cannot set rolling update partition"
+                return
+        except ApiError:
+            fail_message = "Cannot set rolling update partition"
         event.fail(fail_message)
 
     @override
     def _on_upgrade_granted(self, event: UpgradeGrantedEvent) -> None:
+        if not self.charm._patroni.member_started:
+            logger.error("Deferring on_upgrade_granted: Patroni has not started yet")
+            event.defer()
+            return
+
         # make the last unit as the single sync_standby.
         logger.error(f"granted for {self.charm.unit.name}")
-        # if self.charm.unit.name == last_unit_name:
         primary_unit_name = self.charm._patroni.get_primary(unit_name_pattern=True)
+        unit_zero_name = f"{self.charm.app.name}/0"
         sync_standby_names = self.charm._patroni.get_sync_standby_names()
-        if (
-            self.charm.unit.name != primary_unit_name
-            and sync_standby_names[0] != self.charm.unit.name
-        ):
+        if primary_unit_name != unit_zero_name and sync_standby_names[0] != self.charm.unit.name:
             self._set_min_ordinal_sync_standbys()
             logger.error(
                 "Deferring on_upgrade_granted: this unit is not the only synchronous standby yet"
@@ -104,14 +106,16 @@ class PostgreSQLUpgrade(DataUpgrade):
             event.defer()
             return
 
-        try:
-            logger.debug("Set rolling update partition to next unit")
-            next_partition = self.upgrade_stack[-1]
-            self._set_rolling_update_partition(partition=next_partition)
-        except ApiError:
-            logger.exception("Cannot set rolling update partition")
-            self.set_unit_failed()
-            self.log_rollback_instructions()
+        if self.charm.unit.name != f"{self.charm.app.name}/{self.charm.app.planned_units()-1}":
+            try:
+                logger.debug("Set rolling update partition to next unit")
+                next_partition = self._get_rolling_update_partition() - 1
+                if next_partition >= 0:
+                    self._set_rolling_update_partition(partition=next_partition)
+            except ApiError:
+                logger.exception("Cannot set rolling update partition")
+                self.set_unit_failed()
+                self.log_rollback_instructions()
 
         self.set_unit_completed()
 
@@ -178,7 +182,7 @@ class PostgreSQLUpgrade(DataUpgrade):
         if self.charm.app.planned_units() > 2 and primary_unit_name != unit_zero_name:
             min_ordinal_sync_standbys = self._get_rolling_update_partition()
             self.peer_relation.data[self.charm.app].update(
-                {"min-ordinal-sync-standbys", min_ordinal_sync_standbys}
+                {"min-ordinal-sync-standbys": min_ordinal_sync_standbys}
             )
             return min_ordinal_sync_standbys
 
