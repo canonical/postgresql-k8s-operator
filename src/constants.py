@@ -27,3 +27,12 @@ POSTGRES_LOG_FILES = [
 ]
 # List of system usernames needed for correct work of the charm/workload.
 SYSTEM_USERS = [BACKUP_USER, REPLICATION_USER, REWIND_USER, USER, MONITORING_USER]
+
+DEPS = {
+    "charm": {
+        "dependencies": {"pgbouncer": ">0"},
+        "name": "postgresql",
+        "upgrade_supported": ">0",
+        "version": "1",
+    }
+}

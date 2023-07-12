@@ -80,6 +80,7 @@ jobs:
           - password-rotation-integration
           - plugins-integration
           - tls-integration
+          - upgrade-integration
         agents-version: ["2.9.43"]  # renovate: latest
     name: ${{ matrix.tox-environments }} | ${{ matrix.agents-version }}
     needs:

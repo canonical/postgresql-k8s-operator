@@ -36,6 +36,10 @@ class EndpointNotReadyError(Exception):
     """Raised when an endpoint is not ready."""
 
 
+class SwitchoverFailedError(Exception):
+    """Raised when a switchover failed for some reason."""
+
+
 class Patroni:
     """This class handles the communication with Patroni API and configuration files."""
 
@@ -120,6 +124,19 @@ class Patroni:
                             primary = "/".join(primary.rsplit("-", 1))
                         break
         return primary
+
+    def get_sync_standby_names(self) -> List[str]:
+        """Get the list of sync standby unit names."""
+        sync_standbys = []
+        # Request info from cluster endpoint (which returns all members of the cluster).
+        for attempt in Retrying(stop=stop_after_attempt(len(self._endpoints) + 1)):
+            with attempt:
+                url = self._get_alternative_patroni_url(attempt)
+                r = requests.get(f"{url}/cluster", verify=self._verify)
+                for member in r.json()["members"]:
+                    if member["role"] == "sync_standby":
+                        sync_standbys.append("/".join(member["name"].rsplit("-", 1)))
+        return sync_standbys
 
     @property
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
@@ -224,6 +241,7 @@ class Patroni:
         self,
         connectivity: bool = False,
         enable_tls: bool = False,
+        is_no_sync_member: bool = False,
         stanza: str = None,
         restore_stanza: Optional[str] = None,
         backup_id: Optional[str] = None,
@@ -233,6 +251,8 @@ class Patroni:
         Args:
             connectivity: whether to allow external connections to the database.
             enable_tls: whether to enable TLS.
+            is_no_sync_member: whether this member shouldn't be a synchronous standby
+                (when it's a replica).
             stanza: name of the stanza created by pgBackRest.
             restore_stanza: name of the stanza used when restoring a backup.
             backup_id: id of the backup that is being restored.
@@ -246,6 +266,7 @@ class Patroni:
             enable_tls=enable_tls,
             endpoint=self._endpoint,
             endpoints=self._endpoints,
+            is_no_sync_member=is_no_sync_member,
             namespace=self._namespace,
             storage_path=self._storage_path,
             superuser_password=self._superuser_password,
@@ -271,3 +292,28 @@ class Patroni:
     def restart_postgresql(self) -> None:
         """Restart PostgreSQL."""
         requests.post(f"{self._patroni_url}/restart", verify=self._verify)
+
+    def switchover(self, candidate: str = None) -> None:
+        """Trigger a switchover."""
+        # Try to trigger the switchover.
+        if candidate is not None:
+            candidate = candidate.replace("/", "-")
+
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+            with attempt:
+                primary = self.get_primary()
+                r = requests.post(
+                    f"{self._patroni_url}/switchover",
+                    json={"leader": primary, "candidate": candidate},
+                    verify=self._verify,
+                )
+
+        # Check whether the switchover was unsuccessful.
+        if r.status_code != 200:
+            raise SwitchoverFailedError(f"received {r.status_code}")
+
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+            with attempt:
+                new_primary = self.get_primary()
+                if (candidate is not None and new_primary != candidate) or new_primary == primary:
+                    raise SwitchoverFailedError("primary was not switched correctly")

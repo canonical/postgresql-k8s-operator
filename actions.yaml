@@ -15,6 +15,8 @@ get-password:
         Possible values - backup, operator, replication, rewind.
 list-backups:
   description: Lists backups in s3 storage in AWS.
+pre-upgrade-check:
+  description: Run necessary pre-upgrade checks and preparations before executing a charm refresh.
 restore:
   description: Restore a database backup using pgBackRest.
     S3 credentials are retrieved from a relation with the S3 integrator charm.
@@ -22,6 +24,8 @@ restore:
     backup-id:
       type: string
       description: A backup-id to identify the backup to restore (format = %Y-%m-%dT%H:%M:%SZ)
+resume-upgrade:
+  description: Resume a rolling upgrade after asserting successful upgrade of a new revision.
 set-password:
   description: Change the system user's password, which is used by charm.
     It is for internal charm users and SHOULD NOT be used by applications.

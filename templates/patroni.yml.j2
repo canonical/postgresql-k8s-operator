@@ -98,3 +98,7 @@ postgresql:
       password: {{ superuser_password }}
 use_endpoints: true
 use_unix_socket: true
+{%- if is_no_sync_member %}
+tags:
+  nosync: true
+{%- endif %}
