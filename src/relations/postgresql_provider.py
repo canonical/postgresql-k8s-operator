@@ -119,7 +119,7 @@ class PostgreSQLProvider(Object):
         """Remove the user created for this relation."""
         # Check for some conditions before trying to access the PostgreSQL instance.
         if (
-            not hasattr(self.charm._peers.data, "data")
+            not self.charm._peers
             or "cluster_initialised" not in self.charm._peers.data[self.charm.app]
             or not self.charm._patroni.member_started
         ):
