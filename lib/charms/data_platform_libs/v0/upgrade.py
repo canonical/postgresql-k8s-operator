@@ -399,6 +399,9 @@ class UpgradeGrantedEvent(EventBase):
         - MUST call :class:`DataUpgarde.on_upgrade_changed` on exit so event not lost on leader
     """
 
+class UpgradeFinishedEvent(EventBase):
+    pass
+
 
 class UpgradeEvents(CharmEvents):
     """Upgrade events.
@@ -407,6 +410,7 @@ class UpgradeEvents(CharmEvents):
     """
 
     upgrade_granted = EventSource(UpgradeGrantedEvent)
+    upgrade_finished = EventSource(UpgradeFinishedEvent)
 
 
 # --- EVENT HANDLER ---
@@ -442,6 +446,7 @@ class DataUpgrade(Object, ABC):
         )
         self.framework.observe(self.charm.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(getattr(self.on, "upgrade_granted"), self._on_upgrade_granted)
+        self.framework.observe(getattr(self.on, "upgrade_finished"), self._on_upgrade_finished)
 
         # actions
         self.framework.observe(
@@ -587,6 +592,9 @@ class DataUpgrade(Object, ABC):
 
         self.peer_relation.data[self.charm.unit].update({"state": "completed"})
 
+        if self.substrate == "k8s":
+            self.on_upgrade_changed(EventBase(self.handle))
+
     def _on_upgrade_created(self, event: RelationCreatedEvent) -> None:
         """Handler for `upgrade-relation-created` events."""
         if not self.peer_relation:
@@ -706,9 +714,7 @@ class DataUpgrade(Object, ABC):
                 return
 
         # all units sets state to ready
-        self.peer_relation.data[self.charm.unit].update({"state": "ready"})
-        if self.substrate == "k8s":
-            self.charm.on[self.relation_name].relation_changed.emit(self.peer_relation)
+        self.peer_relation.data[self.charm.unit].update({"state": "ready" if self.substrate == "vm" else "upgrading"})
 
     def on_upgrade_changed(self, event: EventBase) -> None:
         """Handler for `upgrade-relation-changed` events."""
@@ -755,13 +761,27 @@ class DataUpgrade(Object, ABC):
             self.on_upgrade_changed(event)
 
         # if unit top of stack, emit granted event
-        if self.charm.unit == top_unit and top_state in ["ready", "upgrading"]:
-            logger.debug(
-                f"{top_unit} is next to upgrade, emitting `upgrade_granted` event and upgrading..."
-            )
-            self.peer_relation.data[self.charm.unit].update({"state": "upgrading"})
-            getattr(self.on, "upgrade_granted").emit()
+        if self.charm.unit == top_unit:
+            if self.substrate == "vm" and top_state in ["ready", "upgrading"]:
+                logger.debug(
+                    f"{top_unit} is next to upgrade, emitting `upgrade_granted` event and upgrading..."
+                )
+                self.peer_relation.data[self.charm.unit].update({"state": "upgrading"})
+                getattr(self.on, "upgrade_granted").emit()
+            if self.substrate == "k8s" and top_state == "completed":
+                logger.debug(
+                    f"{top_unit} has completed the upgrade, emitting `upgrade_finished` event..."
+                )
+                getattr(self.on, "upgrade_finished").emit()
 
-    @abstractmethod
     def _on_upgrade_granted(self, event: UpgradeGrantedEvent) -> None:
         """Handler for `upgrade-granted` events."""
+        # don't raise if k8s substrate, only return
+        if self.substrate == "k8s":
+            return
+
+        raise NotImplementedError
+
+    @abstractmethod
+    def _on_upgrade_finished(self, event: UpgradeFinishedEvent) -> None:
+        """Handler for `upgrade-finished` events."""
