@@ -12,10 +12,10 @@ fi
 
 deploy_chaos_mesh() {
 	echo "adding chaos-mesh helm repo"
-	sg microk8s -c "microk8s.helm3 repo add chaos-mesh https://charts.chaos-mesh.org"
+	sg snap_microk8s -c "microk8s.helm3 repo add chaos-mesh https://charts.chaos-mesh.org"
 
 	echo "installing chaos-mesh"
-        sg microk8s -c "microk8s.helm3 install chaos-mesh chaos-mesh/chaos-mesh \
+        sg snap_microk8s -c "microk8s.helm3 install chaos-mesh chaos-mesh/chaos-mesh \
           --namespace=\"${chaos_mesh_ns}\" \
           --set chaosDaemon.runtime=containerd \
           --set chaosDaemon.socketPath=/var/snap/microk8s/common/run/containerd.sock \
