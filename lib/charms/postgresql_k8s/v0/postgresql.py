@@ -32,7 +32,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 10
+LIBPATCH = 11
 
 
 logger = logging.getLogger(__name__)
@@ -165,7 +165,7 @@ class PostgreSQL:
             raise PostgreSQLCreateDatabaseError()
 
     def create_user(
-        self, user: str, password: str, admin: bool = False, extra_user_roles: str = None
+        self, user: str, password: str = None, admin: bool = False, extra_user_roles: str = None
     ) -> None:
         """Creates a database user.
 
@@ -178,18 +178,25 @@ class PostgreSQL:
         try:
             with self._connect_to_database() as connection, connection.cursor() as cursor:
                 # Separate roles and privileges from the provided extra user roles.
+                admin_role = False
                 roles = privileges = None
                 if extra_user_roles:
                     extra_user_roles = tuple(extra_user_roles.lower().split(","))
                     cursor.execute(
                         "SELECT rolname FROM pg_roles WHERE rolname IN %s;", (extra_user_roles,)
                     )
-                    roles = [role[0] for role in cursor.fetchall()]
-                    privileges = [
+                    admin_role = "admin" in extra_user_roles
+                    roles = [role[0] for role in cursor.fetchall() if role[0] != "admin"]
+                    privileges = {
                         extra_user_role
                         for extra_user_role in extra_user_roles
-                        if extra_user_role not in roles
-                    ]
+                        if extra_user_role not in roles and extra_user_role != "admin"
+                    }
+                    if "SUPERUSER" in map(str.upper, privileges):
+                        logger.error(
+                            "Failed to create user due to invalid extra-user-role: SUPERUSER"
+                        )
+                        raise PostgreSQLCreateUserError()
 
                 # Create or update the user.
                 cursor.execute(f"SELECT TRUE FROM pg_roles WHERE rolname='{user}';")
@@ -197,11 +204,11 @@ class PostgreSQL:
                     user_definition = "ALTER ROLE {}"
                 else:
                     user_definition = "CREATE ROLE {}"
-                user_definition += (
-                    f"WITH LOGIN{' SUPERUSER' if admin else ''} ENCRYPTED PASSWORD '{password}'"
-                )
+                if password is not None:
+                    user_definition += f"WITH LOGIN{' SUPERUSER' if admin else ''} ENCRYPTED PASSWORD '{password}'{'IN ROLE admin CREATEDB CREATEROLE' if admin_role else ''}"
                 if privileges:
                     user_definition += f' {" ".join(privileges)}'
+                logger.error(f"user_definition: {user_definition}")
                 cursor.execute(sql.SQL(f"{user_definition};").format(sql.Identifier(user)))
 
                 # Add extra user roles to the new user.
@@ -356,6 +363,10 @@ class PostgreSQL:
                             sql.Identifier(user)
                         )
                     )
+            self.create_user(
+                "admin",
+                extra_user_roles="pg_read_all_data,pg_write_all_data,pg_read_all_settings,pg_read_all_stats,pg_stat_scan_tables,pg_monitor,pg_signal_backend",
+            )
         except psycopg2.Error as e:
             logger.error(f"Failed to set up databases: {e}")
             raise PostgreSQLDatabasesSetupError()
