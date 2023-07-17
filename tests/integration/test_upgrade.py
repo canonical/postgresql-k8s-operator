@@ -5,6 +5,7 @@ import logging
 
 import pytest as pytest
 from pytest_operator.plugin import OpsTest
+from tenacity import Retrying, stop_after_attempt, wait_exponential
 
 from tests.integration.ha_tests.conftest import APPLICATION_NAME
 from tests.integration.ha_tests.helpers import (
@@ -12,7 +13,12 @@ from tests.integration.ha_tests.helpers import (
     check_writes,
     start_continuous_writes,
 )
-from tests.integration.helpers import app_name, build_and_deploy, get_primary
+from tests.integration.helpers import (
+    app_name,
+    build_and_deploy,
+    get_primary,
+    switchover,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +54,22 @@ async def test_upgrade(ops_test: OpsTest, continuous_writes) -> None:
     primary_name = await get_primary(ops_test, app)
     await are_writes_increasing(ops_test, primary_name)
 
+    # Trigger a switchover if the primary is not the first unit.
+    primary = await get_primary(ops_test)
+    unit_zero_name = f"{app}/0"
+    if primary != unit_zero_name:
+        logger.info("switching over to the first unit")
+        switchover(ops_test, primary, unit_zero_name)
+
+        # Get the new primary unit.
+        primary = await get_primary(ops_test)
+        # Check that the primary changed.
+        for attempt in Retrying(
+            stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=30)
+        ):
+            with attempt:
+                assert primary == unit_zero_name
+
     # Run the pre-upgrade-check action.
     logger.info("running pre-upgrade check")
     leader_unit_name = None
@@ -67,17 +89,18 @@ async def test_upgrade(ops_test: OpsTest, continuous_writes) -> None:
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(apps=[app], status="active")
 
-    # # Run the resume-upgrade action.
-    # logger.info("resuming upgrade")
-    # for unit in ops_test.model.applications[app].units:
-    #     if await unit.is_leader_from_status():
-    #         leader_unit_name = unit.name
-    #         break
-    # action = await ops_test.model.units.get(leader_unit_name).run_action("resume-upgrade")
-    # await action.wait()
-    # assert action.results["Code"] == "0"
-    # async with ops_test.fast_forward():
-    #     await ops_test.model.wait_for_idle(apps=[app], status="active")
+    # Run the resume-upgrade action.
+    logger.info("resuming upgrade")
+    for unit in ops_test.model.applications[app].units:
+        if await unit.is_leader_from_status():
+            leader_unit_name = unit.name
+            break
+    print(f"leader_unit_name: {leader_unit_name}")
+    action = await ops_test.model.units.get(leader_unit_name).run_action("resume-upgrade")
+    await action.wait()
+    assert action.results["Code"] == "0"
+    async with ops_test.fast_forward(fast_interval="30s"):
+        await ops_test.model.wait_for_idle(apps=[app], status="active", idle_period=15)
 
     # Check whether writes are increasing.
     logger.info("checking whether writes are increasing")
@@ -88,3 +111,5 @@ async def test_upgrade(ops_test: OpsTest, continuous_writes) -> None:
     # (check that all the units have all the writes).
     logger.info("checking whether no writes were lost")
     await check_writes(ops_test)
+
+    # check that all units were really upgraded.

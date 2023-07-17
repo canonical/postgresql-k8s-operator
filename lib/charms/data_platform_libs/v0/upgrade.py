@@ -38,7 +38,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 4
+LIBPATCH = 6
 
 PYDEPS = ["pydantic>=1.10,<2"]
 
@@ -399,8 +399,16 @@ class UpgradeGrantedEvent(EventBase):
         - MUST call :class:`DataUpgarde.on_upgrade_changed` on exit so event not lost on leader
     """
 
+
 class UpgradeFinishedEvent(EventBase):
-    pass
+    """Used to tell units that they finished the upgrade.
+
+    Handlers of this event must meet the following:
+        - MUST trigger the upgrade in the next unit by, for example, decrementing the partition
+            value from the rolling update strategy
+        - MUST update unit `state` if the previous operation fails, calling
+            :class:`DataUpgrade.set_unit_failed`
+    """
 
 
 class UpgradeEvents(CharmEvents):
@@ -561,7 +569,7 @@ class DataUpgrade(Object, ABC):
         Called by leader unit during :meth:`_on_pre_upgrade_check_action`.
 
         Returns:
-            Iterable of integeter unit.ids, LIFO ordered in upgrade order
+            Iterable of integer unit.ids, LIFO ordered in upgrade order
                 i.e `[5, 2, 4, 1, 3]`, unit `3` upgrades first, `5` upgrades last
         """
         # don't raise if k8s substrate, uses default statefulset order
@@ -583,12 +591,25 @@ class DataUpgrade(Object, ABC):
         if not self.peer_relation:
             return None
 
+        # needed to refresh the stack
+        # now leader pulls a fresh stack from newly updated relation data
+        if self.charm.unit.is_leader():
+            self._upgrade_stack = None
+
         self.peer_relation.data[self.charm.unit].update({"state": "failed"})
+
+        if self.substrate == "k8s":
+            self.on_upgrade_changed(EventBase(self.handle))
 
     def set_unit_completed(self) -> None:
         """Sets unit `state=completed` to the upgrade peer data."""
         if not self.peer_relation:
             return None
+
+        # needed to refresh the stack
+        # now leader pulls a fresh stack from newly updated relation data
+        if self.charm.unit.is_leader():
+            self._upgrade_stack = None
 
         self.peer_relation.data[self.charm.unit].update({"state": "completed"})
 
@@ -630,12 +651,12 @@ class DataUpgrade(Object, ABC):
             self.pre_upgrade_check()
 
             if self.substrate == "k8s":
-                logger.info("Building upgrade stack for K8s...")
+                logger.info("Building upgrade-stack for K8s...")
                 built_upgrade_stack = sorted(
                     [int(unit.name.split("/")[1]) for unit in self.app_units]
                 )
             else:
-                logger.info("Building upgrade stack for VMs...")
+                logger.info("Building upgrade-stack for VMs...")
                 built_upgrade_stack = self.build_upgrade_stack()
 
             logger.debug(f"Built upgrade stack of {built_upgrade_stack}")
@@ -714,7 +735,9 @@ class DataUpgrade(Object, ABC):
                 return
 
         # all units sets state to ready
-        self.peer_relation.data[self.charm.unit].update({"state": "ready" if self.substrate == "vm" else "upgrading"})
+        self.peer_relation.data[self.charm.unit].update(
+            {"state": "ready" if self.substrate == "vm" else "upgrading"}
+        )
 
     def on_upgrade_changed(self, event: EventBase) -> None:
         """Handler for `upgrade-relation-changed` events."""
@@ -730,12 +753,12 @@ class DataUpgrade(Object, ABC):
 
         # if all units completed, mark as complete
         if not self.upgrade_stack:
-            if self.cluster_state == "idle":
-                logger.debug("upgrade-changed event handled before pre-checks, exiting...")
-                return
-            elif self.cluster_state == "completed":
+            if self.state == "completed" and self.cluster_state in ["idle", "completed"]:
                 logger.info("All units completed upgrade, setting idle upgrade state...")
                 self.peer_relation.data[self.charm.unit].update({"state": "idle"})
+                return
+            if self.cluster_state == "idle":
+                logger.debug("upgrade-changed event handled before pre-checks, exiting...")
                 return
             else:
                 logger.debug("Did not find upgrade-stack or completed cluster state, deferring...")
@@ -782,6 +805,10 @@ class DataUpgrade(Object, ABC):
 
         raise NotImplementedError
 
-    @abstractmethod
     def _on_upgrade_finished(self, event: UpgradeFinishedEvent) -> None:
         """Handler for `upgrade-finished` events."""
+        # don't raise if vm substrate, only return
+        if self.substrate == "vm":
+            return
+
+        raise NotImplementedError
