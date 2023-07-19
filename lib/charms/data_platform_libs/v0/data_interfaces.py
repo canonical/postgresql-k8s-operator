@@ -302,11 +302,11 @@ from ops.charm import (
     CharmBase,
     CharmEvents,
     RelationChangedEvent,
+    RelationCreatedEvent,
     RelationEvent,
-    RelationJoinedEvent,
 )
 from ops.framework import EventSource, Object
-from ops.model import Application, Relation, Unit
+from ops.model import Application, ModelError, Relation, Unit
 
 # The unique Charmhub library identifier, never change it
 LIBID = "6c3e6b6680d64e9c89e611d1a15f65be"
@@ -316,7 +316,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 14
+LIBPATCH = 16
 
 PYDEPS = ["ops>=2.0.0"]
 
@@ -493,15 +493,15 @@ class DataRequires(Object, ABC):
         self.local_unit = self.charm.unit
         self.relation_name = relation_name
         self.framework.observe(
-            self.charm.on[relation_name].relation_joined, self._on_relation_joined_event
+            self.charm.on[relation_name].relation_created, self._on_relation_created_event
         )
         self.framework.observe(
             self.charm.on[relation_name].relation_changed, self._on_relation_changed_event
         )
 
     @abstractmethod
-    def _on_relation_joined_event(self, event: RelationJoinedEvent) -> None:
-        """Event emitted when the application joins the relation."""
+    def _on_relation_created_event(self, event: RelationCreatedEvent) -> None:
+        """Event emitted when the relation is created."""
         raise NotImplementedError
 
     @abstractmethod
@@ -569,7 +569,7 @@ class DataRequires(Object, ABC):
         try:
             _ = repr(relation.data)
             return True
-        except RuntimeError:
+        except (RuntimeError, ModelError):
             return False
 
     @staticmethod
@@ -1028,8 +1028,8 @@ class DatabaseRequires(DataRequires):
             )
             return False
 
-    def _on_relation_joined_event(self, event: RelationJoinedEvent) -> None:
-        """Event emitted when the application joins the database relation."""
+    def _on_relation_created_event(self, event: RelationCreatedEvent) -> None:
+        """Event emitted when the database relation is created."""
         # If relations aliases were provided, assign one to the relation.
         self._assign_relation_alias(event.relation.id)
 
@@ -1282,8 +1282,8 @@ class KafkaRequires(DataRequires):
             raise ValueError(f"Error on topic '{value}', cannot be a wildcard.")
         self._topic = value
 
-    def _on_relation_joined_event(self, event: RelationJoinedEvent) -> None:
-        """Event emitted when the application joins the Kafka relation."""
+    def _on_relation_created_event(self, event: RelationCreatedEvent) -> None:
+        """Event emitted when the Kafka relation is created."""
         # Sets topic, extra user roles, and "consumer-group-prefix" in the relation
         relation_data = {
             f: getattr(self, f.replace("-", "_"), "")
@@ -1436,8 +1436,8 @@ class OpenSearchRequires(DataRequires):
         self.charm = charm
         self.index = index
 
-    def _on_relation_joined_event(self, event: RelationJoinedEvent) -> None:
-        """Event emitted when the application joins the OpenSearch relation."""
+    def _on_relation_created_event(self, event: RelationCreatedEvent) -> None:
+        """Event emitted when the OpenSearch relation is created."""
         # Sets both index and extra user roles in the relation if the roles are provided.
         # Otherwise, sets only the index.
         data = {"index": self.index}
