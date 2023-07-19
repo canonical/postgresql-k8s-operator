@@ -17,12 +17,12 @@ ops = "2.4.1"
 pgconnstr = "1.0.1"
 tenacity = "8.2.2"
 cryptography = "41.0.2"
-jsonschema = "4.18.0"
+jsonschema = "4.18.4"
 jinja2 = "3.1.2"
-lightkube = "0.13.0"
+lightkube = "0.14.0"
 lightkube-models = "1.27.1.4"
 requests = "2.31.0"
-boto3 = "1.28.1"
+boto3 = "1.28.5"
 # psycopg2 = "^2.9.5" # Injected in charmcraft.yaml
 packaging = "23.1"
 
@@ -30,7 +30,7 @@ packaging = "23.1"
 optional = true
 
 [tool.poetry.group.format.dependencies]
-black = "23.3.0"
+black = "23.7.0"
 isort = "5.12.0"
 
 [tool.poetry.group.lint]
@@ -51,14 +51,14 @@ optional = true
 [tool.poetry.group.unit.dependencies]
 coverage = {extras = ["toml"], version = "7.2.7"}
 pytest = "7.4.0"
-pytest-asyncio = "0.21.0"
+pytest-asyncio = "0.21.1"
 psycopg2 = {version = "2.9.6", extras = ["binary"]}
 
 [tool.poetry.group.integration]
 optional = true
 
 [tool.poetry.group.integration.dependencies]
-lightkube = "0.13.0"
+lightkube = "0.14.0"
 pytest = "7.4.0"
 pytest-operator = "0.28.0"
 juju = "2.9.43.0 || 3.1.2.0"  # renovate libjuju
