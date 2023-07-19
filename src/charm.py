@@ -197,6 +197,7 @@ class PostgresqlOperatorCharm(CharmBase):
             user=USER,
             password=self.get_secret("app", f"{USER}-password"),
             database="postgres",
+            system_users=SYSTEM_USERS,
         )
 
     @property
@@ -572,6 +573,8 @@ class PostgresqlOperatorCharm(CharmBase):
                 self.get_secret("app", MONITORING_PASSWORD_KEY),
                 extra_user_roles="pg_monitor",
             )
+
+        self.postgresql.set_up_database()
 
         # Mark the cluster as initialised.
         self._peers.data[self.app]["cluster_initialised"] = "True"
@@ -1043,7 +1046,7 @@ class PostgresqlOperatorCharm(CharmBase):
         """
         return self.model.get_relation(PEER)
 
-    def push_tls_files_to_workload(self, container: Container = None) -> None:
+    def push_tls_files_to_workload(self, container: Container = None) -> bool:
         """Uploads TLS files to the workload container."""
         if container is None:
             container = self.unit.get_container("postgresql")
@@ -1087,7 +1090,7 @@ class PostgresqlOperatorCharm(CharmBase):
                 group=WORKLOAD_OS_GROUP,
             )
 
-        self.update_config()
+        return self.update_config()
 
     def _restart(self, event: RunWithLock) -> None:
         """Restart PostgreSQL."""
@@ -1110,7 +1113,20 @@ class PostgresqlOperatorCharm(CharmBase):
         # Start or stop the pgBackRest TLS server service when TLS certificate change.
         self.backup.start_stop_pgbackrest_service()
 
-    def update_config(self) -> None:
+    @property
+    def _is_workload_running(self) -> bool:
+        """Returns whether the workload is running (in an active state)."""
+        container = self.unit.get_container("postgresql")
+        if not container.can_connect():
+            return False
+
+        services = container.pebble.get_services(names=[self._postgresql_service])
+        if len(services) == 0:
+            return False
+
+        return services[0].current == ServiceStatus.ACTIVE
+
+    def update_config(self) -> bool:
         """Updates Patroni config file based on the existence of the TLS files."""
         # Update and reload configuration based on TLS files availability.
         self._patroni.render_patroni_yml_file(
@@ -1121,14 +1137,18 @@ class PostgresqlOperatorCharm(CharmBase):
             stanza=self.app_peer_data.get("stanza"),
             restore_stanza=self.app_peer_data.get("restore-stanza"),
         )
-        if not self._patroni.member_started:
+        if not self._is_workload_running:
             # If Patroni/PostgreSQL has not started yet and TLS relations was initialised,
             # then mark TLS as enabled. This commonly happens when the charm is deployed
             # in a bundle together with the TLS certificates operator. This flag is used to
             # know when to call the Patroni API using HTTP or HTTPS.
             self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
+            logger.debug("Early exit update_config: Workload not started yet")
+            return True
+
+        if not self._patroni.member_started:
             logger.debug("Early exit update_config: Patroni not started yet")
-            return
+            return False
 
         restart_postgresql = self.is_tls_enabled != self.postgresql.is_tls_enabled()
         self._patroni.reload_patroni_configuration()
@@ -1141,6 +1161,8 @@ class PostgresqlOperatorCharm(CharmBase):
                 self._generate_metrics_jobs(self.is_tls_enabled)
             )
             self.on[self.restart_manager.name].acquire_lock.emit()
+
+        return True
 
     def _update_pebble_layers(self) -> None:
         """Update the pebble layers to keep the health check URL up-to-date."""

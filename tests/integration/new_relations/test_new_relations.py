@@ -9,6 +9,7 @@ import psycopg2
 import pytest
 import yaml
 from pytest_operator.plugin import OpsTest
+from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from tests.integration.helpers import (
     CHARM_SERIES,
@@ -180,6 +181,25 @@ async def test_two_applications_doesnt_share_the_same_relation_data(
 
     assert application_connection_string != another_application_connection_string
 
+    # Check that the user cannot access other databases.
+    for application, other_application_database in [
+        (APPLICATION_APP_NAME, "another_application_first_database"),
+        (another_application_app_name, "application_first_database"),
+    ]:
+        connection_string = await build_connection_string(
+            ops_test, application, FIRST_DATABASE_RELATION_NAME, database="postgres"
+        )
+        with pytest.raises(psycopg2.Error):
+            psycopg2.connect(connection_string)
+        connection_string = await build_connection_string(
+            ops_test,
+            application,
+            FIRST_DATABASE_RELATION_NAME,
+            database=other_application_database,
+        )
+        with pytest.raises(psycopg2.Error):
+            psycopg2.connect(connection_string)
+
 
 async def test_an_application_can_connect_to_multiple_database_clusters(
     ops_test: OpsTest, database_charm
@@ -233,18 +253,20 @@ async def test_an_application_can_connect_to_multiple_aliased_database_clusters(
 
     # Retrieve the connection string to both database clusters using the relation aliases
     # and assert they are different.
-    application_connection_string = await build_connection_string(
-        ops_test,
-        APPLICATION_APP_NAME,
-        ALIASED_MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME,
-        relation_alias="cluster1",
-    )
-    another_application_connection_string = await build_connection_string(
-        ops_test,
-        APPLICATION_APP_NAME,
-        ALIASED_MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME,
-        relation_alias="cluster2",
-    )
+    for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3), reraise=True):
+        with attempt:
+            application_connection_string = await build_connection_string(
+                ops_test,
+                APPLICATION_APP_NAME,
+                ALIASED_MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME,
+                relation_alias="cluster1",
+            )
+            another_application_connection_string = await build_connection_string(
+                ops_test,
+                APPLICATION_APP_NAME,
+                ALIASED_MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME,
+                relation_alias="cluster2",
+            )
     assert application_connection_string != another_application_connection_string
 
 
@@ -257,12 +279,14 @@ async def test_an_application_can_request_multiple_databases(ops_test: OpsTest, 
     await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active")
 
     # Get the connection strings to connect to both databases.
-    first_database_connection_string = await build_connection_string(
-        ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME
-    )
-    second_database_connection_string = await build_connection_string(
-        ops_test, APPLICATION_APP_NAME, SECOND_DATABASE_RELATION_NAME
-    )
+    for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3), reraise=True):
+        with attempt:
+            first_database_connection_string = await build_connection_string(
+                ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME
+            )
+            second_database_connection_string = await build_connection_string(
+                ops_test, APPLICATION_APP_NAME, SECOND_DATABASE_RELATION_NAME
+            )
 
     # Assert the two application have different relation (connection) data.
     assert first_database_connection_string != second_database_connection_string
