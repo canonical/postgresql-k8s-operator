@@ -2,18 +2,19 @@
 # See LICENSE file for licensing details.
 
 """Upgrades implementation."""
+import json
 import logging
 
 from charms.data_platform_libs.v0.upgrade import (
     ClusterNotReadyError,
     DataUpgrade,
     DependencyModel,
-    UpgradeFinishedEvent,
+    KubernetesClientError,
 )
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
 from lightkube.resources.apps_v1 import StatefulSet
-from ops.charm import ActionEvent, RelationChangedEvent, WorkloadEvent
+from ops.charm import RelationChangedEvent, WorkloadEvent
 from pydantic import BaseModel
 from typing_extensions import override
 
@@ -28,6 +29,13 @@ class PostgreSQLDependencyModel(BaseModel):
     charm: DependencyModel
 
 
+def get_postgresql_k8s_dependencies_model() -> PostgreSQLDependencyModel:
+    """Return the PostgreSQL dependencies model."""
+    with open("src/dependency.json") as dependency_file:
+        _deps = json.load(dependency_file)
+    return PostgreSQLDependencyModel(**_deps)
+
+
 class PostgreSQLUpgrade(DataUpgrade):
     """PostgreSQL upgrade class."""
 
@@ -39,9 +47,6 @@ class PostgreSQLUpgrade(DataUpgrade):
         self.framework.observe(self.charm.on.upgrade_relation_changed, self._on_upgrade_changed)
         self.framework.observe(
             getattr(self.charm.on, "postgresql_pebble_ready"), self._postgresql_on_pebble_ready
-        )
-        self.framework.observe(
-            getattr(self.charm.on, "resume_upgrade_action"), self._on_resume_upgrade
         )
 
     def _get_rolling_update_partition(self) -> int:
@@ -102,23 +107,8 @@ class PostgreSQLUpgrade(DataUpgrade):
             event.defer()
             return
 
+        logger.error("called set_unit_completed")
         self.set_unit_completed()
-
-    def _on_resume_upgrade(self, event: ActionEvent) -> None:
-        """Handle resume upgrade action.
-
-        Continue the upgrade by setting the partition to the next unit.
-        """
-        fail_message = "Nothing to resume, upgrade stack unset"
-        try:
-            next_partition = self._get_rolling_update_partition() - 1
-            if next_partition >= 0:
-                self._set_rolling_update_partition(partition=next_partition)
-                event.set_results({"message": f"Upgrade will resume on unit {next_partition}"})
-                return
-        except ApiError:
-            fail_message = "Cannot set rolling update partition"
-        event.fail(fail_message)
 
     def _on_upgrade_changed(self, event: RelationChangedEvent) -> None:
         if not self.peer_relation:
@@ -127,20 +117,6 @@ class PostgreSQLUpgrade(DataUpgrade):
 
         self._set_min_ordinal_sync_standbys()
         self.charm.update_config()
-
-    @override
-    def _on_upgrade_finished(self, event: UpgradeFinishedEvent) -> None:
-        logger.error(f"finished for {self.charm.unit.name}")
-        if self.charm.unit.name != f"{self.charm.app.name}/{self.charm.app.planned_units() - 1}":
-            try:
-                logger.debug("Set rolling update partition to next unit")
-                next_partition = self._get_rolling_update_partition() - 1
-                if next_partition >= 0:
-                    self._set_rolling_update_partition(partition=next_partition)
-            except ApiError:
-                logger.exception("Cannot set rolling update partition")
-                self.set_unit_failed()
-                self.log_rollback_instructions()
 
     @override
     def pre_upgrade_check(self) -> None:
@@ -208,10 +184,20 @@ class PostgreSQLUpgrade(DataUpgrade):
     def _set_first_rolling_update_partition(self) -> None:
         self._set_rolling_update_partition(self.charm.app.planned_units() - 1)
 
+    @override
     def _set_rolling_update_partition(self, partition: int) -> None:
-        logger.info(f"partition: {partition}")
-        client = Client()
-        patch = {"spec": {"updateStrategy": {"rollingUpdate": {"partition": partition}}}}
-        client.patch(
-            StatefulSet, name=self.charm.model.app.name, namespace=self.charm.model.name, obj=patch
-        )
+        try:
+            patch = {"spec": {"updateStrategy": {"rollingUpdate": {"partition": partition}}}}
+            Client().patch(
+                StatefulSet,
+                name=self.charm.model.app.name,
+                namespace=self.charm.model.name,
+                obj=patch,
+            )
+            logger.debug(f"Kubernetes StatefulSet partition set to {partition}")
+        except ApiError as e:
+            if e.status.code == 403:
+                cause = "`juju trust` needed"
+            else:
+                cause = str(e)
+            raise KubernetesClientError("Kubernetes StatefulSet patch failed", cause)

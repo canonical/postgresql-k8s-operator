@@ -43,8 +43,9 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
 
-async def test_upgrade(ops_test: OpsTest, continuous_writes) -> None:
-    # Start an application that continuously writes data to the database.
+@pytest.mark.parametrize("first_unit_role", ["primary"])  # , "sync_standby", "replica"],
+async def test_upgrade(ops_test: OpsTest, continuous_writes, first_unit_role) -> None:
+    # # Start an application that continuously writes data to the database.
     logger.info("starting continuous writes to the database")
     app = await app_name(ops_test)
     await start_continuous_writes(ops_test, app)
@@ -59,7 +60,7 @@ async def test_upgrade(ops_test: OpsTest, continuous_writes) -> None:
     unit_zero_name = f"{app}/0"
     if primary != unit_zero_name:
         logger.info("switching over to the first unit")
-        switchover(ops_test, primary, unit_zero_name)
+        await switchover(ops_test, primary, unit_zero_name)
 
         # Get the new primary unit.
         primary = await get_primary(ops_test)
@@ -113,3 +114,35 @@ async def test_upgrade(ops_test: OpsTest, continuous_writes) -> None:
     await check_writes(ops_test)
 
     # check that all units were really upgraded.
+
+
+async def test_failed_upgrade(ops_test: OpsTest, continuous_writes) -> None:
+    # # Try a failing upgrade.
+    # with open("./src/dependency.json", 'r+') as file:
+    #     content = json.load(file)
+    #     file.seek(0)
+    #     original_version = int(content["charm"]["version"])
+    #     print(original_version)
+    #     content["charm"]["upgrade_supported"] = f">{original_version + 1}"
+    #     content["charm"]["version"] = str(original_version + 2)
+    #     json.dump(content, file, indent=2)
+    #
+    # # Run the pre-upgrade-check action.
+    # logger.info("running pre-upgrade check")
+    # leader_unit_name = None
+    # for unit in ops_test.model.applications[app].units:
+    #     if await unit.is_leader_from_status():
+    #         leader_unit_name = unit.name
+    #         break
+    # action = await ops_test.model.units.get(leader_unit_name).run_action("pre-upgrade-check")
+    # await action.wait()
+    # assert action.results["Code"] == "0"
+    #
+    # # Run juju refresh.
+    # logger.info("refreshing the charm")
+    # application = ops_test.model.applications[app]
+    # charm = await ops_test.build_charm(".")
+    # await application.refresh(path=charm)
+    # async with ops_test.fast_forward():
+    #     await ops_test.model.wait_for_idle(apps=[app], status="active")
+    pass

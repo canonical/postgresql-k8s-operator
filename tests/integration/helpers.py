@@ -638,7 +638,11 @@ async def set_password(
     return result.results
 
 
-def switchover(ops_test: OpsTest, current_primary: str, candidate: str = None) -> None:
+async def set_role_for_unit(ops_test: OpsTest, unit: str, role: str) -> None:
+    pass
+
+
+async def switchover(ops_test: OpsTest, current_primary: str, candidate: str = None) -> None:
     """Trigger a switchover.
 
     Args:
@@ -646,7 +650,7 @@ def switchover(ops_test: OpsTest, current_primary: str, candidate: str = None) -
         current_primary: The current primary unit.
         candidate: The unit that should be elected the new primary.
     """
-    primary_ip = get_unit_address(ops_test, current_primary)
+    primary_ip = await get_unit_address(ops_test, current_primary)
     response = requests.get(f"http://{primary_ip}:8008/cluster")
     assert response.status_code == 200
     standbys = [
@@ -654,7 +658,7 @@ def switchover(ops_test: OpsTest, current_primary: str, candidate: str = None) -
     ]
     assert len(standbys)
     if candidate not in standbys:
-        candidate = standbys[0]
+        candidate = standbys[0]["name"]
 
     response = requests.post(
         f"http://{primary_ip}:8008/switchover",

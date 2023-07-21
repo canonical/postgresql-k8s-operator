@@ -46,7 +46,6 @@ from tenacity import RetryError
 from backups import PostgreSQLBackups
 from constants import (
     BACKUP_USER,
-    DEPS,
     METRICS_PORT,
     MONITORING_PASSWORD_KEY,
     MONITORING_USER,
@@ -67,7 +66,7 @@ from constants import (
 from patroni import NotReadyError, Patroni
 from relations.db import EXTENSIONS_BLOCKING_MESSAGE, DbProvides
 from relations.postgresql_provider import PostgreSQLProvider
-from upgrade import PostgreSQLDependencyModel, PostgreSQLUpgrade
+from upgrade import PostgreSQLUpgrade, get_postgresql_k8s_dependencies_model
 from utils import new_password
 
 logger = logging.getLogger(__name__)
@@ -101,8 +100,12 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on.update_status, self._on_update_status)
         self._storage_path = self.meta.storages["pgdata"].location
 
-        model = PostgreSQLDependencyModel(**DEPS)
-        self.upgrade = PostgreSQLUpgrade(self, model, substrate="k8s")
+        self.upgrade = PostgreSQLUpgrade(
+            self,
+            model=get_postgresql_k8s_dependencies_model(),
+            relation_name="upgrade",
+            substrate="k8s",
+        )
         self.postgresql_client_relation = PostgreSQLProvider(self)
         self.legacy_db_relation = DbProvides(self, admin=False)
         self.legacy_db_admin_relation = DbProvides(self, admin=True)
