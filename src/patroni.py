@@ -240,6 +240,7 @@ class Patroni:
     def render_patroni_yml_file(
         self,
         connectivity: bool = False,
+        is_creating_backup: bool = False,
         enable_tls: bool = False,
         is_no_sync_member: bool = False,
         stanza: str = None,
@@ -251,6 +252,7 @@ class Patroni:
         Args:
             connectivity: whether to allow external connections to the database.
             enable_tls: whether to enable TLS.
+            is_creating_backup: whether this unit is creating a backup.
             is_no_sync_member: whether this member shouldn't be a synchronous standby
                 (when it's a replica).
             stanza: name of the stanza created by pgBackRest.
@@ -266,6 +268,7 @@ class Patroni:
             enable_tls=enable_tls,
             endpoint=self._endpoint,
             endpoints=self._endpoints,
+            is_creating_backup=is_creating_backup,
             is_no_sync_member=is_no_sync_member,
             namespace=self._namespace,
             storage_path=self._storage_path,

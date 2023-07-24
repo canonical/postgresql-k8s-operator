@@ -98,7 +98,8 @@ postgresql:
       password: {{ superuser_password }}
 use_endpoints: true
 use_unix_socket: true
-{%- if is_no_sync_member %}
+{%- if is_no_sync_member or is_creating_backup %}
 tags:
-  nosync: true
+  nosync: {{ is_no_sync_member }}
+  is_creating_backup: {{ is_creating_backup }}
 {%- endif %}

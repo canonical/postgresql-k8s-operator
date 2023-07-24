@@ -46,31 +46,28 @@ class PostgreSQLUpgrade(DataUpgrade):
 
         self.framework.observe(self.charm.on.upgrade_relation_changed, self._on_upgrade_changed)
         self.framework.observe(
-            getattr(self.charm.on, "postgresql_pebble_ready"), self._postgresql_on_pebble_ready
+            getattr(self.charm.on, "postgresql_pebble_ready"), self._on_postgresql_pebble_ready
         )
-
-    def _get_rolling_update_partition(self) -> int:
-        client = Client(namespace=self.charm.model.name)
-        stateful_set = client.get(StatefulSet, name=self.charm.model.app.name)
-        return stateful_set.spec.updateStrategy.rollingUpdate.partition
 
     @property
     def is_no_sync_member(self) -> bool:
         """Whether this member shouldn't be a synchronous standby (when it's a replica)."""
-        min_ordinal_sync_standbys = int(
-            self.peer_relation.data[self.charm.app].get("min-ordinal-sync-standbys", 0)
-        )
-        return int(self.charm.unit.name.split("/")[1]) < min_ordinal_sync_standbys
+        sync_standbys = self.peer_relation.data[self.charm.app].get("sync-standbys")
+        if sync_standbys is None:
+            return False
+        return self.charm.unit.name not in json.loads(sync_standbys)
 
     @override
     def log_rollback_instructions(self) -> None:
         """Log rollback instructions."""
-        logger.info("Run `juju refresh --revision <previous-revision> postgresql-k8s` to rollback")
         logger.info(
-            "and `juju run-action postgresql-k8s/leader resume-upgrade` to finish the rollback"
+            "Run `juju refresh --revision <previous-revision> postgresql-k8s` to initiate the rollback"
+        )
+        logger.info(
+            "and `juju run-action postgresql-k8s/leader resume-upgrade` to resume the rollback"
         )
 
-    def _postgresql_on_pebble_ready(self, event: WorkloadEvent) -> None:
+    def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
         """Handle pebble ready event.
 
         Confirm that unit is healthy and set unit completed.
@@ -88,25 +85,6 @@ class PostgreSQLUpgrade(DataUpgrade):
             event.defer()
             return
 
-        # make the last unit as the single sync_standby.
-        primary_unit_name = self.charm._patroni.get_primary(unit_name_pattern=True)
-        logger.error(f"primary_unit_name: {primary_unit_name}")
-        unit_zero_name = f"{self.charm.app.name}/0"
-        sync_standby_names = self.charm._patroni.get_sync_standby_names()
-        logger.error(f"sync_standby_names: {sync_standby_names}")
-        if (
-            self.charm.unit.name != unit_zero_name
-            and primary_unit_name != unit_zero_name
-            and len(sync_standby_names) > 0
-            and sync_standby_names[0] != self.charm.unit.name
-        ):
-            self._set_min_ordinal_sync_standbys()
-            logger.error(
-                "Deferring on_pebble_ready: this unit is not the only synchronous standby yet"
-            )
-            event.defer()
-            return
-
         logger.error("called set_unit_completed")
         self.set_unit_completed()
 
@@ -115,7 +93,6 @@ class PostgreSQLUpgrade(DataUpgrade):
             event.defer()
             return
 
-        self._set_min_ordinal_sync_standbys()
         self.charm.update_config()
 
     @override
@@ -127,18 +104,18 @@ class PostgreSQLUpgrade(DataUpgrade):
         Raises:
             :class:`ClusterNotReadyError`: if cluster is not ready to upgrade
         """
-        if not self.charm.is_cluster_initialised:
-            message = "cluster has not initialised yet"
-            raise ClusterNotReadyError(message, message)
+        if not self.charm._patroni.are_all_members_ready():
+            raise ClusterNotReadyError(
+                "not all members are ready yet", "wait for all units to become active/idle"
+            )
 
         # check for backups running.
-
-        # check for tools in relation, like pgbouncer, being upgraded first?
 
         primary_unit_name = self.charm._patroni.get_primary(unit_name_pattern=True)
         unit_zero_name = f"{self.charm.app.name}/0"
         if primary_unit_name == unit_zero_name:
-            self._set_first_rolling_update_partition()
+            self.peer_relation.data[self.charm.app].update({"sync-standbys": ""})
+            self._set_rolling_update_partition(self.charm.app.planned_units() - 1)
             return
 
         sync_standby_names = self.charm._patroni.get_sync_standby_names()
@@ -147,42 +124,33 @@ class PostgreSQLUpgrade(DataUpgrade):
 
         if unit_zero_name in sync_standby_names:
             try:
+                self.peer_relation.data[self.charm.app].update({"sync-standbys": ""})
                 self.charm._patroni.switchover(unit_zero_name)
             except SwitchoverFailedError as e:
                 raise ClusterNotReadyError(
                     str(e), f"try to switchover manually to {unit_zero_name}"
                 )
-            self._set_first_rolling_update_partition()
+            self._set_rolling_update_partition(self.charm.app.planned_units() - 1)
             return
 
-        # if last unit is the primary, switchover to any of the sync_standbys.
-        if primary_unit_name == f"{self.charm.app.name}/{self.charm.app.planned_units()-1}":
-            try:
-                self.charm._patroni.switchover()
-            except SwitchoverFailedError as e:
-                raise ClusterNotReadyError(
-                    str(e), "try to manually switchover to any synchronous standby"
-                )
-            self._set_first_rolling_update_partition()
-            return
+        self._set_list_of_sync_standbys()
+        raise ClusterNotReadyError(
+            f"{unit_zero_name} needs to be a synchronous standby in order to become the primary before the upgrade process can start",
+            f"wait 30 seconds for {unit_zero_name} and run this action again",
+        )
 
-        self._set_first_rolling_update_partition()
-
-    def _set_min_ordinal_sync_standbys(self) -> None:
-        if not self.charm.is_cluster_initialised or not self.charm.unit.is_leader():
-            return
-
-        primary_unit_name = self.charm._patroni.get_primary(unit_name_pattern=True)
-        unit_zero_name = f"{self.charm.app.name}/0"
-
-        if self.charm.app.planned_units() > 2 and primary_unit_name != unit_zero_name:
-            min_ordinal_sync_standbys = self._get_rolling_update_partition()
+    def _set_list_of_sync_standbys(self) -> None:
+        if self.charm.app.planned_units() > 2:
+            sync_standbys = self.charm._patroni.get_sync_standby_names()
+            unit_to_become_sync_standby = f"{self.charm.app.name}/0"
+            if unit_to_become_sync_standby not in set(sync_standbys):
+                if len(sync_standbys) > 0:
+                    sync_standbys.pop()
+                sync_standbys.append(unit_to_become_sync_standby)
             self.peer_relation.data[self.charm.app].update(
-                {"min-ordinal-sync-standbys": str(min_ordinal_sync_standbys)}
+                {"sync-standbys": json.dumps(sync_standbys)}
             )
-
-    def _set_first_rolling_update_partition(self) -> None:
-        self._set_rolling_update_partition(self.charm.app.planned_units() - 1)
+            logger.debug(f"sync-standbys changed to: {sync_standbys}")
 
     @override
     def _set_rolling_update_partition(self, partition: int) -> None:

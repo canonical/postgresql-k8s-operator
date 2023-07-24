@@ -413,6 +413,7 @@ Juju Version: {str(juju_version)}
             self._change_connectivity_to_database(connectivity=False)
 
         self.charm.unit.status = MaintenanceStatus("creating backup")
+        self.charm.update_config(is_creating_backup=True)
 
         try:
             command = [
@@ -488,6 +489,7 @@ Stderr:
             # and update the Patroni configuration.
             self._change_connectivity_to_database(connectivity=True)
 
+        self.charm.update_config(is_creating_backup=False)
         self.charm.unit.status = ActiveStatus()
 
     def _on_list_backups_action(self, event) -> None:
