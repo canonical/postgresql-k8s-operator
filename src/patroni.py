@@ -165,6 +165,24 @@ class Patroni:
         return all(member["state"] == "running" for member in r.json()["members"])
 
     @property
+    def is_creating_backup(self) -> bool:
+        """Returns whether a backup is being created."""
+        # Request info from cluster endpoint (which returns the list of tags from each
+        # cluster member; the "is_creating_backup" tag means that the member is creating
+        # a backup).
+        try:
+            for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(3)):
+                with attempt:
+                    r = requests.get(f"{self._patroni_url}/cluster", verify=self._verify)
+        except RetryError:
+            return False
+
+        return any(
+            "tags" in member and member["tags"].get("is_creating_backup")
+            for member in r.json()["members"]
+        )
+
+    @property
     def primary_endpoint_ready(self) -> bool:
         """Is the primary endpoint redirecting connections to the primary pod.
 
@@ -315,8 +333,9 @@ class Patroni:
         if r.status_code != 200:
             raise SwitchoverFailedError(f"received {r.status_code}")
 
-        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
             with attempt:
                 new_primary = self.get_primary()
+                print(new_primary)
                 if (candidate is not None and new_primary != candidate) or new_primary == primary:
                     raise SwitchoverFailedError("primary was not switched correctly")

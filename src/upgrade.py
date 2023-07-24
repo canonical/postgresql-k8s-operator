@@ -109,7 +109,11 @@ class PostgreSQLUpgrade(DataUpgrade):
                 "not all members are ready yet", "wait for all units to become active/idle"
             )
 
-        # check for backups running.
+        if self.charm._patroni.is_creating_backup:
+            raise ClusterNotReadyError(
+                "a backup is being created",
+                "wait for the backup creation to finish before starting the upgrade",
+            )
 
         primary_unit_name = self.charm._patroni.get_primary(unit_name_pattern=True)
         unit_zero_name = f"{self.charm.app.name}/0"

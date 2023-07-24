@@ -116,10 +116,12 @@ class TestUpgrade(unittest.TestCase):
     @patch("charm.Patroni.get_sync_standby_names")
     @patch("charm.PostgresqlOperatorCharm.update_config")
     @patch("charm.Patroni.get_primary")
+    @patch("charm.Patroni.is_creating_backup", new_callable=PropertyMock)
     @patch("charm.Patroni.are_all_members_ready")
     def test_pre_upgrade_check(
         self,
         _are_all_members_ready,
+        _is_creating_backup,
         _get_primary,
         _update_config,
         _get_sync_standby_names,
@@ -130,14 +132,23 @@ class TestUpgrade(unittest.TestCase):
         self.harness.set_leader(True)
 
         # Set some side effects to test multiple situations.
-        _are_all_members_ready.side_effect = [False, True, True, True, True, True]
+        _are_all_members_ready.side_effect = [False, True, True, True, True, True, True]
+        _is_creating_backup.side_effect = [True, False, False, False, False, False]
         _switchover.side_effect = [None, SwitchoverFailedError]
 
         # Test when not all members are ready.
         with self.assertRaises(ClusterNotReadyError):
             self.charm.upgrade.pre_upgrade_check()
+        _switchover.assert_not_called()
+        _set_list_of_sync_standbys.assert_not_called()
+        _set_rolling_update_partition.assert_not_called()
 
-        # Test when a backup is running.
+        # Test when a backup is being created.
+        with self.assertRaises(ClusterNotReadyError):
+            self.charm.upgrade.pre_upgrade_check()
+        _switchover.assert_not_called()
+        _set_list_of_sync_standbys.assert_not_called()
+        _set_rolling_update_partition.assert_not_called()
 
         # Test when the primary is already the first unit.
         unit_zero_name = f"{self.charm.app.name}/0"
