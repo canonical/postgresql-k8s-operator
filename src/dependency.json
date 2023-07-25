@@ -4,11 +4,5 @@
     "name": "postgresql",
     "upgrade_supported": ">0",
     "version": "1"
-  },
-  "rock": {
-    "dependencies": {},
-    "name": "charmed-postgresql",
-    "upgrade_supported": ">14.7",
-    "version": "14.8"
   }
 }

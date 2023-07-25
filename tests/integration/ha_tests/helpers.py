@@ -4,6 +4,7 @@ import asyncio
 import os
 import string
 import subprocess
+import tarfile
 import tempfile
 from datetime import datetime
 from pathlib import Path
@@ -30,7 +31,6 @@ from tenacity import (
 
 from tests.integration.helpers import (
     app_name,
-    copy_file_into_pod,
     db_connect,
     get_password,
     get_primary,
@@ -206,6 +206,62 @@ async def are_writes_increasing(ops_test, down_unit: str = None) -> None:
             with attempt:
                 more_writes, _ = await count_writes(ops_test, down_unit=down_unit)
                 assert more_writes[member] > count, f"{member}: writes not continuing to DB"
+
+
+def copy_file_into_pod(
+    client: kubernetes.client.api.core_v1_api.CoreV1Api,
+    namespace: str,
+    pod_name: str,
+    container_name: str,
+    destination_path: str,
+    source_path: str,
+) -> None:
+    """Copy file contents into pod.
+
+    Args:
+        client: The kubernetes CoreV1Api client
+        namespace: The namespace of the pod to copy files to
+        pod_name: The name of the pod to copy files to
+        container_name: The name of the pod container to copy files to
+        destination_path: The path to which the file should be copied over
+        source_path: The path of the file which needs to be copied over
+    """
+    try:
+        exec_command = ["tar", "xvf", "-", "-C", "/"]
+
+        api_response = kubernetes.stream.stream(
+            client.connect_get_namespaced_pod_exec,
+            pod_name,
+            namespace,
+            container=container_name,
+            command=exec_command,
+            stdin=True,
+            stdout=True,
+            stderr=True,
+            tty=False,
+            _preload_content=False,
+        )
+
+        with tempfile.TemporaryFile() as tar_buffer:
+            with tarfile.open(fileobj=tar_buffer, mode="w") as tar:
+                tar.add(source_path, destination_path)
+
+            tar_buffer.seek(0)
+            commands = []
+            commands.append(tar_buffer.read())
+
+            while api_response.is_open():
+                api_response.update(timeout=1)
+
+                if commands:
+                    command = commands.pop(0)
+                    api_response.write_stdin(command.decode())
+                else:
+                    break
+
+            api_response.close()
+    except kubernetes.client.rest.ApiException:
+        assert False
 
 
 async def count_writes(
