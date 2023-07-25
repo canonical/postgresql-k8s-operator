@@ -3,11 +3,17 @@
 # See LICENSE file for licensing details.
 import asyncio
 import itertools
+import logging
+import os
+import tarfile
+import tempfile
 from datetime import datetime
 from pathlib import Path
+from tempfile import mkstemp
 from typing import List, Optional
 
 import botocore
+import kubernetes as kubernetes
 import psycopg2
 import requests
 import yaml
@@ -28,9 +34,12 @@ from tenacity import (
     wait_fixed,
 )
 
+logger = logging.getLogger(__name__)
+
 CHARM_SERIES = "jammy"
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
+PATRONI_CONF_DEFAULT_PATH = "/var/lib/postgresql/data/patroni.yml"
 
 charm = None
 
@@ -216,6 +225,141 @@ def convert_records_to_dict(records: List[tuple]) -> dict:
         # Add record tuple data to dict.
         records_dict[record[0]] = record[1]
     return records_dict
+
+
+def copy_file_from_pod(
+    client: kubernetes.client.api.core_v1_api.CoreV1Api,
+    namespace: str,
+    pod_name: str,
+    container_name: str,
+    source_path: str,
+    destination_path: str,
+) -> None:
+    """Copy file contents into pod.
+
+    Args:
+        client: The kubernetes CoreV1Api client
+        namespace: The namespace of the pod to copy files to
+        pod_name: The name of the pod to copy files to
+        container_name: The name of the pod container to copy files to
+        source_path: The path of the file which needs to be copied over
+        destination_path: The path to which the file should be copied over
+    """
+    try:
+        exec_command = ["tar", "cf", "-", source_path]
+
+        api_response = kubernetes.stream.stream(
+            client.connect_get_namespaced_pod_exec,
+            pod_name,
+            namespace,
+            container=container_name,
+            command=exec_command,
+            stdin=True,
+            stdout=True,
+            stderr=True,
+            tty=False,
+            _preload_content=False,
+        )
+
+        with tempfile.TemporaryFile() as tar_buffer:
+            while api_response.is_open():
+                api_response.update(timeout=1)
+                if api_response.peek_stdout():
+                    out = api_response.read_stdout()
+                    # print("STDOUT: %s" % len(out))
+                    tar_buffer.write(out.encode("utf-8"))
+                if api_response.peek_stderr():
+                    print("STDERR: {0}".format(api_response.read_stderr()))
+            api_response.close()
+
+            tar_buffer.flush()
+            tar_buffer.seek(0)
+            with tarfile.open(fileobj=tar_buffer, mode="r:") as tar:
+                member = tar.getmember(source_path.lstrip("/"))
+                tar.makefile(member, destination_path)
+    except kubernetes.client.rest.ApiException:
+        assert False
+
+
+def copy_file_into_pod(
+    client: kubernetes.client.api.core_v1_api.CoreV1Api,
+    namespace: str,
+    pod_name: str,
+    container_name: str,
+    source_path: str,
+    destination_path: str,
+) -> None:
+    """Copy file contents into pod.
+
+    Args:
+        client: The kubernetes CoreV1Api client
+        namespace: The namespace of the pod to copy files to
+        pod_name: The name of the pod to copy files to
+        container_name: The name of the pod container to copy files to
+        source_path: The path of the file which needs to be copied over
+        destination_path: The path to which the file should be copied over
+    """
+    try:
+        api_response = kubernetes.stream.stream(
+            client.connect_get_namespaced_pod_exec,
+            pod_name,
+            namespace,
+            container=container_name,
+            command=["tar", "xvf", "-", "-C", "/"],
+            stdin=True,
+            stdout=True,
+            stderr=True,
+            tty=False,
+            _preload_content=False,
+        )
+
+        with tempfile.TemporaryFile() as tar_buffer:
+            with tarfile.open(fileobj=tar_buffer, mode="w") as tar:
+                tar.add(source_path, destination_path)
+
+            tar_buffer.seek(0)
+            commands = []
+            commands.append(tar_buffer.read())
+
+            while api_response.is_open():
+                api_response.update(timeout=1)
+
+                if commands:
+                    command = commands.pop(0)
+                    api_response.write_stdin(command.decode())
+                else:
+                    break
+
+            api_response.close()
+
+        for command in [
+            ["chmod", "644", destination_path],
+            ["chown", "postgres:postgres", destination_path],
+        ]:
+            api_response = kubernetes.stream.stream(
+                client.connect_get_namespaced_pod_exec,
+                pod_name,
+                namespace,
+                container=container_name,
+                command=command,
+                stdin=True,
+                stdout=True,
+                stderr=True,
+                tty=False,
+                _preload_content=False,
+            )
+            api_response.run_forever(timeout=10)
+            if api_response.returncode != 0:
+                assert False
+    except kubernetes.client.rest.ApiException:
+        assert False
+
+
+async def count_switchovers(ops_test: OpsTest, unit_name: str) -> int:
+    """Return the number of performed switchovers."""
+    unit_address = await get_unit_address(ops_test, unit_name)
+    switchover_history_info = requests.get(f"http://{unit_address}:8008/history")
+    return len(switchover_history_info.json())
 
 
 def db_connect(host: str, password: str):
@@ -636,6 +780,198 @@ async def set_password(
     action = await unit.run_action("set-password", **parameters)
     result = await action.wait()
     return result.results
+
+
+async def set_role_for_unit(ops_test: OpsTest, unit_name: str, role: str) -> None:
+    """Updates the restart condition in the DB service file.
+
+    When the DB service fails it will now wait for `delay` number of seconds.
+    """
+    kubernetes.config.load_kube_config()
+    client = kubernetes.client.api.core_v1_api.CoreV1Api()
+    print(f"role: {role}")
+
+    # Replace the configuration and reload the Patroni configuration to set
+    # the specific role in the unit.
+    for unit in ops_test.model.applications[unit_name.split("/")[0]].units:
+        pod_name = unit.name.replace("/", "-")
+        container_name = "postgresql"
+        _, temp_path = mkstemp()
+        copy_file_from_pod(
+            client,
+            ops_test.model.info.name,
+            pod_name,
+            container_name,
+            PATRONI_CONF_DEFAULT_PATH,
+            temp_path,
+        )
+
+        with open(temp_path, "r+") as f:
+            unit_number = int(unit.name.split("/")[1])
+            print(unit_number)
+            if role == "leader" or role == "sync_standby":
+                nosync_value = (
+                    unit_number > 1
+                )  # Keep only the two first units as candidates for sync_standby role.
+            if role == "replica":
+                nosync_value = (
+                    unit_number == 0
+                )  # Mark the first unit as not a candidate for sync_standby role.
+            # print(f"{unit_number} - {f.read()} - 0")
+            data = yaml.safe_load(f)
+            if "tags" in data:
+                print(f'{pod_name} before: {data["tags"]["nosync"]}')
+            if nosync_value:
+                data["tags"] = {"nosync": True}
+            elif "tags" in data:
+                del data["tags"]["nosync"]
+            f.seek(0)
+            f.write(yaml.dump(data))
+            f.seek(0)
+
+        # with open(temp_path, "r") as f:
+        #     data = yaml.safe_load(f)
+        #     if "tags" in data:
+        #         print(f'{pod_name}: {data["tags"]["nosync"]}')
+
+        copy_file_into_pod(
+            client,
+            ops_test.model.info.name,
+            pod_name,
+            container_name,
+            temp_path,
+            PATRONI_CONF_DEFAULT_PATH,
+        )
+
+        unit_address = await get_unit_address(ops_test, unit.name)
+        response = requests.post(f"http://{unit_address}:8008/reload")
+        print(f"response: {response}")
+        assert response.status_code == 202
+
+        # Remove temporary file from machine.
+        os.remove(temp_path)
+
+    for attempt in Retrying(
+        stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
+    ):
+        with attempt:
+            primary_name = await get_primary(ops_test)
+            primary_ip = await get_unit_address(ops_test, primary_name)
+            response = requests.get(f"http://{primary_ip}:8008/cluster")
+            assert response.status_code == 200
+            if (
+                len(
+                    [
+                        member
+                        for member in response.json()["members"]
+                        if member["name"] == unit_name.replace("/", "-") and member["role"] == role
+                    ]
+                )
+                != 1
+            ):
+                logger.info(f"waiting for {unit_name} to become {role}")
+                print(response.json()["members"])
+                await switchover(
+                    ops_test, primary_name, primary_name if role == "leader" else None
+                )
+                assert False
+
+    for unit in ops_test.model.applications[unit_name.split("/")[0]].units:
+        pod_name = unit.name.replace("/", "-")
+        container_name = "postgresql"
+        _, temp_path = mkstemp()
+        copy_file_from_pod(
+            client,
+            ops_test.model.info.name,
+            pod_name,
+            container_name,
+            PATRONI_CONF_DEFAULT_PATH,
+            temp_path,
+        )
+
+        with open(temp_path, "r+") as f:
+            unit_number = int(unit.name.split("/")[1])
+            print(unit_number)
+            if role == "leader" or role == "sync_standby":
+                nosync_value = (
+                    unit_number > 1
+                )  # Keep only the two first units as candidates for sync_standby role.
+            if role == "replica":
+                nosync_value = (
+                    unit_number == 0
+                )  # Mark the first unit as not a candidate for sync_standby role.
+            # print(f"{unit_number} - {f.read()} - 1")
+            f.seek(0)
+            data = yaml.safe_load(f)
+            if "tags" in data:
+                del data["tags"]
+            f.seek(0)
+            f.write(yaml.dump(data))
+            f.seek(0)
+
+        # with open(temp_path, "r") as f:
+        #     data = yaml.safe_load(f)
+        #     if "tags" in data:
+        #         print(f'{pod_name}: {data["tags"]["nosync"]}')
+
+        copy_file_into_pod(
+            client,
+            ops_test.model.info.name,
+            pod_name,
+            container_name,
+            temp_path,
+            PATRONI_CONF_DEFAULT_PATH,
+        )
+
+        unit_address = await get_unit_address(ops_test, unit.name)
+        response = requests.post(f"http://{unit_address}:8008/reload")
+        print(f"response: {response}")
+        assert response.status_code == 202
+
+        # Remove temporary file from machine.
+        os.remove(temp_path)
+
+
+async def switchover(ops_test: OpsTest, current_primary: str, candidate: str = None) -> None:
+    """Trigger a switchover.
+
+    Args:
+        ops_test: The ops test framework instance.
+        current_primary: The current primary unit.
+        candidate: The unit that should be elected the new primary.
+    """
+    primary_ip = await get_unit_address(ops_test, current_primary)
+    response = requests.get(f"http://{primary_ip}:8008/cluster")
+    assert response.status_code == 200
+    standbys = [
+        member for member in response.json()["members"] if member["role"] == "sync_standby"
+    ]
+    assert len(standbys)
+    if candidate not in standbys:
+        candidate = standbys[0]["name"]
+
+    response = requests.post(
+        f"http://{primary_ip}:8008/switchover",
+        json={
+            "leader": current_primary.replace("/", "-"),
+            "candidate": candidate.replace("/", "-") if candidate else None,
+        },
+    )
+    assert response.status_code == 200
+    application_name = current_primary.split("/")[0]
+    minority_count = len(ops_test.model.applications[application_name].units) // 2
+    for attempt in Retrying(stop=stop_after_attempt(30), wait=wait_fixed(2), reraise=True):
+        with attempt:
+            response = requests.get(f"http://{primary_ip}:8008/cluster")
+            assert response.status_code == 200
+            standbys = len(
+                [
+                    member
+                    for member in response.json()["members"]
+                    if member["role"] == "sync_standby"
+                ]
+            )
+            assert standbys >= minority_count
 
 
 async def wait_for_idle_on_blocked(
