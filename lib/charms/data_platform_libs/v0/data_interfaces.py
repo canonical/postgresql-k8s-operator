@@ -306,7 +306,7 @@ from ops.charm import (
     RelationEvent,
 )
 from ops.framework import EventSource, Object
-from ops.model import Application, Relation, Unit
+from ops.model import Application, ModelError, Relation, Unit
 
 # The unique Charmhub library identifier, never change it
 LIBID = "6c3e6b6680d64e9c89e611d1a15f65be"
@@ -316,7 +316,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 15
+LIBPATCH = 16
 
 PYDEPS = ["ops>=2.0.0"]
 
@@ -569,7 +569,7 @@ class DataRequires(Object, ABC):
         try:
             _ = repr(relation.data)
             return True
-        except RuntimeError:
+        except (RuntimeError, ModelError):
             return False
 
     @staticmethod
