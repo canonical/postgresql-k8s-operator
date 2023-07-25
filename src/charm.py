@@ -22,6 +22,7 @@ from lightkube import ApiError, Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Endpoints, Pod, Service
+from ops import JujuVersion
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -76,6 +77,9 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def __init__(self, *args):
         super().__init__(*args)
+
+        self.app_secrets = None
+        self.unit_secrets = None
 
         self._postgresql_service = "postgresql"
         self.pgbackrest_server_service = "pgbackrest server"
@@ -155,29 +159,117 @@ class PostgresqlOperatorCharm(CharmBase):
 
         return relation.data[self.unit]
 
+    def _get_secret_from_juju(self, scope: str, key: str) -> Optional[str]:
+        """Retrieve and return the secret from the juju secret storage."""
+        if scope == "unit":
+            secret_id = self.unit_peer_data.get("secret-id")
+
+            if not self.unit_secrets and not secret_id:
+                logger.debug("Getting a secret when no secrets added in juju")
+                return None
+
+            if not self.unit_secrets:
+                secret = self.model.get_secret(id=secret_id)
+                content = secret.get_content()
+                self.unit_secrets = content
+
+            logger.debug(f"Retrieved secret {key} for unit")
+            return self.unit_secrets.get(key)
+
+        secret_id = self.app_peer_data.get("secret-id")
+
+        if not self.app_secrets and not secret_id:
+            logger.debug("Getting a secret when no secrets added in juju")
+            return None
+
+        if not self.app_secrets:
+            secret = self.model.get_secret(id=secret_id)
+            content = secret.get_content()
+            self.app_secrets = content
+
+        logger.debug(f"Retrieved secret {key} for app")
+        return self.app_secrets.get(key)
+
+    def _get_secret_from_databag(self, scope: str, key: str) -> Optional[str]:
+        """Retrieve and return the secret from the peer relation databag."""
+        if scope == "unit":
+            return self.unit_peer_data.get(key)
+
+        return self.app_peer_data.get(key)
+
     def get_secret(self, scope: str, key: str) -> Optional[str]:
         """Get secret from the secret storage."""
+        if scope not in ["unit", "app"]:
+            raise RuntimeError(f"Invalid secret scope: {scope}")
+
+        if JujuVersion.from_environ().has_secrets:
+            return self._get_secret_from_juju(scope, key)
+
+        return self._get_secret_from_databag(scope, key)
+
+    def _set_secret_in_databag(self, scope: str, key: str, value: str) -> None:
+        """Set secret in the peer relation databag."""
+        if not value:
+            if scope == "unit":
+                del self.unit_peer_data[key]
+            else:
+                del self.app_peer_data[key]
+            return
+
         if scope == "unit":
-            return self.unit_peer_data.get(key, None)
-        elif scope == "app":
-            return self.app_peer_data.get(key, None)
+            self.unit_peer_data.update({key: value})
+            return
+
+        self.app_peer_data.update({key: value})
+
+    def _set_secret_in_juju(self, scope: str, key: str, value: str) -> None:
+        """Set the secret in the juju secret storage."""
+        if scope == "unit":
+            secret_id = self.unit_peer_data.get("secret-id")
         else:
-            raise RuntimeError("Unknown secret scope.")
+            secret_id = self.app_peer_data.get("secret-id")
+
+        if secret_id:
+            secret = self.model.get_secret(id=secret_id)
+            content = secret.get_content()
+
+            if not value:
+                del content[key]
+            else:
+                content[key] = value
+
+            secret.set_content(content)
+            logger.debug(f"Updated {scope} secret {secret_id} for {key}")
+        else:
+            content = {
+                key: value,
+            }
+
+            if scope == "unit":
+                secret = self.unit.add_secret(content)
+                self.unit_peer_data["secret-id"] = secret.id
+            else:
+                secret = self.app.add_secret(content)
+                self.app_peer_data["secret-id"] = secret.id
+            logger.debug(f"Added {scope} secret {secret_id} for {key}")
+
+        if scope == "unit":
+            self.unit_secrets = content
+        else:
+            self.app_secrets = content
 
     def set_secret(self, scope: str, key: str, value: Optional[str]) -> None:
-        """Get secret from the secret storage."""
-        if scope == "unit":
-            if not value:
-                del self.unit_peer_data[key]
-                return
-            self.unit_peer_data.update({key: value})
-        elif scope == "app":
-            if not value:
-                del self.app_peer_data[key]
-                return
-            self.app_peer_data.update({key: value})
-        else:
-            raise RuntimeError("Unknown secret scope.")
+        """Set a secret in the secret storage."""
+        if scope not in ["unit", "app"]:
+            raise RuntimeError(f"Invalid secret scope: {scope}")
+
+        if scope == "app" and not self.unit.is_leader():
+            raise RuntimeError("Can only set app secrets on the leader unit")
+
+        if JujuVersion.from_environ().has_secrets:
+            return self._set_secret_in_juju(scope, key, value)
+
+        return self._set_secret_in_databag(scope, key, value)
 
     @property
     def is_cluster_initialised(self) -> bool:
