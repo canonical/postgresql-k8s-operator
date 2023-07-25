@@ -109,8 +109,6 @@ jobs:
           channel: "1.27-strict/stable"
           bootstrap-options: "--agent-version ${{ matrix.agent-versions }}"
           juju-channel: "${{ env.channel }}"
-      - name: Pin charmcraft revision # Needed due to https://github.com/canonical/charmcraft/issues/1179.
-        run: snap refresh charmcraft --revision 1424
       - name: Download packed charm(s)
         uses: actions/download-artifact@v3
         with:
