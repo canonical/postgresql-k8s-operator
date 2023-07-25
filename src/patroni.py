@@ -286,7 +286,7 @@ class Patroni:
             enable_tls=enable_tls,
             endpoint=self._endpoint,
             endpoints=self._endpoints,
-            is_creating_backup=(True if self._charm.unit.name == "postgresql-k8s/0" else False),
+            is_creating_backup=is_creating_backup,
             is_no_sync_member=is_no_sync_member,
             namespace=self._namespace,
             storage_path=self._storage_path,

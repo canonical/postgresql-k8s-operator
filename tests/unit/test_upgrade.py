@@ -39,7 +39,8 @@ class TestUpgrade(unittest.TestCase):
         # Test when there is no list of sync-standbys in the relation data.
         self.assertFalse(self.charm.upgrade.is_no_sync_member)
 
-        # Test when the current unit is not part of the list of sync-standbys from the relation data.
+        # Test when the current unit is not part of the list of sync-standbys
+        # from the relation data.
         with self.harness.hooks_disabled():
             self.harness.update_relation_data(
                 self.upgrade_relation_id,
