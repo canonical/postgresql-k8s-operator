@@ -50,7 +50,6 @@ optional = true
 
 [tool.poetry.group.unit.dependencies]
 coverage = {extras = ["toml"], version = "7.2.7"}
-pydantic = "1.10"
 pytest = "7.4.0"
 pytest-asyncio = "0.21.1"
 psycopg2 = {version = "2.9.6", extras = ["binary"]}
