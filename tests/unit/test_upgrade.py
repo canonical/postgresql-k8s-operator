@@ -3,6 +3,7 @@
 import unittest
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
+import tenacity
 from charms.data_platform_libs.v0.upgrade import (
     ClusterNotReadyError,
     KubernetesClientError,
@@ -74,11 +75,16 @@ class TestUpgrade(unittest.TestCase):
         ]
         mock_logging.assert_has_calls(calls)
 
+    @patch("charms.data_platform_libs.v0.upgrade.DataUpgrade.set_unit_failed")
     @patch("charms.data_platform_libs.v0.upgrade.DataUpgrade.set_unit_completed")
+    @patch("charm.Patroni.cluster_members", new_callable=PropertyMock)
+    @patch("upgrade.wait_fixed", return_value=tenacity.wait_fixed(0))
     @patch("charm.Patroni.member_started", new_callable=PropertyMock)
-    def test_on_postgresql_pebble_ready(self, _member_started, _set_unit_completed):
+    def test_on_postgresql_pebble_ready(
+        self, _member_started, _, _cluster_members, _set_unit_completed, _set_unit_failed
+    ):
         # Set some side effects to test multiple situations.
-        _member_started.side_effect = [False, True]
+        _member_started.side_effect = [False, True, True]
 
         # Test when the unit status is different from "upgrading".
         mock_event = MagicMock()
@@ -86,6 +92,7 @@ class TestUpgrade(unittest.TestCase):
         _member_started.assert_not_called()
         mock_event.defer.assert_not_called()
         _set_unit_completed.assert_not_called()
+        _set_unit_failed.assert_not_called()
 
         # Test when the unit status is equal to "upgrading", but the member hasn't started yet.
         with self.harness.hooks_disabled():
@@ -96,14 +103,32 @@ class TestUpgrade(unittest.TestCase):
         _member_started.assert_called_once()
         mock_event.defer.assert_called_once()
         _set_unit_completed.assert_not_called()
+        _set_unit_failed.assert_not_called()
 
-        # Test when the unit status is equal to "upgrading", and the member has already started.
+        # Test when the unit status is equal to "upgrading", and the member has already started
+        # but not joined the cluster yet.
         _member_started.reset_mock()
         mock_event.defer.reset_mock()
+        _cluster_members.return_value = ["postgresql-k8s-1"]
+        self.charm.upgrade._on_postgresql_pebble_ready(mock_event)
+        _member_started.assert_called_once()
+        mock_event.defer.assert_not_called()
+        _set_unit_completed.assert_not_called()
+        _set_unit_failed.assert_called_once()
+
+        # Test when the member has already joined the cluster.
+        _member_started.reset_mock()
+        _set_unit_failed.reset_mock()
+        mock_event.defer.reset_mock()
+        _cluster_members.return_value = [
+            self.charm.unit.name.replace("/", "-"),
+            "postgresql-k8s-1",
+        ]
         self.charm.upgrade._on_postgresql_pebble_ready(mock_event)
         _member_started.assert_called_once()
         mock_event.defer.assert_not_called()
         _set_unit_completed.assert_called_once()
+        _set_unit_failed.assert_not_called()
 
     @patch("charm.PostgresqlOperatorCharm.update_config")
     def test_on_upgrade_changed(self, _update_config):

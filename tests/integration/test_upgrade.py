@@ -44,7 +44,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
 
-@pytest.mark.parametrize("first_unit_role", ["replica"])  # , "sync_standby", "replica"
+@pytest.mark.parametrize("first_unit_role", ["leader"])  # , "sync_standby", "replica"
 async def test_upgrade(ops_test: OpsTest, first_unit_role) -> None:
     # Change the role of the first unit if needed for this test run.
     app = await app_name(ops_test)

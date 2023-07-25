@@ -336,6 +336,5 @@ class Patroni:
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
             with attempt:
                 new_primary = self.get_primary()
-                print(new_primary)
                 if (candidate is not None and new_primary != candidate) or new_primary == primary:
                     raise SwitchoverFailedError("primary was not switched correctly")

@@ -413,6 +413,8 @@ Juju Version: {str(juju_version)}
             self._change_connectivity_to_database(connectivity=False)
 
         self.charm.unit.status = MaintenanceStatus("creating backup")
+        # Set flag due to missing in progress backups on JSON output
+        # (reference: https://github.com/pgbackrest/pgbackrest/issues/2007)
         self.charm.update_config(is_creating_backup=True)
 
         try:

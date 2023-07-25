@@ -10,12 +10,15 @@ from charms.data_platform_libs.v0.upgrade import (
     DataUpgrade,
     DependencyModel,
     KubernetesClientError,
+    VersionError,
 )
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
 from lightkube.resources.apps_v1 import StatefulSet
-from ops.charm import RelationChangedEvent, WorkloadEvent
+from ops.charm import WorkloadEvent
+from ops.model import BlockedStatus
 from pydantic import BaseModel
+from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 from typing_extensions import override
 
 from patroni import SwitchoverFailedError
@@ -44,6 +47,7 @@ class PostgreSQLUpgrade(DataUpgrade):
         super().__init__(charm, model, **kwargs)
         self.charm = charm
 
+        self.framework.observe(self.charm.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(self.charm.on.upgrade_relation_changed, self._on_upgrade_changed)
         self.framework.observe(
             getattr(self.charm.on, "postgresql_pebble_ready"), self._on_postgresql_pebble_ready
@@ -73,27 +77,57 @@ class PostgreSQLUpgrade(DataUpgrade):
         Confirm that unit is healthy and set unit completed.
         """
         if not self.peer_relation:
-            logger.error("Deferring on_pebble_ready: no upgrade peer relation yet")
+            logger.debug("Deferring on_pebble_ready: no upgrade peer relation yet")
             event.defer()
             return
 
         if self.peer_relation.data[self.charm.unit].get("state") != "upgrading":
             return
 
+        # Don't mark the upgrade of this unit as completed until Patroni reports the
+        # workload is ready.
         if not self.charm._patroni.member_started:
-            logger.error("Deferring on_pebble_ready: Patroni has not started yet")
+            logger.debug("Deferring on_pebble_ready: Patroni has not started yet")
             event.defer()
             return
 
-        logger.error("called set_unit_completed")
-        self.set_unit_completed()
+        try:
+            for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(10)):
+                with attempt:
+                    if (
+                        self.charm.unit.name.replace("/", "-")
+                        in self.charm._patroni.cluster_members
+                    ):
+                        logger.debug("Upgraded unit is healthy. Set upgrade state to `completed`")
+                        self.set_unit_completed()
+                    else:
+                        logger.debug(
+                            "Instance not yet back in the cluster."
+                            f" Retry {attempt.retry_state.attempt_number}/6"
+                        )
+                        raise Exception
+        except RetryError:
+            logger.error("Upgraded unit is not part of the cluster")
+            self.set_unit_failed()
+            self.charm.unit.status = BlockedStatus(
+                "upgrade failed. Check logs for rollback instruction"
+            )
 
-    def _on_upgrade_changed(self, event: RelationChangedEvent) -> None:
+    def _on_upgrade_changed(self, _) -> None:
+        """Update the Patroni nosync tag in the unit if needed."""
         if not self.peer_relation:
-            event.defer()
             return
 
         self.charm.update_config()
+
+    def _on_upgrade_charm(self, _) -> None:
+        """Check whether upgrade is supported."""
+        if self.charm.unit.name == f"{self.charm.app.name}/{self.charm.app.planned_units() - 1}":
+            try:
+                self._upgrade_supported_check()
+            except VersionError as e:  # not ready if not passed check
+                logger.error(e)
+                self.set_unit_failed()
 
     @override
     def pre_upgrade_check(self) -> None:
@@ -104,28 +138,35 @@ class PostgreSQLUpgrade(DataUpgrade):
         Raises:
             :class:`ClusterNotReadyError`: if cluster is not ready to upgrade
         """
+        default_message = "Pre-upgrade check failed and cannot safely upgrade"
         if not self.charm._patroni.are_all_members_ready():
             raise ClusterNotReadyError(
-                "not all members are ready yet", "wait for all units to become active/idle"
+                default_message,
+                "not all members are ready yet",
+                "wait for all units to become active/idle",
             )
 
         if self.charm._patroni.is_creating_backup:
             raise ClusterNotReadyError(
+                default_message,
                 "a backup is being created",
                 "wait for the backup creation to finish before starting the upgrade",
             )
 
+        # If the first unit is already the primary we don't need to do any
+        # switchover.
         primary_unit_name = self.charm._patroni.get_primary(unit_name_pattern=True)
         unit_zero_name = f"{self.charm.app.name}/0"
         if primary_unit_name == unit_zero_name:
             self.peer_relation.data[self.charm.app].update({"sync-standbys": ""})
-            self._set_rolling_update_partition(self.charm.app.planned_units() - 1)
+            self._set_first_rolling_update_partition()
             return
 
         sync_standby_names = self.charm._patroni.get_sync_standby_names()
         if len(sync_standby_names) == 0:
             raise ClusterNotReadyError("invalid number of sync nodes", "no action!")
 
+        # If the first unit is a sync-standby we can switchover to it.
         if unit_zero_name in sync_standby_names:
             try:
                 self.peer_relation.data[self.charm.app].update({"sync-standbys": ""})
@@ -134,18 +175,25 @@ class PostgreSQLUpgrade(DataUpgrade):
                 raise ClusterNotReadyError(
                     str(e), f"try to switchover manually to {unit_zero_name}"
                 )
-            self._set_rolling_update_partition(self.charm.app.planned_units() - 1)
+            self._set_first_rolling_update_partition()
             return
 
+        # If the first unit is not one of the sync-standbys, make it one and request
+        # the action to be executed again (because relation data need to be propagated
+        # to the other units to make some of them simple replicas and enable the fist
+        # unit to become a sync-standby before we can trigger a switchover to it).
         self._set_list_of_sync_standbys()
         raise ClusterNotReadyError(
+            default_message,
             f"{unit_zero_name} needs to be a synchronous standby in order to become the primary before the upgrade process can start",
             f"wait 30 seconds for {unit_zero_name} and run this action again",
         )
 
     def _set_list_of_sync_standbys(self) -> None:
+        """Set the list of desired sync-standbys in the relation data."""
         if self.charm.app.planned_units() > 2:
             sync_standbys = self.charm._patroni.get_sync_standby_names()
+            # Include the first unit as one of the sync-standbys.
             unit_to_become_sync_standby = f"{self.charm.app.name}/0"
             if unit_to_become_sync_standby not in set(sync_standbys):
                 if len(sync_standbys) > 0:
@@ -158,6 +206,7 @@ class PostgreSQLUpgrade(DataUpgrade):
 
     @override
     def _set_rolling_update_partition(self, partition: int) -> None:
+        """Set the rolling update partition to a specific value."""
         try:
             patch = {"spec": {"updateStrategy": {"rollingUpdate": {"partition": partition}}}}
             Client().patch(
@@ -173,3 +222,10 @@ class PostgreSQLUpgrade(DataUpgrade):
             else:
                 cause = str(e)
             raise KubernetesClientError("Kubernetes StatefulSet patch failed", cause)
+
+    def _set_first_rolling_update_partition(self) -> None:
+        """Set the initial rolling update partition value."""
+        try:
+            self._set_rolling_update_partition(self.charm.app.planned_units() - 1)
+        except KubernetesClientError as e:
+            raise ClusterNotReadyError(e.message, e.cause)
