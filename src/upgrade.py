@@ -47,7 +47,7 @@ class PostgreSQLUpgrade(DataUpgrade):
         super().__init__(charm, model, **kwargs)
         self.charm = charm
 
-        self.framework.observe(self.charm.on.upgrade_charm, self._on_upgrade_charm)
+        self.framework.observe(self.charm.on.upgrade_charm, self._on_upgrade_k8s_charm)
         self.framework.observe(self.charm.on.upgrade_relation_changed, self._on_upgrade_changed)
         self.framework.observe(
             getattr(self.charm.on, "postgresql_pebble_ready"), self._on_postgresql_pebble_ready
@@ -120,7 +120,7 @@ class PostgreSQLUpgrade(DataUpgrade):
 
         self.charm.update_config()
 
-    def _on_upgrade_charm(self, _) -> None:
+    def _on_upgrade_k8s_charm(self, _) -> None:
         """Check whether upgrade is supported."""
         if self.charm.unit.name == f"{self.charm.app.name}/{self.charm.app.planned_units() - 1}":
             try:
