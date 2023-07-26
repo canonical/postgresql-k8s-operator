@@ -129,7 +129,7 @@ class PostgreSQL:
                     sql.Identifier(database)
                 )
             )
-            for user_to_grant_access in [user] + self.system_users:
+            for user_to_grant_access in [user, "admin"] + self.system_users:
                 cursor.execute(
                     sql.SQL("GRANT ALL PRIVILEGES ON DATABASE {} TO {};").format(
                         sql.Identifier(database), sql.Identifier(user_to_grant_access)
@@ -204,11 +204,9 @@ class PostgreSQL:
                     user_definition = "ALTER ROLE {}"
                 else:
                     user_definition = "CREATE ROLE {}"
-                if password is not None:
-                    user_definition += f"WITH LOGIN{' SUPERUSER' if admin else ''} ENCRYPTED PASSWORD '{password}'{'IN ROLE admin CREATEDB CREATEROLE' if admin_role else ''}"
+                user_definition += f"WITH LOGIN{' SUPERUSER' if admin else ''} ENCRYPTED PASSWORD '{password}'{'IN ROLE admin CREATEDB CREATEROLE' if admin_role else ''}"
                 if privileges:
                     user_definition += f' {" ".join(privileges)}'
-                logger.error(f"user_definition: {user_definition}")
                 cursor.execute(sql.SQL(f"{user_definition};").format(sql.Identifier(user)))
 
                 # Add extra user roles to the new user.
@@ -354,19 +352,21 @@ class PostgreSQL:
         """Set up postgres database with the right permissions."""
         connection = None
         try:
+            self.create_user(
+                "admin",
+                extra_user_roles="pg_read_all_data,pg_read_all_settings,pg_read_all_stats,pg_stat_scan_tables,pg_monitor,pg_signal_backend",
+            )
             with self._connect_to_database() as connection, connection.cursor() as cursor:
                 # Allow access to the postgres database only to the system users.
                 cursor.execute("REVOKE ALL PRIVILEGES ON DATABASE postgres FROM PUBLIC;")
+                cursor.execute("REVOKE CREATE ON SCHEMA public FROM PUBLIC;")
                 for user in self.system_users:
                     cursor.execute(
                         sql.SQL("GRANT ALL PRIVILEGES ON DATABASE postgres TO {};").format(
                             sql.Identifier(user)
                         )
                     )
-            self.create_user(
-                "admin",
-                extra_user_roles="pg_read_all_data,pg_write_all_data,pg_read_all_settings,pg_read_all_stats,pg_stat_scan_tables,pg_monitor,pg_signal_backend",
-            )
+                cursor.execute("GRANT CONNECT ON DATABASE postgres TO admin;")
         except psycopg2.Error as e:
             logger.error(f"Failed to set up databases: {e}")
             raise PostgreSQLDatabasesSetupError()

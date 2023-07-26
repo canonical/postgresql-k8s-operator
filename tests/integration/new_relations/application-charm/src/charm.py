@@ -22,7 +22,7 @@ from ops.model import ActiveStatus
 logger = logging.getLogger(__name__)
 
 # Extra roles that this application needs when interacting with the database.
-EXTRA_USER_ROLES = "admin"
+EXTRA_USER_ROLES = "CREATEDB,CREATEROLE"
 
 
 class ApplicationCharm(CharmBase):
