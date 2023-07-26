@@ -26,8 +26,8 @@ from ops import JujuVersion
 from ops.charm import (
     ActionEvent,
     CharmBase,
+    HookEvent,
     LeaderElectedEvent,
-    RelationChangedEvent,
     RelationDepartedEvent,
     WorkloadEvent,
 )
@@ -93,6 +93,7 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
+        self.framework.observe(self.on.secret_changed, self._on_peer_relation_changed)
         self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
         self.framework.observe(self.on.stop, self._on_stop)
@@ -343,7 +344,7 @@ class PostgresqlOperatorCharm(CharmBase):
         self.postgresql_client_relation.update_read_only_endpoint()
         self._remove_from_endpoints(endpoints_to_remove)
 
-    def _on_peer_relation_changed(self, event: RelationChangedEvent) -> None:
+    def _on_peer_relation_changed(self, event: HookEvent) -> None:
         """Reconfigure cluster members."""
         # The cluster must be initialized first in the leader unit
         # before any other member joins the cluster.
