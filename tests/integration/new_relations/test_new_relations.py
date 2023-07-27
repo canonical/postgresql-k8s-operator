@@ -419,7 +419,7 @@ async def test_admin_role(ops_test: OpsTest):
         await ops_test.model.add_relation(DATA_INTEGRATOR_APP_NAME, DATABASE_APP_NAME)
         await ops_test.model.wait_for_idle(apps=all_app_names, status="active")
 
-    # Check that the user cannot access other databases.
+    # Check that the user can access all the databases.
     for database in [
         "postgres",
         "application_first_database",

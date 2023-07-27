@@ -192,11 +192,6 @@ class PostgreSQL:
                         for extra_user_role in extra_user_roles
                         if extra_user_role not in roles and extra_user_role != "admin"
                     }
-                    if "SUPERUSER" in map(str.upper, privileges):
-                        logger.error(
-                            "Failed to create user due to invalid extra-user-role: SUPERUSER"
-                        )
-                        raise PostgreSQLCreateUserError()
 
                 # Create or update the user.
                 cursor.execute(f"SELECT TRUE FROM pg_roles WHERE rolname='{user}';")
