@@ -6,7 +6,7 @@ import logging
 import pytest as pytest
 import requests
 from pytest_operator.plugin import OpsTest
-from tenacity import Retrying, stop_after_delay, wait_exponential
+from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from tests.integration.helpers import (
     DATABASE_APP_NAME,
@@ -76,9 +76,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         # being used in a later step.
         await enable_connections_logging(ops_test, primary)
 
-        for attempt in Retrying(
-            stop=stop_after_delay(60), wait=wait_exponential(multiplier=1, min=2, max=30)
-        ):
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(2), reraise=True):
             with attempt:
                 # Promote the replica to primary.
                 await run_command_on_unit(
@@ -119,9 +117,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         # Restart the initial primary and check the logs to ensure TLS is being used by pg_rewind.
         logger.info(f"starting database on {primary}")
         await run_command_on_unit(ops_test, primary, "/charm/bin/pebble start postgresql")
-        for attempt in Retrying(
-            stop=stop_after_delay(60 * 3), wait=wait_exponential(multiplier=1, min=2, max=30)
-        ):
+        for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(2), reraise=True):
             with attempt:
                 logger.info(f"checking if pg_rewind used TLS on {replica}")
                 logs = await run_command_on_unit(

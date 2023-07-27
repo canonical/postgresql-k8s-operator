@@ -208,6 +208,8 @@ class PostgresqlOperatorCharm(CharmBase):
         if not key:
             return
 
+        key = SECRET_KEY_OVERRIDES.get(key, key)
+
         if self._juju_secrets_get(scope):
             secret_cache = self.secrets[scope].get(SECRET_CACHE_LABEL)
             if secret_cache:
@@ -227,16 +229,9 @@ class PostgresqlOperatorCharm(CharmBase):
         if juju_version.has_secrets:
             return self._juju_secret_get_key(scope, key)
         if scope == UNIT_SCOPE:
-            result = self.unit_peer_data.get(key, None)
+            return self.unit_peer_data.get(key, None)
         elif scope == APP_SCOPE:
-            result = self.app_peer_data.get(key, None)
-
-        # Handle renamed keys
-        if not result and key in SECRET_KEY_OVERRIDES:
-            result = self.get_secret(scope, SECRET_KEY_OVERRIDES[key])
-            if result:
-                self.set_secret(scope, key, result)
-        return result
+            return self.app_peer_data.get(key, None)
 
     def _juju_secret_set(self, scope: str, key: str, value: str) -> str:
         """Helper function setting Juju secret."""
@@ -245,6 +240,8 @@ class PostgresqlOperatorCharm(CharmBase):
         elif scope == APP_SCOPE:
             peer_data = self.app_peer_data
         self._juju_secrets_get(scope)
+
+        key = SECRET_KEY_OVERRIDES.get(key, key)
 
         secret = self.secrets[scope].get(SECRET_LABEL)
 
@@ -302,6 +299,8 @@ class PostgresqlOperatorCharm(CharmBase):
     def _juju_secret_remove(self, scope: str, key: str) -> None:
         """Remove a Juju 3.x secret."""
         self._juju_secrets_get(scope)
+
+        key = SECRET_KEY_OVERRIDES.get(key, key)
 
         secret = self.secrets[scope].get(SECRET_LABEL)
         if not secret:
