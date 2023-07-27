@@ -35,3 +35,5 @@ SECRET_DELETED_LABEL = "None"
 
 APP_SCOPE = "app"
 UNIT_SCOPE = "unit"
+
+SECRET_KEY_OVERRIDES = {"cauth": "ca"}
