@@ -45,7 +45,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version.
-LIBPATCH = 8
+LIBPATCH = 7
 
 logger = logging.getLogger(__name__)
 SCOPE = "unit"
@@ -118,7 +118,7 @@ class PostgreSQLTLS(Object):
 
     def _on_tls_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Disable TLS when TLS relation broken."""
-        self.charm.set_secret(SCOPE, "cauth", None)
+        self.charm.set_secret(SCOPE, "ca", None)
         self.charm.set_secret(SCOPE, "cert", None)
         self.charm.set_secret(SCOPE, "chain", None)
         if not self.charm.update_config():
@@ -138,7 +138,7 @@ class PostgreSQLTLS(Object):
             SCOPE, "chain", "\n".join(event.chain) if event.chain is not None else None
         )
         self.charm.set_secret(SCOPE, "cert", event.certificate)
-        self.charm.set_secret(SCOPE, "cauth", event.ca)
+        self.charm.set_secret(SCOPE, "ca", event.ca)
 
         try:
             if not self.charm.push_tls_files_to_workload():
@@ -221,7 +221,7 @@ class PostgreSQLTLS(Object):
         — Key file should have private key.
         — Certificate file should have certificate without certificate chain.
         """
-        ca = self.charm.get_secret(SCOPE, "cauth")
+        ca = self.charm.get_secret(SCOPE, "ca")
         chain = self.charm.get_secret(SCOPE, "chain")
         ca_file = chain if chain else ca
 

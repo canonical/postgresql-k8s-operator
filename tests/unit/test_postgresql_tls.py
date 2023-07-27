@@ -19,7 +19,7 @@ SCOPE = "unit"
 class TestPostgreSQLTLS(unittest.TestCase):
     def delete_secrets(self) -> None:
         # Delete TLS secrets from the secret store.
-        self.charm.set_secret(SCOPE, "cauth", None)
+        self.charm.set_secret(SCOPE, "ca", None)
         self.charm.set_secret(SCOPE, "cert", None)
         self.charm.set_secret(SCOPE, "chain", None)
 
@@ -42,7 +42,7 @@ class TestPostgreSQLTLS(unittest.TestCase):
 
     def no_secrets(self, include_certificate: bool = True) -> bool:
         # Check whether there is no TLS secrets in the secret store.
-        secrets = [self.charm.get_secret(SCOPE, "cauth"), self.charm.get_secret(SCOPE, "chain")]
+        secrets = [self.charm.get_secret(SCOPE, "ca"), self.charm.get_secret(SCOPE, "chain")]
         if include_certificate:
             secrets.append(self.charm.get_secret(SCOPE, "cert"))
         return all(secret is None for secret in secrets)
@@ -55,7 +55,7 @@ class TestPostgreSQLTLS(unittest.TestCase):
 
     def set_secrets(self) -> None:
         # Set some TLS secrets in the secret store.
-        self.charm.set_secret(SCOPE, "cauth", "test-ca")
+        self.charm.set_secret(SCOPE, "ca", "test-ca")
         self.charm.set_secret(SCOPE, "cert", "test-cert")
         self.charm.set_secret(SCOPE, "chain", "test-chain")
 
@@ -151,7 +151,7 @@ class TestPostgreSQLTLS(unittest.TestCase):
         # Test providing CSR.
         self.charm.set_secret(SCOPE, "csr", "test-csr\n")
         self.emit_certificate_available_event()
-        self.assertEqual(self.charm.get_secret(SCOPE, "cauth"), "test-ca")
+        self.assertEqual(self.charm.get_secret(SCOPE, "ca"), "test-ca")
         self.assertEqual(self.charm.get_secret(SCOPE, "cert"), "test-cert")
         self.assertEqual(
             self.charm.get_secret(SCOPE, "chain"),
@@ -216,7 +216,7 @@ class TestPostgreSQLTLS(unittest.TestCase):
 
         # Test with TLS files available.
         self.charm.set_secret(SCOPE, "key", "test-key")
-        self.charm.set_secret(SCOPE, "cauth", "test-ca")
+        self.charm.set_secret(SCOPE, "ca", "test-ca")
         self.charm.set_secret(SCOPE, "cert", "test-cert")
         key, ca, certificate = self.charm.tls.get_tls_files()
         self.assertEqual(key, "test-key")
