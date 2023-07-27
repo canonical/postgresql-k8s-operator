@@ -60,6 +60,7 @@ from constants import (
     SECRET_CACHE_LABEL,
     SECRET_DELETED_LABEL,
     SECRET_INTERNAL_LABEL,
+    SECRET_KEY_OVERRIDES,
     SECRET_LABEL,
     SYSTEM_USERS,
     TLS_CA_FILE,
@@ -226,9 +227,16 @@ class PostgresqlOperatorCharm(CharmBase):
         if juju_version.has_secrets:
             return self._juju_secret_get_key(scope, key)
         if scope == UNIT_SCOPE:
-            return self.unit_peer_data.get(key, None)
+            result = self.unit_peer_data.get(key, None)
         elif scope == APP_SCOPE:
-            return self.app_peer_data.get(key, None)
+            result = self.app_peer_data.get(key, None)
+
+        # Handle renamed keys
+        if not result and key in SECRET_KEY_OVERRIDES:
+            result = self.get_secret(scope, SECRET_KEY_OVERRIDES[key])
+            if result:
+                self.set_secret(scope, key, result)
+        return result
 
     def _juju_secret_set(self, scope: str, key: str, value: str) -> str:
         """Helper function setting Juju secret."""
