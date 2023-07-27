@@ -27,3 +27,13 @@ POSTGRES_LOG_FILES = [
 ]
 # List of system usernames needed for correct work of the charm/workload.
 SYSTEM_USERS = [BACKUP_USER, REPLICATION_USER, REWIND_USER, USER, MONITORING_USER]
+
+SECRET_LABEL = "secret"
+SECRET_CACHE_LABEL = "cache"
+SECRET_INTERNAL_LABEL = "internal-secret"
+SECRET_DELETED_LABEL = "None"
+
+APP_SCOPE = "app"
+UNIT_SCOPE = "unit"
+
+SECRET_KEY_OVERRIDES = {"cauth": "ca"}
