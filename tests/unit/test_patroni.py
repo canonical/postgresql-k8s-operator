@@ -3,7 +3,7 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import PropertyMock, mock_open, patch
+from unittest.mock import MagicMock, PropertyMock, mock_open, patch
 
 import tenacity
 from jinja2 import Template
@@ -29,7 +29,7 @@ class TestPatroni(unittest.TestCase):
         self.patroni = Patroni(
             self.charm,
             "postgresql-k8s-0",
-            ["postgresql-k8s-0"],
+            ["postgresql-k8s-0", "postgresql-k8s-1", "postgresql-k8s-2"],
             "postgresql-k8s-primary.dev.svc.cluster.local",
             "test-model",
             STORAGE_PATH,
@@ -78,6 +78,22 @@ class TestPatroni(unittest.TestCase):
             "members": [{"name": "postgresql-k8s-0"}, {"name": "postgresql-k8s-1"}]
         }
         self.assertFalse(self.patroni.is_creating_backup)
+
+    @patch("requests.get")
+    @patch("charm.Patroni.get_primary")
+    @patch("patroni.stop_after_delay", return_value=stop_after_delay(0))
+    def test_is_replication_healthy(self, _, __, _get):
+        # Test when replication is healthy.
+        _get.return_value.status_code = 200
+        self.assertTrue(self.patroni.is_replication_healthy)
+
+        # Test when replication is not healthy.
+        _get.side_effect = [
+            MagicMock(status_code=200),
+            MagicMock(status_code=200),
+            MagicMock(status_code=503),
+        ]
+        self.assertFalse(self.patroni.is_replication_healthy)
 
     @patch("os.chmod")
     @patch("os.chown")

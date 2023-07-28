@@ -10,7 +10,6 @@ from charms.data_platform_libs.v0.upgrade import (
     DataUpgrade,
     DependencyModel,
     KubernetesClientError,
-    VersionError,
 )
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
@@ -30,6 +29,7 @@ class PostgreSQLDependencyModel(BaseModel):
     """PostgreSQL dependencies model."""
 
     charm: DependencyModel
+    rock: DependencyModel
 
 
 def get_postgresql_k8s_dependencies_model() -> PostgreSQLDependencyModel:
@@ -47,7 +47,6 @@ class PostgreSQLUpgrade(DataUpgrade):
         super().__init__(charm, model, **kwargs)
         self.charm = charm
 
-        self.framework.observe(self.charm.on.upgrade_charm, self._on_upgrade_k8s_charm)
         self.framework.observe(self.charm.on.upgrade_relation_changed, self._on_upgrade_changed)
         self.framework.observe(
             getattr(self.charm.on, "postgresql_pebble_ready"), self._on_postgresql_pebble_ready
@@ -97,17 +96,18 @@ class PostgreSQLUpgrade(DataUpgrade):
                     if (
                         self.charm.unit.name.replace("/", "-")
                         in self.charm._patroni.cluster_members
+                        and self.charm._patroni.is_replication_healthy
                     ):
                         logger.debug("Upgraded unit is healthy. Set upgrade state to `completed`")
                         self.set_unit_completed()
                     else:
                         logger.debug(
-                            "Instance not yet back in the cluster."
+                            "Instance not yet back in the cluster or not healthy."
                             f" Retry {attempt.retry_state.attempt_number}/6"
                         )
                         raise Exception
         except RetryError:
-            logger.error("Upgraded unit is not part of the cluster")
+            logger.error("Upgraded unit is not part of the cluster or not healthy")
             self.set_unit_failed()
             self.charm.unit.status = BlockedStatus(
                 "upgrade failed. Check logs for rollback instruction"
@@ -119,15 +119,6 @@ class PostgreSQLUpgrade(DataUpgrade):
             return
 
         self.charm.update_config()
-
-    def _on_upgrade_k8s_charm(self, _) -> None:
-        """Check whether upgrade is supported."""
-        if self.charm.unit.name == f"{self.charm.app.name}/{self.charm.app.planned_units() - 1}":
-            try:
-                self._upgrade_supported_check()
-            except VersionError as e:  # not ready if not passed check
-                logger.error(e)
-                self.set_unit_failed()
 
     @override
     def pre_upgrade_check(self) -> None:
