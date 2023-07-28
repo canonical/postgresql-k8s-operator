@@ -39,6 +39,25 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await build_and_deploy(ops_test, DATABASE_UNITS, wait_for_idle=False)
 
 
+async def check_tls_rewind(ops_test: OpsTest) -> None:
+    """Checks if TLS was used by rewind."""
+    for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
+        logger.info(f"checking if pg_rewind used TLS on {unit.name}")
+        try:
+            logs = await run_command_on_unit(
+                ops_test,
+                unit.name,
+                "grep rewind /var/log/postgresql/postgresql.log",
+            )
+        except Exception:
+            continue
+        if "connection authorized: user=rewind database=postgres SSL enabled" in logs:
+            break
+    assert (
+        "connection authorized: user=rewind database=postgres SSL enabled" in logs
+    ), "TLS is not being used on pg_rewind connections"
+
+
 async def test_mattermost_db(ops_test: OpsTest) -> None:
     """Deploy Mattermost to test the 'db' relation.
 
@@ -119,15 +138,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         await run_command_on_unit(ops_test, primary, "/charm/bin/pebble start postgresql")
         for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(2), reraise=True):
             with attempt:
-                logger.info(f"checking if pg_rewind used TLS on {replica}")
-                logs = await run_command_on_unit(
-                    ops_test,
-                    replica,
-                    "grep rewind /var/log/postgresql/postgresql.log",
-                )
-                assert (
-                    "connection authorized: user=rewind database=postgres SSL enabled" in logs
-                ), "TLS is not being used on pg_rewind connections"
+                check_tls_rewind(ops_test)
 
         # Deploy and check Mattermost user and database existence.
         relation_id = await deploy_and_relate_application_with_postgresql(
