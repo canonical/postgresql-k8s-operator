@@ -6,13 +6,13 @@ from unittest.mock import MagicMock, Mock, PropertyMock, patch
 
 from charms.postgresql_k8s.v0.postgresql import PostgreSQLUpdateUserPasswordError
 from lightkube.resources.core_v1 import Endpoints, Pod, Service
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, WaitingStatus
+from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, SecretNotFoundError, WaitingStatus
 from ops.pebble import ServiceStatus
 from ops.testing import Harness
 from tenacity import RetryError
 
 from charm import PostgresqlOperatorCharm
-from constants import PEER, SECRET_CACHE_LABEL, SECRET_INTERNAL_LABEL, SECRET_LABEL
+from constants import PEER, SECRET_CACHE_LABEL, SECRET_DELETED_LABEL, SECRET_INTERNAL_LABEL, SECRET_LABEL
 from tests.helpers import patch_network_get
 from tests.unit.helpers import _FakeApiError
 
@@ -585,6 +585,27 @@ class TestCharm(unittest.TestCase):
     @patch("charm.JujuVersion.has_secrets", new_callable=PropertyMock, return_value=True)
     @patch("charm.Patroni.reload_patroni_configuration")
     @patch("charm.PostgresqlOperatorCharm._create_services")
+    def test_get_secret_juju_error(self, _, __, ___, _get_secret):
+        self.harness.set_leader()
+        _get_secret.return_value.get_content.return_value = {"password": "test-password"}
+
+        # clean the caches
+        if SECRET_INTERNAL_LABEL in self.charm.app_peer_data:
+            del self.charm.app_peer_data[SECRET_INTERNAL_LABEL]
+        self.charm.secrets["app"] = {}
+
+        # general tests
+        self.harness.update_relation_data(
+            self.rel_id, self.charm.app.name, {SECRET_INTERNAL_LABEL: "secret_key"}
+        )
+        _get_secret.side_effect = SecretNotFoundError
+        assert self.charm.get_secret("app", "password") is None
+        self.harness.update_relation_data(self.rel_id, self.charm.app.name, {})
+
+    @patch("ops.charm.model.Model.get_secret")
+    @patch("charm.JujuVersion.has_secrets", new_callable=PropertyMock, return_value=True)
+    @patch("charm.Patroni.reload_patroni_configuration")
+    @patch("charm.PostgresqlOperatorCharm._create_services")
     def test_get_secret_juju(self, _, __, ___, _get_secret):
         self.harness.set_leader()
         _get_secret.return_value.get_content.return_value = {"password": "test-password"}
@@ -624,6 +645,8 @@ class TestCharm(unittest.TestCase):
             self.harness.get_relation_data(self.rel_id, self.charm.app.name)["password"]
             == "test-password"
         )
+        self.charm.set_secret("app", "password", None)
+        assert "password" not in self.harness.get_relation_data(self.rel_id, self.charm.app.name)
 
         # Test unit scope.
         assert "password" not in self.harness.get_relation_data(self.rel_id, self.charm.unit.name)
@@ -632,6 +655,8 @@ class TestCharm(unittest.TestCase):
             self.harness.get_relation_data(self.rel_id, self.charm.unit.name)["password"]
             == "test-password"
         )
+        self.charm.set_secret("unit", "password", None)
+        assert "password" not in self.harness.get_relation_data(self.rel_id, self.charm.unit.name)
 
     @patch("charm.JujuVersion.has_secrets", new_callable=PropertyMock, return_value=True)
     @patch("charm.Patroni.reload_patroni_configuration")
@@ -652,6 +677,13 @@ class TestCharm(unittest.TestCase):
         )
         secret_mock.reset_mock()
 
+        self.charm.set_secret("app", "password", None)
+        assert self.charm.secrets["app"][SECRET_CACHE_LABEL]["password"] == SECRET_DELETED_LABEL
+        secret_mock.set_content.assert_called_once_with(
+            self.charm.secrets["app"][SECRET_CACHE_LABEL]
+        )
+        secret_mock.reset_mock()
+
         # Test unit scope.
         assert "password" not in self.charm.secrets["unit"].get(SECRET_CACHE_LABEL, {})
         self.charm.set_secret("unit", "password", "test-password")
@@ -659,6 +691,14 @@ class TestCharm(unittest.TestCase):
         secret_mock.set_content.assert_called_once_with(
             self.charm.secrets["unit"][SECRET_CACHE_LABEL]
         )
+        secret_mock.reset_mock()
+
+        self.charm.set_secret("unit", "password", None)
+        assert self.charm.secrets["unit"][SECRET_CACHE_LABEL]["password"] == SECRET_DELETED_LABEL
+        secret_mock.set_content.assert_called_once_with(
+            self.charm.secrets["unit"][SECRET_CACHE_LABEL]
+        )
+        secret_mock.reset_mock()
 
     @patch("charm.Client")
     def test_on_stop(self, _client):

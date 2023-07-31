@@ -178,7 +178,7 @@ class PostgresqlOperatorCharm(CharmBase):
         """Helper function to get Juju secret."""
         if scope == UNIT_SCOPE:
             peer_data = self.unit_peer_data
-        elif scope == APP_SCOPE:
+        else:
             peer_data = self.app_peer_data
 
         if not peer_data.get(SECRET_INTERNAL_LABEL):
@@ -200,9 +200,7 @@ class PostgresqlOperatorCharm(CharmBase):
             # We retrieve and cache actual secret data for the lifetime of the event scope
             self.secrets[scope][SECRET_CACHE_LABEL] = secret.get_content()
 
-        if self.secrets[scope].get(SECRET_CACHE_LABEL):
-            return True
-        return False
+        return bool(self.secrets[scope].get(SECRET_CACHE_LABEL))
 
     def _juju_secret_get_key(self, scope: str, key: str) -> Optional[str]:
         if not key:
@@ -230,14 +228,14 @@ class PostgresqlOperatorCharm(CharmBase):
             return self._juju_secret_get_key(scope, key)
         if scope == UNIT_SCOPE:
             return self.unit_peer_data.get(key, None)
-        elif scope == APP_SCOPE:
+        else:
             return self.app_peer_data.get(key, None)
 
     def _juju_secret_set(self, scope: str, key: str, value: str) -> str:
         """Helper function setting Juju secret."""
         if scope == UNIT_SCOPE:
             peer_data = self.unit_peer_data
-        elif scope == APP_SCOPE:
+        else:
             peer_data = self.app_peer_data
         self._juju_secrets_get(scope)
 
@@ -293,7 +291,7 @@ class PostgresqlOperatorCharm(CharmBase):
             return
         if scope == UNIT_SCOPE:
             self.unit_peer_data.update({key: value})
-        elif scope == APP_SCOPE:
+        else:
             self.app_peer_data.update({key: value})
 
     def _juju_secret_remove(self, scope: str, key: str) -> None:
@@ -326,7 +324,7 @@ class PostgresqlOperatorCharm(CharmBase):
             return self._juju_secret_remove(scope, key)
         if scope == UNIT_SCOPE:
             del self.unit_peer_data[key]
-        elif scope == APP_SCOPE:
+        else:
             del self.app_peer_data[key]
 
     @property
