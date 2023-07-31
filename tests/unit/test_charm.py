@@ -6,13 +6,25 @@ from unittest.mock import MagicMock, Mock, PropertyMock, patch
 
 from charms.postgresql_k8s.v0.postgresql import PostgreSQLUpdateUserPasswordError
 from lightkube.resources.core_v1 import Endpoints, Pod, Service
-from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, SecretNotFoundError, WaitingStatus
+from ops.model import (
+    ActiveStatus,
+    BlockedStatus,
+    MaintenanceStatus,
+    SecretNotFoundError,
+    WaitingStatus,
+)
 from ops.pebble import ServiceStatus
 from ops.testing import Harness
 from tenacity import RetryError
 
 from charm import PostgresqlOperatorCharm
-from constants import PEER, SECRET_CACHE_LABEL, SECRET_DELETED_LABEL, SECRET_INTERNAL_LABEL, SECRET_LABEL
+from constants import (
+    PEER,
+    SECRET_CACHE_LABEL,
+    SECRET_DELETED_LABEL,
+    SECRET_INTERNAL_LABEL,
+    SECRET_LABEL,
+)
 from tests.helpers import patch_network_get
 from tests.unit.helpers import _FakeApiError
 
@@ -561,6 +573,11 @@ class TestCharm(unittest.TestCase):
             },
         }
         self.assertDictEqual(plan, expected)
+
+    def test_scope_obj(self):
+        assert self.charm._scope_obj("app") == self.charm.framework.model.app
+        assert self.charm._scope_obj("unit") == self.charm.framework.model.unit
+        assert self.charm._scope_obj("test") is None
 
     @patch("charm.Patroni.reload_patroni_configuration")
     @patch("charm.PostgresqlOperatorCharm._create_services")
