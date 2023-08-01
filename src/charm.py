@@ -323,6 +323,10 @@ class PostgresqlOperatorCharm(CharmBase):
         logging.debug(f"Secret {scope}:{key}")
 
         # TODO change upgrade to switch to secrets once minor version upgrades is done
+        if scope == UNIT_SCOPE:
+            peer_data = self.unit_peer_data
+        else:
+            peer_data = self.app_peer_data
         if key in peer_data:
             del peer_data[key]
 
