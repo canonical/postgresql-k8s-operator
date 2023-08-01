@@ -1119,6 +1119,25 @@ class PostgresqlOperatorCharm(CharmBase):
                 endpoints.remove(endpoint)
         self._peers.data[self.app]["endpoints"] = json.dumps(endpoints)
 
+    def _generate_metrics_service(self) -> Dict:
+        """Generate the metrics service definition."""
+        return {
+            "override": "replace",
+            "summary": "postgresql metrics exporter",
+            "command": "/start-exporter.sh",
+            "startup": "enabled",
+            "after": [self._postgresql_service],
+            "user": WORKLOAD_OS_USER,
+            "group": WORKLOAD_OS_GROUP,
+            "environment": {
+                "DATA_SOURCE_NAME": (
+                    f"user={MONITORING_USER} "
+                    f"password={self.get_secret('app', MONITORING_PASSWORD_KEY)} "
+                    "host=/var/run/postgresql port=5432 database=postgres"
+                ),
+            },
+        }
+
     def _postgresql_layer(self) -> Layer:
         """Returns a Pebble configuration layer for PostgreSQL."""
         pod_name = self._unit_name_to_pod_name(self._unit)
@@ -1151,22 +1170,7 @@ class PostgresqlOperatorCharm(CharmBase):
                     "user": WORKLOAD_OS_USER,
                     "group": WORKLOAD_OS_GROUP,
                 },
-                self._metrics_service: {
-                    "override": "replace",
-                    "summary": "postgresql metrics exporter",
-                    "command": "/start-exporter.sh",
-                    "startup": "enabled",
-                    "after": [self._postgresql_service],
-                    "user": WORKLOAD_OS_USER,
-                    "group": WORKLOAD_OS_GROUP,
-                    "environment": {
-                        "DATA_SOURCE_NAME": (
-                            f"user={MONITORING_USER} "
-                            f"password={self.get_secret('app', MONITORING_PASSWORD_KEY)} "
-                            "host=/var/run/postgresql port=5432 database=postgres"
-                        ),
-                    },
-                },
+                self._metrics_service: self._generate_metrics_service(),
             },
             "checks": {
                 self._postgresql_service: {
@@ -1304,6 +1308,19 @@ class PostgresqlOperatorCharm(CharmBase):
                 self._generate_metrics_jobs(self.is_tls_enabled)
             )
             self.on[self.restart_manager.name].acquire_lock.emit()
+
+        # Restart the monitoring service if the password was rotated
+        container = self.unit.get_container("postgresql")
+        current_layer = container.get_plan()
+        if metrics_service := current_layer.services[self._metrics_service]:
+            if not metrics_service.environment.get("DATA_SOURCE_NAME", "").startswith(
+                f"user={MONITORING_USER} password={self.get_secret('app', MONITORING_PASSWORD_KEY)} "
+            ):
+                container.add_layer(
+                    self._metrics_service,
+                    Layer({"services": {self._metrics_service: self._generate_metrics_service()}}),
+                )
+                container.restart(self._metrics_service)
 
         return True
 
