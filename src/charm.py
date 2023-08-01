@@ -278,6 +278,10 @@ class PostgresqlOperatorCharm(CharmBase):
             logging.debug(f"Secret {scope}:{key} published (as first). ID: {secret.id}")
             peer_data.update({SECRET_INTERNAL_LABEL: secret.id})
 
+        # TODO change upgrade to switch to secrets once minor version upgrades is done
+        if key in peer_data:
+            del peer_data[key]
+
         return self.secrets[scope][SECRET_LABEL].id
 
     def set_secret(self, scope: str, key: str, value: Optional[str]) -> Optional[str]:
@@ -317,6 +321,10 @@ class PostgresqlOperatorCharm(CharmBase):
         secret_cache[key] = SECRET_DELETED_LABEL
         secret.set_content(secret_cache)
         logging.debug(f"Secret {scope}:{key}")
+
+        # TODO change upgrade to switch to secrets once minor version upgrades is done
+        if key in peer_data:
+            del peer_data[key]
 
     def remove_secret(self, scope: str, key: str) -> None:
         """Removing a secret."""
