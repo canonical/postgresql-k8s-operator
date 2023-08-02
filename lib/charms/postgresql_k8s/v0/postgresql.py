@@ -199,7 +199,7 @@ class PostgreSQL:
                     user_definition = "ALTER ROLE {}"
                 else:
                     user_definition = "CREATE ROLE {}"
-                user_definition += f"WITH LOGIN{' SUPERUSER' if admin else ''} ENCRYPTED PASSWORD '{password}'{'IN ROLE admin CREATEDB CREATEROLE' if admin_role else ''}"
+                user_definition += f"WITH {'NOLOGIN' if user == 'admin' else 'LOGIN'}{' SUPERUSER' if admin else ''} ENCRYPTED PASSWORD '{password}'{'IN ROLE admin CREATEDB' if admin_role else ''}"
                 if privileges:
                     user_definition += f' {" ".join(privileges)}'
                 cursor.execute(sql.SQL(f"{user_definition};").format(sql.Identifier(user)))
@@ -349,7 +349,7 @@ class PostgreSQL:
         try:
             self.create_user(
                 "admin",
-                extra_user_roles="pg_read_all_data,pg_read_all_settings,pg_read_all_stats,pg_stat_scan_tables,pg_monitor,pg_signal_backend",
+                extra_user_roles="pg_read_all_data,pg_write_all_data",
             )
             with self._connect_to_database() as connection, connection.cursor() as cursor:
                 # Allow access to the postgres database only to the system users.
