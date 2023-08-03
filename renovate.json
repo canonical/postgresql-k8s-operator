@@ -50,6 +50,9 @@
     }, {
       "matchPackageNames": ["urllib3"],
       "allowedVersions": "<2.0.0"
+    }, {
+      "matchPackageNames": ["flake8"],
+      "allowedVersions": "<6.1.0"
     }
   ],
   "regexManagers": [
