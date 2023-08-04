@@ -8,7 +8,7 @@
   "rock": {
     "dependencies": {},
     "name": "charmed-postgresql",
-    "upgrade_supported": ">14.7",
+    "upgrade_supported": "^14",
     "version": "14.8"
   }
 }

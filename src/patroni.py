@@ -183,6 +183,32 @@ class Patroni:
         )
 
     @property
+    def is_replication_healthy(self) -> bool:
+        """Return whether the replication is healthy."""
+        try:
+            for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+                with attempt:
+                    primary = self.get_primary()
+                    unit_id = primary.split("-")[-1]
+                    primary_endpoint = (
+                        f"{self._charm.app.name}-{unit_id}.{self._charm.app.name}-endpoints"
+                    )
+                    for member_endpoint in self._endpoints:
+                        endpoint = (
+                            "leader" if member_endpoint == primary_endpoint else "replica?lag=16kB"
+                        )
+                        url = self._patroni_url.replace(self._endpoint, member_endpoint)
+                        member_status = requests.get(f"{url}/{endpoint}", verify=self._verify)
+                        if member_status.status_code != 200:
+                            raise Exception
+        except RetryError:
+            logger.exception("replication is not healthy")
+            return False
+
+        logger.debug("replication is healthy")
+        return True
+
+    @property
     def primary_endpoint_ready(self) -> bool:
         """Is the primary endpoint redirecting connections to the primary pod.
 
