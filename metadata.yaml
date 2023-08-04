@@ -14,6 +14,8 @@ website:
   - https://charmhub.io/postgresql-k8s
   - https://github.com/canonical/postgresql-k8s-operator
   - https://chat.charmhub.io/charmhub/channels/data-platform
+maintainers:
+  - "Canonical Data Platform <data-platform@lists.launchpad.net>"
 
 containers:
   postgresql:
