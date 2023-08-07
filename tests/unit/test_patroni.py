@@ -3,15 +3,16 @@
 # See LICENSE file for licensing details.
 
 import unittest
-from unittest.mock import PropertyMock, mock_open, patch
+from unittest.mock import MagicMock, PropertyMock, mock_open, patch
 
+import tenacity
 from jinja2 import Template
 from ops.testing import Harness
 from tenacity import RetryError, stop_after_delay, wait_fixed
 
 from charm import PostgresqlOperatorCharm
 from constants import REWIND_USER
-from patroni import Patroni
+from patroni import Patroni, SwitchoverFailedError
 from tests.helpers import STORAGE_PATH, patch_network_get
 
 
@@ -28,7 +29,7 @@ class TestPatroni(unittest.TestCase):
         self.patroni = Patroni(
             self.charm,
             "postgresql-k8s-0",
-            ["postgresql-k8s-0"],
+            ["postgresql-k8s-0", "postgresql-k8s-1", "postgresql-k8s-2"],
             "postgresql-k8s-primary.dev.svc.cluster.local",
             "test-model",
             STORAGE_PATH,
@@ -59,6 +60,40 @@ class TestPatroni(unittest.TestCase):
         primary = self.patroni.get_primary(unit_name_pattern=True)
         self.assertEqual(primary, "postgresql-k8s/1")
         _get.assert_called_once_with("http://postgresql-k8s-0:8008/cluster", verify=True)
+
+    @patch("requests.get")
+    def test_is_creating_backup(self, _get):
+        # Test when one member is creating a backup.
+        response = _get.return_value
+        response.json.return_value = {
+            "members": [
+                {"name": "postgresql-k8s-0"},
+                {"name": "postgresql-k8s-1", "tags": {"is_creating_backup": True}},
+            ]
+        }
+        self.assertTrue(self.patroni.is_creating_backup)
+
+        # Test when no member is creating a backup.
+        response.json.return_value = {
+            "members": [{"name": "postgresql-k8s-0"}, {"name": "postgresql-k8s-1"}]
+        }
+        self.assertFalse(self.patroni.is_creating_backup)
+
+    @patch("requests.get")
+    @patch("charm.Patroni.get_primary")
+    @patch("patroni.stop_after_delay", return_value=stop_after_delay(0))
+    def test_is_replication_healthy(self, _, __, _get):
+        # Test when replication is healthy.
+        _get.return_value.status_code = 200
+        self.assertTrue(self.patroni.is_replication_healthy)
+
+        # Test when replication is not healthy.
+        _get.side_effect = [
+            MagicMock(status_code=200),
+            MagicMock(status_code=200),
+            MagicMock(status_code=503),
+        ]
+        self.assertFalse(self.patroni.is_replication_healthy)
 
     @patch("os.chmod")
     @patch("os.chown")
@@ -182,3 +217,50 @@ class TestPatroni(unittest.TestCase):
         # Test with the primary endpoint ready.
         _get.return_value.json.return_value = {"state": "running"}
         self.assertTrue(self.patroni.primary_endpoint_ready)
+
+    @patch("patroni.stop_after_delay", return_value=tenacity.stop_after_delay(0))
+    @patch("requests.post")
+    @patch("patroni.Patroni.get_primary")
+    def test_switchover(self, _get_primary, _post, __):
+        # Test a successful switchover.
+        _get_primary.side_effect = ["postgresql-k8s-0", "postgresql-k8s-1"]
+        response = _post.return_value
+        response.status_code = 200
+        self.patroni.switchover()
+        _post.assert_called_once_with(
+            "http://postgresql-k8s-0:8008/switchover",
+            json={"leader": "postgresql-k8s-0", "candidate": None},
+            verify=True,
+        )
+
+        # Test a successful switchover with a candidate name.
+        _post.reset_mock()
+        _get_primary.side_effect = ["postgresql-k8s-0", "postgresql-k8s-2"]
+        self.patroni.switchover("postgresql-k8s/2")
+        _post.assert_called_once_with(
+            "http://postgresql-k8s-0:8008/switchover",
+            json={"leader": "postgresql-k8s-0", "candidate": "postgresql-k8s-2"},
+            verify=True,
+        )
+
+        # Test failed switchovers.
+        _post.reset_mock()
+        _get_primary.side_effect = ["postgresql-k8s-0", "postgresql-k8s-1"]
+        with self.assertRaises(SwitchoverFailedError):
+            self.patroni.switchover("postgresql-k8s/2")
+        _post.assert_called_once_with(
+            "http://postgresql-k8s-0:8008/switchover",
+            json={"leader": "postgresql-k8s-0", "candidate": "postgresql-k8s-2"},
+            verify=True,
+        )
+
+        _post.reset_mock()
+        _get_primary.side_effect = ["postgresql-k8s-0", "postgresql-k8s-2"]
+        response.status_code = 400
+        with self.assertRaises(SwitchoverFailedError):
+            self.patroni.switchover("postgresql-k8s/2")
+        _post.assert_called_once_with(
+            "http://postgresql-k8s-0:8008/switchover",
+            json={"leader": "postgresql-k8s-0", "candidate": "postgresql-k8s-2"},
+            verify=True,
+        )
