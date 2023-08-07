@@ -429,11 +429,12 @@ class TestCharm(unittest.TestCase):
         # Assert that the backup id is not in the application relation databag anymore.
         self.assertEqual(self.harness.get_relation_data(self.rel_id, self.charm.app), {})
 
+    @patch("charms.data_platform_libs.v0.upgrade.DataUpgrade._upgrade_supported_check")
     @patch("charm.PostgresqlOperatorCharm._patch_pod_labels", side_effect=[_FakeApiError, None])
     @patch(
         "charm.PostgresqlOperatorCharm._create_services", side_effect=[_FakeApiError, None, None]
     )
-    def test_on_upgrade_charm(self, _create_services, _patch_pod_labels):
+    def test_on_upgrade_charm(self, _create_services, _patch_pod_labels, _upgrade_supported_check):
         # Test with a problem happening when trying to create the k8s resources.
         self.charm.unit.status = ActiveStatus()
         self.charm.on.upgrade_charm.emit()
