@@ -33,7 +33,7 @@
       "matchDepNames": ["libjuju 3"],
       "matchPackageNames": ["juju"],
       "matchDatasources": ["pypi"],
-      "allowedVersions": "<3.2.0",
+      "allowedVersions": "<4.0.0",
       "groupName": "Juju 3"
     }, {
       "matchDepNames": ["libjuju 2"],
@@ -50,6 +50,9 @@
     }, {
       "matchPackageNames": ["urllib3"],
       "allowedVersions": "<2.0.0"
+    }, {
+      "matchPackageNames": ["flake8"],
+      "allowedVersions": "<6.1.0"
     }
   ],
   "regexManagers": [
