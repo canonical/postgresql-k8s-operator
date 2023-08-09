@@ -13,16 +13,16 @@ repository = "https://github.com/canonical/postgresql-k8s-operator"
 
 [tool.poetry.dependencies]
 python = "^3.10.6"
-ops = "2.4.1"
+ops = "2.5.0"
 pgconnstr = "1.0.1"
 tenacity = "8.2.2"
-cryptography = "41.0.2"
-jsonschema = "4.18.4"
+cryptography = "41.0.3"
+jsonschema = "4.18.6"
 jinja2 = "3.1.2"
 lightkube = "0.14.0"
 lightkube-models = "1.27.1.4"
 requests = "2.31.0"
-boto3 = "1.28.7"
+boto3 = "1.28.18"
 # psycopg2 = "^2.9.5" # Injected in charmcraft.yaml
 packaging = "23.1"
 
@@ -69,14 +69,14 @@ psycopg2 = {version = "2.9.6", extras = ["binary"]}
 optional = true
 
 [tool.poetry.group.ha_charm.dependencies]
-ops = "2.4.1"
+ops = "2.5.0"
 tenacity = "8.2.2"
 
 [tool.poetry.group.relation_charm]
 optional = true
 
 [tool.poetry.group.relation_charm.dependencies]
-ops = "2.4.1"
+ops = "2.5.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

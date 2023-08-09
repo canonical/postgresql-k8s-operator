@@ -90,7 +90,10 @@ async def test_upgrade(ops_test: OpsTest, first_unit_role) -> None:
         for unit in ops_test.model.applications[app].units:
             print(f"unit: {unit.name}")
             ops_test.model.block_until(
-                lambda: unit.agent_status == "idle" and unit.workload_status == ("waiting" if unit.name.split("/")[1] == "2" else "active"), timeout=600
+                lambda: unit.agent_status == "idle"
+                and unit.workload_status
+                == ("waiting" if unit.name.split("/")[1] == "2" else "active"),
+                timeout=600,
             )
 
     # Run the resume-upgrade action.
