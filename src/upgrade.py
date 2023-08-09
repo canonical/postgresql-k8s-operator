@@ -115,7 +115,7 @@ class PostgreSQLUpgrade(DataUpgrade):
 
     def _on_upgrade_changed(self, _) -> None:
         """Update the Patroni nosync tag in the unit if needed."""
-        if not self.peer_relation:
+        if not self.peer_relation or not self.charm._patroni.member_started:
             return
 
         self.charm.update_config()
