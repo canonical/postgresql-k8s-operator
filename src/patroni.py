@@ -144,7 +144,7 @@ class Patroni:
         """Get the current cluster members."""
         # Request info from cluster endpoint (which returns all members of the cluster).
         r = requests.get(f"{self._patroni_url}/cluster", verify=self._verify)
-        return set([member["name"] for member in r.json()["members"]])
+        return {member["name"] for member in r.json()["members"]}
 
     def are_all_members_ready(self) -> bool:
         """Check if all members are correctly running Patroni and PostgreSQL.
@@ -257,7 +257,7 @@ class Patroni:
             if "/usr/lib/postgresql/14/bin/postgres" in process
         ]
         # Check whether the PostgreSQL process has a state equal to T (frozen).
-        return any([process for process in postgresql_processes if process.split()[7] != "T"])
+        return any(process for process in postgresql_processes if process.split()[7] != "T")
 
     def _render_file(self, path: str, content: str, mode: int) -> None:
         """Write a content rendered from a template to a file.
