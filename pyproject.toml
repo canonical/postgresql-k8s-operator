@@ -99,7 +99,7 @@ target-version = ["py38"]
 target-version = "py38"
 src = ["src", "."]
 line-length = 99
-select = ["E", "W", "F", "C", "N", "D", "I001"]
+select = ["E", "W", "F", "C", "N", "D", "I001", "CPY001"]
 extend-ignore = [
     "D203",
     "D204",
@@ -123,7 +123,7 @@ ignore = ["E501", "D107"]
 [tool.ruff.flake8-copyright]
 # Check for properly formatted copyright header in each file
 author = "Canonical Ltd."
-notice-rgx = "Copyright\\s\\d{4}([-,]\\d{4})*\\s+%(author)s"
+notice-rgx = "Copyright\\s\\d{4}([-,]\\d{4})*\\s+"
 
 [tool.ruff.mccabe]
 max-complexity = 10
