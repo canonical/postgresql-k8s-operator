@@ -149,8 +149,14 @@ class TestUpgrade(unittest.TestCase):
         _set_unit_failed.assert_not_called()
 
     @patch("charm.PostgresqlOperatorCharm.update_config")
-    def test_on_upgrade_changed(self, _update_config):
+    @patch("charm.Patroni.member_started", new_callable=PropertyMock)
+    def test_on_upgrade_changed(self, _member_started, _update_config):
+        _member_started.return_value = False
         relation = self.harness.model.get_relation("upgrade")
+        self.charm.on.upgrade_relation_changed.emit(relation)
+        _update_config.assert_not_called()
+
+        _member_started.return_value = True
         self.charm.on.upgrade_relation_changed.emit(relation)
         _update_config.assert_called_once()
 
