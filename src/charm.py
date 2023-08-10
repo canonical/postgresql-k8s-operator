@@ -75,6 +75,7 @@ from constants import (
 from patroni import NotReadyError, Patroni
 from relations.db import EXTENSIONS_BLOCKING_MESSAGE, DbProvides
 from relations.postgresql_provider import PostgreSQLProvider
+from upgrade import PostgreSQLUpgrade, get_postgresql_k8s_dependencies_model
 from utils import new_password
 
 logger = logging.getLogger(__name__)
@@ -112,6 +113,12 @@ class PostgresqlOperatorCharm(CharmBase):
         self.framework.observe(self.on.update_status, self._on_update_status)
         self._storage_path = self.meta.storages["pgdata"].location
 
+        self.upgrade = PostgreSQLUpgrade(
+            self,
+            model=get_postgresql_k8s_dependencies_model(),
+            relation_name="upgrade",
+            substrate="k8s",
+        )
         self.postgresql_client_relation = PostgreSQLProvider(self)
         self.legacy_db_relation = DbProvides(self, admin=False)
         self.legacy_db_admin_relation = DbProvides(self, admin=True)
@@ -1290,12 +1297,14 @@ class PostgresqlOperatorCharm(CharmBase):
 
         return services[0].current == ServiceStatus.ACTIVE
 
-    def update_config(self) -> bool:
+    def update_config(self, is_creating_backup: bool = False) -> bool:
         """Updates Patroni config file based on the existence of the TLS files."""
         # Update and reload configuration based on TLS files availability.
         self._patroni.render_patroni_yml_file(
             connectivity=self.unit_peer_data.get("connectivity", "on") == "on",
+            is_creating_backup=is_creating_backup,
             enable_tls=self.is_tls_enabled,
+            is_no_sync_member=self.upgrade.is_no_sync_member,
             backup_id=self.app_peer_data.get("restoring-backup"),
             stanza=self.app_peer_data.get("stanza"),
             restore_stanza=self.app_peer_data.get("restore-stanza"),

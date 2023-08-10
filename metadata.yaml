@@ -14,6 +14,8 @@ website:
   - https://charmhub.io/postgresql-k8s
   - https://github.com/canonical/postgresql-k8s-operator
   - https://chat.charmhub.io/charmhub/channels/data-platform
+maintainers:
+  - Canonical Data Platform <data-platform@lists.launchpad.net>
 
 containers:
   postgresql:
@@ -26,13 +28,15 @@ resources:
   postgresql-image:
     type: oci-image
     description: OCI image for PostgreSQL
-    upstream-source: ghcr.io/canonical/charmed-postgresql@sha256:2181002bffd2e8aa7ddf3e5584629b3fa5ac47ab7fa0b1627bc2e093331bbd59
+    upstream-source: ghcr.io/canonical/charmed-postgresql@sha256:cc3fab75013b3beb4b1a9acfeca58a26a8f91f30c14525b32056b4ae78de35ba
 
 peers:
   database-peers:
     interface: postgresql_peers
   restart:
     interface: rolling_op
+  upgrade:
+    interface: upgrade
 
 provides:
   database:
