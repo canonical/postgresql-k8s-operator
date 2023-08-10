@@ -138,7 +138,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         await run_command_on_unit(ops_test, primary, "/charm/bin/pebble start postgresql")
         for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(2), reraise=True):
             with attempt:
-                check_tls_rewind(ops_test)
+                await check_tls_rewind(ops_test)
 
         # Deploy and check Mattermost user and database existence.
         relation_id = await deploy_and_relate_application_with_postgresql(
