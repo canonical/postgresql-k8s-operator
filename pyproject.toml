@@ -94,11 +94,10 @@ markers = ["unstable"]
 line-length = 99
 target-version = ["py38"]
 
-[tool.isort]
-profile = "black"
-
 # Linting tools configuration
 [tool.ruff]
+target-version = "py38"
+src = ["src", "."]
 line-length = 99
 select = ["E", "W", "F", "C", "N", "D", "I001"]
 extend-ignore = [
@@ -131,6 +130,3 @@ max-complexity = 10
 
 [tool.ruff.pydocstyle]
 convention = "google"
-
-[tool.ruff.isort]
-order-by-type = true
