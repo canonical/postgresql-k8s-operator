@@ -68,7 +68,6 @@ storage:
   pgdata:
     type: filesystem
     location: /var/lib/postgresql/data
-    description: Persistent storage for PostgreSQL data
 
 assumes:
   - k8s-api
