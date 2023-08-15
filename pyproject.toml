@@ -99,7 +99,7 @@ target-version = ["py38"]
 target-version = "py38"
 src = ["src", "."]
 line-length = 99
-select = ["E", "W", "F", "C", "N", "D", "I001", "CPY001"]
+select = ["A", "E", "W", "F", "C", "N", "D", "I001", "CPY001"]
 extend-ignore = [
     "D203",
     "D204",
