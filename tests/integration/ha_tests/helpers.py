@@ -277,7 +277,7 @@ async def count_writes(
             break
 
     count = {}
-    max = {}
+    maximum = {}
     for member in cluster["members"]:
         if member["role"] != "replica" and member["host"].split(".")[0] != (
             down_unit or ""
@@ -299,9 +299,9 @@ async def count_writes(
                 cursor.execute("SELECT COUNT(number), MAX(number) FROM continuous_writes;")
                 results = cursor.fetchone()
                 count[member["name"]] = results[0]
-                max[member["name"]] = results[1]
+                maximum[member["name"]] = results[1]
             connection.close()
-    return count, max
+    return count, maximum
 
 
 def deploy_chaos_mesh(namespace: str) -> None:
