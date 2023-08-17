@@ -283,10 +283,7 @@ async def test_application_removal(ops_test: OpsTest) -> None:
     await ops_test.model.block_until(
         lambda: APP_NAME not in ops_test.model.applications
         or any(
-            [
-                unit.workload_status == "error"
-                for unit in ops_test.model.applications[APP_NAME].units
-            ]
+            unit.workload_status == "error" for unit in ops_test.model.applications[APP_NAME].units
         )
     )
 
