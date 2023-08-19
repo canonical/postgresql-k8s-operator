@@ -201,6 +201,7 @@ class PostgreSQL:
                     privilege for privilege in privileges if privilege not in valid_privileges
                 ]
                 if len(invalid_privileges) > 0:
+                    logger.error(f'Invalid extra user roles: {", ".join(privileges)}')
                     raise PostgreSQLCreateUserError(INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE)
 
             with self._connect_to_database() as connection, connection.cursor() as cursor:
