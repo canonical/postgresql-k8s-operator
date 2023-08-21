@@ -43,7 +43,7 @@ from ops.model import (
 )
 from ops.pebble import ChangeError, Layer, PathError, ProtocolError, ServiceStatus
 from requests import ConnectionError
-from tenacity import RetryError
+from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from backups import PostgreSQLBackups
 from constants import (
@@ -192,12 +192,16 @@ class PostgresqlOperatorCharm(CharmBase):
             return
 
         if SECRET_CACHE_LABEL not in self.secrets[scope]:
-            try:
-                # NOTE: Secret contents are not yet available!
-                secret = self.model.get_secret(id=peer_data[SECRET_INTERNAL_LABEL])
-            except SecretNotFoundError as e:
-                logging.debug(f"No secret found for ID {peer_data[SECRET_INTERNAL_LABEL]}, {e}")
-                return
+            for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(1), reraise=True):
+                with attempt:
+                    try:
+                        # NOTE: Secret contents are not yet available!
+                        secret = self.model.get_secret(id=peer_data[SECRET_INTERNAL_LABEL])
+                    except SecretNotFoundError as e:
+                        logging.debug(
+                            f"No secret found for ID {peer_data[SECRET_INTERNAL_LABEL]}, {e}"
+                        )
+                        return
 
             logging.debug(f"Secret {peer_data[SECRET_INTERNAL_LABEL]} downloaded")
 
@@ -242,7 +246,7 @@ class PostgresqlOperatorCharm(CharmBase):
         if juju_version.has_secrets:
             return self._juju_secret_get_key(scope, key)
 
-    def _juju_secret_set(self, scope: str, key: str, value: str) -> str:
+    def _juju_secret_set(self, scope: str, key: str, value: str) -> Optional[str]:
         """Helper function setting Juju secret."""
         if scope == UNIT_SCOPE:
             peer_data = self.unit_peer_data
@@ -270,6 +274,7 @@ class PostgresqlOperatorCharm(CharmBase):
                         f"Error in attempt to set {scope}:{key}. "
                         f"Existing keys were: {list(secret_cache.keys())}. {error}"
                     )
+                    return
                 logging.debug(f"Secret {scope}:{key} was {key} set")
 
         # We need to create a brand-new secret for this scope
