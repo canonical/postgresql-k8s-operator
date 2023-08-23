@@ -284,7 +284,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 9
+LIBPATCH = 10
 
 PYDEPS = ["pydantic>=1.10,<2"]
 
@@ -817,7 +817,7 @@ class DataUpgrade(Object, ABC):
         Returns:
             True if all application units in idle state. Otherwise False
         """
-        return self.cluster_state == "idle"
+        return set(self.unit_states) == {"idle"}
 
     @abstractmethod
     def pre_upgrade_check(self) -> None:
