@@ -22,8 +22,8 @@ jinja2 = "3.1.2"
 lightkube = "0.14.0"
 lightkube-models = "1.27.1.4"
 requests = "2.31.0"
-boto3 = "1.28.31"
-cosl = "0.0.5"
+boto3 = "1.28.34"
+cosl = "0.0.6"
 # psycopg2 = "^2.9.5" # Injected in charmcraft.yaml
 
 [tool.poetry.group.format]
@@ -55,7 +55,7 @@ optional = true
 [tool.poetry.group.integration.dependencies]
 lightkube = "0.14.0"
 pytest = "7.4.0"
-pytest-operator = "0.28.0"
+pytest-operator = "0.29.0"
 juju = "2.9.44.0 || 3.2.0.1"  # renovate libjuju
 psycopg2 = {version = "2.9.7", extras = ["binary"]}
 
