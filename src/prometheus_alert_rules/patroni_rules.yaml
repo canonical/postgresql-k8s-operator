@@ -1,0 +1,12 @@
+groups:
+  - name: PatroniExporterK8s
+
+    rules:
+      - alert: PatroniPostgresqlDown
+        expr: "patroni_postgres_running == 0"
+        for: 0m
+        labels:
+          severity: critical
+        annotations:
+          summary: Patroni Posrgresql Down (instance {{ $labels.instance }})
+          description: "Patroni Postgresql instance is down\n  VALUE = {{ $value }}\n  LABELS = {{ $labels }}"  
