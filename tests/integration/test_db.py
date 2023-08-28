@@ -233,7 +233,7 @@ async def test_discourse(ops_test: OpsTest):
     # Deploy Discourse and Redis.
     await gather(
         ops_test.model.deploy(DISCOURSE_APP_NAME, application_name=DISCOURSE_APP_NAME),
-        ops_test.model.deploy(REDIS_APP_NAME, application_name=REDIS_APP_NAME, channel="edge"),
+        ops_test.model.deploy(REDIS_APP_NAME, application_name=REDIS_APP_NAME),
     )
 
     # Add both relations to Discourse (PostgreSQL and Redis)
@@ -268,7 +268,9 @@ async def test_discourse(ops_test: OpsTest):
         config = {"plugin_hstore_enable": "True", "plugin_pg_trgm_enable": "True"}
         await ops_test.model.applications[database_application_name].set_config(config)
         await ops_test.model.wait_for_idle(
-            apps=[database_application_name, DISCOURSE_APP_NAME, REDIS_APP_NAME], status="active"
+            apps=[database_application_name, DISCOURSE_APP_NAME, REDIS_APP_NAME],
+            status="active",
+            timeout=2000,
         )
 
         # Check for the correct databases and users creation.
