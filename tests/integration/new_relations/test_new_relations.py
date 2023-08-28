@@ -187,7 +187,7 @@ async def test_two_applications_doesnt_share_the_same_relation_data(
     # Check that the user cannot access other databases.
     for application, other_application_database in [
         (APPLICATION_APP_NAME, "another_application_first_database"),
-        (another_application_app_name, "application_first_database"),
+        (another_application_app_name, f"{APPLICATION_APP_NAME.replace('-', '_')}_first_database"),
     ]:
         connection_string = await build_connection_string(
             ops_test, application, FIRST_DATABASE_RELATION_NAME, database="postgres"
@@ -422,7 +422,7 @@ async def test_admin_role(ops_test: OpsTest):
     # Check that the user can access all the databases.
     for database in [
         "postgres",
-        "application_first_database",
+        f"{APPLICATION_APP_NAME.replace('-', '_')}_first_database",
         "another_application_first_database",
     ]:
         logger.info(f"connecting to the following database: {database}")

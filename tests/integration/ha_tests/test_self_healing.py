@@ -9,8 +9,8 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from tests.integration.ha_tests.conftest import APPLICATION_NAME
 from tests.integration.ha_tests.helpers import (
+    APPLICATION_NAME,
     METADATA,
     are_all_db_processes_down,
     are_writes_increasing,
@@ -63,7 +63,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     if not await app_name(ops_test, APPLICATION_NAME):
         wait_for_apps = True
         async with ops_test.fast_forward():
-            charm = await ops_test.build_charm("tests/integration/ha_tests/application-charm")
+            charm = await ops_test.build_charm("tests/integration/postgresql-test-app")
             await ops_test.model.deploy(
                 charm, application_name=APPLICATION_NAME, series=CHARM_SERIES
             )

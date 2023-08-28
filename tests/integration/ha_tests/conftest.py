@@ -7,6 +7,7 @@ from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from tests.integration.ha_tests.helpers import (
+    APPLICATION_NAME,
     change_patroni_setting,
     change_wal_settings,
     deploy_chaos_mesh,
@@ -17,8 +18,6 @@ from tests.integration.ha_tests.helpers import (
     remove_instance_isolation,
 )
 from tests.integration.helpers import app_name
-
-APPLICATION_NAME = "application"
 
 
 @pytest.fixture()

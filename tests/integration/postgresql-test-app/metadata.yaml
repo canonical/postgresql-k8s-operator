@@ -19,3 +19,7 @@ requires:
     limit: 2
   no-database:
     interface: postgresql_client
+
+peers:
+  application-peers:
+    interface: postgresql-test-peers
