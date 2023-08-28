@@ -13,16 +13,16 @@ repository = "https://github.com/canonical/postgresql-k8s-operator"
 
 [tool.poetry.dependencies]
 python = "^3.10.6"
-ops = "2.5.0"
+ops = "2.5.1"
 pgconnstr = "1.0.1"
-tenacity = "8.2.2"
+tenacity = "8.2.3"
 cryptography = "41.0.3"
 jsonschema = "4.19.0"
 jinja2 = "3.1.2"
 lightkube = "0.14.0"
 lightkube-models = "1.27.1.4"
 requests = "2.31.0"
-boto3 = "1.28.22"
+boto3 = "1.28.34"
 # psycopg2 = "^2.9.5" # Injected in charmcraft.yaml
 packaging = "23.1"
 
@@ -31,7 +31,7 @@ optional = true
 
 [tool.poetry.group.format.dependencies]
 black = "23.7.0"
-ruff = "0.0.284"
+ruff = "0.0.285"
 
 [tool.poetry.group.lint]
 optional = true
@@ -43,7 +43,7 @@ codespell = "2.2.5"
 optional = true
 
 [tool.poetry.group.unit.dependencies]
-coverage = {extras = ["toml"], version = "7.2.7"}
+coverage = {extras = ["toml"], version = "7.3.0"}
 pydantic = "1.10.12"
 pytest = "7.4.0"
 pytest-asyncio = "0.21.1"
@@ -55,7 +55,7 @@ optional = true
 [tool.poetry.group.integration.dependencies]
 lightkube = "0.14.0"
 pytest = "7.4.0"
-pytest-operator = "0.28.0"
+pytest-operator = "0.29.0"
 juju = "2.9.44.0 || 3.2.0.1"  # renovate libjuju
 psycopg2 = {version = "2.9.7", extras = ["binary"]}
 
@@ -63,14 +63,14 @@ psycopg2 = {version = "2.9.7", extras = ["binary"]}
 optional = true
 
 [tool.poetry.group.ha_charm.dependencies]
-ops = "2.5.0"
-tenacity = "8.2.2"
+ops = "2.5.1"
+tenacity = "8.2.3"
 
 [tool.poetry.group.relation_charm]
 optional = true
 
 [tool.poetry.group.relation_charm.dependencies]
-ops = "2.5.0"
+ops = "2.5.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
