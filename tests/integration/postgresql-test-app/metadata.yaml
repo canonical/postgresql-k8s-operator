@@ -21,5 +21,5 @@ requires:
     interface: postgresql_client
 
 peers:
-  application-peers:
+  postgresql-test-peers:
     interface: postgresql-test-peers
