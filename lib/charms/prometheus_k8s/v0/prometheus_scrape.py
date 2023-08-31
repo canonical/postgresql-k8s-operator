@@ -18,13 +18,6 @@ provide a scrape target for Prometheus.
 Source code can be found on GitHub at:
  https://github.com/canonical/prometheus-k8s-operator/tree/main/lib/charms/prometheus_k8s
 
-## Dependencies
-
-Using this library requires you to fetch the juju_topology library from
-[observability-libs](https://charmhub.io/observability-libs/libraries/juju_topology).
-
-`charmcraft fetch-lib charms.observability_libs.v0.juju_topology`
-
 ## Provider Library Usage
 
 This Prometheus charm interacts with its scrape targets using its
@@ -369,7 +362,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 40
+LIBPATCH = 42
 
 PYDEPS = ["cosl"]
 
@@ -611,12 +604,12 @@ class PrometheusConfig:
         return {
             "alertmanagers": [
                 {
+                    # For https we still do not render a `tls_config` section because
+                    # certs are expected to be made available by the charm via the
+                    # `update-ca-certificates` mechanism.
                     "scheme": scheme,
                     "path_prefix": path_prefix,
                     "static_configs": [{"targets": netlocs}],
-                    # FIXME figure out how to get alertmanager's ca_file into here
-                    #  Without this, prom errors: "x509: certificate signed by unknown authority"
-                    "tls_config": {"insecure_skip_verify": True},
                 }
                 for (scheme, path_prefix), netlocs in paths.items()
             ]
@@ -1129,7 +1122,7 @@ class MetricsEndpointConsumer(Object):
                         # Inject topology and put it back in the list
                         rule["expr"] = self._tool.inject_label_matchers(
                             re.sub(r"%%juju_topology%%,?", "", rule["expr"]),
-                            topology.label_matcher_dict,
+                            topology.alert_expression_dict,
                         )
                     except KeyError:
                         # Some required JujuTopology key is missing. Just move on.
@@ -1183,16 +1176,8 @@ class MetricsEndpointConsumer(Object):
             scrape_configs, hosts, topology
         )
 
-        # If scheme is https but no ca section present, then auto add "insecure_skip_verify",
-        # otherwise scraping errors out with "x509: certificate signed by unknown authority".
-        # https://prometheus.io/docs/prometheus/latest/configuration/configuration/#tls_config
-        for scrape_config in scrape_configs:
-            tls_config = scrape_config.get("tls_config", {})
-            ca_present = "ca" in tls_config or "ca_file" in tls_config
-            if scrape_config.get("scheme") == "https" and not ca_present:
-                tls_config["insecure_skip_verify"] = True
-                scrape_config["tls_config"] = tls_config
-
+        # For https scrape targets we still do not render a `tls_config` section because certs
+        # are expected to be made available by the charm via the `update-ca-certificates` mechanism.
         return scrape_configs
 
     def _relation_hosts(self, relation: Relation) -> Dict[str, Tuple[str, str]]:

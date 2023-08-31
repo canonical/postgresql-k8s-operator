@@ -76,3 +76,10 @@ def ops_test(ops_test: OpsTest) -> OpsTest:
 
         ops_test.build_charm = build_charm
     return ops_test
+
+
+@pytest.fixture(scope="module")
+async def database_charm(ops_test: OpsTest):
+    """Build the database charm."""
+    charm = await ops_test.build_charm(".")
+    return charm
