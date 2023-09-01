@@ -149,9 +149,7 @@ class PostgresqlOperatorCharm(CharmBase):
         return [
             {"static_configs": [{"targets": [f"*:{METRICS_PORT}"]}]},
             {
-                "static_configs": [
-                    {"targets": [f"{self.get_hostname_by_unit(self.unit.name)}:8008"]}
-                ],
+                "static_configs": [{"targets": [f"{ self._build_unit_name()}:8008"]}],
                 "scheme": "https" if enable_tls else "http",
                 "tls_config": {"insecure_skip_verify": True},
             },
@@ -386,6 +384,10 @@ class PostgresqlOperatorCharm(CharmBase):
     def replicas_endpoint(self) -> str:
         """Returns the endpoint of the replicas instances' service."""
         return self._build_service_name("replicas")
+
+    def _build_unit_name(self) -> str:
+        """Build a cluster resolvable host for the unit."""
+        return f"{self.get_hostname_by_unit(self.unit.name)}.{self._namespace}.svc.cluster.local"
 
     def _build_service_name(self, service: str) -> str:
         """Build a full k8s service name based on the service name."""
