@@ -98,6 +98,7 @@ class PostgresqlOperatorCharm(CharmBase):
         self._context = {"namespace": self._namespace, "app_name": self._name}
         self.cluster_name = f"patroni-{self._name}"
 
+        self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
@@ -481,6 +482,11 @@ class PostgresqlOperatorCharm(CharmBase):
         if not self.is_blocked:
             self.unit.status = ActiveStatus()
 
+    def _on_install(self, _) -> None:
+        """Cleanup old cluster resources only in the first unit."""
+        if self.unit.name.split("/")[1] == "0":
+            self._cleanup_old_cluster_resources()
+
     def _on_config_changed(self, _) -> None:
         """Handle configuration changes, like enabling plugins."""
         if not self.is_cluster_initialised:
@@ -846,6 +852,34 @@ class PostgresqlOperatorCharm(CharmBase):
                 force=True,
                 field_manager=self.model.app.name,
             )
+
+    def _cleanup_old_cluster_resources(self) -> None:
+        """Delete kubernetes services and endpoints from previous deployment."""
+        client = Client()
+        for endpoint_suffix in ["config", "sync"]:
+            try:
+                client.delete(
+                    res=Service,
+                    name=f"{self.cluster_name}-{endpoint_suffix}",
+                    namespace=self._namespace,
+                )
+                logger.error(f"deleted {self.cluster_name}-{endpoint_suffix} service")
+            except ApiError as e:
+                # Ignore the error only when the resource doesn't exist.
+                if e.status.code != 404:
+                    raise e
+
+            try:
+                client.delete(
+                    res=Endpoints,
+                    name=f"{self.cluster_name}-{endpoint_suffix}",
+                    namespace=self._namespace,
+                )
+                logger.error(f"deleted {self.cluster_name}-{endpoint_suffix} endpoint")
+            except ApiError as e:
+                # Ignore the error only when the resource doesn't exist.
+                if e.status.code != 404:
+                    raise e
 
     @property
     def _has_blocked_status(self) -> bool:
