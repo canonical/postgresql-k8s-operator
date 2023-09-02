@@ -863,7 +863,7 @@ class PostgresqlOperatorCharm(CharmBase):
                     name=f"{self.cluster_name}-{endpoint_suffix}",
                     namespace=self._namespace,
                 )
-                logger.error(f"deleted {self.cluster_name}-{endpoint_suffix} service")
+                logger.info(f"deleted {self.cluster_name}-{endpoint_suffix} service")
             except ApiError as e:
                 # Ignore the error only when the resource doesn't exist.
                 if e.status.code != 404:
@@ -875,7 +875,7 @@ class PostgresqlOperatorCharm(CharmBase):
                     name=f"{self.cluster_name}-{endpoint_suffix}",
                     namespace=self._namespace,
                 )
-                logger.error(f"deleted {self.cluster_name}-{endpoint_suffix} endpoint")
+                logger.info(f"deleted {self.cluster_name}-{endpoint_suffix} endpoint")
             except ApiError as e:
                 # Ignore the error only when the resource doesn't exist.
                 if e.status.code != 404:
