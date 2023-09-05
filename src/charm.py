@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 """Charmed Kubernetes Operator for the PostgreSQL database."""
+import itertools
 import json
 import logging
 from typing import Dict, List, Optional
@@ -856,26 +857,14 @@ class PostgresqlOperatorCharm(CharmBase):
     def _cleanup_old_cluster_resources(self) -> None:
         """Delete kubernetes services and endpoints from previous deployment."""
         client = Client()
-        for endpoint_suffix in ["config", "sync"]:
+        for kind, suffix in itertools.product([Service, Endpoints], ["", "-config", "-sync"]):
             try:
                 client.delete(
-                    res=Service,
-                    name=f"{self.cluster_name}-{endpoint_suffix}",
+                    res=kind,
+                    name=f"{self.cluster_name}{suffix}",
                     namespace=self._namespace,
                 )
-                logger.info(f"deleted {self.cluster_name}-{endpoint_suffix} service")
-            except ApiError as e:
-                # Ignore the error only when the resource doesn't exist.
-                if e.status.code != 404:
-                    raise e
-
-            try:
-                client.delete(
-                    res=Endpoints,
-                    name=f"{self.cluster_name}-{endpoint_suffix}",
-                    namespace=self._namespace,
-                )
-                logger.info(f"deleted {self.cluster_name}-{endpoint_suffix} endpoint")
+                logger.info(f"deleted {kind.__name__}/{self.cluster_name}{suffix}")
             except ApiError as e:
                 # Ignore the error only when the resource doesn't exist.
                 if e.status.code != 404:
