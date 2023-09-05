@@ -99,7 +99,6 @@ class PostgresqlOperatorCharm(CharmBase):
         self._context = {"namespace": self._namespace, "app_name": self._name}
         self.cluster_name = f"patroni-{self._name}"
 
-        self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
@@ -483,11 +482,6 @@ class PostgresqlOperatorCharm(CharmBase):
         if not self.is_blocked:
             self.unit.status = ActiveStatus()
 
-    def _on_install(self, _) -> None:
-        """Cleanup old cluster resources only in the first unit."""
-        if self.unit.name.split("/")[1] == "0":
-            self._cleanup_old_cluster_resources()
-
     def _on_config_changed(self, _) -> None:
         """Handle configuration changes, like enabling plugins."""
         if not self.is_cluster_initialised:
@@ -631,6 +625,8 @@ class PostgresqlOperatorCharm(CharmBase):
 
         if self.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY) is None:
             self.set_secret(APP_SCOPE, MONITORING_PASSWORD_KEY, new_password())
+
+        self._cleanup_old_cluster_resources()
 
         # Create resources and add labels needed for replication.
         try:
@@ -856,6 +852,10 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _cleanup_old_cluster_resources(self) -> None:
         """Delete kubernetes services and endpoints from previous deployment."""
+        if self.is_cluster_initialised:
+            logger.debug("Early exit _cleanup_old_cluster_resources: cluster already initialised")
+            return
+
         client = Client()
         for kind, suffix in itertools.product([Service, Endpoints], ["", "-config", "-sync"]):
             try:
