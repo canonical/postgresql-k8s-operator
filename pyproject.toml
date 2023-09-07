@@ -22,7 +22,7 @@ jinja2 = "3.1.2"
 lightkube = "0.14.0"
 lightkube-models = "1.28.1.4"
 requests = "2.31.0"
-boto3 = "1.28.41"
+boto3 = "1.28.42"
 cosl = "0.0.7"
 # psycopg2 = "^2.9.5" # Injected in charmcraft.yaml
 
