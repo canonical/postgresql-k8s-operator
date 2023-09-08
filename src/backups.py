@@ -726,7 +726,7 @@ Stderr:
 
         return s3_parameters, []
 
-    def start_stop_pgbackrest_service(self, force=False) -> bool:
+    def start_stop_pgbackrest_service(self) -> bool:
         """Start or stop the pgBackRest TLS server service.
 
         Returns:
@@ -734,7 +734,7 @@ Stderr:
         """
         # Ignore this operation if backups settings aren't ok.
         are_backup_settings_ok, _ = self._are_backup_settings_ok()
-        if not are_backup_settings_ok and not force:
+        if not are_backup_settings_ok:
             return True
 
         # Update pgBackRest configuration (to update the TLS settings).
@@ -747,11 +747,7 @@ Stderr:
             return True
 
         # Don't start the service if the service hasn't started yet in the primary.
-        if (
-            not force
-            and not self.charm.is_primary
-            and not self._is_primary_pgbackrest_service_running
-        ):
+        if not self.charm.is_primary and not self._is_primary_pgbackrest_service_running:
             return False
 
         # Start the service.

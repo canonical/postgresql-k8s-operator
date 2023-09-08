@@ -468,9 +468,7 @@ class PostgresqlOperatorCharm(CharmBase):
             self.backup.check_stanza()
 
         # Start or stop the pgBackRest TLS server service when TLS certificate change.
-        if not self.backup.start_stop_pgbackrest_service(
-            force="init-pgbackrest" in self.app_peer_data
-        ):
+        if not self.backup.start_stop_pgbackrest_service():
             # Ping primary to start its TLS server.
             self.unit_peer_data.update({"start-tls-server": "True"})
             logger.debug(
