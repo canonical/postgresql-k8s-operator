@@ -299,11 +299,17 @@ class PostgreSQLBackups(Object):
             self.charm.unit.status = BlockedStatus(FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE)
             return
 
-        # Store the stanza name to be used in configurations updates.
-        self.charm.app_peer_data.update({"stanza": self.stanza_name})
+        self.start_stop_pgbackrest_service()
 
+        # Store the stanza name to be used in configurations updates.
+        self.charm.app_peer_data.update({"stanza": self.stanza_name, "init-pgbackrest": "True"})
+
+    def check_stanza(self) -> None:
+        """Runs the pgbackrest stanza validation."""
         # Update the configuration to use pgBackRest as the archiving mechanism.
         self.charm.update_config()
+
+        self.charm.unit.status = MaintenanceStatus("checking stanza")
 
         try:
             # Check that the stanza is correctly configured.
@@ -317,13 +323,14 @@ class PostgreSQLBackups(Object):
             # If the check command doesn't succeed, remove the stanza name
             # and rollback the configuration.
             self.charm.app_peer_data.update({"stanza": ""})
+            self.charm.app_peer_data.pop("init-pgbackrest", None)
             self.charm.update_config()
 
             logger.exception(e)
             self.charm.unit.status = BlockedStatus(FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE)
             return
 
-        return
+        self.charm.app_peer_data.pop("init-pgbackrest", None)
 
     @property
     def _is_primary_pgbackrest_service_running(self) -> bool:
@@ -371,8 +378,6 @@ class PostgreSQLBackups(Object):
             return
 
         self._initialise_stanza()
-
-        self.start_stop_pgbackrest_service()
 
     def _on_create_backup_action(self, event) -> None:
         """Request that pgBackRest creates a backup."""
@@ -721,7 +726,7 @@ Stderr:
 
         return s3_parameters, []
 
-    def start_stop_pgbackrest_service(self) -> bool:
+    def start_stop_pgbackrest_service(self, force=False) -> bool:
         """Start or stop the pgBackRest TLS server service.
 
         Returns:
@@ -729,7 +734,7 @@ Stderr:
         """
         # Ignore this operation if backups settings aren't ok.
         are_backup_settings_ok, _ = self._are_backup_settings_ok()
-        if not are_backup_settings_ok:
+        if not are_backup_settings_ok and not force:
             return True
 
         # Update pgBackRest configuration (to update the TLS settings).
@@ -742,7 +747,11 @@ Stderr:
             return True
 
         # Don't start the service if the service hasn't started yet in the primary.
-        if not self.charm.is_primary and not self._is_primary_pgbackrest_service_running:
+        if (
+            not force
+            and not self.charm.is_primary
+            and not self._is_primary_pgbackrest_service_running
+        ):
             return False
 
         # Start the service.
