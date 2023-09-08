@@ -291,19 +291,23 @@ creating a new topic when other information other than a topic name is
 exchanged in the relation databag.
 """
 
+import copy
 import json
 import logging
 from abc import ABC, abstractmethod
 from collections import namedtuple
 from datetime import datetime
-from typing import List, Optional, Union
+from enum import Enum
+from typing import Dict, List, Optional, Set, Union
 
+from ops import JujuVersion, Secret, SecretInfo, SecretNotFoundError
 from ops.charm import (
     CharmBase,
     CharmEvents,
     RelationChangedEvent,
     RelationCreatedEvent,
     RelationEvent,
+    SecretChangedEvent,
 )
 from ops.framework import EventSource, Object
 from ops.model import Application, ModelError, Relation, Unit
@@ -316,7 +320,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 17
+LIBPATCH = 18
 
 PYDEPS = ["ops>=2.0.0"]
 
@@ -329,6 +333,40 @@ A tuple for storing the diff between two data mappings.
 added - keys that were added
 changed - keys that still exist but have new values
 deleted - key that were deleted"""
+
+
+class SecretGroup(Enum):
+    """Secret groups as constants."""
+
+    USER = "user"
+    TLS = "tls"
+    EXTRA = "extra"
+
+
+# Local map to associate mappings with secrets potentially as a group
+SECRET_LABEL_MAP = {
+    "username": SecretGroup.USER.value,
+    "password": SecretGroup.USER.value,
+    "uris": SecretGroup.USER.value,
+    "tls": SecretGroup.TLS.value,
+    "tls-ca": SecretGroup.TLS.value,
+}
+
+
+class DataInterfacesError(Exception):
+    """Common ancestor for DataInterfaces related exceptions."""
+
+
+class SecretError(Exception):
+    """Common ancestor for Secrets related exceptions."""
+
+
+class SecretAlreadyExistsError(SecretError):
+    """A secret that was to be added already exists."""
+
+
+class SecretsUnavailableError(SecretError):
+    """Secrets aren't yet available for Juju version used."""
 
 
 def diff(event: RelationChangedEvent, bucket: Union[Unit, Application]) -> Diff:
@@ -365,6 +403,119 @@ def diff(event: RelationChangedEvent, bucket: Union[Unit, Application]) -> Diff:
     return Diff(added, changed, deleted)
 
 
+def leader_only(f):
+    """Decorator to ensure that only leader can perform given operation."""
+
+    def wrapper(self, *args, **kwargs):
+        if not self.local_unit.is_leader():
+            return
+        return f(self, *args, **kwargs)
+
+    return wrapper
+
+
+def juju_secrets_only(f):
+    """Decorator to ensure that certain operations would be only executed on Juju3."""
+
+    def wrapper(self, *args, **kwargs):
+        if not self.secrets_enabled:
+            raise SecretsUnavailableError("Secrets unavailable on current Juju version")
+        return f(self, *args, **kwargs)
+
+    return wrapper
+
+
+class Scope(Enum):
+    """Peer relations scope."""
+
+    APP = "app"
+    UNIT = "unit"
+
+
+class CachedSecret:
+    """Locally cache a secret.
+
+    The data structure is precisely re-using/simulating as in the actual Secret Storage
+    """
+
+    def __init__(self, charm: CharmBase, label: str, secret_uri: Optional[str] = None):
+        self._secret_meta = None
+        self._secret_content = {}
+        self._secret_uri = secret_uri
+        self.label = label
+        self.charm = charm
+
+    def add_secret(self, content: Dict[str, str], relation: Relation) -> Secret:
+        """Create a new secret."""
+        if self._secret_uri:
+            raise SecretAlreadyExistsError(
+                "Secret is already defined with uri %s", self._secret_uri
+            )
+
+        secret = self.charm.app.add_secret(content, label=self.label)
+        secret.grant(relation)
+        self._secret_uri = secret.id
+        self._secret_meta = secret
+        return self._secret_meta
+
+    @property
+    def meta(self) -> Optional[Secret]:
+        """Getting cached secret meta-information."""
+        if not self._secret_meta:
+            if not (self._secret_uri or self.label):
+                return
+            try:
+                self._secret_meta = self.charm.model.get_secret(label=self.label)
+            except SecretNotFoundError:
+                if self._secret_uri:
+                    self._secret_meta = self.charm.model.get_secret(
+                        id=self._secret_uri, label=self.label
+                    )
+        return self._secret_meta
+
+    def get_content(self) -> Dict[str, str]:
+        """Getting cached secret content."""
+        if not self._secret_content:
+            if self.meta:
+                self._secret_content = self.meta.get_content()
+        return self._secret_content
+
+    def set_content(self, content: Dict[str, str]) -> None:
+        """Setting cached secret content."""
+        if self.meta:
+            self.meta.set_content(content)
+            self._secret_content = content
+
+    def get_info(self) -> Optional[SecretInfo]:
+        """Wrapper function to provide direct access to contained Secret's equal function."""
+        if self.meta:
+            return self.meta.get_info()
+
+
+class SecretCache:
+    """A data structure storing CachedSecret objects."""
+
+    def __init__(self, charm):
+        self.charm = charm
+        self._secrets: Dict[str, CachedSecret] = {}
+
+    def get(self, label: str, uri: Optional[str] = None) -> Optional[CachedSecret]:
+        """Getting a secret from Juju Secret store or cache."""
+        if not self._secrets.get(label):
+            secret = CachedSecret(self.charm, label, uri)
+            if secret.meta:
+                self._secrets[label] = secret
+        return self._secrets.get(label)
+
+    def add(self, label: str, content: Dict[str, str], relation: Relation) -> CachedSecret:
+        """Adding a secret to Juju Secret."""
+        if not self._secrets.get(label):
+            secret = CachedSecret(self.charm, label)
+            secret.add_secret(content, relation)
+            self._secrets[label] = secret
+        return self._secrets[label]
+
+
 # Base DataRelation
 
 
@@ -381,11 +532,95 @@ class DataRelation(Object, ABC):
             charm.on[relation_name].relation_changed,
             self._on_relation_changed_event,
         )
+        self._jujuversion = None
+        self.secrets = SecretCache(self.charm)
+
+    @property
+    def relations(self) -> List[Relation]:
+        """The list of Relation instances associated with this relation_name."""
+        return [
+            relation
+            for relation in self.charm.model.relations[self.relation_name]
+            if self._is_relation_active(relation)
+        ]
+
+    @property
+    def secrets_enabled(self):
+        """Is this Juju version allowing for Secrets usage?"""
+        if not self._jujuversion:
+            self._jujuversion = JujuVersion.from_environ()
+        return self._jujuversion.has_secrets
 
     @abstractmethod
     def _on_relation_changed_event(self, event: RelationChangedEvent) -> None:
         """Event emitted when the relation data has changed."""
         raise NotImplementedError
+
+    @staticmethod
+    def _is_relation_active(relation: Relation):
+        """Whether the relation is active based on contained data."""
+        try:
+            _ = repr(relation.data)
+            return True
+        except (RuntimeError, ModelError):
+            return False
+
+    def get_relation(self, relation_name, relation_id) -> Relation:
+        """Safe way of retrieving a relation."""
+        relation = self.charm.model.get_relation(relation_name, relation_id)
+
+        if not relation:
+            raise DataInterfacesError(
+                "Relation %s %s couldn't be retrieved", relation_name, relation_id
+            )
+
+        if not relation.app:
+            raise DataInterfacesError("Relation's application missing")
+
+        return relation
+
+    def generate_secret_label(self, relation_name, relation_id, mapping) -> str:
+        """Generate unique mappings for secrets within a relation context."""
+        return f"{relation_name}.{relation_id}.{mapping}.secret"
+
+    def relation_from_secret_label(self, secret_label: str) -> Optional[Relation]:
+        """Retrieve the relation that belongs to a secret label."""
+        contents = secret_label.split(".")
+
+        if not (contents and len(contents) >= 3):
+            return
+
+        contents.pop()  # ".secret" at the end
+        contents.pop()  # Group mapping
+        relation_id = contents.pop()
+        try:
+            relation_id = int(relation_id)
+        except ValueError:
+            return
+
+        # In case '.' character appeared in relation name
+        relation_name = ".".join(contents)
+
+        try:
+            return self.get_relation(relation_name, relation_id)
+        except ModelError:
+            return
+
+    @abstractmethod
+    def _get_relation_secret(
+        self, relation_id: int, mapping: str, relation_name: Optional[str] = None
+    ) -> Optional[CachedSecret]:
+        """Retrieve a Juju Secret that's been stored in the relation databag."""
+        raise NotImplementedError
+
+    @juju_secrets_only
+    def get_relation_secret_data(
+        self, relation_id: int, mapping: str, relation_name: Optional[str] = None
+    ) -> Optional[Dict[str, str]]:
+        """Retrieve contents of a Juju Secret that's been stored in the relation databag."""
+        secret = self._get_relation_secret(relation_id, mapping, relation_name)
+        if secret:
+            return secret.get_content()
 
     def fetch_relation_data(self) -> dict:
         """Retrieves data from relation.
@@ -407,6 +642,7 @@ class DataRelation(Object, ABC):
             )
         return data
 
+    @leader_only
     def _update_relation_data(self, relation_id: int, data: dict) -> None:
         """Updates a set of key-value pairs in the relation.
 
@@ -418,28 +654,24 @@ class DataRelation(Object, ABC):
             data: dict containing the key-value pairs
                 that should be updated in the relation.
         """
-        if self.local_unit.is_leader():
-            relation = self.charm.model.get_relation(self.relation_name, relation_id)
-            if relation:
-                relation.data[self.local_app].update(data)
+        relation = self.charm.model.get_relation(self.relation_name, relation_id)
+        if relation:
+            relation.data[self.local_app].update(data)
 
     @staticmethod
-    def _is_relation_active(relation: Relation):
-        """Whether the relation is active based on contained data."""
-        try:
-            _ = repr(relation.data)
-            return True
-        except (RuntimeError, ModelError):
-            return False
+    def _create_mapping_sorted_content(secret_fields: List[str]) -> Dict[str, List[str]]:
+        """Helper function to arrange secret mappings under their group.
 
-    @property
-    def relations(self) -> List[Relation]:
-        """The list of Relation instances associated with this relation_name."""
-        return [
-            relation
-            for relation in self.charm.model.relations[self.relation_name]
-            if self._is_relation_active(relation)
-        ]
+        NOTE: All unrecognized items end up in the 'extra' secret bucket.
+        Make sure only secret fields are passed!
+        """
+        mapping_sorted_content = {}
+        for key in secret_fields:
+            if group := SECRET_LABEL_MAP.get(key):
+                mapping_sorted_content.setdefault(group, []).append(key)
+            else:
+                mapping_sorted_content.setdefault(SecretGroup.EXTRA.value, []).append(key)
+        return mapping_sorted_content
 
 
 # Base DataProvides and DataRequires
@@ -463,6 +695,105 @@ class DataProvides(DataRelation):
         """
         return diff(event, self.local_app)
 
+    @leader_only
+    @juju_secrets_only
+    def add_relation_secret(
+        self, relation_id: int, content: Dict[str, str], mapping: str
+    ) -> Optional[Secret]:
+        """Add a new Juju Secret that will be registered in the relation databag."""
+        relation = self.get_relation(self.relation_name, relation_id)
+
+        if relation.data[self.local_app].get(f"secret-{mapping}"):
+            logging.error("Secret for relation %s already exists, not adding again", relation_id)
+            return
+
+        label = self.generate_secret_label(self.relation_name, relation_id, mapping)
+        secret = self.secrets.add(label, content, relation)
+
+        # According to lint we may not have a Secret ID
+        if secret.meta and secret.meta.id:
+            relation.data[self.local_app][f"secret-{mapping}"] = secret.meta.id
+
+    @leader_only
+    @juju_secrets_only
+    def update_relation_secret(self, relation_id: int, content: Dict[str, str], mapping: str):
+        """Update the contents of an existing Juju Secret, referred in the relation databag."""
+        secret = self._get_relation_secret(relation_id, mapping)
+
+        if not secret:
+            logging.error("Can't update secret for relation %s", relation_id)
+            return
+
+        old_content = secret.get_content()
+        full_content = copy.deepcopy(old_content)
+        full_content.update(content)
+        secret.set_content(full_content)
+
+    @juju_secrets_only
+    def _get_relation_secret(
+        self, relation_id: int, mapping: str, relation_name: Optional[str] = None
+    ) -> Optional[CachedSecret]:
+        """Retrieve a Juju Secret that's been stored in the relation databag."""
+        if not relation_name:
+            relation_name = self.relation_name
+
+        label = self.generate_secret_label(relation_name, relation_id, mapping)
+        if secret := self.secrets.get(label):
+            return secret
+
+        relation = self.charm.model.get_relation(relation_name, relation_id)
+        if not relation:
+            return
+
+        if secret_uri := relation.data[self.local_app].get(f"secret-{mapping}"):
+            return self.secrets.get(label, secret_uri)
+
+    def _create_secret_content_for_mapping(
+        self, content: Dict[str, str], secret_fields: Set[str], mapping: str
+    ) -> Dict[str, str]:
+        if mapping == SecretGroup.EXTRA.value:
+            return {
+                k: v
+                for k, v in content.items()
+                if k in secret_fields and k not in SECRET_LABEL_MAP.keys()
+            }
+
+        return {
+            k: v
+            for k, v in content.items()
+            if k in secret_fields and SECRET_LABEL_MAP.get(k) == mapping
+        }
+
+    @leader_only
+    def set_relation_fields(self, relation_id: int, fields: Dict[str, str]) -> None:
+        """Set values for fields not caring whether it's a secret or not."""
+        relation = self.get_relation(self.relation_name, relation_id)
+        relation_secret_fields = relation.data.get(
+            relation.app, {}  # pyright: ignore [reportGeneralTypeIssues]
+        ).get("secret_fields")
+
+        normal_fields = list(fields)
+        if relation_secret_fields and self.secrets_enabled:
+            relation_secret_fields = relation_secret_fields.split(" ")
+            normal_fields = set(fields.keys()) - set(relation_secret_fields)
+            secret_fields = set(fields.keys()) - set(normal_fields)
+
+            mapping_sorted_content = self._create_mapping_sorted_content(list(secret_fields))
+
+            for mapping in mapping_sorted_content:
+                secret_content = self._create_secret_content_for_mapping(
+                    fields, secret_fields, mapping
+                )
+                if self._get_relation_secret(relation_id, mapping):
+                    self.update_relation_secret(relation_id, secret_content, mapping)
+                else:
+                    self.add_relation_secret(relation_id, secret_content, mapping)
+
+        normal_content = {k: v for k, v in fields.items() if k in normal_fields}
+        relation.data[self.local_app].update(  # pyright: ignore [reportGeneralTypeIssues]
+            normal_content
+        )
+
     def set_credentials(self, relation_id: int, username: str, password: str) -> None:
         """Set credentials.
 
@@ -474,13 +805,7 @@ class DataProvides(DataRelation):
             username: user that was created.
             password: password of the created user.
         """
-        self._update_relation_data(
-            relation_id,
-            {
-                "username": username,
-                "password": password,
-            },
-        )
+        self.set_relation_fields(relation_id, {"username": username, "password": password})
 
     def set_tls(self, relation_id: int, tls: str) -> None:
         """Set whether TLS is enabled.
@@ -489,7 +814,7 @@ class DataProvides(DataRelation):
             relation_id: the identifier for a particular relation.
             tls: whether tls is enabled (True or False).
         """
-        self._update_relation_data(relation_id, {"tls": tls})
+        self.set_relation_fields(relation_id, {"tls": tls})
 
     def set_tls_ca(self, relation_id: int, tls_ca: str) -> None:
         """Set the TLS CA in the application relation databag.
@@ -498,29 +823,49 @@ class DataProvides(DataRelation):
             relation_id: the identifier for a particular relation.
             tls_ca: TLS certification authority.
         """
-        self._update_relation_data(relation_id, {"tls-ca": tls_ca})
+        self.set_relation_fields(relation_id, {"tls-ca": tls_ca})
 
 
 class DataRequires(DataRelation):
     """Requires-side of the relation."""
+
+    SECRET_FIELDS = ["username", "password", "tls", "tls-ca", "uris"]
 
     def __init__(
         self,
         charm,
         relation_name: str,
         extra_user_roles: Optional[str] = None,
+        additional_secret_fields: Optional[List[str]] = [],
     ):
         """Manager of base client relations."""
         super().__init__(charm, relation_name)
         self.extra_user_roles = extra_user_roles
+        self._secret_fields = list(self.SECRET_FIELDS)
+        if additional_secret_fields:
+            self._secret_fields += additional_secret_fields
+
         self.framework.observe(
             self.charm.on[relation_name].relation_created, self._on_relation_created_event
         )
+        self.framework.observe(
+            charm.on.secret_changed,
+            self._on_secret_changed_event,
+        )
 
-    @abstractmethod
+    @property
+    def secret_fields(self) -> Optional[List[str]]:
+        """Local access to secrets field, in case they are being used."""
+        if self.secrets_enabled:
+            return self._secret_fields
+
     def _on_relation_created_event(self, event: RelationCreatedEvent) -> None:
         """Event emitted when the relation is created."""
-        raise NotImplementedError
+        if not self.local_unit.is_leader():
+            return
+
+        if self.secret_fields:
+            event.relation.data[self.charm.app]["secret_fields"] = " ".join(self.secret_fields)
 
     def _diff(self, event: RelationChangedEvent) -> Diff:
         """Retrieves the diff of the data in the relation changed databag.
@@ -534,14 +879,70 @@ class DataRequires(DataRelation):
         """
         return diff(event, self.local_unit)
 
-    @staticmethod
-    def _is_resource_created_for_relation(relation: Relation) -> bool:
+    @juju_secrets_only
+    def _get_relation_secret(
+        self, relation_id: int, mapping: str, relation_name: Optional[str] = None
+    ) -> Optional[CachedSecret]:
+        """Retrieve a Juju Secret that's been stored in the relation databag."""
+        if not relation_name:
+            relation_name = self.relation_name
+
+        label = self.generate_secret_label(relation_name, relation_id, mapping)
+        return self.secrets.get(label)
+
+    def provides_has_secrets(self, relation) -> bool:
+        """Are there any secrets in the relation databag?"""
+        all_keys = set().union(*(d.keys() for d in relation.data.values()))
+        return any(key.startswith("secret-") for key in all_keys)
+
+    def get_relation_fields(
+        self, relation_id: int, fields: List[str], relation_name: Optional[str] = None
+    ) -> Dict[str, str]:
+        """Get the value of a field not caring whether it's a secret or not."""
+        if not relation_name:
+            relation_name = self.relation_name
+
+        result = {}
+        relation = self.get_relation(relation_name, relation_id)
+
+        normal_fields = fields
+        if self.secret_fields and self.secrets_enabled and self.provides_has_secrets(relation):
+            normal_fields = set(fields) - set(self.secret_fields)
+            secret_fields = set(fields) - set(normal_fields)
+
+            mapping_sorted_content = self._create_mapping_sorted_content(list(secret_fields))
+            for mapping in mapping_sorted_content:
+                if (secret := self._get_relation_secret(relation_id, mapping)) and (
+                    secret_data := secret.get_content()
+                ):
+                    result.update(
+                        {
+                            k: v
+                            for k, v in secret_data.items()
+                            if k in mapping_sorted_content[mapping]
+                        }
+                    )
+
+        result.update(
+            {
+                k: relation.data[relation.app].get(k)  # pyright: ignore [reportGeneralTypeIssues]
+                for k in normal_fields
+            }
+        )
+        return result
+
+    def get_relation_field(
+        self, relation_id: int, field: str, relation_name: Optional[str] = None
+    ) -> Optional[str]:
+        """Get a single field from the relation data."""
+        return self.get_relation_fields(relation_id, [field], relation_name).get(field)
+
+    def _is_resource_created_for_relation(self, relation: Relation) -> bool:
         if not relation.app:
             return False
 
-        return (
-            "username" in relation.data[relation.app] and "password" in relation.data[relation.app]
-        )
+        data = self.get_relation_fields(relation.id, ["username", "password"])
+        return bool(data.get("username")) and bool(data.get("password"))
 
     def is_resource_created(self, relation_id: Optional[int] = None) -> bool:
         """Check if the resource has been created.
@@ -576,6 +977,44 @@ class DataRequires(DataRelation):
                 else False
             )
 
+    @abstractmethod
+    def _on_secret_changed_event(self, event: RelationChangedEvent) -> None:
+        """Event emitted when the relation data has changed."""
+        raise NotImplementedError
+
+    def _register_secret_to_relation(
+        self, relation_name: str, relation_id: int, secret_id: str, mapping: str
+    ):
+        """Fetch secrets and apply local label on them.
+
+        [MAGIC HERE]
+        If we fetch a secret using get_secret(id=<ID>, label=<arbitraty_label>),
+        then <arbitraty_label> will be "stuck" on the Secret object, whenever it may
+        appear (i.e. as an event attribute, or fetched manually) on future occasions.
+
+        This will allow us to uniquely identify the secret on Provides side (typically on
+        'secret-changed' events), and map it to the corresponding relation.
+        """
+        label = self.generate_secret_label(relation_name, relation_id, mapping)
+
+        # Fetchin the Secret's meta information ensuring that it's locally getting registered with
+        CachedSecret(self.charm, label, secret_id).meta
+
+    def register_secrets_to_relation(self, relation: Relation, params_name_list: List[str]):
+        """Make sure that secrets of the provided list are locally 'registered' from the databag.
+
+        More on 'locally registered' magic is described in _register_secret_to_relation() method
+        """
+        if not relation.app:
+            return
+
+        for mapping in [group.value for group in SecretGroup]:
+            if f"secret-{mapping}" in params_name_list:
+                if secret_uri := relation.data[relation.app].get(f"secret-{mapping}"):
+                    self._register_secret_to_relation(
+                        relation.name, relation.id, secret_uri, mapping
+                    )
+
 
 # General events
 
@@ -593,13 +1032,60 @@ class ExtraRoleEvent(RelationEvent):
 
 
 class AuthenticationEvent(RelationEvent):
-    """Base class for authentication fields for events."""
+    """Base class for authentication fields for events.
+
+    The amount of logic added here is not ideal -- but this was the only way to preserve
+    the interface when moving to Juju Secrets
+    """
+
+    @property
+    def _secrets(self) -> dict:
+        """Caching secrets to avoid fetching them each time a field is referrd.
+
+        DON'T USE the encapsulated helper variable outside of this function
+        """
+        if not hasattr(self, "_cached_secrets"):
+            self._cached_secrets = {}
+        return self._cached_secrets
+
+    @property
+    def _jujuversion(self) -> JujuVersion:
+        """Caching jujuversion to avoid a Juju call on each field evaluation.
+
+        DON'T USE the encapsulated helper variable outside of this function
+        """
+        if not hasattr(self, "_cached_jujuversion"):
+            self._cached_jujuversion = None
+        if not self._cached_jujuversion:
+            self._cached_jujuversion = JujuVersion.from_environ()
+        return self._cached_jujuversion
+
+    def _get_secret(self, mapping) -> Optional[Dict[str, str]]:
+        """Retrieveing secrets."""
+        if not self.app:
+            return
+        if not self._secrets.get(mapping):
+            self._secrets[mapping] = None
+            if secret_uri := self.relation.data[self.app].get(f"secret-{mapping}"):
+                secret = self.framework.model.get_secret(id=secret_uri)
+                self._secrets[mapping] = secret.get_content()
+        return self._secrets[mapping]
+
+    @property
+    def secrets_enabled(self):
+        """Is this Juju version allowing for Secrets usage?"""
+        return self._jujuversion.has_secrets
 
     @property
     def username(self) -> Optional[str]:
         """Returns the created username."""
         if not self.relation.app:
             return None
+
+        if self.secrets_enabled:
+            secret = self._get_secret("user")
+            if secret:
+                return secret.get("username")
 
         return self.relation.data[self.relation.app].get("username")
 
@@ -609,6 +1095,11 @@ class AuthenticationEvent(RelationEvent):
         if not self.relation.app:
             return None
 
+        if self.secrets_enabled:
+            secret = self._get_secret("user")
+            if secret:
+                return secret.get("password")
+
         return self.relation.data[self.relation.app].get("password")
 
     @property
@@ -617,6 +1108,11 @@ class AuthenticationEvent(RelationEvent):
         if not self.relation.app:
             return None
 
+        if self.secrets_enabled:
+            secret = self._get_secret("tls")
+            if secret:
+                return secret.get("tls")
+
         return self.relation.data[self.relation.app].get("tls")
 
     @property
@@ -624,6 +1120,11 @@ class AuthenticationEvent(RelationEvent):
         """Returns TLS CA."""
         if not self.relation.app:
             return None
+
+        if self.secrets_enabled:
+            secret = self._get_secret("tls")
+            if secret:
+                return secret.get("tls-ca")
 
         return self.relation.data[self.relation.app].get("tls-ca")
 
@@ -761,10 +1262,9 @@ class DatabaseProvides(DataProvides):
 
     def _on_relation_changed_event(self, event: RelationChangedEvent) -> None:
         """Event emitted when the relation has changed."""
-        # Only the leader should handle this event.
+        # Leader only
         if not self.local_unit.is_leader():
             return
-
         # Check which data has changed to emit customs events.
         diff = self._diff(event)
 
@@ -801,7 +1301,7 @@ class DatabaseProvides(DataProvides):
             relation_id: the identifier for a particular relation.
             connection_strings: database hosts and ports comma separated list.
         """
-        self._update_relation_data(relation_id, {"endpoints": connection_strings})
+        self.set_relation_fields(relation_id, {"endpoints": connection_strings})
 
     def set_read_only_endpoints(self, relation_id: int, connection_strings: str) -> None:
         """Set database replicas connection strings.
@@ -835,7 +1335,7 @@ class DatabaseProvides(DataProvides):
             relation_id: the identifier for a particular relation.
             uris: connection URIs.
         """
-        self._update_relation_data(relation_id, {"uris": uris})
+        self.set_relation_fields(relation_id, {"uris": uris})
 
     def set_version(self, relation_id: int, version: str) -> None:
         """Set the database version in the application relation databag.
@@ -859,9 +1359,10 @@ class DatabaseRequires(DataRequires):
         database_name: str,
         extra_user_roles: Optional[str] = None,
         relations_aliases: Optional[List[str]] = None,
+        additional_secret_fields: Optional[List[str]] = [],
     ):
         """Manager of database client relations."""
-        super().__init__(charm, relation_name, extra_user_roles)
+        super().__init__(charm, relation_name, extra_user_roles, additional_secret_fields)
         self.database = database_name
         self.relations_aliases = relations_aliases
 
@@ -885,6 +1386,10 @@ class DatabaseRequires(DataRequires):
                     f"{relation_alias}_read_only_endpoints_changed",
                     DatabaseReadOnlyEndpointsChangedEvent,
                 )
+
+    def _on_secret_changed_event(self, event: SecretChangedEvent):
+        """Event notifying about a new value of a secret."""
+        pass
 
     def _assign_relation_alias(self, relation_id: int) -> None:
         """Assigns an alias to a relation.
@@ -962,16 +1467,19 @@ class DatabaseRequires(DataRequires):
         if len(self.relations) == 0:
             return False
 
-        relation_data = self.fetch_relation_data()[self.relations[relation_index].id]
-        host = relation_data.get("endpoints")
+        relation_id = self.relations[relation_index].id
+        host = self.get_relation_field(relation_id, "endpoints")
 
         # Return False if there is no endpoint available.
         if host is None:
             return False
 
         host = host.split(":")[0]
-        user = relation_data.get("username")
-        password = relation_data.get("password")
+
+        content = self.get_relation_fields(relation_id, ["username", "password"])
+        user = content.get("username")
+        password = content.get("password")
+
         connection_string = (
             f"host='{host}' dbname='{self.database}' user='{user}' password='{password}'"
         )
@@ -990,6 +1498,8 @@ class DatabaseRequires(DataRequires):
 
     def _on_relation_created_event(self, event: RelationCreatedEvent) -> None:
         """Event emitted when the database relation is created."""
+        super()._on_relation_created_event(event)
+
         # If relations aliases were provided, assign one to the relation.
         self._assign_relation_alias(event.relation.id)
 
@@ -1011,9 +1521,13 @@ class DatabaseRequires(DataRequires):
         # Check which data has changed to emit customs events.
         diff = self._diff(event)
 
+        # Register all new secrets with their labels
+        if any(newval for newval in diff.added if newval.startswith("secret-")):
+            self.register_secrets_to_relation(event.relation, diff.added)
+
         # Check if the database is created
         # (the database charm shared the credentials).
-        if "username" in diff.added and "password" in diff.added:
+        if ("username" in diff.added and "password" in diff.added) or "secret-user" in diff.added:
             # Emit the default event (the one without an alias).
             logger.info("database created at %s", datetime.now())
             getattr(self.on, "database_created").emit(
@@ -1159,7 +1673,7 @@ class KafkaProvides(DataProvides):
 
     def _on_relation_changed_event(self, event: RelationChangedEvent) -> None:
         """Event emitted when the relation has changed."""
-        # Only the leader should handle this event.
+        # Leader only
         if not self.local_unit.is_leader():
             return
 
@@ -1189,7 +1703,7 @@ class KafkaProvides(DataProvides):
             relation_id: the identifier for a particular relation.
             bootstrap_server: the bootstrap server address.
         """
-        self._update_relation_data(relation_id, {"endpoints": bootstrap_server})
+        self.set_relation_fields(relation_id, {"endpoints": bootstrap_server})
 
     def set_consumer_group_prefix(self, relation_id: int, consumer_group_prefix: str) -> None:
         """Set the consumer group prefix in the application relation databag.
@@ -1222,10 +1736,11 @@ class KafkaRequires(DataRequires):
         topic: str,
         extra_user_roles: Optional[str] = None,
         consumer_group_prefix: Optional[str] = None,
+        additional_secret_fields: Optional[List[str]] = [],
     ):
         """Manager of Kafka client relations."""
         # super().__init__(charm, relation_name)
-        super().__init__(charm, relation_name, extra_user_roles)
+        super().__init__(charm, relation_name, extra_user_roles, additional_secret_fields)
         self.charm = charm
         self.topic = topic
         self.consumer_group_prefix = consumer_group_prefix or ""
@@ -1244,6 +1759,8 @@ class KafkaRequires(DataRequires):
 
     def _on_relation_created_event(self, event: RelationCreatedEvent) -> None:
         """Event emitted when the Kafka relation is created."""
+        super()._on_relation_created_event(event)
+
         # Sets topic, extra user roles, and "consumer-group-prefix" in the relation
         relation_data = {
             f: getattr(self, f.replace("-", "_"), "")
@@ -1252,6 +1769,10 @@ class KafkaRequires(DataRequires):
 
         self._update_relation_data(event.relation.id, relation_data)
 
+    def _on_secret_changed_event(self, event: SecretChangedEvent):
+        """Event notifying about a new value of a secret."""
+        pass
+
     def _on_relation_changed_event(self, event: RelationChangedEvent) -> None:
         """Event emitted when the Kafka relation has changed."""
         # Check which data has changed to emit customs events.
@@ -1259,7 +1780,12 @@ class KafkaRequires(DataRequires):
 
         # Check if the topic is created
         # (the Kafka charm shared the credentials).
-        if "username" in diff.added and "password" in diff.added:
+
+        # Register all new secrets with their labels
+        if any(newval for newval in diff.added if newval.startswith("secret-")):
+            self.register_secrets_to_relation(event.relation, diff.added)
+
+        if ("username" in diff.added and "password" in diff.added) or "secret-user" in diff.added:
             # Emit the default event (the one without an alias).
             logger.info("topic created at %s", datetime.now())
             getattr(self.on, "topic_created").emit(event.relation, app=event.app, unit=event.unit)
@@ -1339,10 +1865,9 @@ class OpenSearchProvides(DataProvides):
 
     def _on_relation_changed_event(self, event: RelationChangedEvent) -> None:
         """Event emitted when the relation has changed."""
-        # Only the leader should handle this event.
+        # Leader only
         if not self.local_unit.is_leader():
             return
-
         # Check which data has changed to emit customs events.
         diff = self._diff(event)
 
@@ -1371,7 +1896,7 @@ class OpenSearchProvides(DataProvides):
             relation_id: the identifier for a particular relation.
             endpoints: the endpoint addresses for opensearch nodes.
         """
-        self._update_relation_data(relation_id, {"endpoints": endpoints})
+        self.set_relation_fields(relation_id, {"endpoints": endpoints})
 
     def set_version(self, relation_id: int, version: str) -> None:
         """Set the opensearch version in the application relation databag.
@@ -1389,15 +1914,22 @@ class OpenSearchRequires(DataRequires):
     on = OpenSearchRequiresEvents()  # pyright: ignore[reportGeneralTypeIssues]
 
     def __init__(
-        self, charm, relation_name: str, index: str, extra_user_roles: Optional[str] = None
+        self,
+        charm,
+        relation_name: str,
+        index: str,
+        extra_user_roles: Optional[str] = None,
+        additional_secret_fields: Optional[List[str]] = [],
     ):
         """Manager of OpenSearch client relations."""
-        super().__init__(charm, relation_name, extra_user_roles)
+        super().__init__(charm, relation_name, extra_user_roles, additional_secret_fields)
         self.charm = charm
         self.index = index
 
     def _on_relation_created_event(self, event: RelationCreatedEvent) -> None:
         """Event emitted when the OpenSearch relation is created."""
+        super()._on_relation_created_event(event)
+
         # Sets both index and extra user roles in the relation if the roles are provided.
         # Otherwise, sets only the index.
         data = {"index": self.index}
@@ -1405,6 +1937,22 @@ class OpenSearchRequires(DataRequires):
             data["extra-user-roles"] = self.extra_user_roles
 
         self._update_relation_data(event.relation.id, data)
+
+    def _on_secret_changed_event(self, event: SecretChangedEvent):
+        """Event notifying about a new value of a secret."""
+        if not event.secret.label:
+            return
+
+        relation = self.relation_from_secret_label(event.secret.label)
+        if not relation:
+            logging.info(
+                f"Received secret {event.secret.label} but couldn't parse, seems irrelevant"
+            )
+            return
+
+        logger.info("authentication updated at: %s", datetime.now())
+        # TODO: Unit parameter is missing !!!!
+        getattr(self.on, "authentication_updated").emit(relation, app=relation.app)
 
     def _on_relation_changed_event(self, event: RelationChangedEvent) -> None:
         """Event emitted when the OpenSearch relation has changed.
@@ -1414,8 +1962,11 @@ class OpenSearchRequires(DataRequires):
         # Check which data has changed to emit customs events.
         diff = self._diff(event)
 
-        # Check if authentication has updated, emit event if so
-        updates = {"username", "password", "tls", "tls-ca"}
+        # Register all new secrets with their labels
+        if any(newval for newval in diff.added if newval.startswith("secret-")):
+            self.register_secrets_to_relation(event.relation, diff.added)
+
+        updates = {"username", "password", "tls", "tls-ca", "secret-user", "secret-tls"}
         if len(set(diff._asdict().keys()) - updates) < len(diff):
             logger.info("authentication updated at: %s", datetime.now())
             getattr(self.on, "authentication_updated").emit(
@@ -1424,7 +1975,7 @@ class OpenSearchRequires(DataRequires):
 
         # Check if the index is created
         # (the OpenSearch charm shares the credentials).
-        if "username" in diff.added and "password" in diff.added:
+        if ("username" in diff.added and "password" in diff.added) or "secret-user" in diff.added:
             # Emit the default event (the one without an alias).
             logger.info("index created at: %s", datetime.now())
             getattr(self.on, "index_created").emit(event.relation, app=event.app, unit=event.unit)
