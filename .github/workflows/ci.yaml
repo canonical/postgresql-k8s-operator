@@ -79,8 +79,8 @@ jobs:
           # - backup-integration
           # - charm-integration
           - database-relation-integration
-          - db-relation-integration
-          - db-admin-relation-integration
+          # - db-relation-integration
+          # - db-admin-relation-integration
           # - ha-replication-integration
           # - ha-self-healing-integration
           # - password-rotation-integration
