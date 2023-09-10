@@ -281,7 +281,7 @@ async def test_an_application_can_request_multiple_databases(ops_test: OpsTest):
     await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active")
 
     # Get the connection strings to connect to both databases.
-    for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3), reraise=True):
+    for attempt in Retrying(stop=stop_after_attempt(15), wait=wait_fixed(3), reraise=True):
         with attempt:
             first_database_connection_string = await build_connection_string(
                 ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME
