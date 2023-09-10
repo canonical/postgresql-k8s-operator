@@ -1,0 +1,39 @@
+# Copyright 2023 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: Release to Charmhub
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'tests/**'
+      - 'docs/**'
+      - renovate.json
+      - poetry.lock
+      - pyproject.toml
+      - '.github/workflows/ci.yaml'
+
+jobs:
+  ci-tests:
+    name: Tests
+    uses: ./.github/workflows/ci.yaml
+    secrets: inherit
+
+  build:
+    name: Build charm
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm_without_cache.yaml@v2
+
+  release:
+    name: Release charm
+    needs:
+      - ci-tests
+      - build
+    uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v2
+    with:
+      channel: edge
+      artifact-name: ${{ needs.build.outputs.artifact-name }}
+    secrets:
+      charmhub-token: ${{ secrets.CHARMHUB_TOKEN }}
+    permissions:
+      contents: write  # Needed to create GitHub release
