@@ -41,14 +41,16 @@ INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE = "invalid role(s) for extra user roles
 
 
 @pytest.mark.abort_on_fail
-async def test_database_relation_with_charm_libraries(ops_test: OpsTest, database_charm):
+async def test_database_relation_with_charm_libraries(
+    ops_test: OpsTest, database_charm, application_charm
+):
     """Test basic functionality of database relation interface."""
     # Deploy both charms (multiple units for each application to test that later they correctly
     # set data in the relation application databag using only the leader unit).
     async with ops_test.fast_forward():
         await asyncio.gather(
             ops_test.model.deploy(
-                APPLICATION_APP_NAME,
+                application_charm,
                 application_name=APPLICATION_APP_NAME,
                 num_units=2,
                 series=CHARM_SERIES,
@@ -150,7 +152,9 @@ async def test_user_with_extra_roles(ops_test: OpsTest):
     connection.close()
 
 
-async def test_two_applications_doesnt_share_the_same_relation_data(ops_test: OpsTest):
+async def test_two_applications_doesnt_share_the_same_relation_data(
+    ops_test: OpsTest, application_charm
+):
     """Test that two different application connect to the database with different credentials."""
     # Set some variables to use in this test.
     another_application_app_name = "another-application"
@@ -159,7 +163,7 @@ async def test_two_applications_doesnt_share_the_same_relation_data(ops_test: Op
 
     # Deploy another application.
     await ops_test.model.deploy(
-        APPLICATION_APP_NAME,
+        application_charm,
         application_name=another_application_app_name,
         series=CHARM_SERIES,
         channel="edge",
@@ -426,7 +430,7 @@ async def test_admin_role(ops_test: OpsTest):
     ]:
         logger.info(f"connecting to the following database: {database}")
         connection_string = await build_connection_string(
-            ops_test, DATA_INTEGRATOR_APP_NAME, "postgresql", database=database
+            ops_test, DATA_INTEGRATOR_APP_NAME, "postgresql", database=database, use_secrets=False
         )
         connection = None
         should_fail = False
@@ -466,7 +470,7 @@ async def test_admin_role(ops_test: OpsTest):
 
     # Test the creation and deletion of databases.
     connection_string = await build_connection_string(
-        ops_test, DATA_INTEGRATOR_APP_NAME, "postgresql", database="postgres"
+        ops_test, DATA_INTEGRATOR_APP_NAME, "postgresql", database="postgres", use_secrets=False
     )
     connection = psycopg2.connect(connection_string)
     connection.autocommit = True

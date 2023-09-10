@@ -17,8 +17,7 @@ def juju_has_secrets(mocker: MockerFixture):
     (i.e. not the real juju version)
     """
     if juju_version := os.environ.get("LIBJUJU"):
-        juju_version.replace("==", "")
-        juju_version = juju_version[2:].split(".")[0]
+        juju_version = juju_version[1:].split(".")[0]
     else:
         juju_version = version("juju")
 
