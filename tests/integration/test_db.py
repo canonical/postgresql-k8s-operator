@@ -170,7 +170,7 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
         )
 
         await ops_test.model.applications[database_application_name].destroy_relation(
-            f"{database_application_name}:db", "indico:db"
+            f"{database_application_name}:db", f"{APPLICATION_APP_NAME}:db"
         )
 
         # Verify that active status is restored when all blocking relations are gone
