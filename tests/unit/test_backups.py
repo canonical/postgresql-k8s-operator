@@ -538,6 +538,22 @@ class TestPostgreSQLBackups(unittest.TestCase):
     def test_check_stanza(
         self, _execute_command, _update_config, _, _member_started, _reload_patroni_configuration
     ):
+        # Set peer data flag
+        with self.harness.hooks_disabled():
+            self.harness.update_relation_data(
+                self.peer_rel_id,
+                self.charm.app.name,
+                {"init-pgbackrest": "True"},
+            )
+
+        # Test when the unit is not the leader.
+        self.charm.backup.check_stanza()
+        _execute_command.assert_not_called()
+
+        # Set the unit as leader
+        with self.harness.hooks_disabled():
+            self.harness.set_leader()
+
         stanza_check_command = [
             "pgbackrest",
             f"--stanza={self.charm.backup.stanza_name}",
@@ -556,6 +572,12 @@ class TestPostgreSQLBackups(unittest.TestCase):
         self.assertEqual(self.charm.unit.status.message, FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE)
 
         # Test when the archiving is working correctly (pgBackRest check command succeeds).
+        with self.harness.hooks_disabled():
+            self.harness.update_relation_data(
+                self.peer_rel_id,
+                self.charm.app.name,
+                {"init-pgbackrest": "True"},
+            )
         _execute_command.reset_mock()
         _update_config.reset_mock()
         _member_started.reset_mock()

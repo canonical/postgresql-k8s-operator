@@ -306,6 +306,9 @@ class PostgreSQLBackups(Object):
 
     def check_stanza(self) -> None:
         """Runs the pgbackrest stanza validation."""
+        if not self.charm.unit.is_leader() or "init-pgbackrest" not in self.charm.app_peer_data:
+            return
+
         # Update the configuration to use pgBackRest as the archiving mechanism.
         self.charm.update_config()
 
