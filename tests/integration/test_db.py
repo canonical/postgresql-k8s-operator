@@ -118,8 +118,14 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
 
         # Wait for model to stabilise
         await ops_test.model.wait_for_idle(
-            apps=["indico", APPLICATION_APP_NAME],
+            apps=["indico"],
             status="waiting",
+            raise_on_blocked=False,
+            timeout=1000,
+        )
+        await ops_test.model.wait_for_idle(
+            apps=[APPLICATION_APP_NAME],
+            status="active",
             raise_on_blocked=False,
             timeout=1000,
         )
