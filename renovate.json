@@ -42,9 +42,6 @@
       "allowedVersions": "<3.0.0",
       "groupName": "Juju 2"
     }, {
-      "matchPackageNames": ["httpcore"],
-      "allowedVersions": "<0.18.0"
-    }, {
       "matchPackageNames": ["urllib3"],
       "allowedVersions": "<2.0.0"
     }, {
