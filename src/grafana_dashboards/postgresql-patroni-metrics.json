@@ -152,7 +152,7 @@
         "text": {
           "valueSize": 20
         },
-        "textMode": "auto"
+        "textMode": "value"
       },
       "pluginVersion": "9.2.13",
       "targets": [
@@ -732,7 +732,7 @@
         "text": {
           "valueSize": 20
         },
-        "textMode": "auto"
+        "textMode": "value"
       },
       "pluginVersion": "9.2.13",
       "targets": [
