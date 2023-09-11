@@ -16,6 +16,7 @@ from tests.integration.helpers import (
     wait_for_relation_removed_between,
 )
 
+APPLICATION_APP_NAME = "postgresql-test-app"
 EXTENSIONS_BLOCKING_MESSAGE = "extensions requested through relation"
 FINOS_WALTZ_APP_NAME = "finos-waltz"
 ANOTHER_FINOS_WALTZ_APP_NAME = "another-finos-waltz"
@@ -99,38 +100,38 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
         await ops_test.model.deploy(
             "indico",
             channel="stable",
-            application_name="indico1",
+            application_name="indico",
             num_units=APPLICATION_UNITS,
         )
         await ops_test.model.deploy(
-            "indico",
-            channel="stable",
-            application_name="indico2",
+            APPLICATION_APP_NAME,
+            channel="edge",
+            application_name=APPLICATION_APP_NAME,
             num_units=APPLICATION_UNITS,
         )
         await ops_test.model.deploy("redis-k8s", channel="stable", application_name="redis-broker")
         await ops_test.model.deploy("redis-k8s", channel="stable", application_name="redis-cache")
         await gather(
-            ops_test.model.relate("redis-broker", "indico1"),
-            ops_test.model.relate("redis-cache", "indico1"),
+            ops_test.model.relate("redis-broker", "indico"),
+            ops_test.model.relate("redis-cache", "indico"),
         )
 
         # Wait for model to stabilise
         await ops_test.model.wait_for_idle(
-            apps=["indico1", "indico2"],
+            apps=["indico", APPLICATION_APP_NAME],
             status="waiting",
             raise_on_blocked=False,
             timeout=1000,
         )
-        unit = ops_test.model.units.get("indico1/0")
+        unit = ops_test.model.units.get("indico/0")
         ops_test.model.block_until(
             lambda: unit.workload_status_message == "Waiting for database availability",
             timeout=1000,
         )
 
         await gather(
-            ops_test.model.relate(f"{database_application_name}:db", "indico1:db"),
-            ops_test.model.relate(f"{database_application_name}:db", "indico2:db"),
+            ops_test.model.relate(f"{database_application_name}:db", "indico:db"),
+            ops_test.model.relate(f"{database_application_name}:db", f"{APPLICATION_APP_NAME}:db"),
         )
 
         await ops_test.model.wait_for_idle(
@@ -146,7 +147,7 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
         )
 
         await ops_test.model.applications[database_application_name].destroy_relation(
-            f"{database_application_name}:db", "indico1:db"
+            f"{database_application_name}:db", "indico:db"
         )
 
         await ops_test.model.wait_for_idle(
@@ -163,7 +164,7 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
         )
 
         await ops_test.model.applications[database_application_name].destroy_relation(
-            f"{database_application_name}:db", "indico2:db"
+            f"{database_application_name}:db", "indico:db"
         )
 
         # Verify that active status is restored when all blocking relations are gone
@@ -181,9 +182,9 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
         await ops_test.model.wait_for_idle(
             apps=[database_application_name], status="active", idle_period=15
         )
-        await ops_test.model.relate(f"{database_application_name}:db", "indico1:db")
+        await ops_test.model.relate(f"{database_application_name}:db", "indico:db")
         await ops_test.model.wait_for_idle(
-            apps=[database_application_name, "indico1"],
+            apps=[database_application_name, "indico"],
             status="active",
             raise_on_blocked=False,
             timeout=2000,
@@ -195,14 +196,14 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
         config = {"plugin_pg_trgm_enable": "False", "plugin_unaccent_enable": "False"}
         await ops_test.model.applications[database_application_name].set_config(config)
         await ops_test.model.applications[database_application_name].destroy_relation(
-            f"{database_application_name}:db", "indico1:db"
+            f"{database_application_name}:db", "indico:db"
         )
-        wait_for_relation_removed_between(ops_test, database_application_name, "indico1")
+        wait_for_relation_removed_between(ops_test, database_application_name, "indico")
         await ops_test.model.wait_for_idle(
-            apps=[database_application_name, "indico1"], status="active", idle_period=15
+            apps=[database_application_name, "indico"], status="active", idle_period=15
         )
 
-        await ops_test.model.relate(f"{database_application_name}:db", "indico1:db")
+        await ops_test.model.relate(f"{database_application_name}:db", "indico:db")
         unit = next(iter(ops_test.model.units.values()))
         ops_test.model.block_until(
             lambda: unit.workload_status_message == EXTENSIONS_BLOCKING_MESSAGE, timeout=600
@@ -211,7 +212,7 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
         config = {"plugin_pg_trgm_enable": "True", "plugin_unaccent_enable": "True"}
         await ops_test.model.applications[database_application_name].set_config(config)
         await ops_test.model.wait_for_idle(
-            apps=[database_application_name, "indico1"],
+            apps=[database_application_name, "indico"],
             status="active",
             raise_on_blocked=False,
             timeout=2000,
@@ -220,8 +221,8 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
 
         # Cleanup
         await gather(
-            ops_test.model.remove_application("indico1", block_until_done=True),
-            ops_test.model.remove_application("indico2", block_until_done=True),
+            ops_test.model.remove_application("indico", block_until_done=True),
+            ops_test.model.remove_application(APPLICATION_APP_NAME, block_until_done=True),
             ops_test.model.remove_application("redis-broker", block_until_done=True),
             ops_test.model.remove_application("redis-cache", block_until_done=True),
         )
