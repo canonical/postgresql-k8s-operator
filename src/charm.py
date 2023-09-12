@@ -464,6 +464,8 @@ class PostgresqlOperatorCharm(CharmBase):
 
         self.postgresql_client_relation.update_read_only_endpoint()
 
+        self.backup.check_stanza()
+
         # Start or stop the pgBackRest TLS server service when TLS certificate change.
         if not self.backup.start_stop_pgbackrest_service():
             # Ping primary to start its TLS server.
@@ -474,7 +476,7 @@ class PostgresqlOperatorCharm(CharmBase):
             event.defer()
             return
         else:
-            self.unit_peer_data.pop("start-tls.server", None)
+            self.unit_peer_data.pop("start-tls-server", None)
 
         if not self.is_blocked:
             self.unit.status = ActiveStatus()
