@@ -83,7 +83,7 @@ jobs:
           - tls-integration
         agent-versions:
           - "2.9.44"  # renovate: latest juju 2
-          - "3.1.5"  # renovate: latest juju 3
+          - "3.1.6"  # renovate: latest juju 3
     name: ${{ matrix.tox-environments }} | ${{ matrix.agent-versions }}
     needs:
       - lib-check
@@ -98,7 +98,7 @@ jobs:
       - name: Set channel
         run: |
           juju_channel=$(echo "${{ matrix.agent-versions }}" | cut -c 1-3)
-          echo "channel=${juju_channel}/stable" >> "$GITHUB_ENV"
+          echo "channel=${juju_channel}/edge" >> "$GITHUB_ENV"
           juju_major=$(echo "${{ matrix.agent-versions }}" | cut -c 1)
           echo "libjuju=juju${juju_major}" >> "$GITHUB_ENV"
       - name: Setup operator environment
