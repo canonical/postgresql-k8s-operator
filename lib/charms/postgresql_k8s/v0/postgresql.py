@@ -32,7 +32,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 12
+LIBPATCH = 13
 
 INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE = "invalid role(s) for extra user roles"
 
@@ -346,6 +346,13 @@ class PostgreSQL:
         except psycopg2.Error as e:
             logger.error(f"Failed to get PostgreSQL version: {e}")
             raise PostgreSQLGetPostgreSQLVersionError()
+
+    def has_pending_restart(self) -> bool:
+        """Returns whether PostgreSQL has a pending restart."""
+        with self._connect_to_database() as connection, connection.cursor() as cursor:
+            cursor.execute("SELECT True FROM pg_settings WHERE pending_restart;")
+            results = cursor.fetchall()
+            return len(results) > 0
 
     def is_tls_enabled(self, check_current_host: bool = False) -> bool:
         """Returns whether TLS is enabled.

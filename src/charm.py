@@ -5,7 +5,7 @@
 """Charmed Kubernetes Operator for the PostgreSQL database."""
 import json
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v0.loki_push_api import LogProxyConsumer
@@ -1309,8 +1309,7 @@ class PostgresqlOperatorCharm(CharmBase):
     def update_config(self, is_creating_backup: bool = False) -> bool:
         """Updates Patroni config file based on the existence of the TLS files."""
         # Update and reload configuration based on TLS files availability.
-        invalid, restart_postgresql = self._validate_and_apply_configurations(is_creating_backup)
-        if invalid:
+        if not self._validate_and_render_configurations(is_creating_backup):
             self.unit.status = BlockedStatus(INVALID_POSTGRESQL_CONFIGURATIONS_ERROR_MESSAGE)
             return False
         elif self.unit.status.message == INVALID_POSTGRESQL_CONFIGURATIONS_ERROR_MESSAGE:
@@ -1329,10 +1328,9 @@ class PostgresqlOperatorCharm(CharmBase):
             logger.debug("Early exit update_config: Patroni not started yet")
             return False
 
-        restart_postgresql = restart_postgresql or (
-            self.is_tls_enabled != self.postgresql.is_tls_enabled()
-        )
+        restart_postgresql = self.is_tls_enabled != self.postgresql.is_tls_enabled()
         self._patroni.reload_patroni_configuration()
+        restart_postgresql = restart_postgresql or self.postgresql.has_pending_restart()
         self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
 
         # Restart PostgreSQL if TLS configuration has changed
@@ -1358,7 +1356,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
         return True
 
-    def _validate_and_apply_configurations(self, is_creating_backup: bool) -> Tuple[bool, bool]:
+    def _validate_and_render_configurations(self, is_creating_backup: bool) -> bool:
         configurations = {}
         for config, value in self.model.config.items():
             # Filter config option not related to PostgreSQL configurations.
@@ -1408,9 +1406,9 @@ class PostgresqlOperatorCharm(CharmBase):
                 stanza=self.app_peer_data.get("stanza"),
                 restore_stanza=self.app_peer_data.get("restore-stanza"),
             )
-            return False, True
+            return False
 
-        return True, False
+        return True
 
     def _update_pebble_layers(self) -> None:
         """Update the pebble layers to keep the health check URL up-to-date."""
