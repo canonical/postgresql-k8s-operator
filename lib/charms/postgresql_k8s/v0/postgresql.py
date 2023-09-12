@@ -19,7 +19,7 @@ The `postgresql` module provides methods for interacting with the PostgreSQL ins
 Any charm using this library should import the `psycopg2` or `psycopg2-binary` dependency.
 """
 import logging
-from typing import List, Set, Tuple
+from typing import Dict, List, Set, Tuple
 
 import psycopg2
 from psycopg2 import sql
@@ -304,6 +304,33 @@ class PostgreSQL:
         finally:
             if connection is not None:
                 connection.close()
+
+    def get_applied_postgresql_configurations(self, configurations=List[str]) -> Dict:
+        """Returns the applied PostgreSQL configurations and their values.
+
+        Args:
+            configurations: list of configurations to retrieve the values.
+
+        Returns:
+            Dict containing PostgreSQL configurations and their values.
+        """
+        with self._connect_to_database() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT name, setting FROM pg_settings WHERE name IN %s;", (configurations,)
+            )
+            results = cursor.fetchall()
+            return {configuration[0]: configuration[1] for configuration in results}
+
+    def get_invalid_postgresql_configurations(self) -> List:
+        """Returns the PostgreSQL configurations that have invalid values.
+
+        Returns:
+            Dict containing PostgreSQL configurations and their values.
+        """
+        with self._connect_to_database() as connection, connection.cursor() as cursor:
+            cursor.execute("SELECT name FROM pg_file_settings WHERE error IS NOT NULL;")
+            results = cursor.fetchall()
+            return [configuration[0] for configuration in results]
 
     def get_postgresql_version(self) -> str:
         """Returns the PostgreSQL version.

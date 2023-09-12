@@ -5,7 +5,7 @@
 """Charmed Kubernetes Operator for the PostgreSQL database."""
 import json
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v0.loki_push_api import LogProxyConsumer
@@ -79,6 +79,8 @@ from upgrade import PostgreSQLUpgrade, get_postgresql_k8s_dependencies_model
 from utils import new_password
 
 logger = logging.getLogger(__name__)
+
+INVALID_POSTGRESQL_CONFIGURATIONS_ERROR_MESSAGE = "invalid configuration(s) for PostgreSQL"
 
 
 class PostgresqlOperatorCharm(CharmBase):
@@ -489,6 +491,8 @@ class PostgresqlOperatorCharm(CharmBase):
 
         if not self.unit.is_leader():
             return
+
+        self.update_config()
 
         # Enable and/or disable the extensions.
         self.enable_disable_extensions()
@@ -1305,15 +1309,13 @@ class PostgresqlOperatorCharm(CharmBase):
     def update_config(self, is_creating_backup: bool = False) -> bool:
         """Updates Patroni config file based on the existence of the TLS files."""
         # Update and reload configuration based on TLS files availability.
-        self._patroni.render_patroni_yml_file(
-            connectivity=self.unit_peer_data.get("connectivity", "on") == "on",
-            is_creating_backup=is_creating_backup,
-            enable_tls=self.is_tls_enabled,
-            is_no_sync_member=self.upgrade.is_no_sync_member,
-            backup_id=self.app_peer_data.get("restoring-backup"),
-            stanza=self.app_peer_data.get("stanza"),
-            restore_stanza=self.app_peer_data.get("restore-stanza"),
-        )
+        invalid, restart_postgresql = self._validate_and_apply_configurations(is_creating_backup)
+        if invalid:
+            self.unit.status = BlockedStatus(INVALID_POSTGRESQL_CONFIGURATIONS_ERROR_MESSAGE)
+            return False
+        elif self.unit.status.message == INVALID_POSTGRESQL_CONFIGURATIONS_ERROR_MESSAGE:
+            self.unit.status = ActiveStatus()
+
         if not self._is_workload_running:
             # If Patroni/PostgreSQL has not started yet and TLS relations was initialised,
             # then mark TLS as enabled. This commonly happens when the charm is deployed
@@ -1327,7 +1329,9 @@ class PostgresqlOperatorCharm(CharmBase):
             logger.debug("Early exit update_config: Patroni not started yet")
             return False
 
-        restart_postgresql = self.is_tls_enabled != self.postgresql.is_tls_enabled()
+        restart_postgresql = restart_postgresql or (
+            self.is_tls_enabled != self.postgresql.is_tls_enabled()
+        )
         self._patroni.reload_patroni_configuration()
         self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
 
@@ -1353,6 +1357,60 @@ class PostgresqlOperatorCharm(CharmBase):
                 container.restart(self._metrics_service)
 
         return True
+
+    def _validate_and_apply_configurations(self, is_creating_backup: bool) -> Tuple[bool, bool]:
+        configurations = {}
+        for config, value in self.model.config.items():
+            # Filter config option not related to PostgreSQL configurations.
+            if not config.startswith(
+                (
+                    "connection",
+                    "durability",
+                    "instance",
+                    "logging",
+                    "memory",
+                    "optimizer",
+                    "request",
+                    "response",
+                    "vacuum",
+                )
+            ):
+                continue
+
+            configuration = "_".join(config.split("_")[1:-1])
+            configurations[configuration] = value
+
+        self._patroni.render_patroni_yml_file(
+            configurations=configurations,
+            connectivity=self.unit_peer_data.get("connectivity", "on") == "on",
+            is_creating_backup=is_creating_backup,
+            enable_tls=self.is_tls_enabled,
+            is_no_sync_member=self.upgrade.is_no_sync_member,
+            backup_id=self.app_peer_data.get("restoring-backup"),
+            stanza=self.app_peer_data.get("stanza"),
+            restore_stanza=self.app_peer_data.get("restore-stanza"),
+        )
+        invalid_configurations = self.postgresql.get_invalid_postgresql_configurations()
+        if len(invalid_configurations) > 0:
+            logger.error(
+                f"invalid values for the following configurations: {''.join(invalid_configurations)}"
+            )
+            applied_configurations = self.postgresql.get_applied_postgresql_configurations(
+                list(configurations.keys())
+            )
+            self._patroni.render_patroni_yml_file(
+                configurations=applied_configurations,
+                connectivity=self.unit_peer_data.get("connectivity", "on") == "on",
+                is_creating_backup=is_creating_backup,
+                enable_tls=self.is_tls_enabled,
+                is_no_sync_member=self.upgrade.is_no_sync_member,
+                backup_id=self.app_peer_data.get("restoring-backup"),
+                stanza=self.app_peer_data.get("stanza"),
+                restore_stanza=self.app_peer_data.get("restore-stanza"),
+            )
+            return False, True
+
+        return True, False
 
     def _update_pebble_layers(self) -> None:
         """Update the pebble layers to keep the health check URL up-to-date."""

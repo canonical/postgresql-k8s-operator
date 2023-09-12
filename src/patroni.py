@@ -7,7 +7,7 @@
 import logging
 import os
 import pwd
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import requests
 import yaml
@@ -283,6 +283,7 @@ class Patroni:
 
     def render_patroni_yml_file(
         self,
+        configurations: Dict,
         connectivity: bool = False,
         is_creating_backup: bool = False,
         enable_tls: bool = False,
@@ -294,6 +295,7 @@ class Patroni:
         """Render the Patroni configuration file.
 
         Args:
+            configurations: dictionary with PostgreSQL configurations.
             connectivity: whether to allow external connections to the database.
             enable_tls: whether to enable TLS.
             is_creating_backup: whether this unit is creating a backup.
@@ -327,6 +329,7 @@ class Patroni:
             restore_stanza=restore_stanza,
             minority_count=self._members_count // 2,
             version=self.rock_postgresql_version.split(".")[0],
+            configurations=configurations,
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 

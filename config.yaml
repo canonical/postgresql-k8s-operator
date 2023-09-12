@@ -2,6 +2,57 @@
 # See LICENSE file for licensing details.
 
 options:
+  connection_ssl:
+    default: false
+    type: boolean
+  durability_synchronous_commit:
+    default: false
+    type: boolean
+  instance_default_text_search_config:
+    default: false
+    type: boolean
+  instance_password_encryption:
+    default: false
+    type: boolean
+  logging_log_connections:
+    default: false
+    type: boolean
+  logging_log_disconnections:
+    default: false
+    type: boolean
+  logging_log_lock_waits:
+    default: false
+    type: boolean
+  logging_log_min_duration_statement:
+    default: false
+    type: boolean
+  memory_maintenance_work_mem:
+    default: false
+    type: boolean
+  memory_max_prepared_transactions:
+    default: false
+    type: boolean
+  memory_shared_buffers:
+    default: false
+    type: boolean
+  memory_temp_buffers:
+    default: false
+    type: boolean
+  memory_work_mem:
+    default: false
+    type: boolean
+  optimizer_constraint_exclusion:
+    default: false
+    type: boolean
+  optimizer_default_statistics_target:
+    default: false
+    type: boolean
+  optimizer_from_collapse_limit:
+    default: false
+    type: boolean
+  optimizer_join_collapse_limit:
+    default: false
+    type: boolean
   plugin_citext_enable:
     default: false
     type: boolean
@@ -26,3 +77,42 @@ options:
     default: false
     type: boolean
     description: Enable unaccent extension
+  request_date_style:
+    default: false
+    type: boolean
+  request_standard_conforming_strings:
+    default: false
+    type: boolean
+  request_time_zone:
+    default: false
+    type: boolean
+  response_bytea_output:
+    default: false
+    type: boolean
+  response_lc_monetary:
+    default: false
+    type: boolean
+  response_lc_numeric:
+    default: false
+    type: boolean
+  response_lc_time:
+    default: false
+    type: boolean
+  vacuum_autovacuum_analyze_scale_factor:
+    default: false
+    type: boolean
+  vacuum_autovacuum_analyze_threshold:
+    default: false
+    type: boolean
+  vacuum_autovacuum_freeze_max_age:
+    default: false
+    type: boolean
+  vacuum_autovacuum_vacuum_cost_delay:
+    default: false
+    type: boolean
+  vacuum_autovacuum_vacuum_scale_factor:
+    default: false
+    type: boolean
+  vacuum_vacuum_freeze_table_age:
+    default: false
+    type: boolean
