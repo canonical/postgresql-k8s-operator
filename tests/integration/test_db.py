@@ -4,6 +4,7 @@
 import logging
 from asyncio import gather
 
+import pytest
 from pytest_operator.plugin import OpsTest
 
 from tests.integration.helpers import (
@@ -88,6 +89,7 @@ async def test_finos_waltz_db(ops_test: OpsTest) -> None:
         await ops_test.model.remove_application(DATABASE_APP_NAME, block_until_done=True)
 
 
+@pytest.mark.notjuju3
 async def test_indico_db_blocked(ops_test: OpsTest) -> None:
     """Tests if deploying and relating to Indico charm will block due to requested extensions."""
     async with ops_test.fast_forward(fast_interval="30s"):
@@ -229,6 +231,8 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
 
 async def test_discourse(ops_test: OpsTest):
     database_application_name = f"extensions-{DATABASE_APP_NAME}"
+    if database_application_name not in ops_test.model.applications:
+        await build_and_deploy(ops_test, 1, database_application_name)
 
     # Deploy Discourse and Redis.
     await gather(
