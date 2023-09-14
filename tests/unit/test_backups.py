@@ -517,24 +517,6 @@ class TestPostgreSQLBackups(unittest.TestCase):
             # Assert there is no stanza name in the application relation databag.
             self.assertEqual(self.harness.get_relation_data(self.peer_rel_id, self.charm.app), {})
 
-        # Test when the stanza creation succeeds, but the archiving is not working correctly
-        # (pgBackRest check command fails).
-        _execute_command.reset_mock()
-        _execute_command.side_effect = [
-            None,
-            ExecError(
-                command=stanza_creation_command, exit_code=1, stdout="", stderr="fake error"
-            ),
-        ]
-        _member_started.return_value = True
-        self.charm.backup._initialise_stanza()
-        self.assertEqual(_update_config.call_count, 2)
-        self.assertEqual(self.harness.get_relation_data(self.peer_rel_id, self.charm.app), {})
-        self.assertEqual(_member_started.call_count, 5)
-        self.assertEqual(_reload_patroni_configuration.call_count, 5)
-        self.assertIsInstance(self.charm.unit.status, BlockedStatus)
-        self.assertEqual(self.charm.unit.status.message, FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE)
-
         # Test when the archiving is working correctly (pgBackRest check command succeeds).
         _execute_command.reset_mock()
         _update_config.reset_mock()
@@ -544,8 +526,64 @@ class TestPostgreSQLBackups(unittest.TestCase):
         self.charm.backup._initialise_stanza()
         self.assertEqual(
             self.harness.get_relation_data(self.peer_rel_id, self.charm.app),
-            {"stanza": self.charm.backup.stanza_name},
+            {"stanza": "None.patroni-postgresql-k8s", "init-pgbackrest": "True"},
         )
+        self.assertIsInstance(self.charm.unit.status, MaintenanceStatus)
+
+    @patch("charm.Patroni.reload_patroni_configuration")
+    @patch("charm.Patroni.member_started", new_callable=PropertyMock)
+    @patch("backups.wait_fixed", return_value=wait_fixed(0))
+    @patch("charm.PostgresqlOperatorCharm.update_config")
+    @patch("charm.PostgreSQLBackups._execute_command")
+    def test_check_stanza(
+        self, _execute_command, _update_config, _, _member_started, _reload_patroni_configuration
+    ):
+        # Set peer data flag
+        with self.harness.hooks_disabled():
+            self.harness.update_relation_data(
+                self.peer_rel_id,
+                self.charm.app.name,
+                {"init-pgbackrest": "True"},
+            )
+
+        # Test when the unit is not the leader.
+        self.charm.backup.check_stanza()
+        _execute_command.assert_not_called()
+
+        # Set the unit as leader
+        with self.harness.hooks_disabled():
+            self.harness.set_leader()
+
+        stanza_check_command = [
+            "pgbackrest",
+            f"--stanza={self.charm.backup.stanza_name}",
+            "check",
+        ]
+        # Test when the archiving is not working correctly (pgBackRest check command fails).
+        _execute_command.side_effect = ExecError(
+            command=stanza_check_command, exit_code=1, stdout="", stderr="fake error"
+        )
+        _member_started.return_value = True
+        self.charm.backup.check_stanza()
+        self.assertEqual(_update_config.call_count, 2)
+        self.assertEqual(_member_started.call_count, 5)
+        self.assertEqual(_reload_patroni_configuration.call_count, 5)
+        self.assertIsInstance(self.charm.unit.status, BlockedStatus)
+        self.assertEqual(self.charm.unit.status.message, FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE)
+
+        # Test when the archiving is working correctly (pgBackRest check command succeeds).
+        with self.harness.hooks_disabled():
+            self.harness.update_relation_data(
+                self.peer_rel_id,
+                self.charm.app.name,
+                {"init-pgbackrest": "True"},
+            )
+        _execute_command.reset_mock()
+        _update_config.reset_mock()
+        _member_started.reset_mock()
+        _reload_patroni_configuration.reset_mock()
+        _execute_command.side_effect = None
+        self.charm.backup.check_stanza()
         _update_config.assert_called_once()
         _member_started.assert_called_once()
         _reload_patroni_configuration.assert_called_once()
@@ -576,7 +614,6 @@ class TestPostgreSQLBackups(unittest.TestCase):
         self.assertEqual(self.charm.backup._is_primary_pgbackrest_service_running, True)
         _execute_command.assert_called_once()
 
-    @patch("charm.PostgreSQLBackups.start_stop_pgbackrest_service")
     @patch("charm.PostgreSQLBackups._initialise_stanza")
     @patch("charm.PostgreSQLBackups.can_use_s3_repository")
     @patch("charm.PostgreSQLBackups._create_bucket_if_not_exists")
@@ -589,7 +626,6 @@ class TestPostgreSQLBackups(unittest.TestCase):
         _create_bucket_if_not_exists,
         _can_use_s3_repository,
         _initialise_stanza,
-        _start_stop_pgbackrest_service,
     ):
         # Test when the cluster was not initialised yet.
         self.relate_to_s3_integrator()
@@ -601,7 +637,6 @@ class TestPostgreSQLBackups(unittest.TestCase):
         _create_bucket_if_not_exists.assert_not_called()
         _can_use_s3_repository.assert_not_called()
         _initialise_stanza.assert_not_called()
-        _start_stop_pgbackrest_service.assert_not_called()
 
         # Test when the cluster is already initialised, but the charm fails to render
         # the pgBackRest configuration file due to missing S3 parameters.
@@ -621,7 +656,6 @@ class TestPostgreSQLBackups(unittest.TestCase):
         _create_bucket_if_not_exists.assert_not_called()
         _can_use_s3_repository.assert_not_called()
         _initialise_stanza.assert_not_called()
-        _start_stop_pgbackrest_service.assert_not_called()
 
         # Test when the charm render the pgBackRest configuration file, but fails to
         # access or create the S3 bucket.
@@ -654,7 +688,6 @@ class TestPostgreSQLBackups(unittest.TestCase):
             )
             _can_use_s3_repository.assert_not_called()
             _initialise_stanza.assert_not_called()
-            _start_stop_pgbackrest_service.assert_not_called()
 
         # Test when it's not possible to use the S3 repository due to backups from another cluster.
         _create_bucket_if_not_exists.reset_mock()
@@ -668,7 +701,6 @@ class TestPostgreSQLBackups(unittest.TestCase):
         _create_bucket_if_not_exists.assert_called_once()
         _can_use_s3_repository.assert_called_once()
         _initialise_stanza.assert_not_called()
-        _start_stop_pgbackrest_service.assert_not_called()
 
         # Test when the stanza can be initialised and the pgBackRest service can start.
         _can_use_s3_repository.reset_mock()
@@ -678,7 +710,6 @@ class TestPostgreSQLBackups(unittest.TestCase):
         )
         _can_use_s3_repository.assert_called_once()
         _initialise_stanza.assert_called_once()
-        _start_stop_pgbackrest_service.assert_called_once()
 
     @patch("charm.PostgresqlOperatorCharm.update_config")
     @patch("charm.PostgreSQLBackups._change_connectivity_to_database")
