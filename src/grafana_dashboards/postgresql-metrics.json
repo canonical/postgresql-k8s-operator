@@ -3034,7 +3034,6 @@
   "tags": [
     "postgres",
     "db",
-    "stats",
     "k8s"
   ],
   "templating": {
@@ -3264,7 +3263,7 @@
     ]
   },
   "timezone": "",
-  "title": "PostgreSQL Database K8S",
+  "title": "PostgreSQL K8s",
   "uid": "rAGSbgu4k",
   "version": 1
 }
