@@ -3328,7 +3328,7 @@
     ]
   },
   "timezone": "",
-  "title": "PostgreSQL Patroni K8S",
+  "title": "Patroni K8s",
   "tags": ["postgres", "patroni", "k8s"],
   "uid": "SyZeZmu4k",
   "version": 5,
