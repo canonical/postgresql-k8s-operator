@@ -64,7 +64,7 @@ async def test_database_relation_with_charm_libraries(
                     ]
                 },
                 application_name=DATABASE_APP_NAME,
-                num_units=3,
+                num_units=2,
                 series=CHARM_SERIES,
                 trust=True,
             ),
@@ -76,7 +76,7 @@ async def test_database_relation_with_charm_libraries(
                     ]
                 },
                 application_name=ANOTHER_DATABASE_APP_NAME,
-                num_units=3,
+                num_units=2,
                 series=CHARM_SERIES,
                 trust=True,
             ),
@@ -389,6 +389,7 @@ async def test_restablish_relation(ops_test: OpsTest):
         assert data[0] == "other data"
 
 
+@pytest.mark.abort_on_fail
 async def test_relation_with_no_database_name(ops_test: OpsTest):
     """Test that a relation with no database name doesn't block the charm."""
     async with ops_test.fast_forward():
@@ -405,6 +406,7 @@ async def test_relation_with_no_database_name(ops_test: OpsTest):
         await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active", raise_on_blocked=True)
 
 
+@pytest.mark.abort_on_fail
 async def test_admin_role(ops_test: OpsTest):
     """Test that the admin role gives access to all the databases."""
     all_app_names = [DATA_INTEGRATOR_APP_NAME]
