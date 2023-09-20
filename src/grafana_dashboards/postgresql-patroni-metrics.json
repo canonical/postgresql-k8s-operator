@@ -152,7 +152,7 @@
         "text": {
           "valueSize": 20
         },
-        "textMode": "auto"
+        "textMode": "value"
       },
       "pluginVersion": "9.2.13",
       "targets": [
@@ -732,7 +732,7 @@
         "text": {
           "valueSize": 20
         },
-        "textMode": "auto"
+        "textMode": "value"
       },
       "pluginVersion": "9.2.13",
       "targets": [
@@ -3328,7 +3328,7 @@
     ]
   },
   "timezone": "",
-  "title": "PostgreSQL Patroni K8S",
+  "title": "Patroni K8s",
   "tags": ["postgres", "patroni", "k8s"],
   "uid": "SyZeZmu4k",
   "version": 5,
