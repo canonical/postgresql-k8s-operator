@@ -276,13 +276,14 @@ async def test_an_application_can_connect_to_multiple_aliased_database_clusters(
     assert application_connection_string != another_application_connection_string
 
 
+@pytest.mark.abort_on_fail
 async def test_an_application_can_request_multiple_databases(ops_test: OpsTest):
     """Test that an application can request additional databases using the same interface."""
     # Relate the charms using another relation and wait for them exchanging some connection data.
     await ops_test.model.add_relation(
         f"{APPLICATION_APP_NAME}:{SECOND_DATABASE_RELATION_NAME}", DATABASE_APP_NAME
     )
-    await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active")
+    await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active", timeout=15 * 60)
 
     # Get the connection strings to connect to both databases.
     for attempt in Retrying(stop=stop_after_attempt(15), wait=wait_fixed(3), reraise=True):
