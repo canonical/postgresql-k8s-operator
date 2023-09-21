@@ -278,7 +278,7 @@ class TestPostgreSQLBackups(unittest.TestCase):
         self.charm.backup._create_bucket_if_not_exists()
         _resource.assert_not_called()
 
-        # Test when the charm fails to create a boto3 session.
+        # Test when unit is not leader.
         _retrieve_s3_parameters.return_value = (
             {
                 "bucket": "test-bucket",
@@ -289,6 +289,16 @@ class TestPostgreSQLBackups(unittest.TestCase):
             },
             [],
         )
+
+        create = _resource.return_value.Bucket.return_value.create
+        self.charm.backup._create_bucket_if_not_exists()
+        create.assert_not_called()
+        create.reset_mock()
+
+        # Test when the charm fails to create a boto3 session.
+        with self.harness.hooks_disabled():
+            self.harness.set_leader()
+
         _resource.side_effect = ValueError
         with self.assertRaises(ValueError):
             self.charm.backup._create_bucket_if_not_exists()

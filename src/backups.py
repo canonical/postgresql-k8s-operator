@@ -34,6 +34,12 @@ FAILED_TO_ACCESS_CREATE_BUCKET_ERROR_MESSAGE = (
 )
 FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE = "failed to initialize stanza, check your S3 settings"
 
+S3_BLOCK_MESSAGES = [
+    ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE,
+    FAILED_TO_ACCESS_CREATE_BUCKET_ERROR_MESSAGE,
+    FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE,
+]
+
 
 class PostgreSQLBackups(Object):
     """In this class, we manage PostgreSQL backups."""
@@ -50,6 +56,7 @@ class PostgreSQLBackups(Object):
         self.framework.observe(
             self.s3_client.on.credentials_changed, self._on_s3_credential_changed
         )
+        self.framework.observe(self.s3_client.on.credentials_gone, self._on_s3_credential_gone)
         self.framework.observe(self.charm.on.create_backup_action, self._on_create_backup_action)
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_action)
@@ -140,6 +147,9 @@ class PostgreSQLBackups(Object):
         return endpoint
 
     def _create_bucket_if_not_exists(self) -> None:
+        if not self.charm.unit.is_leader():
+            return
+
         s3_parameters, missing_parameters = self._retrieve_s3_parameters()
         if missing_parameters:
             return
@@ -501,6 +511,10 @@ Stderr:
 
         self.charm.update_config(is_creating_backup=False)
         self.charm.unit.status = ActiveStatus()
+
+    def _on_s3_credential_gone(self, _) -> None:
+        if self.charm.is_blocked and self.charm.unit.status.message in S3_BLOCK_MESSAGES:
+            self.charm.unit.status = ActiveStatus()
 
     def _on_list_backups_action(self, event) -> None:
         """List the previously created backups."""
