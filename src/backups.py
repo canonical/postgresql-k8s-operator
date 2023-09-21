@@ -147,9 +147,6 @@ class PostgreSQLBackups(Object):
         return endpoint
 
     def _create_bucket_if_not_exists(self) -> None:
-        if not self.charm.unit.is_leader():
-            return
-
         s3_parameters, missing_parameters = self._retrieve_s3_parameters()
         if missing_parameters:
             return
@@ -377,6 +374,10 @@ class PostgreSQLBackups(Object):
 
         if not self._render_pgbackrest_conf_file():
             logger.debug("Cannot set pgBackRest configurations, missing configurations.")
+            return
+
+        # Verify the s3 relation only on the leader
+        if not self.charm.unit.is_leader():
             return
 
         try:
