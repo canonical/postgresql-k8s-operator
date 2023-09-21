@@ -356,6 +356,7 @@ async def test_redeploy_charm_same_model_after_forcing_removal(ops_test: OpsTest
             num_units=len(UNIT_IDS),
             series=CHARM_SERIES,
             trust=True,
+            config={"profile": "testing"},
         )
 
         # This check is enough to ensure that the charm/workload is working for this specific test.
