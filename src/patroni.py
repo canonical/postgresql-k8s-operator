@@ -290,6 +290,7 @@ class Patroni:
         stanza: str = None,
         restore_stanza: Optional[str] = None,
         backup_id: Optional[str] = None,
+        parameters: Optional[dict[str, str]] = None,
     ) -> None:
         """Render the Patroni configuration file.
 
@@ -302,6 +303,7 @@ class Patroni:
             stanza: name of the stanza created by pgBackRest.
             restore_stanza: name of the stanza used when restoring a backup.
             backup_id: id of the backup that is being restored.
+            parameters: PostgreSQL parameters to be added to the postgresql.conf file.
         """
         # Open the template patroni.yml file.
         with open("templates/patroni.yml.j2", "r") as file:
@@ -327,6 +329,7 @@ class Patroni:
             restore_stanza=restore_stanza,
             minority_count=self._members_count // 2,
             version=self.rock_postgresql_version.split(".")[0],
+            pg_parameters=parameters,
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 
