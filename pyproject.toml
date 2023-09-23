@@ -16,13 +16,13 @@ python = "^3.10.6"
 ops = "2.6.0"
 pgconnstr = "1.0.1"
 tenacity = "8.2.3"
-cryptography = "41.0.3"
-jsonschema = "4.19.0"
+cryptography = "41.0.4"
+jsonschema = "4.19.1"
 jinja2 = "3.1.2"
 lightkube = "0.14.0"
 lightkube-models = "1.28.1.4"
 requests = "2.31.0"
-boto3 = "1.28.49"
+boto3 = "1.28.53"
 cosl = "0.0.7"
 poetry-core = "1.7.0"
 # psycopg2 = "^2.9.5" # Injected in charmcraft.yaml
@@ -32,7 +32,7 @@ optional = true
 
 [tool.poetry.group.format.dependencies]
 black = "23.9.1"
-ruff = "0.0.290"
+ruff = "0.0.291"
 
 [tool.poetry.group.lint]
 optional = true
