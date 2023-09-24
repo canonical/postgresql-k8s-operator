@@ -67,6 +67,7 @@ async def test_database_relation_with_charm_libraries(
                 num_units=2,
                 series=CHARM_SERIES,
                 trust=True,
+                config={"profile": "testing"},
             ),
             ops_test.model.deploy(
                 database_charm,
@@ -79,6 +80,7 @@ async def test_database_relation_with_charm_libraries(
                 num_units=2,
                 series=CHARM_SERIES,
                 trust=True,
+                config={"profile": "testing"},
             ),
         )
         # Relate the charms and wait for them exchanging some connection data.

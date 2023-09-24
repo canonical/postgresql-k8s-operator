@@ -77,6 +77,7 @@ async def build_and_deploy(
         trust=True,
         num_units=num_units,
         series=CHARM_SERIES,
+        config={"profile": "testing"},
     ),
     if wait_for_idle:
         # Wait until the PostgreSQL charm is successfully deployed.
