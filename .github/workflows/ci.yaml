@@ -76,16 +76,16 @@ jobs:
       max-parallel: 6
       matrix:
         tox-environments:
-          # - backup-integration
-          # - charm-integration
+          - backup-integration
+          - charm-integration
           - database-relation-integration
-          # - db-relation-integration
-          # - db-admin-relation-integration
-          # - ha-replication-integration
-          # - ha-self-healing-integration
-          # - password-rotation-integration
-          # - plugins-integration
-          # - tls-integration
+          - db-relation-integration
+          - db-admin-relation-integration
+          - ha-replication-integration
+          - ha-self-healing-integration
+          - password-rotation-integration
+          - plugins-integration
+          - tls-integration
         agent-versions:
           - "2.9.44"  # renovate: latest juju 2
           - "3.1.5"  # renovate: latest juju 3
