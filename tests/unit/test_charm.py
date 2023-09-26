@@ -4,7 +4,6 @@
 import unittest
 from unittest.mock import MagicMock, Mock, PropertyMock, patch
 
-import pytest
 from charms.postgresql_k8s.v0.postgresql import PostgreSQLUpdateUserPasswordError
 from lightkube.resources.core_v1 import Endpoints, Pod, Service
 from ops.model import (
@@ -51,36 +50,27 @@ class TestCharm(unittest.TestCase):
 
         self.rel_id = self.harness.add_relation(self._peer_relation, self.charm.app.name)
 
-    @pytest.mark.skip(reason="To be adapted to secrets")
+    @patch("charm.new_password", return_value="sekr1t")
+    @patch("charm.PostgresqlOperatorCharm.get_secret", return_value=None)
+    @patch("charm.PostgresqlOperatorCharm.set_secret")
     @patch("charm.Patroni.reload_patroni_configuration")
     @patch("charm.PostgresqlOperatorCharm._patch_pod_labels")
     @patch("charm.PostgresqlOperatorCharm._create_services")
-    def test_on_leader_elected(self, _, __, ___):
-        # Assert that there is no password in the peer relation.
-        self.assertIsNone(self.charm._peers.data[self.charm.app].get("postgres-password", None))
-        self.assertIsNone(self.charm._peers.data[self.charm.app].get("replication-password", None))
-
+    def test_on_leader_elected(self, _, __, ___, _set_secret, _get_secret, _____):
         # Check that a new password was generated on leader election.
         self.harness.set_leader()
-        superuser_password = self.charm._peers.data[self.charm.app].get("operator-password", None)
-        self.assertIsNotNone(superuser_password)
-
-        replication_password = self.charm._peers.data[self.charm.app].get(
-            "replication-password", None
-        )
-        self.assertIsNotNone(replication_password)
+        assert _set_secret.call_count == 4
+        _set_secret.assert_any_call("app", "operator-password", "sekr1t")
+        _set_secret.assert_any_call("app", "replication-password", "sekr1t")
+        _set_secret.assert_any_call("app", "rewind-password", "sekr1t")
+        _set_secret.assert_any_call("app", "monitoring-password", "sekr1t")
 
         # Trigger a new leader election and check that the password is still the same.
+        _set_secret.reset_mock()
+        _get_secret.return_value = "test"
         self.harness.set_leader(False)
         self.harness.set_leader()
-        self.assertEqual(
-            self.charm._peers.data[self.charm.app].get("operator-password", None),
-            superuser_password,
-        )
-        self.assertEqual(
-            self.charm._peers.data[self.charm.app].get("replication-password", None),
-            replication_password,
-        )
+        assert _set_secret.call_count == 0
 
     @patch("charm.Patroni.rock_postgresql_version", new_callable=PropertyMock)
     @patch("charm.Patroni.primary_endpoint_ready", new_callable=PropertyMock)
@@ -653,7 +643,6 @@ class TestCharm(unittest.TestCase):
         assert self.charm.get_secret("unit", "password") == "test-password"
         _get_secret.assert_called_once_with(id="secret_key")
 
-    @pytest.mark.skip(reason="To be adapted to secrets")
     @patch("charm.Patroni.reload_patroni_configuration")
     @patch("charm.PostgresqlOperatorCharm._create_services")
     def test_set_secret(self, _, __):
@@ -662,22 +651,16 @@ class TestCharm(unittest.TestCase):
         # Test application scope.
         assert "password" not in self.harness.get_relation_data(self.rel_id, self.charm.app.name)
         self.charm.set_secret("app", "password", "test-password")
-        assert (
-            self.harness.get_relation_data(self.rel_id, self.charm.app.name)["password"]
-            == "test-password"
-        )
+        assert self.charm.get_secret("app", "password") == "test-password"
         self.charm.set_secret("app", "password", None)
-        assert "password" not in self.harness.get_relation_data(self.rel_id, self.charm.app.name)
+        assert self.charm.get_secret("app", "password") is None
 
         # Test unit scope.
         assert "password" not in self.harness.get_relation_data(self.rel_id, self.charm.unit.name)
         self.charm.set_secret("unit", "password", "test-password")
-        assert (
-            self.harness.get_relation_data(self.rel_id, self.charm.unit.name)["password"]
-            == "test-password"
-        )
+        assert self.charm.get_secret("unit", "password") == "test-password"
         self.charm.set_secret("unit", "password", None)
-        assert "password" not in self.harness.get_relation_data(self.rel_id, self.charm.unit.name)
+        assert self.charm.get_secret("unit", "password") is None
 
     @patch("charm.JujuVersion.has_secrets", new_callable=PropertyMock, return_value=True)
     @patch("charm.Patroni.reload_patroni_configuration")
