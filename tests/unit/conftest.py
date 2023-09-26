@@ -1,7 +1,6 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 import os
-from importlib.metadata import version
 from unittest.mock import PropertyMock
 
 import pytest
@@ -19,7 +18,7 @@ def juju_has_secrets(mocker: MockerFixture):
     if juju_version := os.environ.get("LIBJUJU"):
         juju_version = juju_version[1:].split(".")[0]
     else:
-        juju_version = version("juju")
+        juju_version = "3"
 
     if juju_version < "3":
         mocker.patch.object(
