@@ -62,7 +62,7 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest, databas
                     ]
                 },
                 application_name=DATABASE_APP_NAME,
-                num_units=2,
+                num_units=3,
                 series=CHARM_SERIES,
                 trust=True,
                 config={"profile": "testing"},
@@ -75,7 +75,7 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest, databas
                     ]
                 },
                 application_name=ANOTHER_DATABASE_APP_NAME,
-                num_units=2,
+                num_units=3,
                 series=CHARM_SERIES,
                 trust=True,
                 config={"profile": "testing"},
