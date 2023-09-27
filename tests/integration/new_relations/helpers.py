@@ -49,7 +49,6 @@ async def build_connection_string(
     if database is None:
         database = f'{application_name.replace("-", "_")}_{relation_name.replace("-", "_")}'
 
-    # If we have list_secrets, we are using libjuju 3
     if secret_uri := await get_application_relation_data(
         ops_test,
         application_name,

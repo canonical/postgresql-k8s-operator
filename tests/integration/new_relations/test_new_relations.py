@@ -87,6 +87,26 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest, databas
         )
         await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active", raise_on_blocked=True)
 
+        # Check that on juju 3 we have secrets and no username and password in the rel databag
+        if hasattr(ops_test.model, "list_secrets"):
+            logger.info("checking for secrets")
+            secret_uri, password = await asyncio.gather(
+                get_application_relation_data(
+                    ops_test,
+                    APPLICATION_APP_NAME,
+                    FIRST_DATABASE_RELATION_NAME,
+                    "secret-user",
+                ),
+                get_application_relation_data(
+                    ops_test,
+                    APPLICATION_APP_NAME,
+                    FIRST_DATABASE_RELATION_NAME,
+                    "password",
+                ),
+            )
+            assert secret_uri is not None
+            assert password is None
+
     # Get the connection string to connect to the database using the read/write endpoint.
     connection_string = await build_connection_string(
         ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME
