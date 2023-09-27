@@ -7,7 +7,6 @@ from typing import Dict, Optional
 import yaml
 from lightkube import AsyncClient
 from lightkube.resources.core_v1 import Service
-from ops import JujuVersion
 from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_exponential
 
@@ -29,7 +28,6 @@ async def build_connection_string(
     relation_alias: str = None,
     read_only_endpoint: bool = False,
     database: str = None,
-    use_secrets: bool = True,
 ) -> str:
     """Build a PostgreSQL connection string.
 
@@ -43,7 +41,6 @@ async def build_connection_string(
         read_only_endpoint: whether to choose the read-only endpoint
             instead of the read/write endpoint
         database: optional database to be used in the connection string
-        use_secrets: whether secrets are to be used or not
 
     Returns:
         a PostgreSQL connection string
@@ -52,7 +49,7 @@ async def build_connection_string(
     if database is None:
         database = f'{application_name.replace("-", "_")}_{relation_name.replace("-", "_")}'
 
-    if JujuVersion.from_environ().has_secrets and use_secrets:
+    if hasattr(ops_test.model, "list_secrets"):
         secret_uri = await get_application_relation_data(
             ops_test,
             application_name,
