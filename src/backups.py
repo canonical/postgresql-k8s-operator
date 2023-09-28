@@ -187,11 +187,7 @@ class PostgreSQLBackups(Object):
     def _empty_data_files(self) -> None:
         """Empty the PostgreSQL data directory in preparation of backup restore."""
         try:
-            self.container.exec(
-                "rm -r /var/lib/postgresql/data/pgdata".split(),
-                user="postgres",
-                group="postgres",
-            ).wait_output()
+            self.container.exec("rm -r /var/lib/postgresql/data/pgdata".split()).wait_output()
         except ExecError as e:
             logger.exception(
                 "Failed to empty data directory in prep for backup restore", exc_info=e
@@ -593,6 +589,9 @@ Stderr:
             event.fail(error_message)
             self._restart_database()
             return
+
+        logger.info("Creating PostgreSQL data directory")
+        self.charm._create_pgdata(self.container)
 
         # Mark the cluster as in a restoring backup state and update the Patroni configuration.
         logger.info("Configuring Patroni to restore the backup")
