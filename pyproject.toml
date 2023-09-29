@@ -47,6 +47,7 @@ optional = true
 coverage = {extras = ["toml"], version = "7.3.1"}
 pydantic = "1.10.12"
 pytest = "7.4.2"
+pytest-mock = "3.11.1"
 pytest-asyncio = "0.21.1"
 psycopg2 = {version = "2.9.7", extras = ["binary"]}
 
