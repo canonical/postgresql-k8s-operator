@@ -86,6 +86,7 @@ async def build_and_deploy(
         trust=True,
         num_units=num_units,
         series=CHARM_SERIES,
+        config={"profile": "testing"},
     ),
     if wait_for_idle:
         # Wait until the PostgreSQL charm is successfully deployed.
@@ -523,15 +524,7 @@ def get_existing_k8s_resources(namespace: str, application: str) -> set:
             namespace=namespace,
             labels={"app.juju.is/created-by": application},
         )
-        resources.update(
-            set(
-                map(
-                    # Build an identifier for each resource (using its type and name).
-                    lambda x: f"{kind.__name__}/{x.metadata.name}",
-                    extra_resources,
-                )
-            )
-        )
+        resources.update({f"{kind.__name__}/{x.metadata.name}" for x in extra_resources})
 
     return resources
 

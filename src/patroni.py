@@ -144,7 +144,7 @@ class Patroni:
         """Get the current cluster members."""
         # Request info from cluster endpoint (which returns all members of the cluster).
         r = requests.get(f"{self._patroni_url}/cluster", verify=self._verify)
-        return set([member["name"] for member in r.json()["members"]])
+        return {member["name"] for member in r.json()["members"]}
 
     def are_all_members_ready(self) -> bool:
         """Check if all members are correctly running Patroni and PostgreSQL.
@@ -257,7 +257,7 @@ class Patroni:
             if "/usr/lib/postgresql/14/bin/postgres" in process
         ]
         # Check whether the PostgreSQL process has a state equal to T (frozen).
-        return any([process for process in postgresql_processes if process.split()[7] != "T"])
+        return any(process for process in postgresql_processes if process.split()[7] != "T")
 
     def _render_file(self, path: str, content: str, mode: int) -> None:
         """Write a content rendered from a template to a file.
@@ -290,6 +290,7 @@ class Patroni:
         stanza: str = None,
         restore_stanza: Optional[str] = None,
         backup_id: Optional[str] = None,
+        parameters: Optional[dict[str, str]] = None,
     ) -> None:
         """Render the Patroni configuration file.
 
@@ -302,6 +303,7 @@ class Patroni:
             stanza: name of the stanza created by pgBackRest.
             restore_stanza: name of the stanza used when restoring a backup.
             backup_id: id of the backup that is being restored.
+            parameters: PostgreSQL parameters to be added to the postgresql.conf file.
         """
         # Open the template patroni.yml file.
         with open("templates/patroni.yml.j2", "r") as file:
@@ -327,6 +329,7 @@ class Patroni:
             restore_stanza=restore_stanza,
             minority_count=self._members_count // 2,
             version=self.rock_postgresql_version.split(".")[0],
+            pg_parameters=parameters,
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 

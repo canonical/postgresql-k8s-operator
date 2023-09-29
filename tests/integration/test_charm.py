@@ -283,10 +283,7 @@ async def test_application_removal(ops_test: OpsTest) -> None:
     await ops_test.model.block_until(
         lambda: APP_NAME not in ops_test.model.applications
         or any(
-            [
-                unit.workload_status == "error"
-                for unit in ops_test.model.applications[APP_NAME].units
-            ]
+            unit.workload_status == "error" for unit in ops_test.model.applications[APP_NAME].units
         )
     )
 
@@ -316,6 +313,7 @@ async def test_redeploy_charm_same_model(ops_test: OpsTest):
             num_units=len(UNIT_IDS),
             series=CHARM_SERIES,
             trust=True,
+            config={"profile": "testing"},
         )
 
         # This check is enough to ensure that the charm/workload is working for this specific test.
@@ -342,6 +340,7 @@ async def test_storage_with_more_restrictive_permissions(ops_test: OpsTest):
                 num_units=1,
                 series=CHARM_SERIES,
                 trust=True,
+                config={"profile": "testing"},
             )
 
         # Restrict the permissions of the storage.

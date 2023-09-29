@@ -34,6 +34,12 @@ FAILED_TO_ACCESS_CREATE_BUCKET_ERROR_MESSAGE = (
 )
 FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE = "failed to initialize stanza, check your S3 settings"
 
+S3_BLOCK_MESSAGES = [
+    ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE,
+    FAILED_TO_ACCESS_CREATE_BUCKET_ERROR_MESSAGE,
+    FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE,
+]
+
 
 class PostgreSQLBackups(Object):
     """In this class, we manage PostgreSQL backups."""
@@ -50,6 +56,7 @@ class PostgreSQLBackups(Object):
         self.framework.observe(
             self.s3_client.on.credentials_changed, self._on_s3_credential_changed
         )
+        self.framework.observe(self.s3_client.on.credentials_gone, self._on_s3_credential_gone)
         self.framework.observe(self.charm.on.create_backup_action, self._on_create_backup_action)
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_action)
@@ -180,11 +187,7 @@ class PostgreSQLBackups(Object):
     def _empty_data_files(self) -> None:
         """Empty the PostgreSQL data directory in preparation of backup restore."""
         try:
-            self.container.exec(
-                "rm -r /var/lib/postgresql/data/pgdata".split(),
-                user="postgres",
-                group="postgres",
-            ).wait_output()
+            self.container.exec("rm -r /var/lib/postgresql/data/pgdata".split()).wait_output()
         except ExecError as e:
             logger.exception(
                 "Failed to empty data directory in prep for backup restore", exc_info=e
@@ -299,11 +302,20 @@ class PostgreSQLBackups(Object):
             self.charm.unit.status = BlockedStatus(FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE)
             return
 
+        self.start_stop_pgbackrest_service()
+
         # Store the stanza name to be used in configurations updates.
-        self.charm.app_peer_data.update({"stanza": self.stanza_name})
+        self.charm.app_peer_data.update({"stanza": self.stanza_name, "init-pgbackrest": "True"})
+
+    def check_stanza(self) -> None:
+        """Runs the pgbackrest stanza validation."""
+        if not self.charm.unit.is_leader() or "init-pgbackrest" not in self.charm.app_peer_data:
+            return
 
         # Update the configuration to use pgBackRest as the archiving mechanism.
         self.charm.update_config()
+
+        self.charm.unit.status = MaintenanceStatus("checking stanza")
 
         try:
             # Check that the stanza is correctly configured.
@@ -317,13 +329,14 @@ class PostgreSQLBackups(Object):
             # If the check command doesn't succeed, remove the stanza name
             # and rollback the configuration.
             self.charm.app_peer_data.update({"stanza": ""})
+            self.charm.app_peer_data.pop("init-pgbackrest", None)
             self.charm.update_config()
 
             logger.exception(e)
             self.charm.unit.status = BlockedStatus(FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE)
             return
 
-        return
+        self.charm.app_peer_data.pop("init-pgbackrest", None)
 
     @property
     def _is_primary_pgbackrest_service_running(self) -> bool:
@@ -359,6 +372,10 @@ class PostgreSQLBackups(Object):
             logger.debug("Cannot set pgBackRest configurations, missing configurations.")
             return
 
+        # Verify the s3 relation only on the leader
+        if not self.charm.unit.is_leader():
+            return
+
         try:
             self._create_bucket_if_not_exists()
         except (ClientError, ValueError):
@@ -371,8 +388,6 @@ class PostgreSQLBackups(Object):
             return
 
         self._initialise_stanza()
-
-        self.start_stop_pgbackrest_service()
 
     def _on_create_backup_action(self, event) -> None:
         """Request that pgBackRest creates a backup."""
@@ -494,6 +509,10 @@ Stderr:
         self.charm.update_config(is_creating_backup=False)
         self.charm.unit.status = ActiveStatus()
 
+    def _on_s3_credential_gone(self, _) -> None:
+        if self.charm.is_blocked and self.charm.unit.status.message in S3_BLOCK_MESSAGES:
+            self.charm.unit.status = ActiveStatus()
+
     def _on_list_backups_action(self, event) -> None:
         """List the previously created backups."""
         are_backup_settings_ok, validation_message = self._are_backup_settings_ok()
@@ -570,6 +589,9 @@ Stderr:
             event.fail(error_message)
             self._restart_database()
             return
+
+        logger.info("Creating PostgreSQL data directory")
+        self.charm._create_pgdata(self.container)
 
         # Mark the cluster as in a restoring backup state and update the Patroni configuration.
         logger.info("Configuring Patroni to restore the backup")

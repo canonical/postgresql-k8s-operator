@@ -42,20 +42,11 @@
       "allowedVersions": "<3.0.0",
       "groupName": "Juju 2"
     }, {
-      "matchPackageNames": ["httpcore"],
-      "allowedVersions": "<0.18.0"
-    }, {
-      "matchPackageNames": ["packaging"],
-      "allowedVersions": "<23.0.1"
-    }, {
       "matchPackageNames": ["urllib3"],
       "allowedVersions": "<2.0.0"
     }, {
       "matchPackageNames": ["pydantic"],
       "allowedVersions": "<2.0.0"
-    }, {
-      "matchPackageNames": ["flake8"],
-      "allowedVersions": "<6.1.0"
     }
   ],
   "regexManagers": [

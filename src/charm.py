@@ -21,7 +21,7 @@ from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
 from lightkube import ApiError, Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
-from lightkube.resources.core_v1 import Endpoints, Pod, Service
+from lightkube.resources.core_v1 import Endpoints, Node, Pod, Service
 from ops import JujuVersion
 from ops.charm import (
     ActionEvent,
@@ -43,7 +43,7 @@ from ops.model import (
 )
 from ops.pebble import ChangeError, Layer, PathError, ProtocolError, ServiceStatus
 from requests import ConnectionError
-from tenacity import RetryError
+from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from backups import PostgreSQLBackups
 from constants import (
@@ -76,7 +76,7 @@ from patroni import NotReadyError, Patroni
 from relations.db import EXTENSIONS_BLOCKING_MESSAGE, DbProvides
 from relations.postgresql_provider import PostgreSQLProvider
 from upgrade import PostgreSQLUpgrade, get_postgresql_k8s_dependencies_model
-from utils import new_password
+from utils import any_memory_to_bytes, new_password
 
 logger = logging.getLogger(__name__)
 
@@ -149,9 +149,7 @@ class PostgresqlOperatorCharm(CharmBase):
         return [
             {"static_configs": [{"targets": [f"*:{METRICS_PORT}"]}]},
             {
-                "static_configs": [
-                    {"targets": [f"{self.get_hostname_by_unit(self.unit.name)}:8008"]}
-                ],
+                "static_configs": [{"targets": ["*:8008"]}],
                 "scheme": "https" if enable_tls else "http",
                 "tls_config": {"insecure_skip_verify": True},
             },
@@ -192,12 +190,16 @@ class PostgresqlOperatorCharm(CharmBase):
             return
 
         if SECRET_CACHE_LABEL not in self.secrets[scope]:
-            try:
-                # NOTE: Secret contents are not yet available!
-                secret = self.model.get_secret(id=peer_data[SECRET_INTERNAL_LABEL])
-            except SecretNotFoundError as e:
-                logging.debug(f"No secret found for ID {peer_data[SECRET_INTERNAL_LABEL]}, {e}")
-                return
+            for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(1), reraise=True):
+                with attempt:
+                    try:
+                        # NOTE: Secret contents are not yet available!
+                        secret = self.model.get_secret(id=peer_data[SECRET_INTERNAL_LABEL])
+                    except SecretNotFoundError as e:
+                        logging.debug(
+                            f"No secret found for ID {peer_data[SECRET_INTERNAL_LABEL]}, {e}"
+                        )
+                        return
 
             logging.debug(f"Secret {peer_data[SECRET_INTERNAL_LABEL]} downloaded")
 
@@ -242,7 +244,7 @@ class PostgresqlOperatorCharm(CharmBase):
         if juju_version.has_secrets:
             return self._juju_secret_get_key(scope, key)
 
-    def _juju_secret_set(self, scope: str, key: str, value: str) -> str:
+    def _juju_secret_set(self, scope: str, key: str, value: str) -> Optional[str]:
         """Helper function setting Juju secret."""
         if scope == UNIT_SCOPE:
             peer_data = self.unit_peer_data
@@ -270,6 +272,7 @@ class PostgresqlOperatorCharm(CharmBase):
                         f"Error in attempt to set {scope}:{key}. "
                         f"Existing keys were: {list(secret_cache.keys())}. {error}"
                     )
+                    return
                 logging.debug(f"Secret {scope}:{key} was {key} set")
 
         # We need to create a brand-new secret for this scope
@@ -461,6 +464,8 @@ class PostgresqlOperatorCharm(CharmBase):
 
         self.postgresql_client_relation.update_read_only_endpoint()
 
+        self.backup.check_stanza()
+
         # Start or stop the pgBackRest TLS server service when TLS certificate change.
         if not self.backup.start_stop_pgbackrest_service():
             # Ping primary to start its TLS server.
@@ -471,7 +476,7 @@ class PostgresqlOperatorCharm(CharmBase):
             event.defer()
             return
         else:
-            self.unit_peer_data.pop("start-tls.server", None)
+            self.unit_peer_data.pop("start-tls-server", None)
 
         if not self.is_blocked:
             self.unit.status = ActiveStatus()
@@ -1299,6 +1304,11 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def update_config(self, is_creating_backup: bool = False) -> bool:
         """Updates Patroni config file based on the existence of the TLS files."""
+        # Retrieve PostgreSQL parameters.
+        postgresql_parameters = self.postgresql.build_postgresql_parameters(
+            self.config["profile"], self.get_available_memory()
+        )
+
         # Update and reload configuration based on TLS files availability.
         self._patroni.render_patroni_yml_file(
             connectivity=self.unit_peer_data.get("connectivity", "on") == "on",
@@ -1308,6 +1318,7 @@ class PostgresqlOperatorCharm(CharmBase):
             backup_id=self.app_peer_data.get("restoring-backup"),
             stanza=self.app_peer_data.get("stanza"),
             restore_stanza=self.app_peer_data.get("restore-stanza"),
+            parameters=postgresql_parameters,
         )
         if not self._is_workload_running:
             # If Patroni/PostgreSQL has not started yet and TLS relations was initialised,
@@ -1381,6 +1392,54 @@ class PostgresqlOperatorCharm(CharmBase):
             pod name in "postgresql-k8s-0" format.
         """
         return unit_name.replace("/", "-")
+
+    def _get_node_name_for_pod(self) -> str:
+        """Return the node name for a given pod."""
+        client = Client()
+        pod = client.get(
+            Pod, name=self._unit_name_to_pod_name(self.unit.name), namespace=self._namespace
+        )
+        return pod.spec.nodeName
+
+    def get_resources_limits(self, container_name: str) -> Dict:
+        """Return resources limits for a given container.
+
+        Args:
+            container_name: name of the container to get resources limits for
+        """
+        client = Client()
+        pod = client.get(
+            Pod, self._unit_name_to_pod_name(self.unit.name), namespace=self._namespace
+        )
+
+        for container in pod.spec.containers:
+            if container.name == container_name:
+                return container.resources.limits or {}
+        return {}
+
+    def get_node_allocable_memory(self) -> int:
+        """Return the allocable memory in bytes for a given node.
+
+        Args:
+            node_name: name of the node to get the allocable memory for
+        """
+        client = Client()
+        node = client.get(Node, name=self._get_node_name_for_pod(), namespace=self._namespace)
+        return any_memory_to_bytes(node.status.allocatable["memory"])
+
+    def get_available_memory(self) -> int:
+        """Get available memory for the container in bytes."""
+        allocable_memory = self.get_node_allocable_memory()
+        container_limits = self.get_resources_limits(container_name="postgresql")
+        if "memory" in container_limits:
+            memory_str = container_limits["memory"]
+            constrained_memory = any_memory_to_bytes(memory_str)
+            if constrained_memory < allocable_memory:
+                logger.debug(f"Memory constrained to {memory_str} from resource limit")
+                return constrained_memory
+
+        logger.debug("Memory constrained by node allocable memory")
+        return allocable_memory
 
 
 if __name__ == "__main__":

@@ -26,7 +26,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
       - name: Install tox
         # TODO: Consider replacing with custom image on self-hosted runner OR pinning version
         run: python3 -m pip install tox
@@ -37,14 +37,19 @@ jobs:
     name: Unit tests
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    strategy:
+      matrix:
+        juju-version:
+          - "juju2"
+          - "juju3"
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
       - name: Install tox
         # TODO: Consider replacing with custom image on self-hosted runner OR pinning version
         run: python3 -m pip install tox
       - name: Run tests
-        run: tox run -e unit
+        run: tox run -e unit-${{ matrix.juju-version }}
 
   lib-check:
     name: Check libraries
@@ -52,7 +57,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
         with:
           fetch-depth: 0
       - name: Check libs
@@ -95,7 +100,7 @@ jobs:
     timeout-minutes: 120
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
       - name: Set channel
         run: |
           juju_channel=$(echo "${{ matrix.agent-versions }}" | cut -c 1-3)
@@ -107,7 +112,7 @@ jobs:
         uses: charmed-kubernetes/actions-operator@main
         with:
           provider: microk8s
-          channel: "1.27-strict/stable"
+          channel: "1.28-strict/stable"
           bootstrap-options: "--agent-version ${{ matrix.agent-versions }}"
           juju-channel: "${{ env.channel }}"
       - name: Download packed charm(s)
@@ -123,10 +128,10 @@ jobs:
             echo "mark_expression=" >> $GITHUB_OUTPUT
           else
             echo Skipping unstable tests
-            echo "mark_expression=not unstable" >> $GITHUB_OUTPUT
+            echo "mark_expression=and not unstable" >> $GITHUB_OUTPUT
           fi
       - name: Run integration tests
-        run: tox run -e ${{ matrix.tox-environments }}-${{ env.libjuju }} -- -m '${{ steps.select-tests.outputs.mark_expression }}'
+        run: tox run -e ${{ matrix.tox-environments }}-${{ env.libjuju }} -- -m 'not not${{ env.libjuju }} ${{ steps.select-tests.outputs.mark_expression }}' --keep-models
         env:
           AWS_ACCESS_KEY: "${{ secrets.AWS_ACCESS_KEY }}"
           AWS_SECRET_KEY: "${{ secrets.AWS_SECRET_KEY }}"

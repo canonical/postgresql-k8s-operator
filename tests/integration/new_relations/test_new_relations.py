@@ -26,7 +26,7 @@ from tests.integration.new_relations.helpers import (
 
 logger = logging.getLogger(__name__)
 
-APPLICATION_APP_NAME = "application"
+APPLICATION_APP_NAME = "postgresql-test-app"
 DATABASE_APP_NAME = "database"
 ANOTHER_DATABASE_APP_NAME = "another-database"
 DATA_INTEGRATOR_APP_NAME = "data-integrator"
@@ -37,22 +37,22 @@ SECOND_DATABASE_RELATION_NAME = "second-database"
 MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME = "multiple-database-clusters"
 ALIASED_MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME = "aliased-multiple-database-clusters"
 NO_DATABASE_RELATION_NAME = "no-database"
+INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE = "invalid role(s) for extra user roles"
 
 
 @pytest.mark.abort_on_fail
-async def test_database_relation_with_charm_libraries(
-    ops_test: OpsTest, application_charm, database_charm
-):
+async def test_database_relation_with_charm_libraries(ops_test: OpsTest, database_charm):
     """Test basic functionality of database relation interface."""
     # Deploy both charms (multiple units for each application to test that later they correctly
     # set data in the relation application databag using only the leader unit).
     async with ops_test.fast_forward():
         await asyncio.gather(
             ops_test.model.deploy(
-                application_charm,
+                APPLICATION_APP_NAME,
                 application_name=APPLICATION_APP_NAME,
                 num_units=2,
                 series=CHARM_SERIES,
+                channel="edge",
             ),
             ops_test.model.deploy(
                 database_charm,
@@ -65,6 +65,7 @@ async def test_database_relation_with_charm_libraries(
                 num_units=3,
                 series=CHARM_SERIES,
                 trust=True,
+                config={"profile": "testing"},
             ),
             ops_test.model.deploy(
                 database_charm,
@@ -77,6 +78,7 @@ async def test_database_relation_with_charm_libraries(
                 num_units=3,
                 series=CHARM_SERIES,
                 trust=True,
+                config={"profile": "testing"},
             ),
         )
         # Relate the charms and wait for them exchanging some connection data.
@@ -84,6 +86,26 @@ async def test_database_relation_with_charm_libraries(
             f"{APPLICATION_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}", DATABASE_APP_NAME
         )
         await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active", raise_on_blocked=True)
+
+        # Check that on juju 3 we have secrets and no username and password in the rel databag
+        if hasattr(ops_test.model, "list_secrets"):
+            logger.info("checking for secrets")
+            secret_uri, password = await asyncio.gather(
+                get_application_relation_data(
+                    ops_test,
+                    APPLICATION_APP_NAME,
+                    FIRST_DATABASE_RELATION_NAME,
+                    "secret-user",
+                ),
+                get_application_relation_data(
+                    ops_test,
+                    APPLICATION_APP_NAME,
+                    FIRST_DATABASE_RELATION_NAME,
+                    "password",
+                ),
+            )
+            assert secret_uri is not None
+            assert password is None
 
     # Get the connection string to connect to the database using the read/write endpoint.
     connection_string = await build_connection_string(
@@ -150,9 +172,7 @@ async def test_user_with_extra_roles(ops_test: OpsTest):
     connection.close()
 
 
-async def test_two_applications_doesnt_share_the_same_relation_data(
-    ops_test: OpsTest, application_charm
-):
+async def test_two_applications_doesnt_share_the_same_relation_data(ops_test: OpsTest):
     """Test that two different application connect to the database with different credentials."""
     # Set some variables to use in this test.
     another_application_app_name = "another-application"
@@ -161,9 +181,10 @@ async def test_two_applications_doesnt_share_the_same_relation_data(
 
     # Deploy another application.
     await ops_test.model.deploy(
-        application_charm,
+        APPLICATION_APP_NAME,
         application_name=another_application_app_name,
         series=CHARM_SERIES,
+        channel="edge",
     )
     await ops_test.model.wait_for_idle(apps=all_app_names, status="active")
 
@@ -187,7 +208,7 @@ async def test_two_applications_doesnt_share_the_same_relation_data(
     # Check that the user cannot access other databases.
     for application, other_application_database in [
         (APPLICATION_APP_NAME, "another_application_first_database"),
-        (another_application_app_name, "application_first_database"),
+        (another_application_app_name, f"{APPLICATION_APP_NAME.replace('-', '_')}_first_database"),
     ]:
         connection_string = await build_connection_string(
             ops_test, application, FIRST_DATABASE_RELATION_NAME, database="postgres"
@@ -273,16 +294,17 @@ async def test_an_application_can_connect_to_multiple_aliased_database_clusters(
     assert application_connection_string != another_application_connection_string
 
 
-async def test_an_application_can_request_multiple_databases(ops_test: OpsTest, application_charm):
+@pytest.mark.abort_on_fail
+async def test_an_application_can_request_multiple_databases(ops_test: OpsTest):
     """Test that an application can request additional databases using the same interface."""
     # Relate the charms using another relation and wait for them exchanging some connection data.
     await ops_test.model.add_relation(
         f"{APPLICATION_APP_NAME}:{SECOND_DATABASE_RELATION_NAME}", DATABASE_APP_NAME
     )
-    await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active")
+    await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active", timeout=15 * 60)
 
     # Get the connection strings to connect to both databases.
-    for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3), reraise=True):
+    for attempt in Retrying(stop=stop_after_attempt(15), wait=wait_fixed(3), reraise=True):
         with attempt:
             first_database_connection_string = await build_connection_string(
                 ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME
@@ -386,6 +408,7 @@ async def test_restablish_relation(ops_test: OpsTest):
         assert data[0] == "other data"
 
 
+@pytest.mark.abort_on_fail
 async def test_relation_with_no_database_name(ops_test: OpsTest):
     """Test that a relation with no database name doesn't block the charm."""
     async with ops_test.fast_forward():
@@ -402,6 +425,7 @@ async def test_relation_with_no_database_name(ops_test: OpsTest):
         await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active", raise_on_blocked=True)
 
 
+@pytest.mark.abort_on_fail
 async def test_admin_role(ops_test: OpsTest):
     """Test that the admin role gives access to all the databases."""
     all_app_names = [DATA_INTEGRATOR_APP_NAME]
@@ -422,7 +446,7 @@ async def test_admin_role(ops_test: OpsTest):
     # Check that the user can access all the databases.
     for database in [
         "postgres",
-        "application_first_database",
+        f"{APPLICATION_APP_NAME.replace('-', '_')}_first_database",
         "another_application_first_database",
     ]:
         logger.info(f"connecting to the following database: {database}")
@@ -484,3 +508,64 @@ async def test_admin_role(ops_test: OpsTest):
         pass
     finally:
         connection.close()
+
+
+async def test_invalid_extra_user_roles(ops_test: OpsTest):
+    async with ops_test.fast_forward():
+        # Remove the relation between the database and the first data integrator.
+        await ops_test.model.applications[DATABASE_APP_NAME].remove_relation(
+            DATABASE_APP_NAME, DATA_INTEGRATOR_APP_NAME
+        )
+        await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active", raise_on_blocked=True)
+
+        another_data_integrator_app_name = f"another-{DATA_INTEGRATOR_APP_NAME}"
+        data_integrator_apps_names = [DATA_INTEGRATOR_APP_NAME, another_data_integrator_app_name]
+        await ops_test.model.deploy(
+            DATA_INTEGRATOR_APP_NAME, application_name=another_data_integrator_app_name
+        )
+        await ops_test.model.wait_for_idle(
+            apps=[another_data_integrator_app_name], status="blocked"
+        )
+        for app in data_integrator_apps_names:
+            await ops_test.model.applications[app].set_config(
+                {
+                    "database-name": app.replace("-", "_"),
+                    "extra-user-roles": "test",
+                }
+            )
+        await ops_test.model.wait_for_idle(apps=data_integrator_apps_names, status="blocked")
+        for app in data_integrator_apps_names:
+            await ops_test.model.add_relation(f"{app}:postgresql", f"{DATABASE_APP_NAME}:database")
+        await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME])
+        ops_test.model.block_until(
+            lambda: any(
+                unit.workload_status_message == INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE
+                for unit in ops_test.model.applications[DATABASE_APP_NAME].units
+            ),
+            timeout=1000,
+        )
+
+        # Verify that the charm remains blocked if there are still other relations with invalid
+        # extra user roles.
+        await ops_test.model.applications[DATABASE_APP_NAME].destroy_relation(
+            f"{DATABASE_APP_NAME}:database", f"{DATA_INTEGRATOR_APP_NAME}:postgresql"
+        )
+        await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME])
+        ops_test.model.block_until(
+            lambda: any(
+                unit.workload_status_message == INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE
+                for unit in ops_test.model.applications[DATABASE_APP_NAME].units
+            ),
+            timeout=1000,
+        )
+
+        # Verify that active status is restored after all relations are removed.
+        await ops_test.model.applications[DATABASE_APP_NAME].destroy_relation(
+            f"{DATABASE_APP_NAME}:database", f"{another_data_integrator_app_name}:postgresql"
+        )
+        await ops_test.model.wait_for_idle(
+            apps=[DATABASE_APP_NAME],
+            status="active",
+            raise_on_blocked=False,
+            timeout=1000,
+        )
