@@ -37,6 +37,11 @@ jobs:
     name: Unit tests
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    strategy:
+      matrix:
+        juju-version:
+          - "juju2"
+          - "juju3"
     steps:
       - name: Checkout
         uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
@@ -44,7 +49,7 @@ jobs:
         # TODO: Consider replacing with custom image on self-hosted runner OR pinning version
         run: python3 -m pip install tox
       - name: Run tests
-        run: tox run -e unit
+        run: tox run -e unit-${{ matrix.juju-version }}
 
   lib-check:
     name: Check libraries

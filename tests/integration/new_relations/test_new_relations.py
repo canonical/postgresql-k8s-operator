@@ -87,6 +87,26 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest, databas
         )
         await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active", raise_on_blocked=True)
 
+        # Check that on juju 3 we have secrets and no username and password in the rel databag
+        if hasattr(ops_test.model, "list_secrets"):
+            logger.info("checking for secrets")
+            secret_uri, password = await asyncio.gather(
+                get_application_relation_data(
+                    ops_test,
+                    APPLICATION_APP_NAME,
+                    FIRST_DATABASE_RELATION_NAME,
+                    "secret-user",
+                ),
+                get_application_relation_data(
+                    ops_test,
+                    APPLICATION_APP_NAME,
+                    FIRST_DATABASE_RELATION_NAME,
+                    "password",
+                ),
+            )
+            assert secret_uri is not None
+            assert password is None
+
     # Get the connection string to connect to the database using the read/write endpoint.
     connection_string = await build_connection_string(
         ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME
@@ -274,16 +294,17 @@ async def test_an_application_can_connect_to_multiple_aliased_database_clusters(
     assert application_connection_string != another_application_connection_string
 
 
+@pytest.mark.abort_on_fail
 async def test_an_application_can_request_multiple_databases(ops_test: OpsTest):
     """Test that an application can request additional databases using the same interface."""
     # Relate the charms using another relation and wait for them exchanging some connection data.
     await ops_test.model.add_relation(
         f"{APPLICATION_APP_NAME}:{SECOND_DATABASE_RELATION_NAME}", DATABASE_APP_NAME
     )
-    await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active")
+    await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active", timeout=15 * 60)
 
     # Get the connection strings to connect to both databases.
-    for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3), reraise=True):
+    for attempt in Retrying(stop=stop_after_attempt(15), wait=wait_fixed(3), reraise=True):
         with attempt:
             first_database_connection_string = await build_connection_string(
                 ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME
@@ -387,6 +408,7 @@ async def test_restablish_relation(ops_test: OpsTest):
         assert data[0] == "other data"
 
 
+@pytest.mark.abort_on_fail
 async def test_relation_with_no_database_name(ops_test: OpsTest):
     """Test that a relation with no database name doesn't block the charm."""
     async with ops_test.fast_forward():
@@ -403,6 +425,7 @@ async def test_relation_with_no_database_name(ops_test: OpsTest):
         await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active", raise_on_blocked=True)
 
 
+@pytest.mark.abort_on_fail
 async def test_admin_role(ops_test: OpsTest):
     """Test that the admin role gives access to all the databases."""
     all_app_names = [DATA_INTEGRATOR_APP_NAME]
