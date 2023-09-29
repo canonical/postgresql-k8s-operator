@@ -19,7 +19,7 @@ The `postgresql` module provides methods for interacting with the PostgreSQL ins
 Any charm using this library should import the `psycopg2` or `psycopg2-binary` dependency.
 """
 import logging
-from typing import List, Set
+from typing import List, Optional, Set, Tuple
 
 import psycopg2
 from psycopg2 import sql
@@ -32,7 +32,9 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 11
+LIBPATCH = 14
+
+INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE = "invalid role(s) for extra user roles"
 
 
 logger = logging.getLogger(__name__)
@@ -44,6 +46,10 @@ class PostgreSQLCreateDatabaseError(Exception):
 
 class PostgreSQLCreateUserError(Exception):
     """Exception raised when creating a user fails."""
+
+    def __init__(self, message: str = None):
+        super().__init__(message)
+        self.message = message
 
 
 class PostgreSQLDatabasesSetupError(Exception):
@@ -176,23 +182,29 @@ class PostgreSQL:
             extra_user_roles: additional privileges and/or roles to be assigned to the user.
         """
         try:
-            with self._connect_to_database() as connection, connection.cursor() as cursor:
-                # Separate roles and privileges from the provided extra user roles.
-                admin_role = False
-                roles = privileges = None
-                if extra_user_roles:
-                    extra_user_roles = tuple(extra_user_roles.lower().split(","))
-                    cursor.execute(
-                        "SELECT rolname FROM pg_roles WHERE rolname IN %s;", (extra_user_roles,)
-                    )
-                    admin_role = "admin" in extra_user_roles
-                    roles = [role[0] for role in cursor.fetchall() if role[0] != "admin"]
-                    privileges = {
-                        extra_user_role
-                        for extra_user_role in extra_user_roles
-                        if extra_user_role not in roles and extra_user_role != "admin"
-                    }
+            # Separate roles and privileges from the provided extra user roles.
+            admin_role = False
+            roles = privileges = None
+            if extra_user_roles:
+                extra_user_roles = tuple(extra_user_roles.lower().split(","))
+                admin_role = "admin" in extra_user_roles
+                valid_privileges, valid_roles = self.list_valid_privileges_and_roles()
+                roles = [
+                    role for role in extra_user_roles if role in valid_roles and role != "admin"
+                ]
+                privileges = {
+                    extra_user_role
+                    for extra_user_role in extra_user_roles
+                    if extra_user_role not in roles and extra_user_role != "admin"
+                }
+                invalid_privileges = [
+                    privilege for privilege in privileges if privilege not in valid_privileges
+                ]
+                if len(invalid_privileges) > 0:
+                    logger.error(f'Invalid extra user roles: {", ".join(privileges)}')
+                    raise PostgreSQLCreateUserError(INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE)
 
+            with self._connect_to_database() as connection, connection.cursor() as cursor:
                 # Create or update the user.
                 cursor.execute(f"SELECT TRUE FROM pg_roles WHERE rolname='{user}';")
                 if cursor.fetchone() is not None:
@@ -343,6 +355,21 @@ class PostgreSQL:
             logger.error(f"Failed to list PostgreSQL database users: {e}")
             raise PostgreSQLListUsersError()
 
+    def list_valid_privileges_and_roles(self) -> Tuple[Set[str], Set[str]]:
+        """Returns two sets with valid privileges and roles.
+
+        Returns:
+            Tuple containing two sets: the first with valid privileges
+                and the second with valid roles.
+        """
+        with self._connect_to_database() as connection, connection.cursor() as cursor:
+            cursor.execute("SELECT rolname FROM pg_roles;")
+            return {
+                "createdb",
+                "createrole",
+                "superuser",
+            }, {role[0] for role in cursor.fetchall() if role[0]}
+
     def set_up_database(self) -> None:
         """Set up postgres database with the right permissions."""
         connection = None
@@ -392,3 +419,30 @@ class PostgreSQL:
         finally:
             if connection is not None:
                 connection.close()
+
+    @staticmethod
+    def build_postgresql_parameters(
+        profile: str, available_memory: int
+    ) -> Optional[dict[str, str]]:
+        """Builds the PostgreSQL parameters.
+
+        Args:
+            profile: the profile to use.
+            available_memory: available memory to use in calculation in bytes.
+
+        Returns:
+            Dictionary with the PostgreSQL parameters.
+        """
+        logger.debug(f"Building PostgreSQL parameters for {profile=} and {available_memory=}")
+        if profile == "production":
+            # Use 25% of the available memory for shared_buffers.
+            # and the remaind as cache memory.
+            shared_buffers = int(available_memory * 0.25)
+            effective_cache_size = int(available_memory - shared_buffers)
+
+            parameters = {
+                "shared_buffers": f"{int(shared_buffers/10**6)}MB",
+                "effective_cache_size": f"{int(effective_cache_size/10**6)}MB",
+            }
+
+            return parameters
