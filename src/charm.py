@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 """Charmed Kubernetes Operator for the PostgreSQL database."""
+import itertools
 import json
 import logging
 from typing import Dict, List, Optional
@@ -625,6 +626,8 @@ class PostgresqlOperatorCharm(CharmBase):
         if self.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY) is None:
             self.set_secret(APP_SCOPE, MONITORING_PASSWORD_KEY, new_password())
 
+        self._cleanup_old_cluster_resources()
+
         # Create resources and add labels needed for replication.
         try:
             self._create_services()
@@ -846,6 +849,26 @@ class PostgresqlOperatorCharm(CharmBase):
                 force=True,
                 field_manager=self.model.app.name,
             )
+
+    def _cleanup_old_cluster_resources(self) -> None:
+        """Delete kubernetes services and endpoints from previous deployment."""
+        if self.is_cluster_initialised:
+            logger.debug("Early exit _cleanup_old_cluster_resources: cluster already initialised")
+            return
+
+        client = Client()
+        for kind, suffix in itertools.product([Service, Endpoints], ["", "-config", "-sync"]):
+            try:
+                client.delete(
+                    res=kind,
+                    name=f"{self.cluster_name}{suffix}",
+                    namespace=self._namespace,
+                )
+                logger.info(f"deleted {kind.__name__}/{self.cluster_name}{suffix}")
+            except ApiError as e:
+                # Ignore the error only when the resource doesn't exist.
+                if e.status.code != 404:
+                    raise e
 
     @property
     def _has_blocked_status(self) -> bool:
