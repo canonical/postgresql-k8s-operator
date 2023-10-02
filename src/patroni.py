@@ -230,6 +230,26 @@ class Patroni:
         return True
 
     @property
+    def member_replication_lag(self) -> str:
+        """Member replication lag."""
+        try:
+            for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+                with attempt:
+                    cluster_status = requests.get(
+                        f"{self._patroni_url}/cluster",
+                        verify=self._verify,
+                        timeout=5,
+                    )
+        except RetryError:
+            return "unknown"
+
+        for member in cluster_status.json()["members"]:
+            if member["name"] == self._charm.unit.name.replace("/", "-"):
+                return member.get("lag", "unknown")
+
+        return "unknown"
+
+    @property
     def member_started(self) -> bool:
         """Has the member started Patroni and PostgreSQL.
 
@@ -258,6 +278,11 @@ class Patroni:
         ]
         # Check whether the PostgreSQL process has a state equal to T (frozen).
         return any(process for process in postgresql_processes if process.split()[7] != "T")
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    def reinitialize_postgresql(self) -> None:
+        """Reinitialize PostgreSQL."""
+        requests.post(f"{self._patroni_url}/reinitialize", verify=self._verify)
 
     def _render_file(self, path: str, content: str, mode: int) -> None:
         """Write a content rendered from a template to a file.
