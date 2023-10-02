@@ -463,6 +463,18 @@ class PostgresqlOperatorCharm(CharmBase):
             event.defer()
             return
 
+        # Restart the workload if it's stuck on the starting state after a timeline divergence
+        # due to a backup that was restored.
+        if not self.is_primary and (
+            self._patroni.member_replication_lag == "unknown"
+            or int(self._patroni.member_replication_lag) > 1000
+        ):
+            self._patroni.reinitialize_postgresql()
+            logger.debug("Deferring on_peer_relation_changed: reinitialising replica")
+            self.unit.status = WaitingStatus("reinitialising replica")
+            event.defer()
+            return
+
         self.postgresql_client_relation.update_read_only_endpoint()
 
         self.backup.check_stanza()
