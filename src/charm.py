@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 """Charmed Kubernetes Operator for the PostgreSQL database."""
+import itertools
 import json
 import logging
 from typing import Dict, List, Optional
@@ -462,6 +463,18 @@ class PostgresqlOperatorCharm(CharmBase):
             event.defer()
             return
 
+        # Restart the workload if it's stuck on the starting state after a timeline divergence
+        # due to a backup that was restored.
+        if not self.is_primary and (
+            self._patroni.member_replication_lag == "unknown"
+            or int(self._patroni.member_replication_lag) > 1000
+        ):
+            self._patroni.reinitialize_postgresql()
+            logger.debug("Deferring on_peer_relation_changed: reinitialising replica")
+            self.unit.status = WaitingStatus("reinitialising replica")
+            event.defer()
+            return
+
         self.postgresql_client_relation.update_read_only_endpoint()
 
         self.backup.check_stanza()
@@ -514,6 +527,7 @@ class PostgresqlOperatorCharm(CharmBase):
         Args:
             database: optional database where to enable/disable the extension.
         """
+        orginial_status = self.unit.status
         for config, enable in self.model.config.items():
             # Filter config option not related to plugins.
             if not config.startswith("plugin_"):
@@ -522,7 +536,11 @@ class PostgresqlOperatorCharm(CharmBase):
             # Enable or disable the plugin/extension.
             extension = "_".join(config.split("_")[1:-1])
             try:
+                self.unit.status = WaitingStatus(
+                    f"{'Enabling' if enable else 'Disabling'} {extension}"
+                )
                 self.postgresql.enable_disable_extension(extension, enable, database)
+                self.unit.status = orginial_status
             except PostgreSQLEnableDisableExtensionError as e:
                 logger.exception(
                     f"failed to {'enable' if enable else 'disable'} {extension} plugin: %s", str(e)
@@ -624,6 +642,8 @@ class PostgresqlOperatorCharm(CharmBase):
 
         if self.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY) is None:
             self.set_secret(APP_SCOPE, MONITORING_PASSWORD_KEY, new_password())
+
+        self._cleanup_old_cluster_resources()
 
         # Create resources and add labels needed for replication.
         try:
@@ -846,6 +866,26 @@ class PostgresqlOperatorCharm(CharmBase):
                 force=True,
                 field_manager=self.model.app.name,
             )
+
+    def _cleanup_old_cluster_resources(self) -> None:
+        """Delete kubernetes services and endpoints from previous deployment."""
+        if self.is_cluster_initialised:
+            logger.debug("Early exit _cleanup_old_cluster_resources: cluster already initialised")
+            return
+
+        client = Client()
+        for kind, suffix in itertools.product([Service, Endpoints], ["", "-config", "-sync"]):
+            try:
+                client.delete(
+                    res=kind,
+                    name=f"{self.cluster_name}{suffix}",
+                    namespace=self._namespace,
+                )
+                logger.info(f"deleted {kind.__name__}/{self.cluster_name}{suffix}")
+            except ApiError as e:
+                # Ignore the error only when the resource doesn't exist.
+                if e.status.code != 404:
+                    raise e
 
     @property
     def _has_blocked_status(self) -> bool:

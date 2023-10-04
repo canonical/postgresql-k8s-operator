@@ -322,6 +322,49 @@ async def test_redeploy_charm_same_model(ops_test: OpsTest):
         )
 
 
+async def test_redeploy_charm_same_model_after_forcing_removal(ops_test: OpsTest) -> None:
+    """Redeploy the charm in the same model to test that it works after a forceful removal."""
+    return_code, _, stderr = await ops_test.juju(
+        "remove-application", APP_NAME, "--destroy-storage", "--force", "--no-wait"
+    )
+    if return_code != 0:
+        assert False, stderr
+
+    # Block until the application is completely removed, or any unit gets in an error state.
+    await ops_test.model.block_until(
+        lambda: APP_NAME not in ops_test.model.applications
+        or any(
+            unit.workload_status == "error" for unit in ops_test.model.applications[APP_NAME].units
+        )
+    )
+
+    # Check that all k8s resources created by the charm and Patroni were still present.
+    namespace = ops_test.model.info.name
+    existing_resources = get_existing_k8s_resources(namespace, APP_NAME)
+    expected_resources = get_expected_k8s_resources(APP_NAME)
+    assert set(existing_resources) == set(expected_resources)
+
+    # Check that the charm can be deployed again.
+    charm = await ops_test.build_charm(".")
+    async with ops_test.fast_forward():
+        await ops_test.model.deploy(
+            charm,
+            resources={
+                "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
+            },
+            application_name=APP_NAME,
+            num_units=len(UNIT_IDS),
+            series=CHARM_SERIES,
+            trust=True,
+            config={"profile": "testing"},
+        )
+
+        # This check is enough to ensure that the charm/workload is working for this specific test.
+        await ops_test.model.wait_for_idle(
+            apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=len(UNIT_IDS)
+        )
+
+
 async def test_storage_with_more_restrictive_permissions(ops_test: OpsTest):
     """Test that the charm can be deployed with a storage with more restrictive permissions."""
     app_name = f"test-storage-{APP_NAME}"
