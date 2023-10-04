@@ -335,13 +335,13 @@ class TestPostgreSQLBackups(unittest.TestCase):
         _exec.side_effect = ExecError(command=command, exit_code=1, stdout="", stderr="fake error")
         with self.assertRaises(ExecError):
             self.charm.backup._empty_data_files()
-        _exec.assert_called_once_with(command, user="postgres", group="postgres")
+        _exec.assert_called_once_with(command)
 
         # Test when data files are successfully removed.
         _exec.reset_mock()
         _exec.side_effect = None
         self.charm.backup._empty_data_files()
-        _exec.assert_called_once_with(command, user="postgres", group="postgres")
+        _exec.assert_called_once_with(command)
 
     @patch("charm.PostgresqlOperatorCharm.update_config")
     def test_change_connectivity_to_database(self, _update_config):
@@ -657,6 +657,29 @@ class TestPostgreSQLBackups(unittest.TestCase):
         _can_use_s3_repository.assert_not_called()
         _initialise_stanza.assert_not_called()
 
+        # Test that followers will not initialise the bucket
+        self.charm.unit.status = ActiveStatus()
+        _render_pgbackrest_conf_file.reset_mock()
+        with self.harness.hooks_disabled():
+            self.harness.update_relation_data(
+                self.peer_rel_id,
+                self.charm.app.name,
+                {"cluster_initialised": "True"},
+            )
+        _render_pgbackrest_conf_file.return_value = True
+
+        self.charm.backup.s3_client.on.credentials_changed.emit(
+            relation=self.harness.model.get_relation(S3_PARAMETERS_RELATION, self.s3_rel_id)
+        )
+        _render_pgbackrest_conf_file.assert_called_once()
+        _create_bucket_if_not_exists.assert_not_called()
+        self.assertIsInstance(self.charm.unit.status, ActiveStatus)
+        _can_use_s3_repository.assert_not_called()
+        _initialise_stanza.assert_not_called()
+
+        with self.harness.hooks_disabled():
+            self.harness.set_leader()
+
         # Test when the charm render the pgBackRest configuration file, but fails to
         # access or create the S3 bucket.
         for error in [
@@ -666,16 +689,8 @@ class TestPostgreSQLBackups(unittest.TestCase):
             ),
             ValueError,
         ]:
-            self.charm.unit.status = ActiveStatus()
             _render_pgbackrest_conf_file.reset_mock()
             _create_bucket_if_not_exists.reset_mock()
-            with self.harness.hooks_disabled():
-                self.harness.update_relation_data(
-                    self.peer_rel_id,
-                    self.charm.app.name,
-                    {"cluster_initialised": "True"},
-                )
-            _render_pgbackrest_conf_file.return_value = True
             _create_bucket_if_not_exists.side_effect = error
             self.charm.backup.s3_client.on.credentials_changed.emit(
                 relation=self.harness.model.get_relation(S3_PARAMETERS_RELATION, self.s3_rel_id)
@@ -710,6 +725,17 @@ class TestPostgreSQLBackups(unittest.TestCase):
         )
         _can_use_s3_repository.assert_called_once()
         _initialise_stanza.assert_called_once()
+
+    def test_on_s3_credential_gone(self):
+        # Test that unrelated blocks will remain
+        self.charm.unit.status = BlockedStatus("test block")
+        self.charm.backup._on_s3_credential_gone(None)
+        self.assertIsInstance(self.charm.unit.status, BlockedStatus)
+
+        # Test that s3 related blocks will be cleared
+        self.charm.unit.status = BlockedStatus(ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE)
+        self.charm.backup._on_s3_credential_gone(None)
+        self.assertIsInstance(self.charm.unit.status, ActiveStatus)
 
     @patch("charm.PostgresqlOperatorCharm.update_config")
     @patch("charm.PostgreSQLBackups._change_connectivity_to_database")
@@ -911,6 +937,7 @@ Juju Version: test-juju-version
 
     @patch("ops.model.Container.start")
     @patch("charm.PostgresqlOperatorCharm.update_config")
+    @patch("charm.PostgresqlOperatorCharm._create_pgdata")
     @patch("charm.PostgreSQLBackups._empty_data_files")
     @patch("charm.PostgreSQLBackups._restart_database")
     @patch("lightkube.Client.delete")
@@ -925,6 +952,7 @@ Juju Version: test-juju-version
         _delete,
         _restart_database,
         _empty_data_files,
+        _create_pgdata,
         _update_config,
         _start,
     ):
@@ -938,6 +966,7 @@ Juju Version: test-juju-version
         _delete.assert_not_called()
         _restart_database.assert_not_called()
         _empty_data_files.assert_not_called()
+        _create_pgdata.assert_not_called()
         _update_config.assert_not_called()
         _start.assert_not_called()
         mock_event.fail.assert_not_called()
@@ -956,6 +985,7 @@ Juju Version: test-juju-version
         _delete.assert_not_called()
         _restart_database.assert_not_called()
         _empty_data_files.assert_not_called()
+        _create_pgdata.assert_not_called()
         _update_config.assert_not_called()
         _start.assert_not_called()
         mock_event.set_results.assert_not_called()
@@ -984,6 +1014,7 @@ Juju Version: test-juju-version
         _delete.assert_not_called()
         _restart_database.assert_not_called()
         _empty_data_files.assert_not_called()
+        _create_pgdata.assert_not_called()
         _update_config.assert_not_called()
         _start.assert_not_called()
         mock_event.set_results.assert_not_called()
@@ -998,6 +1029,7 @@ Juju Version: test-juju-version
         mock_event.fail.assert_called_once()
         _restart_database.assert_called_once()
         _empty_data_files.assert_not_called()
+        _create_pgdata.assert_not_called()
         _update_config.assert_not_called()
         _start.assert_not_called()
         mock_event.set_results.assert_not_called()
@@ -1013,6 +1045,7 @@ Juju Version: test-juju-version
         _empty_data_files.assert_called_once()
         mock_event.fail.assert_called_once()
         _restart_database.assert_called_once()
+        _create_pgdata.assert_not_called()
         _update_config.assert_not_called()
         _start.assert_not_called()
         mock_event.set_results.assert_not_called()
@@ -1031,6 +1064,7 @@ Juju Version: test-juju-version
                 "restore-stanza": f"{self.charm.model.name}.{self.charm.cluster_name}",
             },
         )
+        _create_pgdata.assert_called_once()
         _update_config.assert_called_once()
         _start.assert_called_once_with("postgresql")
         mock_event.fail.assert_not_called()

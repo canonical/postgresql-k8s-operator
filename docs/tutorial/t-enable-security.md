@@ -30,12 +30,13 @@ tls-certificates-operator/0*  active      idle   10.1.188.212
 ```
 *Note: this tutorial uses [self-signed certificates](https://en.wikipedia.org/wiki/Self-signed_certificate); self-signed certificates should not be used in a production cluster.*
 
+### Add external TLS certificate
 To enable TLS on Charmed PostgreSQL K8s, relate the two applications:
 ```shell
 juju relate postgresql-k8s tls-certificates-operator
 ```
 
-### Add external TLS certificate
+#### Check the TLS certificate in use:
 Use `openssl` to connect to the PostgreSQL and check the TLS certificate in use:
 ```shell
 > openssl s_client -starttls postgres -connect 10.1.188.206:5432 | grep Issuer
@@ -53,7 +54,7 @@ To remove the external TLS and return to the locally generate one, unrelate appl
 juju remove-relation postgresql-k8s tls-certificates-operator
 ```
 
-Check the TLS certificate in use:
+#### Check the TLS certificate in use:
 ```shell
 > openssl s_client -starttls postgres -connect 10.1.188.206:5432
 ...

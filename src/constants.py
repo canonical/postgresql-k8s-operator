@@ -21,9 +21,9 @@ WORKLOAD_OS_GROUP = "postgres"
 WORKLOAD_OS_USER = "postgres"
 METRICS_PORT = "9187"
 POSTGRES_LOG_FILES = [
-    "/var/log/pgbackrest",
+    "/var/log/pgbackrest/*",
     "/var/log/postgresql/patroni.log",
-    "/var/log/postgresql/postgresql.log",
+    "/var/log/postgresql/postgresql*.log",
 ]
 # List of system usernames needed for correct work of the charm/workload.
 SYSTEM_USERS = [BACKUP_USER, REPLICATION_USER, REWIND_USER, USER, MONITORING_USER]

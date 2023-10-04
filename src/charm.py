@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 """Charmed Kubernetes Operator for the PostgreSQL database."""
+import itertools
 import json
 import logging
 from typing import Dict, List, Optional
@@ -21,7 +22,7 @@ from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
 from lightkube import ApiError, Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
-from lightkube.resources.core_v1 import Endpoints, Pod, Service
+from lightkube.resources.core_v1 import Endpoints, Node, Pod, Service
 from ops import JujuVersion
 from ops.charm import (
     ActionEvent,
@@ -76,7 +77,7 @@ from patroni import NotReadyError, Patroni
 from relations.db import EXTENSIONS_BLOCKING_MESSAGE, DbProvides
 from relations.postgresql_provider import PostgreSQLProvider
 from upgrade import PostgreSQLUpgrade, get_postgresql_k8s_dependencies_model
-from utils import new_password
+from utils import any_memory_to_bytes, new_password
 
 logger = logging.getLogger(__name__)
 
@@ -464,6 +465,18 @@ class PostgresqlOperatorCharm(CharmBase):
             event.defer()
             return
 
+        # Restart the workload if it's stuck on the starting state after a timeline divergence
+        # due to a backup that was restored.
+        if not self.is_primary and (
+            self._patroni.member_replication_lag == "unknown"
+            or int(self._patroni.member_replication_lag) > 1000
+        ):
+            self._patroni.reinitialize_postgresql()
+            logger.debug("Deferring on_peer_relation_changed: reinitialising replica")
+            self.unit.status = WaitingStatus("reinitialising replica")
+            event.defer()
+            return
+
         self.postgresql_client_relation.update_read_only_endpoint()
 
         self.backup.check_stanza()
@@ -518,6 +531,7 @@ class PostgresqlOperatorCharm(CharmBase):
         Args:
             database: optional database where to enable/disable the extension.
         """
+        orginial_status = self.unit.status
         for config, enable in self.model.config.items():
             # Filter config option not related to plugins.
             if not config.startswith("plugin_"):
@@ -526,7 +540,11 @@ class PostgresqlOperatorCharm(CharmBase):
             # Enable or disable the plugin/extension.
             extension = "_".join(config.split("_")[1:-1])
             try:
+                self.unit.status = WaitingStatus(
+                    f"{'Enabling' if enable else 'Disabling'} {extension}"
+                )
                 self.postgresql.enable_disable_extension(extension, enable, database)
+                self.unit.status = orginial_status
             except PostgreSQLEnableDisableExtensionError as e:
                 logger.exception(
                     f"failed to {'enable' if enable else 'disable'} {extension} plugin: %s", str(e)
@@ -628,6 +646,8 @@ class PostgresqlOperatorCharm(CharmBase):
 
         if self.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY) is None:
             self.set_secret(APP_SCOPE, MONITORING_PASSWORD_KEY, new_password())
+
+        self._cleanup_old_cluster_resources()
 
         # Create resources and add labels needed for replication.
         try:
@@ -850,6 +870,26 @@ class PostgresqlOperatorCharm(CharmBase):
                 force=True,
                 field_manager=self.model.app.name,
             )
+
+    def _cleanup_old_cluster_resources(self) -> None:
+        """Delete kubernetes services and endpoints from previous deployment."""
+        if self.is_cluster_initialised:
+            logger.debug("Early exit _cleanup_old_cluster_resources: cluster already initialised")
+            return
+
+        client = Client()
+        for kind, suffix in itertools.product([Service, Endpoints], ["", "-config", "-sync"]):
+            try:
+                client.delete(
+                    res=kind,
+                    name=f"{self.cluster_name}{suffix}",
+                    namespace=self._namespace,
+                )
+                logger.info(f"deleted {kind.__name__}/{self.cluster_name}{suffix}")
+            except ApiError as e:
+                # Ignore the error only when the resource doesn't exist.
+                if e.status.code != 404:
+                    raise e
 
     @property
     def _has_blocked_status(self) -> bool:
@@ -1357,7 +1397,10 @@ class PostgresqlOperatorCharm(CharmBase):
         return True
 
     def _validate_and_render_configurations(self, is_creating_backup: bool) -> bool:
-        configurations = {}
+        # Retrieve PostgreSQL parameters.
+        postgresql_parameters = self.postgresql.build_postgresql_parameters(
+            self.config["profile"], self.get_available_memory()
+        )
         for config, value in self.model.config.items():
             # Filter config option not related to PostgreSQL configurations.
             if not config.startswith(
@@ -1375,11 +1418,10 @@ class PostgresqlOperatorCharm(CharmBase):
             ):
                 continue
 
-            configuration = "_".join(config.split("_")[1:-1])
-            configurations[configuration] = value
+            parameter = "_".join(config.split("_")[1:-1])
+            postgresql_parameters[parameter] = value
 
         self._patroni.render_patroni_yml_file(
-            configurations=configurations,
             connectivity=self.unit_peer_data.get("connectivity", "on") == "on",
             is_creating_backup=is_creating_backup,
             enable_tls=self.is_tls_enabled,
@@ -1387,17 +1429,17 @@ class PostgresqlOperatorCharm(CharmBase):
             backup_id=self.app_peer_data.get("restoring-backup"),
             stanza=self.app_peer_data.get("stanza"),
             restore_stanza=self.app_peer_data.get("restore-stanza"),
+            parameters=postgresql_parameters,
         )
-        invalid_configurations = self.postgresql.get_invalid_postgresql_configurations()
+        invalid_configurations = self.postgresql.get_invalid_postgresql_parameters()
         if len(invalid_configurations) > 0:
             logger.error(
-                f"invalid values for the following configurations: {''.join(invalid_configurations)}"
+                f"invalid values for the following parameters: {''.join(invalid_configurations)}"
             )
-            applied_configurations = self.postgresql.get_applied_postgresql_configurations(
-                list(configurations.keys())
+            applied_parameters = self.postgresql.get_applied_postgresql_parameters(
+                list(postgresql_parameters.keys())
             )
             self._patroni.render_patroni_yml_file(
-                configurations=applied_configurations,
                 connectivity=self.unit_peer_data.get("connectivity", "on") == "on",
                 is_creating_backup=is_creating_backup,
                 enable_tls=self.is_tls_enabled,
@@ -1405,6 +1447,7 @@ class PostgresqlOperatorCharm(CharmBase):
                 backup_id=self.app_peer_data.get("restoring-backup"),
                 stanza=self.app_peer_data.get("stanza"),
                 restore_stanza=self.app_peer_data.get("restore-stanza"),
+                parameters=applied_parameters,
             )
             return False
 
@@ -1442,6 +1485,54 @@ class PostgresqlOperatorCharm(CharmBase):
             pod name in "postgresql-k8s-0" format.
         """
         return unit_name.replace("/", "-")
+
+    def _get_node_name_for_pod(self) -> str:
+        """Return the node name for a given pod."""
+        client = Client()
+        pod = client.get(
+            Pod, name=self._unit_name_to_pod_name(self.unit.name), namespace=self._namespace
+        )
+        return pod.spec.nodeName
+
+    def get_resources_limits(self, container_name: str) -> Dict:
+        """Return resources limits for a given container.
+
+        Args:
+            container_name: name of the container to get resources limits for
+        """
+        client = Client()
+        pod = client.get(
+            Pod, self._unit_name_to_pod_name(self.unit.name), namespace=self._namespace
+        )
+
+        for container in pod.spec.containers:
+            if container.name == container_name:
+                return container.resources.limits or {}
+        return {}
+
+    def get_node_allocable_memory(self) -> int:
+        """Return the allocable memory in bytes for a given node.
+
+        Args:
+            node_name: name of the node to get the allocable memory for
+        """
+        client = Client()
+        node = client.get(Node, name=self._get_node_name_for_pod(), namespace=self._namespace)
+        return any_memory_to_bytes(node.status.allocatable["memory"])
+
+    def get_available_memory(self) -> int:
+        """Get available memory for the container in bytes."""
+        allocable_memory = self.get_node_allocable_memory()
+        container_limits = self.get_resources_limits(container_name="postgresql")
+        if "memory" in container_limits:
+            memory_str = container_limits["memory"]
+            constrained_memory = any_memory_to_bytes(memory_str)
+            if constrained_memory < allocable_memory:
+                logger.debug(f"Memory constrained to {memory_str} from resource limit")
+                return constrained_memory
+
+        logger.debug("Memory constrained by node allocable memory")
+        return allocable_memory
 
 
 if __name__ == "__main__":
