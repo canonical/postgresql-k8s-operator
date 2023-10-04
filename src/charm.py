@@ -527,6 +527,7 @@ class PostgresqlOperatorCharm(CharmBase):
         Args:
             database: optional database where to enable/disable the extension.
         """
+        orginial_status = self.unit.status
         for config, enable in self.model.config.items():
             # Filter config option not related to plugins.
             if not config.startswith("plugin_"):
@@ -535,7 +536,11 @@ class PostgresqlOperatorCharm(CharmBase):
             # Enable or disable the plugin/extension.
             extension = "_".join(config.split("_")[1:-1])
             try:
+                self.unit.status = WaitingStatus(
+                    f"{'Enabling' if enable else 'Disabling'} {extension}"
+                )
                 self.postgresql.enable_disable_extension(extension, enable, database)
+                self.unit.status = orginial_status
             except PostgreSQLEnableDisableExtensionError as e:
                 logger.exception(
                     f"failed to {'enable' if enable else 'disable'} {extension} plugin: %s", str(e)
