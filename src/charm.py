@@ -6,6 +6,7 @@
 import itertools
 import json
 import logging
+import os
 from typing import Dict, List, Optional
 
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
@@ -1401,8 +1402,11 @@ class PostgresqlOperatorCharm(CharmBase):
         postgresql_parameters = self.postgresql.build_postgresql_parameters(
             self.config["profile"], self.get_available_memory()
         )
+
+        postgresql_parameters["max_connections"] = max(4 * os.cpu_count(), 100)
+
         for config, value in self.model.config.items():
-            # Filter config option not related to PostgreSQL configurations.
+            # Filter config option not related to PostgreSQL parameters.
             if not config.startswith(
                 (
                     "connection",
@@ -1418,7 +1422,9 @@ class PostgresqlOperatorCharm(CharmBase):
             ):
                 continue
 
-            parameter = "_".join(config.split("_")[1:-1])
+            parameter = "_".join(config.split("_")[1:])
+            if parameter in ["date_style", "time_zone"]:
+                parameter = "".join(x.capitalize() for x in parameter.split("_"))
             postgresql_parameters[parameter] = value
 
         self._patroni.render_patroni_yml_file(
@@ -1431,6 +1437,12 @@ class PostgresqlOperatorCharm(CharmBase):
             restore_stanza=self.app_peer_data.get("restore-stanza"),
             parameters=postgresql_parameters,
         )
+
+        if not self._patroni.member_started or not self._patroni.primary_endpoint_ready:
+            return True
+
+        self._patroni.reload_patroni_configuration()
+
         invalid_configurations = self.postgresql.get_invalid_postgresql_parameters()
         if len(invalid_configurations) > 0:
             logger.error(
