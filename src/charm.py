@@ -1390,8 +1390,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("Early exit update_config: Patroni not started yet")
             return False
 
-        restart_postgresql = self.is_tls_enabled != self.postgresql.is_tls_enabled()
-        restart_postgresql = restart_postgresql or self.postgresql.is_restart_pending()
+        restart_postgresql = (
+            self.is_tls_enabled != self.postgresql.is_tls_enabled()
+        ) or self.postgresql.is_restart_pending()
         self._patroni.reload_patroni_configuration()
         self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
 
