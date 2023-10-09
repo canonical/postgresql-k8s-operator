@@ -40,7 +40,7 @@ from ops.model import (
     MaintenanceStatus,
     Relation,
     SecretNotFoundError,
-    WaitingStatus,
+    WaitingStatus, Unit,
 )
 from ops.pebble import ChangeError, Layer, PathError, ProtocolError, ServiceStatus
 from requests import ConnectionError
@@ -155,6 +155,14 @@ class PostgresqlOperatorCharm(CharmBase):
                 "tls_config": {"insecure_skip_verify": True},
             },
         ]
+
+    @property
+    def app_units(self) -> set[Unit]:
+        """The peer-related units in the application."""
+        if not self._peers:
+            return set()
+
+        return {self.unit, *self._peers.units}
 
     @property
     def app_peer_data(self) -> Dict:
@@ -535,16 +543,16 @@ class PostgresqlOperatorCharm(CharmBase):
 
             # Enable or disable the plugin/extension.
             extension = "_".join(config.split("_")[1:-1])
+            self.unit.status = WaitingStatus(
+                f"{'Enabling' if enable else 'Disabling'} {extension}"
+            )
             try:
-                self.unit.status = WaitingStatus(
-                    f"{'Enabling' if enable else 'Disabling'} {extension}"
-                )
                 self.postgresql.enable_disable_extension(extension, enable, database)
-                self.unit.status = orginial_status
             except PostgreSQLEnableDisableExtensionError as e:
                 logger.exception(
                     f"failed to {'enable' if enable else 'disable'} {extension} plugin: %s", str(e)
                 )
+            self.unit.status = orginial_status
 
     def _add_members(self, event) -> None:
         """Add new cluster members.
@@ -1395,6 +1403,7 @@ class PostgresqlOperatorCharm(CharmBase):
                 container.add_layer(
                     self._metrics_service,
                     Layer({"services": {self._metrics_service: self._generate_metrics_service()}}),
+                    combine=True,
                 )
                 container.restart(self._metrics_service)
 

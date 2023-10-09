@@ -11,16 +11,19 @@ from charms.data_platform_libs.v0.upgrade import (
     DependencyModel,
     KubernetesClientError,
 )
+from charms.postgresql_k8s.v0.postgresql import PostgreSQLGetPostgreSQLVersionError
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
 from lightkube.resources.apps_v1 import StatefulSet
 from ops.charm import WorkloadEvent
-from ops.model import BlockedStatus
+from ops.model import BlockedStatus, RelationDataContent
 from pydantic import BaseModel
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 from typing_extensions import override
 
+from constants import APP_SCOPE, MONITORING_PASSWORD_KEY, MONITORING_USER
 from patroni import SwitchoverFailedError
+from utils import new_password
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +54,8 @@ class PostgreSQLUpgrade(DataUpgrade):
         self.framework.observe(
             getattr(self.charm.on, "postgresql_pebble_ready"), self._on_postgresql_pebble_ready
         )
+
+        self._on_upgrade_charm_check_legacy()
 
     @property
     def is_no_sync_member(self) -> bool:
@@ -91,6 +96,14 @@ class PostgreSQLUpgrade(DataUpgrade):
             return
 
         try:
+            self.charm.unit.set_workload_version(
+                self.charm._patroni.get_postgresql_version() or "unset"
+            )
+        except PostgreSQLGetPostgreSQLVersionError:
+            # Don't fail on this, just log it.
+            logger.warning("Failed to get PostgreSQL version")
+
+        try:
             for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(10)):
                 with attempt:
                     if (
@@ -119,6 +132,30 @@ class PostgreSQLUpgrade(DataUpgrade):
             return
 
         self.charm.update_config()
+
+
+    def _on_upgrade_charm_check_legacy(self) -> None:
+        if not self.peer_relation or len(self.app_units) < len(self.charm.app_units):
+            logger.debug("Wait all units join the upgrade relation")
+            return
+
+        if self.state:
+            # Do nothing - if state set, upgrade is supported
+            return
+
+        if not self.charm.unit.is_leader():
+            # set ready state on non-leader units
+            self.unit_upgrade_data.update({"state": "ready"})
+            return
+
+        peers_state = list(filter(lambda state: state != "", self.unit_states))
+
+        if len(peers_state) == len(self.peer_relation.units) and (set(peers_state) == {"ready"} or len(peers_state) == 0):
+            if self.charm._patroni.member_started:
+                # All peers have set the state to ready
+                self.unit_upgrade_data.update({"state": "ready"})
+                self._prepare_upgrade_from_legacy()
+            getattr(self.on, "upgrade_charm").emit()
 
     @override
     def pre_upgrade_check(self) -> None:
@@ -180,6 +217,33 @@ class PostgreSQLUpgrade(DataUpgrade):
             f"wait 30 seconds for {unit_zero_name} and run this action again",
         )
 
+    def _prepare_upgrade_from_legacy(self) -> None:
+        """Prepare upgrade from legacy charm without upgrade support.
+
+        Assumes run on leader unit only.
+        """
+        logger.warning("Upgrading from unsupported version")
+
+        # Populate app upgrade databag to allow upgrade procedure
+        logger.debug("Building upgrade stack")
+        upgrade_stack = self.build_upgrade_stack()
+        logger.debug(f"Upgrade stack: {upgrade_stack}")
+        self.upgrade_stack = upgrade_stack
+        logger.debug("Persisting dependencies to upgrade relation data...")
+        self.peer_relation.data[self.charm.app].update(
+            {"dependencies": json.dumps(self.dependency_model.dict())}
+        )
+        if self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY) is None:
+            self.charm.set_secret(APP_SCOPE, MONITORING_PASSWORD_KEY, new_password())
+        users = self.charm.postgresql.list_users()
+        if MONITORING_USER not in users:
+            # Create the monitoring user.
+            self.charm.postgresql.create_user(
+                MONITORING_USER,
+                self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY),
+                extra_user_roles="pg_monitor",
+            )
+
     def _set_list_of_sync_standbys(self) -> None:
         """Set the list of desired sync-standbys in the relation data."""
         if self.charm.app.planned_units() > 2:
@@ -220,3 +284,8 @@ class PostgreSQLUpgrade(DataUpgrade):
             self._set_rolling_update_partition(self.charm.app.planned_units() - 1)
         except KubernetesClientError as e:
             raise ClusterNotReadyError(e.message, e.cause)
+
+    @property
+    def unit_upgrade_data(self) -> RelationDataContent:
+        """Return the application upgrade data."""
+        return self.peer_relation.data[self.charm.unit]
