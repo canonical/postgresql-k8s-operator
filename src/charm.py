@@ -500,6 +500,9 @@ class PostgresqlOperatorCharm(CharmBase):
         else:
             self.unit_peer_data.pop("start-tls-server", None)
 
+        # Start the metrics service after the upgrade from a revision without support for upgrade.
+        # container.start(self._metrics_service)
+
         if not self.is_blocked:
             self.unit.status = ActiveStatus()
 
@@ -1206,7 +1209,7 @@ class PostgresqlOperatorCharm(CharmBase):
             "override": "replace",
             "summary": "postgresql metrics exporter",
             "command": "/start-exporter.sh",
-            "startup": "enabled",
+            "startup": ("enabled" if self.get_secret('app', MONITORING_PASSWORD_KEY) is not None else "disabled"),
             "after": [self._postgresql_service],
             "user": WORKLOAD_OS_USER,
             "group": WORKLOAD_OS_GROUP,
