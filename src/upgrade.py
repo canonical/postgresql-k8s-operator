@@ -21,9 +21,7 @@ from pydantic import BaseModel
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 from typing_extensions import override
 
-from constants import APP_SCOPE, MONITORING_PASSWORD_KEY, MONITORING_USER
 from patroni import SwitchoverFailedError
-from utils import new_password
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +96,9 @@ class PostgreSQLUpgrade(DataUpgrade):
 
         if self.charm.unit.is_leader():
             if not self.charm._patroni.primary_endpoint_ready:
-                logger.debug("Deferring on_pebble_ready: current unit is leader but primary endpoint is not ready yet")
+                logger.debug(
+                    "Deferring on_pebble_ready: current unit is leader but primary endpoint is not ready yet"
+                )
                 event.defer()
                 return
             # Create missing password and user.
@@ -150,7 +150,6 @@ class PostgreSQLUpgrade(DataUpgrade):
 
         self.charm.update_config()
 
-
     def _on_upgrade_charm_check_legacy(self, event: UpgradeCharmEvent) -> None:
         if not self.peer_relation:
             logger.debug("Wait all units join the upgrade relation")
@@ -165,10 +164,7 @@ class PostgreSQLUpgrade(DataUpgrade):
         # All peers should set the state to upgrading.
         self.unit_upgrade_data.update({"state": "upgrading"})
 
-        if (
-            self.charm.unit.name
-            != f"{self.charm.app.name}/{self.charm.app.planned_units() - 1}"
-        ):
+        if self.charm.unit.name != f"{self.charm.app.name}/{self.charm.app.planned_units() - 1}":
             self.charm.unit.status = MaintenanceStatus("upgrading unit")
             self.peer_relation.data[self.charm.unit].update({"state": "upgrading"})
             self._set_rolling_update_partition(self.charm.app.planned_units())

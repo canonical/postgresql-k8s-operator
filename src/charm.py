@@ -1209,7 +1209,11 @@ class PostgresqlOperatorCharm(CharmBase):
             "override": "replace",
             "summary": "postgresql metrics exporter",
             "command": "/start-exporter.sh",
-            "startup": ("enabled" if self.get_secret('app', MONITORING_PASSWORD_KEY) is not None else "disabled"),
+            "startup": (
+                "enabled"
+                if self.get_secret("app", MONITORING_PASSWORD_KEY) is not None
+                else "disabled"
+            ),
             "after": [self._postgresql_service],
             "user": WORKLOAD_OS_USER,
             "group": WORKLOAD_OS_GROUP,
