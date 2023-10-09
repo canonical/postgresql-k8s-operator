@@ -47,7 +47,7 @@ async def check_tls_rewind(ops_test: OpsTest) -> None:
             logs = await run_command_on_unit(
                 ops_test,
                 unit.name,
-                "grep rewind /var/log/postgresql/postgresql.log",
+                "grep rewind /var/log/postgresql/postgresql-*.log",
             )
         except Exception:
             continue
@@ -69,7 +69,9 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
         # Deploy TLS Certificates operator.
         config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
-        await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, config=config)
+        await ops_test.model.deploy(
+            TLS_CERTIFICATES_APP_NAME, config=config, channel="legacy/stable"
+        )
         # Relate it to the PostgreSQL to enable TLS.
         await ops_test.model.relate(DATABASE_APP_NAME, TLS_CERTIFICATES_APP_NAME)
         await ops_test.model.wait_for_idle(status="active", timeout=1000)

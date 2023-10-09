@@ -230,6 +230,26 @@ class Patroni:
         return True
 
     @property
+    def member_replication_lag(self) -> str:
+        """Member replication lag."""
+        try:
+            for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+                with attempt:
+                    cluster_status = requests.get(
+                        f"{self._patroni_url}/cluster",
+                        verify=self._verify,
+                        timeout=5,
+                    )
+        except RetryError:
+            return "unknown"
+
+        for member in cluster_status.json()["members"]:
+            if member["name"] == self._charm.unit.name.replace("/", "-"):
+                return member.get("lag", "unknown")
+
+        return "unknown"
+
+    @property
     def member_started(self) -> bool:
         """Has the member started Patroni and PostgreSQL.
 
@@ -258,6 +278,11 @@ class Patroni:
         ]
         # Check whether the PostgreSQL process has a state equal to T (frozen).
         return any(process for process in postgresql_processes if process.split()[7] != "T")
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    def reinitialize_postgresql(self) -> None:
+        """Reinitialize PostgreSQL."""
+        requests.post(f"{self._patroni_url}/reinitialize", verify=self._verify)
 
     def _render_file(self, path: str, content: str, mode: int) -> None:
         """Write a content rendered from a template to a file.
@@ -290,6 +315,7 @@ class Patroni:
         stanza: str = None,
         restore_stanza: Optional[str] = None,
         backup_id: Optional[str] = None,
+        parameters: Optional[dict[str, str]] = None,
     ) -> None:
         """Render the Patroni configuration file.
 
@@ -302,6 +328,7 @@ class Patroni:
             stanza: name of the stanza created by pgBackRest.
             restore_stanza: name of the stanza used when restoring a backup.
             backup_id: id of the backup that is being restored.
+            parameters: PostgreSQL parameters to be added to the postgresql.conf file.
         """
         # Open the template patroni.yml file.
         with open("templates/patroni.yml.j2", "r") as file:
@@ -327,6 +354,7 @@ class Patroni:
             restore_stanza=restore_stanza,
             minority_count=self._members_count // 2,
             version=self.rock_postgresql_version.split(".")[0],
+            pg_parameters=parameters,
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 
