@@ -40,7 +40,8 @@ from ops.model import (
     MaintenanceStatus,
     Relation,
     SecretNotFoundError,
-    WaitingStatus, Unit,
+    Unit,
+    WaitingStatus,
 )
 from ops.pebble import ChangeError, Layer, PathError, ProtocolError, ServiceStatus
 from requests import ConnectionError
@@ -506,6 +507,10 @@ class PostgresqlOperatorCharm(CharmBase):
         """Handle configuration changes, like enabling plugins."""
         if not self.is_cluster_initialised:
             logger.debug("Early exit on_config_changed: cluster not initialised yet")
+            return
+
+        if not self.upgrade.idle:
+            logger.debug("Early exit on_config_changed: upgrade in progress")
             return
 
         if not self.unit.is_leader():
