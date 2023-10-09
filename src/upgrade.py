@@ -15,8 +15,8 @@ from charms.postgresql_k8s.v0.postgresql import PostgreSQLGetPostgreSQLVersionEr
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
 from lightkube.resources.apps_v1 import StatefulSet
-from ops.charm import WorkloadEvent, UpgradeCharmEvent
-from ops.model import BlockedStatus, RelationDataContent, MaintenanceStatus
+from ops.charm import UpgradeCharmEvent, WorkloadEvent
+from ops.model import BlockedStatus, MaintenanceStatus, RelationDataContent
 from pydantic import BaseModel
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 from typing_extensions import override
@@ -96,6 +96,22 @@ class PostgreSQLUpgrade(DataUpgrade):
             event.defer()
             return
 
+        if self.charm.unit.is_leader():
+            if not self.charm._patroni.primary_endpoint_ready:
+                logger.debug("Deferring on_pebble_ready: current unit is leader but primary endpoint is not ready yet")
+                event.defer()
+                return
+            # Create missing password and user.
+            if self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY) is None:
+                self.charm.set_secret(APP_SCOPE, MONITORING_PASSWORD_KEY, new_password())
+            users = self.charm.postgresql.list_users()
+            if MONITORING_USER not in users:
+                self.charm.postgresql.create_user(
+                    MONITORING_USER,
+                    self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY),
+                    extra_user_roles="pg_monitor",
+                )
+
         try:
             self.charm.unit.set_workload_version(
                 self.charm._patroni.rock_postgresql_version or "unset"
@@ -144,12 +160,10 @@ class PostgreSQLUpgrade(DataUpgrade):
             # Do nothing - if state set, upgrade is supported
             return
 
+        logger.warning("Upgrading from unsupported version")
+
         # All peers should set the state to upgrading.
         self.unit_upgrade_data.update({"state": "upgrading"})
-
-        if self.charm.unit.is_leader() and not self._prepare_upgrade_from_legacy():
-            event.defer()
-            return
 
         if (
             self.charm.unit.name
@@ -218,28 +232,6 @@ class PostgreSQLUpgrade(DataUpgrade):
             f"{unit_zero_name} needs to be a synchronous standby in order to become the primary before the upgrade process can start",
             f"wait 30 seconds for {unit_zero_name} and run this action again",
         )
-
-    def _prepare_upgrade_from_legacy(self) -> bool:
-        """Prepare upgrade from legacy charm without upgrade support.
-
-        Assumes run on leader unit only.
-        """
-        if not self.charm._patroni.primary_endpoint_ready:
-            return False
-
-        logger.warning("Upgrading from unsupported version")
-
-        # Create missing password and user.
-        if self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY) is None:
-            self.charm.set_secret(APP_SCOPE, MONITORING_PASSWORD_KEY, new_password())
-        users = self.charm.postgresql.list_users()
-        if MONITORING_USER not in users:
-            self.charm.postgresql.create_user(
-                MONITORING_USER,
-                self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY),
-                extra_user_roles="pg_monitor",
-            )
-        return True
 
     def _set_list_of_sync_standbys(self) -> None:
         """Set the list of desired sync-standbys in the relation data."""
