@@ -1360,7 +1360,7 @@
           "hide": false,
           "interval": "$interval",
           "intervalFactor": 1,
-          "legendFormat": "{{service_name}}",
+          "legendFormat": "{{juju_unit}}",
           "range": true,
           "refId": "A"
         }
@@ -1470,7 +1470,7 @@
           "hide": false,
           "interval": "$interval",
           "intervalFactor": 1,
-          "legendFormat": "{{service_name}}",
+          "legendFormat": "{{juju_unit}}",
           "range": true,
           "refId": "A"
         }
@@ -1601,7 +1601,7 @@
           "format": "time_series",
           "interval": "$interval",
           "intervalFactor": 1,
-          "legendFormat": "{{service_name}}",
+          "legendFormat": "{{juju_unit}}",
           "range": true,
           "refId": "A"
         }
@@ -1710,7 +1710,7 @@
           "instant": false,
           "interval": "$interval",
           "intervalFactor": 1,
-          "legendFormat": "{{service_name}}",
+          "legendFormat": "{{juju_unit}}",
           "range": true,
           "refId": "A"
         }
@@ -1819,7 +1819,7 @@
           "instant": false,
           "interval": "$interval",
           "intervalFactor": 1,
-          "legendFormat": "{{service_name}}",
+          "legendFormat": "{{juju_unit}}",
           "range": true,
           "refId": "A"
         }
@@ -1928,7 +1928,7 @@
           "instant": false,
           "interval": "$interval",
           "intervalFactor": 1,
-          "legendFormat": "{{service_name}}",
+          "legendFormat": "{{juju_unit}}",
           "range": true,
           "refId": "A"
         }
