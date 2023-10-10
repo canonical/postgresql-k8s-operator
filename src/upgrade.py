@@ -21,7 +21,9 @@ from pydantic import BaseModel
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 from typing_extensions import override
 
+from constants import APP_SCOPE, MONITORING_PASSWORD_KEY, MONITORING_USER
 from patroni import SwitchoverFailedError
+from utils import new_password
 
 logger = logging.getLogger(__name__)
 
@@ -101,16 +103,7 @@ class PostgreSQLUpgrade(DataUpgrade):
                 )
                 event.defer()
                 return
-            # Create missing password and user.
-            if self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY) is None:
-                self.charm.set_secret(APP_SCOPE, MONITORING_PASSWORD_KEY, new_password())
-            users = self.charm.postgresql.list_users()
-            if MONITORING_USER not in users:
-                self.charm.postgresql.create_user(
-                    MONITORING_USER,
-                    self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY),
-                    extra_user_roles="pg_monitor",
-                )
+            self._set_up_new_credentials_for_legacy()
 
         try:
             self.charm.unit.set_workload_version(
@@ -269,6 +262,18 @@ class PostgreSQLUpgrade(DataUpgrade):
             self._set_rolling_update_partition(self.charm.app.planned_units() - 1)
         except KubernetesClientError as e:
             raise ClusterNotReadyError(e.message, e.cause)
+
+    def _set_up_new_credentials_for_legacy(self) -> None:
+        """Create missing password and user."""
+        if self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY) is None:
+            self.charm.set_secret(APP_SCOPE, MONITORING_PASSWORD_KEY, new_password())
+        users = self.charm.postgresql.list_users()
+        if MONITORING_USER not in users:
+            self.charm.postgresql.create_user(
+                MONITORING_USER,
+                self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY),
+                extra_user_roles="pg_monitor",
+            )
 
     @property
     def unit_upgrade_data(self) -> RelationDataContent:
