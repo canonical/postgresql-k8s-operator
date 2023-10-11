@@ -9,6 +9,7 @@ import logging
 import os
 from typing import Dict, List, Optional
 
+from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v0.loki_push_api import LogProxyConsumer
 from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
@@ -27,7 +28,6 @@ from lightkube.resources.core_v1 import Endpoints, Node, Pod, Service
 from ops import JujuVersion
 from ops.charm import (
     ActionEvent,
-    CharmBase,
     HookEvent,
     LeaderElectedEvent,
     RelationDepartedEvent,
@@ -48,6 +48,7 @@ from requests import ConnectionError
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from backups import PostgreSQLBackups
+from config import CharmConfig
 from constants import (
     APP_SCOPE,
     BACKUP_USER,
@@ -82,11 +83,17 @@ from utils import any_memory_to_bytes, new_password
 
 logger = logging.getLogger(__name__)
 
+# http{x,core} clutter the logs with debug messages
+logging.getLogger("httpcore").setLevel(logging.ERROR)
+logging.getLogger("httpx").setLevel(logging.ERROR)
+
 INVALID_POSTGRESQL_CONFIGURATIONS_ERROR_MESSAGE = "invalid configuration(s) for PostgreSQL"
 
 
-class PostgresqlOperatorCharm(CharmBase):
+class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     """Charmed Operator for the PostgreSQL database."""
+
+    config_type = CharmConfig
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -260,7 +267,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
         secret = self.secrets[scope].get(SECRET_LABEL)
 
-        # It's not the first secret for the scope, we can re-use the existing one
+        # It's not the first secret for the scope, we can reuse the existing one
         # that was fetched in the previous call
         if secret:
             secret_cache = self.secrets[scope][SECRET_CACHE_LABEL]
@@ -503,6 +510,13 @@ class PostgresqlOperatorCharm(CharmBase):
             logger.debug("Early exit on_config_changed: cluster not initialised yet")
             return
 
+        if not self.upgrade.idle:
+            logger.debug("Early exit on_config_changed: upgrade in progress")
+            return
+
+        # update config on every run
+        self.update_config()
+
         if not self.unit.is_leader():
             return
 
@@ -533,13 +547,10 @@ class PostgresqlOperatorCharm(CharmBase):
             database: optional database where to enable/disable the extension.
         """
         orginial_status = self.unit.status
-        for config, enable in self.model.config.items():
-            # Filter config option not related to plugins.
-            if not config.startswith("plugin_"):
-                continue
-
+        for plugin in self.config.plugin_keys():
+            enable = self.config[plugin]
             # Enable or disable the plugin/extension.
-            extension = "_".join(config.split("_")[1:-1])
+            extension = "_".join(plugin.split("_")[1:-1])
             try:
                 self.unit.status = WaitingStatus(
                     f"{'Enabling' if enable else 'Disabling'} {extension}"
@@ -1321,6 +1332,7 @@ class PostgresqlOperatorCharm(CharmBase):
             return
 
         try:
+            logger.debug("Restarting PostgreSQL")
             self._patroni.restart_postgresql()
         except RetryError:
             error_message = "failed to restart PostgreSQL"
@@ -1349,6 +1361,7 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def update_config(self, is_creating_backup: bool = False) -> bool:
         """Updates Patroni config file based on the existence of the TLS files."""
+        logger.info("Updating Patroni config file")
         # Update and reload configuration based on TLS files availability.
         if not self._validate_and_render_configurations(is_creating_backup):
             self.unit.status = BlockedStatus(INVALID_POSTGRESQL_CONFIGURATIONS_ERROR_MESSAGE)
@@ -1369,14 +1382,16 @@ class PostgresqlOperatorCharm(CharmBase):
             logger.debug("Early exit update_config: Patroni not started yet")
             return False
 
-        restart_postgresql = self.is_tls_enabled != self.postgresql.is_tls_enabled()
+        restart_postgresql = (
+            self.is_tls_enabled != self.postgresql.is_tls_enabled()
+        ) or self.postgresql.is_restart_pending()
         self._patroni.reload_patroni_configuration()
-        restart_postgresql = restart_postgresql or self.postgresql.has_pending_restart()
         self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
 
         # Restart PostgreSQL if TLS configuration has changed
         # (so the both old and new connections use the configuration).
         if restart_postgresql:
+            logger.info("PostgreSQL restart required")
             self.metrics_endpoint.update_scrape_job_spec(
                 self._generate_metrics_jobs(self.is_tls_enabled)
             )
@@ -1399,8 +1414,12 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _validate_and_render_configurations(self, is_creating_backup: bool) -> bool:
         # Retrieve PostgreSQL parameters.
+        if self.config.profile_limit_memory:
+            limit_memory = self.config.profile_limit_memory * 10**6
+        else:
+            limit_memory = None
         postgresql_parameters = self.postgresql.build_postgresql_parameters(
-            self.config["profile"], self.get_available_memory()
+            self.config["profile"], self.get_available_memory(), limit_memory
         )
 
         postgresql_parameters["max_connections"] = max(4 * os.cpu_count(), 100)
