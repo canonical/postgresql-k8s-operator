@@ -56,8 +56,6 @@ class PostgreSQLUpgrade(DataUpgrade):
         )
         self.framework.observe(self.charm.on.upgrade_charm, self._on_upgrade_charm_check_legacy)
 
-        # self._on_upgrade_charm_check_legacy()
-
     @property
     def is_no_sync_member(self) -> bool:
         """Whether this member shouldn't be a synchronous standby (when it's a replica)."""

@@ -507,9 +507,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         else:
             self.unit_peer_data.pop("start-tls-server", None)
 
-        # Start the metrics service after the upgrade from a revision without support for upgrade.
-        # container.start(self._metrics_service)
-
         if not self.is_blocked:
             self.unit.status = ActiveStatus()
 
@@ -553,7 +550,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         Args:
             database: optional database where to enable/disable the extension.
         """
-        orginial_status = self.unit.status
+        original_status = self.unit.status
         for plugin in self.config.plugin_keys():
             enable = self.config[plugin]
             # Enable or disable the plugin/extension.
@@ -567,7 +564,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 logger.exception(
                     f"failed to {'enable' if enable else 'disable'} {extension} plugin: %s", str(e)
                 )
-            self.unit.status = orginial_status
+            self.unit.status = original_status
 
     def _add_members(self, event) -> None:
         """Add new cluster members.
