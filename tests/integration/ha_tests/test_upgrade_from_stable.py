@@ -8,6 +8,7 @@ import pytest
 from lightkube import Client
 from lightkube.resources.apps_v1 import StatefulSet
 from pytest_operator.plugin import OpsTest
+from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from tests.integration.ha_tests.helpers import (
     APPLICATION_NAME,
@@ -48,9 +49,7 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
     logger.info("Wait for applications to become active")
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME, APPLICATION_NAME],
-            status="active",
-            timeout=TIMEOUT,
+            apps=[DATABASE_APP_NAME, APPLICATION_NAME], status="active"
         )
     assert len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3
 
@@ -67,12 +66,15 @@ async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
     assert leader_unit is not None, "No leader unit found"
 
-    logger.info("Run pre-upgrade-check action")
-    action = await leader_unit.run_action("pre-upgrade-check")
-    await action.wait()
+    for attempt in Retrying(stop=stop_after_attempt(2), wait=wait_fixed(30), reraise=True):
+        with attempt:
+            logger.info("Run pre-upgrade-check action")
+            action = await leader_unit.run_action("pre-upgrade-check")
+            await action.wait()
 
-    primary_name = await get_primary(ops_test, DATABASE_APP_NAME)
-    assert primary_name == f"{DATABASE_APP_NAME}/0", "Primary unit not set to unit 0"
+            # Ensure the primary has changed to the first unit.
+            primary_name = await get_primary(ops_test, DATABASE_APP_NAME)
+            assert primary_name == f"{DATABASE_APP_NAME}/0", "Primary unit not set to unit 0"
 
     logger.info("Assert partition is set to 2")
     client = Client()
@@ -84,7 +86,7 @@ async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_upgrade_from_stable(ops_test: OpsTest):
+async def test_upgrade_from_stable(ops_test: OpsTest, continuous_writes):
     """Test updating from stable channel."""
     # Start an application that continuously writes data to the database.
     logger.info("starting continuous writes to the database")
@@ -92,9 +94,9 @@ async def test_upgrade_from_stable(ops_test: OpsTest):
 
     # Check whether writes are increasing.
     logger.info("checking whether writes are increasing")
-    primary_name = await get_primary(ops_test, DATABASE_APP_NAME)
-    await are_writes_increasing(ops_test, primary_name)
+    await are_writes_increasing(ops_test)
 
+    primary_name = await get_primary(ops_test, DATABASE_APP_NAME)
     initial_number_of_switchovers = await count_switchovers(ops_test, primary_name)
 
     resources = {"postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]}
@@ -133,8 +135,7 @@ async def test_upgrade_from_stable(ops_test: OpsTest):
 
     # Check whether writes are increasing.
     logger.info("checking whether writes are increasing")
-    primary_name = await get_primary(ops_test, DATABASE_APP_NAME)
-    await are_writes_increasing(ops_test, primary_name)
+    await are_writes_increasing(ops_test)
 
     # Verify that no writes to the database were missed after stopping the writes
     # (check that all the units have all the writes).

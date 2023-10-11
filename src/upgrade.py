@@ -86,7 +86,7 @@ class PostgreSQLUpgrade(DataUpgrade):
             event.defer()
             return
 
-        if self.peer_relation.data[self.charm.unit].get("state") != "upgrading":
+        if self.state not in ["upgrading", "recovery"]:
             return
 
         # Don't mark the upgrade of this unit as completed until Patroni reports the

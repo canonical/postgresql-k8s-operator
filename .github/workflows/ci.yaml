@@ -86,6 +86,7 @@ jobs:
           - password-rotation-integration
           - plugins-integration
           - tls-integration
+          - upgrade-integration
           - upgrade-from-stable-integration
         agent-versions:
           - "2.9.45"  # renovate: latest juju 2
