@@ -19,7 +19,7 @@ The `postgresql` module provides methods for interacting with the PostgreSQL ins
 Any charm using this library should import the `psycopg2` or `psycopg2-binary` dependency.
 """
 import logging
-from typing import List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 
 import psycopg2
 from psycopg2 import sql
@@ -32,7 +32,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 14
+LIBPATCH = 15
 
 INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE = "invalid role(s) for extra user roles"
 
@@ -423,7 +423,7 @@ class PostgreSQL:
     @staticmethod
     def build_postgresql_parameters(
         profile: str, available_memory: int
-    ) -> Optional[dict[str, str]]:
+    ) -> Optional[Dict[str, str]]:
         """Builds the PostgreSQL parameters.
 
         Args:
