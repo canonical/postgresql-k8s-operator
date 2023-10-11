@@ -1051,6 +1051,10 @@ class PostgresqlOperatorCharm(CharmBase):
 
     def _on_update_status(self, _) -> None:
         """Update the unit status message."""
+        if not self.upgrade.idle:
+            logger.debug("Early exit on_update_status: upgrade in progress")
+            return
+
         container = self.unit.get_container("postgresql")
         if not container.can_connect():
             logger.debug("on_update_status early exit: Cannot connect to container")
