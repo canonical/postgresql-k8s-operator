@@ -271,8 +271,10 @@ class TestCharm(unittest.TestCase):
     @patch("charm.Patroni.member_started")
     @patch("charm.Patroni.get_primary")
     @patch("ops.model.Container.pebble")
+    @patch("upgrade.PostgreSQLUpgrade.idle", return_value="idle")
     def test_on_update_status(
         self,
+        _,
         _pebble,
         _get_primary,
         _member_started,
@@ -322,8 +324,9 @@ class TestCharm(unittest.TestCase):
     @patch("charm.Patroni.member_started")
     @patch("charm.Patroni.get_primary")
     @patch("ops.model.Container.pebble")
+    @patch("upgrade.PostgreSQLUpgrade.idle", return_value="idle")
     def test_on_update_status_with_error_on_get_primary(
-        self, _pebble, _get_primary, _member_started
+        self, _, _pebble, _get_primary, _member_started
     ):
         # Mock the access to the list of Pebble services.
         _pebble.get_services.return_value = ["service data"]
@@ -344,8 +347,10 @@ class TestCharm(unittest.TestCase):
     @patch("charm.PostgresqlOperatorCharm.update_config")
     @patch("charm.Patroni.member_started", new_callable=PropertyMock)
     @patch("ops.model.Container.pebble")
+    @patch("upgrade.PostgreSQLUpgrade.idle", return_value="idle")
     def test_on_update_status_after_restore_operation(
         self,
+        _,
         _pebble,
         _member_started,
         _update_config,
