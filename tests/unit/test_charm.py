@@ -324,7 +324,7 @@ class TestCharm(unittest.TestCase):
     @patch("charm.Patroni.member_started")
     @patch("charm.Patroni.get_primary")
     @patch("ops.model.Container.pebble")
-    @patch("upgrade.PostgreSQLUpgrade.idle", return_value="idle")
+    @patch("upgrade.PostgreSQLUpgrade.idle", return_value=True)
     def test_on_update_status_with_error_on_get_primary(
         self, _, _pebble, _get_primary, _member_started
     ):
@@ -347,7 +347,7 @@ class TestCharm(unittest.TestCase):
     @patch("charm.PostgresqlOperatorCharm.update_config")
     @patch("charm.Patroni.member_started", new_callable=PropertyMock)
     @patch("ops.model.Container.pebble")
-    @patch("upgrade.PostgreSQLUpgrade.idle", return_value="idle")
+    @patch("upgrade.PostgreSQLUpgrade.idle", return_value=True)
     def test_on_update_status_after_restore_operation(
         self,
         _,
