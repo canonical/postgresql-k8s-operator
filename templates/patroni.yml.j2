@@ -33,7 +33,7 @@ bootstrap:
         log_statement_sample_rate: 1
         log_statement_stats: 'off'
         log_temp_files: 1
-        log_timezone: 'GMT'
+        log_timezone: 'UTC'
         log_truncate_on_rotation: 'on'
         logging_collector: 'on'
         wal_level: logical
@@ -61,6 +61,10 @@ bootstrap:
 bypass_api_service: true
 log:
   dir: /var/log/postgresql
+  dateformat: "%Y-%m-%d %H:%M:%S %Z"
+  format: "%(asctime)s [%(process)d]: %(levelname)s: %(message)s "
+  file_num: 10080
+  file_size: 600
 restapi:
   connect_address: '{{ endpoint }}:8008'
   listen: 0.0.0.0:8008
@@ -93,6 +97,11 @@ postgresql:
     ssl_cert_file: {{ storage_path }}/cert.pem
     ssl_key_file: {{ storage_path }}/key.pem
     {%- endif %}
+    {%- if pg_parameters %}
+    {%- for key, value in pg_parameters.items() %}
+    {{key}}: {{value}}
+    {%- endfor -%}
+    {% endif %}
   pgpass: /tmp/pgpass
   pg_hba:
   - local all backup peer map=operator
