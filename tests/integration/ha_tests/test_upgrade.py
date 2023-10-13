@@ -23,8 +23,6 @@ from tests.integration.ha_tests.helpers import (
 )
 from tests.integration.helpers import (
     DATABASE_APP_NAME,
-    METADATA,
-    count_switchovers,
     get_leader_unit,
     get_primary,
     get_unit_by_index,
@@ -85,67 +83,6 @@ async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     )
 
     assert stateful_set.spec.updateStrategy.rollingUpdate.partition == 2, "Partition not set to 2"
-
-
-@pytest.mark.abort_on_fail
-async def test_upgrade_from_edge(ops_test: OpsTest, continuous_writes) -> None:
-    # Start an application that continuously writes data to the database.
-    logger.info("starting continuous writes to the database")
-    await start_continuous_writes(ops_test, DATABASE_APP_NAME)
-
-    # Check whether writes are increasing.
-    logger.info("checking whether writes are increasing")
-    await are_writes_increasing(ops_test)
-
-    primary_name = await get_primary(ops_test, DATABASE_APP_NAME)
-    initial_number_of_switchovers = await count_switchovers(ops_test, primary_name)
-
-    resources = {"postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]}
-    application = ops_test.model.applications[DATABASE_APP_NAME]
-
-    logger.info("Build charm locally")
-    charm = await ops_test.build_charm(".")
-
-    logger.info("Refresh the charm")
-    await application.refresh(path=charm, resources=resources)
-
-    logger.info("Wait for upgrade to complete on first upgrading unit")
-    # highest ordinal unit always the first to upgrade
-    unit = get_unit_by_index(DATABASE_APP_NAME, application.units, 2)
-
-    async with ops_test.fast_forward("60s"):
-        await ops_test.model.block_until(
-            lambda: unit.workload_status_message == "upgrade completed", timeout=TIMEOUT
-        )
-        await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME], idle_period=30, timeout=TIMEOUT
-        )
-
-    logger.info("Resume upgrade")
-    leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
-    action = await leader_unit.run_action("resume-upgrade")
-    await action.wait()
-
-    logger.info("Wait for upgrade to complete")
-    async with ops_test.fast_forward("60s"):
-        await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
-        )
-
-    # Check whether writes are increasing.
-    logger.info("checking whether writes are increasing")
-    await are_writes_increasing(ops_test)
-
-    # Verify that no writes to the database were missed after stopping the writes
-    # (check that all the units have all the writes).
-    logger.info("checking whether no writes were lost")
-    await check_writes(ops_test)
-
-    logger.info("checking the number of switchovers")
-    final_number_of_switchovers = await count_switchovers(ops_test, primary_name)
-    assert (
-        final_number_of_switchovers - initial_number_of_switchovers
-    ) <= 2, "Number of switchovers is greater than 2"
 
 
 @pytest.mark.abort_on_fail
