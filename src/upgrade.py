@@ -11,7 +11,6 @@ from charms.data_platform_libs.v0.upgrade import (
     DependencyModel,
     KubernetesClientError,
 )
-from charms.postgresql_k8s.v0.postgresql import PostgreSQLGetPostgreSQLVersionError
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
 from lightkube.resources.apps_v1 import StatefulSet
@@ -104,14 +103,6 @@ class PostgreSQLUpgrade(DataUpgrade):
             self._set_up_new_credentials_for_legacy()
 
         try:
-            self.charm.unit.set_workload_version(
-                self.charm._patroni.rock_postgresql_version or "unset"
-            )
-        except PostgreSQLGetPostgreSQLVersionError:
-            # Don't fail on this, just log it.
-            logger.warning("Failed to get PostgreSQL version")
-
-        try:
             for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(10)):
                 with attempt:
                     if (
@@ -150,7 +141,7 @@ class PostgreSQLUpgrade(DataUpgrade):
             # Do nothing - if state set, upgrade is supported
             return
 
-        logger.warning("Upgrading from unsupported version")
+        logger.warning("Upgrading from unspecified version")
 
         # All peers should set the state to upgrading.
         self.unit_upgrade_data.update({"state": "upgrading"})
