@@ -14,13 +14,15 @@ from charms.data_platform_libs.v0.upgrade import (
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
 from lightkube.resources.apps_v1 import StatefulSet
-from ops.charm import WorkloadEvent
-from ops.model import BlockedStatus
+from ops.charm import UpgradeCharmEvent, WorkloadEvent
+from ops.model import BlockedStatus, MaintenanceStatus, RelationDataContent
 from pydantic import BaseModel
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 from typing_extensions import override
 
+from constants import APP_SCOPE, MONITORING_PASSWORD_KEY, MONITORING_USER
 from patroni import SwitchoverFailedError
+from utils import new_password
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +53,7 @@ class PostgreSQLUpgrade(DataUpgrade):
         self.framework.observe(
             getattr(self.charm.on, "postgresql_pebble_ready"), self._on_postgresql_pebble_ready
         )
+        self.framework.observe(self.charm.on.upgrade_charm, self._on_upgrade_charm_check_legacy)
 
     @property
     def is_no_sync_member(self) -> bool:
@@ -80,7 +83,7 @@ class PostgreSQLUpgrade(DataUpgrade):
             event.defer()
             return
 
-        if self.peer_relation.data[self.charm.unit].get("state") != "upgrading":
+        if self.state not in ["upgrading", "recovery"]:
             return
 
         # Don't mark the upgrade of this unit as completed until Patroni reports the
@@ -89,6 +92,15 @@ class PostgreSQLUpgrade(DataUpgrade):
             logger.debug("Deferring on_pebble_ready: Patroni has not started yet")
             event.defer()
             return
+
+        if self.charm.unit.is_leader():
+            if not self.charm._patroni.primary_endpoint_ready:
+                logger.debug(
+                    "Deferring on_pebble_ready: current unit is leader but primary endpoint is not ready yet"
+                )
+                event.defer()
+                return
+            self._set_up_new_credentials_for_legacy()
 
         try:
             for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(10)):
@@ -119,6 +131,25 @@ class PostgreSQLUpgrade(DataUpgrade):
             return
 
         self.charm.update_config()
+
+    def _on_upgrade_charm_check_legacy(self, event: UpgradeCharmEvent) -> None:
+        if not self.peer_relation:
+            logger.debug("Wait all units join the upgrade relation")
+            return
+
+        if self.state:
+            # Do nothing - if state set, upgrade is supported
+            return
+
+        logger.warning("Upgrading from unspecified version")
+
+        # All peers should set the state to upgrading.
+        self.unit_upgrade_data.update({"state": "upgrading"})
+
+        if self.charm.unit.name != f"{self.charm.app.name}/{self.charm.app.planned_units() - 1}":
+            self.charm.unit.status = MaintenanceStatus("upgrading unit")
+            self.peer_relation.data[self.charm.unit].update({"state": "upgrading"})
+            self._set_rolling_update_partition(self.charm.app.planned_units())
 
     @override
     def pre_upgrade_check(self) -> None:
@@ -220,3 +251,20 @@ class PostgreSQLUpgrade(DataUpgrade):
             self._set_rolling_update_partition(self.charm.app.planned_units() - 1)
         except KubernetesClientError as e:
             raise ClusterNotReadyError(e.message, e.cause)
+
+    def _set_up_new_credentials_for_legacy(self) -> None:
+        """Create missing password and user."""
+        if self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY) is None:
+            self.charm.set_secret(APP_SCOPE, MONITORING_PASSWORD_KEY, new_password())
+        users = self.charm.postgresql.list_users()
+        if MONITORING_USER not in users:
+            self.charm.postgresql.create_user(
+                MONITORING_USER,
+                self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY),
+                extra_user_roles="pg_monitor",
+            )
+
+    @property
+    def unit_upgrade_data(self) -> RelationDataContent:
+        """Return the application upgrade data."""
+        return self.peer_relation.data[self.charm.unit]
