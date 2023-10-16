@@ -11,6 +11,7 @@ import botocore
 import psycopg2
 import requests
 import yaml
+from juju.unit import Unit
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
 from lightkube.generic_resource import GenericNamespacedResource
@@ -219,6 +220,13 @@ def convert_records_to_dict(records: List[tuple]) -> dict:
     return records_dict
 
 
+async def count_switchovers(ops_test: OpsTest, unit_name: str) -> int:
+    """Return the number of performed switchovers."""
+    unit_address = await get_unit_address(ops_test, unit_name)
+    switchover_history_info = requests.get(f"http://{unit_address}:8008/history")
+    return len(switchover_history_info.json())
+
+
 def db_connect(host: str, password: str):
     """Returns psycopg2 connection object linked to postgres db in the given host.
 
@@ -409,6 +417,16 @@ def get_expected_k8s_resources(application: str) -> set:
     }
 
 
+async def get_leader_unit(ops_test: OpsTest, app: str) -> Optional[Unit]:
+    leader_unit = None
+    for unit in ops_test.model.applications[app].units:
+        if await unit.is_leader_from_status():
+            leader_unit = unit
+            break
+
+    return leader_unit
+
+
 async def get_password(
     ops_test: OpsTest,
     username: str = "operator",
@@ -463,6 +481,19 @@ async def get_unit_address(ops_test: OpsTest, unit_name: str) -> str:
     """
     status = await ops_test.model.get_status()
     return status["applications"][unit_name.split("/")[0]].units[unit_name]["address"]
+
+
+def get_unit_by_index(app: str, units: list, index: int) -> Optional[Unit]:
+    """Get unit by index.
+
+    Args:
+        app: Name of the application
+        units: List of units
+        index: index of the unit to get
+    """
+    for unit in units:
+        if unit.name == f"{app}/{index}":
+            return unit
 
 
 async def check_tls(ops_test: OpsTest, unit_name: str, enabled: bool) -> bool:
