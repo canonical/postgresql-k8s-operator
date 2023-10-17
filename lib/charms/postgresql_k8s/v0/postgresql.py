@@ -311,7 +311,9 @@ class PostgreSQL:
         Returns:
             Dict containing PostgreSQL configurations and their values.
         """
-        with self._connect_to_database(connect_to_current_host=True) as connection, connection.cursor() as cursor:
+        with self._connect_to_database(
+            connect_to_current_host=True
+        ) as connection, connection.cursor() as cursor:
             cursor.execute("SELECT name FROM pg_file_settings WHERE error IS NOT NULL;")
             results = cursor.fetchall()
             return [parameter[0] for parameter in results]

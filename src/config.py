@@ -64,6 +64,15 @@ class CharmConfig(BaseConfigModel):
         """Return plugin config names in a iterable."""
         return filter(lambda x: x.startswith("plugin_"), cls.keys())
 
+    @validator("durability_synchronous_commit")
+    @classmethod
+    def durability_synchronous_commit_values(cls, value: str) -> Optional[str]:
+        """Check durability_synchronous_commit config option is one of `on`, `remote_apply` or `remote_write`."""
+        if value not in ["on", "remote_apply", "remote_write"]:
+            raise ValueError("Value not one of 'on', 'remote_apply' or 'remote_write'")
+
+        return value
+
     @validator("profile")
     @classmethod
     def profile_values(cls, value: str) -> Optional[str]:

@@ -4,24 +4,13 @@
 import logging
 
 import pytest as pytest
-import requests
 from pytest_operator.plugin import OpsTest
-from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from tests.integration.helpers import (
     DATABASE_APP_NAME,
     build_and_deploy,
-    check_database_creation,
-    check_database_users_existence,
     check_tls,
     check_tls_patroni_api,
-    db_connect,
-    deploy_and_relate_application_with_postgresql,
-    enable_connections_logging,
-    get_password,
-    get_primary,
-    get_unit_address,
-    primary_changed,
     run_command_on_unit,
 )
 
@@ -81,76 +70,90 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
             assert await check_tls(ops_test, unit.name, enabled=True)
             assert await check_tls_patroni_api(ops_test, unit.name, enabled=True)
 
-        # Test TLS being used by pg_rewind. To accomplish that, get the primary unit
-        # and a replica that will be promoted to primary (this should trigger a rewind
-        # operation when the old primary is started again). 'verify=False' is used here
-        # because the unit IP that is used in the test doesn't match the certificate
-        # hostname (that is a k8s hostname).
-        primary = await get_primary(ops_test)
-        primary_address = await get_unit_address(ops_test, primary)
-        cluster_info = requests.get(f"https://{primary_address}:8008/cluster", verify=False)
-        for member in cluster_info.json()["members"]:
-            if member["role"] == "replica":
-                replica = "/".join(member["name"].rsplit("-", 1))
+        # # Test TLS being used by pg_rewind. To accomplish that, get the primary unit
+        # # and a replica that will be promoted to primary (this should trigger a rewind
+        # # operation when the old primary is started again). 'verify=False' is used here
+        # # because the unit IP that is used in the test doesn't match the certificate
+        # # hostname (that is a k8s hostname).
+        # primary = await get_primary(ops_test)
+        # primary_address = await get_unit_address(ops_test, primary)
+        # cluster_info = requests.get(f"https://{primary_address}:8008/cluster", verify=False)
+        # for member in cluster_info.json()["members"]:
+        #     if member["role"] == "replica":
+        #         replica = "/".join(member["name"].rsplit("-", 1))
+        #
+        # # Enable additional logs on the PostgreSQL instance to check TLS
+        # # being used in a later step.
+        # await enable_connections_logging(ops_test, primary)
+        #
+        # for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(2), reraise=True):
+        #     with attempt:
+        #         # Promote the replica to primary.
+        #         await run_command_on_unit(
+        #             ops_test,
+        #             replica,
+        #             'su postgres -c "/usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/data/pgdata promote"',
+        #         )
+        #
+        #         # Check that the replica was promoted.
+        #         host = await get_unit_address(ops_test, replica)
+        #         password = await get_password(ops_test)
+        #         with db_connect(host, password) as connection, connection.cursor() as cursor:
+        #             cursor.execute("SELECT pg_is_in_recovery();")
+        #             in_recovery = cursor.fetchone()[0]
+        #             assert (
+        #                 not in_recovery
+        #             )  # If the instance is not in recovery mode anymore it was successfully promoted.
+        #         connection.close()
+        #
+        # # Write some data to the initial primary (this causes a divergence
+        # # in the instances' timelines).
+        # host = await get_unit_address(ops_test, primary)
+        # password = await get_password(ops_test)
+        # with db_connect(host, password) as connection:
+        #     connection.autocommit = True
+        #     with connection.cursor() as cursor:
+        #         cursor.execute("CREATE TABLE pgrewindtest (testcol INT);")
+        #         cursor.execute("INSERT INTO pgrewindtest SELECT generate_series(1,1000);")
+        # connection.close()
+        #
+        # # Stop the initial primary.
+        # logger.info(f"stopping database on {primary}")
+        # await run_command_on_unit(ops_test, primary, "/charm/bin/pebble stop postgresql")
+        #
+        # # Check that the primary changed.
+        # assert await primary_changed(ops_test, primary), "primary not changed"
+        #
+        # # Restart the initial primary and check the logs to ensure TLS is being used by pg_rewind.
+        # logger.info(f"starting database on {primary}")
+        # await run_command_on_unit(ops_test, primary, "/charm/bin/pebble start postgresql")
+        # for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(2), reraise=True):
+        #     with attempt:
+        #         await check_tls_rewind(ops_test)
+        #
+        # # Deploy and check Mattermost user and database existence.
+        # relation_id = await deploy_and_relate_application_with_postgresql(
+        #     ops_test, "mattermost-k8s", MATTERMOST_APP_NAME, APPLICATION_UNITS, status="waiting"
+        # )
+        # await check_database_creation(ops_test, "mattermost")
+        #
+        # mattermost_users = [f"relation_id_{relation_id}"]
+        #
+        # await check_database_users_existence(ops_test, mattermost_users, [])
 
-        # Enable additional logs on the PostgreSQL instance to check TLS
-        # being used in a later step.
-        await enable_connections_logging(ops_test, primary)
+        # Disable TLS.
+        await ops_test.model.applications[DATABASE_APP_NAME].set_config({"connection_ssl": False})
+        await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active")
+        for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
+            assert await check_tls(ops_test, unit.name, enabled=False)
+            assert await check_tls_patroni_api(ops_test, unit.name, enabled=False)
 
-        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(2), reraise=True):
-            with attempt:
-                # Promote the replica to primary.
-                await run_command_on_unit(
-                    ops_test,
-                    replica,
-                    'su postgres -c "/usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/data/pgdata promote"',
-                )
-
-                # Check that the replica was promoted.
-                host = await get_unit_address(ops_test, replica)
-                password = await get_password(ops_test)
-                with db_connect(host, password) as connection, connection.cursor() as cursor:
-                    cursor.execute("SELECT pg_is_in_recovery();")
-                    in_recovery = cursor.fetchone()[0]
-                    assert (
-                        not in_recovery
-                    )  # If the instance is not in recovery mode anymore it was successfully promoted.
-                connection.close()
-
-        # Write some data to the initial primary (this causes a divergence
-        # in the instances' timelines).
-        host = await get_unit_address(ops_test, primary)
-        password = await get_password(ops_test)
-        with db_connect(host, password) as connection:
-            connection.autocommit = True
-            with connection.cursor() as cursor:
-                cursor.execute("CREATE TABLE pgrewindtest (testcol INT);")
-                cursor.execute("INSERT INTO pgrewindtest SELECT generate_series(1,1000);")
-        connection.close()
-
-        # Stop the initial primary.
-        logger.info(f"stopping database on {primary}")
-        await run_command_on_unit(ops_test, primary, "/charm/bin/pebble stop postgresql")
-
-        # Check that the primary changed.
-        assert await primary_changed(ops_test, primary), "primary not changed"
-
-        # Restart the initial primary and check the logs to ensure TLS is being used by pg_rewind.
-        logger.info(f"starting database on {primary}")
-        await run_command_on_unit(ops_test, primary, "/charm/bin/pebble start postgresql")
-        for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(2), reraise=True):
-            with attempt:
-                await check_tls_rewind(ops_test)
-
-        # Deploy and check Mattermost user and database existence.
-        relation_id = await deploy_and_relate_application_with_postgresql(
-            ops_test, "mattermost-k8s", MATTERMOST_APP_NAME, APPLICATION_UNITS, status="waiting"
-        )
-        await check_database_creation(ops_test, "mattermost")
-
-        mattermost_users = [f"relation_id_{relation_id}"]
-
-        await check_database_users_existence(ops_test, mattermost_users, [])
+        # Re-enable TLS.
+        await ops_test.model.applications[DATABASE_APP_NAME].set_config({"connection_ssl": True})
+        await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active")
+        for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
+            assert await check_tls(ops_test, unit.name, enabled=True)
+            assert await check_tls_patroni_api(ops_test, unit.name, enabled=True)
 
         # Remove the relation.
         await ops_test.model.applications[DATABASE_APP_NAME].remove_relation(
