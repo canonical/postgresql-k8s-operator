@@ -19,6 +19,7 @@ The `postgresql` module provides methods for interacting with the PostgreSQL ins
 Any charm using this library should import the `psycopg2` or `psycopg2-binary` dependency.
 """
 import logging
+import os
 from typing import Dict, List, Optional, Set, Tuple
 
 import psycopg2
@@ -305,19 +306,6 @@ class PostgreSQL:
             if connection is not None:
                 connection.close()
 
-    def get_invalid_postgresql_parameters(self) -> List:
-        """Returns the PostgreSQL configurations that have invalid values.
-
-        Returns:
-            Dict containing PostgreSQL configurations and their values.
-        """
-        with self._connect_to_database(
-            connect_to_current_host=True
-        ) as connection, connection.cursor() as cursor:
-            cursor.execute("SELECT name FROM pg_file_settings WHERE error IS NOT NULL;")
-            results = cursor.fetchall()
-            return [parameter[0] for parameter in results]
-
     def get_postgresql_version(self) -> str:
         """Returns the PostgreSQL version.
 
@@ -453,12 +441,12 @@ class PostgreSQL:
 
     @staticmethod
     def build_postgresql_parameters(
-        profile: str, available_memory: int, limit_memory: Optional[int] = None
-    ) -> Optional[Dict[str, str]]:
+        config_options: Dict, available_memory: int, limit_memory: Optional[int] = None
+    ) -> Optional[Dict]:
         """Builds the PostgreSQL parameters.
 
         Args:
-            profile: the profile to use.
+            config_options: charm config options containing profile and PostgreSQL parameters.
             available_memory: available memory to use in calculation in bytes.
             limit_memory: (optional) limit memory to use in calculation in bytes.
 
@@ -467,19 +455,42 @@ class PostgreSQL:
         """
         if limit_memory:
             available_memory = min(available_memory, limit_memory)
+        profile = config_options["profile"]
         logger.debug(f"Building PostgreSQL parameters for {profile=} and {available_memory=}")
+        parameters = {"max_connections": max(4 * os.cpu_count(), 100)}
+        for config, value in config_options.items():
+            # Filter config option not related to PostgreSQL parameters.
+            if not config.startswith(
+                (
+                    "durability",
+                    "instance",
+                    "logging",
+                    "memory",
+                    "optimizer",
+                    "request",
+                    "response",
+                    "vacuum",
+                )
+            ):
+                continue
+
+            parameter = "_".join(config.split("_")[1:])
+            if parameter in ["date_style", "time_zone"]:
+                parameter = "".join(x.capitalize() for x in parameter.split("_"))
+            parameters[parameter] = value
         if profile == "production":
             # Use 25% of the available memory for shared_buffers.
             # and the remaind as cache memory.
             shared_buffers = int(available_memory * 0.25)
             effective_cache_size = int(available_memory - shared_buffers)
 
-            parameters = {
-                "shared_buffers": f"{int(shared_buffers/10**6)}MB",
-                "effective_cache_size": f"{int(effective_cache_size/10**6)}MB",
-            }
-
-            return parameters
+            parameters.update(
+                {
+                    "shared_buffers": f"{int(shared_buffers/10**6)}MB",
+                    "effective_cache_size": f"{int(effective_cache_size/10**6)}MB",
+                }
+            )
         else:
             # Return default
-            return {"shared_buffers": "128MB"}
+            parameters.update({"shared_buffers": "128MB"})
+        return parameters
