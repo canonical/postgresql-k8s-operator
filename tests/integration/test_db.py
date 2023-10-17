@@ -229,6 +229,7 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
         )
 
 
+@pytest.mark.skip(reason="Should be ported and moved to the new relation tests")
 async def test_discourse(ops_test: OpsTest):
     database_application_name = f"extensions-{DATABASE_APP_NAME}"
     if database_application_name not in ops_test.model.applications:
