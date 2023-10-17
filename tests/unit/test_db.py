@@ -243,7 +243,7 @@ class TestDbProvides(unittest.TestCase):
             self.assertTrue(self.harness.charm.legacy_db_relation.set_up_relation(relation))
             user = f"relation_id_{self.rel_id}"
             postgresql_mock.create_user.assert_called_once_with(user, "test-password", False)
-            postgresql_mock.create_database.assert_called_once_with(DATABASE, user)
+            postgresql_mock.create_database.assert_called_once_with(DATABASE, user, plugins=[])
             _enable_disable_extensions.assert_called_once()
             self.assertEqual(postgresql_mock.get_postgresql_version.call_count, 2)
             _update_unit_status.assert_called_once()
@@ -288,7 +288,7 @@ class TestDbProvides(unittest.TestCase):
                 self.clear_relation_data()
             self.assertTrue(self.harness.charm.legacy_db_relation.set_up_relation(relation))
             postgresql_mock.create_user.assert_called_once_with(user, "test-password", False)
-            postgresql_mock.create_database.assert_called_once_with(DATABASE, user)
+            postgresql_mock.create_database.assert_called_once_with(DATABASE, user, plugins=[])
             _enable_disable_extensions.assert_called_once()
             self.assertEqual(postgresql_mock.get_postgresql_version.call_count, 2)
             _update_unit_status.assert_called_once()
