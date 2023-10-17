@@ -23,6 +23,29 @@ class CharmConfig(BaseConfigModel):
     plugin_pg_trgm_enable: bool
     plugin_plpython3u_enable: bool
     plugin_unaccent_enable: bool
+    plugin_bloom_enable: bool
+    plugin_btree_gin_enable: bool
+    plugin_btree_gist_enable: bool
+    plugin_cube_enable: bool
+    plugin_dict_int_enable: bool
+    plugin_dict_xsyn_enable: bool
+    plugin_earthdistance_enable: bool
+    plugin_fuzzystrmatch_enable: bool
+    plugin_intarray_enable: bool
+    plugin_isn_enable: bool
+    plugin_lo_enable: bool
+    plugin_ltree_enable: bool
+    plugin_old_snapshot_enable: bool
+    plugin_pg_freespacemap_enable: bool
+    plugin_pgrowlocks_enable: bool
+    plugin_pgstattuple_enable: bool
+    plugin_pg_visibility_enable: bool
+    plugin_seg_enable: bool
+    plugin_tablefunc_enable: bool
+    plugin_tcn_enable: bool
+    plugin_tsm_system_rows_enable: bool
+    plugin_tsm_system_time_enable: bool
+    plugin_uuid_ossp_enable: bool
 
     @classmethod
     def keys(cls) -> list[str]:
