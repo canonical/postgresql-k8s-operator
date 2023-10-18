@@ -1417,6 +1417,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("Early exit update_config: Patroni not started yet")
             return False
 
+        if not self._patroni.primary_endpoint_ready:
+            logger.debug("Early exit update_config: primary endpoint is not ready yet")
+            return False
+
         self._validate_config_options()
 
         restart_postgresql = self.is_tls_enabled != self.postgresql.is_tls_enabled()
@@ -1455,6 +1459,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if self.config.connection_ssl and not self.is_tls_enabled:
             raise Exception(
                 "connection_ssl config option should not be set to True when there is no configured TLS relation"
+            )
+        if (
+            self.config.instance_default_text_search_config is not None
+            and self.config.instance_default_text_search_config
+            not in self.postgresql.get_postgresql_text_search_configs()
+        ):
+            raise Exception(
+                "instance_default_text_search_config config option has an invalid value"
             )
 
     def _update_pebble_layers(self) -> None:
