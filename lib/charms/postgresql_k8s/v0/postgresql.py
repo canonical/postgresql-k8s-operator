@@ -326,6 +326,28 @@ class PostgreSQL:
             logger.error(f"Failed to get PostgreSQL version: {e}")
             raise PostgreSQLGetPostgreSQLVersionError()
 
+    def get_postgresql_text_search_configs(self) -> Set[str]:
+        """Returns the PostgreSQL available text search configs.
+
+        Returns:
+            Set of PostgreSQL text search configs.
+        """
+        with self._connect_to_database() as connection, connection.cursor() as cursor:
+            cursor.execute("SELECT CONCAT('pg_catalog.', cfgname) FROM pg_ts_config;")
+            text_search_configs = cursor.fetchall()
+            return {text_search_config[0] for text_search_config in text_search_configs}
+
+    def get_postgresql_timezones(self) -> Set[str]:
+        """Returns the PostgreSQL available timezones.
+
+        Returns:
+            Set of PostgreSQL timezones.
+        """
+        with self._connect_to_database() as connection, connection.cursor() as cursor:
+            cursor.execute("SELECT ")
+            timezones = cursor.fetchall()
+            return {timezone[0] for timezone in timezones}
+
     def is_tls_enabled(self, check_current_host: bool = False) -> bool:
         """Returns whether TLS is enabled.
 
@@ -478,24 +500,23 @@ class PostgreSQL:
                 )
             ):
                 continue
-
             parameter = "_".join(config.split("_")[1:])
             if parameter in ["date_style", "time_zone"]:
                 parameter = "".join(x.capitalize() for x in parameter.split("_"))
             parameters[parameter] = value
+        shared_buffers_max_value = int(int(available_memory * 0.4) / 10**6)
+        if parameters.get("shared_buffers", 0) > shared_buffers_max_value:
+            raise Exception(
+                f"Shared buffers config option should be at greater than 40% of the available memory, which is {shared_buffers_max_value}MB"
+            )
         if profile == "production":
             # Use 25% of the available memory for shared_buffers.
             # and the remaind as cache memory.
             shared_buffers = int(available_memory * 0.25)
             effective_cache_size = int(available_memory - shared_buffers)
-
-            parameters.update(
-                {
-                    "shared_buffers": f"{int(shared_buffers/10**6)}MB",
-                    "effective_cache_size": f"{int(effective_cache_size/10**6)}MB",
-                }
-            )
+            parameters.setdefault("shared_buffers", f"{int(shared_buffers/10**6)}MB")
+            parameters.update({"effective_cache_size": f"{int(effective_cache_size/10**6)}MB"})
         else:
             # Return default
-            parameters.update({"shared_buffers": "128MB"})
+            parameters.setdefault("shared_buffers", "128MB")
         return parameters

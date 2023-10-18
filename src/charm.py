@@ -1391,11 +1391,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.model.config, self.get_available_memory(), limit_memory
         )
 
-        if self.config.connection_ssl and not self.is_tls_enabled:
-            logger.error(
-                "connection_ssl config option should not be set to True when there is no configured TLS relation"
-            )
-
         logger.info("Updating Patroni config file")
         # Update and reload configuration based on TLS files availability.
         self._patroni.render_patroni_yml_file(
@@ -1421,6 +1416,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if not self._patroni.member_started:
             logger.debug("Early exit update_config: Patroni not started yet")
             return False
+
+        self._validate_config_options()
 
         restart_postgresql = self.is_tls_enabled != self.postgresql.is_tls_enabled()
         self._patroni.reload_patroni_configuration()
@@ -1452,6 +1449,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 container.restart(self._metrics_service)
 
         return True
+
+    def _validate_config_options(self) -> None:
+        """Validates specific config options that need access to the database or to the TLS status."""
+        if self.config.connection_ssl and not self.is_tls_enabled:
+            raise Exception(
+                "connection_ssl config option should not be set to True when there is no configured TLS relation"
+            )
 
     def _update_pebble_layers(self) -> None:
         """Update the pebble layers to keep the health check URL up-to-date."""

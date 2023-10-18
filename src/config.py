@@ -107,6 +107,15 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
+    @validator("memory_shared_buffers")
+    @classmethod
+    def memory_shared_buffers_values(cls, value: int) -> Optional[int]:
+        """Check memory_shared_buffers config option is greater or equal than 16."""
+        if value < 16:
+            raise ValueError("Shared buffers config option should be at least 16")
+
+        return value
+
     @validator("memory_temp_buffers")
     @classmethod
     def memory_temp_buffers_values(cls, value: int) -> Optional[int]:
