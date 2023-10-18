@@ -520,3 +520,20 @@ class PostgreSQL:
             # Return default
             parameters.setdefault("shared_buffers", "128MB")
         return parameters
+
+    def validate_date_style(self, date_style: str) -> bool:
+        """Validate a date style against PostgreSQL.
+
+        Returns:
+            Whether the date style is valid.
+        """
+        try:
+            with self._connect_to_database() as connection, connection.cursor() as cursor:
+                cursor.execute(
+                    sql.SQL(
+                        "SET DateStyle to {};",
+                    ).format(sql.Identifier(date_style))
+                )
+            return True
+        except psycopg2.Error:
+            return False

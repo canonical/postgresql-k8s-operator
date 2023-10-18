@@ -1468,6 +1468,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             raise Exception(
                 "instance_default_text_search_config config option has an invalid value"
             )
+        if self.config.request_date_style is not None and not self.postgresql.validate_date_style(
+            self.config.request_date_style
+        ):
+            raise Exception("request_date_style config option has an invalid value")
         if (
             self.config.request_time_zone is not None
             and self.config.request_time_zone not in self.postgresql.get_postgresql_timezones()
