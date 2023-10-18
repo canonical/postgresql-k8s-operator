@@ -1460,6 +1460,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             raise Exception(
                 "connection_ssl config option should not be set to true when there is no configured TLS relation"
             )
+
         if (
             self.config.instance_default_text_search_config is not None
             and self.config.instance_default_text_search_config
@@ -1468,15 +1469,27 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             raise Exception(
                 "instance_default_text_search_config config option has an invalid value"
             )
+
         if self.config.request_date_style is not None and not self.postgresql.validate_date_style(
             self.config.request_date_style
         ):
             raise Exception("request_date_style config option has an invalid value")
+
         if (
             self.config.request_time_zone is not None
             and self.config.request_time_zone not in self.postgresql.get_postgresql_timezones()
         ):
             raise Exception("request_time_zone config option has an invalid value")
+
+        container = self.unit.get_container("postgresql")
+        output, _ = container.exec(["locale", "-a"]).wait_output()
+        locales = list(output.splitlines())
+        for parameter in ["response_lc_monetary", "response_lc_numeric", "response_lc_time"]:
+            value = self.model.config.get(parameter)
+            if value is not None and value not in locales:
+                raise ValueError(
+                    f"Value for {parameter} not one of the locales available in the system"
+                )
 
     def _update_pebble_layers(self) -> None:
         """Update the pebble layers to keep the health check URL up-to-date."""

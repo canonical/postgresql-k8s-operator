@@ -162,6 +162,42 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
     assert settings["postgresql"]["remove_data_directory_on_diverged_timelines"]
 
 
+async def test_postgresql_parameters_change(ops_test: OpsTest) -> None:
+    """Test that's possible to change PostgreSQL parameters."""
+    await ops_test.model.applications[APP_NAME].set_config(
+        {
+            "memory_max_prepared_transactions": "100",
+            "memory_shared_buffers": "128",
+            "response_lc_monetary": "en_GB.utf8",
+        }
+    )
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=30)
+    password = await get_password(ops_test)
+
+    # Connect to PostgreSQL.
+    for unit_id in UNIT_IDS:
+        host = await get_unit_address(ops_test, f"{APP_NAME}/{unit_id}")
+        logger.info("connecting to the database host: %s", host)
+        with psycopg2.connect(
+            f"dbname='postgres' user='operator' host='{host}' password='{password}' connect_timeout=1"
+        ) as connection, connection.cursor() as cursor:
+            settings_names = ["max_prepared_transactions", "shared_buffers", "lc_monetary"]
+            cursor.execute(
+                sql.SQL("SELECT name,setting FROM pg_settings WHERE name IN ({});").format(
+                    sql.SQL(", ").join(sql.Placeholder() * len(settings_names))
+                ),
+                settings_names,
+            )
+            records = cursor.fetchall()
+            settings = convert_records_to_dict(records)
+        connection.close()
+
+        # Validate each configuration set by Patroni on PostgreSQL.
+        assert settings["max_prepared_transactions"] == "100"
+        assert settings["shared_buffers"] == "128"
+        assert settings["lc_monetary"] == "en_GB.utf8"
+
+
 async def test_cluster_is_stable_after_leader_deletion(ops_test: OpsTest) -> None:
     """Tests that the cluster maintains a primary after the primary is deleted."""
     # Find the current primary unit.

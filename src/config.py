@@ -4,7 +4,6 @@
 
 """Structured configuration for the PostgreSQL charm."""
 import logging
-import subprocess
 from typing import Optional
 
 from charms.data_platform_libs.v0.data_models import BaseConfigModel
@@ -191,19 +190,6 @@ class CharmConfig(BaseConfigModel):
         """Check response_bytea_output config option is one of `escape` or `hex`."""
         if value not in ["escape", "hex"]:
             raise ValueError("Value not one of 'escape' or 'hex'")
-
-        return value
-
-    @validator("response_lc_monetary", allow_reuse=True)
-    @validator("response_lc_numeric", allow_reuse=True)
-    @validator("response_lc_time", allow_reuse=True)
-    @classmethod
-    def response_lc_values(cls, value: str) -> Optional[str]:
-        """Check if the requested locale is available in the system."""
-        output = subprocess.check_output(["locale", "-a"])
-        locales = [locale.decode() for locale in output.splitlines()]
-        if value not in locales:
-            raise ValueError("Value not one of the locales available in the system")
 
         return value
 
