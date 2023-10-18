@@ -1458,7 +1458,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Validates specific config options that need access to the database or to the TLS status."""
         if self.config.connection_ssl and not self.is_tls_enabled:
             raise Exception(
-                "connection_ssl config option should not be set to True when there is no configured TLS relation"
+                "connection_ssl config option should not be set to true when there is no configured TLS relation"
             )
         if (
             self.config.instance_default_text_search_config is not None
@@ -1468,6 +1468,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             raise Exception(
                 "instance_default_text_search_config config option has an invalid value"
             )
+        if (
+            self.config.request_time_zone is not None
+            and self.config.request_time_zone not in self.postgresql.get_postgresql_timezones()
+        ):
+            raise Exception("request_time_zone config option has an invalid value")
 
     def _update_pebble_layers(self) -> None:
         """Update the pebble layers to keep the health check URL up-to-date."""

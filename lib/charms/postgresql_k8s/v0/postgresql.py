@@ -344,7 +344,7 @@ class PostgreSQL:
             Set of PostgreSQL timezones.
         """
         with self._connect_to_database() as connection, connection.cursor() as cursor:
-            cursor.execute("SELECT ")
+            cursor.execute("SELECT name FROM pg_timezone_names;")
             timezones = cursor.fetchall()
             return {timezone[0] for timezone in timezones}
 
