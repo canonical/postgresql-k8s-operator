@@ -143,7 +143,6 @@ class Patroni:
     def cluster_members(self) -> set:
         """Get the current cluster members."""
         # Request info from cluster endpoint (which returns all members of the cluster).
-        logger.warning(f"self._patroni_url: {self._patroni_url} - self._verify: {self._verify}")
         r = requests.get(f"{self._patroni_url}/cluster", verify=self._verify)
         return {member["name"] for member in r.json()["members"]}
 

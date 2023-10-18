@@ -590,9 +590,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         try:
             # Compare set of Patroni cluster members and Juju hosts
             # to avoid the unnecessary reconfiguration.
-            logger.warning(
-                f'bool(self.unit_peer_data.get("tls")): {bool(self.unit_peer_data.get("tls"))}'
-            )
             if self._patroni.cluster_members == self._hosts:
                 return
 
@@ -1161,7 +1158,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @property
     def is_tls_enabled(self) -> bool:
         """Return whether TLS is enabled."""
-        logger.warning(f"self.config.connection_ssl: {self.config.connection_ssl}")
         return all(self.tls.get_tls_files()) and (
             self.config.connection_ssl or self.config.connection_ssl is None
         )
