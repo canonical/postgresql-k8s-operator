@@ -60,12 +60,6 @@ class CharmConfig(BaseConfigModel):
         """Return config as list items."""
         return list(cls.__fields__.keys())
 
-    # @classmethod
-    # def locales(cls) -> list[str]:
-    #     """Return the list of locales available in the system."""
-    #     output = subprocess.check_output(["locale", "-a"])
-    #     return [locale.decode() for locale in output.splitlines()]
-
     @classmethod
     def plugin_keys(cls) -> filter:
         """Return plugin config names in a iterable."""
@@ -104,6 +98,15 @@ class CharmConfig(BaseConfigModel):
         """Check memory_maintenance_work_mem config option is between 1024 and 2147483647."""
         if value < 1024 or value > 2147483647:
             raise ValueError("Value not between 1024 and 2147483647")
+
+        return value
+
+    @validator("memory_max_prepared_transactions")
+    @classmethod
+    def memory_max_prepared_transactions_values(cls, value: int) -> Optional[int]:
+        """Check memory_max_prepared_transactions config option is between 0 and 262143."""
+        if value < 0 or value > 262143:
+            raise ValueError("Value not between 0 and 262143")
 
         return value
 

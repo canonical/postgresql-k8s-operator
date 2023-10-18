@@ -19,7 +19,6 @@ The `postgresql` module provides methods for interacting with the PostgreSQL ins
 Any charm using this library should import the `psycopg2` or `psycopg2-binary` dependency.
 """
 import logging
-import os
 from typing import Dict, List, Optional, Set, Tuple
 
 import psycopg2
@@ -484,7 +483,7 @@ class PostgreSQL:
             available_memory = min(available_memory, limit_memory)
         profile = config_options["profile"]
         logger.debug(f"Building PostgreSQL parameters for {profile=} and {available_memory=}")
-        parameters = {"max_connections": max(4 * os.cpu_count(), 100)}
+        parameters = {}
         for config, value in config_options.items():
             # Filter config option not related to PostgreSQL parameters.
             if not config.startswith(

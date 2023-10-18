@@ -6,6 +6,7 @@
 import itertools
 import json
 import logging
+import os
 import time
 from typing import Dict, List, Optional
 
@@ -1422,6 +1423,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return False
 
         self._validate_config_options()
+
+        self._patroni.update_parameter_controller_by_patroni(
+            "max_connections", max(4 * os.cpu_count(), 100)
+        )
+        self._patroni.update_parameter_controller_by_patroni(
+            "max_prepared_transactions", self.config.memory_max_prepared_transactions
+        )
 
         restart_postgresql = self.is_tls_enabled != self.postgresql.is_tls_enabled()
         self._patroni.reload_patroni_configuration()
