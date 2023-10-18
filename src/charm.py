@@ -88,8 +88,6 @@ logger = logging.getLogger(__name__)
 logging.getLogger("httpcore").setLevel(logging.ERROR)
 logging.getLogger("httpx").setLevel(logging.ERROR)
 
-INVALID_POSTGRESQL_CONFIGURATIONS_ERROR_MESSAGE = "invalid configuration(s) for PostgreSQL"
-
 
 class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     """Charmed Operator for the PostgreSQL database."""
