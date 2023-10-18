@@ -43,7 +43,6 @@ options:
     description: |
       Sets the maximum number of simultaneously prepared transactions
     type: int
-    default: 100
   memory_shared_buffers:
     description: |
       Sets the number of shared memory buffers used by the server
