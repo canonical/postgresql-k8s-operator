@@ -506,7 +506,7 @@ class PostgreSQL:
         shared_buffers_max_value = int(int(available_memory * 0.4) / 10**6)
         if parameters.get("shared_buffers", 0) > shared_buffers_max_value:
             raise Exception(
-                f"Shared buffers config option should be at greater than 40% of the available memory, which is {shared_buffers_max_value}MB"
+                f"Shared buffers config option should be at most 40% of the available memory, which is {shared_buffers_max_value}MB"
             )
         if profile == "production":
             # Use 25% of the available memory for shared_buffers.

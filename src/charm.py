@@ -6,9 +6,8 @@
 import itertools
 import json
 import logging
-import os
 import time
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
@@ -1388,8 +1387,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             limit_memory = self.config.profile_limit_memory * 10**6
         else:
             limit_memory = None
+        available_cpu_cores, available_memory = self.get_available_resources()
         postgresql_parameters = self.postgresql.build_postgresql_parameters(
-            self.model.config, self.get_available_memory(), limit_memory
+            self.model.config, available_memory, limit_memory
         )
 
         logger.info("Updating Patroni config file")
@@ -1425,7 +1425,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._validate_config_options()
 
         self._patroni.update_parameter_controller_by_patroni(
-            "max_connections", max(4 * os.cpu_count(), 100)
+            "max_connections", max(4 * available_cpu_cores, 100)
         )
         self._patroni.update_parameter_controller_by_patroni(
             "max_prepared_transactions", self.config.memory_max_prepared_transactions
@@ -1544,28 +1544,38 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         return {}
 
     def get_node_allocable_memory(self) -> int:
-        """Return the allocable memory in bytes for a given node.
-
-        Args:
-            node_name: name of the node to get the allocable memory for
-        """
+        """Return the allocable memory in bytes for the current K8S node."""
         client = Client()
         node = client.get(Node, name=self._get_node_name_for_pod(), namespace=self._namespace)
         return any_memory_to_bytes(node.status.allocatable["memory"])
 
-    def get_available_memory(self) -> int:
-        """Get available memory for the container in bytes."""
+    def get_node_cpu_cores(self) -> int:
+        """Return the number of CPU cores for the current K8S node."""
+        client = Client()
+        node = client.get(Node, name=self._get_node_name_for_pod(), namespace=self._namespace)
+        return int(node.status.allocatable["cpu"])
+
+    def get_available_resources(self) -> Tuple[int, int]:
+        """Get available CPU cores and memory (in bytes) for the container."""
+        cpu_cores = self.get_node_cpu_cores()
         allocable_memory = self.get_node_allocable_memory()
         container_limits = self.get_resources_limits(container_name="postgresql")
+        if "cpu" in container_limits:
+            cpu_str = container_limits["cpu"]
+            constrained_cpu = any_memory_to_bytes(cpu_str)
+            if constrained_cpu < allocable_memory:
+                logger.debug(f"CPU constrained to {cpu_str} cores from resource limit")
+                cpu_cores = constrained_cpu
         if "memory" in container_limits:
             memory_str = container_limits["memory"]
             constrained_memory = any_memory_to_bytes(memory_str)
             if constrained_memory < allocable_memory:
                 logger.debug(f"Memory constrained to {memory_str} from resource limit")
-                return constrained_memory
+                allocable_memory = constrained_memory
 
-        logger.debug("Memory constrained by node allocable memory")
-        return allocable_memory
+        logger.error(f"cpu_cores 2: {cpu_cores}")
+
+        return cpu_cores, allocable_memory
 
 
 if __name__ == "__main__":
