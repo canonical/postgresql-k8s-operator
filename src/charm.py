@@ -1425,6 +1425,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         restart_postgresql = self.is_tls_enabled != self.postgresql.is_tls_enabled()
         self._patroni.reload_patroni_configuration()
+        # Sleep the same time as Patroni's loop_wait default value, which tells how much time
+        # Patroni will wait before checking the configuration file again to reload it.
         time.sleep(10)
         restart_postgresql = restart_postgresql or self.postgresql.is_restart_pending()
         self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
