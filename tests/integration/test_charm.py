@@ -108,10 +108,20 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
         settings_names = [
             "archive_command",
             "archive_mode",
+            "autovacuum",
             "data_directory",
             "cluster_name",
             "data_checksums",
+            "fsync",
+            "full_page_writes",
+            "lc_messages",
             "listen_addresses",
+            "log_autovacuum_min_duration",
+            "log_checkpoints",
+            "log_destination",
+            "log_temp_files",
+            "log_timezone",
+            "max_connections",
             "wal_level",
         ]
         cursor.execute(
@@ -126,10 +136,20 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
     # Validate each configuration set by Patroni on PostgreSQL.
     assert settings["archive_command"] == "/bin/true"
     assert settings["archive_mode"] == "on"
+    assert settings["autovacuum"]
     assert settings["cluster_name"] == f"patroni-{APP_NAME}"
     assert settings["data_directory"] == f"{STORAGE_PATH}/pgdata"
     assert settings["data_checksums"] == "on"
+    assert settings["fsync"]
+    assert settings["full_page_writes"]
+    assert settings["lc_messages"] == "en_US.UTF8"
     assert settings["listen_addresses"] == "0.0.0.0"
+    assert settings["log_autovacuum_min_duration"] == "60000"
+    assert settings["log_checkpoints"] == "on"
+    assert settings["log_destination"] == "stderr"
+    assert settings["log_temp_files"] == "1"
+    assert settings["log_timezone"] == "UTC"
+    assert settings["max_connections"] == "100"
     assert settings["wal_level"] == "logical"
 
     # Retrieve settings from Patroni REST API.
