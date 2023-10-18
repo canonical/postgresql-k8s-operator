@@ -1418,10 +1418,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("Early exit update_config: Patroni not started yet")
             return False
 
-        if not self._patroni.primary_endpoint_ready:
-            logger.debug("Early exit update_config: primary endpoint is not ready yet")
-            return False
-
         self._validate_config_options()
 
         self._patroni.update_parameter_controller_by_patroni(
@@ -1572,8 +1568,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             if constrained_memory < allocable_memory:
                 logger.debug(f"Memory constrained to {memory_str} from resource limit")
                 allocable_memory = constrained_memory
-
-        logger.error(f"cpu_cores 2: {cpu_cores}")
 
         return cpu_cores, allocable_memory
 

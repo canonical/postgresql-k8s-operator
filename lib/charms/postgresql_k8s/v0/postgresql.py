@@ -310,6 +310,32 @@ class PostgreSQL:
             if connection is not None:
                 connection.close()
 
+    def get_postgresql_text_search_configs(self) -> Set[str]:
+        """Returns the PostgreSQL available text search configs.
+
+        Returns:
+            Set of PostgreSQL text search configs.
+        """
+        with self._connect_to_database(
+            connect_to_current_host=True
+        ) as connection, connection.cursor() as cursor:
+            cursor.execute("SELECT CONCAT('pg_catalog.', cfgname) FROM pg_ts_config;")
+            text_search_configs = cursor.fetchall()
+            return {text_search_config[0] for text_search_config in text_search_configs}
+
+    def get_postgresql_timezones(self) -> Set[str]:
+        """Returns the PostgreSQL available timezones.
+
+        Returns:
+            Set of PostgreSQL timezones.
+        """
+        with self._connect_to_database(
+            connect_to_current_host=True
+        ) as connection, connection.cursor() as cursor:
+            cursor.execute("SELECT name FROM pg_timezone_names;")
+            timezones = cursor.fetchall()
+            return {timezone[0] for timezone in timezones}
+
     def get_postgresql_version(self) -> str:
         """Returns the PostgreSQL version.
 
@@ -324,28 +350,6 @@ class PostgreSQL:
         except psycopg2.Error as e:
             logger.error(f"Failed to get PostgreSQL version: {e}")
             raise PostgreSQLGetPostgreSQLVersionError()
-
-    def get_postgresql_text_search_configs(self) -> Set[str]:
-        """Returns the PostgreSQL available text search configs.
-
-        Returns:
-            Set of PostgreSQL text search configs.
-        """
-        with self._connect_to_database() as connection, connection.cursor() as cursor:
-            cursor.execute("SELECT CONCAT('pg_catalog.', cfgname) FROM pg_ts_config;")
-            text_search_configs = cursor.fetchall()
-            return {text_search_config[0] for text_search_config in text_search_configs}
-
-    def get_postgresql_timezones(self) -> Set[str]:
-        """Returns the PostgreSQL available timezones.
-
-        Returns:
-            Set of PostgreSQL timezones.
-        """
-        with self._connect_to_database() as connection, connection.cursor() as cursor:
-            cursor.execute("SELECT name FROM pg_timezone_names;")
-            timezones = cursor.fetchall()
-            return {timezone[0] for timezone in timezones}
 
     def is_tls_enabled(self, check_current_host: bool = False) -> bool:
         """Returns whether TLS is enabled.
@@ -527,7 +531,9 @@ class PostgreSQL:
             Whether the date style is valid.
         """
         try:
-            with self._connect_to_database() as connection, connection.cursor() as cursor:
+            with self._connect_to_database(
+                connect_to_current_host=True
+            ) as connection, connection.cursor() as cursor:
                 cursor.execute(
                     sql.SQL(
                         "SET DateStyle to {};",
