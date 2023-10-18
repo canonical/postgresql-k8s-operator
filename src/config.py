@@ -88,7 +88,7 @@ class CharmConfig(BaseConfigModel):
     def logging_log_min_duration_statement_values(cls, value: int) -> Optional[int]:
         """Check logging_log_min_duration_statement config option is between -1 and 2147483647."""
         if value < -1 or value > 2147483647:
-            raise ValueError("Value not between -1 and 2147483647")
+            raise ValueError("Value is not between -1 and 2147483647")
 
         return value
 
@@ -97,7 +97,7 @@ class CharmConfig(BaseConfigModel):
     def memory_maintenance_work_mem_values(cls, value: int) -> Optional[int]:
         """Check memory_maintenance_work_mem config option is between 1024 and 2147483647."""
         if value < 1024 or value > 2147483647:
-            raise ValueError("Value not between 1024 and 2147483647")
+            raise ValueError("Value is not between 1024 and 2147483647")
 
         return value
 
@@ -106,7 +106,7 @@ class CharmConfig(BaseConfigModel):
     def memory_max_prepared_transactions_values(cls, value: int) -> Optional[int]:
         """Check memory_max_prepared_transactions config option is between 0 and 262143."""
         if value < 0 or value > 262143:
-            raise ValueError("Value not between 0 and 262143")
+            raise ValueError("Value is not between 0 and 262143")
 
         return value
 
@@ -124,7 +124,7 @@ class CharmConfig(BaseConfigModel):
     def memory_temp_buffers_values(cls, value: int) -> Optional[int]:
         """Check memory_temp_buffers config option is between 100 and 1073741823."""
         if value < 100 or value > 1073741823:
-            raise ValueError("Value not between 100 and 1073741823")
+            raise ValueError("Value is not between 100 and 1073741823")
 
         return value
 
@@ -133,14 +133,14 @@ class CharmConfig(BaseConfigModel):
     def memory_work_mem_values(cls, value: int) -> Optional[int]:
         """Check memory_work_mem config option is between 64 and 2147483647."""
         if value < 64 or value > 2147483647:
-            raise ValueError("Value not between 64 and 2147483647")
+            raise ValueError("Value is not between 64 and 2147483647")
 
         return value
 
     @validator("optimizer_constraint_exclusion")
     @classmethod
     def optimizer_constraint_exclusion_values(cls, value: str) -> Optional[str]:
-        """Check optimizer_constraint_exclusion config option is one of `om`, `off` or `partition`."""
+        """Check optimizer_constraint_exclusion config option is one of `on`, `off` or `partition`."""
         if value not in ["on", "off", "partition"]:
             raise ValueError("Value not one of 'on', 'off' or 'partition'")
 
@@ -151,17 +151,17 @@ class CharmConfig(BaseConfigModel):
     def optimizer_default_statistics_target_values(cls, value: int) -> Optional[int]:
         """Check optimizer_default_statistics_target config option is between 1 and 10000."""
         if value < 1 or value > 10000:
-            raise ValueError("Value not between 1 and 10000")
+            raise ValueError("Value is not between 1 and 10000")
 
         return value
 
     @validator("optimizer_from_collapse_limit", allow_reuse=True)
     @validator("optimizer_join_collapse_limit", allow_reuse=True)
     @classmethod
-    def optimizer_join_collapse_limit_values(cls, value: int) -> Optional[int]:
+    def optimizer_collapse_limit_values(cls, value: int) -> Optional[int]:
         """Check optimizer collapse_limit config option is between 1 and 2147483647."""
         if value < 1 or value > 2147483647:
-            raise ValueError("Value not between 1 and 2147483647")
+            raise ValueError("Value is not between 1 and 2147483647")
 
         return value
 
@@ -199,7 +199,7 @@ class CharmConfig(BaseConfigModel):
     @validator("response_lc_time", allow_reuse=True)
     @classmethod
     def response_lc_values(cls, value: str) -> Optional[str]:
-        """Check durability_synchronous_commit config option is one of `on`, `remote_apply` or `remote_write`."""
+        """Check if the requested locale is available in the system."""
         output = subprocess.check_output(["locale", "-a"])
         locales = [locale.decode() for locale in output.splitlines()]
         if value not in locales:
@@ -213,7 +213,7 @@ class CharmConfig(BaseConfigModel):
     def vacuum_autovacuum_vacuum_scale_factor_values(cls, value: float) -> Optional[float]:
         """Check autovacuum scale_factor config option is between 0 and 100."""
         if value < 0 or value > 100:
-            raise ValueError("Value not between 0 and 100")
+            raise ValueError("Value is not between 0 and 100")
 
         return value
 
@@ -222,7 +222,7 @@ class CharmConfig(BaseConfigModel):
     def vacuum_autovacuum_analyze_threshold_values(cls, value: int) -> Optional[int]:
         """Check vacuum_autovacuum_analyze_threshold config option is between 0 and 2147483647."""
         if value < 0 or value > 2147483647:
-            raise ValueError("Value not between 0 and 2147483647")
+            raise ValueError("Value is not between 0 and 2147483647")
 
         return value
 
@@ -231,7 +231,7 @@ class CharmConfig(BaseConfigModel):
     def vacuum_autovacuum_freeze_max_age_values(cls, value: int) -> Optional[int]:
         """Check vacuum_autovacuum_freeze_max_age config option is between 100000 and 2000000000."""
         if value < 100000 or value > 2000000000:
-            raise ValueError("Value not between 100000 and 2000000000")
+            raise ValueError("Value is not between 100000 and 2000000000")
 
         return value
 
@@ -240,7 +240,7 @@ class CharmConfig(BaseConfigModel):
     def vacuum_autovacuum_vacuum_cost_delay_values(cls, value: float) -> Optional[float]:
         """Check vacuum_autovacuum_vacuum_cost_delay config option is between -1 and 100."""
         if value < -1 or value > 100:
-            raise ValueError("Value not between -1 and 100")
+            raise ValueError("Value is not between -1 and 100")
 
         return value
 
@@ -249,6 +249,6 @@ class CharmConfig(BaseConfigModel):
     def vacuum_vacuum_freeze_table_age_values(cls, value: int) -> Optional[int]:
         """Check vacuum_vacuum_freeze_table_age config option is between 0 and 2000000000."""
         if value < 0 or value > 2000000000:
-            raise ValueError("Value not between 0 and 2000000000")
+            raise ValueError("Value is not between 0 and 2000000000")
 
         return value
