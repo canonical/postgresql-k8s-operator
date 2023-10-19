@@ -141,7 +141,7 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
     assert settings["data_directory"] == f"{STORAGE_PATH}/pgdata"
     assert settings["data_checksums"] == "on"
     assert settings["fsync"] == "on"
-    assert settings["full_page_writes"]
+    assert settings["full_page_writes"] == "on"
     assert settings["lc_messages"] == "en_US.UTF8"
     assert settings["listen_addresses"] == "0.0.0.0"
     assert settings["log_autovacuum_min_duration"] == "60000"
