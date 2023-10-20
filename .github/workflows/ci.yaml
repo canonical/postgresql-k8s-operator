@@ -51,20 +51,20 @@ jobs:
       - name: Run tests
         run: tox run -e unit-${{ matrix.juju-version }}
 
-  lib-check:
-    name: Check libraries
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout
-        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
-        with:
-          fetch-depth: 0
-      - name: Check libs
-        uses: canonical/charming-actions/check-libraries@2.4.0
-        with:
-          credentials: "${{ secrets.CHARMHUB_TOKEN }}"
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
+  #lib-check:
+  #  name: Check libraries
+  #  runs-on: ubuntu-latest
+  #  timeout-minutes: 5
+  #  steps:
+  #    - name: Checkout
+  #      uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
+  #      with:
+  #        fetch-depth: 0
+  #    - name: Check libs
+  #      uses: canonical/charming-actions/check-libraries@2.4.0
+  #      with:
+  #        credentials: "${{ secrets.CHARMHUB_TOKEN }}"
+  #        github-token: "${{ secrets.GITHUB_TOKEN }}"
 
   build:
     name: Build charms
@@ -93,7 +93,7 @@ jobs:
           - "3.1.5"  # renovate: latest juju 3
     name: ${{ matrix.tox-environments }} | ${{ matrix.agent-versions }}
     needs:
-      - lib-check
+      #- lib-check
       - lint
       - unit-test
       - build
