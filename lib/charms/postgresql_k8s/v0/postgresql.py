@@ -23,6 +23,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 import psycopg2
 from psycopg2 import sql
+from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 # The unique Charmhub library identifier, never change it
 LIBID = "24ee217a54e840a598ff21a079c3e678"
@@ -32,7 +33,9 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 17
+LIBPATCH = 18
+
+PYDEPS = ["tenacity"]
 
 INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE = "invalid role(s) for extra user roles"
 
@@ -294,14 +297,16 @@ class PostgreSQL:
                 # Retrieve all the databases.
                 with self._connect_to_database() as connection, connection.cursor() as cursor:
                     cursor.execute("SELECT datname FROM pg_database WHERE NOT datistemplate;")
-                    databases = {database[0] for database in cursor.fetchall()}
+                    databases = {str(database[0]) for database in cursor.fetchall()}
 
             # Enable/disabled the extension in each database.
             for database in databases:
                 with self._connect_to_database(
                     database=database
-                ) as connection, connection.cursor() as cursor:
+                ) as db_connection, db_connection.cursor() as cursor:
                     cursor.execute(statement)
+                db_connection.close()
+
         except psycopg2.errors.UniqueViolation:
             pass
         except psycopg2.Error:
@@ -309,6 +314,25 @@ class PostgreSQL:
         finally:
             if connection is not None:
                 connection.close()
+
+        # Ensure that the extension was enable/disabled.
+        for database in databases:
+            with self._connect_to_database(
+                database=database
+            ) as connection, connection.cursor() as cursor:
+                for attempt in Retrying(
+                    stop=stop_after_attempt(6), wait=wait_fixed(10), reraise=True
+                ):
+                    with attempt:
+                        cursor.execute(
+                            "SELECT TRUE FROM pg_extension WHERE extname=%s::text;", (extension,)
+                        )
+                        if bool(cursor.fetchone()) != enable:
+                            logger.warning(
+                                f"{extension} not yet {'enabled' if enable else 'disabled'} for {database}"
+                            )
+                            raise PostgreSQLEnableDisableExtensionError()
+            connection.close()
 
     def get_postgresql_version(self) -> str:
         """Returns the PostgreSQL version.
