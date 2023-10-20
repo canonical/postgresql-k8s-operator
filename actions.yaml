@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 create-backup:
-  description: Creates a backup to s3 storage in AWS.
+  description: Creates a backup to s3 storage in AWS.zzzz
 get-primary:
   description: Get the unit with is the primary/leader in the replication.
 get-password:
