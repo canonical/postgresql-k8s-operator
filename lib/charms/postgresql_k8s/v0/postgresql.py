@@ -321,7 +321,7 @@ class PostgreSQL:
                 database=database
             ) as connection, connection.cursor() as cursor:
                 for attempt in Retrying(
-                    stop=stop_after_attempt(6), wait=wait_fixed(10), reraise=True
+                    stop=stop_after_attempt(15), wait=wait_fixed(2), reraise=True
                 ):
                     with attempt:
                         cursor.execute(
