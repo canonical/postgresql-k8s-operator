@@ -1410,7 +1410,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("Early exit update_config: Patroni not started yet")
             return False
 
-        self._validate_config_options()
+        if not is_creating_backup:
+            self._validate_config_options()
 
         self._patroni.update_parameter_controller_by_patroni(
             "max_connections", max(4 * available_cpu_cores, 100)
