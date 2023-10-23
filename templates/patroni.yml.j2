@@ -48,6 +48,11 @@ bootstrap:
     command: pgbackrest --stanza={{ restore_stanza }} --pg1-path={{ storage_path }}/pgdata --set={{ backup_id }} --type=immediate --target-action=promote restore
     no_params: True
     keep_existing_recovery_conf: True
+  {% elif standby_cluster_endpoint %}
+    standby_cluster:
+      host: {{ standby_cluster_endpoint }}
+      port: 5432
+      create_replica_methods: ["backup_restore", "basebackup"]
   {% else %}
   initdb:
   - auth-host: md5
@@ -58,6 +63,9 @@ bootstrap:
   pg_hba:
   - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 md5
   - {{ 'hostssl' if enable_tls else 'host' }} replication replication 127.0.0.1/32 md5
+  {%- for endpoint in extra_replication_endpoints %}
+  - {{ 'hostssl' if enable_tls else 'host' }} replication replication {{ endpoint }} md5
+  {%- endfor %}
 bypass_api_service: true
 log:
   dir: /var/log/postgresql
@@ -113,6 +121,9 @@ postgresql:
   - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 md5
   {%- endif %}
   - {{ 'hostssl' if enable_tls else 'host' }} replication replication 127.0.0.1/32 md5
+  {%- for e in extra_replication_endpoints %}
+  - {{ 'hostssl' if enable_tls else 'host' }} replication replication {{ e }} md5
+  {%- endfor -%}
   {%- for endpoint in endpoints %}
   - {{ 'hostssl' if enable_tls else 'host' }} replication replication {{ endpoint }}.{{ namespace }}.svc.cluster.local md5
   {%- endfor %}

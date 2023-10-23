@@ -43,3 +43,9 @@ set-tls-private-key:
     private-key:
       type: string
       description: The content of private key for communications with clients. Content will be auto-generated if this option is not specified.
+
+promote-standby-cluster:
+  description: Promotes the standby cluster of choice to a leader. Must be ran against the charm unit leader of the standby cluster.
+
+demote-primary-cluster:
+  description: Demotes the primary cluster of choice to a standby. Must be ran against the charm unit leader of the standby cluster.

@@ -76,6 +76,7 @@ from constants import (
     WORKLOAD_OS_USER,
 )
 from patroni import NotReadyError, Patroni
+from relations.async_replication import PostgreSQLAsyncReplication
 from relations.db import EXTENSIONS_BLOCKING_MESSAGE, DbProvides
 from relations.postgresql_provider import PostgreSQLProvider
 from upgrade import PostgreSQLUpgrade, get_postgresql_k8s_dependencies_model
@@ -152,6 +153,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         postgresql_db_port = ServicePort(5432, name="database")
         patroni_api_port = ServicePort(8008, name="api")
         self.service_patcher = KubernetesServicePatch(self, [postgresql_db_port, patroni_api_port])
+        self.async_manager = PostgreSQLAsyncReplication(self)
 
     def _generate_metrics_jobs(self, enable_tls: bool) -> Dict:
         """Generate spec for Prometheus scraping."""

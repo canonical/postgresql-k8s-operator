@@ -333,6 +333,9 @@ class Patroni:
         # Open the template patroni.yml file.
         with open("templates/patroni.yml.j2", "r") as file:
             template = Template(file.read())
+
+        primary = self._charm.async_manager.get_primary_data()
+
         # Render the template file with the correct values.
         rendered = template.render(
             connectivity=connectivity,
@@ -343,8 +346,12 @@ class Patroni:
             is_no_sync_member=is_no_sync_member,
             namespace=self._namespace,
             storage_path=self._storage_path,
-            superuser_password=self._superuser_password,
-            replication_password=self._replication_password,
+            superuser_password=primary["superuser-password"]
+            if primary
+            else self._superuser_password,
+            replication_password=primary["replication-password"]
+            if primary
+            else self._replication_password,
             rewind_user=REWIND_USER,
             rewind_password=self._rewind_password,
             enable_pgbackrest=stanza is not None,
@@ -355,6 +362,10 @@ class Patroni:
             minority_count=self._members_count // 2,
             version=self.rock_postgresql_version.split(".")[0],
             pg_parameters=parameters,
+            standby_cluster_endpoint=primary["endpoint"] if primary else None,
+            extra_replication_endpoints={"{}/32".format(primary["endpoint"])}
+            if primary
+            else self._charm.async_manager.standby_endpoints(),
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 
