@@ -52,7 +52,7 @@ bootstrap:
     standby_cluster:
       host: {{ standby_cluster_endpoint }}
       port: 5432
-      create_replica_methods: ["backup_restore", "basebackup"]
+      create_replica_methods: ["basebackup"]
   {% else %}
   initdb:
   - auth-host: md5

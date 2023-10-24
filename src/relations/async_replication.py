@@ -35,6 +35,19 @@ class MoreThanOnePrimarySelectedError(Exception):
     """Represents more than one primary has been selected."""
 
 
+def _get_pod_ip():
+    """Reads some files to quickly figure out its own pod IP.
+
+    It should work for any Ubuntu-based image
+    """
+    with open("/etc/hosts") as f:
+        hosts = f.read()
+    with open("/etc/hostname") as f:
+        hostname = f.read().replace("\n", "")
+    line = [ln for ln in hosts.split("\n") if ln.find(hostname) >= 0][0]
+    return line.split("\t")[0]
+
+
 class PostgreSQLAsyncReplication(Object):
     """Defines the async-replication management logic."""
 
@@ -46,7 +59,7 @@ class PostgreSQLAsyncReplication(Object):
             self.charm.on[ASYNC_PRIMARY_RELATION].relation_changed, self._on_primary_changed
         )
         self.framework.observe(
-            self.charm.on[ASYNC_REPLICA_RELATION].relation_changed, self._on_primary_changed
+            self.charm.on[ASYNC_REPLICA_RELATION].relation_changed, self._on_standby_changed
         )
         self.framework.observe(
             self.charm.on.promote_standby_cluster_action, self._on_promote_standby_cluster
@@ -74,16 +87,18 @@ class PostgreSQLAsyncReplication(Object):
         """Returns the set of IPs used by each standby unit with a /32 mask."""
         standby_endpoints = set()
         for rel in self.relation_set:
-            for unit in rel.units:
+            for unit in self._all_units(rel):
                 if not rel.data[unit].get("elected", None):
                     standby_endpoints.add("{}/32".format(str(rel.data[unit]["ingress-address"])))
+                    if "pod-address" in rel.data[unit]:
+                        standby_endpoints.add("{}/32".format(str(rel.data[unit]["pod-address"])))
         return standby_endpoints
 
     def get_primary_data(self) -> Dict[str, str]:
         """Returns the primary info, if available."""
         for rel in self.relation_set:
-            for unit in rel.units:
-                if unit.name == self.charm.unit.name:
+            for unit in self._all_units(rel):
+                if "elected" in rel.data[unit] and unit.name == self.charm.unit.name:
                     # If this unit is the leader, then return None
                     return None
                 if rel.data[unit].get("elected", None):
@@ -95,21 +110,65 @@ class PostgreSQLAsyncReplication(Object):
                     }
         return None
 
+    def _all_units(self, relation):
+        return {*relation.units, self.charm.unit}
+
+    def _all_replica_published_pod_ips(self) -> bool:
+        for rel in self.relation_set:
+            for unit in self._all_units(rel):
+                if "elected" in rel.data[unit]:
+                    # This is the leader unit, it will not publish its own pod address
+                    continue
+                if "pod-address" not in rel.data[unit]:
+                    return False
+        return True
+
     def _on_primary_changed(self, _):
+        """Triggers a configuration change in the primary units."""
+        primary_relation = self.model.get_relation(ASYNC_PRIMARY_RELATION)
+        if not primary_relation:
+            return
+
+        primary = self._check_if_primary_already_selected()
+        if not primary:
+            return
+
+        if primary.name != self.charm.unit.name:
+            # no primary available, once it has been configured, it will trigger
+            # a new event changed
+            return
+
+        if not self._all_replica_published_pod_ips():
+            # We will have more events happening, no need for retrigger
+            return
+
+        # This unit is the leader, generate  a new configuration and leave.
+        # There is nothing to do for the leader.
+        self.container.stop(self.charm._postgresql_service)
+        self.charm.update_config()
+        self.container.start(self.charm._postgresql_service)
+
+        # Retrigger the other units' async-replica-changed
+        primary_relation.data[self.charm.unit]["primary-cluster-ready"] = "true"
+
+    def _on_standby_changed(self, _):
         """Triggers a configuration change."""
         primary = self._check_if_primary_already_selected()
         if not primary:
             return
 
-        if primary.name == self.charm.unit.name:
-            # This unit is the leader, generate  a new configuration and leave.
-            # There is nothing to do for the leader.
-            self.charm.update_config()
-            self.container.start(self.charm._postgresql_service)
+        replica_relation = self.model.get_relation(ASYNC_REPLICA_RELATION)
+        if not replica_relation:
+            return
+
+        # Check if we have already published pod-address. If not, then we are waiting
+        # for the leader to catch all the pod ips and restart itself
+        if "pod-address" not in replica_relation.data[self.charm.unit]:
+            replica_relation.data[self.charm.unit]["pod-address"] = _get_pod_ip()
+            # Finish here and wait for the retrigger from the primary cluster
             return
 
         self.container.stop(self.charm._postgresql_service)
-
         # Standby units must delete their data folder
         # Delete the K8S endpoints that tracks the cluster information, including its id.
         # This is the same as "patronictl remove patroni-postgresql-k8s", but the latter doesn't
@@ -145,10 +204,10 @@ class PostgreSQLAsyncReplication(Object):
         if not self.relation_set:
             return None
         for rel in self.relation_set:
-            for unit in rel.units:
+            for unit in self._all_units(rel):
                 if "elected" in rel.data[unit] and not result:
                     result = unit
-                elif result:
+                elif "elected" in rel.data[unit] and result:
                     raise MoreThanOnePrimarySelectedError
         return result
 
@@ -190,6 +249,13 @@ class PostgreSQLAsyncReplication(Object):
                 "superuser-password": self.charm._patroni._superuser_password,
             }
         )
+
+        # Now, check if postgresql it had originally published its pod IP in the
+        # replica relation databag. Delete it, if yes.
+        replica_relation = self.model.get_relation(ASYNC_PRIMARY_RELATION)
+        if not replica_relation or "pod-address" not in replica_relation.data[self.charm.unit]:
+            return
+        del replica_relation.data[self.charm.unit]["pod-address"]
         # event.set_result()
 
     def _on_demote_primary_cluster(self, event: ActionEvent) -> None:
@@ -213,7 +279,13 @@ class PostgreSQLAsyncReplication(Object):
 
         # If this is a standby-leader, then execute switchover logic
         # TODO
+        primary_relation = self.model.get_relation(ASYNC_PRIMARY_RELATION)
+        if not primary_relation or "elected" not in primary_relation.data[self.charm.unit]:
+            event.fail("No primary relation")
+            return
 
         # Now, publish that this unit is the leader
-        del self._get_primary_candidates()[self.charm.unit].data["elected"]
+        del primary_relation.data[self.charm.unit].data["elected"]
+        if "primary-cluster-ready" in primary_relation.data[self.charm.unit]:
+            del primary_relation.data[self.charm.unit]["primary-cluster-ready"]
         # event.set_result()
