@@ -14,6 +14,7 @@ on:
       - pyproject.toml
       - '.github/**.md'
       - '.github/workflows/ci.yaml'
+      - '.github/workflows/lib-check.yaml'
 
 jobs:
   ci-tests:
