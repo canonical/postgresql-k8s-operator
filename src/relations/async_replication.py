@@ -14,7 +14,7 @@ import logging
 from typing import Dict, Set
 
 from lightkube import Client
-from lightkube.resources.core_v1 import Endpoints
+from lightkube.resources.core_v1 import Service
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -22,6 +22,10 @@ from ops.charm import (
 from ops.framework import Object
 from ops.model import (
     Unit,
+)
+
+from constants import (
+    PEER,
 )
 
 logger = logging.getLogger(__name__)
@@ -61,6 +65,20 @@ class PostgreSQLAsyncReplication(Object):
         self.framework.observe(
             self.charm.on[ASYNC_REPLICA_RELATION].relation_changed, self._on_standby_changed
         )
+
+        self.framework.observe(
+            self.charm.on[ASYNC_PRIMARY_RELATION].relation_departed, self._on_departure
+        )
+        self.framework.observe(
+            self.charm.on[ASYNC_REPLICA_RELATION].relation_departed, self._on_departure
+        )
+        self.framework.observe(
+            self.charm.on[ASYNC_PRIMARY_RELATION].relation_broken, self._on_departure
+        )
+        self.framework.observe(
+            self.charm.on[ASYNC_REPLICA_RELATION].relation_broken, self._on_departure
+        )
+
         self.framework.observe(
             self.charm.on.promote_standby_cluster_action, self._on_promote_standby_cluster
         )
@@ -95,13 +113,15 @@ class PostgreSQLAsyncReplication(Object):
         return standby_endpoints
 
     def get_primary_data(self) -> Dict[str, str]:
-        """Returns the primary info, if available."""
+        """Returns the primary info, if available and if the primary cluster is ready."""
         for rel in self.relation_set:
             for unit in self._all_units(rel):
                 if "elected" in rel.data[unit] and unit.name == self.charm.unit.name:
                     # If this unit is the leader, then return None
                     return None
-                if rel.data[unit].get("elected", None):
+                if rel.data[unit].get("elected", None) and rel.data[unit].get(
+                    "primary-cluster-ready", None
+                ):
                     elected_data = json.loads(rel.data[unit]["elected"])
                     return {
                         "endpoint": str(elected_data["endpoint"]),
@@ -111,7 +131,9 @@ class PostgreSQLAsyncReplication(Object):
         return None
 
     def _all_units(self, relation):
-        return {*relation.units, self.charm.unit}
+        foundUnits = {*relation.units, self.charm.unit}
+        logger.info(f"Units found: {foundUnits}")
+        return foundUnits
 
     def _all_replica_published_pod_ips(self) -> bool:
         for rel in self.relation_set:
@@ -123,24 +145,51 @@ class PostgreSQLAsyncReplication(Object):
                     return False
         return True
 
-    def _on_primary_changed(self, _):
+    def _on_departure(self, _):
+        for rel in [
+            self.model.get_relation(ASYNC_REPLICA_RELATION),
+            self.model.get_relation(ASYNC_PRIMARY_RELATION),
+            self.model.get_relation(PEER),  # for the "replica_ready"
+        ]:
+            if not rel:
+                continue
+            if "pod-address" in rel.data[self.charm.unit]:
+                del rel.data[self.charm.unit]["pod-address"]
+            if "elected" in rel.data[self.charm.unit]:
+                del rel.data[self.charm.unit]["elected"]
+            if "primary-cluster-ready" in rel.data[self.charm.unit]:
+                del rel.data[self.charm.unit]["primary-cluster-ready"]
+            if "replica_ready" in rel.data[self.charm.unit]:
+                del rel.data[self.charm.unit]["replica_ready"]
+
+        self.container.stop(self.charm._postgresql_service)
+        self.charm.update_config()
+        self.container.start(self.charm._postgresql_service)
+
+    def _on_primary_changed(self, event):
         """Triggers a configuration change in the primary units."""
         primary_relation = self.model.get_relation(ASYNC_PRIMARY_RELATION)
         if not primary_relation:
             return
+        logger.info("_on_primary_changed: primary_relation exists")
 
         primary = self._check_if_primary_already_selected()
         if not primary:
             return
+        logger.info("_on_primary_changed: primary cluster exists")
 
         if primary.name != self.charm.unit.name:
             # no primary available, once it has been configured, it will trigger
             # a new event changed
+            event.defer()
             return
+        logger.info("_on_primary_changed: unit is the primary's leader")
 
         if not self._all_replica_published_pod_ips():
             # We will have more events happening, no need for retrigger
+            event.defer()
             return
+        logger.info("_on_primary_changed: all replicas published pod details")
 
         # This unit is the leader, generate  a new configuration and leave.
         # There is nothing to do for the leader.
@@ -149,26 +198,44 @@ class PostgreSQLAsyncReplication(Object):
         self.container.start(self.charm._postgresql_service)
 
         # Retrigger the other units' async-replica-changed
-        primary_relation.data[self.charm.unit]["primary-cluster-ready"] = "true"
+        primary_relation.data[self.charm.unit]["primary-cluster-ready"] = "True"
 
-    def _on_standby_changed(self, _):
+    def _on_standby_changed(self, event):  # noqa C901
         """Triggers a configuration change."""
         primary = self._check_if_primary_already_selected()
         if not primary:
             return
+        logger.info("_on_standby_changed: primary is present")
 
         replica_relation = self.model.get_relation(ASYNC_REPLICA_RELATION)
         if not replica_relation:
             return
+        logger.info("_on_standby_changed: replica relation available")
 
         # Check if we have already published pod-address. If not, then we are waiting
         # for the leader to catch all the pod ips and restart itself
         if "pod-address" not in replica_relation.data[self.charm.unit]:
             replica_relation.data[self.charm.unit]["pod-address"] = _get_pod_ip()
-            # Finish here and wait for the retrigger from the primary cluster
-            return
 
-        self.container.stop(self.charm._postgresql_service)
+            # Stop the container.
+            # We need all replicas to be stopped, so we can remove the patroni-postgresql-k8s
+            # service from Kubernetes and not getting it recreated!
+            # We will restart the it once the cluster is ready.
+            self.container.stop(self.charm._postgresql_service)
+
+            # Finish here and wait for the retrigger from the primary cluster
+            event.defer()
+            return
+        logger.info("_on_standby_changed: pod-address published in own replica databag")
+
+        if not self.get_primary_data():
+            # We've made thus far.
+            # However, the get_primary_data will return != None ONLY if the primary cluster
+            # is ready and configured. Until then, we wait.
+            event.defer()
+            return
+        logger.info("_on_standby_changed: primary cluster is ready")
+
         # Standby units must delete their data folder
         # Delete the K8S endpoints that tracks the cluster information, including its id.
         # This is the same as "patronictl remove patroni-postgresql-k8s", but the latter doesn't
@@ -176,22 +243,57 @@ class PostgreSQLAsyncReplication(Object):
         try:
             client = Client()
             client.delete(
-                Endpoints,
+                Service,
                 name=f"patroni-{self.charm._name}",
                 namespace=self.charm._namespace,
             )
+        except Exception:
+            logger.info("_on_standby_changed: k8s error while trying to delete patroni service")
+            pass
+        try:
             client.delete(
-                Endpoints,
+                Service,
                 name=f"patroni-{self.charm._name}-config",
                 namespace=self.charm._namespace,
             )
+        except Exception:
+            logger.info(
+                "_on_standby_changed: k8s error while trying to delete patroni-config service"
+            )
+            pass
 
+        # Clean folder and generate configuration.
+        try:
             self.container.exec("rm -r /var/lib/postgresql/data/pgdata".split()).wait_output()
             self.charm._create_pgdata(self.container)
 
             self.charm.update_config()
         except Exception:
+            logger.info("_on_standby_changed: error while deleting pgdata or reconfiguring")
             pass
+
+        logger.info("_on_standby_changed: configuration done, waiting for restart of the service")
+
+        #### RESTARTING LOGIC ####
+        # We can only restart the database IF all the replicas already configured themselves.
+        # So, check if peers have published "replica_ready=True" in their databag.
+        peers_relation = self.model.get_relation(PEER)
+        if peers_relation.data[self.charm.unit].get("replica_ready", "False") != "True":
+            peers_relation.data[self.charm.unit]["replica_ready"] = "True"
+            event.defer()
+            return
+        logger.info("_on_standby_changed: this unit has replica_ready=True")
+
+        # Now, check the peers until we have all of them ready:
+        for p in peers_relation.units:
+            if peers_relation.data[p].get("replica_ready", "False") != "True":
+                # Found a peer not ready yet
+                logger.info(f"_on_standby_changed: replica {p.name} is not ready yet")
+                event.defer()
+                return
+        logger.info("_on_standby_changed: all peers have replica_ready=True")
+
+        # We are ready to restart the service now: all peers have configured themselves.
         self.container.start(self.charm._postgresql_service)
 
     def _get_primary_candidates(self):
