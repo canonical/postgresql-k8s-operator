@@ -6,7 +6,8 @@
 import itertools
 import json
 import logging
-from typing import Dict, List, Optional
+import time
+from typing import Dict, List, Optional, Tuple
 
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
@@ -1378,8 +1379,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             limit_memory = self.config.profile_limit_memory * 10**6
         else:
             limit_memory = None
+        available_cpu_cores, available_memory = self.get_available_resources()
         postgresql_parameters = self.postgresql.build_postgresql_parameters(
-            self.config.profile, self.get_available_memory(), limit_memory
+            self.model.config, available_memory, limit_memory
         )
 
         logger.info("Updating Patroni config file")
@@ -1394,6 +1396,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             restore_stanza=self.app_peer_data.get("restore-stanza"),
             parameters=postgresql_parameters,
         )
+
         if not self._is_workload_running:
             # If Patroni/PostgreSQL has not started yet and TLS relations was initialised,
             # then mark TLS as enabled. This commonly happens when the charm is deployed
@@ -1407,10 +1410,22 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("Early exit update_config: Patroni not started yet")
             return False
 
-        restart_postgresql = (
-            self.is_tls_enabled != self.postgresql.is_tls_enabled()
-        ) or self.postgresql.is_restart_pending()
+        if not is_creating_backup:
+            self._validate_config_options()
+
+        self._patroni.update_parameter_controller_by_patroni(
+            "max_connections", max(4 * available_cpu_cores, 100)
+        )
+        self._patroni.update_parameter_controller_by_patroni(
+            "max_prepared_transactions", self.config.memory_max_prepared_transactions
+        )
+
+        restart_postgresql = self.is_tls_enabled != self.postgresql.is_tls_enabled()
         self._patroni.reload_patroni_configuration()
+        # Sleep the same time as Patroni's loop_wait default value, which tells how much time
+        # Patroni will wait before checking the configuration file again to reload it.
+        time.sleep(10)
+        restart_postgresql = restart_postgresql or self.postgresql.is_restart_pending()
         self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
 
         # Restart PostgreSQL if TLS configuration has changed
@@ -1437,6 +1452,38 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 container.restart(self._metrics_service)
 
         return True
+
+    def _validate_config_options(self) -> None:
+        """Validates specific config options that need access to the database or to the TLS status."""
+        if (
+            self.config.instance_default_text_search_config is not None
+            and self.config.instance_default_text_search_config
+            not in self.postgresql.get_postgresql_text_search_configs()
+        ):
+            raise Exception(
+                "instance_default_text_search_config config option has an invalid value"
+            )
+
+        if self.config.request_date_style is not None and not self.postgresql.validate_date_style(
+            self.config.request_date_style
+        ):
+            raise Exception("request_date_style config option has an invalid value")
+
+        if (
+            self.config.request_time_zone is not None
+            and self.config.request_time_zone not in self.postgresql.get_postgresql_timezones()
+        ):
+            raise Exception("request_time_zone config option has an invalid value")
+
+        container = self.unit.get_container("postgresql")
+        output, _ = container.exec(["locale", "-a"]).wait_output()
+        locales = list(output.splitlines())
+        for parameter in ["response_lc_monetary", "response_lc_numeric", "response_lc_time"]:
+            value = self.model.config.get(parameter)
+            if value is not None and value not in locales:
+                raise ValueError(
+                    f"Value for {parameter} not one of the locales available in the system"
+                )
 
     def _update_pebble_layers(self) -> None:
         """Update the pebble layers to keep the health check URL up-to-date."""
@@ -1496,28 +1543,36 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         return {}
 
     def get_node_allocable_memory(self) -> int:
-        """Return the allocable memory in bytes for a given node.
-
-        Args:
-            node_name: name of the node to get the allocable memory for
-        """
+        """Return the allocable memory in bytes for the current K8S node."""
         client = Client()
         node = client.get(Node, name=self._get_node_name_for_pod(), namespace=self._namespace)
         return any_memory_to_bytes(node.status.allocatable["memory"])
 
-    def get_available_memory(self) -> int:
-        """Get available memory for the container in bytes."""
+    def get_node_cpu_cores(self) -> int:
+        """Return the number of CPU cores for the current K8S node."""
+        client = Client()
+        node = client.get(Node, name=self._get_node_name_for_pod(), namespace=self._namespace)
+        return int(node.status.allocatable["cpu"])
+
+    def get_available_resources(self) -> Tuple[int, int]:
+        """Get available CPU cores and memory (in bytes) for the container."""
+        cpu_cores = self.get_node_cpu_cores()
         allocable_memory = self.get_node_allocable_memory()
         container_limits = self.get_resources_limits(container_name="postgresql")
+        if "cpu" in container_limits:
+            cpu_str = container_limits["cpu"]
+            constrained_cpu = int(cpu_str)
+            if constrained_cpu < cpu_cores:
+                logger.debug(f"CPU constrained to {cpu_str} cores from resource limit")
+                cpu_cores = constrained_cpu
         if "memory" in container_limits:
             memory_str = container_limits["memory"]
             constrained_memory = any_memory_to_bytes(memory_str)
             if constrained_memory < allocable_memory:
                 logger.debug(f"Memory constrained to {memory_str} from resource limit")
-                return constrained_memory
+                allocable_memory = constrained_memory
 
-        logger.debug("Memory constrained by node allocable memory")
-        return allocable_memory
+        return cpu_cores, allocable_memory
 
 
 if __name__ == "__main__":

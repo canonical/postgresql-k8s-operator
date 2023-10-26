@@ -8,7 +8,6 @@ bootstrap:
       remove_data_directory_on_diverged_timelines: true
       bin_dir: /usr/lib/postgresql/{{ version }}/bin
       parameters:
-        synchronous_commit: on
         synchronous_standby_names: "*"
         {%- if enable_pgbackrest %}
         archive_command: 'pgbackrest --stanza={{ stanza }} archive-push %p'
@@ -16,6 +15,10 @@ bootstrap:
         archive_command: /bin/true
         {%- endif %}
         archive_mode: on
+        autovacuum: true
+        fsync: true
+        full_page_writes: true
+        lc_messages: 'en_US.UTF8'
         log_autovacuum_min_duration: 60000
         log_checkpoints: 'on'
         log_destination: 'stderr'

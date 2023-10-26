@@ -197,7 +197,7 @@ class PostgreSQLBackups(Object):
     def _change_connectivity_to_database(self, connectivity: bool) -> None:
         """Enable or disable the connectivity to the database."""
         self.charm.unit_peer_data.update({"connectivity": "on" if connectivity else "off"})
-        self.charm.update_config()
+        self.charm.update_config(is_creating_backup=True)
 
     def _execute_command(
         self, command: List[str], timeout: float = None
