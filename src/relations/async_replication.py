@@ -131,9 +131,9 @@ class PostgreSQLAsyncReplication(Object):
         return None
 
     def _all_units(self, relation):
-        foundUnits = {*relation.units, self.charm.unit}
-        logger.info(f"Units found: {foundUnits}")
-        return foundUnits
+        found_units = {*relation.units, self.charm.unit}
+        logger.debug(f"Units found: {found_units}")
+        return found_units
 
     def _all_replica_published_pod_ips(self) -> bool:
         for rel in self.relation_set:
