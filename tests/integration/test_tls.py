@@ -17,7 +17,6 @@ from tests.integration.helpers import (
     check_tls_patroni_api,
     db_connect,
     deploy_and_relate_application_with_postgresql,
-    enable_connections_logging,
     get_password,
     get_primary,
     get_unit_address,
@@ -95,7 +94,12 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
 
         # Enable additional logs on the PostgreSQL instance to check TLS
         # being used in a later step.
-        await enable_connections_logging(ops_test, primary)
+        await ops_test.model.applications[DATABASE_APP_NAME].set_config(
+            {"logging_log_connections": "True"}
+        )
+        await ops_test.model.wait_for_idle(
+            apps=[DATABASE_APP_NAME], status="active", idle_period=30
+        )
 
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(2), reraise=True):
             with attempt:

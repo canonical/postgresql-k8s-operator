@@ -108,10 +108,20 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
         settings_names = [
             "archive_command",
             "archive_mode",
+            "autovacuum",
             "data_directory",
             "cluster_name",
             "data_checksums",
+            "fsync",
+            "full_page_writes",
+            "lc_messages",
             "listen_addresses",
+            "log_autovacuum_min_duration",
+            "log_checkpoints",
+            "log_destination",
+            "log_temp_files",
+            "log_timezone",
+            "max_connections",
             "wal_level",
         ]
         cursor.execute(
@@ -126,10 +136,20 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
     # Validate each configuration set by Patroni on PostgreSQL.
     assert settings["archive_command"] == "/bin/true"
     assert settings["archive_mode"] == "on"
+    assert settings["autovacuum"] == "on"
     assert settings["cluster_name"] == f"patroni-{APP_NAME}"
     assert settings["data_directory"] == f"{STORAGE_PATH}/pgdata"
     assert settings["data_checksums"] == "on"
+    assert settings["fsync"] == "on"
+    assert settings["full_page_writes"] == "on"
+    assert settings["lc_messages"] == "en_US.UTF8"
     assert settings["listen_addresses"] == "0.0.0.0"
+    assert settings["log_autovacuum_min_duration"] == "60000"
+    assert settings["log_checkpoints"] == "on"
+    assert settings["log_destination"] == "stderr"
+    assert settings["log_temp_files"] == "1"
+    assert settings["log_timezone"] == "UTC"
+    assert settings["max_connections"] == "100"
     assert settings["wal_level"] == "logical"
 
     # Retrieve settings from Patroni REST API.
@@ -137,9 +157,45 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
     settings = result.json()
 
     # Validate configuration exposed by Patroni.
-    assert settings["postgresql"]["use_pg_rewind"]
-    assert settings["postgresql"]["remove_data_directory_on_rewind_failure"]
-    assert settings["postgresql"]["remove_data_directory_on_diverged_timelines"]
+    assert settings["postgresql"]["use_pg_rewind"] is True
+    assert settings["postgresql"]["remove_data_directory_on_rewind_failure"] is True
+    assert settings["postgresql"]["remove_data_directory_on_diverged_timelines"] is True
+
+
+async def test_postgresql_parameters_change(ops_test: OpsTest) -> None:
+    """Test that's possible to change PostgreSQL parameters."""
+    await ops_test.model.applications[APP_NAME].set_config(
+        {
+            "memory_max_prepared_transactions": "100",
+            "memory_shared_buffers": "128",
+            "response_lc_monetary": "en_GB.utf8",
+        }
+    )
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=30)
+    password = await get_password(ops_test)
+
+    # Connect to PostgreSQL.
+    for unit_id in UNIT_IDS:
+        host = await get_unit_address(ops_test, f"{APP_NAME}/{unit_id}")
+        logger.info("connecting to the database host: %s", host)
+        with psycopg2.connect(
+            f"dbname='postgres' user='operator' host='{host}' password='{password}' connect_timeout=1"
+        ) as connection, connection.cursor() as cursor:
+            settings_names = ["max_prepared_transactions", "shared_buffers", "lc_monetary"]
+            cursor.execute(
+                sql.SQL("SELECT name,setting FROM pg_settings WHERE name IN ({});").format(
+                    sql.SQL(", ").join(sql.Placeholder() * len(settings_names))
+                ),
+                settings_names,
+            )
+            records = cursor.fetchall()
+            settings = convert_records_to_dict(records)
+        connection.close()
+
+        # Validate each configuration set by Patroni on PostgreSQL.
+        assert settings["max_prepared_transactions"] == "100"
+        assert settings["shared_buffers"] == "128"
+        assert settings["lc_monetary"] == "en_GB.utf8"
 
 
 async def test_cluster_is_stable_after_leader_deletion(ops_test: OpsTest) -> None:
