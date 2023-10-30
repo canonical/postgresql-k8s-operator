@@ -75,6 +75,8 @@ pytest-operator-cache = {git = "https://github.com/canonical/data-platform-workf
 pytest-operator-groups = {git = "https://github.com/canonical/data-platform-workflows", tag = "v5.1.2", subdirectory = "python/pytest_plugins/pytest_operator_groups"}
 juju = "^3.2.2"
 psycopg2 = {version = "^2.9.9", extras = ["binary"]}
+boto3 = "^1.28.70"
+tenacity = "^8.2.3"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
