@@ -67,10 +67,6 @@ jobs:
           - upgrade-integration
           - upgrade-from-stable-integration
         juju-snap-channel:  ["2.9/stable", "3.1/stable"]
-        exclude:
-          # Admin tests need landscape on juju 2
-          - tox-environment: db-admin-relation-integration
-            juju-snap-channel: "3.1/stable"
         include:
           - juju-snap-channel: "3.1/stable"
             agent-version: "3.1.6"
