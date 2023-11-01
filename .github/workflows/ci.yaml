@@ -127,7 +127,7 @@ jobs:
             echo "mark_secrets=and not uses_secrets" >> "$GITHUB_OUTPUT"
           fi
       - name: Run integration tests
-        run: tox run -e ${{ matrix.tox-environment }} -- -m 'not ${{ matrix.exclude-mark }} ${{ steps.select-test-stability.outputs.mark_secrets }} ${{ steps.select-test-stability.outputs.mark_expression }}' --keep-models
+        run: tox run -e ${{ matrix.tox-environment }} -- -m 'not ${{ matrix.exclude-mark }} ${{ steps.select-test-secrets.outputs.mark_secrets }} ${{ steps.select-test-stability.outputs.mark_expression }}' --keep-models
         env:
           SECRETS_FROM_GITHUB: |
             {
