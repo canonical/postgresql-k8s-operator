@@ -82,6 +82,7 @@ async def cloud_configs(ops_test: OpsTest, github_secrets) -> None:
 
 async def test_none() -> None:
     """Empty test so that the suite will not fail if all tests are skippedi."""
+    # Test
     pass
 
 
