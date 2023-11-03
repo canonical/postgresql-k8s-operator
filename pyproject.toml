@@ -78,6 +78,8 @@ juju = "^3.2.2"
 psycopg2 = {version = "^2.9.9", extras = ["binary"]}
 boto3 = "^1.28.70"
 tenacity = "^8.2.3"
+ops = "^2.8.0"
+pytest-mock = "^3.12.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
