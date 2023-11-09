@@ -105,6 +105,12 @@ postgresql:
     {{key}}: {{value}}
     {%- endfor -%}
     {% endif %}
+    ldapserver: "<server_host>"
+    ldapport: "<server_port>"
+    ldaptls: 1
+    ldapbinddn: "<username>"
+    ldapbindpasswd: "<userpassword>"
+        
   pgpass: /tmp/pgpass
   pg_hba:
   - local all backup peer map=operator
