@@ -474,7 +474,7 @@ async def list_wal_files(ops_test: OpsTest, app: str) -> Set:
     files = {}
     for unit in units:
         complete_command = f"run --unit {unit} -- {command}"
-        return_code, stdout, stderr = await ops_test.juju(*complete_command.split())
+        _, stdout, _ = await ops_test.juju(*complete_command.split())
         files[unit] = stdout.splitlines()
         files[unit] = {
             i for i in files[unit] if ".history" not in i and i != "" and i != "archive_status"
