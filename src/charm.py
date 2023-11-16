@@ -552,24 +552,22 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             database: optional database where to enable/disable the extension.
         """
         original_status = self.unit.status
+        extensions = {}
+        # collect extensions
         plugins_exception = {"uuid_ossp": '"uuid-ossp"'}
         for plugin in self.config.plugin_keys():
             enable = self.config[plugin]
 
             # Enable or disable the plugin/extension.
             extension = "_".join(plugin.split("_")[1:-1])
-            if extension in plugins_exception:
-                extension = plugins_exception[extension]
-            self.unit.status = WaitingStatus(
-                f"{'Enabling' if enable else 'Disabling'} {extension}"
-            )
-            try:
-                self.postgresql.enable_disable_extension(extension, enable, database)
-            except PostgreSQLEnableDisableExtensionError as e:
-                logger.exception(
-                    f"failed to {'enable' if enable else 'disable'} {extension} plugin: %s", str(e)
-                )
-            self.unit.status = original_status
+            extension = plugins_exception.get(extension, extension)
+            extensions[extension] = enable
+        self.unit.status = WaitingStatus("Updating extensions")
+        try:
+            self.postgresql.enable_disable_extensions(extensions, database)
+        except PostgreSQLEnableDisableExtensionError as e:
+            logger.exception("failed to change plugins: %s", str(e))
+        self.unit.status = original_status
 
     def _add_members(self, event) -> None:
         """Add new cluster members.
