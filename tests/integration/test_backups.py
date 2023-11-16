@@ -208,7 +208,7 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
     await ops_test.model.remove_application(TLS_CERTIFICATES_APP_NAME, block_until_done=True)
 
 
-async def test_restore_on_new_cluster(ops_test: OpsTest) -> None:
+async def test_restore_on_new_cluster(ops_test: OpsTest, github_secrets) -> None:
     """Test that is possible to restore a backup to another PostgreSQL cluster."""
     database_app_name = f"new-{DATABASE_APP_NAME}"
     await build_and_deploy(ops_test, 1, database_app_name=database_app_name, wait_for_idle=False)
