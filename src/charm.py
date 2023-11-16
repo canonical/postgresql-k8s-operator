@@ -19,7 +19,6 @@ from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQLEnableDisableExtensionError,
     PostgreSQLUpdateUserPasswordError,
 )
-from charms.postgresql_k8s.v0.postgresql_secrets import SecretCache, generate_secret_label
 from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
@@ -212,6 +211,20 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         new_key = key.replace("_", "-")
         return new_key.strip("-")
 
+    def _safe_get_secret(self, scope: Scopes, label: str) -> SecretCache:
+        """Safety measure, for upgrades between versions based on secret URI usage to others with labels usage.
+
+        If the secret can't be retrieved by label, we search for the uri -- and if found, we "stick" the
+        label on the secret for further usage.
+        """
+        secret_uri = self._peer_data(scope).get(SECRET_INTERNAL_LABEL, None)
+        secret = self.secrets.get(label, secret_uri)
+
+        # Since now we switched to labels, the databag reference can be removed
+        if secret_uri and secret and scope == APP_SCOPE and self.unit.is_leader():
+            self._peer_data(scope).pop(SECRET_INTERNAL_LABEL, None)
+        return secret
+
     def get_secret(self, scope: Scopes, key: str) -> Optional[str]:
         """Get secret from the secret storage."""
         if scope not in get_args(Scopes):
@@ -221,15 +234,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return value
 
         if JujuVersion.from_environ().has_secrets:
-            secret_key = self._translate_field_to_secret_key(key)
             label = generate_secret_label(self, scope)
             for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(1), reraise=True):
                 with attempt:
-                    secret = self.secrets.get(label)
+                    secret = self._safe_get_secret(scope, label)
 
             if not secret:
                 return
 
+            secret_key = self._translate_field_to_secret_key(key)
             value = secret.get_content().get(secret_key)
             if value != SECRET_DELETED_LABEL:
                 return value
@@ -249,7 +262,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
             secret_key = self._translate_field_to_secret_key(key)
             label = generate_secret_label(self, scope)
-            secret = self.secrets.get(label)
+            secret = self._safe_get_secret(scope, label)
             if not secret:
                 self.secrets.add(label, {secret_key: value}, scope)
             else:
@@ -268,7 +281,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if JujuVersion.from_environ().has_secrets:
             secret_key = self._translate_field_to_secret_key(key)
             label = generate_secret_label(self, scope)
-            secret = self.secrets.get(label)
+            secret = self._safe_get_secret(scope, label)
 
             if not secret:
                 return
