@@ -1013,7 +1013,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.error(f"failed to get primary with error {e}")
 
     def _clear_cluster_info(self) -> None:
-        logger.error(f"planned units: {self.app.planned_units()}")
+        # logger.error(f"planned units: {self.app.planned_units()}")
         if self.app.planned_units() == 0:
             # Clear DCS.
             try:
