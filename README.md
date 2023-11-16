@@ -7,7 +7,7 @@ This repository contains a [Juju Charm](https://charmhub.io/postgresql-k8s) for 
 To deploy on virtual machines, please use [Charmed PostgreSQL operator](https://charmhub.io/postgresql).
 
 ## Usage
-
+Test
 Bootstrap a Kubernetes (e.g. [Multipass-based MicroK8s](https://discourse.charmhub.io/t/charmed-environment-charm-dev-with-canonical-multipass/8886)) and create a new model using Juju 2.9+:
 
 ```shell
