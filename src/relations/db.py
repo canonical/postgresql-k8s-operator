@@ -152,9 +152,6 @@ class DbProvides(Object):
 
             self.charm.postgresql.create_database(database, user, plugins=plugins)
 
-            # Enable/disable extensions in the new database.
-            self.charm.enable_disable_extensions(database)
-
             # Build the primary's connection string.
             primary = str(
                 ConnectionString(
