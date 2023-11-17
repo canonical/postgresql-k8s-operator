@@ -667,7 +667,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.set_secret(APP_SCOPE, MONITORING_PASSWORD_KEY, new_password())
 
         self._cleanup_old_cluster_resources()
-        # self._clear_cluster_info()
         client = Client()
         try:
             endpoint = client.get(Endpoints, name=self.cluster_name, namespace=self._namespace)
@@ -1012,40 +1011,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         except RetryError as e:
             logger.error(f"failed to get primary with error {e}")
 
-    def _clear_cluster_info(self) -> None:
-        # logger.error(f"planned units: {self.app.planned_units()}")
-        if self.app.planned_units() == 0:
-            # Clear DCS.
-            try:
-                # client = Client()
-                # client.delete(
-                #     Service,
-                #     name=f"patroni-{self._name}",
-                #     namespace=self._namespace,
-                # )
-                # client.delete(
-                #     Service,
-                #     name=f"patroni-{self._name}-config",
-                #     namespace=self._namespace,
-                # )
-                # client.delete(
-                #     Service,
-                #     name=f"patroni-{self._name}-sync",
-                #     namespace=self._namespace,
-                # )
-                pass
-            except ApiError as e:
-                # Only log the exception.
-                logger.error(f"Failed to remove previous cluster information with error: {str(e)}")
-            # Remove data from unit databag.
-            self.unit_peer_data.clear()
-            # if self.unit.is_leader():
-            #     self.app_peer_data.clear()
-
     def _on_stop(self, _):
+        # Remove data from the drive when scaling down to zero to prevent
+        # the cluster from getting stuck when scaling back up.
+        if self.app.planned_units() == 0:
+            self.unit_peer_data.clear()
+
         # Patch the services to remove them when the StatefulSet is deleted
         # (i.e. application is removed).
-        self._clear_cluster_info()
         try:
             client = Client(field_manager=self.model.app.name)
 
