@@ -106,7 +106,6 @@ async def test_extensions_blocking(ops_test: OpsTest) -> None:
     await ops_test.model.wait_for_idle(
         apps=[DATABASE_APP_NAME, APPLICATION_NAME, f"{APPLICATION_NAME}2"],
         status="active",
-        raise_on_blocked=False,
         timeout=1000,
     )
 
@@ -141,7 +140,6 @@ async def test_extensions_blocking(ops_test: OpsTest) -> None:
     await ops_test.model.wait_for_idle(
         apps=[DATABASE_APP_NAME],
         status="active",
-        raise_on_blocked=False,
         timeout=1000,
     )
 
@@ -153,7 +151,6 @@ async def test_extensions_blocking(ops_test: OpsTest) -> None:
     await ops_test.model.wait_for_idle(
         apps=[DATABASE_APP_NAME, APPLICATION_NAME],
         status="active",
-        raise_on_blocked=False,
         timeout=2000,
     )
 

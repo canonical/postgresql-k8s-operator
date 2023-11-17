@@ -571,8 +571,8 @@ async def test_invalid_extra_user_roles(ops_test: OpsTest):
         )
 
 
-async def test_indico_db_blocked(ops_test: OpsTest) -> None:
-    """Tests if deploying and relating to Indico charm will block due to requested extensions."""
+async def test_indico_datatabase(ops_test: OpsTest) -> None:
+    """Tests deploying and relating to the Indico charm."""
     async with ops_test.fast_forward(fast_interval="30s"):
         await ops_test.model.deploy(
             "indico",
@@ -591,7 +591,6 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
         await ops_test.model.wait_for_idle(
             apps=["indico"],
             status="waiting",
-            raise_on_blocked=False,
             timeout=1000,
         )
 
@@ -604,6 +603,5 @@ async def test_indico_db_blocked(ops_test: OpsTest) -> None:
         await ops_test.model.wait_for_idle(
             apps=[DATABASE_APP_NAME, "indico"],
             status="active",
-            raise_on_blocked=False,
             timeout=2000,
         )
