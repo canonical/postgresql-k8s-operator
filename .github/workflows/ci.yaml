@@ -22,7 +22,7 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v5.1.2
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v6.1.1
 
   unit-test:
     name: Unit test charm
@@ -45,7 +45,7 @@ jobs:
 
   build:
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v5.1.2
+    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v6.1.1
     permissions:
       actions: write  # Needed to manage GitHub Actions cache
 
@@ -115,14 +115,8 @@ jobs:
             echo Skipping unstable tests
             echo "mark_expression=and not unstable" >> "$GITHUB_OUTPUT"
           fi
-      - name: Select test secret usage
-        id: select-test-secrets
-        if: ${{ github.event.pull_request.head.repo.full_name != 'canonical/postgresql-k8s-operator' }}
-        run: |
-          echo Skipping tests using secrets
-          echo "mark_secrets=and not uses_secrets" >> "$GITHUB_OUTPUT"
       - name: Run integration tests
-        run: tox run -e ${{ matrix.tox-environment }} -- -m 'not ${{ matrix.exclude-mark }} ${{ steps.select-test-secrets.outputs.mark_secrets }} ${{ steps.select-test-stability.outputs.mark_expression }}' --keep-models
+        run: tox run -e ${{ matrix.tox-environment }} -- -m 'not ${{ matrix.exclude-mark }} ${{ steps.select-test-stability.outputs.mark_expression }}' --keep-models
         env:
           SECRETS_FROM_GITHUB: |
             {
