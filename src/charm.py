@@ -10,6 +10,7 @@ import time
 from typing import Dict, List, Optional, Tuple
 
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
+from charms.data_platform_libs.v0.data_secrets import SecretCache, generate_secret_label
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v0.loki_push_api import LogProxyConsumer
 from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
