@@ -8,13 +8,13 @@ from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from tests.integration.ha_tests.helpers import (
-    APPLICATION_NAME,
     are_writes_increasing,
     check_writes,
     is_cluster_updated,
     start_continuous_writes,
 )
 from tests.integration.helpers import (
+    APPLICATION_NAME,
     CHARM_SERIES,
     app_name,
     build_and_deploy,

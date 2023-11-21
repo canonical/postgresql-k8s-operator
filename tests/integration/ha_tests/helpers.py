@@ -7,13 +7,11 @@ import subprocess
 import tarfile
 import tempfile
 from datetime import datetime
-from pathlib import Path
 from typing import Dict, Optional, Set, Tuple
 
 import kubernetes as kubernetes
 import psycopg2
 import requests
-import yaml
 from kubernetes import config
 from kubernetes.client.api import core_v1_api
 from kubernetes.stream import stream
@@ -30,6 +28,7 @@ from tenacity import (
 )
 
 from tests.integration.helpers import (
+    APPLICATION_NAME,
     app_name,
     db_connect,
     get_password,
@@ -37,8 +36,6 @@ from tests.integration.helpers import (
     get_unit_address,
 )
 
-APPLICATION_NAME = "postgresql-test-app"
-METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 PORT = 5432
 
 
