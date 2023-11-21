@@ -584,7 +584,7 @@ async def test_indico_datatabase(ops_test: OpsTest) -> None:
         await ops_test.model.deploy("redis-k8s", channel="stable", application_name="redis-cache")
         await asyncio.gather(
             ops_test.model.relate("redis-broker", "indico:redis-broker"),
-            ops_test.model.relate("redis-cache", "indico:redis"),
+            ops_test.model.relate("redis-cache", "indico:redis-cache"),
         )
 
         # Wait for model to stabilise
