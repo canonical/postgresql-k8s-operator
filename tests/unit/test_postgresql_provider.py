@@ -11,10 +11,7 @@ from charm import PostgresqlOperatorCharm
 from constants import PEER
 from tests.helpers import patch_network_get
 
-DATABASE = "test_database"
-EXTRA_USER_ROLES = "CREATEDB,CREATEROLE"
 RELATION_NAME = "database"
-POSTGRESQL_VERSION = "14"
 
 
 @patch_network_get(private_address="1.1.1.1")
