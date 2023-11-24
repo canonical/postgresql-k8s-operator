@@ -10,7 +10,6 @@ from tests.integration.helpers import (
     APPLICATION_NAME,
     CHARM_SERIES,
     DATABASE_APP_NAME,
-    EXTENSIONS_BLOCKING_MESSAGE,
     build_and_deploy,
     check_database_creation,
     check_database_users_existence,
@@ -19,6 +18,7 @@ from tests.integration.helpers import (
     wait_for_relation_removed_between,
 )
 
+EXTENSIONS_BLOCKING_MESSAGE = "extensions requested through relation"
 FINOS_WALTZ_APP_NAME = "finos-waltz"
 ANOTHER_FINOS_WALTZ_APP_NAME = "another-finos-waltz"
 APPLICATION_UNITS = 1
@@ -162,4 +162,13 @@ async def test_extensions_blocking(ops_test: OpsTest) -> None:
     await ops_test.model.relate(f"{DATABASE_APP_NAME}:db", f"{APPLICATION_NAME}:db")
     ops_test.model.block_until(
         lambda: leader_unit.workload_status_message == EXTENSIONS_BLOCKING_MESSAGE, timeout=1000
+    )
+
+    config = {"plugin_pg_trgm_enable": "True", "plugin_unaccent_enable": "True"}
+    await ops_test.model.applications[DATABASE_APP_NAME].set_config(config)
+    await ops_test.model.wait_for_idle(
+        apps=[DATABASE_APP_NAME, APPLICATION_NAME],
+        status="active",
+        raise_on_blocked=False,
+        timeout=2000,
     )

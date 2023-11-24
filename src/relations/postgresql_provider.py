@@ -151,11 +151,6 @@ class PostgreSQLProvider(Object):
         user = f"relation_id_{event.relation.id}"
         try:
             self.charm.postgresql.delete_user(user)
-            logger.error(
-                "user {} deleted - planned units: {} - units: {}".format(
-                    user, self.charm.app.planned_units(), len(self.charm._peers.units) + 1
-                )
-            )
         except PostgreSQLDeleteUserError as e:
             logger.exception(e)
             self.charm.unit.status = BlockedStatus(
