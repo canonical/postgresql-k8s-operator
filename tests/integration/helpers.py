@@ -413,18 +413,28 @@ async def get_leader_unit(ops_test: OpsTest, app: str) -> Optional[Unit]:
     return leader_unit
 
 
+async def get_password_on_unit(
+    ops_test: OpsTest, username: str, unit: Unit, database_app_name: str = DATABASE_APP_NAME
+) -> str:
+    action = await unit.run_action("get-password", **{"username": username})
+    result = await action.wait()
+    return result.results["password"]
+
+
 async def get_password(
     ops_test: OpsTest,
     username: str = "operator",
     database_app_name: str = DATABASE_APP_NAME,
     down_unit: str = None,
+    unit_name: str = None,
 ):
     """Retrieve a user password using the action."""
     for unit in ops_test.model.applications[database_app_name].units:
-        if unit.name != down_unit:
-            action = await unit.run_action("get-password", **{"username": username})
-            result = await action.wait()
-            return result.results["password"]
+        if unit.name == down_unit:
+            continue
+
+        if pw := await get_password_on_unit(ops_test, username, unit, database_app_name):
+            return pw
 
 
 @retry(
