@@ -161,7 +161,7 @@ class PostgreSQL:
                     curs.execute(
                         "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT LIKE 'pg_%' and schema_name <> 'information_schema';"
                     )
-                    schemas = [row[0] for row in curs]
+                    schemas = [row[0] for row in curs.fetchall()]
                     statements = self._generate_database_privileges_statements(
                         relations_accessing_this_database, schemas, user
                     )
@@ -316,49 +316,20 @@ class PostgreSQL:
         if relations_accessing_this_database == 1:
             statements.append(
                 sql.SQL(
-                    """SELECT 'ALTER TABLE '|| schemaname || '."' || tablename ||'" OWNER TO {};' as statement
+                    """SELECT 'ALTER TABLE '|| schemaname || '."' || tablename ||'" OWNER TO {};' AS statement
 INTO TEMP TABLE temp_table
 FROM pg_tables WHERE NOT schemaname IN ('pg_catalog', 'information_schema')
-ORDER BY schemaname, tablename;
-do
+UNION SELECT 'ALTER SEQUENCE '|| sequence_schema || '."' || sequence_name ||'" OWNER TO {};' AS statement
+FROM information_schema.sequences WHERE NOT sequence_schema IN ('pg_catalog', 'information_schema');
+DO
 $$
-declare r record;
+DECLARE r RECORD;
 BEGIN
   FOR r IN (select * from temp_table) LOOP
       EXECUTE format(r.statement);
   END LOOP;
 END; $$;"""
-                ).format(sql.Identifier(user))
-            )
-            statements.append(
-                sql.SQL(
-                    """SELECT 'ALTER SEQUENCE '|| sequence_schema || '."' || sequence_name ||'" OWNER TO my_new_owner;'
-FROM information_schema.sequences WHERE NOT sequence_schema IN ('pg_catalog', 'information_schema')
-ORDER BY sequence_schema, sequence_name;
-do
-$$
-declare r record;
-BEGIN
-  FOR r IN (select * from temp_table) LOOP
-      EXECUTE format(r.statement);
-  END LOOP;
-END; $$;"""
-                ).format(sql.Identifier(user))
-            )
-            statements.append(
-                sql.SQL(
-                    """SELECT 'ALTER VIEW '|| table_schema || '."' || table_name ||'" OWNER TO my_new_owner;'
-FROM information_schema.views WHERE NOT table_schema IN ('pg_catalog', 'information_schema')
-ORDER BY table_schema, table_name;
-do
-$$
-declare r record;
-BEGIN
-  FOR r IN (select * from temp_table) LOOP
-      EXECUTE format(r.statement);
-  END LOOP;
-END; $$;"""
-                ).format(sql.Identifier(user))
+                ).format(sql.Identifier(user), sql.Identifier(user))
             )
         else:
             for schema in schemas:
