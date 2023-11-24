@@ -657,3 +657,39 @@ async def test_discourse(ops_test: OpsTest):
         }
         await ops_test.model.applications[other_discourse_app_name].set_config(config)
         ops_test.model.wait_for_idle(apps=[other_discourse_app_name], status="active")
+
+
+async def test_indico_datatabase(ops_test: OpsTest) -> None:
+    """Tests deploying and relating to the Indico charm."""
+    async with ops_test.fast_forward(fast_interval="30s"):
+        await ops_test.model.deploy(
+            "indico",
+            channel="stable",
+            application_name="indico",
+            num_units=1,
+        )
+        await ops_test.model.deploy("redis-k8s", channel="stable", application_name="redis-broker")
+        await ops_test.model.deploy("redis-k8s", channel="stable", application_name="redis-cache")
+        await asyncio.gather(
+            ops_test.model.relate("redis-broker", "indico:redis-broker"),
+            ops_test.model.relate("redis-cache", "indico:redis-cache"),
+        )
+
+        # Wait for model to stabilise
+        await ops_test.model.wait_for_idle(
+            apps=["indico"],
+            status="waiting",
+            timeout=1000,
+        )
+
+        # Verify that the charm doesn't block when the extensions are enabled.
+        logger.info("Verifying that the charm doesn't block when the extensions are enabled")
+        config = {"plugin_pg_trgm_enable": "True", "plugin_unaccent_enable": "True"}
+        await ops_test.model.applications[DATABASE_APP_NAME].set_config(config)
+        await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active")
+        await ops_test.model.relate(DATABASE_APP_NAME, "indico")
+        await ops_test.model.wait_for_idle(
+            apps=[DATABASE_APP_NAME, "indico"],
+            status="active",
+            timeout=2000,
+        )

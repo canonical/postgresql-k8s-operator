@@ -32,7 +32,7 @@ from tenacity import (
 CHARM_SERIES = "jammy"
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
-EXTENSIONS_BLOCKING_MESSAGE = "extensions requested through relation"
+APPLICATION_NAME = "postgresql-test-app"
 
 charm = None
 
