@@ -316,20 +316,26 @@ class PostgreSQL:
         if relations_accessing_this_database == 1:
             statements.append(
                 sql.SQL(
-                    """SELECT 'ALTER TABLE '|| schemaname || '."' || tablename ||'" OWNER TO {};' AS statement
-INTO TEMP TABLE temp_table
-FROM pg_tables WHERE NOT schemaname IN ('pg_catalog', 'information_schema')
-UNION SELECT 'ALTER SEQUENCE '|| sequence_schema || '."' || sequence_name ||'" OWNER TO {};' AS statement
-FROM information_schema.sequences WHERE NOT sequence_schema IN ('pg_catalog', 'information_schema');
-DO
-$$
+                    """DO $$
 DECLARE r RECORD;
 BEGIN
-  FOR r IN (select * from temp_table) LOOP
+  FOR r IN (SELECT statement FROM (SELECT 1 AS index,'ALTER TABLE '|| schemaname || '."' || tablename ||'" OWNER TO {};' AS statement
+FROM pg_tables WHERE NOT schemaname IN ('pg_catalog', 'information_schema')
+UNION SELECT 2 AS index,'ALTER SEQUENCE '|| sequence_schema || '."' || sequence_name ||'" OWNER TO {};' AS statement
+FROM information_schema.sequences WHERE NOT sequence_schema IN ('pg_catalog', 'information_schema')
+UNION SELECT 3 AS index,'ALTER FUNCTION '|| nsp.nspname || '."' || p.proname ||'"('||pg_get_function_identity_arguments(p.oid)||') OWNER TO {};' AS statement
+FROM pg_proc p JOIN pg_namespace nsp ON p.pronamespace = nsp.oid WHERE NOT nsp.nspname IN ('pg_catalog', 'information_schema')
+UNION SELECT 4 AS index,'ALTER VIEW '|| schemaname || '."' || viewname ||'" OWNER TO {};' AS statement
+FROM pg_catalog.pg_views WHERE NOT schemaname IN ('pg_catalog', 'information_schema')) AS statements ORDER BY index) LOOP
       EXECUTE format(r.statement);
   END LOOP;
 END; $$;"""
-                ).format(sql.Identifier(user), sql.Identifier(user))
+                ).format(
+                    sql.Identifier(user),
+                    sql.Identifier(user),
+                    sql.Identifier(user),
+                    sql.Identifier(user),
+                )
             )
         else:
             for schema in schemas:

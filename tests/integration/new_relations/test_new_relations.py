@@ -618,7 +618,7 @@ async def test_discourse(ops_test: OpsTest):
             "s3_install_cors_rule": "false",
         }
         await ops_test.model.applications[DISCOURSE_APP_NAME].set_config(config)
-        ops_test.model.wait_for_idle(apps=[DISCOURSE_APP_NAME], status="active")
+        await ops_test.model.wait_for_idle(apps=[DISCOURSE_APP_NAME], status="active")
 
         # Deploy a new discourse application (https://github.com/canonical/data-platform-libs/issues/118
         # prevents from re-relating the same Discourse application; Discourse uses the old secret and fails).
@@ -648,7 +648,7 @@ async def test_discourse(ops_test: OpsTest):
             "s3_install_cors_rule": "false",
         }
         await ops_test.model.applications[other_discourse_app_name].set_config(config)
-        ops_test.model.wait_for_idle(apps=[other_discourse_app_name], status="active")
+        await ops_test.model.wait_for_idle(apps=[other_discourse_app_name], status="active")
 
 
 async def test_indico_datatabase(ops_test: OpsTest) -> None:

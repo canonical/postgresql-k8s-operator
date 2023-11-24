@@ -181,15 +181,23 @@ class TestPostgreSQL(unittest.TestCase):
                 Composed(
                     [
                         SQL(
-                            "SELECT 'ALTER TABLE '|| schemaname || '.\"' || tablename ||'\" OWNER TO "
+                            "DO $$\nDECLARE r RECORD;\nBEGIN\n  FOR r IN (SELECT statement FROM (SELECT 1 AS index,'ALTER TABLE '|| schemaname || '.\"' || tablename ||'\" OWNER TO "
                         ),
                         Identifier("test_user"),
                         SQL(
-                            ";' AS statement\nINTO TEMP TABLE temp_table\nFROM pg_tables WHERE NOT schemaname IN ('pg_catalog', 'information_schema')\nUNION SELECT 'ALTER SEQUENCE '|| sequence_schema || '.\"' || sequence_name ||'\" OWNER TO "
+                            ";' AS statement\nFROM pg_tables WHERE NOT schemaname IN ('pg_catalog', 'information_schema')\nUNION SELECT 2 AS index,'ALTER SEQUENCE '|| sequence_schema || '.\"' || sequence_name ||'\" OWNER TO "
                         ),
                         Identifier("test_user"),
                         SQL(
-                            ";' AS statement\nFROM information_schema.sequences WHERE NOT sequence_schema IN ('pg_catalog', 'information_schema');\nDO\n$$\nDECLARE r RECORD;\nBEGIN\n  FOR r IN (select * from temp_table) LOOP\n      EXECUTE format(r.statement);\n  END LOOP;\nEND; $$;"
+                            ";' AS statement\nFROM information_schema.sequences WHERE NOT sequence_schema IN ('pg_catalog', 'information_schema')\nUNION SELECT 3 AS index,'ALTER FUNCTION '|| nsp.nspname || '.\"' || p.proname ||'\"('||pg_get_function_identity_arguments(p.oid)||') OWNER TO "
+                        ),
+                        Identifier("test_user"),
+                        SQL(
+                            ";' AS statement\nFROM pg_proc p JOIN pg_namespace nsp ON p.pronamespace = nsp.oid WHERE NOT nsp.nspname IN ('pg_catalog', 'information_schema')\nUNION SELECT 4 AS index,'ALTER VIEW '|| schemaname || '.\"' || viewname ||'\" OWNER TO "
+                        ),
+                        Identifier("test_user"),
+                        SQL(
+                            ";' AS statement\nFROM pg_catalog.pg_views WHERE NOT schemaname IN ('pg_catalog', 'information_schema')) AS statements ORDER BY index) LOOP\n      EXECUTE format(r.statement);\n  END LOOP;\nEND; $$;"
                         ),
                     ]
                 )
