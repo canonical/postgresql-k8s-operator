@@ -572,6 +572,7 @@ async def test_discourse(ops_test: OpsTest):
         ops_test.model.deploy(
             REDIS_APP_NAME, application_name=REDIS_APP_NAME, channel="latest/edge"
         ),
+        # ops_test.model.deploy("nginx-ingress-integrator", application_name="nginx", series="focal", trust=True)
     )
 
     # Discourse requests extensions through relation, so check that the PostgreSQL charm
@@ -592,33 +593,67 @@ async def test_discourse(ops_test: OpsTest):
         # )
         #
         # # Enable the plugins/extensions required by Discourse.
+        logger.info("Enabling the plugins/extensions required by Discourse")
         config = {"plugin_hstore_enable": "True", "plugin_pg_trgm_enable": "True"}
         await ops_test.model.applications[DATABASE_APP_NAME].set_config(config)
-        await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME, REDIS_APP_NAME], status="active"
+        await gather(
+            ops_test.model.wait_for_idle(apps=[DISCOURSE_APP_NAME], status="waiting"),
+            ops_test.model.wait_for_idle(
+                apps=[DATABASE_APP_NAME, REDIS_APP_NAME], status="active"
+            ),
         )
         # Add both relations to Discourse (PostgreSQL and Redis)
         # and wait for it to be ready.
+        logger.info("Adding relations")
         await gather(
             ops_test.model.add_relation(DATABASE_APP_NAME, DISCOURSE_APP_NAME),
             ops_test.model.add_relation(REDIS_APP_NAME, DISCOURSE_APP_NAME),
+            # ops_test.model.add_relation("nginx", DISCOURSE_APP_NAME),
         )
-        await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME, DISCOURSE_APP_NAME, REDIS_APP_NAME],
-            status="active",
-            timeout=2000,
+        await gather(
+            ops_test.model.wait_for_idle(apps=[DISCOURSE_APP_NAME], timeout=2000),
+            ops_test.model.wait_for_idle(
+                apps=[DATABASE_APP_NAME, REDIS_APP_NAME], status="active"
+            ),
         )
+        logger.info("Configuring Discourse")
+        config = {
+            "developer_emails": "noreply@canonical.com",
+            "external_hostname": "discourse-k8s",
+            "smtp_address": "test.local",
+            "smtp_domain": "test.local",
+            "s3_install_cors_rule": "false",
+        }
+        await ops_test.model.applications[DISCOURSE_APP_NAME].set_config(config)
+        ops_test.model.wait_for_idle(apps=[DISCOURSE_APP_NAME], status="active")
 
-        # Break the relation.
-        await ops_test.model.applications[DATABASE_APP_NAME].remove_relation(
-            DATABASE_APP_NAME, DISCOURSE_APP_NAME
-        )
-        await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME, DISCOURSE_APP_NAME, REDIS_APP_NAME], status="active"
-        )
+        # Deploy a new discourse application (https://github.com/canonical/data-platform-libs/issues/118
+        # prevents from re-relating the same Discourse application; Discourse uses the old secret and fails).
+        await ops_test.model.applications[DISCOURSE_APP_NAME].remove()
+        other_discourse_app_name = f"other-{DISCOURSE_APP_NAME}"
+        await ops_test.model.deploy(DISCOURSE_APP_NAME, application_name=other_discourse_app_name)
 
-        # Add the relation back.
-        await ops_test.model.add_relation(DATABASE_APP_NAME, DISCOURSE_APP_NAME)
-        await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME, DISCOURSE_APP_NAME, REDIS_APP_NAME], status="active"
+        # Add both relations to Discourse (PostgreSQL and Redis)
+        # and wait for it to be ready.
+        logger.info("Adding relations")
+        await gather(
+            ops_test.model.add_relation(DATABASE_APP_NAME, other_discourse_app_name),
+            ops_test.model.add_relation(REDIS_APP_NAME, other_discourse_app_name),
+            # ops_test.model.add_relation("nginx", DISCOURSE_APP_NAME),
         )
+        await gather(
+            ops_test.model.wait_for_idle(apps=[other_discourse_app_name], timeout=2000),
+            ops_test.model.wait_for_idle(
+                apps=[DATABASE_APP_NAME, REDIS_APP_NAME], status="active"
+            ),
+        )
+        logger.info("Configuring Discourse")
+        config = {
+            "developer_emails": "noreply@canonical.com",
+            "external_hostname": "discourse-k8s",
+            "smtp_address": "test.local",
+            "smtp_domain": "test.local",
+            "s3_install_cors_rule": "false",
+        }
+        await ops_test.model.applications[other_discourse_app_name].set_config(config)
+        ops_test.model.wait_for_idle(apps=[other_discourse_app_name], status="active")

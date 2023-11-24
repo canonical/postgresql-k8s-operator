@@ -154,9 +154,6 @@ class DbProvides(Object):
                 database, user, plugins=plugins, client_relations=self.charm.client_relations
             )
 
-            # Enable/disable extensions in the new database.
-            self.charm.enable_disable_extensions(database)
-
             # Build the primary's connection string.
             primary = str(
                 ConnectionString(

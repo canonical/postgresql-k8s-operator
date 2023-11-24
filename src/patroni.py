@@ -7,7 +7,7 @@
 import logging
 import os
 import pwd
-from typing import List, Optional
+from typing import Any, List, Optional
 
 import requests
 import yaml
@@ -278,6 +278,18 @@ class Patroni:
         ]
         # Check whether the PostgreSQL process has a state equal to T (frozen).
         return any(process for process in postgresql_processes if process.split()[7] != "T")
+
+    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    def update_parameter_controller_by_patroni(self, parameter: str, value: Any) -> None:
+        """Update the value of a parameter controller by Patroni.
+
+        For more information, check https://patroni.readthedocs.io/en/latest/patroni_configuration.html#postgresql-parameters-controlled-by-patroni.
+        """
+        requests.patch(
+            f"{self._patroni_url}/config",
+            verify=self._verify,
+            json={"postgresql": {"parameters": {parameter: value}}},
+        )
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def reinitialize_postgresql(self) -> None:

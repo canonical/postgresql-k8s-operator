@@ -74,7 +74,7 @@ class PostgreSQLBackups(Object):
                 "Relation with s3-integrator charm missing, cannot create/restore backup.",
             )
 
-        s3_parameters, missing_parameters = self._retrieve_s3_parameters()
+        _, missing_parameters = self._retrieve_s3_parameters()
         if missing_parameters:
             return False, f"Missing S3 parameters: {missing_parameters}"
 
@@ -197,7 +197,7 @@ class PostgreSQLBackups(Object):
     def _change_connectivity_to_database(self, connectivity: bool) -> None:
         """Enable or disable the connectivity to the database."""
         self.charm.unit_peer_data.update({"connectivity": "on" if connectivity else "off"})
-        self.charm.update_config()
+        self.charm.update_config(is_creating_backup=True)
 
     def _execute_command(
         self, command: List[str], timeout: float = None

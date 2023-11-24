@@ -86,7 +86,7 @@ async def test_finos_waltz_db(ops_test: OpsTest) -> None:
         await ops_test.model.remove_application(DATABASE_APP_NAME, block_until_done=True)
 
 
-@pytest.mark.notjuju3
+@pytest.mark.skip(reason="Should be ported and moved to the new relation tests")
 async def test_indico_db_blocked(ops_test: OpsTest) -> None:
     """Tests if deploying and relating to Indico charm will block due to requested extensions."""
     async with ops_test.fast_forward(fast_interval="30s"):
