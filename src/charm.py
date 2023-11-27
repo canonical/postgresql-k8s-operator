@@ -42,6 +42,7 @@ from ops.model import (
     MaintenanceStatus,
     Relation,
     Unit,
+    UnknownStatus,
     WaitingStatus,
 )
 from ops.pebble import ChangeError, Layer, PathError, ProtocolError, ServiceStatus
@@ -498,12 +499,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 continue
             extension = plugins_exception.get(extension, extension)
             extensions[extension] = enable
-        self.unit.status = WaitingStatus("Updating extensions")
+        if not isinstance(original_status, UnknownStatus):
+            self.unit.status = WaitingStatus("Updating extensions")
         try:
             self.postgresql.enable_disable_extensions(extensions, database)
         except PostgreSQLEnableDisableExtensionError as e:
             logger.exception("failed to change plugins: %s", str(e))
-        self.unit.status = original_status
+        if not isinstance(original_status, UnknownStatus):
+            self.unit.status = original_status
 
     def _add_members(self, event) -> None:
         """Add new cluster members.
