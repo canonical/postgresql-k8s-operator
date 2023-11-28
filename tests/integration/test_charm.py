@@ -50,6 +50,7 @@ async def test_build_and_deploy(ops_test: OpsTest):
         assert ops_test.model.applications[APP_NAME].units[unit_id].workload_status == "active"
 
 
+@pytest.mark.group(1)
 async def test_application_created_required_resources(ops_test: OpsTest) -> None:
     # Compare the k8s resources that the charm and Patroni should create with
     # the currently created k8s resources.

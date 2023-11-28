@@ -7,6 +7,7 @@ import time
 import pytest
 from pytest_operator.plugin import OpsTest
 
+from . import markers
 from .helpers import (
     CHARM_SERIES,
     METADATA,
@@ -81,7 +82,7 @@ async def test_password_rotation(ops_test: OpsTest):
 
 
 @pytest.mark.group(1)
-@pytest.mark.juju3
+@markers.juju_secrets
 async def test_password_from_secret_same_as_cli(ops_test: OpsTest):
     """Checking if password is same as returned by CLI.
 
