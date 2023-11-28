@@ -25,6 +25,8 @@ from tenacity import (
 
 from constants import REWIND_USER, TLS_CA_FILE
 
+RUNNING_STATES = ["running", "streaming"]
+
 logger = logging.getLogger(__name__)
 
 
@@ -162,7 +164,7 @@ class Patroni:
         except RetryError:
             return False
 
-        return all(member["state"] == "running" for member in r.json()["members"])
+        return all(member["state"] in RUNNING_STATES for member in r.json()["members"])
 
     @property
     def is_creating_backup(self) -> bool:
@@ -222,7 +224,7 @@ class Patroni:
                         f"{'https' if self._tls_enabled else 'http'}://{self._primary_endpoint}:8008/health",
                         verify=self._verify,
                     )
-                    if r.json()["state"] != "running":
+                    if r.json()["state"] not in RUNNING_STATES:
                         raise EndpointNotReadyError
         except RetryError:
             return False
@@ -264,7 +266,7 @@ class Patroni:
         except RetryError:
             return False
 
-        return r.json()["state"] == "running"
+        return r.json()["state"] in RUNNING_STATES
 
     @property
     def is_database_running(self) -> bool:
