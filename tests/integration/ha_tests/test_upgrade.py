@@ -15,12 +15,9 @@ from lightkube.resources.apps_v1 import StatefulSet
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 
-from tests.integration.ha_tests.helpers import (
-    are_writes_increasing,
-    check_writes,
-    start_continuous_writes,
-)
-from tests.integration.helpers import (
+from tests.integration.new_relations.helpers import get_application_relation_data
+
+from ..helpers import (
     APPLICATION_NAME,
     DATABASE_APP_NAME,
     METADATA,
@@ -29,7 +26,11 @@ from tests.integration.helpers import (
     get_primary,
     get_unit_by_index,
 )
-from tests.integration.new_relations.helpers import get_application_relation_data
+from .helpers import (
+    are_writes_increasing,
+    check_writes,
+    start_continuous_writes,
+)
 
 logger = logging.getLogger(__name__)
 

@@ -13,9 +13,10 @@ from psycopg2 import sql
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from tests.helpers import METADATA, STORAGE_PATH
-from tests.integration.helpers import (
+from .helpers import (
     CHARM_SERIES,
+    METADATA,
+    STORAGE_PATH,
     build_and_deploy,
     convert_records_to_dict,
     db_connect,

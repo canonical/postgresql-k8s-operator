@@ -7,9 +7,9 @@ import time
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.helpers import METADATA
-from tests.integration.helpers import (
+from .helpers import (
     CHARM_SERIES,
+    METADATA,
     check_patroni,
     get_leader_unit,
     get_password,

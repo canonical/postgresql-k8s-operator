@@ -7,13 +7,7 @@ from lightkube.resources.core_v1 import Pod
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from tests.integration.ha_tests.helpers import (
-    are_writes_increasing,
-    check_writes,
-    is_cluster_updated,
-    start_continuous_writes,
-)
-from tests.integration.helpers import (
+from ..helpers import (
     APPLICATION_NAME,
     CHARM_SERIES,
     app_name,
@@ -23,6 +17,12 @@ from tests.integration.helpers import (
     get_primary,
     get_unit_address,
     scale_application,
+)
+from .helpers import (
+    are_writes_increasing,
+    check_writes,
+    is_cluster_updated,
+    start_continuous_writes,
 )
 
 

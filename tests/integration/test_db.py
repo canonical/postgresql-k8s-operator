@@ -7,7 +7,7 @@ from asyncio import gather
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers import (
+from .helpers import (
     APPLICATION_NAME,
     CHARM_SERIES,
     DATABASE_APP_NAME,

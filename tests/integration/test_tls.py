@@ -8,7 +8,7 @@ import requests
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from tests.integration.helpers import (
+from .helpers import (
     DATABASE_APP_NAME,
     build_and_deploy,
     check_database_creation,

@@ -6,7 +6,7 @@ import asyncio
 import pytest as pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers import (
+from .helpers import (
     DATABASE_APP_NAME,
     build_and_deploy,
     check_database_creation,

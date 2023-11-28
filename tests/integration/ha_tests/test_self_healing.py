@@ -9,7 +9,18 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from tests.integration.ha_tests.helpers import (
+from ..helpers import (
+    APPLICATION_NAME,
+    CHARM_SERIES,
+    METADATA,
+    app_name,
+    build_and_deploy,
+    db_connect,
+    get_password,
+    get_unit_address,
+    run_command_on_unit,
+)
+from .helpers import (
     are_all_db_processes_down,
     are_writes_increasing,
     change_patroni_setting,
@@ -28,17 +39,6 @@ from tests.integration.ha_tests.helpers import (
     remove_instance_isolation,
     send_signal_to_process,
     start_continuous_writes,
-)
-from tests.integration.helpers import (
-    APPLICATION_NAME,
-    CHARM_SERIES,
-    METADATA,
-    app_name,
-    build_and_deploy,
-    db_connect,
-    get_password,
-    get_unit_address,
-    run_command_on_unit,
 )
 
 logger = logging.getLogger(__name__)
