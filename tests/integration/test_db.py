@@ -31,6 +31,7 @@ DATABASE_UNITS = 3
 logger = logging.getLogger(__name__)
 
 
+@pytest.mark.group(1)
 async def test_finos_waltz_db(ops_test: OpsTest) -> None:
     """Deploy Finos Waltz to test the 'db' relation.
 
@@ -89,6 +90,7 @@ async def test_finos_waltz_db(ops_test: OpsTest) -> None:
         await ops_test.model.remove_application(FINOS_WALTZ_APP_NAME, block_until_done=True)
 
 
+@pytest.mark.group(1)
 async def test_extensions_blocking(ops_test: OpsTest) -> None:
     await ops_test.model.deploy(
         APPLICATION_NAME,
@@ -178,6 +180,7 @@ async def test_extensions_blocking(ops_test: OpsTest) -> None:
     )
 
 
+@pytest.mark.group(1)
 @pytest.mark.skip(reason="Should be ported and moved to the new relation tests")
 async def test_discourse(ops_test: OpsTest):
     database_application_name = f"extensions-{DATABASE_APP_NAME}"

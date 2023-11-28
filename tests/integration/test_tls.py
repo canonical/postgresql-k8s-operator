@@ -32,12 +32,14 @@ APPLICATION_UNITS = 2
 DATABASE_UNITS = 3
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy three units of PostgreSQL."""
     await build_and_deploy(ops_test, DATABASE_UNITS, wait_for_idle=False)
 
 
+@pytest.mark.group(1)
 async def check_tls_rewind(ops_test: OpsTest) -> None:
     """Checks if TLS was used by rewind."""
     for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
@@ -57,6 +59,7 @@ async def check_tls_rewind(ops_test: OpsTest) -> None:
     ), "TLS is not being used on pg_rewind connections"
 
 
+@pytest.mark.group(1)
 async def test_mattermost_db(ops_test: OpsTest) -> None:
     """Deploy Mattermost to test the 'db' relation.
 

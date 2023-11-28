@@ -35,6 +35,7 @@ APP_NAME = METADATA["name"]
 UNIT_IDS = [0, 1, 2]
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest):
@@ -57,6 +58,7 @@ async def test_application_created_required_resources(ops_test: OpsTest) -> None
     assert set(existing_resources) == set(expected_resources)
 
 
+@pytest.mark.group(1)
 @pytest.mark.parametrize("unit_id", UNIT_IDS)
 async def test_labels_consistency_across_pods(ops_test: OpsTest, unit_id: int) -> None:
     model = ops_test.model.info
@@ -68,6 +70,7 @@ async def test_labels_consistency_across_pods(ops_test: OpsTest, unit_id: int) -
     assert pod.metadata.labels["cluster-name"] == f"patroni-{APP_NAME}"
 
 
+@pytest.mark.group(1)
 @pytest.mark.parametrize("unit_id", UNIT_IDS)
 async def test_database_is_up(ops_test: OpsTest, unit_id: int):
     # Query Patroni REST API and check the status that indicates
@@ -77,6 +80,7 @@ async def test_database_is_up(ops_test: OpsTest, unit_id: int):
     assert result.status_code == 200
 
 
+@pytest.mark.group(1)
 @pytest.mark.parametrize("unit_id", UNIT_IDS)
 async def test_exporter_is_up(ops_test: OpsTest, unit_id: int):
     # Query exporter metrics endpoint and check the status that indicates
@@ -89,6 +93,7 @@ async def test_exporter_is_up(ops_test: OpsTest, unit_id: int):
     ), "Scrape error in postgresql_prometheus_exporter"
 
 
+@pytest.mark.group(1)
 @pytest.mark.parametrize("unit_id", UNIT_IDS)
 async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
     password = await get_password(ops_test)
@@ -162,6 +167,7 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
     assert settings["postgresql"]["remove_data_directory_on_diverged_timelines"] is True
 
 
+@pytest.mark.group(1)
 async def test_postgresql_parameters_change(ops_test: OpsTest) -> None:
     """Test that's possible to change PostgreSQL parameters."""
     await ops_test.model.applications[APP_NAME].set_config(
@@ -198,6 +204,7 @@ async def test_postgresql_parameters_change(ops_test: OpsTest) -> None:
         assert settings["lc_monetary"] == "en_GB.utf8"
 
 
+@pytest.mark.group(1)
 async def test_cluster_is_stable_after_leader_deletion(ops_test: OpsTest) -> None:
     """Tests that the cluster maintains a primary after the primary is deleted."""
     # Find the current primary unit.
@@ -220,6 +227,7 @@ async def test_cluster_is_stable_after_leader_deletion(ops_test: OpsTest) -> Non
     assert await get_primary(ops_test, down_unit=primary) != "None"
 
 
+@pytest.mark.group(1)
 @pytest.mark.unstable
 async def test_scale_down_and_up(ops_test: OpsTest):
     """Test data is replicated to new units after a scale up."""
@@ -246,6 +254,7 @@ async def test_scale_down_and_up(ops_test: OpsTest):
     await scale_application(ops_test, APP_NAME, initial_scale)
 
 
+@pytest.mark.group(1)
 async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
     """Test data persists through a graceful restart."""
     primary = await get_primary(ops_test)
@@ -274,6 +283,7 @@ async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
             connection.cursor().execute("SELECT * FROM gracetest;")
 
 
+@pytest.mark.group(1)
 async def test_persist_data_through_failure(ops_test: OpsTest):
     """Test data persists through a failure."""
     primary = await get_primary(ops_test)
@@ -314,6 +324,7 @@ async def test_persist_data_through_failure(ops_test: OpsTest):
             connection.cursor().execute("SELECT * FROM failtest;")
 
 
+@pytest.mark.group(1)
 async def test_automatic_failover_after_leader_issue(ops_test: OpsTest) -> None:
     """Tests that an automatic failover is triggered after an issue happens in the leader."""
     # Find the current primary unit.
@@ -331,6 +342,7 @@ async def test_automatic_failover_after_leader_issue(ops_test: OpsTest) -> None:
     assert await get_primary(ops_test) != "None"
 
 
+@pytest.mark.group(1)
 async def test_application_removal(ops_test: OpsTest) -> None:
     # Remove the application to trigger some hooks (like peer relation departed).
     await ops_test.model.applications[APP_NAME].remove()
@@ -356,6 +368,7 @@ async def test_application_removal(ops_test: OpsTest) -> None:
     assert APP_NAME not in ops_test.model.applications
 
 
+@pytest.mark.group(1)
 async def test_redeploy_charm_same_model(ops_test: OpsTest):
     """Redeploy the charm in the same model to test that it works."""
     charm = await ops_test.build_charm(".")
@@ -378,6 +391,7 @@ async def test_redeploy_charm_same_model(ops_test: OpsTest):
         )
 
 
+@pytest.mark.group(1)
 async def test_redeploy_charm_same_model_after_forcing_removal(ops_test: OpsTest) -> None:
     """Redeploy the charm in the same model to test that it works after a forceful removal."""
     return_code, _, stderr = await ops_test.juju(
@@ -421,6 +435,7 @@ async def test_redeploy_charm_same_model_after_forcing_removal(ops_test: OpsTest
         )
 
 
+@pytest.mark.group(1)
 async def test_storage_with_more_restrictive_permissions(ops_test: OpsTest):
     """Test that the charm can be deployed with a storage with more restrictive permissions."""
     app_name = f"test-storage-{APP_NAME}"
