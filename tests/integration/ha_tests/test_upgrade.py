@@ -15,8 +15,7 @@ from lightkube.resources.apps_v1 import StatefulSet
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 
-from tests.integration.new_relations.helpers import get_application_relation_data
-
+from ...new_relations.helpers import get_application_relation_data
 from ..helpers import (
     APPLICATION_NAME,
     DATABASE_APP_NAME,
