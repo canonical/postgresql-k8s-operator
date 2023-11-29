@@ -250,7 +250,6 @@ async def test_full_cluster_restart(
 
 
 @pytest.mark.group(1)
-@pytest.mark.ha_self_healing_tests
 async def test_forceful_restart_without_data_and_transaction_logs(
     ops_test: OpsTest,
     continuous_writes,
