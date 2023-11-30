@@ -1512,6 +1512,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         return cpu_cores, allocable_memory
 
+    @property
+    def client_relations(self) -> List[Relation]:
+        """Return the list of established client relations."""
+        relations = []
+        for relation_name in ["database", "db", "db-admin"]:
+            for relation in self.model.relations.get(relation_name, []):
+                relations.append(relation)
+        return relations
+
 
 if __name__ == "__main__":
     main(PostgresqlOperatorCharm, use_juju_for_storage=True)
