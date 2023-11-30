@@ -42,6 +42,7 @@ from ops.model import (
     MaintenanceStatus,
     Relation,
     Unit,
+    UnknownStatus,
     WaitingStatus,
 )
 from ops.pebble import ChangeError, Layer, PathError, ProtocolError, ServiceStatus
@@ -498,12 +499,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 continue
             extension = plugins_exception.get(extension, extension)
             extensions[extension] = enable
-        self.unit.status = WaitingStatus("Updating extensions")
+        if not isinstance(original_status, UnknownStatus):
+            self.unit.status = WaitingStatus("Updating extensions")
         try:
             self.postgresql.enable_disable_extensions(extensions, database)
         except PostgreSQLEnableDisableExtensionError as e:
             logger.exception("failed to change plugins: %s", str(e))
-        self.unit.status = original_status
+        if not isinstance(original_status, UnknownStatus):
+            self.unit.status = original_status
 
     def _add_members(self, event) -> None:
         """Add new cluster members.
@@ -603,6 +606,23 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.set_secret(APP_SCOPE, MONITORING_PASSWORD_KEY, new_password())
 
         self._cleanup_old_cluster_resources()
+        client = Client()
+        try:
+            endpoint = client.get(Endpoints, name=self.cluster_name, namespace=self._namespace)
+            if "leader" not in endpoint.metadata.annotations:
+                patch = {
+                    "metadata": {
+                        "annotations": {"leader": self._unit_name_to_pod_name(self._unit)}
+                    }
+                }
+                client.patch(
+                    Endpoints, name=self.cluster_name, namespace=self._namespace, obj=patch
+                )
+                self.app_peer_data.pop("cluster_initialised", None)
+        except ApiError as e:
+            # Ignore the error only when the resource doesn't exist.
+            if e.status.code != 404:
+                raise e
 
         # Create resources and add labels needed for replication.
         try:
@@ -931,6 +951,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.error(f"failed to get primary with error {e}")
 
     def _on_stop(self, _):
+        # Remove data from the drive when scaling down to zero to prevent
+        # the cluster from getting stuck when scaling back up.
+        if self.app.planned_units() == 0:
+            self.unit_peer_data.clear()
+
         # Patch the services to remove them when the StatefulSet is deleted
         # (i.e. application is removed).
         try:
