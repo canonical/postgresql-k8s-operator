@@ -5,6 +5,7 @@ import asyncio
 import logging
 import secrets
 import string
+from asyncio import gather
 from pathlib import Path
 
 import psycopg2
@@ -30,6 +31,8 @@ APPLICATION_APP_NAME = "postgresql-test-app"
 DATABASE_APP_NAME = "database"
 ANOTHER_DATABASE_APP_NAME = "another-database"
 DATA_INTEGRATOR_APP_NAME = "data-integrator"
+DISCOURSE_APP_NAME = "discourse-k8s"
+REDIS_APP_NAME = "redis-k8s"
 APP_NAMES = [APPLICATION_APP_NAME, DATABASE_APP_NAME, ANOTHER_DATABASE_APP_NAME]
 DATABASE_APP_METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 FIRST_DATABASE_RELATION_NAME = "first-database"
@@ -85,7 +88,9 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest, databas
         await ops_test.model.add_relation(
             f"{APPLICATION_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}", DATABASE_APP_NAME
         )
-        await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active", raise_on_blocked=True)
+        await ops_test.model.wait_for_idle(
+            apps=[DATABASE_APP_NAME], status="active", raise_on_blocked=True
+        )
 
         # Check that on juju 3 we have secrets and no username and password in the rel databag
         if hasattr(ops_test.model, "list_secrets"):
@@ -569,6 +574,81 @@ async def test_invalid_extra_user_roles(ops_test: OpsTest):
             raise_on_blocked=False,
             timeout=1000,
         )
+
+
+async def test_discourse(ops_test: OpsTest):
+    # Deploy Discourse and Redis.
+    await gather(
+        ops_test.model.deploy(DISCOURSE_APP_NAME, application_name=DISCOURSE_APP_NAME),
+        ops_test.model.deploy(
+            REDIS_APP_NAME, application_name=REDIS_APP_NAME, channel="latest/edge"
+        ),
+    )
+
+    async with ops_test.fast_forward():
+        # Enable the plugins/extensions required by Discourse.
+        logger.info("Enabling the plugins/extensions required by Discourse")
+        config = {"plugin_hstore_enable": "True", "plugin_pg_trgm_enable": "True"}
+        await ops_test.model.applications[DATABASE_APP_NAME].set_config(config)
+        await gather(
+            ops_test.model.wait_for_idle(apps=[DISCOURSE_APP_NAME], status="waiting"),
+            ops_test.model.wait_for_idle(
+                apps=[DATABASE_APP_NAME, REDIS_APP_NAME], status="active"
+            ),
+        )
+        # Add both relations to Discourse (PostgreSQL and Redis)
+        # and wait for it to be ready.
+        logger.info("Adding relations")
+        await gather(
+            ops_test.model.add_relation(DATABASE_APP_NAME, DISCOURSE_APP_NAME),
+            ops_test.model.add_relation(REDIS_APP_NAME, DISCOURSE_APP_NAME),
+        )
+        await gather(
+            ops_test.model.wait_for_idle(apps=[DISCOURSE_APP_NAME], timeout=2000),
+            ops_test.model.wait_for_idle(
+                apps=[DATABASE_APP_NAME, REDIS_APP_NAME], status="active"
+            ),
+        )
+        logger.info("Configuring Discourse")
+        config = {
+            "developer_emails": "noreply@canonical.com",
+            "external_hostname": "discourse-k8s",
+            "smtp_address": "test.local",
+            "smtp_domain": "test.local",
+            "s3_install_cors_rule": "false",
+        }
+        await ops_test.model.applications[DISCOURSE_APP_NAME].set_config(config)
+        await ops_test.model.wait_for_idle(apps=[DISCOURSE_APP_NAME], status="active")
+
+        # Deploy a new discourse application (https://github.com/canonical/data-platform-libs/issues/118
+        # prevents from re-relating the same Discourse application; Discourse uses the old secret and fails).
+        await ops_test.model.applications[DISCOURSE_APP_NAME].remove()
+        other_discourse_app_name = f"other-{DISCOURSE_APP_NAME}"
+        await ops_test.model.deploy(DISCOURSE_APP_NAME, application_name=other_discourse_app_name)
+
+        # Add both relations to Discourse (PostgreSQL and Redis)
+        # and wait for it to be ready.
+        logger.info("Adding relations")
+        await gather(
+            ops_test.model.add_relation(DATABASE_APP_NAME, other_discourse_app_name),
+            ops_test.model.add_relation(REDIS_APP_NAME, other_discourse_app_name),
+        )
+        await gather(
+            ops_test.model.wait_for_idle(apps=[other_discourse_app_name], timeout=2000),
+            ops_test.model.wait_for_idle(
+                apps=[DATABASE_APP_NAME, REDIS_APP_NAME], status="active"
+            ),
+        )
+        logger.info("Configuring Discourse")
+        config = {
+            "developer_emails": "noreply@canonical.com",
+            "external_hostname": "discourse-k8s",
+            "smtp_address": "test.local",
+            "smtp_domain": "test.local",
+            "s3_install_cors_rule": "false",
+        }
+        await ops_test.model.applications[other_discourse_app_name].set_config(config)
+        await ops_test.model.wait_for_idle(apps=[other_discourse_app_name], status="active")
 
 
 async def test_indico_datatabase(ops_test: OpsTest) -> None:
