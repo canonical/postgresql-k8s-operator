@@ -20,6 +20,7 @@ from ..helpers import (
     get_password,
     get_unit_address,
     run_command_on_unit,
+    scale_application,
 )
 from .helpers import (
     are_all_db_processes_down,
@@ -394,3 +395,44 @@ async def test_network_cut(
     ), "Connection is not possible after network restore"
 
     await is_cluster_updated(ops_test, primary_name)
+
+
+@pytest.mark.group(1)
+async def test_scaling_to_zero(ops_test: OpsTest, continuous_writes) -> None:
+    """Scale the database to zero units and scale up again."""
+    # Locate primary unit.
+    app = await app_name(ops_test)
+
+    # Start an application that continuously writes data to the database.
+    await start_continuous_writes(ops_test, app)
+
+    # Scale the database to zero units.
+    logger.info("scaling database to zero units")
+    await scale_application(ops_test, app, 0)
+
+    # Scale the database to three units.
+    logger.info("scaling database to three units")
+    await scale_application(ops_test, app, 3)
+
+    # Verify all units are up and running.
+    logger.info("waiting for the database service to start in all units")
+    for unit in ops_test.model.applications[app].units:
+        assert await is_postgresql_ready(
+            ops_test, unit.name
+        ), f"unit {unit.name} not restarted after cluster restart."
+
+    logger.info("checking whether writes are increasing")
+    await are_writes_increasing(ops_test)
+
+    # Verify that all units are part of the same cluster.
+    logger.info("checking whether all units are part of the same cluster")
+    member_ips = await fetch_cluster_members(ops_test)
+    ip_addresses = [
+        await get_unit_address(ops_test, unit.name)
+        for unit in ops_test.model.applications[app].units
+    ]
+    assert set(member_ips) == set(ip_addresses), "not all units are part of the same cluster."
+
+    # Verify that no writes to the database were missed after stopping the writes.
+    logger.info("checking whether no writes to the database were missed after stopping the writes")
+    await check_writes(ops_test)
