@@ -779,6 +779,21 @@ class TestCharm(unittest.TestCase):
             self.assertEqual(_client.return_value.apply.call_count, 2)
             self.assertIn("failed to patch k8s MagicMock", "".join(logs.output))
 
+    def test_client_relations(self):
+        # Test when the charm has no relations.
+        self.assertEqual(self.charm.client_relations, [])
+
+        # Test when the charm has some relations.
+        self.harness.add_relation("database", "application")
+        self.harness.add_relation("db", "legacy-application")
+        self.harness.add_relation("db-admin", "legacy-admin-application")
+        database_relation = self.harness.model.get_relation("database")
+        db_relation = self.harness.model.get_relation("db")
+        db_admin_relation = self.harness.model.get_relation("db-admin")
+        self.assertEqual(
+            self.charm.client_relations, [database_relation, db_relation, db_admin_relation]
+        )
+
     @parameterized.expand([("app"), ("unit")])
     @pytest.mark.usefixtures("only_with_juju_secrets")
     def test_set_secret_returning_secret_label(self, scope):
