@@ -4,6 +4,7 @@
 import logging
 from asyncio import gather
 
+import pytest
 from pytest_operator.plugin import OpsTest
 
 from .helpers import (
