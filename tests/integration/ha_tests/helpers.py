@@ -27,7 +27,7 @@ from tenacity import (
     wait_fixed,
 )
 
-from tests.integration.helpers import (
+from ..helpers import (
     APPLICATION_NAME,
     app_name,
     db_connect,
