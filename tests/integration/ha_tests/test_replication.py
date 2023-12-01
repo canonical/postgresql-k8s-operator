@@ -64,7 +64,7 @@ async def test_reelection(ops_test: OpsTest, continuous_writes, primary_start_ti
 
     # Kill the current primary.
     primary_name = await get_primary(ops_test, app)
-    client = Client(namespace=ops_test.model.info.name)
+    client = Client(namespace=ops_test.model.info.name, trust_env=False)
     client.delete(Pod, name=primary_name.replace("/", "-"))
 
     # Wait and get the primary again (which can be any unit, including the previous primary).

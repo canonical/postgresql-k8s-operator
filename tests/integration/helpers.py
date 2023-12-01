@@ -365,7 +365,7 @@ def get_existing_k8s_resources(namespace: str, application: str) -> set:
         set of existing charm/Patroni specific k8s resources.
     """
     # Create a k8s API client instance.
-    client = Client(namespace=namespace)
+    client = Client(namespace=namespace, trust_env=False)
 
     # Retrieve the resources created by the charm and Patroni.
     resources = set()

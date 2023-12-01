@@ -79,7 +79,7 @@ async def build_connection_string(
 
     # Translate the service hostname to an IP address.
     model = ops_test.model.info
-    client = AsyncClient(namespace=model.name)
+    client = AsyncClient(namespace=model.name, trust_env=False)
     service = await client.get(Service, name=host.split(".")[0])
     ip = service.spec.clusterIP
 
