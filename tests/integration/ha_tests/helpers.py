@@ -284,7 +284,7 @@ async def count_writes(
 
             # Translate the service hostname to an IP address.
             model = ops_test.model.info
-            client = Client(namespace=model.name)
+            client = Client(namespace=model.name, trust_env=False)
             service = client.get(Pod, name=host.split(".")[0])
             ip = service.status.podIP
 
@@ -349,7 +349,7 @@ async def fetch_cluster_members(ops_test: OpsTest):
     def get_host_ip(host: str) -> str:
         # Translate the pod hostname to an IP address.
         model = ops_test.model.info
-        client = Client(namespace=model.name)
+        client = Client(namespace=model.name, trust_env=False)
         pod = client.get(Pod, name=host.split(".")[0])
         return pod.status.podIP
 

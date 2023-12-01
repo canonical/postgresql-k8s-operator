@@ -81,7 +81,7 @@ async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
             assert primary_name == f"{DATABASE_APP_NAME}/0", "Primary unit not set to unit 0"
 
     logger.info("Assert partition is set to 2")
-    client = Client()
+    client = Client(trust_env=False)
     stateful_set = client.get(
         res=StatefulSet, namespace=ops_test.model.info.name, name=DATABASE_APP_NAME
     )
