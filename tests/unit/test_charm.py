@@ -975,12 +975,10 @@ class TestCharm(unittest.TestCase):
         )
 
         # Test when only one of the two config options for profile limit memory is set.
-        _render_patroni_yml_file.reset_mock()
         self.harness.update_config({"profile-limit-memory": 1000})
         self.charm.update_config()
 
         # Test when only one of the two config options for profile limit memory is set.
-        _render_patroni_yml_file.reset_mock()
         self.harness.update_config({"profile_limit_memory": 1000}, unset={"profile-limit-memory"})
         self.charm.update_config()
 
