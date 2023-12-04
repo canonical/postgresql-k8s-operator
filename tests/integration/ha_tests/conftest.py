@@ -6,7 +6,8 @@ import pytest as pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from tests.integration.ha_tests.helpers import (
+from ..helpers import app_name
+from .helpers import (
     APPLICATION_NAME,
     change_patroni_setting,
     change_wal_settings,
@@ -17,7 +18,6 @@ from tests.integration.ha_tests.helpers import (
     modify_pebble_restart_delay,
     remove_instance_isolation,
 )
-from tests.integration.helpers import app_name
 
 
 @pytest.fixture()

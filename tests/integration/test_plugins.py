@@ -7,7 +7,7 @@ import psycopg2 as psycopg2
 import pytest as pytest
 from pytest_operator.plugin import OpsTest
 
-from tests.integration.helpers import (
+from .helpers import (
     DATABASE_APP_NAME,
     build_and_deploy,
     db_connect,
@@ -59,6 +59,7 @@ INSERT_USERNAME_EXTENSION_STATEMENT = "CREATE TABLE username_test (name text, us
 MODDATETIME_EXTENSION_STATEMENT = "CREATE TABLE mdt (moddate timestamp DEFAULT CURRENT_TIMESTAMP NOT NULL);CREATE TRIGGER mdt_moddatetime BEFORE UPDATE ON mdt FOR EACH ROW EXECUTE PROCEDURE moddatetime (moddate);"
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_plugins(ops_test: OpsTest) -> None:
     """Build and deploy one unit of PostgreSQL and then test the available plugins."""

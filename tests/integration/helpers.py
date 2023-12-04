@@ -33,6 +33,7 @@ CHARM_SERIES = "jammy"
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
 APPLICATION_NAME = "postgresql-test-app"
+STORAGE_PATH = METADATA["storage"]["pgdata"]["location"]
 
 charm = None
 
@@ -637,12 +638,18 @@ async def scale_application(ops_test: OpsTest, application_name: str, scale: int
         scale: The number of units to scale to
     """
     await ops_test.model.applications[application_name].scale(scale)
-    await ops_test.model.wait_for_idle(
-        apps=[application_name],
-        status="active",
-        timeout=1000,
-        wait_for_exact_units=scale,
-    )
+    if scale == 0:
+        await ops_test.model.block_until(
+            lambda: len(ops_test.model.applications[DATABASE_APP_NAME].units) == scale,
+            timeout=1000,
+        )
+    else:
+        await ops_test.model.wait_for_idle(
+            apps=[application_name],
+            status="active",
+            timeout=1000,
+            wait_for_exact_units=scale,
+        )
 
 
 async def set_password(
