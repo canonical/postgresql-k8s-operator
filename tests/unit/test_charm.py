@@ -916,3 +916,74 @@ class TestCharm(unittest.TestCase):
         secret_label = self.harness.charm.set_secret(scope, "my-secret", "blablabla")
         assert self.harness.charm.model.get_secret(label=secret_label)
         assert self.harness.charm.get_secret(scope, "my-secret") == "blablabla"
+
+    @patch(
+        "charm.PostgresqlOperatorCharm._is_workload_running",
+        new_callable=PropertyMock(return_value=False),
+    )
+    @patch(
+        "upgrade.PostgreSQLUpgrade.is_no_sync_member",
+        new_callable=PropertyMock(return_value=False),
+    )
+    @patch("charm.Patroni.render_patroni_yml_file")
+    def test_update_config(
+        self, _render_patroni_yml_file, _is_no_sync_member, _is_workload_running
+    ):
+        # Test when no config option is changed.
+        parameters = {
+            "synchronous_commit": "on",
+            "default_text_search_config": "pg_catalog.simple",
+            "password_encryption": "scram-sha-256",
+            "log_connections": False,
+            "log_disconnections": False,
+            "log_lock_waits": False,
+            "log_min_duration_statement": -1,
+            "maintenance_work_mem": 65536,
+            "max_prepared_transactions": 0,
+            "temp_buffers": 1024,
+            "work_mem": 4096,
+            "constraint_exclusion": "partition",
+            "default_statistics_target": 100,
+            "from_collapse_limit": 8,
+            "join_collapse_limit": 8,
+            "DateStyle": "ISO, MDY",
+            "standard_conforming_strings": True,
+            "TimeZone": "UTC",
+            "bytea_output": "hex",
+            "lc_monetary": "C",
+            "lc_numeric": "C",
+            "lc_time": "C",
+            "autovacuum_analyze_scale_factor": 0.1,
+            "autovacuum_analyze_threshold": 50,
+            "autovacuum_freeze_max_age": 200000000,
+            "autovacuum_vacuum_cost_delay": 2.0,
+            "autovacuum_vacuum_scale_factor": 0.2,
+            "vacuum_freeze_table_age": 150000000,
+            "shared_buffers": "0MB",
+            "effective_cache_size": "0MB",
+        }
+        self.charm.update_config()
+        _render_patroni_yml_file.assert_called_once_with(
+            connectivity=True,
+            is_creating_backup=False,
+            enable_tls=False,
+            is_no_sync_member=False,
+            backup_id=None,
+            stanza=None,
+            restore_stanza=None,
+            parameters=parameters,
+        )
+
+        # Test when only one of the two config options for profile limit memory is set.
+        self.harness.update_config({"profile-limit-memory": 1000})
+        self.charm.update_config()
+
+        # Test when only one of the two config options for profile limit memory is set.
+        self.harness.update_config({"profile_limit_memory": 1000}, unset={"profile-limit-memory"})
+        self.charm.update_config()
+
+        # Test when the two config options for profile limit memory are set at the same time.
+        _render_patroni_yml_file.reset_mock()
+        self.harness.update_config({"profile-limit-memory": 1000})
+        with self.assertRaises(ValueError):
+            self.charm.update_config()
