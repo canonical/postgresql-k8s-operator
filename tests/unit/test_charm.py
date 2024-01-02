@@ -185,6 +185,8 @@ class TestCharm(unittest.TestCase):
 
     @pytest.mark.usefixtures("only_with_juju_secrets")
     def test_on_get_password_secrets(self):
+        self.harness.set_leader()
+
         # Create a mock event and set passwords in peer relation data.
         mock_event = MagicMock(params={})
         self.harness.charm.set_secret("app", "operator-password", "test-password")
@@ -725,7 +727,8 @@ class TestCharm(unittest.TestCase):
     @parameterized.expand([("app"), ("unit")])
     @pytest.mark.usefixtures("only_with_juju_secrets")
     def test_set_reset_new_secret(self, scope):
-        """NOTE: currently ops.testing seems to allow for non-leader to set secrets too!"""
+        self.harness.set_leader()
+
         # Getting current password
         self.harness.charm.set_secret(scope, "new-secret", "bla")
         assert self.harness.charm.get_secret(scope, "new-secret") == "bla"
@@ -791,7 +794,8 @@ class TestCharm(unittest.TestCase):
     @pytest.mark.usefixtures("only_with_juju_secrets")
     @pytest.mark.usefixtures("use_caplog")
     def test_delete_existing_password_secrets(self):
-        """NOTE: currently ops.testing seems to allow for non-leader to remove secrets too!"""
+        self.harness.set_leader()
+
         assert self.harness.charm.set_secret("app", "replication", "somepw")
         self.harness.charm.remove_secret("app", "replication")
         assert self.harness.charm.get_secret("app", "replication") is None
