@@ -146,7 +146,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 8
+LIBPATCH = 9
 
 ServiceType = Literal["ClusterIP", "LoadBalancer"]
 
@@ -314,7 +314,7 @@ class KubernetesServicePatch(Object):
             raise
 
         # Construct a list of expected ports, should the patch be applied
-        expected_ports = [(p.port, p.targetPort) for p in self.service.spec.ports]
+        expected_ports = [(p.port, p.targetPort) for p in self.service.spec.ports]  # type: ignore[attr-defined]
         # Construct a list in the same manner, using the fetched service
         fetched_ports = [
             (p.port, p.targetPort) for p in service.spec.ports  # type: ignore[attr-defined]
