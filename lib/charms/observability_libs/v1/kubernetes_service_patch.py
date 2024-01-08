@@ -127,7 +127,7 @@ import logging
 from types import MethodType
 from typing import List, Literal, Optional, Union
 
-from lightkube import ApiError, Client
+from lightkube import ApiError, Client  # pyright: ignore
 from lightkube.core import exceptions
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
@@ -146,7 +146,7 @@ LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 7
+LIBPATCH = 8
 
 ServiceType = Literal["ClusterIP", "LoadBalancer"]
 
@@ -268,7 +268,7 @@ class KubernetesServicePatch(Object):
             PatchFailed: if patching fails due to lack of permissions, or otherwise.
         """
         try:
-            client = Client()
+            client = Client()  # pyright: ignore
         except exceptions.ConfigError as e:
             logger.warning("Error creating k8s client: %s", e)
             return
@@ -300,7 +300,7 @@ class KubernetesServicePatch(Object):
         Returns:
             bool: A boolean indicating if the service patch has been applied.
         """
-        client = Client()
+        client = Client()  # pyright: ignore
         return self._is_patched(client)
 
     def _is_patched(self, client: Client) -> bool:
