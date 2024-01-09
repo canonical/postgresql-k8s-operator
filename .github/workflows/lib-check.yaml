@@ -35,7 +35,7 @@ jobs:
           poetry config warnings.export false
       - name: Generate requirements
         run: |
-          tox run -e pack-wrapper
+          tox run -e build-wrapper
           mv requirements-last-build.txt requirements.txt
       - name: Check libs
         uses: canonical/charming-actions/check-libraries@2.4.0

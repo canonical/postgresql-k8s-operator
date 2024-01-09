@@ -46,6 +46,8 @@ jobs:
   build:
     name: Build charm
     uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v9.0.2
+    with:
+      charmcraft-snap-channel: beta
 
   integration-test:
     strategy:
