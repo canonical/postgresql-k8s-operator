@@ -116,7 +116,7 @@ class PostgreSQLBackups(Object):
             for stanza in json.loads(output):
                 system_identifier_from_instance, error = self._execute_command(
                     [
-                        "/usr/lib/postgresql/14/bin/pg_controldata",
+                        f'/usr/lib/postgresql/{self.charm._patroni.rock_postgresql_version.split(".")[0]}/bin/pg_controldata',
                         "/var/lib/postgresql/data/pgdata",
                     ]
                 )
