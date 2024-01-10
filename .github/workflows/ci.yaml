@@ -22,7 +22,7 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v7.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v9.0.2
 
   unit-test:
     name: Unit test charm
@@ -45,16 +45,16 @@ jobs:
 
   build:
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v7.0.0
-    permissions:
-      actions: write  # Needed to manage GitHub Actions cache
+    uses: canonical/data-platform-workflows/.github/workflows/build_charms_with_cache.yaml@v9.0.2
+    with:
+      charmcraft-snap-channel: beta
 
   integration-test:
     strategy:
       fail-fast: false
       matrix:
         juju:
-          - agent: 2.9.45
+          - agent: 2.9.46
             libjuju: ^2
           - agent: 3.1.6
     name: Integration test charm | ${{ matrix.juju.agent }}
@@ -62,11 +62,11 @@ jobs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v7.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v9.0.2
     with:
       artifact-name: ${{ needs.build.outputs.artifact-name }}
       cloud: microk8s
-      microk8s-snap-channel: 1.28-strict/stable
+      microk8s-snap-channel: 1.29-strict/stable
       juju-agent-version: ${{ matrix.juju.agent }}
       libjuju-version-constraint: ${{ matrix.juju.libjuju }}
     secrets:

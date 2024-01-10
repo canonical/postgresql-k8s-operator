@@ -12,7 +12,7 @@ parts:
       craftctl default
       if [[ ! -f requirements.txt ]]
       then
-          echo 'ERROR: Use "tox run -e build" instead of calling "charmcraft pack" directly' >&2
+          echo 'ERROR: Use "tox run -e build-dev" instead of calling "charmcraft pack" directly' >&2
           exit 1
       fi
     build-packages:
@@ -21,5 +21,6 @@ parts:
       - rustc
       - cargo
       - pkg-config
+    charm-strict-dependencies: true
     charm-binary-python-packages:
-      - psycopg2-binary==2.9.9  # renovate
+      - psycopg2-binary
