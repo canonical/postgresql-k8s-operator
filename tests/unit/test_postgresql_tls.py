@@ -87,7 +87,7 @@ class TestPostgreSQLTLS(unittest.TestCase):
 
     @patch_network_get(private_address="1.1.1.1")
     @patch(
-        "charms.tls_certificates_interface.v1.tls_certificates.TLSCertificatesRequiresV1.request_certificate_creation"
+        "charms.tls_certificates_interface.v2.tls_certificates.TLSCertificatesRequiresV2.request_certificate_creation"
     )
     def test_request_certificate(self, _request_certificate_creation):
         # Test without an established relation.
@@ -166,7 +166,7 @@ class TestPostgreSQLTLS(unittest.TestCase):
 
     @patch_network_get(private_address="1.1.1.1")
     @patch(
-        "charms.tls_certificates_interface.v1.tls_certificates.TLSCertificatesRequiresV1.request_certificate_renewal"
+        "charms.tls_certificates_interface.v2.tls_certificates.TLSCertificatesRequiresV2.request_certificate_renewal"
     )
     def test_on_certificate_expiring(self, _request_certificate_renewal):
         # Test with no provided or invalid certificate.
@@ -200,12 +200,6 @@ class TestPostgreSQLTLS(unittest.TestCase):
                 ],
             },
         )
-
-    def test_get_tls_extensions(self):
-        extensions = self.charm.tls._get_tls_extensions()
-        self.assertEqual(len(extensions), 1)
-        self.assertEqual(extensions[0].ca, True)
-        self.assertIsNone(extensions[0].path_length)
 
     def test_get_tls_files(self):
         # Test with no TLS files available.
