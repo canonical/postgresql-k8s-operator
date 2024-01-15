@@ -38,6 +38,7 @@ class TestCharm(unittest.TestCase):
 
         self.harness = Harness(PostgresqlOperatorCharm)
         self.addCleanup(self.harness.cleanup)
+        self.rel_id = self.harness.add_relation(self._peer_relation, "postgresql-k8s")
         self.harness.begin()
         self.charm = self.harness.charm
         self._cluster_name = f"patroni-{self.charm.app.name}"
@@ -45,8 +46,6 @@ class TestCharm(unittest.TestCase):
             "namespace": self.harness.model.name,
             "app_name": self.harness.model.app.name,
         }
-
-        self.rel_id = self.harness.add_relation(self._peer_relation, self.charm.app.name)
 
     @pytest.fixture
     def use_caplog(self, caplog):

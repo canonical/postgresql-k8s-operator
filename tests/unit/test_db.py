@@ -30,6 +30,8 @@ class TestDbProvides(unittest.TestCase):
 
         # Set up the initial relation and hooks.
         self.harness.set_leader(True)
+        self.peer_rel_id = self.harness.add_relation(PEER, "postgresql-k8s")
+        self.harness.add_relation_unit(self.peer_rel_id, "postgresql-k8s/1")
         self.harness.begin()
         self.app = self.harness.charm.app.name
         self.unit = self.harness.charm.unit.name
@@ -37,8 +39,6 @@ class TestDbProvides(unittest.TestCase):
         # Define some relations.
         self.rel_id = self.harness.add_relation(RELATION_NAME, "application")
         self.harness.add_relation_unit(self.rel_id, "application/0")
-        self.peer_rel_id = self.harness.add_relation(PEER, self.app)
-        self.harness.add_relation_unit(self.peer_rel_id, f"{self.app}/1")
         self.harness.add_relation_unit(self.peer_rel_id, self.unit)
         self.harness.update_relation_data(
             self.peer_rel_id,

@@ -25,7 +25,6 @@ class TestUpgrade(unittest.TestCase):
         self.patcher = patch("lightkube.core.client.GenericSyncClient")
         self.patcher.start()
         self.harness = Harness(PostgresqlOperatorCharm)
-        self.harness.begin()
         self.upgrade_relation_id = self.harness.add_relation("upgrade", "postgresql-k8s")
         self.peer_relation_id = self.harness.add_relation("database-peers", "postgresql-k8s")
         for rel_id in (self.upgrade_relation_id, self.peer_relation_id):
@@ -34,6 +33,7 @@ class TestUpgrade(unittest.TestCase):
             self.harness.update_relation_data(
                 self.upgrade_relation_id, "postgresql-k8s/1", {"state": "idle"}
             )
+        self.harness.begin()
         self.charm = self.harness.charm
 
     def test_is_no_sync_member(self):
