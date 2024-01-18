@@ -1583,13 +1583,13 @@ dev = ["pre-commit", "pytest-asyncio", "tox"]
 
 [[package]]
 name = "pytest-operator"
-version = "0.31.1"
+version = "0.32.0"
 description = "Fixtures for Operators"
 optional = false
 python-versions = "*"
 files = [
-    {file = "pytest-operator-0.31.1.tar.gz", hash = "sha256:83a5c5a2ec781eeea97e678b777cf3469e4502fc07ff8b1b8b0f9b160cff4d32"},
-    {file = "pytest_operator-0.31.1-py3-none-any.whl", hash = "sha256:103fd6a2dfe66c7d8f317359ca0f10bd9b3a8483581d9351e5e96aff1d4e8349"},
+    {file = "pytest-operator-0.32.0.tar.gz", hash = "sha256:9e7b3b1384118110654f86bb6aaf772d29c6f38aec05492707ad09beff7b645b"},
+    {file = "pytest_operator-0.32.0-py3-none-any.whl", hash = "sha256:a03efd6e3aea5f5c7395ef64c45d6d1719fde61f8593804dc5c8ffff561ecfd4"},
 ]
 
 [package.dependencies]
@@ -2187,4 +2187,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "729191e78290a179ac27a6770cdfd4c884a29dff45ba37edff3aad28cf9ccf92"
+content-hash = "4382ab808d435ef3ce74e380cee176ba29c2871193c84a622ec4e8cea6564a6c"
