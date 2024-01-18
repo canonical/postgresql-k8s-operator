@@ -22,7 +22,6 @@ class TestPatroni(unittest.TestCase):
     def setUp(self):
         self.harness = Harness(PostgresqlOperatorCharm)
         self.addCleanup(self.harness.cleanup)
-        self.harness.add_relation("database-peers", "postgresql-k8s")
         self.harness.begin()
         self.charm = self.harness.charm
 

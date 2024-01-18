@@ -33,21 +33,21 @@ class TestPostgreSQLProvider(unittest.TestCase):
 
         # Set up the initial relation and hooks.
         self.harness.set_leader(True)
+        self.harness.begin()
+        self.app = self.harness.charm.app.name
+        self.unit = self.harness.charm.unit.name
 
         # Define some relations.
         self.rel_id = self.harness.add_relation(RELATION_NAME, "application")
         self.harness.add_relation_unit(self.rel_id, "application/0")
-        self.peer_rel_id = self.harness.add_relation(PEER, "postgresql-k8s")
-        self.harness.add_relation_unit(self.peer_rel_id, "postgresql-k8s/0")
-        self.harness.begin()
-        self.app = self.harness.charm.app.name
-        self.unit = self.harness.charm.unit.name
-        self.provider = self.harness.charm.postgresql_client_relation
+        self.peer_rel_id = self.harness.add_relation(PEER, self.app)
+        self.harness.add_relation_unit(self.peer_rel_id, self.unit)
         self.harness.update_relation_data(
             self.peer_rel_id,
             self.app,
             {"cluster_initialised": "True"},
         )
+        self.provider = self.harness.charm.postgresql_client_relation
 
     def request_database(self):
         # Reset the charm status.
