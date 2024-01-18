@@ -177,6 +177,8 @@ class TestDbProvides(unittest.TestCase):
             type: boolean"""
         harness = Harness(PostgresqlOperatorCharm, config=config)
         self.addCleanup(harness.cleanup)
+        harness.add_relation(PEER, "postgresql-k8s")
+
         harness.begin()
         self.assertEqual(
             harness.charm.legacy_db_relation._get_extensions(relation),
