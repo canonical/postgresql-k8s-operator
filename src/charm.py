@@ -1094,6 +1094,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @property
     def is_tls_enabled(self) -> bool:
         """Return whether TLS is enabled."""
+        if not self.model.get_relation(PEER):
+            return False
         return all(self.tls.get_tls_files())
 
     @property
