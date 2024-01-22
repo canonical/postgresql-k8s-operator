@@ -71,6 +71,7 @@ async def second_model(controller, first_model) -> Model:
     return second_model
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_deploy_async_replication_setup(
     ops_test: OpsTest, first_model: Model, second_model: Model
