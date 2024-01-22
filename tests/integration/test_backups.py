@@ -5,14 +5,15 @@ import logging
 import uuid
 from typing import Dict, Tuple
 
+import boto3
 import pytest as pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_exponential
 
-from tests.integration.conftest import AWS
-from tests.integration.helpers import (
+from .helpers import (
     DATABASE_APP_NAME,
     build_and_deploy,
+    construct_endpoint,
     db_connect,
     get_password,
     get_primary,
@@ -31,7 +32,61 @@ TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
 
 logger = logging.getLogger(__name__)
 
+AWS = "AWS"
+GCP = "GCP"
 
+
+@pytest.fixture(scope="module")
+async def cloud_configs(ops_test: OpsTest, github_secrets) -> None:
+    # Define some configurations and credentials.
+    configs = {
+        AWS: {
+            "endpoint": "https://s3.amazonaws.com",
+            "bucket": "data-charms-testing",
+            "path": f"/postgresql-k8s/{uuid.uuid1()}",
+            "region": "us-east-1",
+        },
+        GCP: {
+            "endpoint": "https://storage.googleapis.com",
+            "bucket": "data-charms-testing",
+            "path": f"/postgresql-k8s/{uuid.uuid1()}",
+            "region": "",
+        },
+    }
+    credentials = {
+        AWS: {
+            "access-key": github_secrets["AWS_ACCESS_KEY"],
+            "secret-key": github_secrets["AWS_SECRET_KEY"],
+        },
+        GCP: {
+            "access-key": github_secrets["GCP_ACCESS_KEY"],
+            "secret-key": github_secrets["GCP_SECRET_KEY"],
+        },
+    }
+    yield configs, credentials
+    # Delete the previously created objects.
+    for cloud, config in configs.items():
+        session = boto3.session.Session(
+            aws_access_key_id=credentials[cloud]["access-key"],
+            aws_secret_access_key=credentials[cloud]["secret-key"],
+            region_name=config["region"],
+        )
+        s3 = session.resource(
+            "s3", endpoint_url=construct_endpoint(config["endpoint"], config["region"])
+        )
+        bucket = s3.Bucket(config["bucket"])
+        # GCS doesn't support batch delete operation, so delete the objects one by one.
+        for bucket_object in bucket.objects.filter(Prefix=config["path"].lstrip("/")):
+            bucket_object.delete()
+
+
+@pytest.mark.group(1)
+async def test_none() -> None:
+    """Empty test so that the suite will not fail if all tests are skippedi."""
+    pass
+
+
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> None:
     """Build and deploy two units of PostgreSQL and then test the backup and restore actions."""
@@ -155,12 +210,28 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
     await ops_test.model.remove_application(TLS_CERTIFICATES_APP_NAME, block_until_done=True)
 
 
-async def test_restore_on_new_cluster(ops_test: OpsTest) -> None:
+@pytest.mark.group(1)
+async def test_restore_on_new_cluster(ops_test: OpsTest, github_secrets) -> None:
     """Test that is possible to restore a backup to another PostgreSQL cluster."""
+    previous_database_app_name = f"{DATABASE_APP_NAME}-gcp"
     database_app_name = f"new-{DATABASE_APP_NAME}"
+    await build_and_deploy(
+        ops_test, 1, database_app_name=previous_database_app_name, wait_for_idle=False
+    )
     await build_and_deploy(ops_test, 1, database_app_name=database_app_name, wait_for_idle=False)
+    await ops_test.model.relate(previous_database_app_name, S3_INTEGRATOR_APP_NAME)
     await ops_test.model.relate(database_app_name, S3_INTEGRATOR_APP_NAME)
     async with ops_test.fast_forward():
+        logger.info(
+            "waiting for the database charm to become blocked due to existing backups from another cluster in the repository"
+        )
+        await wait_for_idle_on_blocked(
+            ops_test,
+            previous_database_app_name,
+            0,
+            S3_INTEGRATOR_APP_NAME,
+            ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE,
+        )
         logger.info(
             "waiting for the database charm to become blocked due to existing backups from another cluster in the repository"
         )
@@ -171,6 +242,9 @@ async def test_restore_on_new_cluster(ops_test: OpsTest) -> None:
             S3_INTEGRATOR_APP_NAME,
             ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE,
         )
+    # Remove the database app with the same name as the previous one (that was used only to test
+    # that the cluster becomes blocked).
+    await ops_test.model.remove_application(previous_database_app_name, block_until_done=True)
 
     # Run the "list backups" action.
     unit_name = f"{database_app_name}/0"
@@ -227,6 +301,7 @@ async def test_restore_on_new_cluster(ops_test: OpsTest) -> None:
     connection.close()
 
 
+@pytest.mark.group(1)
 async def test_invalid_config_and_recovery_after_fixing_it(
     ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]
 ) -> None:

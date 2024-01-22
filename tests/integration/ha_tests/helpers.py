@@ -7,13 +7,11 @@ import subprocess
 import tarfile
 import tempfile
 from datetime import datetime
-from pathlib import Path
 from typing import Dict, Optional, Set, Tuple
 
 import kubernetes as kubernetes
 import psycopg2
 import requests
-import yaml
 from kubernetes import config
 from kubernetes.client.api import core_v1_api
 from kubernetes.stream import stream
@@ -29,7 +27,8 @@ from tenacity import (
     wait_fixed,
 )
 
-from tests.integration.helpers import (
+from ..helpers import (
+    APPLICATION_NAME,
     app_name,
     db_connect,
     get_password,
@@ -37,8 +36,6 @@ from tests.integration.helpers import (
     get_unit_address,
 )
 
-APPLICATION_NAME = "postgresql-test-app"
-METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 PORT = 5432
 
 
@@ -474,7 +471,7 @@ async def list_wal_files(ops_test: OpsTest, app: str) -> Set:
     files = {}
     for unit in units:
         complete_command = f"run --unit {unit} -- {command}"
-        return_code, stdout, stderr = await ops_test.juju(*complete_command.split())
+        _, stdout, _ = await ops_test.juju(*complete_command.split())
         files[unit] = stdout.splitlines()
         files[unit] = {
             i for i in files[unit] if ".history" not in i and i != "" and i != "archive_status"

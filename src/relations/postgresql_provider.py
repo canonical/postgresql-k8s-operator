@@ -17,7 +17,7 @@ from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQLDeleteUserError,
     PostgreSQLGetPostgreSQLVersionError,
 )
-from ops.charm import CharmBase, RelationBrokenEvent
+from ops.charm import CharmBase, RelationBrokenEvent, RelationDepartedEvent
 from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, Relation
 
@@ -45,6 +45,9 @@ class PostgreSQLProvider(Object):
         self.relation_name = relation_name
 
         super().__init__(charm, self.relation_name)
+        self.framework.observe(
+            charm.on[self.relation_name].relation_departed, self._on_relation_departed
+        )
         self.framework.observe(
             charm.on[self.relation_name].relation_broken, self._on_relation_broken
         )
@@ -91,7 +94,9 @@ class PostgreSQLProvider(Object):
                 if self.charm.config[plugin]
             ]
 
-            self.charm.postgresql.create_database(database, user, plugins=plugins)
+            self.charm.postgresql.create_database(
+                database, user, plugins=plugins, client_relations=self.charm.client_relations
+            )
 
             # Share the credentials with the application.
             self.database_provides.set_credentials(event.relation.id, user, password)
@@ -126,6 +131,14 @@ class PostgreSQLProvider(Object):
                 else f"Failed to initialize {self.relation_name} relation"
             )
 
+    def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
+        """Set a flag to avoid deleting database users when not wanted."""
+        # Set a flag to avoid deleting database users when this unit
+        # is removed and receives relation broken events from related applications.
+        # This is needed because of https://bugs.launchpad.net/juju/+bug/1979811.
+        if event.departing_unit == self.charm.unit:
+            self.charm._peers.data[self.charm.unit].update({"departing": "True"})
+
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Remove the user created for this relation."""
         # Check for some conditions before trying to access the PostgreSQL instance.
@@ -141,6 +154,10 @@ class PostgreSQLProvider(Object):
             return
 
         self._update_unit_status(event.relation)
+
+        if "departing" in self.charm._peers.data[self.charm.unit]:
+            logger.debug("Early exit on_relation_broken: Skipping departing unit")
+            return
 
         if not self.charm.unit.is_leader():
             return

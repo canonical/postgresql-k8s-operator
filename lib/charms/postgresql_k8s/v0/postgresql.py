@@ -22,7 +22,9 @@ import logging
 from typing import Dict, List, Optional, Set, Tuple
 
 import psycopg2
+from ops.model import Relation
 from psycopg2 import sql
+from psycopg2.sql import Composed
 
 # The unique Charmhub library identifier, never change it
 LIBID = "24ee217a54e840a598ff21a079c3e678"
@@ -32,7 +34,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 17
+LIBPATCH = 21
 
 INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE = "invalid role(s) for extra user roles"
 
@@ -117,13 +119,20 @@ class PostgreSQL:
         connection.autocommit = True
         return connection
 
-    def create_database(self, database: str, user: str, plugins: List[str] = []) -> None:
+    def create_database(
+        self,
+        database: str,
+        user: str,
+        plugins: List[str] = [],
+        client_relations: List[Relation] = [],
+    ) -> None:
         """Creates a new database and grant privileges to a user on it.
 
         Args:
             database: database to be created.
             user: user that will have access to the database.
             plugins: extensions to enable in the new database.
+            client_relations: current established client relations.
         """
         try:
             connection = self._connect_to_database()
@@ -142,29 +151,20 @@ class PostgreSQL:
                         sql.Identifier(database), sql.Identifier(user_to_grant_access)
                     )
                 )
+            relations_accessing_this_database = 0
+            for relation in client_relations:
+                for data in relation.data.values():
+                    if data.get("database") == database:
+                        relations_accessing_this_database += 1
             with self._connect_to_database(database=database) as conn:
                 with conn.cursor() as curs:
-                    statements = []
                     curs.execute(
                         "SELECT schema_name FROM information_schema.schemata WHERE schema_name NOT LIKE 'pg_%' and schema_name <> 'information_schema';"
                     )
-                    for row in curs:
-                        schema = sql.Identifier(row[0])
-                        statements.append(
-                            sql.SQL(
-                                "GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA {} TO {};"
-                            ).format(schema, sql.Identifier(user))
-                        )
-                        statements.append(
-                            sql.SQL(
-                                "GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA {} TO {};"
-                            ).format(schema, sql.Identifier(user))
-                        )
-                        statements.append(
-                            sql.SQL(
-                                "GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA {} TO {};"
-                            ).format(schema, sql.Identifier(user))
-                        )
+                    schemas = [row[0] for row in curs.fetchall()]
+                    statements = self._generate_database_privileges_statements(
+                        relations_accessing_this_database, schemas, user
+                    )
                     for statement in statements:
                         curs.execute(statement)
         except psycopg2.Error as e:
@@ -172,8 +172,7 @@ class PostgreSQL:
             raise PostgreSQLCreateDatabaseError()
 
         # Enable preset extensions
-        for plugin in plugins:
-            self.enable_disable_extension(plugin, True, database)
+        self.enable_disable_extensions({plugin: True for plugin in plugins}, database)
 
     def create_user(
         self, user: str, password: str = None, admin: bool = False, extra_user_roles: str = None
@@ -270,22 +269,16 @@ class PostgreSQL:
             logger.error(f"Failed to delete user: {e}")
             raise PostgreSQLDeleteUserError()
 
-    def enable_disable_extension(self, extension: str, enable: bool, database: str = None) -> None:
+    def enable_disable_extensions(self, extensions: Dict[str, bool], database: str = None) -> None:
         """Enables or disables a PostgreSQL extension.
 
         Args:
-            extension: the name of the extensions.
-            enable: whether the extension should be enabled or disabled.
+            extensions: the name of the extensions.
             database: optional database where to enable/disable the extension.
 
         Raises:
             PostgreSQLEnableDisableExtensionError if the operation fails.
         """
-        statement = (
-            f"CREATE EXTENSION IF NOT EXISTS {extension};"
-            if enable
-            else f"DROP EXTENSION IF EXISTS {extension};"
-        )
         connection = None
         try:
             if database is not None:
@@ -301,7 +294,12 @@ class PostgreSQL:
                 with self._connect_to_database(
                     database=database
                 ) as connection, connection.cursor() as cursor:
-                    cursor.execute(statement)
+                    for extension, enable in extensions.items():
+                        cursor.execute(
+                            f"CREATE EXTENSION IF NOT EXISTS {extension};"
+                            if enable
+                            else f"DROP EXTENSION IF EXISTS {extension};"
+                        )
         except psycopg2.errors.UniqueViolation:
             pass
         except psycopg2.Error:
@@ -309,6 +307,81 @@ class PostgreSQL:
         finally:
             if connection is not None:
                 connection.close()
+
+    def _generate_database_privileges_statements(
+        self, relations_accessing_this_database: int, schemas: List[str], user: str
+    ) -> List[Composed]:
+        """Generates a list of databases privileges statements."""
+        statements = []
+        if relations_accessing_this_database == 1:
+            statements.append(
+                sql.SQL(
+                    """DO $$
+DECLARE r RECORD;
+BEGIN
+  FOR r IN (SELECT statement FROM (SELECT 1 AS index,'ALTER TABLE '|| schemaname || '."' || tablename ||'" OWNER TO {};' AS statement
+FROM pg_tables WHERE NOT schemaname IN ('pg_catalog', 'information_schema')
+UNION SELECT 2 AS index,'ALTER SEQUENCE '|| sequence_schema || '."' || sequence_name ||'" OWNER TO {};' AS statement
+FROM information_schema.sequences WHERE NOT sequence_schema IN ('pg_catalog', 'information_schema')
+UNION SELECT 3 AS index,'ALTER FUNCTION '|| nsp.nspname || '."' || p.proname ||'"('||pg_get_function_identity_arguments(p.oid)||') OWNER TO {};' AS statement
+FROM pg_proc p JOIN pg_namespace nsp ON p.pronamespace = nsp.oid WHERE NOT nsp.nspname IN ('pg_catalog', 'information_schema')
+UNION SELECT 4 AS index,'ALTER VIEW '|| schemaname || '."' || viewname ||'" OWNER TO {};' AS statement
+FROM pg_catalog.pg_views WHERE NOT schemaname IN ('pg_catalog', 'information_schema')) AS statements ORDER BY index) LOOP
+      EXECUTE format(r.statement);
+  END LOOP;
+END; $$;"""
+                ).format(
+                    sql.Identifier(user),
+                    sql.Identifier(user),
+                    sql.Identifier(user),
+                    sql.Identifier(user),
+                )
+            )
+        else:
+            for schema in schemas:
+                schema = sql.Identifier(schema)
+                statements.append(
+                    sql.SQL("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA {} TO {};").format(
+                        schema, sql.Identifier(user)
+                    )
+                )
+                statements.append(
+                    sql.SQL("GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA {} TO {};").format(
+                        schema, sql.Identifier(user)
+                    )
+                )
+                statements.append(
+                    sql.SQL("GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA {} TO {};").format(
+                        schema, sql.Identifier(user)
+                    )
+                )
+        return statements
+
+    def get_postgresql_text_search_configs(self) -> Set[str]:
+        """Returns the PostgreSQL available text search configs.
+
+        Returns:
+            Set of PostgreSQL text search configs.
+        """
+        with self._connect_to_database(
+            connect_to_current_host=True
+        ) as connection, connection.cursor() as cursor:
+            cursor.execute("SELECT CONCAT('pg_catalog.', cfgname) FROM pg_ts_config;")
+            text_search_configs = cursor.fetchall()
+            return {text_search_config[0] for text_search_config in text_search_configs}
+
+    def get_postgresql_timezones(self) -> Set[str]:
+        """Returns the PostgreSQL available timezones.
+
+        Returns:
+            Set of PostgreSQL timezones.
+        """
+        with self._connect_to_database(
+            connect_to_current_host=True
+        ) as connection, connection.cursor() as cursor:
+            cursor.execute("SELECT name FROM pg_timezone_names;")
+            timezones = cursor.fetchall()
+            return {timezone[0] for timezone in timezones}
 
     def get_postgresql_version(self) -> str:
         """Returns the PostgreSQL version.
@@ -445,12 +518,12 @@ class PostgreSQL:
 
     @staticmethod
     def build_postgresql_parameters(
-        profile: str, available_memory: int, limit_memory: Optional[int] = None
-    ) -> Optional[Dict[str, str]]:
+        config_options: Dict, available_memory: int, limit_memory: Optional[int] = None
+    ) -> Optional[Dict]:
         """Builds the PostgreSQL parameters.
 
         Args:
-            profile: the profile to use.
+            config_options: charm config options containing profile and PostgreSQL parameters.
             available_memory: available memory to use in calculation in bytes.
             limit_memory: (optional) limit memory to use in calculation in bytes.
 
@@ -459,19 +532,60 @@ class PostgreSQL:
         """
         if limit_memory:
             available_memory = min(available_memory, limit_memory)
+        profile = config_options["profile"]
         logger.debug(f"Building PostgreSQL parameters for {profile=} and {available_memory=}")
+        parameters = {}
+        for config, value in config_options.items():
+            # Filter config option not related to PostgreSQL parameters.
+            if not config.startswith(
+                (
+                    "durability",
+                    "instance",
+                    "logging",
+                    "memory",
+                    "optimizer",
+                    "request",
+                    "response",
+                    "vacuum",
+                )
+            ):
+                continue
+            parameter = "_".join(config.split("_")[1:])
+            if parameter in ["date_style", "time_zone"]:
+                parameter = "".join(x.capitalize() for x in parameter.split("_"))
+            parameters[parameter] = value
+        shared_buffers_max_value = int(int(available_memory * 0.4) / 10**6)
+        if parameters.get("shared_buffers", 0) > shared_buffers_max_value:
+            raise Exception(
+                f"Shared buffers config option should be at most 40% of the available memory, which is {shared_buffers_max_value}MB"
+            )
         if profile == "production":
             # Use 25% of the available memory for shared_buffers.
-            # and the remaind as cache memory.
+            # and the remaining as cache memory.
             shared_buffers = int(available_memory * 0.25)
             effective_cache_size = int(available_memory - shared_buffers)
-
-            parameters = {
-                "shared_buffers": f"{int(shared_buffers/10**6)}MB",
-                "effective_cache_size": f"{int(effective_cache_size/10**6)}MB",
-            }
-
-            return parameters
+            parameters.setdefault("shared_buffers", f"{int(shared_buffers/10**6)}MB")
+            parameters.update({"effective_cache_size": f"{int(effective_cache_size/10**6)}MB"})
         else:
             # Return default
-            return {"shared_buffers": "128MB"}
+            parameters.setdefault("shared_buffers", "128MB")
+        return parameters
+
+    def validate_date_style(self, date_style: str) -> bool:
+        """Validate a date style against PostgreSQL.
+
+        Returns:
+            Whether the date style is valid.
+        """
+        try:
+            with self._connect_to_database(
+                connect_to_current_host=True
+            ) as connection, connection.cursor() as cursor:
+                cursor.execute(
+                    sql.SQL(
+                        "SET DateStyle to {};",
+                    ).format(sql.Identifier(date_style))
+                )
+            return True
+        except psycopg2.Error:
+            return False

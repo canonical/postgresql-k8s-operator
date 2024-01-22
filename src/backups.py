@@ -74,7 +74,7 @@ class PostgreSQLBackups(Object):
                 "Relation with s3-integrator charm missing, cannot create/restore backup.",
             )
 
-        s3_parameters, missing_parameters = self._retrieve_s3_parameters()
+        _, missing_parameters = self._retrieve_s3_parameters()
         if missing_parameters:
             return False, f"Missing S3 parameters: {missing_parameters}"
 
@@ -114,7 +114,23 @@ class PostgreSQLBackups(Object):
 
         if self.charm.unit.is_leader():
             for stanza in json.loads(output):
-                if stanza.get("name") != self.charm.app_peer_data.get("stanza", self.stanza_name):
+                system_identifier_from_instance, error = self._execute_command(
+                    [
+                        f'/usr/lib/postgresql/{self.charm._patroni.rock_postgresql_version.split(".")[0]}/bin/pg_controldata',
+                        "/var/lib/postgresql/data/pgdata",
+                    ]
+                )
+                if error != "":
+                    raise Exception(error)
+                system_identifier_from_instance = [
+                    line
+                    for line in system_identifier_from_instance.splitlines()
+                    if "Database system identifier" in line
+                ][0].split(" ")[-1]
+                system_identifier_from_stanza = str(stanza.get("db")[0]["system-id"])
+                if system_identifier_from_instance != system_identifier_from_stanza or stanza.get(
+                    "name"
+                ) != self.charm.app_peer_data.get("stanza", self.stanza_name):
                     # Prevent archiving of WAL files.
                     self.charm.app_peer_data.update({"stanza": ""})
                     self.charm.update_config()
@@ -197,7 +213,7 @@ class PostgreSQLBackups(Object):
     def _change_connectivity_to_database(self, connectivity: bool) -> None:
         """Enable or disable the connectivity to the database."""
         self.charm.unit_peer_data.update({"connectivity": "on" if connectivity else "off"})
-        self.charm.update_config()
+        self.charm.update_config(is_creating_backup=True)
 
     def _execute_command(
         self, command: List[str], timeout: float = None

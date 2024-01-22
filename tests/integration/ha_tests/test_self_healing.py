@@ -9,9 +9,20 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from tests.integration.ha_tests.helpers import (
+from .. import markers
+from ..helpers import (
     APPLICATION_NAME,
+    CHARM_SERIES,
     METADATA,
+    app_name,
+    build_and_deploy,
+    db_connect,
+    get_password,
+    get_unit_address,
+    run_command_on_unit,
+    scale_application,
+)
+from .helpers import (
     are_all_db_processes_down,
     are_writes_increasing,
     change_patroni_setting,
@@ -31,15 +42,6 @@ from tests.integration.ha_tests.helpers import (
     send_signal_to_process,
     start_continuous_writes,
 )
-from tests.integration.helpers import (
-    CHARM_SERIES,
-    app_name,
-    build_and_deploy,
-    db_connect,
-    get_password,
-    get_unit_address,
-    run_command_on_unit,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +52,7 @@ DB_PROCESSES = [POSTGRESQL_PROCESS, PATRONI_PROCESS]
 MEDIAN_ELECTION_TIME = 10
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy three unit of PostgreSQL."""
@@ -75,6 +78,8 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
 
+@pytest.mark.group(1)
+@markers.juju2
 @pytest.mark.parametrize("process", DB_PROCESSES)
 async def test_kill_db_process(
     ops_test: OpsTest, process: str, continuous_writes, primary_start_timeout
@@ -105,6 +110,7 @@ async def test_kill_db_process(
     await is_cluster_updated(ops_test, primary_name)
 
 
+@pytest.mark.group(1)
 @pytest.mark.parametrize("process", DB_PROCESSES)
 async def test_freeze_db_process(
     ops_test: OpsTest, process: str, continuous_writes, primary_start_timeout
@@ -146,6 +152,7 @@ async def test_freeze_db_process(
     await is_cluster_updated(ops_test, primary_name)
 
 
+@pytest.mark.group(1)
 @pytest.mark.parametrize("process", DB_PROCESSES)
 async def test_restart_db_process(
     ops_test: OpsTest, process: str, continuous_writes, primary_start_timeout
@@ -176,6 +183,7 @@ async def test_restart_db_process(
     await is_cluster_updated(ops_test, primary_name)
 
 
+@pytest.mark.group(1)
 @pytest.mark.unstable
 @pytest.mark.parametrize("process", DB_PROCESSES)
 @pytest.mark.parametrize("signal", ["SIGTERM", "SIGKILL"])
@@ -242,7 +250,7 @@ async def test_full_cluster_restart(
     await check_writes(ops_test)
 
 
-@pytest.mark.ha_self_healing_tests
+@pytest.mark.group(1)
 async def test_forceful_restart_without_data_and_transaction_logs(
     ops_test: OpsTest,
     continuous_writes,
@@ -325,6 +333,7 @@ async def test_forceful_restart_without_data_and_transaction_logs(
     await is_cluster_updated(ops_test, primary_name)
 
 
+@pytest.mark.group(1)
 async def test_network_cut(
     ops_test: OpsTest, continuous_writes, primary_start_timeout, chaos_mesh
 ) -> None:
@@ -386,3 +395,44 @@ async def test_network_cut(
     ), "Connection is not possible after network restore"
 
     await is_cluster_updated(ops_test, primary_name)
+
+
+@pytest.mark.group(1)
+async def test_scaling_to_zero(ops_test: OpsTest, continuous_writes) -> None:
+    """Scale the database to zero units and scale up again."""
+    # Locate primary unit.
+    app = await app_name(ops_test)
+
+    # Start an application that continuously writes data to the database.
+    await start_continuous_writes(ops_test, app)
+
+    # Scale the database to zero units.
+    logger.info("scaling database to zero units")
+    await scale_application(ops_test, app, 0)
+
+    # Scale the database to three units.
+    logger.info("scaling database to three units")
+    await scale_application(ops_test, app, 3)
+
+    # Verify all units are up and running.
+    logger.info("waiting for the database service to start in all units")
+    for unit in ops_test.model.applications[app].units:
+        assert await is_postgresql_ready(
+            ops_test, unit.name
+        ), f"unit {unit.name} not restarted after cluster restart."
+
+    logger.info("checking whether writes are increasing")
+    await are_writes_increasing(ops_test)
+
+    # Verify that all units are part of the same cluster.
+    logger.info("checking whether all units are part of the same cluster")
+    member_ips = await fetch_cluster_members(ops_test)
+    ip_addresses = [
+        await get_unit_address(ops_test, unit.name)
+        for unit in ops_test.model.applications[app].units
+    ]
+    assert set(member_ips) == set(ip_addresses), "not all units are part of the same cluster."
+
+    # Verify that no writes to the database were missed after stopping the writes.
+    logger.info("checking whether no writes to the database were missed after stopping the writes")
+    await check_writes(ops_test)

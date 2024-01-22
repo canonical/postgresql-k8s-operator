@@ -8,7 +8,7 @@ import requests
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from tests.integration.helpers import (
+from .helpers import (
     DATABASE_APP_NAME,
     build_and_deploy,
     check_database_creation,
@@ -17,7 +17,6 @@ from tests.integration.helpers import (
     check_tls_patroni_api,
     db_connect,
     deploy_and_relate_application_with_postgresql,
-    enable_connections_logging,
     get_password,
     get_primary,
     get_unit_address,
@@ -33,12 +32,14 @@ APPLICATION_UNITS = 2
 DATABASE_UNITS = 3
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy three units of PostgreSQL."""
     await build_and_deploy(ops_test, DATABASE_UNITS, wait_for_idle=False)
 
 
+@pytest.mark.group(1)
 async def check_tls_rewind(ops_test: OpsTest) -> None:
     """Checks if TLS was used by rewind."""
     for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
@@ -58,6 +59,7 @@ async def check_tls_rewind(ops_test: OpsTest) -> None:
     ), "TLS is not being used on pg_rewind connections"
 
 
+@pytest.mark.group(1)
 async def test_mattermost_db(ops_test: OpsTest) -> None:
     """Deploy Mattermost to test the 'db' relation.
 
@@ -95,7 +97,12 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
 
         # Enable additional logs on the PostgreSQL instance to check TLS
         # being used in a later step.
-        await enable_connections_logging(ops_test, primary)
+        await ops_test.model.applications[DATABASE_APP_NAME].set_config(
+            {"logging_log_connections": "True"}
+        )
+        await ops_test.model.wait_for_idle(
+            apps=[DATABASE_APP_NAME], status="active", idle_period=30
+        )
 
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(2), reraise=True):
             with attempt:

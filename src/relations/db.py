@@ -150,10 +150,9 @@ class DbProvides(Object):
                 if self.charm.config[plugin]
             ]
 
-            self.charm.postgresql.create_database(database, user, plugins=plugins)
-
-            # Enable/disable extensions in the new database.
-            self.charm.enable_disable_extensions(database)
+            self.charm.postgresql.create_database(
+                database, user, plugins=plugins, client_relations=self.charm.client_relations
+            )
 
             # Build the primary's connection string.
             primary = str(
@@ -245,6 +244,13 @@ class DbProvides(Object):
             event.defer()
             return
 
+        # Set a flag to avoid deleting database users when this unit
+        # is removed and receives relation broken events from related applications.
+        # This is needed because of https://bugs.launchpad.net/juju/+bug/1979811.
+        if event.departing_unit == self.charm.unit:
+            self.charm._peers.data[self.charm.unit].update({"departing": "True"})
+            return
+
         if not self.charm.unit.is_leader():
             return
 
@@ -274,6 +280,10 @@ class DbProvides(Object):
                 "Deferring on_relation_broken: Cluster not initialized or patroni not running"
             )
             event.defer()
+            return
+
+        if "departing" in self.charm._peers.data[self.charm.unit]:
+            logger.debug("Early exit on_relation_broken: Skipping departing unit")
             return
 
         if not self.charm.unit.is_leader():

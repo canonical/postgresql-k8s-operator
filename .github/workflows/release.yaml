@@ -9,11 +9,10 @@ on:
     paths-ignore:
       - 'tests/**'
       - 'docs/**'
-      - renovate.json
-      - poetry.lock
+      - .github/renovate.json5
       - pyproject.toml
-      - '.github/**.md'
       - '.github/workflows/ci.yaml'
+      - '.github/workflows/lib-check.yaml'
 
 jobs:
   ci-tests:
@@ -29,9 +28,20 @@ jobs:
     timeout-minutes: 60
     steps:
       - name: Checkout
-        uses: actions/checkout@3df4ab11eba7bda6032a0b82a6bb43b11571feac # v4
+        uses: actions/checkout@v4
         with:
           fetch-depth: 0
+      - name: Set up environment
+        run: |
+          pipx install tox
+          pipx install poetry
+          pipx inject poetry poetry-plugin-export
+          # TODO: Remove after https://github.com/python-poetry/poetry/pull/5980 is closed
+          poetry config warnings.export false
+      - name: Generate requirements
+        run: |
+          tox run -e build-wrapper
+          mv requirements-last-build.txt requirements.txt
       - name: Release charm libraries
         uses: canonical/charming-actions/release-libraries@2.4.0
         with:
@@ -40,14 +50,16 @@ jobs:
 
   build:
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm_without_cache.yaml@v2
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm_without_cache.yaml@v9.3.1
+    with:
+      charmcraft-snap-channel: beta
 
   release:
     name: Release charm
     needs:
       - ci-tests
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v2
+    uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v9.3.1
     with:
       channel: 14/edge
       artifact-name: ${{ needs.build.outputs.artifact-name }}

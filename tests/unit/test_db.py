@@ -9,6 +9,7 @@ from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQLCreateUserError,
     PostgreSQLGetPostgreSQLVersionError,
 )
+from ops import Unit
 from ops.framework import EventBase
 from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
@@ -183,14 +184,12 @@ class TestDbProvides(unittest.TestCase):
         )
 
     @patch("relations.db.DbProvides._update_unit_status")
-    @patch("charm.PostgresqlOperatorCharm.enable_disable_extensions")
     @patch("relations.db.new_password", return_value="test-password")
     @patch("relations.db.DbProvides._get_extensions")
     def test_set_up_relation(
         self,
         _get_extensions,
         _new_password,
-        _enable_disable_extensions,
         _update_unit_status,
     ):
         with patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock:
@@ -228,7 +227,6 @@ class TestDbProvides(unittest.TestCase):
             self.assertFalse(self.harness.charm.legacy_db_relation.set_up_relation(relation))
             postgresql_mock.create_user.assert_not_called()
             postgresql_mock.create_database.assert_not_called()
-            _enable_disable_extensions.assert_not_called()
             postgresql_mock.get_postgresql_version.assert_not_called()
             _update_unit_status.assert_not_called()
 
@@ -243,8 +241,9 @@ class TestDbProvides(unittest.TestCase):
             self.assertTrue(self.harness.charm.legacy_db_relation.set_up_relation(relation))
             user = f"relation_id_{self.rel_id}"
             postgresql_mock.create_user.assert_called_once_with(user, "test-password", False)
-            postgresql_mock.create_database.assert_called_once_with(DATABASE, user, plugins=[])
-            _enable_disable_extensions.assert_called_once()
+            postgresql_mock.create_database.assert_called_once_with(
+                DATABASE, user, plugins=[], client_relations=[relation]
+            )
             self.assertEqual(postgresql_mock.get_postgresql_version.call_count, 2)
             _update_unit_status.assert_called_once()
             expected_data = {
@@ -271,7 +270,6 @@ class TestDbProvides(unittest.TestCase):
             # provided only in the unit databag.
             postgresql_mock.create_user.reset_mock()
             postgresql_mock.create_database.reset_mock()
-            _enable_disable_extensions.reset_mock()
             postgresql_mock.get_postgresql_version.reset_mock()
             _update_unit_status.reset_mock()
             with self.harness.hooks_disabled():
@@ -288,8 +286,9 @@ class TestDbProvides(unittest.TestCase):
                 self.clear_relation_data()
             self.assertTrue(self.harness.charm.legacy_db_relation.set_up_relation(relation))
             postgresql_mock.create_user.assert_called_once_with(user, "test-password", False)
-            postgresql_mock.create_database.assert_called_once_with(DATABASE, user, plugins=[])
-            _enable_disable_extensions.assert_called_once()
+            postgresql_mock.create_database.assert_called_once_with(
+                DATABASE, user, plugins=[], client_relations=[relation]
+            )
             self.assertEqual(postgresql_mock.get_postgresql_version.call_count, 2)
             _update_unit_status.assert_called_once()
             self.assertEqual(self.harness.get_relation_data(self.rel_id, self.app), expected_data)
@@ -299,7 +298,6 @@ class TestDbProvides(unittest.TestCase):
             # Assert that the correct calls were made when the database name is not provided.
             postgresql_mock.create_user.reset_mock()
             postgresql_mock.create_database.reset_mock()
-            _enable_disable_extensions.reset_mock()
             postgresql_mock.get_postgresql_version.reset_mock()
             _update_unit_status.reset_mock()
             with self.harness.hooks_disabled():
@@ -312,7 +310,6 @@ class TestDbProvides(unittest.TestCase):
             self.assertFalse(self.harness.charm.legacy_db_relation.set_up_relation(relation))
             postgresql_mock.create_user.assert_not_called()
             postgresql_mock.create_database.assert_not_called()
-            _enable_disable_extensions.assert_not_called()
             postgresql_mock.get_postgresql_version.assert_not_called()
             _update_unit_status.assert_not_called()
             # No data is set in the databags by the database.
@@ -329,7 +326,6 @@ class TestDbProvides(unittest.TestCase):
                 )
             self.assertFalse(self.harness.charm.legacy_db_relation.set_up_relation(relation))
             postgresql_mock.create_database.assert_not_called()
-            _enable_disable_extensions.assert_not_called()
             postgresql_mock.get_postgresql_version.assert_not_called()
             _update_unit_status.assert_not_called()
             self.assertIsInstance(self.harness.model.unit.status, BlockedStatus)
@@ -340,7 +336,6 @@ class TestDbProvides(unittest.TestCase):
             # BlockedStatus due to a PostgreSQLCreateDatabaseError.
             self.harness.charm.unit.status = ActiveStatus()
             self.assertFalse(self.harness.charm.legacy_db_relation.set_up_relation(relation))
-            _enable_disable_extensions.assert_not_called()
             postgresql_mock.get_postgresql_version.assert_not_called()
             _update_unit_status.assert_not_called()
             self.assertIsInstance(self.harness.model.unit.status, BlockedStatus)
@@ -384,6 +379,54 @@ class TestDbProvides(unittest.TestCase):
         self.harness.charm.legacy_db_relation._update_unit_status(relation)
         _check_for_blocking_relations.assert_called_once_with(relation.id)
         self.assertIsInstance(self.harness.charm.unit.status, ActiveStatus)
+
+    @patch("charm.Patroni.member_started", new_callable=PropertyMock(return_value=True))
+    def test_on_relation_departed(self, _):
+        # Test when this unit is departing the relation (due to a scale down event).
+        self.assertNotIn(
+            "departing", self.harness.get_relation_data(self.peer_rel_id, self.harness.charm.unit)
+        )
+        event = Mock()
+        event.relation.data = {self.harness.charm.app: {}, self.harness.charm.unit: {}}
+        event.departing_unit = self.harness.charm.unit
+        self.harness.charm.legacy_db_relation._on_relation_departed(event)
+        self.assertIn(
+            "departing", self.harness.get_relation_data(self.peer_rel_id, self.harness.charm.unit)
+        )
+
+        # Test when this unit is departing the relation (due to the relation being broken between the apps).
+        with self.harness.hooks_disabled():
+            self.harness.update_relation_data(
+                self.peer_rel_id, self.harness.charm.unit.name, {"departing": ""}
+            )
+        event.relation.data = {self.harness.charm.app: {}, self.harness.charm.unit: {}}
+        event.departing_unit = Unit(
+            f"{self.harness.charm.app}/1", None, self.harness.charm.app._backend, {}
+        )
+        self.harness.charm.legacy_db_relation._on_relation_departed(event)
+        relation_data = self.harness.get_relation_data(self.peer_rel_id, self.harness.charm.unit)
+        self.assertNotIn("departing", relation_data)
+
+    @patch("charm.Patroni.member_started", new_callable=PropertyMock(return_value=True))
+    def test_on_relation_broken(self, _member_started):
+        with self.harness.hooks_disabled():
+            self.harness.set_leader()
+        with patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock:
+            # Test when this unit is departing the relation (due to the relation being broken between the apps).
+            event = Mock()
+            event.relation.id = self.rel_id
+            self.harness.charm.legacy_db_relation._on_relation_broken(event)
+            user = f"relation_id_{self.rel_id}"
+            postgresql_mock.delete_user.assert_called_once_with(user)
+
+            # Test when this unit is departing the relation (due to a scale down event).
+            postgresql_mock.reset_mock()
+            with self.harness.hooks_disabled():
+                self.harness.update_relation_data(
+                    self.peer_rel_id, self.harness.charm.unit.name, {"departing": "True"}
+                )
+            self.harness.charm.legacy_db_relation._on_relation_broken(event)
+            postgresql_mock.delete_user.assert_not_called()
 
     @patch(
         "charm.PostgresqlOperatorCharm.primary_endpoint",
