@@ -21,7 +21,7 @@ from parameterized import parameterized
 from tenacity import RetryError
 
 from charm import PostgresqlOperatorCharm
-from constants import PEER
+from constants import PEER, SECRET_INTERNAL_LABEL
 from tests.helpers import patch_network_get
 from tests.unit.helpers import _FakeApiError
 
@@ -212,33 +212,6 @@ class TestCharm(unittest.TestCase):
                 "replication-password": "replication-test-password",
             },
         )
-
-        # Test providing an invalid username.
-        mock_event.params["username"] = "user"
-        self.charm._on_get_password(mock_event)
-        mock_event.fail.assert_called_once()
-        mock_event.set_results.assert_not_called()
-
-        # Test without providing the username option.
-        mock_event.reset_mock()
-        del mock_event.params["username"]
-        self.charm._on_get_password(mock_event)
-        mock_event.set_results.assert_called_once_with({"password": "test-password"})
-
-        # Also test providing the username option.
-        mock_event.reset_mock()
-        mock_event.params["username"] = "replication"
-        self.charm._on_get_password(mock_event)
-        mock_event.set_results.assert_called_once_with({"password": "replication-test-password"})
-
-    @pytest.mark.usefixtures("only_with_juju_secrets")
-    def test_on_get_password_secrets(self):
-        self.harness.set_leader()
-
-        # Create a mock event and set passwords in peer relation data.
-        mock_event = MagicMock(params={})
-        self.harness.charm.set_secret("app", "operator-password", "test-password")
-        self.harness.charm.set_secret("app", "replication-password", "replication-test-password")
 
         # Test providing an invalid username.
         mock_event.params["username"] = "user"
@@ -649,57 +622,6 @@ class TestCharm(unittest.TestCase):
         }
         self.assertDictEqual(plan, expected)
 
-    def test_scope_obj(self):
-        assert self.charm._scope_obj("app") == self.charm.framework.model.app
-        assert self.charm._scope_obj("unit") == self.charm.framework.model.unit
-        assert self.charm._scope_obj("test") is None
-
-    @parameterized.expand([("app"), ("unit")])
-    @pytest.mark.usefixtures("only_without_juju_secrets")
-    @patch("charm.Patroni.reload_patroni_configuration")
-    @patch("charm.PostgresqlOperatorCharm._create_services")
-    @patch("charm.PostgresqlOperatorCharm._cleanup_old_cluster_resources")
-    def test_get_secret(self, scope, _, __, ___):
-        self.harness.set_leader()
-
-        scope_obj = self.charm._scope_obj(scope)
-        assert self.charm.get_secret(scope, "password") is None
-        self.harness.update_relation_data(
-            self.rel_id, scope_obj.name, {"password": "test-password"}
-        )
-        assert self.charm.get_secret(scope, "password") == "test-password"
-
-    @parameterized.expand([("app"), ("unit")])
-    @pytest.mark.usefixtures("only_with_juju_secrets")
-    @patch("charm.Patroni.reload_patroni_configuration")
-    @patch("charm.PostgresqlOperatorCharm._create_services")
-    @patch("charm.PostgresqlOperatorCharm._cleanup_old_cluster_resources")
-    def test_get_secret_secrets(self, scope, _, __, ___):
-        self.harness.set_leader()
-
-        assert self.charm.get_secret(scope, "password") is None
-        self.charm.set_secret(scope, "password", "test-password")
-        assert self.charm.get_secret(scope, "password") == "test-password"
-
-    @patch("charm.Patroni.reload_patroni_configuration")
-    @patch("charm.PostgresqlOperatorCharm._create_services")
-    def test_set_secret(self, _, __):
-        self.harness.set_leader()
-
-        # Test application scope.
-        assert "password" not in self.harness.get_relation_data(self.rel_id, self.charm.app.name)
-        self.charm.set_secret("app", "password", "test-password")
-        assert self.charm.get_secret("app", "password") == "test-password"
-        self.charm.set_secret("app", "password", None)
-        assert self.charm.get_secret("app", "password") is None
-
-        # Test unit scope.
-        assert "password" not in self.harness.get_relation_data(self.rel_id, self.charm.unit.name)
-        self.charm.set_secret("unit", "password", "test-password")
-        assert self.charm.get_secret("unit", "password") == "test-password"
-        self.charm.set_secret("unit", "password", None)
-        assert self.charm.get_secret("unit", "password") is None
-
     @patch("charm.Client")
     def test_on_stop(self, _client):
         # Test a successful run of the hook.
@@ -795,11 +717,111 @@ class TestCharm(unittest.TestCase):
             self.charm.client_relations, [database_relation, db_relation, db_admin_relation]
         )
 
+    #
+    # Secrets
+    #
+
+    def test_scope_obj(self):
+        assert self.charm._scope_obj("app") == self.charm.framework.model.app
+        assert self.charm._scope_obj("unit") == self.charm.framework.model.unit
+        assert self.charm._scope_obj("test") is None
+
+    @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
+    def test_get_secret(self, _):
+        # App level changes require leader privileges
+        self.harness.set_leader()
+        # Test application scope.
+        assert self.charm.get_secret("app", "password") is None
+        self.harness.update_relation_data(
+            self.rel_id, self.charm.app.name, {"password": "test-password"}
+        )
+        assert self.charm.get_secret("app", "password") == "test-password"
+
+        # Unit level changes don't require leader privileges
+        self.harness.set_leader(False)
+        # Test unit scope.
+        assert self.charm.get_secret("unit", "password") is None
+        self.harness.update_relation_data(
+            self.rel_id, self.charm.unit.name, {"password": "test-password"}
+        )
+        assert self.charm.get_secret("unit", "password") == "test-password"
+
+    @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
+    @patch("charm.JujuVersion.has_secrets", new_callable=PropertyMock, return_value=True)
+    def test_on_get_password_secrets(self, mock1, mock2):
+        # Create a mock event and set passwords in peer relation data.
+        self.harness.set_leader()
+        mock_event = MagicMock(params={})
+        self.harness.charm.set_secret("app", "operator-password", "test-password")
+        self.harness.charm.set_secret("app", "replication-password", "replication-test-password")
+
+        # Test providing an invalid username.
+        mock_event.params["username"] = "user"
+        self.charm._on_get_password(mock_event)
+        mock_event.fail.assert_called_once()
+        mock_event.set_results.assert_not_called()
+
+        # Test without providing the username option.
+        mock_event.reset_mock()
+        del mock_event.params["username"]
+        self.charm._on_get_password(mock_event)
+        mock_event.set_results.assert_called_once_with({"password": "test-password"})
+
+        # Also test providing the username option.
+        mock_event.reset_mock()
+        mock_event.params["username"] = "replication"
+        self.charm._on_get_password(mock_event)
+        mock_event.set_results.assert_called_once_with({"password": "replication-test-password"})
+
     @parameterized.expand([("app"), ("unit")])
-    @pytest.mark.usefixtures("only_with_juju_secrets")
-    def test_set_reset_new_secret(self, scope):
+    @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
+    @patch("charm.JujuVersion.has_secrets", new_callable=PropertyMock, return_value=True)
+    def test_get_secret_secrets(self, scope, _, __):
         self.harness.set_leader()
 
+        assert self.charm.get_secret(scope, "operator-password") is None
+        self.charm.set_secret(scope, "operator-password", "test-password")
+        assert self.charm.get_secret(scope, "operator-password") == "test-password"
+
+    @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
+    def test_set_secret(self, _):
+        self.harness.set_leader()
+
+        # Test application scope.
+        assert "password" not in self.harness.get_relation_data(self.rel_id, self.charm.app.name)
+        self.charm.set_secret("app", "password", "test-password")
+        assert (
+            self.harness.get_relation_data(self.rel_id, self.charm.app.name)["password"]
+            == "test-password"
+        )
+        self.charm.set_secret("app", "password", None)
+        assert "password" not in self.harness.get_relation_data(self.rel_id, self.charm.app.name)
+
+        # Test unit scope.
+        assert "password" not in self.harness.get_relation_data(self.rel_id, self.charm.unit.name)
+        self.charm.set_secret("unit", "password", "test-password")
+        assert (
+            self.harness.get_relation_data(self.rel_id, self.charm.unit.name)["password"]
+            == "test-password"
+        )
+        self.charm.set_secret("unit", "password", None)
+        assert "password" not in self.harness.get_relation_data(self.rel_id, self.charm.unit.name)
+
+        with self.assertRaises(RuntimeError):
+            self.charm.set_secret("test", "password", "test")
+
+    @parameterized.expand([("app", True), ("unit", True), ("unit", False)])
+    @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
+    @patch("charm.JujuVersion.has_secrets", new_callable=PropertyMock, return_value=True)
+    def test_set_reset_new_secret(self, scope, is_leader, _, __):
+        """NOTE: currently ops.testing seems to allow for non-leader to set secrets too!"""
+        # App has to be leader, unit can be either
+        self.harness.set_leader(is_leader)
         # Getting current password
         self.harness.charm.set_secret(scope, "new-secret", "bla")
         assert self.harness.charm.get_secret(scope, "new-secret") == "bla"
@@ -812,20 +834,24 @@ class TestCharm(unittest.TestCase):
         self.harness.charm.set_secret(scope, "new-secret2", "blablabla")
         assert self.harness.charm.get_secret(scope, "new-secret2") == "blablabla"
 
-    @parameterized.expand([("app"), ("unit")])
-    @pytest.mark.usefixtures("only_with_juju_secrets")
-    def test_invalid_secret(self, scope):
-        self.harness.set_leader()
+    @parameterized.expand([("app", True), ("unit", True), ("unit", False)])
+    @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
+    @patch("charm.JujuVersion.has_secrets", new_callable=PropertyMock, return_value=True)
+    def test_invalid_secret(self, scope, is_leader, _, __):
+        # App has to be leader, unit can be either
+        self.harness.set_leader(is_leader)
 
         with self.assertRaises(RelationDataTypeError):
             self.harness.charm.set_secret(scope, "somekey", 1)
 
-        self.harness.charm.set_secret("unit", "somekey", "")
+        self.harness.charm.set_secret(scope, "somekey", "")
         assert self.harness.charm.get_secret(scope, "somekey") is None
 
-    @pytest.mark.usefixtures("only_without_juju_secrets")
     @pytest.mark.usefixtures("use_caplog")
-    def test_delete_password(self):
+    @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
+    def test_delete_password(self, _):
         """NOTE: currently ops.testing seems to allow for non-leader to remove secrets too!"""
         self.harness.set_leader(True)
         self.harness.update_relation_data(
@@ -863,27 +889,35 @@ class TestCharm(unittest.TestCase):
                 in self._caplog.text
             )
 
-    @pytest.mark.usefixtures("only_with_juju_secrets")
+    @patch("charm.JujuVersion.has_secrets", new_callable=PropertyMock, return_value=True)
+    @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
     @pytest.mark.usefixtures("use_caplog")
-    def test_delete_existing_password_secrets(self):
-        self.harness.set_leader()
+    def test_delete_existing_password_secrets(self, _, __):
+        """NOTE: currently ops.testing seems to allow for non-leader to remove secrets too!"""
+        self.harness.set_leader(True)
+        self.harness.charm.set_secret("app", "operator-password", "somepw")
+        self.harness.charm.remove_secret("app", "operator-password")
+        assert self.harness.charm.get_secret("app", "operator-password") is None
 
-        # self.harness.charm.set_secret("app", "replication", "somepw")
-        self.harness.charm.remove_secret("app", "replication")
-        assert self.harness.charm.get_secret("app", "replication") is None
+        self.harness.set_leader(False)
+        self.harness.charm.set_secret("unit", "operator-password", "somesecret")
+        self.harness.charm.remove_secret("unit", "operator-password")
+        assert self.harness.charm.get_secret("unit", "operator-password") is None
 
-        self.harness.charm.set_secret("unit", "somekey", "somesecret")
-        self.harness.charm.remove_secret("unit", "somekey")
-        assert self.harness.charm.get_secret("unit", "somekey") is None
-
+        self.harness.set_leader(True)
         with self._caplog.at_level(logging.ERROR):
-            self.harness.charm.remove_secret("app", "replication")
+            self.harness.charm.remove_secret("app", "operator-password")
             assert (
-                "Non-existing field 'replication' was attempted to be removed" in self._caplog.text
+                "Non-existing secret {'operator-password'} was attempted to be removed."
+                in self._caplog.text
             )
 
-            self.harness.charm.remove_secret("unit", "somekey")
-            assert "Non-existing field 'somekey' was attempted to be removed" in self._caplog.text
+            self.harness.charm.remove_secret("unit", "operator-password")
+            assert (
+                "Non-existing secret {'operator-password'} was attempted to be removed."
+                in self._caplog.text
+            )
 
             self.harness.charm.remove_secret("app", "non-existing-secret")
             assert (
@@ -897,10 +931,11 @@ class TestCharm(unittest.TestCase):
                 in self._caplog.text
             )
 
-    @pytest.mark.usefixtures("only_with_juju_secrets")
     @parameterized.expand([("app", True), ("unit", True), ("unit", False)])
+    @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
     @patch("charm.JujuVersion.has_secrets", new_callable=PropertyMock, return_value=True)
-    def test_migration_from_databag(self, scope, is_leader, _):
+    def test_migration_from_databag(self, scope, is_leader, _, __):
         """Check if we're moving on to use secrets when live upgrade from databag to Secrets usage."""
         # App has to be leader, unit can be either
         self.harness.set_leader(is_leader)
@@ -918,73 +953,33 @@ class TestCharm(unittest.TestCase):
             self.rel_id, getattr(self.charm, scope).name
         )
 
-    @patch(
-        "charm.PostgresqlOperatorCharm._is_workload_running",
-        new_callable=PropertyMock(return_value=False),
-    )
-    @patch(
-        "upgrade.PostgreSQLUpgrade.is_no_sync_member",
-        new_callable=PropertyMock(return_value=False),
-    )
-    @patch("charm.Patroni.render_patroni_yml_file")
-    def test_update_config(
-        self, _render_patroni_yml_file, _is_no_sync_member, _is_workload_running
-    ):
-        # Test when no config option is changed.
-        parameters = {
-            "synchronous_commit": "on",
-            "default_text_search_config": "pg_catalog.simple",
-            "password_encryption": "scram-sha-256",
-            "log_connections": False,
-            "log_disconnections": False,
-            "log_lock_waits": False,
-            "log_min_duration_statement": -1,
-            "maintenance_work_mem": 65536,
-            "max_prepared_transactions": 0,
-            "temp_buffers": 1024,
-            "work_mem": 4096,
-            "constraint_exclusion": "partition",
-            "default_statistics_target": 100,
-            "from_collapse_limit": 8,
-            "join_collapse_limit": 8,
-            "DateStyle": "ISO, MDY",
-            "standard_conforming_strings": True,
-            "TimeZone": "UTC",
-            "bytea_output": "hex",
-            "lc_monetary": "C",
-            "lc_numeric": "C",
-            "lc_time": "C",
-            "autovacuum_analyze_scale_factor": 0.1,
-            "autovacuum_analyze_threshold": 50,
-            "autovacuum_freeze_max_age": 200000000,
-            "autovacuum_vacuum_cost_delay": 2.0,
-            "autovacuum_vacuum_scale_factor": 0.2,
-            "vacuum_freeze_table_age": 150000000,
-            "shared_buffers": "0MB",
-            "effective_cache_size": "0MB",
-        }
-        self.charm.update_config()
-        _render_patroni_yml_file.assert_called_once_with(
-            connectivity=True,
-            is_creating_backup=False,
-            enable_tls=False,
-            is_no_sync_member=False,
-            backup_id=None,
-            stanza=None,
-            restore_stanza=None,
-            parameters=parameters,
+    @parameterized.expand([("app", True), ("unit", True), ("unit", False)])
+    @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.PostgresqlOperatorCharm._on_leader_elected")
+    @patch("charm.JujuVersion.has_secrets", new_callable=PropertyMock, return_value=True)
+    def test_migration_from_single_secret(self, scope, is_leader, _, __):
+        """Check if we're moving on to use secrets when live upgrade from databag to Secrets usage."""
+        # App has to be leader, unit can be either
+        self.harness.set_leader(is_leader)
+
+        secret = self.harness.charm.app.add_secret({"operator-password": "bla"})
+
+        # Getting current password
+        entity = getattr(self.charm, scope)
+        self.harness.update_relation_data(
+            self.rel_id, entity.name, {SECRET_INTERNAL_LABEL: secret.id}
         )
+        assert self.harness.charm.get_secret(scope, "operator-password") == "bla"
 
-        # Test when only one of the two config options for profile limit memory is set.
-        self.harness.update_config({"profile-limit-memory": 1000})
-        self.charm.update_config()
-
-        # Test when only one of the two config options for profile limit memory is set.
-        self.harness.update_config({"profile_limit_memory": 1000}, unset={"profile-limit-memory"})
-        self.charm.update_config()
-
-        # Test when the two config options for profile limit memory are set at the same time.
-        _render_patroni_yml_file.reset_mock()
-        self.harness.update_config({"profile-limit-memory": 1000})
-        with self.assertRaises(ValueError):
-            self.charm.update_config()
+        # Reset new secret
+        # Only the leader can set app secret content.
+        with self.harness.hooks_disabled():
+            self.harness.set_leader(True)
+        self.harness.charm.set_secret(scope, "operator-password", "blablabla")
+        with self.harness.hooks_disabled():
+            self.harness.set_leader(is_leader)
+        assert self.harness.charm.model.get_secret(label=f"postgresql-k8s.{scope}")
+        assert self.harness.charm.get_secret(scope, "operator-password") == "blablabla"
+        assert SECRET_INTERNAL_LABEL not in self.harness.get_relation_data(
+            self.rel_id, getattr(self.charm, scope).name
+        )
