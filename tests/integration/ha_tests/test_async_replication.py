@@ -93,6 +93,7 @@ async def test_deploy_async_replication_setup(
         )
 
 
+@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_async_replication(
     ops_test: OpsTest,
@@ -156,6 +157,7 @@ async def test_async_replication(
     await check_writes(ops_test, extra_model=second_model)
 
 
+@pytest.mark.group(1)
 async def test_break_and_reestablish_relation(
     ops_test: OpsTest, first_model: Model, second_model: Model, continuous_writes
 ) -> None:
@@ -211,6 +213,7 @@ async def test_break_and_reestablish_relation(
     await check_writes(ops_test, extra_model=second_model)
 
 
+@pytest.mark.group(1)
 async def test_async_replication_failover_in_main_cluster(
     ops_test: OpsTest, first_model: Model, second_model: Model, continuous_writes
 ) -> None:
@@ -247,6 +250,7 @@ async def test_async_replication_failover_in_main_cluster(
     await check_writes(ops_test, extra_model=second_model)
 
 
+@pytest.mark.group(1)
 async def test_async_replication_failover_in_secondary_cluster(
     ops_test: OpsTest, first_model: Model, second_model: Model, continuous_writes
 ) -> None:
