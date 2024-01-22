@@ -360,6 +360,18 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         endpoints_to_remove = list(set(old) - set(current))
         return endpoints_to_remove
 
+    def get_unit_ip(self, unit: Unit) -> Optional[str]:
+        """Get the IP address of a specific unit."""
+        # Check if host is current host.
+        if unit == self.unit:
+            return str(self.model.get_binding(PEER).network.bind_address)
+        # Check if host is a peer.
+        elif unit in self._peers.data:
+            return str(self._peers.data[unit].get("private-address"))
+        # Return None if the unit is not a peer neither the current unit.
+        else:
+            return None
+
     def _on_peer_relation_departed(self, event: RelationDepartedEvent) -> None:
         """The leader removes the departing units from the list of cluster members."""
         # Allow leader to update endpoints if it isn't leaving.
@@ -416,9 +428,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         # Restart the workload if it's stuck on the starting state after a timeline divergence
         # due to a backup that was restored.
-        if not self.is_primary and (
-            self._patroni.member_replication_lag == "unknown"
-            or int(self._patroni.member_replication_lag) > 1000
+        if (
+            not self.is_primary
+            and not self.is_standby_leader
+            and (
+                self._patroni.member_replication_lag == "unknown"
+                or int(self._patroni.member_replication_lag) > 1000
+            )
         ):
             self._patroni.reinitialize_postgresql()
             logger.debug("Deferring on_peer_relation_changed: reinitialising replica")
@@ -1119,6 +1135,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         return self._unit == self._patroni.get_primary(unit_name_pattern=True)
 
     @property
+    def is_standby_leader(self) -> bool:
+        """Return whether this unit is the standby leader instance."""
+        return self._unit == self._patroni.get_standby_leader(unit_name_pattern=True)
+
+    @property
     def is_tls_enabled(self) -> bool:
         """Return whether TLS is enabled."""
         return all(self.tls.get_tls_files())
@@ -1524,7 +1545,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Return the number of CPU cores for the current K8S node."""
         client = Client()
         node = client.get(Node, name=self._get_node_name_for_pod(), namespace=self._namespace)
-        return int(node.status.allocatable["cpu"])
+        cpu = node.status.allocatable["cpu"]
+        if cpu.endswith("m"):
+            return int(cpu[:-1]) // 1000
+        return int(cpu)
 
     def get_available_resources(self) -> Tuple[int, int]:
         """Get available CPU cores and memory (in bytes) for the container."""

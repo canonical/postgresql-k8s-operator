@@ -25,6 +25,7 @@ from ops.pebble import ChangeError, ExecError
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from constants import BACKUP_USER, WORKLOAD_OS_GROUP, WORKLOAD_OS_USER
+from relations.async_replication import ASYNC_PRIMARY_RELATION, ASYNC_REPLICA_RELATION
 
 logger = logging.getLogger(__name__)
 
@@ -664,6 +665,18 @@ Stderr:
             error_message = (
                 "Unit cannot restore backup as there are more than one unit in the cluster"
             )
+            logger.error(f"Restore failed: {error_message}")
+            event.fail(error_message)
+            return False
+
+        logger.info("Checking that the cluster is not replicating data to a standby cluster")
+        for rel in [
+            self.model.get_relation(ASYNC_REPLICA_RELATION),
+            self.model.get_relation(ASYNC_PRIMARY_RELATION),
+        ]:
+            if not rel:  # if no relation exits, then it rel == None
+                continue
+            error_message = "Unit cannot restore backup as the cluster is replicating data to a standby cluster"
             logger.error(f"Restore failed: {error_message}")
             event.fail(error_message)
             return False

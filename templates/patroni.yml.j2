@@ -124,6 +124,7 @@ postgresql:
   - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 md5
   {%- endif %}
   - {{ 'hostssl' if enable_tls else 'host' }} replication replication 127.0.0.1/32 md5
+  - {{ 'hostssl' if enable_tls else 'host' }} replication replication 127.0.0.6/32 md5
   {%- for e in extra_replication_endpoints %}
   - {{ 'hostssl' if enable_tls else 'host' }} replication replication {{ e }} md5
   {%- endfor -%}

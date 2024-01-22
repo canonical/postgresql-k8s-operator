@@ -127,6 +127,30 @@ class Patroni:
                         break
         return primary
 
+    def get_standby_leader(self, unit_name_pattern=False) -> str:
+        """Get standby leader instance.
+
+        Args:
+            unit_name_pattern: whether to convert pod name to unit name
+
+        Returns:
+            standby leader pod or unit name.
+        """
+        primary = None
+        # Request info from cluster endpoint (which returns all members of the cluster).
+        for attempt in Retrying(stop=stop_after_attempt(len(self._endpoints) + 1)):
+            with attempt:
+                url = self._get_alternative_patroni_url(attempt)
+                r = requests.get(f"{url}/cluster", verify=self._verify)
+                for member in r.json()["members"]:
+                    if member["role"] == "standby_leader":
+                        primary = member["name"]
+                        if unit_name_pattern:
+                            # Change the last dash to / in order to match unit name pattern.
+                            primary = "/".join(primary.rsplit("-", 1))
+                        break
+        return primary
+
     def get_sync_standby_names(self) -> List[str]:
         """Get the list of sync standby unit names."""
         sync_standbys = []

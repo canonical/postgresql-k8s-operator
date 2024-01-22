@@ -11,7 +11,8 @@
 
 import json
 import logging
-from typing import Dict, Set
+from datetime import datetime
+from typing import Dict, Optional, Set, Tuple
 
 from lightkube import Client
 from lightkube.resources.core_v1 import Service
@@ -22,8 +23,18 @@ from ops.charm import (
 from ops.framework import Object
 from ops.model import (
     Unit,
+    WaitingStatus,
 )
+from ops.pebble import ChangeError
+from tenacity import Retrying, stop_after_attempt, wait_fixed
 
+from constants import (
+    APP_SCOPE,
+    REPLICATION_PASSWORD_KEY,
+    USER_PASSWORD_KEY,
+    WORKLOAD_OS_GROUP,
+    WORKLOAD_OS_USER,
+)
 from coordinator_ops import CoordinatedOpsManager
 
 logger = logging.getLogger(__name__)
@@ -101,9 +112,12 @@ class PostgreSQLAsyncReplication(Object):
     @property
     def endpoint(self) -> str:
         """Assumes the endpoint is the same, disregard if we are a primary or standby cluster."""
-        for rel in self.relation_set:
-            return str(self.charm.model.get_binding(rel).network.ingress_address)
-        return None
+        sync_standby_names = self.charm._patroni.get_sync_standby_names()
+        if len(sync_standby_names) > 0:
+            unit = self.model.get_unit(sync_standby_names[0])
+            return self.charm.get_unit_ip(unit)
+        else:
+            return self.charm.get_unit_ip(self.charm.unit)
 
     def standby_endpoints(self) -> Set[str]:
         """Returns the set of IPs used by each standby unit with a /32 mask."""
@@ -116,13 +130,14 @@ class PostgreSQLAsyncReplication(Object):
                         standby_endpoints.add("{}/32".format(str(rel.data[unit]["pod-address"])))
         return standby_endpoints
 
-    def get_primary_data(self) -> Dict[str, str]:
+    def get_primary_data(self) -> Optional[Dict[str, str]]:
         """Returns the primary info, if available and if the primary cluster is ready."""
         for rel in self.relation_set:
             for unit in self._all_units(rel):
                 if "elected" in rel.data[unit] and unit.name == self.charm.unit.name:
                     # If this unit is the leader, then return None
                     return None
+
                 if rel.data[unit].get("elected", None) and rel.data[unit].get(
                     "primary-cluster-ready", None
                 ):
@@ -162,8 +177,12 @@ class PostgreSQLAsyncReplication(Object):
                 del rel.data[self.charm.unit]["elected"]
             if "primary-cluster-ready" in rel.data[self.charm.unit]:
                 del rel.data[self.charm.unit]["primary-cluster-ready"]
+        if self.charm.unit.is_leader() and "promoted" in self.charm.app_peer_data:
+            del self.charm.app_peer_data["promoted"]
 
-        self.container.stop(self.charm._postgresql_service)
+        for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3)):
+            with attempt:
+                self.container.stop(self.charm._postgresql_service)
         self.charm.update_config()
         self.container.start(self.charm._postgresql_service)
 
@@ -196,7 +215,9 @@ class PostgreSQLAsyncReplication(Object):
 
         # This unit is the leader, generate  a new configuration and leave.
         # There is nothing to do for the leader.
-        self.container.stop(self.charm._postgresql_service)
+        for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3)):
+            with attempt:
+                self.container.stop(self.charm._postgresql_service)
         self.charm.update_config()
         self.container.start(self.charm._postgresql_service)
 
@@ -224,13 +245,29 @@ class PostgreSQLAsyncReplication(Object):
             return
         logger.info("_on_standby_changed: pod-address published in own replica databag")
 
-        if not self.get_primary_data():
+        primary_data = self.get_primary_data()
+        if not primary_data:
             # We've made thus far.
             # However, the get_primary_data will return != None ONLY if the primary cluster
             # is ready and configured. Until then, we wait.
             event.defer()
             return
         logger.info("_on_standby_changed: primary cluster is ready")
+
+        if "system-id" not in replica_relation.data[self.charm.unit]:
+            system_identifier, error = self.get_system_identifier()
+            if error is not None:
+                raise Exception(f"Failed to get system identifier: {error}")
+            replica_relation.data[self.charm.unit]["system-id"] = system_identifier
+
+            if self.charm.unit.is_leader():
+                self.charm.set_secret(
+                    APP_SCOPE, USER_PASSWORD_KEY, primary_data["superuser-password"]
+                )
+                self.charm.set_secret(
+                    APP_SCOPE, REPLICATION_PASSWORD_KEY, primary_data["replication-password"]
+                )
+                del self.charm._peers.data[self.charm.app]["cluster_initialised"]
 
         ################
         # Initiate restart logic
@@ -255,7 +292,28 @@ class PostgreSQLAsyncReplication(Object):
         # We need all replicas to be stopped, so we can remove the patroni-postgresql-k8s
         # service from Kubernetes and not getting it recreated!
         # We will restart the it once the cluster is ready.
-        self.container.stop(self.charm._postgresql_service)
+        for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3)):
+            with attempt:
+                self.container.stop(self.charm._postgresql_service)
+
+        replica_relation = self.model.get_relation(ASYNC_REPLICA_RELATION)
+        for unit in replica_relation.units:
+            if "elected" not in replica_relation.data[unit]:
+                continue
+            elected_data = json.loads(replica_relation.data[unit]["elected"])
+            if "system-id" not in elected_data:
+                continue
+            if replica_relation.data[self.charm.unit]["system-id"] != elected_data["system-id"]:
+                if self.charm.unit.is_leader():
+                    # Store current data in a ZIP file, clean folder and generate configuration.
+                    logger.info("Creating backup of pgdata folder")
+                    self.container.exec(
+                        f"tar -zcf /var/lib/postgresql/data/pgdata-{str(datetime.now()).replace(' ', '-').replace(':', '-')}.zip /var/lib/postgresql/data/pgdata".split()
+                    ).wait_output()
+                logger.info("Removing and recreating pgdata folder")
+                self.container.exec("rm -r /var/lib/postgresql/data/pgdata".split()).wait_output()
+                self.charm._create_pgdata(self.container)
+                break
         self.restart_coordinator.acknowledge(event)
 
     def _on_coordination_approval(self, event):
@@ -270,22 +328,20 @@ class PostgreSQLAsyncReplication(Object):
                 name=f"patroni-{self.charm._name}-config",
                 namespace=self.charm._namespace,
             )
-
-        # Clean folder and generate configuration.
-        self.container.exec("rm -r /var/lib/postgresql/data/pgdata".split()).wait_output()
-        self.charm._create_pgdata(self.container)
+        elif not self.charm._patroni.primary_endpoint_ready:
+            self.charm.unit.status = WaitingStatus("waiting for primary to be ready")
+            event.defer()
+            return
 
         self.charm.update_config()
         logger.info("_on_standby_changed: configuration done, waiting for restart of the service")
 
         # We are ready to restart the service now: all peers have configured themselves.
         self.container.start(self.charm._postgresql_service)
+        if self.charm.unit.is_leader():
+            self.charm._peers.data[self.charm.app]["cluster_initialised"] = "True"
 
-    def _get_primary_candidates(self):
-        rel = self.model.get_relation(ASYNC_PRIMARY_RELATION)
-        return rel.units if rel else []
-
-    def _check_if_primary_already_selected(self) -> Unit:
+    def _check_if_primary_already_selected(self) -> Optional[Unit]:
         """Returns the unit if a primary is present."""
         result = None
         if not self.relation_set:
@@ -332,15 +388,23 @@ class PostgreSQLAsyncReplication(Object):
             event.fail(f"Cannot promote - {unit.name} is already primary: demote it first")
             return
 
+        system_identifier, error = self.get_system_identifier()
+        if error is not None:
+            event.fail(f"Failed to get system identifier: {error}")
+            return
+
         # If this is a standby-leader, then execute switchover logic
         # TODO
         primary_relation.data[self.charm.unit]["elected"] = json.dumps(
             {
+                # "endpoint": self.charm.async_replication_endpoint,
                 "endpoint": self.endpoint,
                 "replication-password": self.charm._patroni._replication_password,
                 "superuser-password": self.charm._patroni._superuser_password,
+                "system-id": system_identifier,
             }
         )
+        self.charm.app_peer_data["promoted"] = "True"
 
         # Now, check if postgresql it had originally published its pod IP in the
         # replica relation databag. Delete it, if yes.
@@ -349,3 +413,23 @@ class PostgreSQLAsyncReplication(Object):
             return
         del replica_relation.data[self.charm.unit]["pod-address"]
         # event.set_result()
+
+    def get_system_identifier(self) -> Tuple[Optional[str], Optional[str]]:
+        """Returns the PostgreSQL system identifier from this instance."""
+        try:
+            system_identifier, error = self.container.exec(
+                [
+                    f'/usr/lib/postgresql/{self.charm._patroni.rock_postgresql_version.split(".")[0]}/bin/pg_controldata',
+                    "/var/lib/postgresql/data/pgdata",
+                ],
+                user=WORKLOAD_OS_USER,
+                group=WORKLOAD_OS_GROUP,
+            ).wait_output()
+        except ChangeError as e:
+            return None, str(e)
+        if error != "":
+            return None, error
+        system_identifier = [
+            line for line in system_identifier.splitlines() if "Database system identifier" in line
+        ][0].split(" ")[-1]
+        return system_identifier, None
