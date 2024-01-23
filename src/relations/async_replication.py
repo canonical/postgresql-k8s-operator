@@ -1,13 +1,7 @@
-# Copyright 2023 Canonical Ltd.
+# Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-"""Implements the state-machine.
-
-1) First async replication relation is made: both units get blocked waiting for a leader
-2) User runs the promote action against one of the clusters
-3) The cluster moves leader and sets the async-replication data, marking itself as leader
-4) The other units receive that new information and update themselves to become standby-leaders.
-"""
+"""Implements the state-machine."""
 
 import json
 import logging
@@ -30,7 +24,9 @@ from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from constants import (
     APP_SCOPE,
+    MONITORING_PASSWORD_KEY,
     REPLICATION_PASSWORD_KEY,
+    REWIND_PASSWORD_KEY,
     USER_PASSWORD_KEY,
     WORKLOAD_OS_GROUP,
     WORKLOAD_OS_USER,
@@ -144,7 +140,9 @@ class PostgreSQLAsyncReplication(Object):
                     elected_data = json.loads(rel.data[unit]["elected"])
                     return {
                         "endpoint": str(elected_data["endpoint"]),
+                        "monitoring-password": elected_data["monitoring-password"],
                         "replication-password": elected_data["replication-password"],
+                        "rewind-password": elected_data["rewind-password"],
                         "superuser-password": elected_data["superuser-password"],
                     }
         return None
@@ -262,10 +260,16 @@ class PostgreSQLAsyncReplication(Object):
 
             if self.charm.unit.is_leader():
                 self.charm.set_secret(
+                    APP_SCOPE, MONITORING_PASSWORD_KEY, primary_data["monitoring-password"]
+                )
+                self.charm.set_secret(
                     APP_SCOPE, USER_PASSWORD_KEY, primary_data["superuser-password"]
                 )
                 self.charm.set_secret(
                     APP_SCOPE, REPLICATION_PASSWORD_KEY, primary_data["replication-password"]
+                )
+                self.charm.set_secret(
+                    APP_SCOPE, REWIND_PASSWORD_KEY, primary_data["rewind-password"]
                 )
                 del self.charm._peers.data[self.charm.app]["cluster_initialised"]
 
@@ -276,7 +280,7 @@ class PostgreSQLAsyncReplication(Object):
         # We need to:
         # 1) Stop all standby units
         # 2) Delete the k8s service
-        # 3) Remove the pgdata folder
+        # 3) Remove the pgdata folder (if the clusters are different)
         # 4) Start all standby units
         # For that, the peer leader must first stop its own service and then, issue a
         # coordination request to all units. All units ack that request once they all have
@@ -291,7 +295,7 @@ class PostgreSQLAsyncReplication(Object):
         # Stop the container.
         # We need all replicas to be stopped, so we can remove the patroni-postgresql-k8s
         # service from Kubernetes and not getting it recreated!
-        # We will restart the it once the cluster is ready.
+        # We will restart it once the cluster is ready.
         for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3)):
             with attempt:
                 self.container.stop(self.charm._postgresql_service)
@@ -376,12 +380,6 @@ class PostgreSQLAsyncReplication(Object):
             event.fail("No primary relation")
             return
 
-        # Check if this is a take over from a standby cluster
-        if event.params.get("force", False) and event.params.get(
-            "force-really-really-mean-it", False
-        ):
-            pass
-
         # Let the exception error the unit
         unit = self._check_if_primary_already_selected()
         if unit:
@@ -393,13 +391,12 @@ class PostgreSQLAsyncReplication(Object):
             event.fail(f"Failed to get system identifier: {error}")
             return
 
-        # If this is a standby-leader, then execute switchover logic
-        # TODO
         primary_relation.data[self.charm.unit]["elected"] = json.dumps(
             {
-                # "endpoint": self.charm.async_replication_endpoint,
                 "endpoint": self.endpoint,
+                "monitoring-password": self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY),
                 "replication-password": self.charm._patroni._replication_password,
+                "rewind-password": self.charm.get_secret(APP_SCOPE, REWIND_PASSWORD_KEY),
                 "superuser-password": self.charm._patroni._superuser_password,
                 "system-id": system_identifier,
             }
@@ -412,7 +409,6 @@ class PostgreSQLAsyncReplication(Object):
         if not replica_relation or "pod-address" not in replica_relation.data[self.charm.unit]:
             return
         del replica_relation.data[self.charm.unit]["pod-address"]
-        # event.set_result()
 
     def get_system_identifier(self) -> Tuple[Optional[str], Optional[str]]:
         """Returns the PostgreSQL system identifier from this instance."""
@@ -433,3 +429,32 @@ class PostgreSQLAsyncReplication(Object):
             line for line in system_identifier.splitlines() if "Database system identifier" in line
         ][0].split(" ")[-1]
         return system_identifier, None
+
+    def update_async_replication_data(self) -> None:
+        """Updates the async-replication data, if the unit is the leader.
+
+        This is used to update the standby units with the new primary information.
+        If the unit is not the leader, then the data is removed from its databag.
+        """
+        if "promoted" not in self.charm.app_peer_data:
+            return
+
+        primary_relation = self.model.get_relation(ASYNC_PRIMARY_RELATION)
+        if self.charm.unit.is_leader():
+            system_identifier, error = self.get_system_identifier()
+            if error is not None:
+                raise Exception(f"Failed to get system identifier: {error}")
+            primary_relation.data[self.charm.unit]["elected"] = json.dumps(
+                {
+                    "endpoint": self.endpoint,
+                    "monitoring-password": self.charm.get_secret(
+                        APP_SCOPE, MONITORING_PASSWORD_KEY
+                    ),
+                    "replication-password": self.charm._patroni._replication_password,
+                    "rewind-password": self.charm.get_secret(APP_SCOPE, REWIND_PASSWORD_KEY),
+                    "superuser-password": self.charm._patroni._superuser_password,
+                    "system-id": system_identifier,
+                }
+            )
+        else:
+            primary_relation.data[self.charm.unit]["elected"] = ""

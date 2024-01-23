@@ -364,6 +364,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.postgresql_client_relation.update_read_only_endpoint()
         self._remove_from_endpoints(endpoints_to_remove)
 
+        # Update the endpoint in the async replication data.
+        self.async_manager.update_async_replication_data()
+
     def _on_peer_relation_changed(self, event: HookEvent) -> None:
         """Reconfigure cluster members."""
         # The cluster must be initialized first in the leader unit
@@ -448,6 +451,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         # update config on every run
         self.update_config()
+
+        # Update the endpoint in the async replication data.
+        self.async_manager.update_async_replication_data()
 
         if not self.unit.is_leader():
             return
@@ -933,6 +939,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Other units Patroni configuration will be reloaded in the peer relation changed event.
         self.update_config()
 
+        # Update the password in the async replication data.
+        self.async_manager.update_async_replication_data()
+
         event.set_results({"password": password})
 
     def _on_get_primary(self, event: ActionEvent) -> None:
@@ -1053,6 +1062,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         if self._handle_processes_failures():
             return
+
+        # Update the endpoint in the async replication data.
+        self.async_manager.update_async_replication_data()
 
         self._set_primary_status_message()
 
