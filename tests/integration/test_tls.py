@@ -27,6 +27,7 @@ from .helpers import (
 logger = logging.getLogger(__name__)
 
 MATTERMOST_APP_NAME = "mattermost"
+SELF_SIGNED_CERTIFICATES_APP_NAME = "self-signed-certificates"
 TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
 APPLICATION_UNITS = 2
 DATABASE_UNITS = 3
@@ -169,3 +170,19 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
             assert await check_tls(ops_test, unit.name, enabled=False)
             assert await check_tls_patroni_api(ops_test, unit.name, enabled=False)
+
+
+@pytest.mark.group(1)
+async def test_relation_with_self_signed_certificates_operator(ops_test: OpsTest) -> None:
+    """Test the relation with the Self Signed Certificates operator."""
+    async with ops_test.fast_forward(fast_interval="60s"):
+        # Deploy Self Signed Certificates operator.
+        await ops_test.model.deploy(SELF_SIGNED_CERTIFICATES_APP_NAME)
+        # Relate it to the PostgreSQL to enable TLS.
+        await ops_test.model.relate(DATABASE_APP_NAME, SELF_SIGNED_CERTIFICATES_APP_NAME)
+        await ops_test.model.wait_for_idle(status="active", timeout=1500)
+
+        # Wait for all units enabling TLS.
+        for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
+            assert await check_tls(ops_test, unit.name, enabled=True)
+            assert await check_tls_patroni_api(ops_test, unit.name, enabled=True)
