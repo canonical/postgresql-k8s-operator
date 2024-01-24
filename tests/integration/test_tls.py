@@ -8,6 +8,7 @@ import requests
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
+from . import markers
 from .helpers import (
     DATABASE_APP_NAME,
     build_and_deploy,
@@ -172,6 +173,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
             assert await check_tls_patroni_api(ops_test, unit.name, enabled=False)
 
 
+@markers.juju3
 @pytest.mark.group(1)
 async def test_relation_with_self_signed_certificates_operator(ops_test: OpsTest) -> None:
     """Test the relation with the Self Signed Certificates operator."""
