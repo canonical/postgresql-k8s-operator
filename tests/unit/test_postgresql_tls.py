@@ -3,7 +3,7 @@
 import base64
 import socket
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 from ops.pebble import ConnectionError
 from ops.testing import Harness
@@ -87,28 +87,69 @@ class TestPostgreSQLTLS(unittest.TestCase):
 
     @patch_network_get(private_address="1.1.1.1")
     @patch(
-        "charms.tls_certificates_interface.v1.tls_certificates.TLSCertificatesRequiresV1.request_certificate_creation"
+        "charms.tls_certificates_interface.v2.tls_certificates.TLSCertificatesRequiresV2.request_certificate_creation"
     )
-    def test_request_certificate(self, _request_certificate_creation):
+    @patch(
+        "charms.postgresql_k8s.v0.postgresql_tls.generate_csr",
+        return_value=b"fake CSR",
+    )
+    @patch(
+        "charms.postgresql_k8s.v0.postgresql_tls.generate_private_key",
+        return_value=b"fake private key",
+    )
+    def test_request_certificate(
+        self, _generate_private_key, _generate_csr, _request_certificate_creation
+    ):
         # Test without an established relation.
         self.delete_secrets()
         self.charm.tls._request_certificate(None)
+        generate_csr_call = call(
+            private_key=b"fake private key",
+            subject="postgresql-k8s-0.postgresql-k8s-endpoints",
+            sans_ip=["1.1.1.1"],
+            sans_dns=[
+                "postgresql-k8s-0",
+                "postgresql-k8s-0.postgresql-k8s-endpoints",
+                socket.getfqdn(),
+                "1.1.1.1",
+                f"postgresql-k8s-primary.{self.charm.model.name}.svc.cluster.local",
+                f"postgresql-k8s-replicas.{self.charm.model.name}.svc.cluster.local",
+            ],
+        )
+        _generate_csr.assert_has_calls([generate_csr_call])
         self.assertIsNotNone(self.charm.get_secret(SCOPE, "key"))
         self.assertIsNotNone(self.charm.get_secret(SCOPE, "csr"))
         _request_certificate_creation.assert_not_called()
 
         # Test without providing a private key.
+        _generate_csr.reset_mock()
         with self.harness.hooks_disabled():
             self.relate_to_tls_certificates_operator()
         self.charm.tls._request_certificate(None)
+        _generate_csr.assert_has_calls([generate_csr_call])
         self.assertIsNotNone(self.charm.get_secret(SCOPE, "key"))
         self.assertIsNotNone(self.charm.get_secret(SCOPE, "csr"))
         _request_certificate_creation.assert_called_once()
 
         # Test providing a private key.
+        _generate_csr.reset_mock()
         _request_certificate_creation.reset_mock()
         key = self.get_content_from_file(filename="tests/unit/key.pem")
         self.charm.tls._request_certificate(key)
+        custom_key_generate_csr_call = call(
+            private_key=key.encode("utf-8"),
+            subject="postgresql-k8s-0.postgresql-k8s-endpoints",
+            sans_ip=["1.1.1.1"],
+            sans_dns=[
+                "postgresql-k8s-0",
+                "postgresql-k8s-0.postgresql-k8s-endpoints",
+                socket.getfqdn(),
+                "1.1.1.1",
+                f"postgresql-k8s-primary.{self.charm.model.name}.svc.cluster.local",
+                f"postgresql-k8s-replicas.{self.charm.model.name}.svc.cluster.local",
+            ],
+        )
+        _generate_csr.assert_has_calls([custom_key_generate_csr_call])
         self.assertIsNotNone(self.charm.get_secret(SCOPE, "key"))
         self.assertIsNotNone(self.charm.get_secret(SCOPE, "csr"))
         _request_certificate_creation.assert_called_once()
@@ -166,7 +207,7 @@ class TestPostgreSQLTLS(unittest.TestCase):
 
     @patch_network_get(private_address="1.1.1.1")
     @patch(
-        "charms.tls_certificates_interface.v1.tls_certificates.TLSCertificatesRequiresV1.request_certificate_renewal"
+        "charms.tls_certificates_interface.v2.tls_certificates.TLSCertificatesRequiresV2.request_certificate_renewal"
     )
     def test_on_certificate_expiring(self, _request_certificate_renewal):
         # Test with no provided or invalid certificate.
@@ -200,12 +241,6 @@ class TestPostgreSQLTLS(unittest.TestCase):
                 ],
             },
         )
-
-    def test_get_tls_extensions(self):
-        extensions = self.charm.tls._get_tls_extensions()
-        self.assertEqual(len(extensions), 1)
-        self.assertEqual(extensions[0].ca, True)
-        self.assertIsNone(extensions[0].path_length)
 
     def test_get_tls_files(self):
         # Test with no TLS files available.
