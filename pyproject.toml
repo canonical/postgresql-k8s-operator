@@ -78,6 +78,7 @@ juju = "^3.2.2"
 psycopg2 = {version = "^2.9.9", extras = ["binary"]}
 boto3 = "^1.34.25"
 tenacity = "^8.2.3"
+allure-pytest = "^2.13.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
