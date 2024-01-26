@@ -373,20 +373,25 @@ class PostgreSQLBackups(Object):
 
     def coordinate_stanza_fields(self) -> None:
         """Coordinate the stanza name between the primary and the leader units."""
-        if "stanza" not in self.charm.app_peer_data:
-            for unit_data in self.charm._peers.data.values():
-                if "stanza" in unit_data and self.charm.unit.is_leader():
-                    self.charm.app_peer_data.update(
-                        {"stanza": self.stanza_name, "init-pgbackrest": "True"}
-                    )
+        for unit, unit_data in self.charm._peers.data.items():
+            if "stanza" not in unit_data:
+                continue
+            # If the stanza name is not set in the application databag, then the primary is not
+            # the leader unit, and it's needed to set the stanza name in the application databag.
+            if "stanza" not in self.charm.app_peer_data and self.charm.unit.is_leader():
+                self.charm.app_peer_data.update(
+                    {"stanza": self.stanza_name, "init-pgbackrest": "True"}
+                )
+                break
+            # If the stanza was already checked and its name is still in the unit databag, mark
+            # the stanza as already checked in the application databag and remove it from the
+            # unit databag.
+            if "init-pgbackrest" not in unit_data:
+                if self.charm.unit.is_leader():
+                    self.charm.app_peer_data.pop("init-pgbackrest", None)
+                if "init-pgbackrest" not in self.charm.app_peer_data and unit == self.charm.unit:
+                    self.charm.unit_peer_data.update({"stanza": ""})
                     break
-        elif (
-            "stanza" in self.charm.unit_peer_data
-            and "init-pgbackrest" not in self.charm.unit_peer_data
-        ):
-            if self.charm.unit.is_leader():
-                self.charm.app_peer_data.pop("init-pgbackrest", None)
-            self.charm.unit_peer_data.update({"stanza": ""})
 
     @property
     def _is_primary_pgbackrest_service_running(self) -> bool:
