@@ -118,9 +118,11 @@ async def check_database_users_existence(
     output = await execute_query_on_unit(
         unit_address,
         password,
-        "SELECT CONCAT(usename, ':', usesuper) FROM pg_catalog.pg_user;"
-        if admin
-        else "SELECT usename FROM pg_catalog.pg_user;",
+        (
+            "SELECT CONCAT(usename, ':', usesuper) FROM pg_catalog.pg_user;"
+            if admin
+            else "SELECT usename FROM pg_catalog.pg_user;"
+        ),
     )
 
     # Assert users that should exist.
