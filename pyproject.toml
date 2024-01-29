@@ -43,7 +43,7 @@ cosl = "*"
 optional = true
 
 [tool.poetry.group.format.dependencies]
-black = "^23.12.1"
+black = "^24.1.1"
 ruff = "^0.1.14"
 
 [tool.poetry.group.lint]
@@ -58,7 +58,7 @@ optional = true
 [tool.poetry.group.unit.dependencies]
 coverage = {extras = ["toml"], version = "^7.4.1"}
 pydantic = "^1.10.14"
-pytest = "^7.4.4"
+pytest = "^8.0.0"
 pytest-mock = "^3.12.0"
 pytest-asyncio = "*"
 psycopg2 = {version = "^2.9.9", extras = ["binary"]}
@@ -69,7 +69,7 @@ optional = true
 
 [tool.poetry.group.integration.dependencies]
 lightkube = "^0.15.0"
-pytest = "^7.4.4"
+pytest = "^8.0.0"
 pytest-github-secrets = {git = "https://github.com/canonical/data-platform-workflows", tag = "v11.0.0", subdirectory = "python/pytest_plugins/github_secrets"}
 pytest-operator = "^0.32.0"
 pytest-operator-cache = {git = "https://github.com/canonical/data-platform-workflows", tag = "v11.0.0", subdirectory = "python/pytest_plugins/pytest_operator_cache"}
