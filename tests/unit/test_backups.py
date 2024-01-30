@@ -553,17 +553,24 @@ class TestPostgreSQLBackups(unittest.TestCase):
     @patch("backups.wait_fixed", return_value=wait_fixed(0))
     @patch("charm.PostgresqlOperatorCharm.update_config")
     @patch("charm.PostgreSQLBackups._execute_command")
+    @patch("charm.PostgresqlOperatorCharm.is_primary", new_callable=PropertyMock)
     def test_initialise_stanza(
-        self, _execute_command, _update_config, _, _member_started, _reload_patroni_configuration
+        self,
+        _is_primary,
+        _execute_command,
+        _update_config,
+        _,
+        _member_started,
+        _reload_patroni_configuration,
     ):
-        # Test when the unit is not the leader.
+        # Test when the unit is not the primary.
+        _is_primary.return_value = False
         self.charm.backup._initialise_stanza()
         _execute_command.assert_not_called()
 
-        # Test when the unit is the leader, but it's in a blocked state
+        # Test when the unit is the primary, but it's in a blocked state
         # other than the ones can be solved by new S3 settings.
-        with self.harness.hooks_disabled():
-            self.harness.set_leader()
+        _is_primary.return_value = True
         self.charm.unit.status = BlockedStatus("fake blocked state")
         self.charm.backup._initialise_stanza()
         _execute_command.assert_not_called()
@@ -595,16 +602,41 @@ class TestPostgreSQLBackups(unittest.TestCase):
             # Assert there is no stanza name in the application relation databag.
             self.assertEqual(self.harness.get_relation_data(self.peer_rel_id, self.charm.app), {})
 
-        # Test when the archiving is working correctly (pgBackRest check command succeeds).
+        # Test when the archiving is working correctly (pgBackRest check command succeeds)
+        # and the unit is not the leader.
         _execute_command.reset_mock()
         _update_config.reset_mock()
         _member_started.reset_mock()
         _reload_patroni_configuration.reset_mock()
         _execute_command.side_effect = None
         self.charm.backup._initialise_stanza()
+        self.assertEqual(self.harness.get_relation_data(self.peer_rel_id, self.charm.app), {})
+        self.assertEqual(
+            self.harness.get_relation_data(self.peer_rel_id, self.charm.unit),
+            {
+                "stanza": f"{self.charm.model.name}.patroni-postgresql-k8s",
+                "init-pgbackrest": "True",
+            },
+        )
+        self.assertIsInstance(self.charm.unit.status, MaintenanceStatus)
+
+        # Test when the unit is the leader.
+        with self.harness.hooks_disabled():
+            self.harness.set_leader()
+            self.harness.update_relation_data(
+                self.peer_rel_id, self.charm.unit.name, {"stanza": "", "init-pgbackrest": ""}
+            )
+        self.charm.backup._initialise_stanza()
         self.assertEqual(
             self.harness.get_relation_data(self.peer_rel_id, self.charm.app),
-            {"stanza": "None.patroni-postgresql-k8s", "init-pgbackrest": "True"},
+            {
+                "stanza": f"{self.charm.model.name}.patroni-postgresql-k8s",
+                "init-pgbackrest": "True",
+            },
+        )
+        self.assertEqual(
+            self.harness.get_relation_data(self.peer_rel_id, self.charm.unit),
+            {},
         )
         self.assertIsInstance(self.charm.unit.status, MaintenanceStatus)
 
@@ -613,8 +645,15 @@ class TestPostgreSQLBackups(unittest.TestCase):
     @patch("backups.wait_fixed", return_value=wait_fixed(0))
     @patch("charm.PostgresqlOperatorCharm.update_config")
     @patch("charm.PostgreSQLBackups._execute_command")
+    @patch("charm.PostgresqlOperatorCharm.is_primary", new_callable=PropertyMock)
     def test_check_stanza(
-        self, _execute_command, _update_config, _, _member_started, _reload_patroni_configuration
+        self,
+        _is_primary,
+        _execute_command,
+        _update_config,
+        _,
+        _member_started,
+        _reload_patroni_configuration,
     ):
         # Set peer data flag
         with self.harness.hooks_disabled():
@@ -624,13 +663,13 @@ class TestPostgreSQLBackups(unittest.TestCase):
                 {"init-pgbackrest": "True"},
             )
 
-        # Test when the unit is not the leader.
+        # Test when the unit is not the primary.
+        _is_primary.return_value = False
         self.charm.backup.check_stanza()
         _execute_command.assert_not_called()
 
-        # Set the unit as leader
-        with self.harness.hooks_disabled():
-            self.harness.set_leader()
+        # Set the unit as primary.
+        _is_primary.return_value = True
 
         stanza_check_command = [
             "pgbackrest",
@@ -695,12 +734,14 @@ class TestPostgreSQLBackups(unittest.TestCase):
     @patch("charm.PostgreSQLBackups._initialise_stanza")
     @patch("charm.PostgreSQLBackups.can_use_s3_repository")
     @patch("charm.PostgreSQLBackups._create_bucket_if_not_exists")
+    @patch("charm.PostgresqlOperatorCharm.is_primary", new_callable=PropertyMock)
     @patch("charm.PostgreSQLBackups._render_pgbackrest_conf_file")
     @patch("ops.framework.EventBase.defer")
     def test_on_s3_credential_changed(
         self,
         _defer,
         _render_pgbackrest_conf_file,
+        _is_primary,
         _create_bucket_if_not_exists,
         _can_use_s3_repository,
         _initialise_stanza,
@@ -745,6 +786,7 @@ class TestPostgreSQLBackups(unittest.TestCase):
                 {"cluster_initialised": "True"},
             )
         _render_pgbackrest_conf_file.return_value = True
+        _is_primary.return_value = False
 
         self.charm.backup.s3_client.on.credentials_changed.emit(
             relation=self.harness.model.get_relation(S3_PARAMETERS_RELATION, self.s3_rel_id)
@@ -755,11 +797,9 @@ class TestPostgreSQLBackups(unittest.TestCase):
         _can_use_s3_repository.assert_not_called()
         _initialise_stanza.assert_not_called()
 
-        with self.harness.hooks_disabled():
-            self.harness.set_leader()
-
         # Test when the charm render the pgBackRest configuration file, but fails to
         # access or create the S3 bucket.
+        _is_primary.return_value = True
         for error in [
             ClientError(
                 error_response={"Error": {"Code": 1, "message": "fake error"}},
