@@ -19,6 +19,7 @@ The `postgresql` module provides methods for interacting with the PostgreSQL ins
 Any charm using this library should import the `psycopg2` or `psycopg2-binary` dependency.
 """
 import logging
+from collections import OrderedDict
 from typing import Dict, List, Optional, Set, Tuple
 
 import psycopg2
@@ -34,10 +35,21 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 21
+LIBPATCH = 22
 
 INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE = "invalid role(s) for extra user roles"
 
+REQUIRED_PLUGINS = {
+    "address_standardizer": ["postgis"],
+    "address_standardizer_data_us": ["postgis"],
+    "jsonb_plperl": ["plperl"],
+    "postgis_raster": ["postgis"],
+    "postgis_tiger_geocoder": ["postgis", "fuzzystrmatch"],
+    "postgis_topology": ["postgis"],
+}
+DEPENDENCY_PLUGINS = set()
+for dependencies in REQUIRED_PLUGINS.values():
+    DEPENDENCY_PLUGINS |= set(dependencies)
 
 logger = logging.getLogger(__name__)
 
@@ -289,12 +301,18 @@ class PostgreSQL:
                     cursor.execute("SELECT datname FROM pg_database WHERE NOT datistemplate;")
                     databases = {database[0] for database in cursor.fetchall()}
 
+            ordered_extensions = OrderedDict()
+            for plugin in DEPENDENCY_PLUGINS:
+                ordered_extensions[plugin] = extensions.get(plugin, False)
+            for extension, enable in extensions.items():
+                ordered_extensions[extension] = enable
+
             # Enable/disabled the extension in each database.
             for database in databases:
                 with self._connect_to_database(
                     database=database
                 ) as connection, connection.cursor() as cursor:
-                    for extension, enable in extensions.items():
+                    for extension, enable in ordered_extensions.items():
                         cursor.execute(
                             f"CREATE EXTENSION IF NOT EXISTS {extension};"
                             if enable
