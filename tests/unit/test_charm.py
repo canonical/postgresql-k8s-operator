@@ -1,6 +1,7 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
-
+import itertools
+import json
 import logging
 import unittest
 from unittest.mock import MagicMock, Mock, PropertyMock, patch
@@ -983,3 +984,155 @@ class TestCharm(unittest.TestCase):
         assert SECRET_INTERNAL_LABEL not in self.harness.get_relation_data(
             self.rel_id, getattr(self.charm, scope).name
         )
+
+    @patch("backups.PostgreSQLBackups.start_stop_pgbackrest_service")
+    @patch("backups.PostgreSQLBackups.check_stanza")
+    @patch("backups.PostgreSQLBackups.coordinate_stanza_fields")
+    @patch("charm.Patroni.reinitialize_postgresql")
+    @patch("charm.Patroni.member_replication_lag", new_callable=PropertyMock)
+    @patch("charm.PostgresqlOperatorCharm.is_primary")
+    @patch("charm.Patroni.member_started", new_callable=PropertyMock)
+    @patch("charm.PostgresqlOperatorCharm.update_config")
+    @patch("charm.PostgresqlOperatorCharm._add_members")
+    @patch("ops.framework.EventBase.defer")
+    def test_on_peer_relation_changed(
+        self,
+        _defer,
+        _add_members,
+        _update_config,
+        _member_started,
+        _is_primary,
+        _member_replication_lag,
+        _reinitialize_postgresql,
+        _coordinate_stanza_fields,
+        _check_stanza,
+        _start_stop_pgbackrest_service,
+    ):
+        # Test when the cluster was not initialised yet.
+        self.harness.set_can_connect(self._postgresql_container, True)
+        self.relation = self.harness.model.get_relation(self._peer_relation, self.rel_id)
+        self.charm.on.database_peers_relation_changed.emit(self.relation)
+        _defer.assert_called_once()
+        _add_members.assert_not_called()
+        _update_config.assert_not_called()
+        _coordinate_stanza_fields.assert_not_called()
+        _check_stanza.assert_not_called()
+        _start_stop_pgbackrest_service.assert_not_called()
+
+        # Test when the cluster has already initialised, but the unit is not the leader and is not
+        # part of the cluster yet.
+        _defer.reset_mock()
+        with self.harness.hooks_disabled():
+            self.harness.update_relation_data(
+                self.rel_id,
+                self.charm.app.name,
+                {"cluster_initialised": "True"},
+            )
+        self.charm.on.database_peers_relation_changed.emit(self.relation)
+        _defer.assert_not_called()
+        _add_members.assert_not_called()
+        _update_config.assert_not_called()
+        _coordinate_stanza_fields.assert_not_called()
+        _check_stanza.assert_not_called()
+        _start_stop_pgbackrest_service.assert_not_called()
+
+        # Test when the unit is the leader.
+        with self.harness.hooks_disabled():
+            self.harness.set_leader()
+        self.charm.on.database_peers_relation_changed.emit(self.relation)
+        _defer.assert_not_called()
+        _add_members.assert_called_once()
+        _update_config.assert_not_called()
+        _coordinate_stanza_fields.assert_not_called()
+        _check_stanza.assert_not_called()
+        _start_stop_pgbackrest_service.assert_not_called()
+
+        # Test when the unit is part of the cluster but the container
+        # is not ready yet.
+        self.harness.set_can_connect(self._postgresql_container, False)
+        with self.harness.hooks_disabled():
+            unit_id = self.charm.unit.name.split("/")[1]
+            self.harness.update_relation_data(
+                self.rel_id,
+                self.charm.app.name,
+                {
+                    "endpoints": json.dumps(
+                        [f"{self.charm.app.name}-{unit_id}.{self.charm.app.name}-endpoints"]
+                    )
+                },
+            )
+        self.charm.on.database_peers_relation_changed.emit(self.relation)
+        _defer.assert_not_called()
+        _update_config.assert_not_called()
+        _coordinate_stanza_fields.assert_not_called()
+        _check_stanza.assert_not_called()
+        _start_stop_pgbackrest_service.assert_not_called()
+
+        # Test when the container is ready but Patroni hasn't started yet.
+        self.harness.set_can_connect(self._postgresql_container, True)
+        _member_started.return_value = False
+        self.charm.on.database_peers_relation_changed.emit(self.relation)
+        _defer.assert_called_once()
+        _update_config.assert_called_once()
+        _coordinate_stanza_fields.assert_not_called()
+        _check_stanza.assert_not_called()
+        _start_stop_pgbackrest_service.assert_not_called()
+
+        # Test when Patroni has already started but this is a replica with a
+        # huge or unknown lag.
+        _member_started.return_value = True
+        for values in itertools.product([True, False], ["0", "1000", "1001", "unknown"]):
+            _defer.reset_mock()
+            _coordinate_stanza_fields.reset_mock()
+            _check_stanza.reset_mock()
+            _start_stop_pgbackrest_service.reset_mock()
+            _is_primary.return_value = values[0]
+            _member_replication_lag.return_value = values[1]
+            self.charm.unit.status = ActiveStatus()
+            self.charm.on.database_peers_relation_changed.emit(self.relation)
+            if _is_primary.return_value == values[0] or int(values[1]) <= 1000:
+                _defer.assert_not_called()
+                _coordinate_stanza_fields.assert_called_once()
+                _check_stanza.assert_called_once()
+                _start_stop_pgbackrest_service.assert_called_once()
+            else:
+                _defer.assert_called_once()
+                _coordinate_stanza_fields.assert_not_called()
+                _check_stanza.assert_not_called()
+                _start_stop_pgbackrest_service.assert_not_called()
+
+        # Test the status not being changed when it was not possible to start
+        # the pgBackRest service yet.
+        _defer.reset_mock()
+        _is_primary.return_value = True
+        _member_replication_lag.return_value = "0"
+        _start_stop_pgbackrest_service.return_value = False
+        self.charm.unit.status = MaintenanceStatus()
+        with self.harness.hooks_disabled():
+            self.harness.update_relation_data(
+                self.rel_id, self.charm.unit.name, {"start-tls-server": ""}
+            )
+        self.charm.on.database_peers_relation_changed.emit(self.relation)
+        self.assertEqual(
+            self.harness.get_relation_data(self.rel_id, self.charm.unit),
+            {"start-tls-server": "True"},
+        )
+        _defer.assert_called_once()
+        self.assertIsInstance(self.charm.unit.status, MaintenanceStatus)
+
+        # Test the status being changed when it was possible to start the
+        # pgBackRest service.
+        _defer.reset_mock()
+        _start_stop_pgbackrest_service.return_value = True
+        self.charm.on.database_peers_relation_changed.emit(self.relation)
+        self.assertEqual(
+            self.harness.get_relation_data(self.rel_id, self.charm.unit),
+            {},
+        )
+        _defer.assert_not_called()
+        self.assertIsInstance(self.charm.unit.status, ActiveStatus)
+
+        # Test that a blocked status is not overridden.
+        self.charm.unit.status = BlockedStatus()
+        self.charm.on.database_peers_relation_changed.emit(self.relation)
+        self.assertIsInstance(self.charm.unit.status, BlockedStatus)
