@@ -8,7 +8,7 @@ from unittest.mock import MagicMock, PropertyMock, call, mock_open, patch
 from boto3.exceptions import S3UploadFailedError
 from botocore.exceptions import ClientError
 from jinja2 import Template
-from ops import ActiveStatus, BlockedStatus, MaintenanceStatus
+from ops import ActiveStatus, BlockedStatus, MaintenanceStatus, Unit
 from ops.pebble import Change, ChangeError, ChangeID, ExecError
 from ops.testing import Harness
 from tenacity import RetryError, wait_fixed
@@ -82,7 +82,15 @@ class TestPostgreSQLBackups(unittest.TestCase):
     def test_can_unit_perform_backup(
         self, _is_primary, _planned_units, _member_started, _are_backup_settings_ok
     ):
+        # Test when the charm fails to retrieve the primary.
+        _is_primary.side_effect = RetryError(last_attempt=1)
+        self.assertEqual(
+            self.charm.backup._can_unit_perform_backup(),
+            (False, "Unit cannot perform backups as the database seems to be offline"),
+        )
+
         # Test when the unit is in a blocked state.
+        _is_primary.side_effect = None
         self.charm.unit.status = BlockedStatus("fake blocked state")
         self.assertEqual(
             self.charm.backup._can_unit_perform_backup(),
@@ -660,7 +668,12 @@ class TestPostgreSQLBackups(unittest.TestCase):
             self.harness.update_relation_data(
                 self.peer_rel_id,
                 self.charm.app.name,
-                {"init-pgbackrest": "True"},
+                {"stanza": "test-stanza", "init-pgbackrest": "True"},
+            )
+            self.harness.update_relation_data(
+                self.peer_rel_id,
+                self.charm.unit.name,
+                {"stanza": "test-stanza", "init-pgbackrest": "True"},
             )
 
         # Test when the unit is not the primary.
@@ -685,15 +698,23 @@ class TestPostgreSQLBackups(unittest.TestCase):
         self.assertEqual(_update_config.call_count, 2)
         self.assertEqual(_member_started.call_count, 5)
         self.assertEqual(_reload_patroni_configuration.call_count, 5)
+        self.assertEqual(self.harness.get_relation_data(self.peer_rel_id, self.charm.app), {})
+        self.assertEqual(self.harness.get_relation_data(self.peer_rel_id, self.charm.unit), {})
         self.assertIsInstance(self.charm.unit.status, BlockedStatus)
         self.assertEqual(self.charm.unit.status.message, FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE)
 
-        # Test when the archiving is working correctly (pgBackRest check command succeeds).
+        # Test when the archiving is working correctly (pgBackRest check command succeeds)
+        # and the unit is not the leader.
         with self.harness.hooks_disabled():
             self.harness.update_relation_data(
                 self.peer_rel_id,
                 self.charm.app.name,
-                {"init-pgbackrest": "True"},
+                {"stanza": "test-stanza", "init-pgbackrest": "True"},
+            )
+            self.harness.update_relation_data(
+                self.peer_rel_id,
+                self.charm.unit.name,
+                {"stanza": "test-stanza", "init-pgbackrest": "True"},
             )
         _execute_command.reset_mock()
         _update_config.reset_mock()
@@ -704,7 +725,133 @@ class TestPostgreSQLBackups(unittest.TestCase):
         _update_config.assert_called_once()
         _member_started.assert_called_once()
         _reload_patroni_configuration.assert_called_once()
+        self.assertEqual(
+            self.harness.get_relation_data(self.peer_rel_id, self.charm.app),
+            {"stanza": "test-stanza", "init-pgbackrest": "True"},
+        )
+        self.assertEqual(
+            self.harness.get_relation_data(self.peer_rel_id, self.charm.unit),
+            {"stanza": "test-stanza"},
+        )
         self.assertIsInstance(self.charm.unit.status, ActiveStatus)
+
+        # Test when the unit is the leader.
+        self.charm.unit.status = BlockedStatus("fake blocked state")
+        with self.harness.hooks_disabled():
+            self.harness.set_leader()
+            self.harness.update_relation_data(
+                self.peer_rel_id,
+                self.charm.app.name,
+                {"init-pgbackrest": "True"},
+            )
+            self.harness.update_relation_data(
+                self.peer_rel_id,
+                self.charm.unit.name,
+                {"init-pgbackrest": "True"},
+            )
+        _update_config.reset_mock()
+        _member_started.reset_mock()
+        _reload_patroni_configuration.reset_mock()
+        self.charm.backup.check_stanza()
+        _update_config.assert_called_once()
+        _member_started.assert_called_once()
+        _reload_patroni_configuration.assert_called_once()
+        self.assertEqual(
+            self.harness.get_relation_data(self.peer_rel_id, self.charm.app),
+            {"stanza": "test-stanza"},
+        )
+        self.assertEqual(
+            self.harness.get_relation_data(self.peer_rel_id, self.charm.unit),
+            {"stanza": "test-stanza"},
+        )
+        self.assertIsInstance(self.charm.unit.status, ActiveStatus)
+
+    def test_coordinate_stanza_fields(self):
+        # Add a new unit to the relation.
+        new_unit_name = "postgresql-k8s/1"
+        new_unit = Unit(new_unit_name, None, self.harness.charm.app._backend, {})
+        self.harness.add_relation_unit(self.peer_rel_id, new_unit_name)
+
+        # Test when the stanza name is neither in the application relation databag nor in the unit relation databag.
+        self.charm.backup.coordinate_stanza_fields()
+        self.assertEqual(self.harness.get_relation_data(self.peer_rel_id, self.charm.app), {})
+        self.assertEqual(self.harness.get_relation_data(self.peer_rel_id, self.charm.unit), {})
+        self.assertEqual(self.harness.get_relation_data(self.peer_rel_id, new_unit), {})
+
+        # Test when the stanza name is in the unit relation databag but the unit is not the leader.
+        stanza_name = f"{self.charm.model.name}.patroni-{self.charm.app.name}"
+        with self.harness.hooks_disabled():
+            self.harness.update_relation_data(
+                self.peer_rel_id, new_unit_name, {"stanza": stanza_name, "init-pgbackrest": "True"}
+            )
+        self.charm.backup.coordinate_stanza_fields()
+        self.assertEqual(self.harness.get_relation_data(self.peer_rel_id, self.charm.app), {})
+        self.assertEqual(self.harness.get_relation_data(self.peer_rel_id, self.charm.unit), {})
+        self.assertEqual(
+            self.harness.get_relation_data(self.peer_rel_id, new_unit),
+            {"stanza": stanza_name, "init-pgbackrest": "True"},
+        )
+
+        # Test when the unit is the leader.
+        with self.harness.hooks_disabled():
+            self.harness.set_leader()
+        self.charm.backup.coordinate_stanza_fields()
+        self.assertEqual(
+            self.harness.get_relation_data(self.peer_rel_id, self.charm.app),
+            {"stanza": stanza_name, "init-pgbackrest": "True"},
+        )
+        self.assertEqual(self.harness.get_relation_data(self.peer_rel_id, self.charm.unit), {})
+        self.assertEqual(
+            self.harness.get_relation_data(self.peer_rel_id, new_unit),
+            {"stanza": stanza_name, "init-pgbackrest": "True"},
+        )
+
+        # Test when the stanza was already checked in the primary non-leader unit.
+        with self.harness.hooks_disabled():
+            self.harness.update_relation_data(
+                self.peer_rel_id, new_unit_name, {"init-pgbackrest": ""}
+            )
+        self.charm.backup.coordinate_stanza_fields()
+        self.assertEqual(
+            self.harness.get_relation_data(self.peer_rel_id, self.charm.app),
+            {"stanza": stanza_name},
+        )
+        self.assertEqual(self.harness.get_relation_data(self.peer_rel_id, self.charm.unit), {})
+        self.assertEqual(
+            self.harness.get_relation_data(self.peer_rel_id, new_unit), {"stanza": stanza_name}
+        )
+
+        # Test when the "init-pgbackrest" flag was removed from the application relation databag
+        # and this is the unit that has the stanza name in the unit relation databag.
+        with self.harness.hooks_disabled():
+            self.harness.update_relation_data(
+                self.peer_rel_id, self.charm.unit.name, {"stanza": stanza_name}
+            )
+        self.charm.backup.coordinate_stanza_fields()
+        self.assertEqual(
+            self.harness.get_relation_data(self.peer_rel_id, self.charm.app),
+            {"stanza": stanza_name},
+        )
+        self.assertEqual(self.harness.get_relation_data(self.peer_rel_id, self.charm.unit), {})
+        self.assertEqual(
+            self.harness.get_relation_data(self.peer_rel_id, new_unit), {"stanza": stanza_name}
+        )
+
+        # Test when the unit is not the leader.
+        with self.harness.hooks_disabled():
+            self.harness.set_leader(False)
+            self.harness.update_relation_data(
+                self.peer_rel_id, self.charm.unit.name, {"stanza": stanza_name}
+            )
+        self.charm.backup.coordinate_stanza_fields()
+        self.assertEqual(
+            self.harness.get_relation_data(self.peer_rel_id, self.charm.app),
+            {"stanza": stanza_name},
+        )
+        self.assertEqual(self.harness.get_relation_data(self.peer_rel_id, self.charm.unit), {})
+        self.assertEqual(
+            self.harness.get_relation_data(self.peer_rel_id, new_unit), {"stanza": stanza_name}
+        )
 
     @patch("charm.PostgreSQLBackups._execute_command")
     @patch("charm.PostgresqlOperatorCharm._get_hostname_from_unit")
@@ -854,6 +1001,37 @@ class TestPostgreSQLBackups(unittest.TestCase):
         self.charm.unit.status = BlockedStatus(ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE)
         self.charm.backup._on_s3_credential_gone(None)
         self.assertIsInstance(self.charm.unit.status, ActiveStatus)
+
+        # Test removal of relation data when the unit is not the leader.
+        with self.harness.hooks_disabled():
+            self.harness.update_relation_data(
+                self.peer_rel_id,
+                self.charm.app.name,
+                {"stanza": "test-stanza", "init-pgbackrest": "True"},
+            )
+            self.harness.update_relation_data(
+                self.peer_rel_id,
+                self.charm.app.name,
+                {"stanza": "test-stanza", "init-pgbackrest": "True"},
+            )
+        self.charm.backup._on_s3_credential_gone(None)
+        self.assertEqual(
+            self.harness.get_relation_data(self.peer_rel_id, self.charm.app),
+            {"stanza": "test-stanza", "init-pgbackrest": "True"},
+        )
+        self.assertEqual(self.harness.get_relation_data(self.peer_rel_id, self.charm.unit), {})
+
+        # Test removal of relation data when the unit is the leader.
+        with self.harness.hooks_disabled():
+            self.harness.set_leader()
+            self.harness.update_relation_data(
+                self.peer_rel_id,
+                self.charm.unit.name,
+                {"stanza": "test-stanza", "init-pgbackrest": "True"},
+            )
+        self.charm.backup._on_s3_credential_gone(None)
+        self.assertEqual(self.harness.get_relation_data(self.peer_rel_id, self.charm.app), {})
+        self.assertEqual(self.harness.get_relation_data(self.peer_rel_id, self.charm.unit), {})
 
     @patch("charm.PostgresqlOperatorCharm.update_config")
     @patch("charm.PostgreSQLBackups._change_connectivity_to_database")
