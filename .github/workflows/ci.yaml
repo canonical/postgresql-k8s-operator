@@ -67,7 +67,6 @@ jobs:
       cloud: microk8s
       microk8s-snap-channel: 1.29-strict/stable
       juju-agent-version: ${{ matrix.juju.agent }}
-      libjuju-version-constraint: ${{ matrix.juju.libjuju }}
       _beta_allure_report: ${{ matrix.juju.allure }}
     secrets:
       integration-test: |
