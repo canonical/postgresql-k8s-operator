@@ -155,7 +155,7 @@ async def is_cluster_updated(ops_test: OpsTest, primary_name: str) -> None:
     # Verify that old primary is up-to-date.
     assert await is_secondary_up_to_date(
         ops_test, primary_name, total_expected_writes
-    ), "secondary not up to date with the cluster after restarting."
+    ), f"secondary ({primary_name}) not up to date with the cluster after restarting."
 
 
 def get_member_lag(cluster: Dict, member_name: str) -> int:
@@ -191,7 +191,7 @@ async def check_writes(ops_test) -> int:
     for member, count in actual_writes.items():
         assert (
             count == max_number_written[member]
-        ), f"{member}: writes to the db were missed: count of actual writes different from the max number written."
+        ), f"{member}: writes to the db were missed: count of actual writes ({count}) on {member} different from the max number written ({max_number_written[member]})."
         assert total_expected_writes == count, f"{member}: writes to the db were missed."
     return total_expected_writes
 
@@ -618,14 +618,19 @@ async def is_secondary_up_to_date(ops_test: OpsTest, unit_name: str, expected_wr
     )
 
     try:
-        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+        for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
             with attempt:
                 with psycopg2.connect(
                     connection_string
                 ) as connection, connection.cursor() as cursor:
                     cursor.execute("SELECT COUNT(number), MAX(number) FROM continuous_writes;")
                     results = cursor.fetchone()
-                    assert results[0] == expected_writes and results[1] == expected_writes
+                    if results[0] != expected_writes or results[1] != expected_writes:
+                        async with ops_test.fast_forward(fast_interval="30s"):
+                            await ops_test.model.wait_for_idle(
+                                apps=[unit_name.split("/")[0]], idle_period=15, timeout=1000
+                            )
+                            raise Exception
     except RetryError:
         return False
     finally:
