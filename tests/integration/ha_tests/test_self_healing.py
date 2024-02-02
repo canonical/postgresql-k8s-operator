@@ -392,7 +392,7 @@ async def test_network_cut(
     logger.info("checking whether the connectivity to the database is working")
     assert await is_connection_possible(
         ops_test, primary_name
-    ), "Connection is not possible after network restore"
+    ), f"Connection is not possible to {primary_name} after network restore"
 
     await is_cluster_updated(ops_test, primary_name)
 

@@ -200,10 +200,12 @@ async def are_writes_increasing(ops_test, down_unit: str = None) -> None:
     """Verify new writes are continuing by counting the number of writes."""
     writes, _ = await count_writes(ops_test, down_unit=down_unit)
     for member, count in writes.items():
-        for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
+        for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3), reraise=True):
             with attempt:
                 more_writes, _ = await count_writes(ops_test, down_unit=down_unit)
-                assert more_writes[member] > count, f"{member}: writes not continuing to DB"
+                assert (
+                    more_writes[member] > count
+                ), f"{member}: writes not continuing to DB (current writes: {more_writes[member]} - previous writes: {count})"
 
 
 def copy_file_into_pod(
@@ -422,14 +424,16 @@ async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
     password = await get_password(ops_test, database_app_name=app, down_unit=unit_name)
     address = await get_unit_address(ops_test, unit_name)
     try:
-        with db_connect(
-            host=address, password=password
-        ) as connection, connection.cursor() as cursor:
-            cursor.execute("SELECT 1;")
-            success = cursor.fetchone()[0] == 1
-        connection.close()
-        return success
-    except psycopg2.Error:
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+            with attempt:
+                with db_connect(
+                    host=address, password=password
+                ) as connection, connection.cursor() as cursor:
+                    cursor.execute("SELECT 1;")
+                    success = cursor.fetchone()[0] == 1
+                connection.close()
+                return success
+    except (psycopg2.Error, RetryError):
         # Error raised when the connection is not possible.
         return False
 
