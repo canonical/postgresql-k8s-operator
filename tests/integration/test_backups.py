@@ -74,6 +74,7 @@ async def cloud_configs(ops_test: OpsTest, github_secrets) -> None:
     }
     yield configs, credentials
     # Delete the previously created objects.
+    logger.info("deleting the previously created backups")
     for cloud, config in configs.items():
         session = boto3.session.Session(
             aws_access_key_id=credentials[cloud]["access-key"],
