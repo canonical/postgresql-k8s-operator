@@ -1,0 +1,1 @@
+[32mINFO    [0m httpx:_client.py:1758 HTTP Request: GET https://10.1.0.37:16443/api/v1/namespaces/test/services/database-primary "HTTP/1.1 200 OK"
