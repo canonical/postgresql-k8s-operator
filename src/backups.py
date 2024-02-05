@@ -402,6 +402,10 @@ class PostgreSQLBackups(Object):
             logger.error(f"failed to get primary with error {str(e)}")
             return False
 
+        if primary is None:
+            logger.debug("the primary was not elected yet")
+            return False
+
         primary_endpoint = self.charm._get_hostname_from_unit(primary)
 
         try:

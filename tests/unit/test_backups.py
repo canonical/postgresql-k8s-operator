@@ -864,8 +864,14 @@ class TestPostgreSQLBackups(unittest.TestCase):
         self.assertEqual(self.charm.backup._is_primary_pgbackrest_service_running, False)
         _execute_command.assert_not_called()
 
-        # Test when the pgBackRest fails to contact the primary server.
+        # Test when the primary was not elected yet.
         _get_primary.side_effect = None
+        _get_primary.return_value = None
+        self.assertEqual(self.charm.backup._is_primary_pgbackrest_service_running, False)
+        _execute_command.assert_not_called()
+
+        # Test when the pgBackRest fails to contact the primary server.
+        _get_primary.return_value = f"{self.charm.app.name}/1"
         _execute_command.side_effect = ExecError(
             command="fake command".split(), exit_code=1, stdout="", stderr="fake error"
         )
