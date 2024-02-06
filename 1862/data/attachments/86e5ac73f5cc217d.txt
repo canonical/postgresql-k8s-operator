@@ -1,0 +1,90 @@
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:410 scaling database to zero units
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:414 scaling database to three units
+[32mINFO    [0m juju.model:model.py:2947 Waiting for model:
+  postgresql-k8s (waiting for exactly 3 units, current : 0)
+[32mINFO    [0m juju.model:model.py:2947 Waiting for model:
+  postgresql-k8s/0 [executing] unknown: 
+  postgresql-k8s/1 [executing] unknown: 
+  postgresql-k8s/2 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2947 Waiting for model:
+  postgresql-k8s/0 [idle] unknown: 
+  postgresql-k8s/1 [idle] unknown: 
+  postgresql-k8s/2 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2947 Waiting for model:
+  postgresql-k8s/0 [idle] unknown: 
+  postgresql-k8s/1 [idle] unknown: 
+  postgresql-k8s/2 [idle] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2947 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2947 Waiting for model:
+  postgresql-k8s/0 [executing] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] maintenance: reconfiguring cluster
+[32mINFO    [0m juju.model:model.py:2947 Waiting for model:
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2947 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] waiting: reinitialising replica
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2947 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] waiting: reinitialising replica
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2947 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] waiting: reinitialising replica
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2947 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] waiting: reinitialising replica
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2947 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] waiting: reinitialising replica
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2947 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:418 waiting for the database service to start in all units
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:424 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1027 HTTP Request: GET https://10.1.0.23:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1027 HTTP Request: GET https://10.1.0.23:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1027 HTTP Request: GET https://10.1.0.23:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1027 HTTP Request: GET https://10.1.0.23:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1027 HTTP Request: GET https://10.1.0.23:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1027 HTTP Request: GET https://10.1.0.23:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:428 checking whether all units are part of the same cluster
+[32mINFO    [0m httpx:_client.py:1027 HTTP Request: GET https://10.1.0.23:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1027 HTTP Request: GET https://10.1.0.23:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1027 HTTP Request: GET https://10.1.0.23:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1027 HTTP Request: GET https://10.1.0.23:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1027 HTTP Request: GET https://10.1.0.23:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1027 HTTP Request: GET https://10.1.0.23:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1027 HTTP Request: GET https://10.1.0.23:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1027 HTTP Request: GET https://10.1.0.23:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1027 HTTP Request: GET https://10.1.0.23:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:437 checking whether no writes to the database were missed after stopping the writes
+[32mINFO    [0m httpx:_client.py:1027 HTTP Request: GET https://10.1.0.23:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1027 HTTP Request: GET https://10.1.0.23:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m pytest_operator.plugin:plugin.py:784 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.7    unsupported  01:59:20Z
+
+App                  Version  Status  Scale  Charm                Channel  Rev  Address         Exposed  Message
+postgresql-k8s       14.10    active      3  postgresql-k8s                  0  10.152.183.238  no       
+postgresql-test-app           active      1  postgresql-test-app  edge      50  10.152.183.148  no       received database credentials of the first database
+
+Unit                    Workload  Agent  Address      Ports  Message
+postgresql-k8s/0        active    idle   10.1.194.83         
+postgresql-k8s/1        active    idle   10.1.194.85         
+postgresql-k8s/2*       active    idle   10.1.194.84         Primary
+postgresql-test-app/0*  active    idle   10.1.194.78         received database credentials of the first database
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:856 Forgetting main...
