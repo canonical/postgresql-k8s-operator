@@ -1088,7 +1088,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self._patroni.reinitialize_postgresql()
                 logger.info("restarted the replica because it was not streaming from primary")
                 self.unit.status = MaintenanceStatus("reinitialising replica")
-            except ChangeError:
+            except RetryError:
                 logger.error(
                     "failed to reinitialise replica after checking that it was not streaming from primary"
                 )

@@ -273,7 +273,7 @@ class Patroni:
         """Has the member started to stream data from primary.
 
         Returns:
-            True if services is ready False otherwise. Retries over a period of 60 seconds times to
+            True if it's streaming False otherwise. Retries over a period of 60 seconds times to
             allow server time to start up.
         """
         try:
