@@ -95,6 +95,24 @@ class TestPatroni(unittest.TestCase):
         ]
         self.assertFalse(self.patroni.is_replication_healthy)
 
+    @patch("requests.get")
+    @patch("patroni.stop_after_delay", return_value=stop_after_delay(0))
+    def test_member_streaming(self, _, _get):
+        # Test when the member is streaming from primary.
+        _get.return_value.json.return_value = {"replication_state": "streaming"}
+        self.assertTrue(self.patroni.member_streaming)
+
+        # Test when the member is not streaming from primary.
+        _get.return_value.json.return_value = {"replication_state": "running"}
+        self.assertFalse(self.patroni.member_streaming)
+
+        _get.return_value.json.return_value = {}
+        self.assertFalse(self.patroni.member_streaming)
+
+        # Test when an error happens.
+        _get.side_effect = RetryError
+        self.assertFalse(self.patroni.member_streaming)
+
     @patch("os.chmod")
     @patch("os.chown")
     @patch("pwd.getpwnam")
