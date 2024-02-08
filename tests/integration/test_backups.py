@@ -123,9 +123,10 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
             **cloud_configs[1][cloud],
         )
         await action.wait()
-        await ops_test.model.wait_for_idle(
-            apps=[database_app_name, S3_INTEGRATOR_APP_NAME], status="active", timeout=1000
-        )
+        async with ops_test.fast_forward(fast_interval="60s"):
+            await ops_test.model.wait_for_idle(
+                apps=[database_app_name, S3_INTEGRATOR_APP_NAME], status="active", timeout=1000
+            )
 
         primary = await get_primary(ops_test, database_app_name)
         for unit in ops_test.model.applications[database_app_name].units:
@@ -169,7 +170,8 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
         connection.close()
 
         # Scale down to be able to restore.
-        await scale_application(ops_test, database_app_name, 1)
+        async with ops_test.fast_forward(fast_interval="60s"):
+            await scale_application(ops_test, database_app_name, 1)
 
         # Run the "restore backup" action.
         for attempt in Retrying(
@@ -226,7 +228,8 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
                 )
 
                 # Scale up to be able to test primary and leader being different.
-                await scale_application(ops_test, database_app_name, 2)
+                async with ops_test.fast_forward():
+                    await scale_application(ops_test, database_app_name, 2)
 
                 logger.info("ensuring that the replication is working correctly")
                 new_unit_name = f"{database_app_name}/1"
