@@ -4,6 +4,7 @@ import itertools
 import json
 import logging
 import unittest
+from datetime import datetime
 from unittest.mock import MagicMock, Mock, PropertyMock, patch
 
 import pytest
@@ -16,7 +17,7 @@ from ops.model import (
     RelationDataTypeError,
     WaitingStatus,
 )
-from ops.pebble import ServiceStatus
+from ops.pebble import Change, ChangeError, ChangeID, ServiceStatus
 from ops.testing import Harness
 from parameterized import parameterized
 from tenacity import RetryError
@@ -319,6 +320,7 @@ class TestCharm(unittest.TestCase):
         mock_event.set_results.assert_not_called()
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.PostgresqlOperatorCharm._handle_processes_failures")
     @patch("charm.Patroni.member_started")
     @patch("charm.Patroni.get_primary")
     @patch("ops.model.Container.pebble")
@@ -329,25 +331,26 @@ class TestCharm(unittest.TestCase):
         _pebble,
         _get_primary,
         _member_started,
+        _handle_processes_failures,
     ):
-        # Mock the access to the list of Pebble services.
-        _pebble.get_services.side_effect = [
-            [],
-            ["service data"],
-            ["service data"],
-        ]
-
         # Test before the PostgreSQL service is available.
+        _pebble.get_services.return_value = []
         self.harness.set_can_connect(self._postgresql_container, True)
         self.charm.on.update_status.emit()
         _get_primary.assert_not_called()
 
+        # Test when a failure need to be handled.
+        _pebble.get_services.return_value = ["service data"]
+        _handle_processes_failures.return_value = True
+        self.charm.on.update_status.emit()
+        _get_primary.assert_not_called()
+
+        # Check primary message not being set (current unit is not the primary).
+        _handle_processes_failures.return_value = False
         _get_primary.side_effect = [
             "postgresql-k8s/1",
             self.charm.unit.name,
         ]
-
-        # Check primary message not being set (current unit is not the primary).
         self.charm.on.update_status.emit()
         _get_primary.assert_called_once()
         self.assertNotEqual(
@@ -372,12 +375,13 @@ class TestCharm(unittest.TestCase):
         _get_primary.assert_not_called()
 
     @patch_network_get(private_address="1.1.1.1")
+    @patch("charm.PostgresqlOperatorCharm._handle_processes_failures", return_value=False)
     @patch("charm.Patroni.member_started")
     @patch("charm.Patroni.get_primary")
     @patch("ops.model.Container.pebble")
     @patch("upgrade.PostgreSQLUpgrade.idle", return_value=True)
     def test_on_update_status_with_error_on_get_primary(
-        self, _, _pebble, _get_primary, _member_started
+        self, _, _pebble, _get_primary, _member_started, _handle_processes_failures
     ):
         # Mock the access to the list of Pebble services.
         _pebble.get_services.return_value = ["service data"]
@@ -1095,11 +1099,13 @@ class TestCharm(unittest.TestCase):
                 _coordinate_stanza_fields.assert_called_once()
                 _check_stanza.assert_called_once()
                 _start_stop_pgbackrest_service.assert_called_once()
+                self.assertIsInstance(self.charm.unit.status, ActiveStatus)
             else:
                 _defer.assert_called_once()
                 _coordinate_stanza_fields.assert_not_called()
                 _check_stanza.assert_not_called()
                 _start_stop_pgbackrest_service.assert_not_called()
+                self.assertIsInstance(self.charm.unit.status, MaintenanceStatus)
 
         # Test the status not being changed when it was not possible to start
         # the pgBackRest service yet.
@@ -1136,3 +1142,95 @@ class TestCharm(unittest.TestCase):
         self.charm.unit.status = BlockedStatus()
         self.charm.on.database_peers_relation_changed.emit(self.relation)
         self.assertIsInstance(self.charm.unit.status, BlockedStatus)
+
+    @patch("charm.Patroni.reinitialize_postgresql")
+    @patch("charm.Patroni.member_streaming", new_callable=PropertyMock)
+    @patch("charm.PostgresqlOperatorCharm.is_primary", new_callable=PropertyMock)
+    @patch("charm.Patroni.is_database_running", new_callable=PropertyMock)
+    @patch("charm.Patroni.member_started", new_callable=PropertyMock)
+    @patch("ops.model.Container.restart")
+    def test_handle_processes_failures(
+        self,
+        _restart,
+        _member_started,
+        _is_database_running,
+        _is_primary,
+        _member_streaming,
+        _reinitialize_postgresql,
+    ):
+        # Test when there are no processes failures to handle.
+        self.harness.set_can_connect(self._postgresql_container, True)
+        for values in itertools.product(
+            [True, False], [True, False], [True, False], [True, False], [True, False]
+        ):
+            # Skip conditions that lead to handling a process failure.
+            if (not values[0] and values[2]) or (not values[3] and values[1] and not values[4]):
+                continue
+
+            _member_started.side_effect = [values[0], values[1]]
+            _is_database_running.return_value = values[2]
+            _is_primary.return_value = values[3]
+            _member_streaming.return_value = values[4]
+            self.assertFalse(self.charm._handle_processes_failures())
+            _restart.assert_not_called()
+            _reinitialize_postgresql.assert_not_called()
+
+        # Test when the Patroni process is not running.
+        _is_database_running.return_value = True
+        for values in itertools.product(
+            [
+                None,
+                ChangeError(
+                    err="fake error",
+                    change=Change(
+                        ChangeID("1"),
+                        "fake kind",
+                        "fake summary",
+                        "fake status",
+                        [],
+                        True,
+                        "fake error",
+                        datetime.now(),
+                        datetime.now(),
+                    ),
+                ),
+            ],
+            [True, False],
+            [True, False],
+            [True, False],
+        ):
+            _restart.reset_mock()
+            _restart.side_effect = values[0]
+            _is_primary.return_value = values[1]
+            _member_started.side_effect = [False, values[2]]
+            _member_streaming.return_value = values[3]
+            self.charm.unit.status = ActiveStatus()
+            result = self.charm._handle_processes_failures()
+            self.assertTrue(result) if values[0] is None else self.assertFalse(result)
+            self.assertIsInstance(self.charm.unit.status, ActiveStatus)
+            _restart.assert_called_once_with("postgresql")
+            _reinitialize_postgresql.assert_not_called()
+
+        # Test when the unit is a replica and it's not streaming from primary.
+        _restart.reset_mock()
+        _is_primary.return_value = False
+        _member_streaming.return_value = False
+        for values in itertools.product(
+            [None, RetryError(last_attempt=1)], [True, False], [True, False]
+        ):
+            # Skip the condition that lead to handling other process failure.
+            if not values[1] and values[2]:
+                continue
+
+            _reinitialize_postgresql.reset_mock()
+            _reinitialize_postgresql.side_effect = values[0]
+            _member_started.side_effect = [values[1], True]
+            _is_database_running.return_value = values[2]
+            self.charm.unit.status = ActiveStatus()
+            result = self.charm._handle_processes_failures()
+            self.assertTrue(result) if values[0] is None else self.assertFalse(result)
+            self.assertIsInstance(
+                self.charm.unit.status, MaintenanceStatus if values[0] is None else ActiveStatus
+            )
+            _restart.assert_not_called()
+            _reinitialize_postgresql.assert_called_once()

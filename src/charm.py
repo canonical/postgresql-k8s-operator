@@ -398,7 +398,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         ):
             self._patroni.reinitialize_postgresql()
             logger.debug("Deferring on_peer_relation_changed: reinitialising replica")
-            self.unit.status = WaitingStatus("reinitialising replica")
+            self.unit.status = MaintenanceStatus("reinitialising replica")
             event.defer()
             return
 
@@ -1078,6 +1078,22 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 logger.info("restarted Patroni because it was not running")
             except ChangeError:
                 logger.error("failed to restart Patroni after checking that it was not running")
+                return False
+            return True
+
+        if (
+            not self.is_primary
+            and self._patroni.member_started
+            and not self._patroni.member_streaming
+        ):
+            try:
+                self._patroni.reinitialize_postgresql()
+                logger.info("restarted the replica because it was not streaming from primary")
+                self.unit.status = MaintenanceStatus("reinitialising replica")
+            except RetryError:
+                logger.error(
+                    "failed to reinitialise replica after checking that it was not streaming from primary"
+                )
                 return False
             return True
 
