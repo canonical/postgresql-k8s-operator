@@ -991,6 +991,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("backups.PostgreSQLBackups.start_stop_pgbackrest_service")
     @patch("backups.PostgreSQLBackups.check_stanza")
+    @patch("backups.PostgreSQLBackups.coordinate_stanza_fields")
     @patch("charm.Patroni.reinitialize_postgresql")
     @patch("charm.Patroni.member_replication_lag", new_callable=PropertyMock)
     @patch("charm.PostgresqlOperatorCharm.is_primary")
@@ -1007,6 +1008,7 @@ class TestCharm(unittest.TestCase):
         _is_primary,
         _member_replication_lag,
         _reinitialize_postgresql,
+        _coordinate_stanza_fields,
         _check_stanza,
         _start_stop_pgbackrest_service,
     ):
@@ -1017,6 +1019,7 @@ class TestCharm(unittest.TestCase):
         _defer.assert_called_once()
         _add_members.assert_not_called()
         _update_config.assert_not_called()
+        _coordinate_stanza_fields.assert_not_called()
         _check_stanza.assert_not_called()
         _start_stop_pgbackrest_service.assert_not_called()
 
@@ -1033,6 +1036,7 @@ class TestCharm(unittest.TestCase):
         _defer.assert_not_called()
         _add_members.assert_not_called()
         _update_config.assert_not_called()
+        _coordinate_stanza_fields.assert_not_called()
         _check_stanza.assert_not_called()
         _start_stop_pgbackrest_service.assert_not_called()
 
@@ -1043,6 +1047,7 @@ class TestCharm(unittest.TestCase):
         _defer.assert_not_called()
         _add_members.assert_called_once()
         _update_config.assert_not_called()
+        _coordinate_stanza_fields.assert_not_called()
         _check_stanza.assert_not_called()
         _start_stop_pgbackrest_service.assert_not_called()
 
@@ -1063,6 +1068,7 @@ class TestCharm(unittest.TestCase):
         self.charm.on.database_peers_relation_changed.emit(self.relation)
         _defer.assert_not_called()
         _update_config.assert_not_called()
+        _coordinate_stanza_fields.assert_not_called()
         _check_stanza.assert_not_called()
         _start_stop_pgbackrest_service.assert_not_called()
 
@@ -1072,6 +1078,7 @@ class TestCharm(unittest.TestCase):
         self.charm.on.database_peers_relation_changed.emit(self.relation)
         _defer.assert_called_once()
         _update_config.assert_called_once()
+        _coordinate_stanza_fields.assert_not_called()
         _check_stanza.assert_not_called()
         _start_stop_pgbackrest_service.assert_not_called()
 
@@ -1080,6 +1087,7 @@ class TestCharm(unittest.TestCase):
         _member_started.return_value = True
         for values in itertools.product([True, False], ["0", "1000", "1001", "unknown"]):
             _defer.reset_mock()
+            _coordinate_stanza_fields.reset_mock()
             _check_stanza.reset_mock()
             _start_stop_pgbackrest_service.reset_mock()
             _is_primary.return_value = values[0]
@@ -1088,11 +1096,13 @@ class TestCharm(unittest.TestCase):
             self.charm.on.database_peers_relation_changed.emit(self.relation)
             if _is_primary.return_value == values[0] or int(values[1]) <= 1000:
                 _defer.assert_not_called()
+                _coordinate_stanza_fields.assert_called_once()
                 _check_stanza.assert_called_once()
                 _start_stop_pgbackrest_service.assert_called_once()
                 self.assertIsInstance(self.charm.unit.status, ActiveStatus)
             else:
                 _defer.assert_called_once()
+                _coordinate_stanza_fields.assert_not_called()
                 _check_stanza.assert_not_called()
                 _start_stop_pgbackrest_service.assert_not_called()
                 self.assertIsInstance(self.charm.unit.status, MaintenanceStatus)
