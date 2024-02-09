@@ -404,6 +404,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         self.postgresql_client_relation.update_read_only_endpoint()
 
+        self.backup.coordinate_stanza_fields()
+
         self.backup.check_stanza()
 
         # Start or stop the pgBackRest TLS server service when TLS certificate change.
