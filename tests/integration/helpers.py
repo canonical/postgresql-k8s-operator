@@ -118,9 +118,11 @@ async def check_database_users_existence(
     output = await execute_query_on_unit(
         unit_address,
         password,
-        "SELECT CONCAT(usename, ':', usesuper) FROM pg_catalog.pg_user;"
-        if admin
-        else "SELECT usename FROM pg_catalog.pg_user;",
+        (
+            "SELECT CONCAT(usename, ':', usesuper) FROM pg_catalog.pg_user;"
+            if admin
+            else "SELECT usename FROM pg_catalog.pg_user;"
+        ),
     )
 
     # Assert users that should exist.
@@ -663,6 +665,39 @@ async def set_password(
     action = await unit.run_action("set-password", **parameters)
     result = await action.wait()
     return result.results
+
+
+async def switchover(ops_test: OpsTest, current_primary: str, candidate: str = None) -> None:
+    """Trigger a switchover.
+
+    Args:
+        ops_test: The ops test framework instance.
+        current_primary: The current primary unit.
+        candidate: The unit that should be elected the new primary.
+    """
+    primary_ip = await get_unit_address(ops_test, current_primary)
+    response = requests.post(
+        f"http://{primary_ip}:8008/switchover",
+        json={
+            "leader": current_primary.replace("/", "-"),
+            "candidate": candidate.replace("/", "-") if candidate else None,
+        },
+    )
+    assert response.status_code == 200
+    app_name = current_primary.split("/")[0]
+    minority_count = len(ops_test.model.applications[app_name].units) // 2
+    for attempt in Retrying(stop=stop_after_attempt(30), wait=wait_fixed(2), reraise=True):
+        with attempt:
+            response = requests.get(f"http://{primary_ip}:8008/cluster")
+            assert response.status_code == 200
+            standbys = len(
+                [
+                    member
+                    for member in response.json()["members"]
+                    if member["role"] == "sync_standby"
+                ]
+            )
+            assert standbys >= minority_count
 
 
 async def wait_for_idle_on_blocked(
