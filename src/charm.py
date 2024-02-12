@@ -15,6 +15,7 @@ from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v0.loki_push_api import LogProxyConsumer
 from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
 from charms.postgresql_k8s.v0.postgresql import (
+    REQUIRED_PLUGINS,
     PostgreSQL,
     PostgreSQLEnableDisableExtensionError,
     PostgreSQLUpdateUserPasswordError,
@@ -83,6 +84,8 @@ from upgrade import PostgreSQLUpgrade, get_postgresql_k8s_dependencies_model
 from utils import any_memory_to_bytes, new_password
 
 logger = logging.getLogger(__name__)
+
+EXTENSIONS_DEPENDENCY_MESSAGE = "Unsatisfied plugin dependencies. Please check the logs"
 
 # http{x,core} clutter the logs with debug messages
 logging.getLogger("httpcore").setLevel(logging.ERROR)
@@ -416,11 +419,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         ):
             self._patroni.reinitialize_postgresql()
             logger.debug("Deferring on_peer_relation_changed: reinitialising replica")
-            self.unit.status = WaitingStatus("reinitialising replica")
+            self.unit.status = MaintenanceStatus("reinitialising replica")
             event.defer()
             return
 
         self.postgresql_client_relation.update_read_only_endpoint()
+
+        self.backup.coordinate_stanza_fields()
 
         self.backup.check_stanza()
 
@@ -483,10 +488,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             database: optional database where to enable/disable the extension.
         """
         spi_module = ["refint", "autoinc", "insert_username", "moddatetime"]
+        plugins_exception = {"uuid_ossp": '"uuid-ossp"'}
         original_status = self.unit.status
         extensions = {}
         # collect extensions
-        plugins_exception = {"uuid_ossp": '"uuid-ossp"'}
         for plugin in self.config.plugin_keys():
             enable = self.config[plugin]
 
@@ -497,7 +502,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     extensions[ext] = enable
                 continue
             extension = plugins_exception.get(extension, extension)
+            if self._check_extension_dependencies(extension, enable):
+                self.unit.status = BlockedStatus(EXTENSIONS_DEPENDENCY_MESSAGE)
+                return
             extensions[extension] = enable
+        if self.is_blocked and self.unit.status.message == EXTENSIONS_DEPENDENCY_MESSAGE:
+            self.unit.status = ActiveStatus()
         if not isinstance(original_status, UnknownStatus):
             self.unit.status = WaitingStatus("Updating extensions")
         try:
@@ -506,6 +516,19 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.exception("failed to change plugins: %s", str(e))
         if not isinstance(original_status, UnknownStatus):
             self.unit.status = original_status
+
+    def _check_extension_dependencies(self, extension: str, enable: bool) -> bool:
+        skip = False
+        if enable and extension in REQUIRED_PLUGINS:
+            for ext in REQUIRED_PLUGINS[extension]:
+                if not self.config[f"plugin_{ext}_enable"]:
+                    skip = True
+                    logger.exception(
+                        "cannot enable %s, extension required %s to be enabled before",
+                        extension,
+                        ext,
+                    )
+        return skip
 
     def _add_members(self, event) -> None:
         """Add new cluster members.
@@ -1085,6 +1108,22 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 logger.info("restarted Patroni because it was not running")
             except ChangeError:
                 logger.error("failed to restart Patroni after checking that it was not running")
+                return False
+            return True
+
+        if (
+            not self.is_primary
+            and self._patroni.member_started
+            and not self._patroni.member_streaming
+        ):
+            try:
+                self._patroni.reinitialize_postgresql()
+                logger.info("restarted the replica because it was not streaming from primary")
+                self.unit.status = MaintenanceStatus("reinitialising replica")
+            except RetryError:
+                logger.error(
+                    "failed to reinitialise replica after checking that it was not streaming from primary"
+                )
                 return False
             return True
 

@@ -101,6 +101,7 @@ async def test_kill_db_process(
         await are_writes_increasing(ops_test, primary_name)
 
         # Verify that the database service got restarted and is ready in the old primary.
+        logger.info(f"waiting for the database service to restart on {primary_name}")
         assert await is_postgresql_ready(ops_test, primary_name)
 
     # Verify that a new primary gets elected (ie old primary is secondary).
@@ -147,6 +148,7 @@ async def test_freeze_db_process(
                         ops_test, primary_name, process, "SIGCONT", use_ssh
                     )
         # Verify that the database service got restarted and is ready in the old primary.
+        logger.info(f"waiting for the database service to restart on {primary_name}")
         assert await is_postgresql_ready(ops_test, primary_name)
 
     await is_cluster_updated(ops_test, primary_name)
@@ -174,6 +176,7 @@ async def test_restart_db_process(
         await are_writes_increasing(ops_test, primary_name)
 
         # Verify that the database service got restarted and is ready in the old primary.
+        logger.info(f"waiting for the database service to restart on {primary_name}")
         assert await is_postgresql_ready(ops_test, primary_name)
 
     # Verify that a new primary gets elected (ie old primary is secondary).
@@ -288,6 +291,7 @@ async def test_forceful_restart_without_data_and_transaction_logs(
     sleep(MEDIAN_ELECTION_TIME * 2)
 
     async with ops_test.fast_forward():
+        logger.info("checking whether writes are increasing")
         await are_writes_increasing(ops_test, primary_name)
 
         # Verify that a new primary gets elected (ie old primary is secondary).
@@ -305,6 +309,7 @@ async def test_forceful_restart_without_data_and_transaction_logs(
             await change_wal_settings(ops_test, unit.name, 32, 32, 1)
 
         # Rotate the WAL segments.
+        logger.info(f"rotating WAL segments on {new_primary_name}")
         files = await list_wal_files(ops_test, app)
         host = await get_unit_address(ops_test, new_primary_name)
         password = await get_password(ops_test, down_unit=primary_name)
@@ -317,17 +322,20 @@ async def test_forceful_restart_without_data_and_transaction_logs(
                 cursor.execute("SELECT pg_switch_wal();")
         connection.close()
         new_files = await list_wal_files(ops_test, app)
+
         # Check that the WAL was correctly rotated.
+
         for unit_name in files:
             assert not files[unit_name].intersection(
                 new_files
-            ), "WAL segments weren't correctly rotated"
+            ), f"WAL segments weren't correctly rotated on {unit_name}"
 
         # Start the systemd service in the old primary.
         logger.info(f"starting database on {primary_name}")
         await run_command_on_unit(ops_test, primary_name, "/charm/bin/pebble start postgresql")
 
         # Verify that the database service got restarted and is ready in the old primary.
+        logger.info(f"waiting for the database service to restart on {primary_name}")
         assert await is_postgresql_ready(ops_test, primary_name)
 
     await is_cluster_updated(ops_test, primary_name)
@@ -385,14 +393,14 @@ async def test_network_cut(
     remove_instance_isolation(ops_test)
 
     # Verify that the database service got restarted and is ready in the old primary.
-    logger.info("waiting for the database service to restart")
+    logger.info(f"waiting for the database service to restart on {primary_name}")
     assert await is_postgresql_ready(ops_test, primary_name)
 
     # Verify that connection is possible.
     logger.info("checking whether the connectivity to the database is working")
     assert await is_connection_possible(
         ops_test, primary_name
-    ), "Connection is not possible after network restore"
+    ), f"Connection is not possible to {primary_name} after network restore"
 
     await is_cluster_updated(ops_test, primary_name)
 

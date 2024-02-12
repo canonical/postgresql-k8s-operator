@@ -293,6 +293,23 @@ class Patroni:
         return r.json()["state"] in RUNNING_STATES
 
     @property
+    def member_streaming(self) -> bool:
+        """Has the member started to stream data from primary.
+
+        Returns:
+            True if it's streaming False otherwise. Retries over a period of 60 seconds times to
+            allow server time to start up.
+        """
+        try:
+            for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+                with attempt:
+                    r = requests.get(f"{self._patroni_url}/health", verify=self._verify)
+        except RetryError:
+            return False
+
+        return r.json().get("replication_state") == "streaming"
+
+    @property
     def is_database_running(self) -> bool:
         """Returns whether the PostgreSQL database process is running (and isn't frozen)."""
         container = self._charm.unit.get_container("postgresql")
