@@ -182,7 +182,7 @@ async def test_extensions_blocking(ops_test: OpsTest) -> None:
 
 @pytest.mark.group(1)
 async def test_roles_blocking(ops_test: OpsTest) -> None:
-    config = {"legacy_roles": True}
+    config = {"legacy_roles": "true"}
     await ops_test.model.applications[APPLICATION_NAME].set_config(config)
     await ops_test.model.applications[f"{APPLICATION_NAME}2"].set_config(config)
     await ops_test.model.wait_for_idle(
