@@ -166,7 +166,7 @@ async def test_extensions_blocking(ops_test: OpsTest) -> None:
     await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME, APPLICATION_NAME], status="active")
 
     await ops_test.model.relate(f"{DATABASE_APP_NAME}:db", f"{APPLICATION_NAME}:db")
-    ops_test.model.block_until(
+    await ops_test.model.block_until(
         lambda: leader_unit.workload_status_message == EXTENSIONS_BLOCKING_MESSAGE, timeout=1000
     )
 
