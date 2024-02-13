@@ -178,6 +178,10 @@ async def test_extensions_blocking(ops_test: OpsTest) -> None:
         raise_on_blocked=False,
         timeout=2000,
     )
+    # removing relation to test roles
+    await ops_test.model.applications[DATABASE_APP_NAME].destroy_relation(
+        f"{DATABASE_APP_NAME}:db", f"{APPLICATION_NAME}:db"
+    )
 
 
 @pytest.mark.group(1)
