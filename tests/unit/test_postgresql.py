@@ -311,3 +311,13 @@ class TestPostgreSQL(unittest.TestCase):
         config_options["profile"] = "testing"
         parameters = self.charm.postgresql.build_postgresql_parameters(config_options, 1000000000)
         self.assertEqual(parameters["shared_buffers"], "128MB")
+
+        # Test when the requested shared buffers are greater than 40% of the available memory.
+        config_options["memory_shared_buffers"] = 50001
+        with self.assertRaises(Exception):
+            self.charm.postgresql.build_postgresql_parameters(config_options, 1000000000)
+
+        # Test when the requested shared buffers are lower than 40% of the available memory.
+        config_options["memory_shared_buffers"] = 50000
+        parameters = self.charm.postgresql.build_postgresql_parameters(config_options, 1000000000)
+        self.assertEqual(parameters["shared_buffers"], 50000)
