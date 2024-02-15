@@ -24,6 +24,9 @@ FINOS_WALTZ_APP_NAME = "finos-waltz"
 ANOTHER_FINOS_WALTZ_APP_NAME = "another-finos-waltz"
 APPLICATION_UNITS = 1
 DATABASE_UNITS = 3
+ROLES_BLOCKING_MESSAGE = (
+    "roles requested through relation, use postgresql_client interface instead"
+)
 
 logger = logging.getLogger(__name__)
 
@@ -163,7 +166,7 @@ async def test_extensions_blocking(ops_test: OpsTest) -> None:
     await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME, APPLICATION_NAME], status="active")
 
     await ops_test.model.relate(f"{DATABASE_APP_NAME}:db", f"{APPLICATION_NAME}:db")
-    ops_test.model.block_until(
+    await ops_test.model.block_until(
         lambda: leader_unit.workload_status_message == EXTENSIONS_BLOCKING_MESSAGE, timeout=1000
     )
 
@@ -174,4 +177,53 @@ async def test_extensions_blocking(ops_test: OpsTest) -> None:
         status="active",
         raise_on_blocked=False,
         timeout=2000,
+    )
+    # removing relation to test roles
+    await ops_test.model.applications[DATABASE_APP_NAME].destroy_relation(
+        f"{DATABASE_APP_NAME}:db", f"{APPLICATION_NAME}:db"
+    )
+
+
+@pytest.mark.group(1)
+async def test_roles_blocking(ops_test: OpsTest) -> None:
+    config = {"legacy_roles": "true"}
+    await ops_test.model.applications[APPLICATION_NAME].set_config(config)
+    await ops_test.model.applications[f"{APPLICATION_NAME}2"].set_config(config)
+    await ops_test.model.wait_for_idle(
+        apps=[DATABASE_APP_NAME, APPLICATION_NAME, f"{APPLICATION_NAME}2"],
+        status="active",
+    )
+
+    await gather(
+        ops_test.model.relate(f"{DATABASE_APP_NAME}:db", f"{APPLICATION_NAME}:db"),
+        ops_test.model.relate(f"{DATABASE_APP_NAME}:db", f"{APPLICATION_NAME}2:db"),
+    )
+
+    leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
+    await ops_test.model.block_until(
+        lambda: leader_unit.workload_status_message == ROLES_BLOCKING_MESSAGE, timeout=1000
+    )
+
+    assert leader_unit.workload_status_message == ROLES_BLOCKING_MESSAGE
+
+    logger.info("Verify that the charm remains blocked if there are other blocking relations")
+    await ops_test.model.applications[DATABASE_APP_NAME].destroy_relation(
+        f"{DATABASE_APP_NAME}:db", f"{APPLICATION_NAME}:db"
+    )
+
+    await ops_test.model.block_until(
+        lambda: leader_unit.workload_status_message == ROLES_BLOCKING_MESSAGE, timeout=1000
+    )
+
+    assert leader_unit.workload_status_message == ROLES_BLOCKING_MESSAGE
+
+    logger.info("Verify that active status is restored when all blocking relations are gone")
+    await ops_test.model.applications[DATABASE_APP_NAME].destroy_relation(
+        f"{DATABASE_APP_NAME}:db", f"{APPLICATION_NAME}2:db"
+    )
+
+    await ops_test.model.wait_for_idle(
+        apps=[DATABASE_APP_NAME],
+        status="active",
+        timeout=1000,
     )
