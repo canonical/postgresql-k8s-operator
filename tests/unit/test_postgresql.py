@@ -307,7 +307,26 @@ class TestPostgreSQL(unittest.TestCase):
         self.assertEqual(parameters["shared_buffers"], "150MB")
         self.assertEqual(parameters["effective_cache_size"], "450MB")
 
+        # Test when the requested shared buffers are greater than 40% of the available memory.
+        config_options["memory_shared_buffers"] = 50001
+        with self.assertRaises(Exception):
+            self.charm.postgresql.build_postgresql_parameters(config_options, 1000000000)
+
+        # Test when the requested shared buffers are lower than 40% of the available memory
+        # (also check that it's used when calculating the effective cache size value).
+        config_options["memory_shared_buffers"] = 50000
+        parameters = self.charm.postgresql.build_postgresql_parameters(config_options, 1000000000)
+        self.assertEqual(parameters["shared_buffers"], 50000)
+        self.assertEqual(parameters["effective_cache_size"], "600MB")
+
         # Test when the profile is set to "testing".
         config_options["profile"] = "testing"
         parameters = self.charm.postgresql.build_postgresql_parameters(config_options, 1000000000)
+        self.assertEqual(parameters["shared_buffers"], 50000)
+        self.assertNotIn("effective_cache_size", parameters)
+
+        # Test when there is no shared_buffers value set in the config option.
+        del config_options["memory_shared_buffers"]
+        parameters = self.charm.postgresql.build_postgresql_parameters(config_options, 1000000000)
         self.assertEqual(parameters["shared_buffers"], "128MB")
+        self.assertNotIn("effective_cache_size", parameters)
