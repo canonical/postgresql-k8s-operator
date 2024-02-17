@@ -6,7 +6,6 @@
 import itertools
 import json
 import logging
-import time
 from typing import Dict, List, Literal, Optional, Tuple, get_args
 
 from charms.data_platform_libs.v0.data_interfaces import DataPeer, DataPeerUnit
@@ -48,7 +47,7 @@ from ops.model import (
 )
 from ops.pebble import ChangeError, Layer, PathError, ProtocolError, ServiceStatus
 from requests import ConnectionError
-from tenacity import RetryError
+from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from backups import PostgreSQLBackups
 from config import CharmConfig
@@ -1406,22 +1405,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             }
         )
 
-        restart_postgresql = self.is_tls_enabled != self.postgresql.is_tls_enabled()
-        self._patroni.reload_patroni_configuration()
-        # Sleep the same time as Patroni's loop_wait default value, which tells how much time
-        # Patroni will wait before checking the configuration file again to reload it.
-        time.sleep(10)
-        restart_postgresql = restart_postgresql or self.postgresql.is_restart_pending()
-        self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
-
-        # Restart PostgreSQL if TLS configuration has changed
-        # (so the both old and new connections use the configuration).
-        if restart_postgresql:
-            logger.info("PostgreSQL restart required")
-            self.metrics_endpoint.update_scrape_job_spec(
-                self._generate_metrics_jobs(self.is_tls_enabled)
-            )
-            self.on[self.restart_manager.name].acquire_lock.emit()
+        self._handle_postgresql_restart_need()
 
         # Restart the monitoring service if the password was rotated
         container = self.unit.get_container("postgresql")
@@ -1470,6 +1454,33 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 raise ValueError(
                     f"Value for {parameter} not one of the locales available in the system"
                 )
+
+    def _handle_postgresql_restart_need(self):
+        """Handle PostgreSQL restart need based on the TLS configuration and configuration changes."""
+        restart_postgresql = self.is_tls_enabled != self.postgresql.is_tls_enabled()
+        self._patroni.reload_patroni_configuration()
+        # Wait for some more time than the Patroni's loop_wait default value (10 seconds),
+        # which tells how much time Patroni will wait before checking the configuration
+        # file again to reload it.
+        try:
+            for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3)):
+                with attempt:
+                    restart_postgresql = restart_postgresql or self.postgresql.is_restart_pending()
+                    if not restart_postgresql:
+                        raise Exception
+        except RetryError:
+            # Ignore the error, as it happens only to indicate that the configuration has not changed.
+            pass
+        self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
+
+        # Restart PostgreSQL if TLS configuration has changed
+        # (so the both old and new connections use the configuration).
+        if restart_postgresql:
+            logger.info("PostgreSQL restart required")
+            self.metrics_endpoint.update_scrape_job_spec(
+                self._generate_metrics_jobs(self.is_tls_enabled)
+            )
+            self.on[self.restart_manager.name].acquire_lock.emit()
 
     def _update_pebble_layers(self) -> None:
         """Update the pebble layers to keep the health check URL up-to-date."""
