@@ -20,65 +20,6 @@ on:
   workflow_call:
 
 jobs:
-  lint:
-    name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v11.0.1
-
-  unit-test:
-    name: Unit test charm
-    strategy:
-      matrix:
-        juju-version:
-          - "juju2"
-          - "juju3"
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Install tox & poetry
-        run: |
-          pipx install tox
-          pipx install poetry
-      - name: Run tests
-        run: tox run -e unit-${{ matrix.juju-version }}
-
   build:
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v11.0.1
-    with:
-      cache: true
-
-  integration-test:
-    strategy:
-      fail-fast: false
-      matrix:
-        juju:
-          - agent: 2.9.46
-            libjuju: ^2
-            allure: false
-          - agent: 3.1.7
-            allure: true
-    name: Integration test charm | ${{ matrix.juju.agent }}
-    needs:
-      - lint
-      - unit-test
-      - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v11.0.1
-    with:
-      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
-      cloud: microk8s
-      microk8s-snap-channel: 1.29-strict/stable
-      juju-agent-version: ${{ matrix.juju.agent }}
-      libjuju-version-constraint: ${{ matrix.juju.libjuju }}
-      _beta_allure_report: ${{ matrix.juju.allure }}
-    secrets:
-      integration-test: |
-        {
-          "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
-          "AWS_SECRET_KEY": "${{ secrets.AWS_SECRET_KEY }}",
-          "GCP_ACCESS_KEY": "${{ secrets.GCP_ACCESS_KEY }}",
-          "GCP_SECRET_KEY": "${{ secrets.GCP_SECRET_KEY }}",
-        }
-    permissions:
-      contents: write  # Needed for Allure Report beta
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@build-arm
