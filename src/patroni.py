@@ -30,12 +30,20 @@ RUNNING_STATES = ["running", "streaming"]
 logger = logging.getLogger(__name__)
 
 
+class ClusterNotPromotedError(Exception):
+    """Raised when a cluster is not promoted."""
+
+
 class NotReadyError(Exception):
     """Raised when not all cluster members healthy or finished initial sync."""
 
 
 class EndpointNotReadyError(Exception):
     """Raised when an endpoint is not ready."""
+
+
+class StandbyClusterAlreadyPromotedError(Exception):
+    """Raised when a standby cluster is already promoted."""
 
 
 class SwitchoverFailedError(Exception):
@@ -333,6 +341,24 @@ class Patroni:
             verify=self._verify,
             json={"postgresql": {"parameters": parameters}},
         )
+
+    def promote_standby_cluster(self) -> None:
+        """Promote a standby cluster to be a regular cluster."""
+        config_response = requests.get(
+            f"{self._patroni_url}/config",
+            verify=self._verify
+        )
+        if "standby_cluster" not in config_response.json():
+            raise StandbyClusterAlreadyPromotedError("standby cluster is already promoted")
+        requests.patch(
+            f"{self._patroni_url}/config",
+            verify=self._verify,
+            json={"standby_cluster": None}
+        )
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+            with attempt:
+                if self.get_primary() is None:
+                    raise ClusterNotPromotedError("cluster not promoted")
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def reinitialize_postgresql(self) -> None:
