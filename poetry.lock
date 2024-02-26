@@ -177,17 +177,17 @@ uvloop = ["uvloop (>=0.15.2)"]
 
 [[package]]
 name = "boto3"
-version = "1.34.49"
+version = "1.34.50"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">= 3.8"
 files = [
-    {file = "boto3-1.34.49-py3-none-any.whl", hash = "sha256:ce8d1de03024f52a1810e8d71ad4dba3a5b9bb48b35567191500e3432a9130b4"},
-    {file = "boto3-1.34.49.tar.gz", hash = "sha256:96b9dc85ce8d52619b56ca7b1ac1423eaf0af5ce132904bcc8aa81396eec2abf"},
+    {file = "boto3-1.34.50-py3-none-any.whl", hash = "sha256:8d709365231234bc4f0ca98fdf33a25eeebf78072853c6aa3d259f0f5cf09877"},
+    {file = "boto3-1.34.50.tar.gz", hash = "sha256:290952be7899560039cb0042e8a2354f61a7dead0d0ca8bea6ba901930df0468"},
 ]
 
 [package.dependencies]
-botocore = ">=1.34.49,<1.35.0"
+botocore = ">=1.34.50,<1.35.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.10.0,<0.11.0"
 
@@ -196,13 +196,13 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.34.49"
+version = "1.34.50"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">= 3.8"
 files = [
-    {file = "botocore-1.34.49-py3-none-any.whl", hash = "sha256:4ed9d7603a04b5bb5bd5de63b513bc2c8a7e8b1cd0088229c5ceb461161f43b6"},
-    {file = "botocore-1.34.49.tar.gz", hash = "sha256:d89410bc60673eaff1699f3f1fdcb0e3a5e1f7a6a048c0d88c3ce5c3549433ec"},
+    {file = "botocore-1.34.50-py3-none-any.whl", hash = "sha256:fda510559dbe796eefdb59561cc81be1b99afba3dee53fd23db9a3d587adc0ab"},
+    {file = "botocore-1.34.50.tar.gz", hash = "sha256:33ab82cb96c4bb684f0dbafb071808e4817d83debc88b223e7d988256370c6d7"},
 ]
 
 [package.dependencies]
@@ -1624,13 +1624,13 @@ dev = ["pre-commit", "pytest-asyncio", "tox"]
 
 [[package]]
 name = "pytest-operator"
-version = "0.32.0"
+version = "0.33.0"
 description = "Fixtures for Operators"
 optional = false
 python-versions = "*"
 files = [
-    {file = "pytest-operator-0.32.0.tar.gz", hash = "sha256:9e7b3b1384118110654f86bb6aaf772d29c6f38aec05492707ad09beff7b645b"},
-    {file = "pytest_operator-0.32.0-py3-none-any.whl", hash = "sha256:a03efd6e3aea5f5c7395ef64c45d6d1719fde61f8593804dc5c8ffff561ecfd4"},
+    {file = "pytest-operator-0.33.0.tar.gz", hash = "sha256:97d5c1890c3a012edde7c5bb1e8659aa9c9b9a0c4b4293af1a319885100d0696"},
+    {file = "pytest_operator-0.33.0-py3-none-any.whl", hash = "sha256:b1f7bc19155a204b86c1957d56fba5e667a1782b63689ef6c9e411e83af1c018"},
 ]
 
 [package.dependencies]
@@ -2229,4 +2229,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "da11cdbddf49e156403c080b24fd1adb4fec0112d540dcd8492bd0cf70c2a4b7"
+content-hash = "3028bdb00ea08c149687c3f79f13d230e8139e4dfc4c74bc06e2bc23cefb73e9"
