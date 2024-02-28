@@ -1,0 +1,91 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:682 Connecting to existing model microk8s-localhost:test on unspecified cloud
+[32mINFO    [0m juju.model:model.py:2097 Deploying ch:amd64/jammy/s3-integrator-13
+[32mINFO    [0m juju.model:model.py:2097 Deploying ch:amd64/jammy/self-signed-certificates-72
+[32mINFO    [0m juju.model:model.py:2097 Deploying local:jammy/postgresql-k8s-0
+[33mWARNING [0m juju.model:model.py:1563 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:model.py:1563 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m integration.test_backups:test_backups.py:119 configuring S3 integrator for AWS
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/0 [allocating] waiting: installing agent
+  postgresql-k8s-aws/1 [allocating] waiting: installing agent
+  s3-integrator/0 [executing] blocked: Missing parameters: ['access-key', 'secret-key']
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/0 [executing] maintenance: installing charm software
+  postgresql-k8s-aws/1 [executing] maintenance: installing charm software
+  s3-integrator/0 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/0 [executing] waiting: awaiting for cluster to start
+  postgresql-k8s-aws/1 [executing] unknown: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/0 [executing] waiting: awaiting for primary endpoint to be ready
+  postgresql-k8s-aws/1 [idle] unknown: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/0 [idle] waiting: awaiting for primary endpoint to be ready
+  postgresql-k8s-aws/1 [executing] unknown: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/0 [executing] maintenance: checking stanza
+  postgresql-k8s-aws/1 [executing] unknown: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/0 [idle] maintenance: reconfiguring cluster
+  postgresql-k8s-aws/1 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/0 [executing] maintenance: initialising stanza
+  postgresql-k8s-aws/1 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/0 [idle] maintenance: initialising stanza
+  postgresql-k8s-aws/1 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/0 [executing] active: 
+  postgresql-k8s-aws/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/1 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-aws/1 [executing] active:
