@@ -48,6 +48,9 @@ async def test_password_rotation(ops_test: OpsTest):
     # Get the initial passwords set for the system users.
     superuser_password = await get_password(ops_test)
     replication_password = await get_password(ops_test, "replication")
+    monitoring_password = await get_password(ops_test, "monitoring")
+    backup_password = await get_password(ops_test, "backup")
+    rewind_password = await get_password(ops_test, "rewind")
 
     # Get the leader unit name (because passwords can only be set through it).
     leader_unit = await get_leader_unit(ops_test, APP_NAME)
@@ -66,11 +69,40 @@ async def test_password_rotation(ops_test: OpsTest):
     assert "password" in result.keys()
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
-    new_superuser_password = await get_password(ops_test)
+    # For monitoring, generate a specific password and pass it to the action.
+    new_monitoring_password = "test-password"
+    result = await set_password(
+        ops_test, unit_name=leader, username="monitoring", password=new_monitoring_password
+    )
+    assert "password" in result.keys()
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
+    # For backup, generate a specific password and pass it to the action.
+    new_backup_password = "test-password"
+    result = await set_password(
+        ops_test, unit_name=leader, username="backup", password=new_backup_password
+    )
+    assert "password" in result.keys()
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
+
+    # For rewind, generate a specific password and pass it to the action.
+    new_rewind_password = "test-password"
+    result = await set_password(
+        ops_test, unit_name=leader, username="rewind", password=new_rewind_password
+    )
+    assert "password" in result.keys()
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
+
+    new_superuser_password = await get_password(ops_test)
     assert superuser_password != new_superuser_password
     assert new_replication_password == await get_password(ops_test, "replication")
     assert replication_password != new_replication_password
+    assert new_monitoring_password == await get_password(ops_test, "monitoring")
+    assert monitoring_password != new_monitoring_password
+    assert new_backup_password == await get_password(ops_test, "backup")
+    assert backup_password != new_backup_password
+    assert new_rewind_password == await get_password(ops_test, "rewind")
+    assert rewind_password != new_rewind_password
 
     # Restart Patroni on any non-leader unit and check that
     # Patroni and PostgreSQL continue to work.
