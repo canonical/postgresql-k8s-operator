@@ -28,7 +28,7 @@ resources:
   postgresql-image:
     type: oci-image
     description: OCI image for PostgreSQL
-    upstream-source: ghcr.io/canonical/charmed-postgresql@sha256:0cfc8cc4c096abdd713480d7cfa300e4edb15b59fc7db429a073a2c8179f5248
+    upstream-source: ghcr.io/canonical/charmed-postgresql@sha256:a00116c6796cac8ede7480d68d68b1194fd8e0dacb6e3de807db7de7e1361d68
 
 peers:
   database-peers:
