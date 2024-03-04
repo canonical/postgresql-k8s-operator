@@ -66,7 +66,7 @@ microk8s enable rbac
 
 # Deploy the charm
 juju deploy ./postgresql-k8s_ubuntu-22.04-amd64.charm --trust \
-    --resource postgresql-image=$(yq '(.resources.postgresql-image.upstream-source)' metadata.yaml)
+    --resource postgresql-image=$(yq '(.resources.postgresql-image.upstream-sources.amd64)' metadata.yaml)
 ```
 
 ## Canonical Contributor Agreement
