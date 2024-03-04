@@ -71,7 +71,7 @@ async def build_and_deploy(
     if not charm:
         charm = await ops_test.build_charm(".")
     resources = {
-        "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
+        "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-sources"]["amd64"],
     }
     await ops_test.model.deploy(
         charm,
