@@ -378,7 +378,9 @@ async def test_redeploy_charm_same_model(ops_test: OpsTest):
         await ops_test.model.deploy(
             charm,
             resources={
-                "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
+                "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-sources"][
+                    "amd64"
+                ]
             },
             application_name=APP_NAME,
             num_units=len(UNIT_IDS),
@@ -422,7 +424,9 @@ async def test_redeploy_charm_same_model_after_forcing_removal(ops_test: OpsTest
         await ops_test.model.deploy(
             charm,
             resources={
-                "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
+                "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-sources"][
+                    "amd64"
+                ]
             },
             application_name=APP_NAME,
             num_units=len(UNIT_IDS),
@@ -449,8 +453,8 @@ async def test_storage_with_more_restrictive_permissions(ops_test: OpsTest):
                 charm,
                 resources={
                     "postgresql-image": METADATA["resources"]["postgresql-image"][
-                        "upstream-source"
-                    ]
+                        "upstream-sources"
+                    ]["amd64"]
                 },
                 application_name=app_name,
                 num_units=1,
