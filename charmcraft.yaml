@@ -21,6 +21,15 @@ parts:
       - rustc
       - cargo
       - pkg-config
+      - libpq-dev
     charm-strict-dependencies: true
-    charm-binary-python-packages:
-      - psycopg2-binary
+  libpq:
+    build-packages:
+      - libpq-dev
+    plugin: dump
+    source: /usr/lib/
+    source-type: local
+    prime:
+      - lib/
+    organize:
+      "*-linux-gnu/libpq.so*": lib/
