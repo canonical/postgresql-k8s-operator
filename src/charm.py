@@ -79,7 +79,7 @@ from patroni import NotReadyError, Patroni
 from relations.db import EXTENSIONS_BLOCKING_MESSAGE, DbProvides
 from relations.postgresql_provider import PostgreSQLProvider
 from upgrade import PostgreSQLUpgrade, get_postgresql_k8s_dependencies_model
-from utils import any_memory_to_bytes, new_password
+from utils import any_cpu_to_cores, any_memory_to_bytes, new_password
 
 logger = logging.getLogger(__name__)
 
@@ -1549,7 +1549,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Return the number of CPU cores for the current K8S node."""
         client = Client()
         node = client.get(Node, name=self._get_node_name_for_pod(), namespace=self._namespace)
-        return int(node.status.allocatable["cpu"])
+        return any_cpu_to_cores(node.status.allocatable["cpu"])
 
     def get_available_resources(self) -> Tuple[int, int]:
         """Get available CPU cores and memory (in bytes) for the container."""
