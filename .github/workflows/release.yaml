@@ -52,7 +52,7 @@ jobs:
 
   build:
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v12.6.2
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@upstream-source-multi-arch
 
   release:
     name: Release charm

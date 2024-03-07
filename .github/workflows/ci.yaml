@@ -45,7 +45,7 @@ jobs:
 
   build:
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v12.6.2
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@upstream-source-multi-arch
     with:
       cache: true
 
@@ -53,7 +53,7 @@ jobs:
     name: Release charm
     needs:
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v12.6.2
+    uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@upstream-source-multi-arch
     with:
       channel: 14/edge/test-multi-arch-rock-upstream-source
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
