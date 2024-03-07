@@ -31,9 +31,7 @@ async def test_deploy_active(ops_test: OpsTest):
         await ops_test.model.deploy(
             charm,
             resources={
-                "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-sources"][
-                    "amd64"
-                ]
+                "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
             },
             application_name=APP_NAME,
             num_units=3,
