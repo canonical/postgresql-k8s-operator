@@ -1,0 +1,20 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:791 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.7    unsupported  01:30:29Z
+
+App                  Version  Status   Scale  Charm                Channel  Rev  Address         Exposed  Message
+postgresql-k8s       14.11    waiting      3  postgresql-k8s                  0  10.152.183.108  no       installing agent
+postgresql-test-app           active       1  postgresql-test-app  edge      71  10.152.183.192  no       
+
+Unit                    Workload     Agent      Address       Ports  Message
+postgresql-k8s/0        maintenance  executing  10.1.192.140         reinitialising replica
+postgresql-k8s/1*       active       executing  10.1.192.142         
+postgresql-k8s/2        waiting      idle       10.1.192.141         awaiting for member to start
+postgresql-test-app/0*  active       idle       10.1.192.139         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:797 Juju error logs:
+
+unit-postgresql-k8s-0: 01:28:15 ERROR unit.postgresql-k8s/0.juju-log failed to get primary with error RetryError[<Future at 0x7f6209965600 state=finished raised ConnectionError>]
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:861 Forgetting main...
