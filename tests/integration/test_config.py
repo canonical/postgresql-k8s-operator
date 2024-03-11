@@ -8,9 +8,9 @@ import pytest as pytest
 from pytest_operator.plugin import OpsTest
 
 from .helpers import (
-    CHARM_SERIES,
     DATABASE_APP_NAME,
-    get_leader_unit, build_and_deploy,
+    build_and_deploy,
+    get_leader_unit,
 )
 
 logger = logging.getLogger(__name__)
