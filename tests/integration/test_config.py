@@ -10,7 +10,7 @@ from pytest_operator.plugin import OpsTest
 from .helpers import (
     CHARM_SERIES,
     DATABASE_APP_NAME,
-    get_leader_unit,
+    get_leader_unit, build_and_deploy,
 )
 
 logger = logging.getLogger(__name__)
@@ -22,14 +22,9 @@ async def test_config_parameters(ops_test: OpsTest) -> None:
     """Build and deploy one unit of PostgreSQL and then test config with wrong parameters."""
     # Build and deploy the PostgreSQL charm.
     async with ops_test.fast_forward():
-        charm = await ops_test.build_charm(".")
-        await ops_test.model.deploy(
-            charm,
-            num_units=1,
-            series=CHARM_SERIES,
-            config={"profile": "testing"},
-        )
-        await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=1500)
+        await build_and_deploy(ops_test, 1)
+
+    await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active")
 
     leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
     test_string = "abcXYZ123"
