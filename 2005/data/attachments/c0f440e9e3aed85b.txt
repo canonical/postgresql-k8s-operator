@@ -1,0 +1,81 @@
+[32mINFO    [0m integration.test_backups:test_backups.py:77 deleting the previously created backups
+[33mWARNING [0m juju.client.connection:connection.py:578 Receiver: Connection closed, reconnecting
+[33mWARNING [0m juju.client.connection:connection.py:654 RPC: Connection closed, reconnecting
+[31m[1mERROR   [0m asyncio:base_events.py:1758 Task exception was never retrieved
+future: <Task finished name='Task-10328' coro=<Connection.reconnect() done, defined at /home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py:779> exception=OSError(9, 'Bad file descriptor')>
+Traceback (most recent call last):
+  File "/home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 788, in reconnect
+    res = await connector(
+  File "/home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 868, in _connect_with_login
+    await self._connect(endpoints)
+  File "/home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 817, in _connect
+    result = await task
+  File "/usr/lib/python3.10/asyncio/tasks.py", line 571, in _wait_for_one
+    return f.result()  # May raise f.exception().
+  File "/home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 806, in _try_endpoint
+    return await self._open(endpoint, cacert)
+  File "/home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 427, in _open
+    return (await websockets.connect(
+  File "/home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/websockets/legacy/client.py", line 647, in __await_impl_timeout__
+    return await self.__await_impl__()
+  File "/home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/websockets/legacy/client.py", line 651, in __await_impl__
+    _transport, _protocol = await self._create_connection()
+  File "/usr/lib/python3.10/asyncio/base_events.py", line 1103, in create_connection
+    transport, protocol = await self._create_connection_transport(
+  File "/usr/lib/python3.10/asyncio/base_events.py", line 1119, in _create_connection_transport
+    sock.setblocking(False)
+OSError: [Errno 9] Bad file descriptor
+[31m[1mERROR   [0m asyncio:base_events.py:1758 Task exception was never retrieved
+future: <Task finished name='Task-10333' coro=<Connection.reconnect() done, defined at /home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py:779> exception=OSError(9, 'Bad file descriptor')>
+Traceback (most recent call last):
+  File "/home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 788, in reconnect
+    res = await connector(
+  File "/home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 868, in _connect_with_login
+    await self._connect(endpoints)
+  File "/home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 817, in _connect
+    result = await task
+  File "/usr/lib/python3.10/asyncio/tasks.py", line 571, in _wait_for_one
+    return f.result()  # May raise f.exception().
+  File "/home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 806, in _try_endpoint
+    return await self._open(endpoint, cacert)
+  File "/home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 427, in _open
+    return (await websockets.connect(
+  File "/home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/websockets/legacy/client.py", line 647, in __await_impl_timeout__
+    return await self.__await_impl__()
+  File "/home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/websockets/legacy/client.py", line 651, in __await_impl__
+    _transport, _protocol = await self._create_connection()
+  File "/usr/lib/python3.10/asyncio/base_events.py", line 1103, in create_connection
+    transport, protocol = await self._create_connection_transport(
+  File "/usr/lib/python3.10/asyncio/base_events.py", line 1119, in _create_connection_transport
+    sock.setblocking(False)
+OSError: [Errno 9] Bad file descriptor
+[31m[1mERROR   [0m juju.client.connection:connection.py:662 RPC: Automatic reconnect failed
+[32mINFO    [0m pytest_operator.plugin:plugin.py:791 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.7    unsupported  01:47:49Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Address         Exposed  Message
+postgresql-k8s-aws        14.11    active      2  postgresql-k8s                             0  10.152.183.117  no       
+s3-integrator                      active      1  s3-integrator             latest/stable   13  10.152.183.137  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable   72  10.152.183.79   no       
+
+Unit                         Workload  Agent  Address     Ports  Message
+postgresql-k8s-aws/0*        active    idle   10.1.32.76         Primary
+postgresql-k8s-aws/1         active    idle   10.1.32.78         
+s3-integrator/0*             active    idle   10.1.32.72         
+self-signed-certificates/0*  active    idle   10.1.32.73         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:797 Juju error logs:
+
+unit-postgresql-k8s-aws-1: 01:41:40 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Non-existing secret cauth was attempted to be removed.
+unit-postgresql-k8s-aws-1: 01:41:40 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Can't update secret for relation 1
+unit-postgresql-k8s-aws-1: 01:41:40 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Non-existing field 'cauth' was attempted to be removed from the databag (relation ID: 1)
+unit-postgresql-k8s-aws-1: 01:41:40 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Non-existing secret cert was attempted to be removed.
+unit-postgresql-k8s-aws-1: 01:41:40 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Can't update secret for relation 1
+unit-postgresql-k8s-aws-1: 01:41:40 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Non-existing field 'cert' was attempted to be removed from the databag (relation ID: 1)
+unit-postgresql-k8s-aws-1: 01:41:40 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Non-existing secret chain was attempted to be removed.
+unit-postgresql-k8s-aws-1: 01:41:40 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Can't update secret for relation 1
+unit-postgresql-k8s-aws-1: 01:41:40 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Non-existing field 'chain' was attempted to be removed from the databag (relation ID: 1)
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:861 Forgetting main...

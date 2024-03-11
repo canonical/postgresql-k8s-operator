@@ -1,0 +1,17 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:791 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.7    unsupported  01:37:31Z
+
+App             Version  Status  Scale  Charm           Channel  Rev  Address         Exposed  Message
+postgresql-k8s  14.11    active      3  postgresql-k8s             0  10.152.183.171  no       
+
+Unit               Workload  Agent  Address      Ports  Message
+postgresql-k8s/0*  active    idle   10.1.124.11         
+postgresql-k8s/1   active    idle   10.1.124.13         
+postgresql-k8s/2   active    idle   10.1.124.12         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:797 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:861 Forgetting main...
