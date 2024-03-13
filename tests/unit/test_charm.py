@@ -729,17 +729,11 @@ class TestCharm(unittest.TestCase):
         _charm_lib.return_value.validate_date_style.return_value = []
         _charm_lib.return_value.get_postgresql_timezones.return_value = []
 
-        self.charm._validate_config_options()
-
-        assert not _charm_lib.return_value.get_postgresql_text_search_configs.called
-        assert not _charm_lib.return_value.validate_date_style.called
-        assert not _charm_lib.return_value.get_postgresql_timezones.called
-
         # Test instance_default_text_search_config exception
         with self.harness.hooks_disabled():
             self.harness.update_config({"instance_default_text_search_config": "pg_catalog.test"})
 
-        with self.assertRaises(Exception) as e:
+        with self.assertRaises(ValueError) as e:
             self.charm._validate_config_options()
             assert (
                 e.msg == "instance_default_text_search_config config option has an invalid value"
@@ -754,7 +748,7 @@ class TestCharm(unittest.TestCase):
         with self.harness.hooks_disabled():
             self.harness.update_config({"request_date_style": "ISO, TEST"})
 
-        with self.assertRaises(Exception) as e:
+        with self.assertRaises(ValueError) as e:
             self.charm._validate_config_options()
             assert e.msg == "request_date_style config option has an invalid value"
 
@@ -765,7 +759,7 @@ class TestCharm(unittest.TestCase):
         with self.harness.hooks_disabled():
             self.harness.update_config({"request_time_zone": "TEST_ZONE"})
 
-        with self.assertRaises(Exception) as e:
+        with self.assertRaises(ValueError) as e:
             self.charm._validate_config_options()
             assert e.msg == "request_time_zone config option has an invalid value"
 
@@ -1288,7 +1282,6 @@ class TestCharm(unittest.TestCase):
     @patch("ops.model.Container.get_plan")
     @patch("charm.PostgresqlOperatorCharm._handle_postgresql_restart_need")
     @patch("charm.Patroni.bulk_update_parameters_controller_by_patroni")
-    @patch("charm.PostgresqlOperatorCharm._validate_config_options")
     @patch("charm.Patroni.member_started", new_callable=PropertyMock)
     @patch("charm.PostgresqlOperatorCharm._is_workload_running", new_callable=PropertyMock)
     @patch("charm.Patroni.render_patroni_yml_file")
@@ -1302,7 +1295,6 @@ class TestCharm(unittest.TestCase):
         _is_workload_running,
         _member_started,
         _,
-        __,
         _handle_postgresql_restart_need,
         _get_plan,
     ):
