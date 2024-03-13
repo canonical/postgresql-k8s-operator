@@ -197,8 +197,7 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
-    @validator("optimizer_from_collapse_limit", allow_reuse=True)
-    @validator("optimizer_join_collapse_limit", allow_reuse=True)
+    @validator("optimizer_from_collapse_limit", "optimizer_join_collapse_limit")
     @classmethod
     def optimizer_collapse_limit_values(cls, value: int) -> Optional[int]:
         """Check optimizer collapse_limit config option is between 1 and 2147483647."""
@@ -236,8 +235,7 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
-    @validator("vacuum_autovacuum_analyze_scale_factor", allow_reuse=True)
-    @validator("vacuum_autovacuum_vacuum_scale_factor", allow_reuse=True)
+    @validator("vacuum_autovacuum_analyze_scale_factor", "vacuum_autovacuum_vacuum_scale_factor")
     @classmethod
     def vacuum_autovacuum_vacuum_scale_factor_values(cls, value: float) -> Optional[float]:
         """Check autovacuum scale_factor config option is between 0 and 100."""

@@ -380,7 +380,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 "Early exit on_peer_relation_changed: Waiting for container to become available"
             )
             return
-        self.update_config()
+        try:
+            self.update_config()
+        except ValueError as e:
+            self.unit.status = BlockedStatus("Configuration Error. Please check the logs")
+            logger.error("Invalid configuration: %s", str(e))
+            return
 
         # Validate the status of the member before setting an ActiveStatus.
         if not self._patroni.member_started:
@@ -432,8 +437,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("Early exit on_config_changed: upgrade in progress")
             return
 
-        # update config on every run
-        self.update_config()
+        try:
+            # update config on every run
+            self.update_config()
+        except ValueError as e:
+            self.unit.status = BlockedStatus("Configuration Error. Please check the logs")
+            logger.error("Invalid configuration: %s", str(e))
+            return
+
+        if self.is_blocked and "Configuration Error" in self.unit.status.message:
+            self.unit.status = ActiveStatus()
 
         if not self.unit.is_leader():
             return
