@@ -1111,8 +1111,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 return False
             return True
 
+        try:
+            is_primary = self.is_primary
+            is_standby_leader = self.is_standby_leader
+        except RetryError:
+            return False
+
         if (
-            not self.is_primary
+            not is_primary
+            and not is_standby_leader
             and self._patroni.member_started
             and not self._patroni.member_streaming
         ):
