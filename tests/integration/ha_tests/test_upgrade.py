@@ -103,9 +103,7 @@ async def test_upgrade_from_edge(ops_test: OpsTest, continuous_writes) -> None:
     primary_name = await get_primary(ops_test, DATABASE_APP_NAME)
     initial_number_of_switchovers = await count_switchovers(ops_test, primary_name)
 
-    resources = {
-        "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-sources"]["amd64"]
-    }
+    resources = {"postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]}
     application = ops_test.model.applications[DATABASE_APP_NAME]
 
     logger.info("Build charm locally")
