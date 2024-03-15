@@ -1,0 +1,136 @@
+[32mINFO    [0m juju.model:model.py:2097 Deploying local:jammy/postgresql-k8s-3
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  test-storage-postgresql-k8s/0 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  test-storage-postgresql-k8s/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  test-storage-postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  test-storage-postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  test-storage-postgresql-k8s/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:791 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.7    unsupported  02:22:34Z
+
+App                          Version  Status   Scale  Charm           Channel  Rev  Address         Exposed  Message
+postgresql-k8s                        waiting    0/3  postgresql-k8s             2  10.152.183.126  no       installing agent
+test-storage-postgresql-k8s  14.11    active       1  postgresql-k8s             3  10.152.183.74   no       
+
+Unit                            Workload  Agent       Address     Ports  Message
+postgresql-k8s/0                waiting   allocating                     installing agent
+postgresql-k8s/1                waiting   allocating                     installing agent
+postgresql-k8s/2                waiting   allocating                     installing agent
+test-storage-postgresql-k8s/0*  active    idle        10.1.43.35         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:797 Juju error logs:
+
+unit-postgresql-k8s-1: 01:35:37 ERROR unit.postgresql-k8s/1.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-postgresql-k8s-0: 01:50:38 ERROR unit.postgresql-k8s/0.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-postgresql-k8s-1: 02:03:04 ERROR unit.postgresql-k8s/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/ops/model.py", line 3014, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-postgresql-k8s-1/relation-get', '-r', '5', '-', 'postgresql-k8s/1', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/./src/charm.py", line 1597, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/ops/main.py", line 444, in main
+    charm = charm_class(framework)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/./src/charm.py", line 172, in __init__
+    jobs=self._generate_metrics_jobs(self.is_tls_enabled),
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/./src/charm.py", line 1158, in is_tls_enabled
+    return all(self.tls.get_tls_files())
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/lib/charms/postgresql_k8s/v0/postgresql_tls.py", line 214, in get_tls_files
+    ca = self.charm.get_secret(SCOPE, "ca")
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/./src/charm.py", line 254, in get_secret
+    value = self.peer_relation_unit.fetch_my_relation_field(peers.id, secret_key)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1008, in fetch_my_relation_field
+    if relation_data := self.fetch_my_relation_data([relation_id], [field], relation_name):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 997, in fetch_my_relation_data
+    data[relation.id] = self._fetch_my_specific_relation_data(relation, fields)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1592, in _fetch_my_specific_relation_data
+    return self._fetch_relation_data_with_secrets(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 875, in _fetch_relation_data_with_secrets
+    result, normal_fields = self._process_secret_fields(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 815, in _process_secret_fields
+    if group_result := operation(relation, group, secret_fields, *args, **kwargs):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1561, in _get_group_secret_contents
+    result = super()._get_group_secret_contents(relation, group, secret_fields)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 749, in _get_group_secret_contents
+    if (secret := self._get_relation_secret(relation.id, group)) and (
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 462, in wrapper
+    return f(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1541, in _get_relation_secret
+    secret_uri = relation.data[self.component].get(self._generate_secret_field_name(), None)
+  File "/usr/lib/python3.10/_collections_abc.py", line 824, in get
+    return self[key]
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/ops/model.py", line 1697, in __getitem__
+    return super().__getitem__(key)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/ops/model.py", line 796, in __getitem__
+    return self._data[key]
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/ops/model.py", line 780, in _data
+    data = self._lazy_data = self._load()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/ops/model.py", line 1581, in _load
+    return self._backend.relation_get(self.relation.id, self._entity.name, self._is_app)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/ops/model.py", line 3095, in relation_get
+    raw_data_content = self._run(*args, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/ops/model.py", line 3016, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR permission denied
+
+unit-postgresql-k8s-2: 02:03:04 ERROR unit.postgresql-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/model.py", line 3014, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-postgresql-k8s-2/relation-get', '-r', '4', '-', 'postgresql-k8s/2', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 1597, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 1040, in _on_update_status
+    if not self.upgrade.idle:
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/lib/charms/data_platform_libs/v0/upgrade.py", line 648, in idle
+    return set(self.unit_states) == {"idle"}
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/lib/charms/data_platform_libs/v0/upgrade.py", line 619, in unit_states
+    return [self.peer_relation.data[unit].get("state", "") for unit in self.app_units]
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/lib/charms/data_platform_libs/v0/upgrade.py", line 619, in <listcomp>
+    return [self.peer_relation.data[unit].get("state", "") for unit in self.app_units]
+  File "/usr/lib/python3.10/_collections_abc.py", line 824, in get
+    return self[key]
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/model.py", line 1697, in __getitem__
+    return super().__getitem__(key)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/model.py", line 796, in __getitem__
+    return self._data[key]
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/model.py", line 780, in _data
+    data = self._lazy_data = self._load()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/model.py", line 1581, in _load
+    return self._backend.relation_get(self.relation.id, self._entity.name, self._is_app)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/model.py", line 3095, in relation_get
+    raw_data_content = self._run(*args, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/model.py", line 3016, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR permission denied
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:861 Forgetting main...
