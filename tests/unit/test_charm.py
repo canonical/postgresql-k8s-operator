@@ -39,6 +39,7 @@ class TestCharm(unittest.TestCase):
         self.pgbackrest_server_service = "pgbackrest server"
 
         self.harness = Harness(PostgresqlOperatorCharm)
+        self.harness.handle_exec("postgresql", ["locale", "-a"], result="C")
         self.addCleanup(self.harness.cleanup)
         self.rel_id = self.harness.add_relation(self._peer_relation, "postgresql-k8s")
         self.harness.begin()
@@ -721,6 +722,50 @@ class TestCharm(unittest.TestCase):
             self.charm.client_relations, [database_relation, db_relation, db_admin_relation]
         )
 
+    @patch("charm.PostgresqlOperatorCharm.postgresql", new_callable=PropertyMock)
+    def test_validate_config_options(self, _charm_lib):
+        self.harness.set_can_connect(self._postgresql_container, True)
+        _charm_lib.return_value.get_postgresql_text_search_configs.return_value = []
+        _charm_lib.return_value.validate_date_style.return_value = []
+        _charm_lib.return_value.get_postgresql_timezones.return_value = []
+
+        # Test instance_default_text_search_config exception
+        with self.harness.hooks_disabled():
+            self.harness.update_config({"instance_default_text_search_config": "pg_catalog.test"})
+
+        with self.assertRaises(ValueError) as e:
+            self.charm._validate_config_options()
+            assert (
+                e.msg == "instance_default_text_search_config config option has an invalid value"
+            )
+
+        _charm_lib.return_value.get_postgresql_text_search_configs.assert_called_once_with()
+        _charm_lib.return_value.get_postgresql_text_search_configs.return_value = [
+            "pg_catalog.test"
+        ]
+
+        # Test request_date_style exception
+        with self.harness.hooks_disabled():
+            self.harness.update_config({"request_date_style": "ISO, TEST"})
+
+        with self.assertRaises(ValueError) as e:
+            self.charm._validate_config_options()
+            assert e.msg == "request_date_style config option has an invalid value"
+
+        _charm_lib.return_value.validate_date_style.assert_called_once_with("ISO, TEST")
+        _charm_lib.return_value.validate_date_style.return_value = ["ISO, TEST"]
+
+        # Test request_time_zone exception
+        with self.harness.hooks_disabled():
+            self.harness.update_config({"request_time_zone": "TEST_ZONE"})
+
+        with self.assertRaises(ValueError) as e:
+            self.charm._validate_config_options()
+            assert e.msg == "request_time_zone config option has an invalid value"
+
+        _charm_lib.return_value.get_postgresql_timezones.assert_called_once_with()
+        _charm_lib.return_value.get_postgresql_timezones.return_value = ["TEST_ZONE"]
+
     #
     # Secrets
     #
@@ -1237,7 +1282,6 @@ class TestCharm(unittest.TestCase):
     @patch("ops.model.Container.get_plan")
     @patch("charm.PostgresqlOperatorCharm._handle_postgresql_restart_need")
     @patch("charm.Patroni.bulk_update_parameters_controller_by_patroni")
-    @patch("charm.PostgresqlOperatorCharm._validate_config_options")
     @patch("charm.Patroni.member_started", new_callable=PropertyMock)
     @patch("charm.PostgresqlOperatorCharm._is_workload_running", new_callable=PropertyMock)
     @patch("charm.Patroni.render_patroni_yml_file")
@@ -1251,7 +1295,6 @@ class TestCharm(unittest.TestCase):
         _is_workload_running,
         _member_started,
         _,
-        __,
         _handle_postgresql_restart_need,
         _get_plan,
     ):
