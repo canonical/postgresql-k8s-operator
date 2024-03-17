@@ -104,9 +104,9 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
 
         # Enable additional logs on the PostgreSQL instance to check TLS
         # being used in a later step.
-        await ops_test.model.applications[DATABASE_APP_NAME].set_config(
-            {"logging_log_connections": "True"}
-        )
+        await ops_test.model.applications[DATABASE_APP_NAME].set_config({
+            "logging_log_connections": "True"
+        })
         await ops_test.model.wait_for_idle(
             apps=[DATABASE_APP_NAME], status="active", idle_period=30
         )
@@ -126,9 +126,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
                 with db_connect(host, password) as connection, connection.cursor() as cursor:
                     cursor.execute("SELECT pg_is_in_recovery();")
                     in_recovery = cursor.fetchone()[0]
-                    assert (
-                        not in_recovery
-                    )  # If the instance is not in recovery mode anymore it was successfully promoted.
+                    assert not in_recovery  # If the instance is not in recovery mode anymore it was successfully promoted.
                 connection.close()
 
         # Write some data to the initial primary (this causes a divergence
