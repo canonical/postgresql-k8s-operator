@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Upgrades implementation."""
+
 import json
 import logging
 
@@ -221,9 +222,9 @@ class PostgreSQLUpgrade(DataUpgrade):
                 if len(sync_standbys) > 0:
                     sync_standbys.pop()
                 sync_standbys.append(unit_to_become_sync_standby)
-            self.peer_relation.data[self.charm.app].update(
-                {"sync-standbys": json.dumps(sync_standbys)}
-            )
+            self.peer_relation.data[self.charm.app].update({
+                "sync-standbys": json.dumps(sync_standbys)
+            })
             logger.debug(f"sync-standbys changed to: {sync_standbys}")
 
     @override
