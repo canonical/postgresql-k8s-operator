@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 """Charmed Kubernetes Operator for the PostgreSQL database."""
+
 import itertools
 import json
 import logging
@@ -1416,12 +1417,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("Early exit update_config: Patroni not started yet")
             return False
 
-        self._patroni.bulk_update_parameters_controller_by_patroni(
-            {
-                "max_connections": max(4 * available_cpu_cores, 100),
-                "max_prepared_transactions": self.config.memory_max_prepared_transactions,
-            }
-        )
+        self._patroni.bulk_update_parameters_controller_by_patroni({
+            "max_connections": max(4 * available_cpu_cores, 100),
+            "max_prepared_transactions": self.config.memory_max_prepared_transactions,
+        })
 
         self._handle_postgresql_restart_need()
 

@@ -1104,9 +1104,9 @@ class TestCharm(unittest.TestCase):
                 self.rel_id,
                 self.charm.app.name,
                 {
-                    "endpoints": json.dumps(
-                        [f"{self.charm.app.name}-{unit_id}.{self.charm.app.name}-endpoints"]
-                    )
+                    "endpoints": json.dumps([
+                        f"{self.charm.app.name}-{unit_id}.{self.charm.app.name}-endpoints"
+                    ])
                 },
             )
         self.charm.on.database_peers_relation_changed.emit(self.relation)
