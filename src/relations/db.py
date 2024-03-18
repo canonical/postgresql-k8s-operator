@@ -30,6 +30,10 @@ logger = logging.getLogger(__name__)
 
 EXTENSIONS_BLOCKING_MESSAGE = "extensions requested through relation"
 
+ROLES_BLOCKING_MESSAGE = (
+    "roles requested through relation, use postgresql_client interface instead"
+)
+
 
 class DbProvides(Object):
     """Defines functionality for the 'provides' side of the 'db' relation.
@@ -110,6 +114,10 @@ class DbProvides(Object):
                     disabled_extensions.add(extension_name)
         return required_extensions, disabled_extensions
 
+    def _get_roles(self, relation: Relation) -> bool:
+        """Checks if relation required roles."""
+        return "roles" in relation.data.get(relation.app, {})
+
     def set_up_relation(self, relation: Relation) -> bool:
         """Set up the relation to be used by the application charm."""
         # Do not allow apps requesting extensions to be installed
@@ -121,6 +129,10 @@ class DbProvides(Object):
                 " - Please enable extensions through `juju config` and add the relation again."
             )
             self.charm.unit.status = BlockedStatus(EXTENSIONS_BLOCKING_MESSAGE)
+            return False
+
+        if self._get_roles(relation):
+            self.charm.unit.status = BlockedStatus(ROLES_BLOCKING_MESSAGE)
             return False
 
         database = relation.data.get(relation.app, {}).get("database")
@@ -214,7 +226,7 @@ class DbProvides(Object):
         return True
 
     def _check_for_blocking_relations(self, relation_id: int) -> bool:
-        """Checks if there are relations with extensions.
+        """Checks if there are relations with extensions or roles.
 
         Args:
             relation_id: current relation to be skipped
@@ -224,7 +236,7 @@ class DbProvides(Object):
                 if relation.id == relation_id:
                     continue
                 for data in relation.data.values():
-                    if "extensions" in data:
+                    if "extensions" in data or "roles" in data:
                         return True
         return False
 
@@ -302,10 +314,10 @@ class DbProvides(Object):
 
     def _update_unit_status(self, relation: Relation) -> None:
         """# Clean up Blocked status if it's due to extensions request."""
-        if (
-            self.charm._has_blocked_status
-            and self.charm.unit.status.message == EXTENSIONS_BLOCKING_MESSAGE
-        ):
+        if self.charm._has_blocked_status and self.charm.unit.status.message in [
+            EXTENSIONS_BLOCKING_MESSAGE,
+            ROLES_BLOCKING_MESSAGE,
+        ]:
             if not self._check_for_blocking_relations(relation.id):
                 self.charm.unit.status = ActiveStatus()
 
