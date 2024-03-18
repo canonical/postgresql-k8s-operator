@@ -172,13 +172,11 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
 @pytest.mark.group(1)
 async def test_postgresql_parameters_change(ops_test: OpsTest) -> None:
     """Test that's possible to change PostgreSQL parameters."""
-    await ops_test.model.applications[APP_NAME].set_config(
-        {
-            "memory_max_prepared_transactions": "100",
-            "memory_shared_buffers": "128",
-            "response_lc_monetary": "en_GB.utf8",
-        }
-    )
+    await ops_test.model.applications[APP_NAME].set_config({
+        "memory_max_prepared_transactions": "100",
+        "memory_shared_buffers": "128",
+        "response_lc_monetary": "en_GB.utf8",
+    })
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=30)
     password = await get_password(ops_test)
 

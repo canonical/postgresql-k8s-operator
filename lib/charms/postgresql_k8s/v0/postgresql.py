@@ -18,6 +18,7 @@ The `postgresql` module provides methods for interacting with the PostgreSQL ins
 
 Any charm using this library should import the `psycopg2` or `psycopg2-binary` dependency.
 """
+
 import logging
 from collections import OrderedDict
 from typing import Dict, List, Optional, Set, Tuple
@@ -35,7 +36,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 24
+LIBPATCH = 25
 
 INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE = "invalid role(s) for extra user roles"
 
@@ -358,9 +359,7 @@ END; $$;"""
             statements.append(
                 """UPDATE pg_catalog.pg_largeobject_metadata
 SET lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}')
-WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}');""".format(
-                    user, self.user
-                )
+WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}');""".format(user, self.user)
             )
         else:
             for schema in schemas:
@@ -562,18 +561,16 @@ WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}');""".format(
         parameters = {}
         for config, value in config_options.items():
             # Filter config option not related to PostgreSQL parameters.
-            if not config.startswith(
-                (
-                    "durability",
-                    "instance",
-                    "logging",
-                    "memory",
-                    "optimizer",
-                    "request",
-                    "response",
-                    "vacuum",
-                )
-            ):
+            if not config.startswith((
+                "durability",
+                "instance",
+                "logging",
+                "memory",
+                "optimizer",
+                "request",
+                "response",
+                "vacuum",
+            )):
                 continue
             parameter = "_".join(config.split("_")[1:])
             if parameter in ["date_style", "time_zone"]:
@@ -594,8 +591,8 @@ WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}');""".format(
                 # and the remaining as cache memory.
                 shared_buffers = int(available_memory * 0.25)
             effective_cache_size = int(available_memory - shared_buffers)
-            parameters.setdefault("shared_buffers", f"{int(shared_buffers/10**6)}MB")
-            parameters.update({"effective_cache_size": f"{int(effective_cache_size/10**6)}MB"})
+            parameters.setdefault("shared_buffers", f"{int(shared_buffers / 10**6)}MB")
+            parameters.update({"effective_cache_size": f"{int(effective_cache_size / 10**6)}MB"})
         else:
             # Return default
             parameters.setdefault("shared_buffers", "128MB")
