@@ -344,16 +344,11 @@ class Patroni:
 
     def promote_standby_cluster(self) -> None:
         """Promote a standby cluster to be a regular cluster."""
-        config_response = requests.get(
-            f"{self._patroni_url}/config",
-            verify=self._verify
-        )
+        config_response = requests.get(f"{self._patroni_url}/config", verify=self._verify)
         if "standby_cluster" not in config_response.json():
             raise StandbyClusterAlreadyPromotedError("standby cluster is already promoted")
         requests.patch(
-            f"{self._patroni_url}/config",
-            verify=self._verify,
-            json={"standby_cluster": None}
+            f"{self._patroni_url}/config", verify=self._verify, json={"standby_cluster": None}
         )
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
             with attempt:
@@ -427,12 +422,12 @@ class Patroni:
             is_no_sync_member=is_no_sync_member,
             namespace=self._namespace,
             storage_path=self._storage_path,
-            superuser_password=primary["superuser-password"]
-            if primary
-            else self._superuser_password,
-            replication_password=primary["replication-password"]
-            if primary
-            else self._replication_password,
+            superuser_password=(
+                primary["superuser-password"] if primary else self._superuser_password
+            ),
+            replication_password=(
+                primary["replication-password"] if primary else self._replication_password
+            ),
             rewind_user=REWIND_USER,
             rewind_password=self._rewind_password,
             enable_pgbackrest=stanza is not None,
@@ -444,9 +439,11 @@ class Patroni:
             version=self.rock_postgresql_version.split(".")[0],
             pg_parameters=parameters,
             standby_cluster_endpoint=primary["endpoint"] if primary else None,
-            extra_replication_endpoints={"{}/32".format(primary["endpoint"])}
-            if primary
-            else self._charm.async_manager.standby_endpoints(),
+            extra_replication_endpoints=(
+                {"{}/32".format(primary["endpoint"])}
+                if primary
+                else self._charm.async_manager.standby_endpoints()
+            ),
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 

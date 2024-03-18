@@ -507,6 +507,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         Args:
             database: optional database where to enable/disable the extension.
         """
+        if self.postgresql.is_standby_cluster:
+            logger.debug("Early exit enable_disable_extensions: standby cluster")
+            return
         spi_module = ["refint", "autoinc", "insert_username", "moddatetime"]
         plugins_exception = {"uuid_ossp": '"uuid-ossp"'}
         original_status = self.unit.status
