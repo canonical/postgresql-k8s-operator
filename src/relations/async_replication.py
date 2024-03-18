@@ -388,7 +388,7 @@ class PostgreSQLAsyncReplication(Object):
             return
 
         if self.charm.unit.is_leader():
-            self._handle_leader_startup()
+            self._handle_leader_startup(event)
         self.charm.unit.status = ActiveStatus()
 
     def _handle_leader_startup(self, event) -> None:
