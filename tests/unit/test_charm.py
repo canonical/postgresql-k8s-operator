@@ -20,7 +20,7 @@ from ops.model import (
 from ops.pebble import Change, ChangeError, ChangeID, ServiceStatus
 from ops.testing import Harness
 from parameterized import parameterized
-from tenacity import RetryError
+from tenacity import RetryError, wait_fixed
 
 from charm import PostgresqlOperatorCharm
 from constants import PEER, SECRET_INTERNAL_LABEL
@@ -39,6 +39,7 @@ class TestCharm(unittest.TestCase):
         self.pgbackrest_server_service = "pgbackrest server"
 
         self.harness = Harness(PostgresqlOperatorCharm)
+        self.harness.handle_exec("postgresql", ["locale", "-a"], result="C")
         self.addCleanup(self.harness.cleanup)
         self.rel_id = self.harness.add_relation(self._peer_relation, "postgresql-k8s")
         self.harness.begin()
@@ -180,7 +181,6 @@ class TestCharm(unittest.TestCase):
         expected = self.charm._postgresql_layer().to_dict()
         expected.pop("summary", "")
         expected.pop("description", "")
-        expected.pop("checks", "")
         # Check the plan is as expected.
         self.assertEqual(plan.to_dict(), expected)
         self.assertEqual(self.harness.model.unit.status, ActiveStatus())
@@ -722,6 +722,50 @@ class TestCharm(unittest.TestCase):
             self.charm.client_relations, [database_relation, db_relation, db_admin_relation]
         )
 
+    @patch("charm.PostgresqlOperatorCharm.postgresql", new_callable=PropertyMock)
+    def test_validate_config_options(self, _charm_lib):
+        self.harness.set_can_connect(self._postgresql_container, True)
+        _charm_lib.return_value.get_postgresql_text_search_configs.return_value = []
+        _charm_lib.return_value.validate_date_style.return_value = []
+        _charm_lib.return_value.get_postgresql_timezones.return_value = []
+
+        # Test instance_default_text_search_config exception
+        with self.harness.hooks_disabled():
+            self.harness.update_config({"instance_default_text_search_config": "pg_catalog.test"})
+
+        with self.assertRaises(ValueError) as e:
+            self.charm._validate_config_options()
+            assert (
+                e.msg == "instance_default_text_search_config config option has an invalid value"
+            )
+
+        _charm_lib.return_value.get_postgresql_text_search_configs.assert_called_once_with()
+        _charm_lib.return_value.get_postgresql_text_search_configs.return_value = [
+            "pg_catalog.test"
+        ]
+
+        # Test request_date_style exception
+        with self.harness.hooks_disabled():
+            self.harness.update_config({"request_date_style": "ISO, TEST"})
+
+        with self.assertRaises(ValueError) as e:
+            self.charm._validate_config_options()
+            assert e.msg == "request_date_style config option has an invalid value"
+
+        _charm_lib.return_value.validate_date_style.assert_called_once_with("ISO, TEST")
+        _charm_lib.return_value.validate_date_style.return_value = ["ISO, TEST"]
+
+        # Test request_time_zone exception
+        with self.harness.hooks_disabled():
+            self.harness.update_config({"request_time_zone": "TEST_ZONE"})
+
+        with self.assertRaises(ValueError) as e:
+            self.charm._validate_config_options()
+            assert e.msg == "request_time_zone config option has an invalid value"
+
+        _charm_lib.return_value.get_postgresql_timezones.assert_called_once_with()
+        _charm_lib.return_value.get_postgresql_timezones.return_value = ["TEST_ZONE"]
+
     #
     # Secrets
     #
@@ -1234,3 +1278,155 @@ class TestCharm(unittest.TestCase):
             )
             _restart.assert_not_called()
             _reinitialize_postgresql.assert_called_once()
+
+    @patch("ops.model.Container.get_plan")
+    @patch("charm.PostgresqlOperatorCharm._handle_postgresql_restart_need")
+    @patch("charm.Patroni.bulk_update_parameters_controller_by_patroni")
+    @patch("charm.Patroni.member_started", new_callable=PropertyMock)
+    @patch("charm.PostgresqlOperatorCharm._is_workload_running", new_callable=PropertyMock)
+    @patch("charm.Patroni.render_patroni_yml_file")
+    @patch("charm.PostgreSQLUpgrade")
+    @patch("charm.PostgresqlOperatorCharm.is_tls_enabled", new_callable=PropertyMock)
+    def test_update_config(
+        self,
+        _is_tls_enabled,
+        _upgrade,
+        _render_patroni_yml_file,
+        _is_workload_running,
+        _member_started,
+        _,
+        _handle_postgresql_restart_need,
+        _get_plan,
+    ):
+        with patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock:
+            # Mock some properties.
+            self.harness.set_can_connect(self._postgresql_container, True)
+            self.upgrade_relation = self.harness.add_relation("upgrade", self.charm.app.name)
+            postgresql_mock.is_tls_enabled = PropertyMock(side_effect=[False, False, False, False])
+            _is_workload_running.side_effect = [False, False, True, True, False, True]
+            _member_started.side_effect = [True, True, False]
+            postgresql_mock.build_postgresql_parameters.return_value = {"test": "test"}
+
+            # Test when only one of the two config options for profile limit memory is set.
+            self.harness.update_config({"profile-limit-memory": 1000})
+            self.charm.update_config()
+
+            # Test when only one of the two config options for profile limit memory is set.
+            self.harness.update_config(
+                {"profile_limit_memory": 1000}, unset={"profile-limit-memory"}
+            )
+            self.charm.update_config()
+
+            # Test when the two config options for profile limit memory are set at the same time.
+            _render_patroni_yml_file.reset_mock()
+            self.harness.update_config({"profile-limit-memory": 1000})
+            with self.assertRaises(ValueError):
+                self.charm.update_config()
+
+            # Test without TLS files available.
+            self.harness.update_config(unset={"profile-limit-memory", "profile_limit_memory"})
+            with self.harness.hooks_disabled():
+                self.harness.update_relation_data(self.rel_id, self.charm.unit.name, {"tls": ""})
+            _is_tls_enabled.return_value = False
+            self.charm.update_config()
+            _render_patroni_yml_file.assert_called_once_with(
+                connectivity=True,
+                is_creating_backup=False,
+                enable_tls=False,
+                is_no_sync_member=False,
+                backup_id=None,
+                stanza=None,
+                restore_stanza=None,
+                parameters={"test": "test"},
+            )
+            _handle_postgresql_restart_need.assert_called_once()
+            self.assertNotIn(
+                "tls", self.harness.get_relation_data(self.rel_id, self.charm.unit.name)
+            )
+
+            # Test with TLS files available.
+            _handle_postgresql_restart_need.reset_mock()
+            self.harness.update_relation_data(
+                self.rel_id, self.charm.unit.name, {"tls": ""}
+            )  # Mock some data in the relation to test that it change.
+            _is_tls_enabled.return_value = True
+            _render_patroni_yml_file.reset_mock()
+            self.charm.update_config()
+            _render_patroni_yml_file.assert_called_once_with(
+                connectivity=True,
+                is_creating_backup=False,
+                enable_tls=True,
+                is_no_sync_member=False,
+                backup_id=None,
+                stanza=None,
+                restore_stanza=None,
+                parameters={"test": "test"},
+            )
+            _handle_postgresql_restart_need.assert_called_once()
+            self.assertNotIn(
+                "tls",
+                self.harness.get_relation_data(
+                    self.rel_id, self.charm.unit.name
+                ),  # The "tls" flag is set in handle_postgresql_restart_need.
+            )
+
+            # Test with workload not running yet.
+            self.harness.update_relation_data(
+                self.rel_id, self.charm.unit.name, {"tls": ""}
+            )  # Mock some data in the relation to test that it change.
+            _handle_postgresql_restart_need.reset_mock()
+            self.charm.update_config()
+            _handle_postgresql_restart_need.assert_not_called()
+            self.assertEqual(
+                self.harness.get_relation_data(self.rel_id, self.charm.unit.name)["tls"], "enabled"
+            )
+
+            # Test with member not started yet.
+            self.harness.update_relation_data(
+                self.rel_id, self.charm.unit.name, {"tls": ""}
+            )  # Mock some data in the relation to test that it doesn't change.
+            self.charm.update_config()
+            _handle_postgresql_restart_need.assert_not_called()
+            self.assertNotIn(
+                "tls", self.harness.get_relation_data(self.rel_id, self.charm.unit.name)
+            )
+
+    @patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_acquire_lock")
+    @patch("charm.PostgresqlOperatorCharm._generate_metrics_jobs")
+    @patch("charm.wait_fixed", return_value=wait_fixed(0))
+    @patch("charm.Patroni.reload_patroni_configuration")
+    @patch("charm.PostgresqlOperatorCharm.is_tls_enabled", new_callable=PropertyMock)
+    def test_handle_postgresql_restart_need(
+        self, _is_tls_enabled, _reload_patroni_configuration, _, _generate_metrics_jobs, _restart
+    ):
+        with patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock:
+            for values in itertools.product([True, False], [True, False], [True, False]):
+                _reload_patroni_configuration.reset_mock()
+                _generate_metrics_jobs.reset_mock()
+                _restart.reset_mock()
+                with self.harness.hooks_disabled():
+                    self.harness.update_relation_data(
+                        self.rel_id, self.charm.unit.name, {"tls": ""}
+                    )
+
+                _is_tls_enabled.return_value = values[0]
+                postgresql_mock.is_tls_enabled = PropertyMock(return_value=values[1])
+                postgresql_mock.is_restart_pending = PropertyMock(return_value=values[2])
+
+                self.charm._handle_postgresql_restart_need()
+                _reload_patroni_configuration.assert_called_once()
+                (
+                    self.assertIn(
+                        "tls", self.harness.get_relation_data(self.rel_id, self.charm.unit)
+                    )
+                    if values[0]
+                    else self.assertNotIn(
+                        "tls", self.harness.get_relation_data(self.rel_id, self.charm.unit)
+                    )
+                )
+                if (values[0] != values[1]) or values[2]:
+                    _generate_metrics_jobs.assert_called_once_with(values[0])
+                    _restart.assert_called_once()
+                else:
+                    _generate_metrics_jobs.assert_not_called()
+                    _restart.assert_not_called()
