@@ -9,7 +9,7 @@ from datetime import datetime
 from typing import Dict, Optional, Set, Tuple
 
 from lightkube import ApiError, Client
-from lightkube.resources.core_v1 import Service
+from lightkube.resources.core_v1 import Endpoints, Service
 from ops.charm import (
     ActionEvent,
     CharmBase,
@@ -348,17 +348,7 @@ class PostgreSQLAsyncReplication(Object):
             # Delete the K8S endpoints that tracks the cluster information, including its id.
             # This is the same as "patronictl remove patroni-postgresql-k8s", but the latter doesn't
             # work after the database service is stopped on Pebble.
-            client = Client()
-            try:
-                client.delete(
-                    Service,
-                    name=f"patroni-{self.charm._name}-config",
-                    namespace=self.charm._namespace,
-                )
-            except ApiError as e:
-                # Ignore the error only when the resource doesn't exist.
-                if e.status.code != 404:
-                    raise e
+            self._remove_previous_cluster_information()
         elif (
             not self.charm._patroni.primary_endpoint_ready
             or not self.charm._patroni.get_standby_leader(unit_name_pattern=True)
@@ -391,6 +381,24 @@ class PostgreSQLAsyncReplication(Object):
             self._handle_leader_startup(event)
         self.charm.unit.status = ActiveStatus()
 
+    def _remove_previous_cluster_information(self) -> None:
+        client = Client()
+        try:
+            client.delete(
+                Service,
+                name=f"patroni-{self.charm._name}-config",
+                namespace=self.charm._namespace,
+            )
+            client.delete(
+                Endpoints,
+                name=f"patroni-{self.charm._name}",
+                namespace=self.charm._namespace,
+            )
+        except ApiError as e:
+            # Ignore the error only when the resource doesn't exist.
+            if e.status.code != 404:
+                raise e
+
     def _handle_leader_startup(self, event) -> None:
         diverging_databases = False
         try:
@@ -415,8 +423,9 @@ class PostgreSQLAsyncReplication(Object):
             ).wait_output()
             logger.info("Removing and recreating pgdata folder")
             self.container.exec("rm -r /var/lib/postgresql/data/pgdata".split()).wait_output()
-            self.container.start(self.charm._postgresql_service)
             self.charm._create_pgdata(self.container)
+            self._remove_previous_cluster_information()
+            self.container.start(self.charm._postgresql_service)
             try:
                 for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(5)):
                     with attempt:
