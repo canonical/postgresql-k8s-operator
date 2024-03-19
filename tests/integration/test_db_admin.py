@@ -67,3 +67,7 @@ async def test_discourse_from_discourse_charmers(ops_test: OpsTest):
     await check_database_creation(ops_test, "discourse-charmers-discourse-k8s")
     discourse_users = [f"relation_id_{relation.id}"]
     await check_database_users_existence(ops_test, discourse_users, [], admin=True)
+
+    # Remove the deployment of Discourse.
+    await ops_test.model.remove_application(DISCOURSE_APP_NAME, block_until_done=True)
+    await check_database_users_existence(ops_test, [], discourse_users, admin=True)

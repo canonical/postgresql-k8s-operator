@@ -81,13 +81,14 @@ async def test_finos_waltz_db(ops_test: OpsTest) -> None:
             ANOTHER_FINOS_WALTZ_APP_NAME, block_until_done=True
         )
 
-        another_finos_waltz_users = []
         await check_database_users_existence(
             ops_test, finos_waltz_users, another_finos_waltz_users
         )
 
         # Remove the first deployment of Finos Waltz.
         await ops_test.model.remove_application(FINOS_WALTZ_APP_NAME, block_until_done=True)
+
+        await check_database_users_existence(ops_test, [], finos_waltz_users)
 
 
 @pytest.mark.group(1)
