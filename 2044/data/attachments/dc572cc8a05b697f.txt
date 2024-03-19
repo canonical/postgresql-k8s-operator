@@ -1,0 +1,1800 @@
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:416 scaling database to zero units
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.7    unsupported  02:20:06Z
+
+App                  Version  Status   Scale  Charm                Channel  Rev  Address        Exposed  Message
+postgresql-k8s       14.11    waiting    1/0  postgresql-k8s                  0  10.152.183.31  no       installing agent
+postgresql-test-app           active       1  postgresql-test-app  edge      76  10.152.183.33  no       received database credentials of the first database
+
+Unit                    Workload    Agent  Address     Ports  Message
+postgresql-k8s/0        terminated  idle   10.1.82.75         
+postgresql-k8s/1        terminated  idle   10.1.82.77         
+postgresql-k8s/2*       error       idle   10.1.82.76         hook failed: "database-relation-departed"
+postgresql-test-app/0*  active      idle   10.1.82.78         received database credentials of the first database
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-postgresql-k8s-2: 01:54:47 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: api connection broken unexpectedly
+unit-postgresql-k8s-2: 01:54:47 ERROR juju.worker.caasunitterminationworker error while terminating unit: connection is shut down
+unit-postgresql-k8s-2: 01:54:54 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [7b15ff] "unit-postgresql-k8s-2" cannot open api: cannot resolve "controller-service.controller-microk8s-localhost.svc.cluster.local": lookup controller-service.controller-microk8s-localhost.svc.cluster.local: i/o timeout
+unit-postgresql-k8s-2: 01:55:00 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [7b15ff] "unit-postgresql-k8s-2" cannot open api: cannot resolve "controller-service.controller-microk8s-localhost.svc.cluster.local": lookup controller-service.controller-microk8s-localhost.svc.cluster.local: i/o timeout
+unit-postgresql-k8s-2: 01:56:27 ERROR unit.postgresql-k8s/2.juju-log database:4: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 1596, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/relations/postgresql_provider.py", line 139, in _on_relation_departed
+    self.charm._peers.data[self.charm.unit].update({"departing": "True"})
+AttributeError: 'NoneType' object has no attribute 'data'
+unit-postgresql-k8s-2: 01:56:28 ERROR juju.worker.uniter.operation hook "database-relation-departed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-postgresql-k8s-2: 01:56:33 ERROR unit.postgresql-k8s/2.juju-log database:4: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 1596, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/relations/postgresql_provider.py", line 139, in _on_relation_departed
+    self.charm._peers.data[self.charm.unit].update({"departing": "True"})
+AttributeError: 'NoneType' object has no attribute 'data'
+unit-postgresql-k8s-2: 01:56:33 ERROR juju.worker.uniter.operation hook "database-relation-departed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-postgresql-k8s-2: 01:56:44 ERROR unit.postgresql-k8s/2.juju-log database:4: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 1596, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/relations/postgresql_provider.py", line 139, in _on_relation_departed
+    self.charm._peers.data[self.charm.unit].update({"departing": "True"})
+AttributeError: 'NoneType' object has no attribute 'data'
+unit-postgresql-k8s-2: 01:56:44 ERROR juju.worker.uniter.operation hook "database-relation-departed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-postgresql-k8s-2: 01:57:05 ERROR unit.postgresql-k8s/2.juju-log database:4: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 1596, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/relations/postgresql_provider.py", line 139, in _on_relation_departed
+    self.charm._peers.data[self.charm.unit].update({"departing": "True"})
+AttributeError: 'NoneType' object has no attribute 'data'
+unit-postgresql-k8s-2: 01:57:05 ERROR juju.worker.uniter.operation hook "database-relation-departed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-postgresql-k8s-2: 01:57:45 ERROR unit.postgresql-k8s/2.juju-log database:4: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 1596, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/relations/postgresql_provider.py", line 139, in _on_relation_departed
+    self.charm._peers.data[self.charm.unit].update({"departing": "True"})
+AttributeError: 'NoneType' object has no attribute 'data'
+unit-postgresql-k8s-2: 01:57:46 ERROR juju.worker.uniter.operation hook "database-relation-departed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-postgresql-k8s-2: 01:59:03 ERROR unit.postgresql-k8s/2.juju-log database:4: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 1596, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/relations/postgresql_provider.py", line 139, in _on_relation_departed
+    self.charm._peers.data[self.charm.unit].update({"departing": "True"})
+AttributeError: 'NoneType' object has no attribute 'data'
+unit-postgresql-k8s-2: 01:59:03 ERROR juju.worker.uniter.operation hook "database-relation-departed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-postgresql-k8s-2: 01:59:14 ERROR unit.postgresql-k8s/2.juju-log database:4: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 1596, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/relations/postgresql_provider.py", line 139, in _on_relation_departed
+    self.charm._peers.data[self.charm.unit].update({"departing": "True"})
+AttributeError: 'NoneType' object has no attribute 'data'
+unit-postgresql-k8s-2: 01:59:14 ERROR juju.worker.uniter.operation hook "database-relation-departed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-postgresql-k8s-2: 01:59:35 ERROR unit.postgresql-k8s/2.juju-log database:4: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 1596, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/relations/postgresql_provider.py", line 139, in _on_relation_departed
+    self.charm._peers.data[self.charm.unit].update({"departing": "True"})
+AttributeError: 'NoneType' object has no attribute 'data'
+unit-postgresql-k8s-2: 01:59:35 ERROR juju.worker.uniter.operation hook "database-relation-departed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-postgresql-k8s-2: 02:00:16 ERROR unit.postgresql-k8s/2.juju-log database:4: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 1596, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/relations/postgresql_provider.py", line 139, in _on_relation_departed
+    self.charm._peers.data[self.charm.unit].update({"departing": "True"})
+AttributeError: 'NoneType' object has no attribute 'data'
+unit-postgresql-k8s-2: 02:00:16 ERROR juju.worker.uniter.operation hook "database-relation-departed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-postgresql-k8s-2: 02:01:38 ERROR unit.postgresql-k8s/2.juju-log database:4: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 1596, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/relations/postgresql_provider.py", line 139, in _on_relation_departed
+    self.charm._peers.data[self.charm.unit].update({"departing": "True"})
+AttributeError: 'NoneType' object has no attribute 'data'
+unit-postgresql-k8s-2: 02:01:38 ERROR juju.worker.uniter.operation hook "database-relation-departed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-postgresql-k8s-2: 02:04:18 ERROR unit.postgresql-k8s/2.juju-log database:4: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 1596, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/relations/postgresql_provider.py", line 139, in _on_relation_departed
+    self.charm._peers.data[self.charm.unit].update({"departing": "True"})
+AttributeError: 'NoneType' object has no attribute 'data'
+unit-postgresql-k8s-2: 02:04:19 ERROR juju.worker.uniter.operation hook "database-relation-departed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-postgresql-k8s-2: 02:09:19 ERROR unit.postgresql-k8s/2.juju-log database:4: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 1596, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/relations/postgresql_provider.py", line 139, in _on_relation_departed
+    self.charm._peers.data[self.charm.unit].update({"departing": "True"})
+AttributeError: 'NoneType' object has no attribute 'data'
+unit-postgresql-k8s-2: 02:09:19 ERROR juju.worker.uniter.operation hook "database-relation-departed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-postgresql-test-app-0: 02:12:43 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:12:43 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:13:47 ERROR unit.postgresql-test-app/0.juju-log Unable to read result
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 371, in _stop_continuous_writes
+    with open(LAST_WRITTEN_FILE, "r") as fd:
+FileNotFoundError: [Errno 2] No such file or directory: '/tmp/last_written_value'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 369, in _stop_continuous_writes
+    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(5)):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/tenacity/__init__.py", line 347, in __iter__
+    do = self.iter(retry_state=retry_state)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/tenacity/__init__.py", line 326, in iter
+    raise retry_exc from fut.exception()
+tenacity.RetryError: RetryError[<Future at 0x7414bfe10310 state=finished raised FileNotFoundError>]
+unit-postgresql-test-app-0: 02:13:47 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:13:47 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:13:51 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:13:51 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:13:55 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:13:55 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:13:59 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:13:59 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:14:03 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:14:03 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:14:07 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:14:07 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:14:11 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:14:11 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:14:15 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:14:15 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:14:19 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:14:19 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-k8s-2: 02:14:20 ERROR unit.postgresql-k8s/2.juju-log database:4: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 1596, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/relations/postgresql_provider.py", line 139, in _on_relation_departed
+    self.charm._peers.data[self.charm.unit].update({"departing": "True"})
+AttributeError: 'NoneType' object has no attribute 'data'
+unit-postgresql-k8s-2: 02:14:20 ERROR juju.worker.uniter.operation hook "database-relation-departed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-postgresql-test-app-0: 02:14:23 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:14:23 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:14:27 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:14:27 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:14:31 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:14:31 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:14:36 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:14:36 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:14:40 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:14:40 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:14:44 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:14:44 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:14:48 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:14:48 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:14:52 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:14:52 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:14:56 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:14:56 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:15:00 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:15:00 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:15:04 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:15:04 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:15:08 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:15:08 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:15:12 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:15:12 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:15:16 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:15:16 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:15:20 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:15:20 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:15:24 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:15:24 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:15:28 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:15:28 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:15:32 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:15:32 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:15:36 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:15:36 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:15:40 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:15:40 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:15:44 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:15:44 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:15:48 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:15:48 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:15:52 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:15:52 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:15:56 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:15:56 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:16:00 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:16:00 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:16:04 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:16:04 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:16:08 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:16:08 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:16:12 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:16:12 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:16:16 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:16:16 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:16:20 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:16:20 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:16:24 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:16:24 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:16:28 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:16:28 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:16:32 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:16:32 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:16:36 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:16:36 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:16:40 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:16:40 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:16:44 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:16:44 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:16:48 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:16:48 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:16:52 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:16:52 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:16:56 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:16:56 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:17:00 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:17:00 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:17:04 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:17:04 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:17:08 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:17:08 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:17:12 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:17:12 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:17:17 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:17:17 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:17:21 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:17:21 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:17:25 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:17:25 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:17:29 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:17:29 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-test-app-0: 02:17:33 ERROR unit.postgresql-test-app/0.juju-log Unable to drop table
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 281, in _on_clear_continuous_writes_action
+    with psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.233), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-0: 02:17:33 ERROR unit.postgresql-test-app/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 504, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/./src/charm.py", line 290, in _on_clear_continuous_writes_action
+    connection.close()
+UnboundLocalError: local variable 'connection' referenced before assignment
+unit-postgresql-k8s-2: 02:19:21 ERROR unit.postgresql-k8s/2.juju-log database:4: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 1596, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 456, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 144, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 865, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 955, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/relations/postgresql_provider.py", line 139, in _on_relation_departed
+    self.charm._peers.data[self.charm.unit].update({"departing": "True"})
+AttributeError: 'NoneType' object has no attribute 'data'
+unit-postgresql-k8s-2: 02:19:21 ERROR juju.worker.uniter.operation hook "database-relation-departed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
