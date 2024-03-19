@@ -197,13 +197,17 @@ async def check_writes(ops_test, extra_model: Model = None) -> int:
     return total_expected_writes
 
 
-async def are_writes_increasing(ops_test, down_unit: str = None) -> None:
+async def are_writes_increasing(
+    ops_test, down_unit: str = None, extra_model: Model = None
+) -> None:
     """Verify new writes are continuing by counting the number of writes."""
-    writes, _ = await count_writes(ops_test, down_unit=down_unit)
+    writes, _ = await count_writes(ops_test, down_unit=down_unit, extra_model=extra_model)
     for member, count in writes.items():
         for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3), reraise=True):
             with attempt:
-                more_writes, _ = await count_writes(ops_test, down_unit=down_unit)
+                more_writes, _ = await count_writes(
+                    ops_test, down_unit=down_unit, extra_model=extra_model
+                )
                 assert (
                     more_writes[member] > count
                 ), f"{member}: writes not continuing to DB (current writes: {more_writes[member]} - previous writes: {count})"
@@ -776,23 +780,25 @@ async def send_signal_to_process(
                 )
 
 
-async def start_continuous_writes(ops_test: OpsTest, app: str) -> None:
+async def start_continuous_writes(ops_test: OpsTest, app: str, model: Model = None) -> None:
     """Start continuous writes to PostgreSQL."""
     # Start the process by relating the application to the database or
     # by calling the action if the relation already exists.
+    if model is None:
+        model = ops_test.model
     relations = [
         relation
-        for relation in ops_test.model.applications[app].relations
+        for relation in model.applications[app].relations
         if not relation.is_peer
         and f"{relation.requires.application_name}:{relation.requires.name}"
         == f"{APPLICATION_NAME}:first-database"
     ]
     if not relations:
-        await ops_test.model.relate(app, f"{APPLICATION_NAME}:first-database")
-        await ops_test.model.wait_for_idle(status="active", timeout=1000)
+        await model.relate(app, f"{APPLICATION_NAME}:first-database")
+        await model.wait_for_idle(status="active", timeout=1000)
     else:
         action = (
-            await ops_test.model.applications[APPLICATION_NAME]
+            await model.applications[APPLICATION_NAME]
             .units[0]
             .run_action("start-continuous-writes")
         )
@@ -800,7 +806,7 @@ async def start_continuous_writes(ops_test: OpsTest, app: str) -> None:
     for attempt in Retrying(stop=stop_after_delay(60 * 5), wait=wait_fixed(3), reraise=True):
         with attempt:
             action = (
-                await ops_test.model.applications[APPLICATION_NAME]
+                await model.applications[APPLICATION_NAME]
                 .units[0]
                 .run_action("start-continuous-writes")
             )

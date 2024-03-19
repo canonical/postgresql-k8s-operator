@@ -415,9 +415,11 @@ def get_expected_k8s_resources(application: str) -> set:
     }
 
 
-async def get_leader_unit(ops_test: OpsTest, app: str) -> Optional[Unit]:
+async def get_leader_unit(ops_test: OpsTest, app: str, model: Model = None) -> Optional[Unit]:
     leader_unit = None
-    for unit in ops_test.model.applications[app].units:
+    if model is None:
+        model = ops_test.model
+    for unit in model.applications[app].units:
         if await unit.is_leader_from_status():
             leader_unit = unit
             break

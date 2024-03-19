@@ -6,12 +6,14 @@ import logging
 from asyncio import gather
 from typing import Optional
 
+import psycopg2
 import pytest as pytest
 from juju.controller import Controller
 from juju.model import Model
 from lightkube import Client
 from lightkube.resources.core_v1 import Pod
 from pytest_operator.plugin import OpsTest
+from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from tests.integration.ha_tests.helpers import (
     are_writes_increasing,
@@ -25,11 +27,16 @@ from tests.integration.helpers import (
     DATABASE_APP_NAME,
     build_and_deploy,
     get_leader_unit,
+    get_password,
+    get_primary,
+    get_unit_address,
     wait_for_relation_removed_between,
 )
-from tests.integration.juju_ import juju_major_version
 
 logger = logging.getLogger(__name__)
+
+
+TIMEOUT = 1500
 
 
 @contextlib.asynccontextmanager
@@ -71,6 +78,22 @@ async def second_model(controller, first_model) -> Model:
     return second_model
 
 
+@pytest.fixture(scope="module")
+async def second_model_continuous_writes(second_model) -> None:
+    """Cleans up continuous writes on the second model after a test run."""
+    yield
+    # Clear the written data at the end.
+    for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(3), reraise=True):
+        with attempt:
+            action = (
+                await second_model.applications[APPLICATION_NAME]
+                .units[0]
+                .run_action("clear-continuous-writes")
+            )
+            await action.wait()
+            assert action.results["result"] == "True", "Unable to clear up continuous_writes table"
+
+
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_deploy_async_replication_setup(
@@ -80,16 +103,19 @@ async def test_deploy_async_replication_setup(
     await build_and_deploy(ops_test, 3, wait_for_idle=False)
     await build_and_deploy(ops_test, 3, wait_for_idle=False, model=second_model)
     await ops_test.model.deploy(APPLICATION_NAME, num_units=1)
+    await second_model.deploy(APPLICATION_NAME, num_units=1)
 
     async with ops_test.fast_forward(), fast_forward(second_model):
         await gather(
             first_model.wait_for_idle(
                 apps=[DATABASE_APP_NAME, APPLICATION_NAME],
                 status="active",
+                timeout=TIMEOUT,
             ),
             second_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME],
+                apps=[DATABASE_APP_NAME, APPLICATION_NAME],
                 status="active",
+                timeout=TIMEOUT,
             ),
         )
 
@@ -110,26 +136,31 @@ async def test_async_replication(
     logger.info("checking whether writes are increasing")
     await are_writes_increasing(ops_test)
 
-    offer_endpoint = (
-        f"{DATABASE_APP_NAME}:async-primary" if juju_major_version == 2 else "async-primary"
-    )
-    await first_model.create_offer(offer_endpoint, "async-primary", DATABASE_APP_NAME)
+    await first_model.create_offer("async-primary", "async-primary", DATABASE_APP_NAME)
     await second_model.consume(
         f"admin/{first_model.info.name}.async-primary", controller=controller
     )
 
     async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
         await gather(
-            first_model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", idle_period=30),
-            second_model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", idle_period=30),
+            first_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
+            second_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
         )
 
     await second_model.relate(DATABASE_APP_NAME, "async-primary")
 
     async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
         await gather(
-            first_model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", idle_period=30),
-            second_model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", idle_period=30),
+            first_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
+            second_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
         )
 
     logger.info("checking whether writes are increasing")
@@ -145,8 +176,12 @@ async def test_async_replication(
 
     async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
         await gather(
-            first_model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", idle_period=30),
-            second_model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", idle_period=30),
+            first_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
+            second_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
         )
 
     logger.info("checking whether writes are increasing")
@@ -159,7 +194,169 @@ async def test_async_replication(
 
 
 @pytest.mark.group(1)
-async def test_break_and_reestablish_relation(
+@pytest.mark.abort_on_fail
+async def test_switchover(
+    ops_test: OpsTest,
+    controller: Controller,
+    first_model: Model,
+    second_model: Model,
+    second_model_continuous_writes,
+):
+    """Test switching over to the second cluster."""
+    logger.info("breaking the relation")
+    await second_model.applications[DATABASE_APP_NAME].remove_relation(
+        "async-replica", "async-primary"
+    )
+    wait_for_relation_removed_between(ops_test, "async-primary", "async-replica", second_model)
+    async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
+        await gather(
+            first_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
+            second_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
+        )
+
+    second_offer_command = f"offer {DATABASE_APP_NAME}:async-replica async-replica"
+    await ops_test.juju(*second_offer_command.split())
+    await second_model.consume(
+        f"admin/{first_model.info.name}.async-replica", controller=controller
+    )
+
+    async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
+        await gather(
+            first_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
+            second_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
+        )
+
+    await second_model.relate(DATABASE_APP_NAME, "async-replica")
+
+    async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
+        await gather(
+            first_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
+            second_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
+        )
+
+    # Run the promote action.
+    logger.info("Get leader unit")
+    leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME, model=second_model)
+    assert leader_unit is not None, "No leader unit found"
+    logger.info("promoting the second cluster")
+    run_action = await leader_unit.run_action("promote-standby-cluster")
+    await run_action.wait()
+
+    async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
+        await gather(
+            first_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
+            second_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
+        )
+
+    logger.info("starting continuous writes to the database")
+    await start_continuous_writes(ops_test, DATABASE_APP_NAME, model=second_model)
+
+    logger.info("checking whether writes are increasing")
+    await are_writes_increasing(ops_test, extra_model=second_model)
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_promote_standby(
+    ops_test: OpsTest,
+    controller: Controller,
+    first_model: Model,
+    second_model: Model,
+    second_model_continuous_writes,
+) -> None:
+    """Test promoting the standby cluster."""
+    logger.info("breaking the relation")
+    await second_model.applications[DATABASE_APP_NAME].remove_relation(
+        "async-primary", "async-replica"
+    )
+    wait_for_relation_removed_between(ops_test, "async-replica", "async-primary", first_model)
+    async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
+        await gather(
+            first_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
+            second_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
+        )
+    # Run the promote action.
+    logger.info("Get leader unit")
+    leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
+    assert leader_unit is not None, "No leader unit found"
+    logger.info("promoting the first cluster")
+    run_action = await leader_unit.run_action("promote-standby-cluster")
+    await run_action.wait()
+    async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
+        await gather(
+            first_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
+            second_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
+        )
+
+    logger.info("removing the previous data")
+    # action = await second_model.applications[APPLICATION_NAME].units[0].run_action("clear-continuous-writes")
+    # await action.wait()
+    # assert action.results["result"] == "True", "Unable to clear up continuous_writes table"
+    primary = await get_primary(ops_test)
+    address = await get_unit_address(ops_test, primary)
+    print(f"address: {address}")
+    password = await get_password(ops_test)
+    print(f"password: {password}")
+    database_name = f'{APPLICATION_NAME.replace("-", "_")}_first_database'
+    connection = None
+    try:
+        connection = psycopg2.connect(
+            f"dbname={database_name} user=operator password={password} host={address}"
+        )
+        connection.autocommit = True
+        cursor = connection.cursor()
+        # cursor.execute(f"DROP DATABASE {database_name};")
+        cursor.execute("DROP TABLE IF EXISTS continuous_writes;")
+    except psycopg2.Error as e:
+        assert False, f"Failed to drop continuous writes table: {e}"
+    finally:
+        if connection is not None:
+            connection.close()
+    # action = await first_model.applications[APPLICATION_NAME].units[0].run_action("clear-continuous-writes")
+    # await action.wait()
+    # assert action.results["result"] == "True", "Unable to clear up continuous_writes table"
+
+    # logger.info("remove the relation between the database and the application")
+    # await first_model.applications[DATABASE_APP_NAME].remove_relation(
+    #     f"{DATABASE_APP_NAME}", f"{APPLICATION_NAME}:first_database"
+    # )
+    # wait_for_relation_removed_between(ops_test, DATABASE_APP_NAME, APPLICATION_NAME)
+    # await first_model.wait_for_idle(apps=[DATABASE_APP_NAME, APPLICATION_NAME], status="active", raise_on_blocked=True)
+
+    logger.info("starting continuous writes to the database")
+    await start_continuous_writes(ops_test, DATABASE_APP_NAME)
+
+    logger.info("checking whether writes are increasing")
+    await are_writes_increasing(ops_test)
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_reestablish_relation(
     ops_test: OpsTest, first_model: Model, second_model: Model, continuous_writes
 ) -> None:
     """Test that the relation can be broken and re-established."""
@@ -169,23 +366,16 @@ async def test_break_and_reestablish_relation(
     logger.info("checking whether writes are increasing")
     await are_writes_increasing(ops_test)
 
-    logger.info("breaking the relation")
-    await second_model.applications[DATABASE_APP_NAME].remove_relation(
-        "async-replica", "async-primary"
-    )
-    wait_for_relation_removed_between(ops_test, "async-primary", "async-replica", second_model)
-    async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
-        await gather(
-            first_model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", idle_period=30),
-            second_model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", idle_period=30),
-        )
-
     logger.info("reestablishing the relation")
     await second_model.relate(DATABASE_APP_NAME, "async-primary")
     async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
         await gather(
-            first_model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", idle_period=30),
-            second_model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", idle_period=30),
+            first_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
+            second_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
         )
 
     logger.info("checking whether writes are increasing")
@@ -201,8 +391,12 @@ async def test_break_and_reestablish_relation(
 
     async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
         await gather(
-            first_model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", idle_period=30),
-            second_model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", idle_period=30),
+            first_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
+            second_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
         )
 
     logger.info("checking whether writes are increasing")
@@ -215,6 +409,7 @@ async def test_break_and_reestablish_relation(
 
 
 @pytest.mark.group(1)
+@pytest.mark.abort_on_fail
 async def test_async_replication_failover_in_main_cluster(
     ops_test: OpsTest, first_model: Model, second_model: Model, continuous_writes
 ) -> None:
@@ -233,8 +428,12 @@ async def test_async_replication_failover_in_main_cluster(
 
     async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
         await gather(
-            first_model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", idle_period=30),
-            second_model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", idle_period=30),
+            first_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
+            second_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
         )
 
     # Check that the sync-standby unit is not the same as before.
@@ -252,6 +451,7 @@ async def test_async_replication_failover_in_main_cluster(
 
 
 @pytest.mark.group(1)
+@pytest.mark.abort_on_fail
 async def test_async_replication_failover_in_secondary_cluster(
     ops_test: OpsTest, first_model: Model, second_model: Model, continuous_writes
 ) -> None:
@@ -270,8 +470,12 @@ async def test_async_replication_failover_in_secondary_cluster(
 
     async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
         await gather(
-            first_model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", idle_period=30),
-            second_model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", idle_period=30),
+            first_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
+            second_model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+            ),
         )
 
     # Check that the standby leader unit is not the same as before.
