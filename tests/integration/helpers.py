@@ -82,15 +82,17 @@ async def build_and_deploy(
     resources = {
         "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
     }
-    await model.deploy(
-        charm,
-        resources=resources,
-        application_name=database_app_name,
-        trust=True,
-        num_units=num_units,
-        series=CHARM_SERIES,
-        config={"profile": "testing"},
-    ),
+    (
+        await ops_test.model.deploy(
+            charm,
+            resources=resources,
+            application_name=database_app_name,
+            trust=True,
+            num_units=num_units,
+            series=CHARM_SERIES,
+            config={"profile": "testing"},
+        ),
+    )
     if wait_for_idle:
         # Wait until the PostgreSQL charm is successfully deployed.
         await model.wait_for_idle(
@@ -704,13 +706,9 @@ async def switchover(ops_test: OpsTest, current_primary: str, candidate: str = N
         with attempt:
             response = requests.get(f"http://{primary_ip}:8008/cluster")
             assert response.status_code == 200
-            standbys = len(
-                [
-                    member
-                    for member in response.json()["members"]
-                    if member["role"] == "sync_standby"
-                ]
-            )
+            standbys = len([
+                member for member in response.json()["members"] if member["role"] == "sync_standby"
+            ])
             assert standbys >= minority_count
 
 

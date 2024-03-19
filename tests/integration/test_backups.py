@@ -91,12 +91,6 @@ async def cloud_configs(ops_test: OpsTest, github_secrets) -> None:
 
 
 @pytest.mark.group(1)
-async def test_none() -> None:
-    """Empty test so that the suite will not fail if all tests are skippedi."""
-    pass
-
-
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> None:
     """Build and deploy two units of PostgreSQL and then test the backup and restore actions."""
@@ -380,14 +374,12 @@ async def test_invalid_config_and_recovery_after_fixing_it(
 
     # Provide invalid backup configurations.
     logger.info("configuring S3 integrator for an invalid cloud")
-    await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config(
-        {
-            "endpoint": "endpoint",
-            "bucket": "bucket",
-            "path": "path",
-            "region": "region",
-        }
-    )
+    await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config({
+        "endpoint": "endpoint",
+        "bucket": "bucket",
+        "path": "path",
+        "region": "region",
+    })
     action = await ops_test.model.units.get(f"{S3_INTEGRATOR_APP_NAME}/0").run_action(
         "sync-s3-credentials",
         **{

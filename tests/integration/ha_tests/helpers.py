@@ -336,12 +336,10 @@ def deploy_chaos_mesh(namespace: str) -> None:
     env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
 
     subprocess.check_output(
-        " ".join(
-            [
-                "tests/integration/ha_tests/scripts/deploy_chaos_mesh.sh",
-                namespace,
-            ]
-        ),
+        " ".join([
+            "tests/integration/ha_tests/scripts/deploy_chaos_mesh.sh",
+            namespace,
+        ]),
         shell=True,
         env=env,
     )
