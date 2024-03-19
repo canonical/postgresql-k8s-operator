@@ -69,7 +69,6 @@ coordinated start, it is recommended that the leader unit publishes twice a _req
                     self.start_coordinator.coordinate()
 """
 
-
 import logging
 from typing import AnyStr
 

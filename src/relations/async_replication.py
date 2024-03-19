@@ -506,16 +506,14 @@ class PostgreSQLAsyncReplication(Object):
             event.fail(f"Failed to get system identifier: {error}")
             return
 
-        primary_relation.data[self.charm.unit]["elected"] = json.dumps(
-            {
-                "endpoint": self.endpoint,
-                "monitoring-password": self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY),
-                "replication-password": self.charm._patroni._replication_password,
-                "rewind-password": self.charm.get_secret(APP_SCOPE, REWIND_PASSWORD_KEY),
-                "superuser-password": self.charm._patroni._superuser_password,
-                "system-id": system_identifier,
-            }
-        )
+        primary_relation.data[self.charm.unit]["elected"] = json.dumps({
+            "endpoint": self.endpoint,
+            "monitoring-password": self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY),
+            "replication-password": self.charm._patroni._replication_password,
+            "rewind-password": self.charm.get_secret(APP_SCOPE, REWIND_PASSWORD_KEY),
+            "superuser-password": self.charm._patroni._superuser_password,
+            "system-id": system_identifier,
+        })
         self.charm.app_peer_data["promoted"] = "True"
 
         # Now, check if postgresql it had originally published its pod IP in the
@@ -559,17 +557,13 @@ class PostgreSQLAsyncReplication(Object):
             system_identifier, error = self.get_system_identifier()
             if error is not None:
                 raise Exception(f"Failed to get system identifier: {error}")
-            primary_relation.data[self.charm.unit]["elected"] = json.dumps(
-                {
-                    "endpoint": self.endpoint,
-                    "monitoring-password": self.charm.get_secret(
-                        APP_SCOPE, MONITORING_PASSWORD_KEY
-                    ),
-                    "replication-password": self.charm._patroni._replication_password,
-                    "rewind-password": self.charm.get_secret(APP_SCOPE, REWIND_PASSWORD_KEY),
-                    "superuser-password": self.charm._patroni._superuser_password,
-                    "system-id": system_identifier,
-                }
-            )
+            primary_relation.data[self.charm.unit]["elected"] = json.dumps({
+                "endpoint": self.endpoint,
+                "monitoring-password": self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY),
+                "replication-password": self.charm._patroni._replication_password,
+                "rewind-password": self.charm.get_secret(APP_SCOPE, REWIND_PASSWORD_KEY),
+                "superuser-password": self.charm._patroni._superuser_password,
+                "system-id": system_identifier,
+            })
         else:
             primary_relation.data[self.charm.unit]["elected"] = ""
