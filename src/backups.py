@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Backups implementation."""
+
 import json
 import logging
 import os
@@ -122,12 +123,10 @@ class PostgreSQLBackups(Object):
 
         if self.charm.unit.is_leader():
             for stanza in json.loads(output):
-                system_identifier_from_instance, error = self._execute_command(
-                    [
-                        f'/usr/lib/postgresql/{self.charm._patroni.rock_postgresql_version.split(".")[0]}/bin/pg_controldata',
-                        "/var/lib/postgresql/data/pgdata",
-                    ]
-                )
+                system_identifier_from_instance, error = self._execute_command([
+                    f'/usr/lib/postgresql/{self.charm._patroni.rock_postgresql_version.split(".")[0]}/bin/pg_controldata',
+                    "/var/lib/postgresql/data/pgdata",
+                ])
                 if error != "":
                     raise Exception(error)
                 system_identifier_from_instance = [
@@ -330,13 +329,15 @@ class PostgreSQLBackups(Object):
 
         # Store the stanza name to be used in configurations updates.
         if self.charm.unit.is_leader():
-            self.charm.app_peer_data.update(
-                {"stanza": self.stanza_name, "init-pgbackrest": "True"}
-            )
+            self.charm.app_peer_data.update({
+                "stanza": self.stanza_name,
+                "init-pgbackrest": "True",
+            })
         else:
-            self.charm.unit_peer_data.update(
-                {"stanza": self.stanza_name, "init-pgbackrest": "True"}
-            )
+            self.charm.unit_peer_data.update({
+                "stanza": self.stanza_name,
+                "init-pgbackrest": "True",
+            })
 
     def check_stanza(self) -> None:
         """Runs the pgbackrest stanza validation."""
@@ -380,9 +381,10 @@ class PostgreSQLBackups(Object):
             # If the stanza name is not set in the application databag, then the primary is not
             # the leader unit, and it's needed to set the stanza name in the application databag.
             if "stanza" not in self.charm.app_peer_data and self.charm.unit.is_leader():
-                self.charm.app_peer_data.update(
-                    {"stanza": self.stanza_name, "init-pgbackrest": "True"}
-                )
+                self.charm.app_peer_data.update({
+                    "stanza": self.stanza_name,
+                    "init-pgbackrest": "True",
+                })
                 break
             # If the stanza was already checked and its name is still in the unit databag, mark
             # the stanza as already checked in the application databag and remove it from the
@@ -410,9 +412,12 @@ class PostgreSQLBackups(Object):
         primary_endpoint = self.charm._get_hostname_from_unit(primary)
 
         try:
-            self._execute_command(
-                ["pgbackrest", "server-ping", "--io-timeout=10", primary_endpoint]
-            )
+            self._execute_command([
+                "pgbackrest",
+                "server-ping",
+                "--io-timeout=10",
+                primary_endpoint,
+            ])
         except ExecError as e:
             logger.warning(
                 f"Failed to contact pgBackRest TLS server on {primary_endpoint} with error {str(e)}"
@@ -658,12 +663,10 @@ Stderr:
 
         # Mark the cluster as in a restoring backup state and update the Patroni configuration.
         logger.info("Configuring Patroni to restore the backup")
-        self.charm.app_peer_data.update(
-            {
-                "restoring-backup": f'{datetime.strftime(datetime.strptime(backup_id, "%Y-%m-%dT%H:%M:%SZ"), "%Y%m%d-%H%M%S")}F',
-                "restore-stanza": backups[backup_id],
-            }
-        )
+        self.charm.app_peer_data.update({
+            "restoring-backup": f'{datetime.strftime(datetime.strptime(backup_id, "%Y-%m-%dT%H:%M:%SZ"), "%Y%m%d-%H%M%S")}F',
+            "restore-stanza": backups[backup_id],
+        })
         self.charm.update_config()
 
         # Start the database to start the restore process.

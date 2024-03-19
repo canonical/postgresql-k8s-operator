@@ -46,101 +46,81 @@ class TestPostgreSQL(unittest.TestCase):
         database_relation = self.harness.model.get_relation("database")
         client_relations = [database_relation]
         schemas = [("test_schema_1",), ("test_schema_2",)]
-        _connect_to_database.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value.fetchall.return_value = (
-            schemas
-        )
+        _connect_to_database.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value.fetchall.return_value = schemas
         self.charm.postgresql.create_database(database, user, plugins, client_relations)
         execute = _connect_to_database.return_value.cursor.return_value.execute
-        execute.assert_has_calls(
-            [
-                call(
-                    Composed(
-                        [
-                            SQL("REVOKE ALL PRIVILEGES ON DATABASE "),
-                            Identifier(database),
-                            SQL(" FROM PUBLIC;"),
-                        ]
-                    )
-                ),
-                call(
-                    Composed(
-                        [
-                            SQL("GRANT ALL PRIVILEGES ON DATABASE "),
-                            Identifier(database),
-                            SQL(" TO "),
-                            Identifier(user),
-                            SQL(";"),
-                        ]
-                    )
-                ),
-                call(
-                    Composed(
-                        [
-                            SQL("GRANT ALL PRIVILEGES ON DATABASE "),
-                            Identifier(database),
-                            SQL(" TO "),
-                            Identifier("admin"),
-                            SQL(";"),
-                        ]
-                    )
-                ),
-                call(
-                    Composed(
-                        [
-                            SQL("GRANT ALL PRIVILEGES ON DATABASE "),
-                            Identifier(database),
-                            SQL(" TO "),
-                            Identifier("backup"),
-                            SQL(";"),
-                        ]
-                    )
-                ),
-                call(
-                    Composed(
-                        [
-                            SQL("GRANT ALL PRIVILEGES ON DATABASE "),
-                            Identifier(database),
-                            SQL(" TO "),
-                            Identifier("replication"),
-                            SQL(";"),
-                        ]
-                    )
-                ),
-                call(
-                    Composed(
-                        [
-                            SQL("GRANT ALL PRIVILEGES ON DATABASE "),
-                            Identifier(database),
-                            SQL(" TO "),
-                            Identifier("rewind"),
-                            SQL(";"),
-                        ]
-                    )
-                ),
-                call(
-                    Composed(
-                        [
-                            SQL("GRANT ALL PRIVILEGES ON DATABASE "),
-                            Identifier(database),
-                            SQL(" TO "),
-                            Identifier("operator"),
-                            SQL(";"),
-                        ]
-                    )
-                ),
-                call(
-                    Composed(
-                        [
-                            SQL("GRANT ALL PRIVILEGES ON DATABASE "),
-                            Identifier(database),
-                            SQL(" TO "),
-                            Identifier("monitoring"),
-                            SQL(";"),
-                        ]
-                    )
-                ),
-            ]
-        )
+        execute.assert_has_calls([
+            call(
+                Composed([
+                    SQL("REVOKE ALL PRIVILEGES ON DATABASE "),
+                    Identifier(database),
+                    SQL(" FROM PUBLIC;"),
+                ])
+            ),
+            call(
+                Composed([
+                    SQL("GRANT ALL PRIVILEGES ON DATABASE "),
+                    Identifier(database),
+                    SQL(" TO "),
+                    Identifier(user),
+                    SQL(";"),
+                ])
+            ),
+            call(
+                Composed([
+                    SQL("GRANT ALL PRIVILEGES ON DATABASE "),
+                    Identifier(database),
+                    SQL(" TO "),
+                    Identifier("admin"),
+                    SQL(";"),
+                ])
+            ),
+            call(
+                Composed([
+                    SQL("GRANT ALL PRIVILEGES ON DATABASE "),
+                    Identifier(database),
+                    SQL(" TO "),
+                    Identifier("backup"),
+                    SQL(";"),
+                ])
+            ),
+            call(
+                Composed([
+                    SQL("GRANT ALL PRIVILEGES ON DATABASE "),
+                    Identifier(database),
+                    SQL(" TO "),
+                    Identifier("replication"),
+                    SQL(";"),
+                ])
+            ),
+            call(
+                Composed([
+                    SQL("GRANT ALL PRIVILEGES ON DATABASE "),
+                    Identifier(database),
+                    SQL(" TO "),
+                    Identifier("rewind"),
+                    SQL(";"),
+                ])
+            ),
+            call(
+                Composed([
+                    SQL("GRANT ALL PRIVILEGES ON DATABASE "),
+                    Identifier(database),
+                    SQL(" TO "),
+                    Identifier("operator"),
+                    SQL(";"),
+                ])
+            ),
+            call(
+                Composed([
+                    SQL("GRANT ALL PRIVILEGES ON DATABASE "),
+                    Identifier(database),
+                    SQL(" TO "),
+                    Identifier("monitoring"),
+                    SQL(";"),
+                ])
+            ),
+        ])
         _generate_database_privileges_statements.assert_called_once_with(
             1, [schemas[0][0], schemas[1][0]], user
         )
@@ -178,29 +158,27 @@ class TestPostgreSQL(unittest.TestCase):
                 1, ["test_schema_1", "test_schema_2"], "test_user"
             ),
             [
-                Composed(
-                    [
-                        SQL(
-                            "DO $$\nDECLARE r RECORD;\nBEGIN\n  FOR r IN (SELECT statement FROM (SELECT 1 AS index,'ALTER TABLE '|| schemaname || '.\"' || tablename ||'\" OWNER TO "
-                        ),
-                        Identifier("test_user"),
-                        SQL(
-                            ";' AS statement\nFROM pg_tables WHERE NOT schemaname IN ('pg_catalog', 'information_schema')\nUNION SELECT 2 AS index,'ALTER SEQUENCE '|| sequence_schema || '.\"' || sequence_name ||'\" OWNER TO "
-                        ),
-                        Identifier("test_user"),
-                        SQL(
-                            ";' AS statement\nFROM information_schema.sequences WHERE NOT sequence_schema IN ('pg_catalog', 'information_schema')\nUNION SELECT 3 AS index,'ALTER FUNCTION '|| nsp.nspname || '.\"' || p.proname ||'\"('||pg_get_function_identity_arguments(p.oid)||') OWNER TO "
-                        ),
-                        Identifier("test_user"),
-                        SQL(
-                            ";' AS statement\nFROM pg_proc p JOIN pg_namespace nsp ON p.pronamespace = nsp.oid WHERE NOT nsp.nspname IN ('pg_catalog', 'information_schema')\nUNION SELECT 4 AS index,'ALTER VIEW '|| schemaname || '.\"' || viewname ||'\" OWNER TO "
-                        ),
-                        Identifier("test_user"),
-                        SQL(
-                            ";' AS statement\nFROM pg_catalog.pg_views WHERE NOT schemaname IN ('pg_catalog', 'information_schema')) AS statements ORDER BY index) LOOP\n      EXECUTE format(r.statement);\n  END LOOP;\nEND; $$;"
-                        ),
-                    ]
-                ),
+                Composed([
+                    SQL(
+                        "DO $$\nDECLARE r RECORD;\nBEGIN\n  FOR r IN (SELECT statement FROM (SELECT 1 AS index,'ALTER TABLE '|| schemaname || '.\"' || tablename ||'\" OWNER TO "
+                    ),
+                    Identifier("test_user"),
+                    SQL(
+                        ";' AS statement\nFROM pg_tables WHERE NOT schemaname IN ('pg_catalog', 'information_schema')\nUNION SELECT 2 AS index,'ALTER SEQUENCE '|| sequence_schema || '.\"' || sequence_name ||'\" OWNER TO "
+                    ),
+                    Identifier("test_user"),
+                    SQL(
+                        ";' AS statement\nFROM information_schema.sequences WHERE NOT sequence_schema IN ('pg_catalog', 'information_schema')\nUNION SELECT 3 AS index,'ALTER FUNCTION '|| nsp.nspname || '.\"' || p.proname ||'\"('||pg_get_function_identity_arguments(p.oid)||') OWNER TO "
+                    ),
+                    Identifier("test_user"),
+                    SQL(
+                        ";' AS statement\nFROM pg_proc p JOIN pg_namespace nsp ON p.pronamespace = nsp.oid WHERE NOT nsp.nspname IN ('pg_catalog', 'information_schema')\nUNION SELECT 4 AS index,'ALTER VIEW '|| schemaname || '.\"' || viewname ||'\" OWNER TO "
+                    ),
+                    Identifier("test_user"),
+                    SQL(
+                        ";' AS statement\nFROM pg_catalog.pg_views WHERE NOT schemaname IN ('pg_catalog', 'information_schema')) AS statements ORDER BY index) LOOP\n      EXECUTE format(r.statement);\n  END LOOP;\nEND; $$;"
+                    ),
+                ]),
                 "UPDATE pg_catalog.pg_largeobject_metadata\nSET lomowner = (SELECT oid FROM pg_roles WHERE rolname = 'test_user')\nWHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = 'operator');",
             ],
         )
@@ -210,60 +188,48 @@ class TestPostgreSQL(unittest.TestCase):
                 2, ["test_schema_1", "test_schema_2"], "test_user"
             ),
             [
-                Composed(
-                    [
-                        SQL("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA "),
-                        Identifier("test_schema_1"),
-                        SQL(" TO "),
-                        Identifier("test_user"),
-                        SQL(";"),
-                    ]
-                ),
-                Composed(
-                    [
-                        SQL("GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA "),
-                        Identifier("test_schema_1"),
-                        SQL(" TO "),
-                        Identifier("test_user"),
-                        SQL(";"),
-                    ]
-                ),
-                Composed(
-                    [
-                        SQL("GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA "),
-                        Identifier("test_schema_1"),
-                        SQL(" TO "),
-                        Identifier("test_user"),
-                        SQL(";"),
-                    ]
-                ),
-                Composed(
-                    [
-                        SQL("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA "),
-                        Identifier("test_schema_2"),
-                        SQL(" TO "),
-                        Identifier("test_user"),
-                        SQL(";"),
-                    ]
-                ),
-                Composed(
-                    [
-                        SQL("GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA "),
-                        Identifier("test_schema_2"),
-                        SQL(" TO "),
-                        Identifier("test_user"),
-                        SQL(";"),
-                    ]
-                ),
-                Composed(
-                    [
-                        SQL("GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA "),
-                        Identifier("test_schema_2"),
-                        SQL(" TO "),
-                        Identifier("test_user"),
-                        SQL(";"),
-                    ]
-                ),
+                Composed([
+                    SQL("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA "),
+                    Identifier("test_schema_1"),
+                    SQL(" TO "),
+                    Identifier("test_user"),
+                    SQL(";"),
+                ]),
+                Composed([
+                    SQL("GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA "),
+                    Identifier("test_schema_1"),
+                    SQL(" TO "),
+                    Identifier("test_user"),
+                    SQL(";"),
+                ]),
+                Composed([
+                    SQL("GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA "),
+                    Identifier("test_schema_1"),
+                    SQL(" TO "),
+                    Identifier("test_user"),
+                    SQL(";"),
+                ]),
+                Composed([
+                    SQL("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA "),
+                    Identifier("test_schema_2"),
+                    SQL(" TO "),
+                    Identifier("test_user"),
+                    SQL(";"),
+                ]),
+                Composed([
+                    SQL("GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA "),
+                    Identifier("test_schema_2"),
+                    SQL(" TO "),
+                    Identifier("test_user"),
+                    SQL(";"),
+                ]),
+                Composed([
+                    SQL("GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA "),
+                    Identifier("test_schema_2"),
+                    SQL(" TO "),
+                    Identifier("test_user"),
+                    SQL(";"),
+                ]),
             ],
         )
 
