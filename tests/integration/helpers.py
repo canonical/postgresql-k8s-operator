@@ -83,7 +83,7 @@ async def build_and_deploy(
         "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
     }
     (
-        await ops_test.model.deploy(
+        await model.deploy(
             charm,
             resources=resources,
             application_name=database_app_name,

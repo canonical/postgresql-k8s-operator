@@ -453,7 +453,11 @@ async def test_async_replication_failover_in_main_cluster(
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_async_replication_failover_in_secondary_cluster(
-    ops_test: OpsTest, first_model: Model, second_model: Model, continuous_writes
+    ops_test: OpsTest,
+    first_model: Model,
+    second_model: Model,
+    continuous_writes,
+    primary_start_timeout,
 ) -> None:
     """Test that async replication fails back correctly."""
     logger.info("starting continuous writes to the database")
