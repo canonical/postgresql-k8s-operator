@@ -1,0 +1,24 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.7    unsupported  01:30:20Z
+
+App                  Version  Status   Scale  Charm                Channel  Rev  Address         Exposed  Message
+another-database              waiting    0/3  postgresql-k8s                  1                  no       installing agent
+database                      waiting    0/3  postgresql-k8s                  0  10.152.183.23   no       installing agent
+postgresql-test-app           active       2  postgresql-test-app  edge      78  10.152.183.140  no       
+
+Unit                    Workload  Agent       Address      Ports  Message
+another-database/0      waiting   allocating                      installing agent
+another-database/1      waiting   allocating                      installing agent
+another-database/2      waiting   allocating                      installing agent
+database/0              waiting   allocating                      installing agent
+database/1              waiting   allocating                      installing agent
+database/2              waiting   allocating                      installing agent
+postgresql-test-app/0*  active    idle        10.1.127.72         
+postgresql-test-app/1   active    idle        10.1.127.73         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
