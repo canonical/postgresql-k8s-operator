@@ -73,9 +73,7 @@ async def test_discourse_from_discourse_charmers(ops_test: OpsTest):
         f"{DATABASE_APP_NAME}:db-admin", f"{DISCOURSE_APP_NAME}"
     )
     await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=1000)
-    await check_database_users_existence(
-        ops_test, [], discourse_users
-    )
+    await check_database_users_existence(ops_test, [], discourse_users)
 
     # Remove the deployment of Discourse.
     await ops_test.model.remove_application(DISCOURSE_APP_NAME, block_until_done=True)
