@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 """Structured configuration for the PostgreSQL charm."""
+
 import logging
 from typing import Optional
 
@@ -62,8 +63,27 @@ class CharmConfig(BaseConfigModel):
     plugin_tsm_system_rows_enable: bool
     plugin_tsm_system_time_enable: bool
     plugin_uuid_ossp_enable: bool
-    plugin_vector_enable: bool
     plugin_spi_enable: bool
+    plugin_bool_plperl_enable: bool
+    plugin_hll_enable: bool
+    plugin_hypopg_enable: bool
+    plugin_ip4r_enable: bool
+    plugin_plperl_enable: bool
+    plugin_jsonb_plperl_enable: bool
+    plugin_orafce_enable: bool
+    plugin_pg_similarity_enable: bool
+    plugin_prefix_enable: bool
+    plugin_rdkit_enable: bool
+    plugin_tds_fdw_enable: bool
+    plugin_icu_ext_enable: bool
+    plugin_pltcl_enable: bool
+    plugin_postgis_enable: bool
+    plugin_address_standardizer_enable: bool
+    plugin_address_standardizer_data_us_enable: bool
+    plugin_postgis_tiger_geocoder_enable: bool
+    plugin_postgis_topology_enable: bool
+    plugin_postgis_raster_enable: bool
+    plugin_vector_enable: bool
     request_date_style: Optional[str]
     request_standard_conforming_strings: Optional[bool]
     request_time_zone: Optional[str]
@@ -178,8 +198,7 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
-    @validator("optimizer_from_collapse_limit", allow_reuse=True)
-    @validator("optimizer_join_collapse_limit", allow_reuse=True)
+    @validator("optimizer_from_collapse_limit", "optimizer_join_collapse_limit")
     @classmethod
     def optimizer_collapse_limit_values(cls, value: int) -> Optional[int]:
         """Check optimizer collapse_limit config option is between 1 and 2147483647."""
@@ -217,8 +236,7 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
-    @validator("vacuum_autovacuum_analyze_scale_factor", allow_reuse=True)
-    @validator("vacuum_autovacuum_vacuum_scale_factor", allow_reuse=True)
+    @validator("vacuum_autovacuum_analyze_scale_factor", "vacuum_autovacuum_vacuum_scale_factor")
     @classmethod
     def vacuum_autovacuum_vacuum_scale_factor_values(cls, value: float) -> Optional[float]:
         """Check autovacuum scale_factor config option is between 0 and 100."""

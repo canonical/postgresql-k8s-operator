@@ -8,7 +8,6 @@ import requests
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from . import markers
 from .helpers import (
     DATABASE_APP_NAME,
     build_and_deploy,
@@ -24,12 +23,19 @@ from .helpers import (
     primary_changed,
     run_command_on_unit,
 )
+from .juju_ import juju_major_version
 
 logger = logging.getLogger(__name__)
 
 MATTERMOST_APP_NAME = "mattermost"
-SELF_SIGNED_CERTIFICATES_APP_NAME = "self-signed-certificates"
-TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
+if juju_major_version < 3:
+    TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
+    TLS_CHANNEL = "legacy/stable"
+    TLS_CONFIG = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
+else:
+    TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
+    TLS_CHANNEL = "latest/stable"
+    TLS_CONFIG = {"ca-common-name": "Test CA"}
 APPLICATION_UNITS = 2
 DATABASE_UNITS = 3
 
@@ -72,9 +78,8 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
     """
     async with ops_test.fast_forward():
         # Deploy TLS Certificates operator.
-        config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
         await ops_test.model.deploy(
-            TLS_CERTIFICATES_APP_NAME, config=config, channel="legacy/stable"
+            TLS_CERTIFICATES_APP_NAME, config=TLS_CONFIG, channel=TLS_CHANNEL
         )
         # Relate it to the PostgreSQL to enable TLS.
         await ops_test.model.relate(DATABASE_APP_NAME, TLS_CERTIFICATES_APP_NAME)
@@ -99,9 +104,9 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
 
         # Enable additional logs on the PostgreSQL instance to check TLS
         # being used in a later step.
-        await ops_test.model.applications[DATABASE_APP_NAME].set_config(
-            {"logging_log_connections": "True"}
-        )
+        await ops_test.model.applications[DATABASE_APP_NAME].set_config({
+            "logging_log_connections": "True"
+        })
         await ops_test.model.wait_for_idle(
             apps=[DATABASE_APP_NAME], status="active", idle_period=30
         )
@@ -121,9 +126,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
                 with db_connect(host, password) as connection, connection.cursor() as cursor:
                     cursor.execute("SELECT pg_is_in_recovery();")
                     in_recovery = cursor.fetchone()[0]
-                    assert (
-                        not in_recovery
-                    )  # If the instance is not in recovery mode anymore it was successfully promoted.
+                    assert not in_recovery  # If the instance is not in recovery mode anymore it was successfully promoted.
                 connection.close()
 
         # Write some data to the initial primary (this causes a divergence
@@ -171,20 +174,3 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
             assert await check_tls(ops_test, unit.name, enabled=False)
             assert await check_tls_patroni_api(ops_test, unit.name, enabled=False)
-
-
-@markers.juju3
-@pytest.mark.group(1)
-async def test_relation_with_self_signed_certificates_operator(ops_test: OpsTest) -> None:
-    """Test the relation with the Self Signed Certificates operator."""
-    async with ops_test.fast_forward(fast_interval="60s"):
-        # Deploy Self Signed Certificates operator.
-        await ops_test.model.deploy(SELF_SIGNED_CERTIFICATES_APP_NAME)
-        # Relate it to the PostgreSQL to enable TLS.
-        await ops_test.model.relate(DATABASE_APP_NAME, SELF_SIGNED_CERTIFICATES_APP_NAME)
-        await ops_test.model.wait_for_idle(status="active", timeout=1500)
-
-        # Wait for all units enabling TLS.
-        for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
-            assert await check_tls(ops_test, unit.name, enabled=True)
-            assert await check_tls_patroni_api(ops_test, unit.name, enabled=True)

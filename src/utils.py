@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 """A collection of utility functions that are used in the charm."""
+
 import re
 import secrets
 import string
@@ -58,3 +59,15 @@ def any_memory_to_bytes(mem_str) -> int:
 
         num = int(memory)
         return int(num * units[unit])
+
+
+def any_cpu_to_cores(cpu_str) -> int:
+    """Convert a CPU string to cores.
+
+    Args:
+        cpu_str: a string representing a CPU value, as integer or millis
+    """
+    if cpu_str.endswith("m"):
+        # convert millis to cores, undercommited
+        return int(cpu_str[:-1]) // 1000
+    return int(cpu_str)

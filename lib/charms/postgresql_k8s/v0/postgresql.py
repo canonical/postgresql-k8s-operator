@@ -18,7 +18,9 @@ The `postgresql` module provides methods for interacting with the PostgreSQL ins
 
 Any charm using this library should import the `psycopg2` or `psycopg2-binary` dependency.
 """
+
 import logging
+from collections import OrderedDict
 from typing import Dict, List, Optional, Set, Tuple
 
 import psycopg2
@@ -34,10 +36,21 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 21
+LIBPATCH = 25
 
 INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE = "invalid role(s) for extra user roles"
 
+REQUIRED_PLUGINS = {
+    "address_standardizer": ["postgis"],
+    "address_standardizer_data_us": ["postgis"],
+    "jsonb_plperl": ["plperl"],
+    "postgis_raster": ["postgis"],
+    "postgis_tiger_geocoder": ["postgis", "fuzzystrmatch"],
+    "postgis_topology": ["postgis"],
+}
+DEPENDENCY_PLUGINS = set()
+for dependencies in REQUIRED_PLUGINS.values():
+    DEPENDENCY_PLUGINS |= set(dependencies)
 
 logger = logging.getLogger(__name__)
 
@@ -289,12 +302,18 @@ class PostgreSQL:
                     cursor.execute("SELECT datname FROM pg_database WHERE NOT datistemplate;")
                     databases = {database[0] for database in cursor.fetchall()}
 
+            ordered_extensions = OrderedDict()
+            for plugin in DEPENDENCY_PLUGINS:
+                ordered_extensions[plugin] = extensions.get(plugin, False)
+            for extension, enable in extensions.items():
+                ordered_extensions[extension] = enable
+
             # Enable/disabled the extension in each database.
             for database in databases:
                 with self._connect_to_database(
                     database=database
                 ) as connection, connection.cursor() as cursor:
-                    for extension, enable in extensions.items():
+                    for extension, enable in ordered_extensions.items():
                         cursor.execute(
                             f"CREATE EXTENSION IF NOT EXISTS {extension};"
                             if enable
@@ -336,6 +355,11 @@ END; $$;"""
                     sql.Identifier(user),
                     sql.Identifier(user),
                 )
+            )
+            statements.append(
+                """UPDATE pg_catalog.pg_largeobject_metadata
+SET lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}')
+WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}');""".format(user, self.user)
             )
         else:
             for schema in schemas:
@@ -537,35 +561,38 @@ END; $$;"""
         parameters = {}
         for config, value in config_options.items():
             # Filter config option not related to PostgreSQL parameters.
-            if not config.startswith(
-                (
-                    "durability",
-                    "instance",
-                    "logging",
-                    "memory",
-                    "optimizer",
-                    "request",
-                    "response",
-                    "vacuum",
-                )
-            ):
+            if not config.startswith((
+                "durability",
+                "instance",
+                "logging",
+                "memory",
+                "optimizer",
+                "request",
+                "response",
+                "vacuum",
+            )):
                 continue
             parameter = "_".join(config.split("_")[1:])
             if parameter in ["date_style", "time_zone"]:
                 parameter = "".join(x.capitalize() for x in parameter.split("_"))
             parameters[parameter] = value
-        shared_buffers_max_value = int(int(available_memory * 0.4) / 10**6)
+        shared_buffers_max_value_in_mb = int(available_memory * 0.4 / 10**6)
+        shared_buffers_max_value = int(shared_buffers_max_value_in_mb * 10**3 / 8)
         if parameters.get("shared_buffers", 0) > shared_buffers_max_value:
             raise Exception(
-                f"Shared buffers config option should be at most 40% of the available memory, which is {shared_buffers_max_value}MB"
+                f"Shared buffers config option should be at most 40% of the available memory, which is {shared_buffers_max_value_in_mb}MB"
             )
         if profile == "production":
-            # Use 25% of the available memory for shared_buffers.
-            # and the remaining as cache memory.
-            shared_buffers = int(available_memory * 0.25)
+            if "shared_buffers" in parameters:
+                # Convert to bytes to use in the calculation.
+                shared_buffers = parameters["shared_buffers"] * 8 * 10**3
+            else:
+                # Use 25% of the available memory for shared_buffers.
+                # and the remaining as cache memory.
+                shared_buffers = int(available_memory * 0.25)
             effective_cache_size = int(available_memory - shared_buffers)
-            parameters.setdefault("shared_buffers", f"{int(shared_buffers/10**6)}MB")
-            parameters.update({"effective_cache_size": f"{int(effective_cache_size/10**6)}MB"})
+            parameters.setdefault("shared_buffers", f"{int(shared_buffers / 10**6)}MB")
+            parameters.update({"effective_cache_size": f"{int(effective_cache_size / 10**6)}MB"})
         else:
             # Return default
             parameters.setdefault("shared_buffers", "128MB")
