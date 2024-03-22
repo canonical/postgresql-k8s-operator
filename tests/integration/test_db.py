@@ -75,19 +75,27 @@ async def test_finos_waltz_db(ops_test: OpsTest) -> None:
             ops_test, finos_waltz_users + another_finos_waltz_users, []
         )
 
-        # Scale down the second deployment of Finos Waltz and confirm that the first deployment
-        # is still active.
-        await ops_test.model.remove_application(
-            ANOTHER_FINOS_WALTZ_APP_NAME, block_until_done=True
+        # Remove second relation and validate that related users were deleted
+        await ops_test.model.applications[DATABASE_APP_NAME].remove_relation(
+            f"{DATABASE_APP_NAME}:db", f"{ANOTHER_FINOS_WALTZ_APP_NAME}"
         )
-
-        another_finos_waltz_users = []
+        await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=1000)
         await check_database_users_existence(
             ops_test, finos_waltz_users, another_finos_waltz_users
         )
 
-        # Remove the first deployment of Finos Waltz.
+        # Remove first relation and validate that related users were deleted
+        await ops_test.model.applications[DATABASE_APP_NAME].remove_relation(
+            f"{DATABASE_APP_NAME}:db", f"{FINOS_WALTZ_APP_NAME}"
+        )
+        await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=1000)
+        await check_database_users_existence(ops_test, [], finos_waltz_users)
+
+        # Remove the first and second deployment of Finos Waltz.
         await ops_test.model.remove_application(FINOS_WALTZ_APP_NAME, block_until_done=True)
+        await ops_test.model.remove_application(
+            ANOTHER_FINOS_WALTZ_APP_NAME, block_until_done=True
+        )
 
 
 @pytest.mark.group(1)
