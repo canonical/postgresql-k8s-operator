@@ -422,16 +422,6 @@ WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}');""".format(user
             logger.error(f"Failed to get PostgreSQL version: {e}")
             raise PostgreSQLGetPostgreSQLVersionError()
 
-    def is_standby_cluster(self) -> bool:
-        """Returns whether the PostgreSQL cluster is a standby cluster."""
-        try:
-            with self._connect_to_database() as connection, connection.cursor() as cursor:
-                cursor.execute("SELECT pg_is_in_recovery();")
-                return cursor.fetchone()[0]
-        except psycopg2.Error as e:
-            logger.error(f"Failed to check if PostgreSQL cluster is a standby cluster: {e}")
-            return False
-
     def is_tls_enabled(self, check_current_host: bool = False) -> bool:
         """Returns whether TLS is enabled.
 
