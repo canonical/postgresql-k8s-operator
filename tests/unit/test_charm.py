@@ -126,6 +126,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("charm.Patroni.rock_postgresql_version", new_callable=PropertyMock)
     @patch("charm.Patroni.primary_endpoint_ready", new_callable=PropertyMock)
+    @patch("charm.PostgresqlOperatorCharm.enable_disable_extensions")
     @patch("charm.PostgresqlOperatorCharm.update_config")
     @patch("charm.PostgresqlOperatorCharm.postgresql")
     @patch(
@@ -147,6 +148,7 @@ class TestCharm(unittest.TestCase):
         _create_services,
         _postgresql,
         ___,
+        ____,
         _primary_endpoint_ready,
         _rock_postgresql_version,
     ):
