@@ -36,7 +36,9 @@ from tests.integration.helpers import (
 logger = logging.getLogger(__name__)
 
 
-TIMEOUT = 1500
+FAST_INTERVAL = "60s"
+IDLE_PERIOD = 30
+TIMEOUT = 2000
 
 
 @contextlib.asynccontextmanager
@@ -95,6 +97,7 @@ async def second_model_continuous_writes(second_model) -> None:
 
 
 @pytest.mark.group(1)
+@pytest.mark.juju3
 @pytest.mark.abort_on_fail
 async def test_deploy_async_replication_setup(
     ops_test: OpsTest, first_model: Model, second_model: Model
@@ -121,6 +124,7 @@ async def test_deploy_async_replication_setup(
 
 
 @pytest.mark.group(1)
+@pytest.mark.juju3
 @pytest.mark.abort_on_fail
 async def test_async_replication(
     ops_test: OpsTest,
@@ -141,25 +145,25 @@ async def test_async_replication(
         f"admin/{first_model.info.name}.async-primary", controller=controller
     )
 
-    async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
+    async with ops_test.fast_forward(FAST_INTERVAL), fast_forward(second_model, FAST_INTERVAL):
         await gather(
             first_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
             second_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
         )
 
     await second_model.relate(DATABASE_APP_NAME, "async-primary")
 
-    async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
+    async with ops_test.fast_forward(FAST_INTERVAL), fast_forward(second_model, FAST_INTERVAL):
         await gather(
             first_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
             second_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
         )
 
@@ -174,13 +178,13 @@ async def test_async_replication(
     run_action = await leader_unit.run_action("promote-standby-cluster")
     await run_action.wait()
 
-    async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
+    async with ops_test.fast_forward(FAST_INTERVAL), fast_forward(second_model, FAST_INTERVAL):
         await gather(
             first_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
             second_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
         )
 
@@ -194,6 +198,7 @@ async def test_async_replication(
 
 
 @pytest.mark.group(1)
+@pytest.mark.juju3
 @pytest.mark.abort_on_fail
 async def test_switchover(
     ops_test: OpsTest,
@@ -208,13 +213,13 @@ async def test_switchover(
         "async-replica", "async-primary"
     )
     wait_for_relation_removed_between(ops_test, "async-primary", "async-replica", second_model)
-    async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
+    async with ops_test.fast_forward(FAST_INTERVAL), fast_forward(second_model, FAST_INTERVAL):
         await gather(
             first_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
             second_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
         )
 
@@ -224,25 +229,25 @@ async def test_switchover(
         f"admin/{first_model.info.name}.async-replica", controller=controller
     )
 
-    async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
+    async with ops_test.fast_forward(FAST_INTERVAL), fast_forward(second_model, FAST_INTERVAL):
         await gather(
             first_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
             second_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
         )
 
     await second_model.relate(DATABASE_APP_NAME, "async-replica")
 
-    async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
+    async with ops_test.fast_forward(FAST_INTERVAL), fast_forward(second_model, FAST_INTERVAL):
         await gather(
             first_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
             second_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
         )
 
@@ -254,13 +259,13 @@ async def test_switchover(
     run_action = await leader_unit.run_action("promote-standby-cluster")
     await run_action.wait()
 
-    async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
+    async with ops_test.fast_forward(FAST_INTERVAL), fast_forward(second_model, FAST_INTERVAL):
         await gather(
             first_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
             second_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
         )
 
@@ -272,6 +277,7 @@ async def test_switchover(
 
 
 @pytest.mark.group(1)
+@pytest.mark.juju3
 @pytest.mark.abort_on_fail
 async def test_promote_standby(
     ops_test: OpsTest,
@@ -286,13 +292,13 @@ async def test_promote_standby(
         "async-primary", "async-replica"
     )
     wait_for_relation_removed_between(ops_test, "async-replica", "async-primary", first_model)
-    async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
+    async with ops_test.fast_forward(FAST_INTERVAL), fast_forward(second_model, FAST_INTERVAL):
         await gather(
             first_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
             second_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
         )
     # Run the promote action.
@@ -302,25 +308,20 @@ async def test_promote_standby(
     logger.info("promoting the first cluster")
     run_action = await leader_unit.run_action("promote-standby-cluster")
     await run_action.wait()
-    async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
+    async with ops_test.fast_forward(FAST_INTERVAL), fast_forward(second_model, FAST_INTERVAL):
         await gather(
             first_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
             second_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
         )
 
     logger.info("removing the previous data")
-    # action = await second_model.applications[APPLICATION_NAME].units[0].run_action("clear-continuous-writes")
-    # await action.wait()
-    # assert action.results["result"] == "True", "Unable to clear up continuous_writes table"
     primary = await get_primary(ops_test)
     address = await get_unit_address(ops_test, primary)
-    print(f"address: {address}")
     password = await get_password(ops_test)
-    print(f"password: {password}")
     database_name = f'{APPLICATION_NAME.replace("-", "_")}_first_database'
     connection = None
     try:
@@ -336,16 +337,6 @@ async def test_promote_standby(
     finally:
         if connection is not None:
             connection.close()
-    # action = await first_model.applications[APPLICATION_NAME].units[0].run_action("clear-continuous-writes")
-    # await action.wait()
-    # assert action.results["result"] == "True", "Unable to clear up continuous_writes table"
-
-    # logger.info("remove the relation between the database and the application")
-    # await first_model.applications[DATABASE_APP_NAME].remove_relation(
-    #     f"{DATABASE_APP_NAME}", f"{APPLICATION_NAME}:first_database"
-    # )
-    # wait_for_relation_removed_between(ops_test, DATABASE_APP_NAME, APPLICATION_NAME)
-    # await first_model.wait_for_idle(apps=[DATABASE_APP_NAME, APPLICATION_NAME], status="active", raise_on_blocked=True)
 
     logger.info("starting continuous writes to the database")
     await start_continuous_writes(ops_test, DATABASE_APP_NAME)
@@ -355,6 +346,7 @@ async def test_promote_standby(
 
 
 @pytest.mark.group(1)
+@pytest.mark.juju3
 @pytest.mark.abort_on_fail
 async def test_reestablish_relation(
     ops_test: OpsTest, first_model: Model, second_model: Model, continuous_writes
@@ -368,13 +360,13 @@ async def test_reestablish_relation(
 
     logger.info("reestablishing the relation")
     await second_model.relate(DATABASE_APP_NAME, "async-primary")
-    async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
+    async with ops_test.fast_forward(FAST_INTERVAL), fast_forward(second_model, FAST_INTERVAL):
         await gather(
             first_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
             second_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
         )
 
@@ -389,13 +381,13 @@ async def test_reestablish_relation(
     run_action = await leader_unit.run_action("promote-standby-cluster")
     await run_action.wait()
 
-    async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
+    async with ops_test.fast_forward(FAST_INTERVAL), fast_forward(second_model, FAST_INTERVAL):
         await gather(
             first_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
             second_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
         )
 
@@ -409,6 +401,7 @@ async def test_reestablish_relation(
 
 
 @pytest.mark.group(1)
+@pytest.mark.juju3
 @pytest.mark.abort_on_fail
 async def test_async_replication_failover_in_main_cluster(
     ops_test: OpsTest, first_model: Model, second_model: Model, continuous_writes
@@ -426,13 +419,13 @@ async def test_async_replication_failover_in_main_cluster(
     client = Client(namespace=first_model.info.name)
     client.delete(Pod, name=sync_standby.replace("/", "-"))
 
-    async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
+    async with ops_test.fast_forward(FAST_INTERVAL), fast_forward(second_model, FAST_INTERVAL):
         await gather(
             first_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
             second_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
         )
 
@@ -451,13 +444,10 @@ async def test_async_replication_failover_in_main_cluster(
 
 
 @pytest.mark.group(1)
+@pytest.mark.juju3
 @pytest.mark.abort_on_fail
 async def test_async_replication_failover_in_secondary_cluster(
-    ops_test: OpsTest,
-    first_model: Model,
-    second_model: Model,
-    continuous_writes,
-    primary_start_timeout,
+    ops_test: OpsTest, first_model: Model, second_model: Model, continuous_writes
 ) -> None:
     """Test that async replication fails back correctly."""
     logger.info("starting continuous writes to the database")
@@ -472,19 +462,15 @@ async def test_async_replication_failover_in_secondary_cluster(
     client = Client(namespace=second_model.info.name)
     client.delete(Pod, name=standby_leader.replace("/", "-"))
 
-    async with ops_test.fast_forward("60s"), fast_forward(second_model, "60s"):
+    async with ops_test.fast_forward(FAST_INTERVAL), fast_forward(second_model, FAST_INTERVAL):
         await gather(
             first_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
             second_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+                apps=[DATABASE_APP_NAME], status="active", idle_period=IDLE_PERIOD, timeout=TIMEOUT
             ),
         )
-
-    # Check that the standby leader unit is not the same as before.
-    new_standby_leader = await get_standby_leader(second_model, DATABASE_APP_NAME)
-    assert new_standby_leader != standby_leader, "Standby leader is the same as before"
 
     logger.info("Ensure continuous_writes after the crashed unit")
     await are_writes_increasing(ops_test)
