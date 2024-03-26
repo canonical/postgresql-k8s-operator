@@ -158,10 +158,10 @@ async def test_empty_password(ops_test: OpsTest) -> None:
 @pytest.mark.group(1)
 async def test_db_connection_with_empty_password(ops_test: OpsTest):
     """Test that user can't connect with empty password."""
-    primary = await get_primary(ops_test, f"{APP_NAME}/0")
-    address = get_unit_address(ops_test, primary)
+    primary = await get_primary(ops_test)
+    address = await get_unit_address(ops_test, primary)
     with pytest.raises(psycopg2.Error):
-        with db_connect(address, "") as connection:
+        with db_connect(host=address, password="") as connection:
             connection.close()
 
 
