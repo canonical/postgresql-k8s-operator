@@ -15,7 +15,7 @@ repository = "https://github.com/canonical/postgresql-k8s-operator"
 python = "^3.10"
 ops = "^2.11.0"
 cryptography = "^42.0.5"
-boto3 = "^1.34.63"
+boto3 = "^1.34.69"
 pgconnstr = "^1.0.1"
 requests = "^2.31.0"
 tenacity = "^8.2.3"
@@ -43,7 +43,7 @@ cosl = "*"
 optional = true
 
 [tool.poetry.group.format.dependencies]
-ruff = "^0.3.3"
+ruff = "^0.3.4"
 
 [tool.poetry.group.lint]
 optional = true
@@ -58,7 +58,7 @@ optional = true
 coverage = {extras = ["toml"], version = "^7.4.4"}
 pydantic = "^1.10.14"
 pytest = "^8.1.1"
-pytest-mock = "^3.12.0"
+pytest-mock = "^3.14.0"
 pytest-asyncio = "*"
 parameterized = "^0.9.0"
 
@@ -74,7 +74,7 @@ pytest-operator-cache = {git = "https://github.com/canonical/data-platform-workf
 pytest-operator-groups = {git = "https://github.com/canonical/data-platform-workflows", tag = "v13.0.0", subdirectory = "python/pytest_plugins/pytest_operator_groups"}
 juju = "^3.2.2"
 psycopg2-binary = "^2.9.9"
-boto3 = "^1.34.63"
+boto3 = "^1.34.69"
 tenacity = "^8.2.3"
 allure-pytest = "^2.13.3"
 

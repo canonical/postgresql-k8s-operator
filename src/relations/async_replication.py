@@ -416,12 +416,9 @@ class PostgreSQLAsyncReplication(Object):
                 with attempt:
                     self.container.stop(self.charm._postgresql_service)
 
-            # Store current data in a ZIP file, clean folder and generate configuration.
-            logger.info("Creating backup of pgdata folder")
-            self.container.exec(
-                f"tar -zcf /var/lib/postgresql/data/pgdata-{str(datetime.now()).replace(' ', '-').replace(':', '-')}.zip /var/lib/postgresql/data/pgdata".split()
-            ).wait_output()
-            logger.info("Removing and recreating pgdata folder")
+            logger.info(
+                "Removing and recreating pgdata folder due to diverging databases between this and the other cluster"
+            )
             self.container.exec("rm -r /var/lib/postgresql/data/pgdata".split()).wait_output()
             self.charm._create_pgdata(self.container)
             self._remove_previous_cluster_information()
