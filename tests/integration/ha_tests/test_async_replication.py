@@ -80,7 +80,7 @@ async def second_model(controller, first_model) -> Model:
     return second_model
 
 
-@pytest.fixture(scope="module")
+@pytest.fixture
 async def second_model_continuous_writes(second_model) -> None:
     """Cleans up continuous writes on the second model after a test run."""
     yield
