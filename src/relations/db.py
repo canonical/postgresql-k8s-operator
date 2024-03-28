@@ -22,7 +22,7 @@ from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, Relation, Unit
 from pgconnstr import ConnectionString
 
-from constants import DATABASE_PORT
+from constants import ALL_LEGACY_RELATIONS, DATABASE_PORT, ENDPOINT_SIMULTANEOUSLY_BLOCKING_MESSAGE
 from utils import new_password
 
 logger = logging.getLogger(__name__)
@@ -90,9 +90,27 @@ class DbProvides(Object):
         if not self.charm.unit.is_leader():
             return
 
+        if self._check_multiple_endpoints():
+            self.charm.unit.status = BlockedStatus(ENDPOINT_SIMULTANEOUSLY_BLOCKING_MESSAGE)
+            return
+
         logger.warning(f"DEPRECATION WARNING - `{self.relation_name}` is a legacy interface")
 
         self.set_up_relation(event.relation)
+
+    def _check_exist_current_relation(self) -> bool:
+        for r in self.charm.client_relations:
+            if r in ALL_LEGACY_RELATIONS:
+                return True
+        return False
+
+    def _check_multiple_endpoints(self) -> bool:
+        """Checks if there are relations with other endpoints."""
+        is_exist = self._check_exist_current_relation()
+        for relation in self.charm.client_relations:
+            if relation.name not in ALL_LEGACY_RELATIONS and is_exist:
+                return True
+        return False
 
     def _get_extensions(self, relation: Relation) -> Tuple[List, Set]:
         """Returns the list of required and disabled extensions."""
@@ -319,6 +337,24 @@ class DbProvides(Object):
         ]:
             if not self._check_for_blocking_relations(relation.id):
                 self.charm.unit.status = ActiveStatus()
+
+        self._update_unit_status_on_blocking_endpoint_simultaneously()
+
+    def _update_unit_status_on_blocking_endpoint_simultaneously(self):
+        """Clean up Blocked status if this is due related of multiple endpoints."""
+        if (
+            self.charm._has_blocked_status
+            and self.charm.unit.status.message == ENDPOINT_SIMULTANEOUSLY_BLOCKING_MESSAGE
+        ):
+            if not self._check_multiple_endpoints():
+                self.charm.unit.status = ActiveStatus()
+
+    def _check_multiple_endpoints(self) -> bool:
+        """Checks if there are relations with other endpoints."""
+        relation_names = {relation.name for relation in self.charm.client_relations}
+        if "database" in relation_names and len(relation_names) > 1:
+            return True
+        return False
 
     def _get_allowed_subnets(self, relation: Relation) -> str:
         """Build the list of allowed subnets as in the legacy charm."""
