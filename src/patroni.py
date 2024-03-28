@@ -30,12 +30,20 @@ RUNNING_STATES = ["running", "streaming"]
 logger = logging.getLogger(__name__)
 
 
+class ClusterNotPromotedError(Exception):
+    """Raised when a cluster is not promoted."""
+
+
 class NotReadyError(Exception):
     """Raised when not all cluster members healthy or finished initial sync."""
 
 
 class EndpointNotReadyError(Exception):
     """Raised when an endpoint is not ready."""
+
+
+class StandbyClusterAlreadyPromotedError(Exception):
+    """Raised when a standby cluster is already promoted."""
 
 
 class SwitchoverFailedError(Exception):
@@ -120,6 +128,30 @@ class Patroni:
                 r = requests.get(f"{url}/cluster", verify=self._verify)
                 for member in r.json()["members"]:
                     if member["role"] == "leader":
+                        primary = member["name"]
+                        if unit_name_pattern:
+                            # Change the last dash to / in order to match unit name pattern.
+                            primary = "/".join(primary.rsplit("-", 1))
+                        break
+        return primary
+
+    def get_standby_leader(self, unit_name_pattern=False) -> str:
+        """Get standby leader instance.
+
+        Args:
+            unit_name_pattern: whether to convert pod name to unit name
+
+        Returns:
+            standby leader pod or unit name.
+        """
+        primary = None
+        # Request info from cluster endpoint (which returns all members of the cluster).
+        for attempt in Retrying(stop=stop_after_attempt(len(self._endpoints) + 1)):
+            with attempt:
+                url = self._get_alternative_patroni_url(attempt)
+                r = requests.get(f"{url}/cluster", verify=self._verify)
+                for member in r.json()["members"]:
+                    if member["role"] == "standby_leader":
                         primary = member["name"]
                         if unit_name_pattern:
                             # Change the last dash to / in order to match unit name pattern.
@@ -310,6 +342,19 @@ class Patroni:
             json={"postgresql": {"parameters": parameters}},
         )
 
+    def promote_standby_cluster(self) -> None:
+        """Promote a standby cluster to be a regular cluster."""
+        config_response = requests.get(f"{self._patroni_url}/config", verify=self._verify)
+        if "standby_cluster" not in config_response.json():
+            raise StandbyClusterAlreadyPromotedError("standby cluster is already promoted")
+        requests.patch(
+            f"{self._patroni_url}/config", verify=self._verify, json={"standby_cluster": None}
+        )
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+            with attempt:
+                if self.get_primary() is None:
+                    raise ClusterNotPromotedError("cluster not promoted")
+
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def reinitialize_postgresql(self) -> None:
         """Reinitialize PostgreSQL."""
@@ -364,6 +409,9 @@ class Patroni:
         # Open the template patroni.yml file.
         with open("templates/patroni.yml.j2", "r") as file:
             template = Template(file.read())
+
+        primary = self._charm.async_manager.get_primary_data()
+
         # Render the template file with the correct values.
         rendered = template.render(
             connectivity=connectivity,
@@ -374,8 +422,12 @@ class Patroni:
             is_no_sync_member=is_no_sync_member,
             namespace=self._namespace,
             storage_path=self._storage_path,
-            superuser_password=self._superuser_password,
-            replication_password=self._replication_password,
+            superuser_password=(
+                primary["superuser-password"] if primary else self._superuser_password
+            ),
+            replication_password=(
+                primary["replication-password"] if primary else self._replication_password
+            ),
             rewind_user=REWIND_USER,
             rewind_password=self._rewind_password,
             enable_pgbackrest=stanza is not None,
@@ -386,6 +438,12 @@ class Patroni:
             minority_count=self._members_count // 2,
             version=self.rock_postgresql_version.split(".")[0],
             pg_parameters=parameters,
+            standby_cluster_endpoint=primary["endpoint"] if primary else None,
+            extra_replication_endpoints=(
+                {"{}/32".format(primary["endpoint"])}
+                if primary
+                else self._charm.async_manager.standby_endpoints()
+            ),
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 

@@ -126,6 +126,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("charm.Patroni.rock_postgresql_version", new_callable=PropertyMock)
     @patch("charm.Patroni.primary_endpoint_ready", new_callable=PropertyMock)
+    @patch("charm.PostgresqlOperatorCharm.enable_disable_extensions")
     @patch("charm.PostgresqlOperatorCharm.update_config")
     @patch("charm.PostgresqlOperatorCharm.postgresql")
     @patch(
@@ -147,6 +148,7 @@ class TestCharm(unittest.TestCase):
         _create_services,
         _postgresql,
         ___,
+        ____,
         _primary_endpoint_ready,
         _rock_postgresql_version,
     ):
@@ -1189,6 +1191,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("charm.Patroni.reinitialize_postgresql")
     @patch("charm.Patroni.member_streaming", new_callable=PropertyMock)
+    @patch("charm.PostgresqlOperatorCharm.is_standby_leader", new_callable=PropertyMock)
     @patch("charm.PostgresqlOperatorCharm.is_primary", new_callable=PropertyMock)
     @patch("charm.Patroni.is_database_running", new_callable=PropertyMock)
     @patch("charm.Patroni.member_started", new_callable=PropertyMock)
@@ -1199,6 +1202,7 @@ class TestCharm(unittest.TestCase):
         _member_started,
         _is_database_running,
         _is_primary,
+        _is_standby_leader,
         _member_streaming,
         _reinitialize_postgresql,
     ):
@@ -1258,6 +1262,7 @@ class TestCharm(unittest.TestCase):
         # Test when the unit is a replica and it's not streaming from primary.
         _restart.reset_mock()
         _is_primary.return_value = False
+        _is_standby_leader.return_value = False
         _member_streaming.return_value = False
         for values in itertools.product(
             [None, RetryError(last_attempt=1)], [True, False], [True, False]
