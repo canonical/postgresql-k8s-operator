@@ -1,0 +1,53 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.7    unsupported  01:56:54Z
+
+App                  Version  Status   Scale  Charm                Channel        Rev  Address         Exposed  Message
+another-application           active       1  postgresql-test-app  edge            87  10.152.183.166  no       received database credentials of the first database
+another-database     14.11    active       3  postgresql-k8s                        1  10.152.183.143  no       
+data-integrator               waiting      1  data-integrator      latest/stable   19  10.152.183.84   no       installing agent
+database             14.11    waiting      3  postgresql-k8s                        0  10.152.183.62   no       installing agent
+postgresql-test-app           active       2  postgresql-test-app  edge            87  10.152.183.141  no       received database credentials of the first database
+
+Unit                    Workload  Agent  Address       Ports  Message
+another-application/0*  active    idle   10.1.131.150         received database credentials of the first database
+another-database/0      active    idle   10.1.131.143         
+another-database/1      active    idle   10.1.131.144         
+another-database/2*     active    idle   10.1.131.145         Primary
+data-integrator/0*      blocked   idle   10.1.131.153         Please relate the data-integrator with the desired product
+database/0              active    idle   10.1.131.147         Primary
+database/1*             blocked   idle   10.1.131.151         Failed to initialize database relation
+database/2              active    idle   10.1.131.152         
+postgresql-test-app/0*  active    idle   10.1.131.136         received database credentials of the first database
+postgresql-test-app/1   active    idle   10.1.131.137         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-database-1: 01:46:57 ERROR unit.database/1.juju-log database:18: Failed to create user: connection to server at "database-primary.test.svc.cluster.local" (10.152.183.77), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-database-1: 01:46:57 ERROR unit.database/1.juju-log database:18: None
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-1/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 208, in create_user
+    valid_privileges, valid_roles = self.list_valid_privileges_and_roles()
+  File "/var/lib/juju/agents/unit-database-1/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 467, in list_valid_privileges_and_roles
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+  File "/var/lib/juju/agents/unit-database-1/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 128, in _connect_to_database
+    connection = psycopg2.connect(
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "database-primary.test.svc.cluster.local" (10.152.183.77), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-1/charm/src/relations/postgresql_provider.py", line 89, in _on_database_requested
+    self.charm.postgresql.create_user(user, password, extra_user_roles=extra_user_roles)
+  File "/var/lib/juju/agents/unit-database-1/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 246, in create_user
+    raise PostgreSQLCreateUserError()
+charms.postgresql_k8s.v0.postgresql.PostgreSQLCreateUserError: None
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
