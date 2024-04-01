@@ -8,7 +8,6 @@ from typing import Optional
 
 import psycopg2
 import pytest as pytest
-from juju.controller import Controller
 from juju.model import Model
 from lightkube import Client
 from lightkube.resources.core_v1 import Pod
@@ -58,12 +57,6 @@ async def fast_forward(
 
 
 @pytest.fixture(scope="module")
-async def controller(first_model) -> Controller:
-    """Return the controller."""
-    return await first_model.get_controller()
-
-
-@pytest.fixture(scope="module")
 def first_model(ops_test: OpsTest) -> Model:
     """Return the first model."""
     first_model = ops_test.model
@@ -71,10 +64,10 @@ def first_model(ops_test: OpsTest) -> Model:
 
 
 @pytest.fixture(scope="module")
-async def second_model(controller, first_model) -> Model:
+async def second_model(ops_test: OpsTest, first_model) -> Model:
     """Create and return the second model."""
     second_model_name = f"{first_model.info.name}-other"
-    await controller.add_model(second_model_name)
+    await ops_test._controller.add_model(second_model_name)
     second_model = Model()
     await second_model.connect(model_name=second_model_name)
     return second_model
@@ -128,7 +121,6 @@ async def test_deploy_async_replication_setup(
 @pytest.mark.abort_on_fail
 async def test_async_replication(
     ops_test: OpsTest,
-    controller: Controller,
     first_model: Model,
     second_model: Model,
     continuous_writes,
@@ -142,7 +134,7 @@ async def test_async_replication(
 
     await first_model.create_offer("async-primary", "async-primary", DATABASE_APP_NAME)
     await second_model.consume(
-        f"admin/{first_model.info.name}.async-primary", controller=controller
+        f"admin/{first_model.info.name}.async-primary", controller=ops_test._controller
     )
 
     async with ops_test.fast_forward(FAST_INTERVAL), fast_forward(second_model, FAST_INTERVAL):
@@ -202,7 +194,6 @@ async def test_async_replication(
 @pytest.mark.abort_on_fail
 async def test_switchover(
     ops_test: OpsTest,
-    controller: Controller,
     first_model: Model,
     second_model: Model,
     second_model_continuous_writes,
@@ -226,7 +217,7 @@ async def test_switchover(
     second_offer_command = f"offer {DATABASE_APP_NAME}:async-replica async-replica"
     await ops_test.juju(*second_offer_command.split())
     await second_model.consume(
-        f"admin/{first_model.info.name}.async-replica", controller=controller
+        f"admin/{first_model.info.name}.async-replica", controller=ops_test._controller
     )
 
     async with ops_test.fast_forward(FAST_INTERVAL), fast_forward(second_model, FAST_INTERVAL):
@@ -281,7 +272,6 @@ async def test_switchover(
 @pytest.mark.abort_on_fail
 async def test_promote_standby(
     ops_test: OpsTest,
-    controller: Controller,
     first_model: Model,
     second_model: Model,
     second_model_continuous_writes,
