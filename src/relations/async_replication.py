@@ -373,6 +373,15 @@ class PostgreSQLAsyncReplication(Object):
                     if not self.charm._patroni.member_started:
                         raise Exception
         except RetryError:
+            if (
+                not self.charm.is_primary
+                and not self.charm.is_standby_leader
+                and (
+                    self.charm._patroni.member_replication_lag == "unknown"
+                    or int(self.charm._patroni.member_replication_lag) > 1000
+                )
+            ):
+                self.charm._patroni.reinitialize_postgresql()
             logger.debug("defer _on_coordination_approval: database hasn't started yet")
             event.defer()
             return
@@ -546,21 +555,28 @@ class PostgreSQLAsyncReplication(Object):
         This is used to update the standby units with the new primary information.
         If the unit is not the leader, then the data is removed from its databag.
         """
-        if "promoted" not in self.charm.app_peer_data:
-            return
-
         primary_relation = self.model.get_relation(ASYNC_PRIMARY_RELATION)
-        if self.charm.unit.is_leader():
-            system_identifier, error = self.get_system_identifier()
-            if error is not None:
-                raise Exception(f"Failed to get system identifier: {error}")
-            primary_relation.data[self.charm.unit]["elected"] = json.dumps({
-                "endpoint": self.endpoint,
-                "monitoring-password": self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY),
-                "replication-password": self.charm._patroni._replication_password,
-                "rewind-password": self.charm.get_secret(APP_SCOPE, REWIND_PASSWORD_KEY),
-                "superuser-password": self.charm._patroni._superuser_password,
-                "system-id": system_identifier,
-            })
+        if primary_relation:
+            if "promoted" not in self.charm.app_peer_data:
+                return
+            if self.charm.unit.is_leader():
+                system_identifier, error = self.get_system_identifier()
+                if error is not None:
+                    raise Exception(f"Failed to get system identifier: {error}")
+                primary_relation.data[self.charm.unit]["elected"] = json.dumps({
+                    "endpoint": self.endpoint,
+                    "monitoring-password": self.charm.get_secret(
+                        APP_SCOPE, MONITORING_PASSWORD_KEY
+                    ),
+                    "replication-password": self.charm._patroni._replication_password,
+                    "rewind-password": self.charm.get_secret(APP_SCOPE, REWIND_PASSWORD_KEY),
+                    "superuser-password": self.charm._patroni._superuser_password,
+                    "system-id": system_identifier,
+                })
+            else:
+                primary_relation.data[self.charm.unit]["elected"] = ""
         else:
-            primary_relation.data[self.charm.unit]["elected"] = ""
+            replica_relation = self.model.get_relation(ASYNC_REPLICA_RELATION)
+            primary = self._check_if_primary_already_selected()
+            if replica_relation and primary:
+                replica_relation.data[self.charm.unit]["pod-address"] = _get_pod_ip()

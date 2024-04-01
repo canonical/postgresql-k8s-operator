@@ -820,6 +820,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
             return
 
+        # Update the endpoint in the async replication data.
+        self.async_manager.update_async_replication_data()
+
     def _patch_pod_labels(self, member: str) -> None:
         """Add labels required for replication to the current pod.
 
