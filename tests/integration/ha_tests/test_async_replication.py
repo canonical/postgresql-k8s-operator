@@ -132,10 +132,12 @@ async def test_async_replication(
     logger.info("checking whether writes are increasing")
     await are_writes_increasing(ops_test)
 
-    await first_model.create_offer("async-primary", "async-primary", DATABASE_APP_NAME)
-    await second_model.consume(
-        f"admin/{first_model.info.name}.async-primary", controller=ops_test._controller
+    first_offer_command = f"offer {DATABASE_APP_NAME}:async-primary async-primary"
+    await ops_test.juju(*first_offer_command.split())
+    first_consume_command = (
+        f"consume -m {second_model.info.name} admin/{first_model.info.name}.async-primary"
     )
+    await ops_test.juju(*first_consume_command.split())
 
     async with ops_test.fast_forward(FAST_INTERVAL), fast_forward(second_model, FAST_INTERVAL):
         await gather(
@@ -216,9 +218,10 @@ async def test_switchover(
 
     second_offer_command = f"offer {DATABASE_APP_NAME}:async-replica async-replica"
     await ops_test.juju(*second_offer_command.split())
-    await second_model.consume(
-        f"admin/{first_model.info.name}.async-replica", controller=ops_test._controller
+    second_consume_command = (
+        f"consume -m {second_model.info.name} admin/{first_model.info.name}.async-replica"
     )
+    await ops_test.juju(*second_consume_command.split())
 
     async with ops_test.fast_forward(FAST_INTERVAL), fast_forward(second_model, FAST_INTERVAL):
         await gather(
