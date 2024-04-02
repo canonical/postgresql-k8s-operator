@@ -427,7 +427,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.unit_peer_data.pop("start-tls-server", None)
 
         if not self.is_blocked:
-            self.unit.status = ActiveStatus()
+            self._set_active_status()
 
     def _on_config_changed(self, event) -> None:
         """Handle configuration changes, like enabling plugins."""
@@ -455,7 +455,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
 
         if self.is_blocked and "Configuration Error" in self.unit.status.message:
-            self.unit.status = ActiveStatus()
+            self._set_active_status()
 
         if not self.unit.is_leader():
             return
@@ -504,7 +504,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 return
             extensions[extension] = enable
         if self.is_blocked and self.unit.status.message == EXTENSIONS_DEPENDENCY_MESSAGE:
-            self.unit.status = ActiveStatus()
+            self._set_active_status()
         if not isinstance(original_status, UnknownStatus):
             self.unit.status = WaitingStatus("Updating extensions")
         try:
@@ -724,7 +724,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.enable_disable_extensions()
 
         # All is well, set an ActiveStatus.
-        self.unit.status = ActiveStatus()
+        self._set_active_status()
+
+    def _set_active_status(self):
+        try:
+            if self._patroni.get_primary(unit_name_pattern=True) == self.unit.name:
+                self.unit.status = ActiveStatus("Primary")
+            elif self._patroni.member_started:
+                self.unit.status = ActiveStatus()
+        except (RetryError, ConnectionError) as e:
+            logger.error(f"failed to get primary with error {e}")
 
     def _initialize_cluster(self, event: WorkloadEvent) -> bool:
         # Add the labels needed for replication in this pod.
@@ -1122,13 +1131,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _set_primary_status_message(self) -> None:
         """Display 'Primary' in the unit status message if the current unit is the primary."""
-        try:
-            if self._patroni.get_primary(unit_name_pattern=True) == self.unit.name:
-                self.unit.status = ActiveStatus("Primary")
-            elif self._patroni.member_started:
-                self.unit.status = ActiveStatus()
-        except (RetryError, ConnectionError) as e:
-            logger.error(f"failed to get primary with error {e}")
+        self._set_active_status()
 
     @property
     def _patroni(self):
