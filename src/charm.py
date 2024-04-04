@@ -1089,7 +1089,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if self._handle_processes_failures():
             return
 
-        self._set_primary_status_message()
+        self._set_active_status()
 
     def _handle_processes_failures(self) -> bool:
         """Handle Patroni and PostgreSQL OS processes failures.
@@ -1128,10 +1128,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return True
 
         return False
-
-    def _set_primary_status_message(self) -> None:
-        """Display 'Primary' in the unit status message if the current unit is the primary."""
-        self._set_active_status()
 
     @property
     def _patroni(self):

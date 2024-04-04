@@ -401,7 +401,7 @@ class TestCharm(unittest.TestCase):
                 "ERROR:charm:failed to get primary with error RetryError[fake error]", logs.output
             )
 
-    @patch("charm.PostgresqlOperatorCharm._set_primary_status_message")
+    @patch("charm.PostgresqlOperatorCharm._set_active_status")
     @patch("charm.PostgresqlOperatorCharm._handle_processes_failures")
     @patch("charm.PostgreSQLBackups.can_use_s3_repository")
     @patch("charm.PostgresqlOperatorCharm.update_config")
@@ -416,7 +416,7 @@ class TestCharm(unittest.TestCase):
         _update_config,
         _can_use_s3_repository,
         _handle_processes_failures,
-        _set_primary_status_message,
+        _set_active_status,
     ):
         # Mock the access to the list of Pebble services to test a failed restore.
         _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.INACTIVE)]
@@ -433,7 +433,7 @@ class TestCharm(unittest.TestCase):
         self.charm.on.update_status.emit()
         _update_config.assert_not_called()
         _handle_processes_failures.assert_not_called()
-        _set_primary_status_message.assert_not_called()
+        _set_active_status.assert_not_called()
         self.assertIsInstance(self.charm.unit.status, BlockedStatus)
 
         # Test when the restore operation hasn't finished yet.
@@ -443,7 +443,7 @@ class TestCharm(unittest.TestCase):
         self.charm.on.update_status.emit()
         _update_config.assert_not_called()
         _handle_processes_failures.assert_not_called()
-        _set_primary_status_message.assert_not_called()
+        _set_active_status.assert_not_called()
         self.assertIsInstance(self.charm.unit.status, ActiveStatus)
 
         # Assert that the backup id is still in the application relation databag.
@@ -459,7 +459,7 @@ class TestCharm(unittest.TestCase):
         self.charm.on.update_status.emit()
         _update_config.assert_called_once()
         _handle_processes_failures.assert_called_once()
-        _set_primary_status_message.assert_called_once()
+        _set_active_status.assert_called_once()
         self.assertIsInstance(self.charm.unit.status, ActiveStatus)
 
         # Assert that the backup id is not in the application relation databag anymore.
@@ -468,7 +468,7 @@ class TestCharm(unittest.TestCase):
         # Test when it's not possible to use the configured S3 repository.
         _update_config.reset_mock()
         _handle_processes_failures.reset_mock()
-        _set_primary_status_message.reset_mock()
+        _set_active_status.reset_mock()
         with self.harness.hooks_disabled():
             self.harness.update_relation_data(
                 self.rel_id,
@@ -479,7 +479,7 @@ class TestCharm(unittest.TestCase):
         self.charm.on.update_status.emit()
         _update_config.assert_called_once()
         _handle_processes_failures.assert_not_called()
-        _set_primary_status_message.assert_not_called()
+        _set_active_status.assert_not_called()
         self.assertIsInstance(self.charm.unit.status, BlockedStatus)
         self.assertEqual(self.charm.unit.status.message, "fake validation message")
 
