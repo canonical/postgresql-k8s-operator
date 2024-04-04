@@ -206,11 +206,10 @@ class PostgreSQLUpgrade(DataUpgrade):
         # to the other units to make some of them simple replicas and enable the fist
         # unit to become a sync-standby before we can trigger a switchover to it).
         self._set_list_of_sync_standbys()
-        raise ClusterNotReadyError(
-            default_message,
-            f"{unit_zero_name} needs to be a synchronous standby in order to become the primary before the upgrade process can start",
-            f"wait 30 seconds for {unit_zero_name} and run this action again",
-        )
+        cause = f"{unit_zero_name} needs to be a synchronous standby in order to become the primary before the upgrade process can start"
+        resolution = f"wait 30 seconds for {unit_zero_name} to become a synchronous standby and run this action again"
+        action_message = f"{cause} - {resolution}"
+        raise ClusterNotReadyError(action_message, cause, resolution)
 
     def _set_list_of_sync_standbys(self) -> None:
         """Set the list of desired sync-standbys in the relation data."""
