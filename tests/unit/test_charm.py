@@ -20,6 +20,7 @@ from ops.model import (
 from ops.pebble import Change, ChangeError, ChangeID, ServiceStatus
 from ops.testing import Harness
 from parameterized import parameterized
+from requests import ConnectionError
 from tenacity import RetryError, wait_fixed
 
 from charm import PostgresqlOperatorCharm
@@ -124,6 +125,7 @@ class TestCharm(unittest.TestCase):
         self.harness.set_leader(False)
         self.harness.set_leader()
 
+    @patch("charm.PostgresqlOperatorCharm._set_active_status")
     @patch("charm.Patroni.rock_postgresql_version", new_callable=PropertyMock)
     @patch("charm.Patroni.primary_endpoint_ready", new_callable=PropertyMock)
     @patch("charm.PostgresqlOperatorCharm.update_config")
@@ -149,6 +151,7 @@ class TestCharm(unittest.TestCase):
         ___,
         _primary_endpoint_ready,
         _rock_postgresql_version,
+        _set_active_status,
     ):
         _rock_postgresql_version.return_value = "14.7"
 
@@ -169,10 +172,12 @@ class TestCharm(unittest.TestCase):
         self.harness.container_pebble_ready(self._postgresql_container)
         _create_pgdata.assert_called_once()
         self.assertTrue(isinstance(self.harness.model.unit.status, WaitingStatus))
+        _set_active_status.assert_not_called()
 
         # Check for a Blocked status when a failure happens .
         self.harness.container_pebble_ready(self._postgresql_container)
         self.assertTrue(isinstance(self.harness.model.unit.status, BlockedStatus))
+        _set_active_status.assert_not_called()
 
         # Check for the Active status.
         _push_tls_files_to_workload.reset_mock()
@@ -183,7 +188,7 @@ class TestCharm(unittest.TestCase):
         expected.pop("description", "")
         # Check the plan is as expected.
         self.assertEqual(plan.to_dict(), expected)
-        self.assertEqual(self.harness.model.unit.status, ActiveStatus())
+        _set_active_status.assert_called_once()
         container = self.harness.model.unit.get_container(self._postgresql_container)
         self.assertEqual(container.get_service(self._postgresql_service).is_running(), True)
         _push_tls_files_to_workload.assert_called_once()
@@ -396,7 +401,7 @@ class TestCharm(unittest.TestCase):
                 "ERROR:charm:failed to get primary with error RetryError[fake error]", logs.output
             )
 
-    @patch("charm.PostgresqlOperatorCharm._set_primary_status_message")
+    @patch("charm.PostgresqlOperatorCharm._set_active_status")
     @patch("charm.PostgresqlOperatorCharm._handle_processes_failures")
     @patch("charm.PostgreSQLBackups.can_use_s3_repository")
     @patch("charm.PostgresqlOperatorCharm.update_config")
@@ -411,7 +416,7 @@ class TestCharm(unittest.TestCase):
         _update_config,
         _can_use_s3_repository,
         _handle_processes_failures,
-        _set_primary_status_message,
+        _set_active_status,
     ):
         # Mock the access to the list of Pebble services to test a failed restore.
         _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.INACTIVE)]
@@ -428,7 +433,7 @@ class TestCharm(unittest.TestCase):
         self.charm.on.update_status.emit()
         _update_config.assert_not_called()
         _handle_processes_failures.assert_not_called()
-        _set_primary_status_message.assert_not_called()
+        _set_active_status.assert_not_called()
         self.assertIsInstance(self.charm.unit.status, BlockedStatus)
 
         # Test when the restore operation hasn't finished yet.
@@ -438,7 +443,7 @@ class TestCharm(unittest.TestCase):
         self.charm.on.update_status.emit()
         _update_config.assert_not_called()
         _handle_processes_failures.assert_not_called()
-        _set_primary_status_message.assert_not_called()
+        _set_active_status.assert_not_called()
         self.assertIsInstance(self.charm.unit.status, ActiveStatus)
 
         # Assert that the backup id is still in the application relation databag.
@@ -454,7 +459,7 @@ class TestCharm(unittest.TestCase):
         self.charm.on.update_status.emit()
         _update_config.assert_called_once()
         _handle_processes_failures.assert_called_once()
-        _set_primary_status_message.assert_called_once()
+        _set_active_status.assert_called_once()
         self.assertIsInstance(self.charm.unit.status, ActiveStatus)
 
         # Assert that the backup id is not in the application relation databag anymore.
@@ -463,7 +468,7 @@ class TestCharm(unittest.TestCase):
         # Test when it's not possible to use the configured S3 repository.
         _update_config.reset_mock()
         _handle_processes_failures.reset_mock()
-        _set_primary_status_message.reset_mock()
+        _set_active_status.reset_mock()
         with self.harness.hooks_disabled():
             self.harness.update_relation_data(
                 self.rel_id,
@@ -474,7 +479,7 @@ class TestCharm(unittest.TestCase):
         self.charm.on.update_status.emit()
         _update_config.assert_called_once()
         _handle_processes_failures.assert_not_called()
-        _set_primary_status_message.assert_not_called()
+        _set_active_status.assert_not_called()
         self.assertIsInstance(self.charm.unit.status, BlockedStatus)
         self.assertEqual(self.charm.unit.status.message, "fake validation message")
 
@@ -1033,6 +1038,7 @@ class TestCharm(unittest.TestCase):
             self.rel_id, getattr(self.charm, scope).name
         )
 
+    @patch("charm.PostgresqlOperatorCharm._set_active_status")
     @patch("backups.PostgreSQLBackups.start_stop_pgbackrest_service")
     @patch("backups.PostgreSQLBackups.check_stanza")
     @patch("backups.PostgreSQLBackups.coordinate_stanza_fields")
@@ -1055,6 +1061,7 @@ class TestCharm(unittest.TestCase):
         _coordinate_stanza_fields,
         _check_stanza,
         _start_stop_pgbackrest_service,
+        _set_active_status,
     ):
         # Test when the cluster was not initialised yet.
         self.harness.set_can_connect(self._postgresql_container, True)
@@ -1130,6 +1137,7 @@ class TestCharm(unittest.TestCase):
         # huge or unknown lag.
         _member_started.return_value = True
         for values in itertools.product([True, False], ["0", "1000", "1001", "unknown"]):
+            _set_active_status.reset_mock()
             _defer.reset_mock()
             _coordinate_stanza_fields.reset_mock()
             _check_stanza.reset_mock()
@@ -1143,17 +1151,18 @@ class TestCharm(unittest.TestCase):
                 _coordinate_stanza_fields.assert_called_once()
                 _check_stanza.assert_called_once()
                 _start_stop_pgbackrest_service.assert_called_once()
-                self.assertIsInstance(self.charm.unit.status, ActiveStatus)
+                _set_active_status.assert_called_once()
             else:
                 _defer.assert_called_once()
                 _coordinate_stanza_fields.assert_not_called()
                 _check_stanza.assert_not_called()
                 _start_stop_pgbackrest_service.assert_not_called()
-                self.assertIsInstance(self.charm.unit.status, MaintenanceStatus)
+                _set_active_status.assert_not_called()
 
         # Test the status not being changed when it was not possible to start
         # the pgBackRest service yet.
         _defer.reset_mock()
+        _set_active_status.reset_mock()
         _is_primary.return_value = True
         _member_replication_lag.return_value = "0"
         _start_stop_pgbackrest_service.return_value = False
@@ -1169,6 +1178,7 @@ class TestCharm(unittest.TestCase):
         )
         _defer.assert_called_once()
         self.assertIsInstance(self.charm.unit.status, MaintenanceStatus)
+        _set_active_status.assert_not_called()
 
         # Test the status being changed when it was possible to start the
         # pgBackRest service.
@@ -1180,12 +1190,14 @@ class TestCharm(unittest.TestCase):
             {},
         )
         _defer.assert_not_called()
-        self.assertIsInstance(self.charm.unit.status, ActiveStatus)
+        _set_active_status.assert_called_once()
 
         # Test that a blocked status is not overridden.
+        _set_active_status.reset_mock()
         self.charm.unit.status = BlockedStatus()
         self.charm.on.database_peers_relation_changed.emit(self.relation)
         self.assertIsInstance(self.charm.unit.status, BlockedStatus)
+        _set_active_status.assert_not_called()
 
     @patch("charm.Patroni.reinitialize_postgresql")
     @patch("charm.Patroni.member_streaming", new_callable=PropertyMock)
@@ -1430,3 +1442,39 @@ class TestCharm(unittest.TestCase):
                 else:
                     _generate_metrics_jobs.assert_not_called()
                     _restart.assert_not_called()
+
+    @patch("charm.Patroni.member_started", new_callable=PropertyMock)
+    @patch("charm.Patroni.get_primary")
+    def test_set_active_status(self, _get_primary, _member_started):
+        for values in itertools.product(
+            [
+                RetryError(last_attempt=1),
+                ConnectionError,
+                self.charm.unit.name,
+                f"{self.charm.app.name}/2",
+            ],
+            [True, False],
+        ):
+            self.charm.unit.status = MaintenanceStatus("fake status")
+            _member_started.return_value = values[1]
+            if isinstance(values[0], str):
+                _get_primary.side_effect = None
+                _get_primary.return_value = values[0]
+                self.charm._set_active_status()
+                self.assertIsInstance(
+                    self.charm.unit.status,
+                    ActiveStatus
+                    if values[0] == self.charm.unit.name or values[1]
+                    else MaintenanceStatus,
+                )
+                self.assertEqual(
+                    self.charm.unit.status.message,
+                    "Primary"
+                    if values[0] == self.charm.unit.name
+                    else ("" if values[1] else "fake status"),
+                )
+            else:
+                _get_primary.side_effect = values[0]
+                _get_primary.return_value = None
+                self.charm._set_active_status()
+                self.assertIsInstance(self.charm.unit.status, MaintenanceStatus)
