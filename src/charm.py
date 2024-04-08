@@ -1611,7 +1611,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         )
         logger.error(
             f"""
-            Unauthorized to access k8s cluster resources. This happens when RBAC is enabled and the deployed application was not trusted.
+            Access to k8s cluster resources is not authorized. This happens when RBAC is enabled and the deployed application was not trusted by the juju admin.
             To fix this issue, run `juju trust {self._name} --scope=cluster` and `juju resolve` for each unit (or remove & re-deploy {self._name} with `--trust`)
             """
         )
