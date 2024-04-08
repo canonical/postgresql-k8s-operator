@@ -625,17 +625,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _on_leader_elected(self, event: LeaderElectedEvent) -> None:
         """Handle the leader-elected event."""
-        if self.get_secret(APP_SCOPE, USER_PASSWORD_KEY) is None:
-            self.set_secret(APP_SCOPE, USER_PASSWORD_KEY, new_password())
-
-        if self.get_secret(APP_SCOPE, REPLICATION_PASSWORD_KEY) is None:
-            self.set_secret(APP_SCOPE, REPLICATION_PASSWORD_KEY, new_password())
-
-        if self.get_secret(APP_SCOPE, REWIND_PASSWORD_KEY) is None:
-            self.set_secret(APP_SCOPE, REWIND_PASSWORD_KEY, new_password())
-
-        if self.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY) is None:
-            self.set_secret(APP_SCOPE, MONITORING_PASSWORD_KEY, new_password())
+        for password in {
+            USER_PASSWORD_KEY,
+            REPLICATION_PASSWORD_KEY,
+            REWIND_PASSWORD_KEY,
+            MONITORING_PASSWORD_KEY,
+        }:
+            if self.get_secret(APP_SCOPE, password) is None:
+                self.set_secret(APP_SCOPE, password, new_password())
 
         self._cleanup_old_cluster_resources()
         client = Client()
@@ -652,6 +649,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 )
                 self.app_peer_data.pop("cluster_initialised", None)
         except ApiError as e:
+            if e.status.code == 403:
+                self.on_deployed_without_trust()
+                return
             # Ignore the error only when the resource doesn't exist.
             if e.status.code != 404:
                 raise e
@@ -903,6 +903,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 )
                 logger.info(f"deleted {kind.__name__}/{self.cluster_name}{suffix}")
             except ApiError as e:
+                if e.status.code == 403:
+                    self.on_deployed_without_trust()
+                    return
                 # Ignore the error only when the resource doesn't exist.
                 if e.status.code != 404:
                     raise e
@@ -1398,7 +1401,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             limit_memory = self.config.profile_limit_memory * 10**6
         else:
             limit_memory = None
-        available_cpu_cores, available_memory = self.get_available_resources()
+        try:
+            available_cpu_cores, available_memory = self.get_available_resources()
+        except ApiError as e:
+            if e.status.code == 403:
+                self.on_deployed_without_trust()
+                return
+            raise e
+
         postgresql_parameters = self.postgresql.build_postgresql_parameters(
             self.model.config, available_memory, limit_memory
         )
@@ -1593,6 +1603,18 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 allocable_memory = constrained_memory
 
         return cpu_cores, allocable_memory
+
+    def on_deployed_without_trust(self) -> None:
+        """Blocks the application and return a specific error message, for deployments made without --trust."""
+        self.unit.status = BlockedStatus(
+            "Unauthorized access to k8s resources. Is the app trusted? See logs"
+        )
+        logger.error(
+            f"""
+            Unauthorized to access k8s cluster resources. This happens when RBAC is enabled and the deployed application was not trusted.
+            To fix this issue, run `juju trust {self._name} --scope=cluster` and `juju resolve` for each unit (or remove & re-deploy {self._name} with `--trust`)
+            """
+        )
 
     @property
     def client_relations(self) -> List[Relation]:
