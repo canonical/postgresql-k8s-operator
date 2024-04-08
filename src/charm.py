@@ -1605,7 +1605,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         return cpu_cores, allocable_memory
 
     def on_deployed_without_trust(self) -> None:
-        """Blocks the application and return a specific error message, for deployments made without --trust."""
+        """Blocks the application and returns a specific error message for deployments made without --trust."""
         self.unit.status = BlockedStatus(
             "Unauthorized access to k8s resources. Is the app trusted? See logs"
         )
