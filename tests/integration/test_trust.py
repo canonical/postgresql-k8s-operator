@@ -27,6 +27,7 @@ async def test_deploy_without_trust(ops_test: OpsTest):
     Assert on the unit status being blocked due to lack of trust.
     """
     charm = await ops_test.build_charm(".")
+    wait ops_test.run("microk8s", "enable", "rbac", check=True)
     async with ops_test.fast_forward():
         await ops_test.model.deploy(
             charm,
@@ -35,9 +36,7 @@ async def test_deploy_without_trust(ops_test: OpsTest):
             },
             application_name=APP_NAME,
             num_units=3,
-            series=CHARM_SERIES,
             trust=False,
-            config={"profile": "testing"},
         )
 
         await ops_test.model.block_until(
