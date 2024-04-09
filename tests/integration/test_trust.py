@@ -8,7 +8,6 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from .helpers import (
-    CHARM_SERIES,
     METADATA,
     get_leader_unit,
 )
@@ -27,7 +26,7 @@ async def test_deploy_without_trust(ops_test: OpsTest):
     Assert on the unit status being blocked due to lack of trust.
     """
     charm = await ops_test.build_charm(".")
-    wait ops_test.run("microk8s", "enable", "rbac", check=True)
+    await ops_test.run("microk8s", "enable", "rbac", check=True)
     async with ops_test.fast_forward():
         await ops_test.model.deploy(
             charm,
