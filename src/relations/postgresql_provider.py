@@ -8,7 +8,6 @@ import logging
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProvides,
     DatabaseRequestedEvent,
-    diff,
 )
 from charms.postgresql_k8s.v0.postgresql import (
     INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE,
@@ -233,15 +232,6 @@ class PostgreSQLProvider(Object):
         if self._check_multiple_endpoints():
             self.charm.unit.status = BlockedStatus(ENDPOINT_SIMULTANEOUSLY_BLOCKING_MESSAGE)
             return
-        # Check which data has changed to emit customs events.
-        _diff = diff(event, self.charm.unit)
-
-        # Emit a database requested event if the setup key (database name and optional
-        # extra user roles) was added to the relation databag by the application.
-        if "database" in _diff.added:
-            getattr(self.database_provides.on, "database_requested").emit(
-                event.relation, app=event.app, unit=event.unit
-            )
 
     def check_for_invalid_extra_user_roles(self, relation_id: int) -> bool:
         """Checks if there are relations with invalid extra user roles.
