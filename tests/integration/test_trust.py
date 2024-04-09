@@ -15,7 +15,9 @@ from .helpers import (
 
 logger = logging.getLogger(__name__)
 
+APP_NAME = "untrusted-postgres-k8s"
 UNTRUST_ERROR_MESSAGE = "Unauthorized access to k8s resources. Is the app trusted? See logs"
+
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
@@ -31,7 +33,7 @@ async def test_deploy_without_trust(ops_test: OpsTest):
             resources={
                 "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
             },
-            application_name="untrusted-postgres-k8s",
+            application_name=APP_NAME,
             num_units=3,
             series=CHARM_SERIES,
             trust=False,
