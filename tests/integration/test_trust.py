@@ -16,17 +16,18 @@ from .helpers import (
 
 logger = logging.getLogger(__name__)
 
-APP_NAME = "untrusted-postgres-k8s"
+APP_NAME = "untrusted-postgresql-k8s"
+MAX_RETRIES = 20
 UNTRUST_ERROR_MESSAGE = "Unauthorized access to k8s resources. Is the app trusted? See logs"
 
 
 @pytest.mark.group(1)
 async def test_enable_rbac(ops_test: OpsTest):
-    """Build and deploy the charm with trust set to false.
+    """Enables RBAC from inside test runner's environment.
 
-    Assert on the unit status being blocked due to lack of trust.
+    Assert on permission enforcement being active.
     """
-    proc = await asyncio.create_subprocess_exec(
+    enable_rbac_call = await asyncio.create_subprocess_exec(
         "sudo",
         "microk8s",
         "enable",
@@ -34,68 +35,50 @@ async def test_enable_rbac(ops_test: OpsTest):
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
+    await enable_rbac_call.communicate()
 
-    stdout, stderr = await proc.communicate()
-    message, err = stdout.decode(), stderr.decode()
-    logger.info(f"{message}")
-    logger.info(f"{err}")
-
-    # procc = await asyncio.create_subprocess_exec(
-    #     "microk8s",
-    #     "kubectl",
-    #     "-n",
-    #     "kube-system",
-    #     "rollout",
-    #     "status", deployment/coredns
-    #     stdout=asyncio.subprocess.PIPE,
-    #     stderr=asyncio.subprocess.PIPE,
-    # )
-
-    # stdout, stderr = await procc.communicate()
-    # logger.info(f"{stdout.decode()}")
-    # logger.info(f"{stderr.decode()}")
-
-    time.sleep(3)
-
-    proc2 = await asyncio.create_subprocess_exec(
-        "microk8s",
-        "status",
-        "--wait-ready",
-        stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE,
-    )
-
-    stdout2, stderr2 = await proc2.communicate()
-    message, err = stdout2.decode(), stderr2.decode()
-    logger.info(f"{message}")
-    logger.info(f"{err}")
-
-    time.sleep(3)
-
-    assert "rbac" in message.split("disabled")[0]
+    is_default_auth = None
+    retries = 0
+    while is_default_auth != 'no' and retries < MAX_RETRIES:
+        rbac_check = await asyncio.create_subprocess_exec(
+            "microk8s",
+            "kubectl",
+            "auth",
+            "can-i",
+            "get",
+            "cm",
+            "-A",
+            "--as=system:serviceaccount:default:no-permissions",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await rbac_check.communicate()
+        if stdout:
+            is_default_auth = stdout.decode().split()[0]
+            logger.info(f"Response from rbac check ('no' means enabled): {is_default_auth}")
+        retries += 1
+    
+    assert is_default_auth == 'no'
 
 
 @pytest.mark.group(1)
 async def test_model_connectivity(ops_test: OpsTest):
-    """Tries to regain connectivity to model."""
-    max_retries = 20
-    retries = 0
+    """Tries to regain connectivity to model after microK8s restart."""
 
-    while retries < max_retries:
+    retries = 0
+    while retries < MAX_RETRIES:
         try:
-            # Attempt to run the await statements sequentially
             await ops_test.model.connect_current()
             status = await ops_test.model.get_status()
-            logger.info(f"status encontrado = {status}")
-            assert True
+            logger.info(f"Connection established: {status}")
             return
         except Exception as e:
-            logger.info(f"Exception occurred: {e}")
+            logger.info(f"Connection attempt failed: {e}")
             retries += 1
-            logger.info(f"Retrying ({retries}/{max_retries})...")
+            logger.info(f"Retrying ({retries}/{MAX_RETRIES})...")
             time.sleep(3)
 
-    print("Max retries reached. Unable to complete the operation.")
+    logger.error(f"Max retries number of {MAX_RETRIES} reached. Unable to connect.")
     assert False
 
 
