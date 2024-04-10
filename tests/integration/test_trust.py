@@ -27,7 +27,7 @@ async def test_deploy_without_trust(ops_test: OpsTest):
     """
     charm = await ops_test.build_charm(".")
     await ops_test.run("sudo", "microk8s", "enable", "rbac")
-    
+
     async with ops_test.fast_forward():
         await ops_test.model.deploy(
             charm,
