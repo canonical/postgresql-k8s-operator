@@ -5,6 +5,7 @@
 import logging
 import os
 import subprocess
+import asyncio
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -32,26 +33,25 @@ async def test_deploy_without_trust(ops_test: OpsTest):
     env = os.environ
     env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
 
-    subprocess.call(
-        " ".join([
-            "sudo",
-            "microk8s",
-            "enable",
-            "rbac",
-        ]),
-        shell=True,
-        env=env,
+    proc = await asyncio.create_subprocess_exec(
+        "sudo", "microk8s", "enable", "rbac",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
 
-    subprocess.call(
-        " ".join([
-            "microk8s",
-            "status",
-            "--wait-ready",
-        ]),
-        shell=True,
-        env=env,
+    stdout, stderr = await proc.communicate()
+    logger.info(f"{stdout}")
+    logger.info(f"{stderr}")
+
+    proc2 = await asyncio.create_subprocess_exec(
+        "microk8s", "status", "--wait-ready",
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
     )
+
+    stdout2, stderr2 = await proc2.communicate()
+    logger.info(f"{stdout2}")
+    logger.info(f"{stderr2}")
 
     await ops_test.model.deploy(
         charm,
