@@ -21,7 +21,6 @@ UNTRUST_ERROR_MESSAGE = "Unauthorized access to k8s resources. Is the app truste
 
 
 @pytest.mark.group(1)
-@pytest.mark.abort_on_fail
 async def test_enable_rbac(ops_test: OpsTest):
     """Build and deploy the charm with trust set to false.
 
@@ -75,8 +74,9 @@ async def test_enable_rbac(ops_test: OpsTest):
 
     assert "rbac" in message.split("disabled")[0]
 
-
-async def test_workload_connectivity(ops_test: OpsTest):
+@pytest.mark.group(1)
+async def test_model_connectivity(ops_test: OpsTest):
+    """Tries to regain connectivity to model """
     max_retries = 20
     retries = 0
 
