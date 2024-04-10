@@ -34,7 +34,6 @@ async def test_deploy_without_trust(ops_test: OpsTest):
 
     subprocess.check_output(
         " ".join([
-            "sudo",
             "microk8s",
             "enable",
             "rbac",
