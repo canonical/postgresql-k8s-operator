@@ -32,7 +32,7 @@ async def test_deploy_without_trust(ops_test: OpsTest):
     env = os.environ
     env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
 
-    subprocess.check_output(
+    subprocess.call(
         " ".join([
             "microk8s",
             "enable",
@@ -42,7 +42,7 @@ async def test_deploy_without_trust(ops_test: OpsTest):
         env=env,
     )
 
-    subprocess.check_output(
+    subprocess.call(
         " ".join([
             "microk8s",
             "status",
