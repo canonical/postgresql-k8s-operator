@@ -3,6 +3,8 @@
 # See LICENSE file for licensing details.
 
 import logging
+import os
+import subprocess
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -26,7 +28,30 @@ async def test_deploy_without_trust(ops_test: OpsTest):
     Assert on the unit status being blocked due to lack of trust.
     """
     charm = await ops_test.build_charm(".")
-    await ops_test.run("sudo", "microk8s", "enable", "rbac")
+
+    env = os.environ
+    env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
+
+    subprocess.check_output(
+        " ".join([
+            "sudo",
+            "microk8s",
+            "enable",
+            "rbac",
+        ]),
+        shell=True,
+        env=env,
+    )
+
+    subprocess.check_output(
+        " ".join([
+            "microk8s",
+            "status",
+            "--wait-ready",
+        ]),
+        shell=True,
+        env=env,
+    )
 
     async with ops_test.fast_forward():
         await ops_test.model.deploy(
