@@ -2,10 +2,9 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import asyncio
 import logging
 import os
-import subprocess
-import asyncio
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -34,7 +33,10 @@ async def test_deploy_without_trust(ops_test: OpsTest):
     env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
 
     proc = await asyncio.create_subprocess_exec(
-        "sudo", "microk8s", "enable", "rbac",
+        "sudo",
+        "microk8s",
+        "enable",
+        "rbac",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
@@ -44,7 +46,9 @@ async def test_deploy_without_trust(ops_test: OpsTest):
     logger.info(f"{stderr}")
 
     proc2 = await asyncio.create_subprocess_exec(
-        "microk8s", "status", "--wait-ready",
+        "microk8s",
+        "status",
+        "--wait-ready",
         stdout=asyncio.subprocess.PIPE,
         stderr=asyncio.subprocess.PIPE,
     )
