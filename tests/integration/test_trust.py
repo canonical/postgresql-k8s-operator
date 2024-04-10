@@ -74,9 +74,10 @@ async def test_enable_rbac(ops_test: OpsTest):
 
     assert "rbac" in message.split("disabled")[0]
 
+
 @pytest.mark.group(1)
 async def test_model_connectivity(ops_test: OpsTest):
-    """Tries to regain connectivity to model """
+    """Tries to regain connectivity to model."""
     max_retries = 20
     retries = 0
 
