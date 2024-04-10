@@ -42,8 +42,8 @@ async def test_deploy_without_trust(ops_test: OpsTest):
     )
 
     stdout, stderr = await proc.communicate()
-    logger.info(f"{stdout}")
-    logger.info(f"{stderr}")
+    logger.info(f"{stdout.decode()}")
+    logger.info(f"{stderr.decode()}")
 
     proc2 = await asyncio.create_subprocess_exec(
         "microk8s",
@@ -54,8 +54,8 @@ async def test_deploy_without_trust(ops_test: OpsTest):
     )
 
     stdout2, stderr2 = await proc2.communicate()
-    logger.info(f"{stdout2}")
-    logger.info(f"{stderr2}")
+    logger.info(f"{stdout2.decode()}")
+    logger.info(f"{stderr2.decode()}")
 
     await ops_test.model.deploy(
         charm,
