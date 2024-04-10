@@ -5,6 +5,8 @@
 import asyncio
 import logging
 import os
+import time
+import requests
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -22,15 +24,11 @@ UNTRUST_ERROR_MESSAGE = "Unauthorized access to k8s resources. Is the app truste
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_deploy_without_trust(ops_test: OpsTest):
+async def test_enable_rbac(ops_test: OpsTest):
     """Build and deploy the charm with trust set to false.
 
     Assert on the unit status being blocked due to lack of trust.
     """
-    charm = await ops_test.build_charm(".")
-
-    env = os.environ
-    env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
 
     proc = await asyncio.create_subprocess_exec(
         "sudo",
@@ -45,6 +43,23 @@ async def test_deploy_without_trust(ops_test: OpsTest):
     logger.info(f"{stdout.decode()}")
     logger.info(f"{stderr.decode()}")
 
+    # procc = await asyncio.create_subprocess_exec(
+    #     "microk8s",
+    #     "kubectl",
+    #     "-n",
+    #     "kube-system",
+    #     "rollout",
+    #     "status", deployment/coredns
+    #     stdout=asyncio.subprocess.PIPE,
+    #     stderr=asyncio.subprocess.PIPE,
+    # )
+
+    # stdout, stderr = await procc.communicate()
+    # logger.info(f"{stdout.decode()}")
+    # logger.info(f"{stderr.decode()}")
+
+    time.sleep(3)
+
     proc2 = await asyncio.create_subprocess_exec(
         "microk8s",
         "status",
@@ -54,8 +69,47 @@ async def test_deploy_without_trust(ops_test: OpsTest):
     )
 
     stdout2, stderr2 = await proc2.communicate()
-    logger.info(f"{stdout2.decode()}")
-    logger.info(f"{stderr2.decode()}")
+    message = stdout2.decode()
+    logger.info(f"{message}")
+
+    time.sleep(3)
+
+    assert "rbac" in message.split('disabled')[0]
+
+
+async def test_workload_connectivity(ops_test: OpsTest):
+    max_retries = 20
+    retries = 0
+
+    while retries < max_retries:
+        try:
+            # Attempt to run the await statements sequentially
+            await ops_test.model.connect_current()
+            status = await ops_test.model.get_status()
+            logger.info(f"status encontrado = {status}")
+            assert True
+            return
+        except Exception as e:
+            logger.info(f"Exception occurred: {e}")
+            retries += 1
+            logger.info(f"Retrying ({retries}/{max_retries})...")
+            time.sleep(3)
+
+    print("Max retries reached. Unable to complete the operation.")
+    assert False
+            
+
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_deploy_without_trust(ops_test: OpsTest):
+    """Build and deploy the charm with trust set to false.
+
+    Assert on the unit status being blocked due to lack of trust.
+    """
+
+    charm = await ops_test.build_charm(".")
 
     await ops_test.model.deploy(
         charm,
