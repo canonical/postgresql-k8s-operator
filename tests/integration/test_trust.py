@@ -53,28 +53,27 @@ async def test_deploy_without_trust(ops_test: OpsTest):
         env=env,
     )
 
-    async with ops_test.fast_forward():
-        await ops_test.model.deploy(
-            charm,
-            resources={
-                "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
-            },
-            application_name=APP_NAME,
-            num_units=3,
-            trust=False,
-        )
+    await ops_test.model.deploy(
+        charm,
+        resources={
+            "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
+        },
+        application_name=APP_NAME,
+        num_units=3,
+        trust=False,
+    )
 
-        await ops_test.model.block_until(
-            lambda: any(
-                unit.workload_status == "blocked"
-                for unit in ops_test.model.applications[APP_NAME].units
-            ),
-            timeout=1000,
-        )
+    await ops_test.model.block_until(
+        lambda: any(
+            unit.workload_status == "blocked"
+            for unit in ops_test.model.applications[APP_NAME].units
+        ),
+        timeout=1000,
+    )
 
-        leader_unit = await get_leader_unit(ops_test, APP_NAME)
-        assert leader_unit.workload_status == "blocked"
-        assert leader_unit.workload_status_message == UNTRUST_ERROR_MESSAGE
+    leader_unit = await get_leader_unit(ops_test, APP_NAME)
+    assert leader_unit.workload_status == "blocked"
+    assert leader_unit.workload_status_message == UNTRUST_ERROR_MESSAGE
 
 
 @pytest.mark.group(1)
