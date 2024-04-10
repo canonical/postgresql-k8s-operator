@@ -4,9 +4,7 @@
 
 import asyncio
 import logging
-import os
 import time
-import requests
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -29,7 +27,6 @@ async def test_enable_rbac(ops_test: OpsTest):
 
     Assert on the unit status being blocked due to lack of trust.
     """
-
     proc = await asyncio.create_subprocess_exec(
         "sudo",
         "microk8s",
@@ -40,8 +37,9 @@ async def test_enable_rbac(ops_test: OpsTest):
     )
 
     stdout, stderr = await proc.communicate()
-    logger.info(f"{stdout.decode()}")
-    logger.info(f"{stderr.decode()}")
+    message, err = stdout.decode(), stderr.decode()
+    logger.info(f"{message}")
+    logger.info(f"{err}")
 
     # procc = await asyncio.create_subprocess_exec(
     #     "microk8s",
@@ -69,12 +67,13 @@ async def test_enable_rbac(ops_test: OpsTest):
     )
 
     stdout2, stderr2 = await proc2.communicate()
-    message = stdout2.decode()
+    message, err = stdout2.decode(), stderr2.decode()
     logger.info(f"{message}")
+    logger.info(f"{err}")
 
     time.sleep(3)
 
-    assert "rbac" in message.split('disabled')[0]
+    assert "rbac" in message.split("disabled")[0]
 
 
 async def test_workload_connectivity(ops_test: OpsTest):
@@ -97,8 +96,6 @@ async def test_workload_connectivity(ops_test: OpsTest):
 
     print("Max retries reached. Unable to complete the operation.")
     assert False
-            
-
 
 
 @pytest.mark.group(1)
@@ -108,7 +105,6 @@ async def test_deploy_without_trust(ops_test: OpsTest):
 
     Assert on the unit status being blocked due to lack of trust.
     """
-
     charm = await ops_test.build_charm(".")
 
     await ops_test.model.deploy(
