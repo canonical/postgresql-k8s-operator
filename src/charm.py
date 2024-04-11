@@ -634,13 +634,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             if self.get_secret(APP_SCOPE, password) is None:
                 self.set_secret(APP_SCOPE, password, new_password())
 
-        self._cleanup_old_cluster_resources()
-
         # Add this unit to the list of cluster members
         # (the cluster should start with only this member).
         if self._endpoint not in self._endpoints:
             self._add_to_endpoints(self._endpoint)
 
+        self._cleanup_old_cluster_resources()
         client = Client()
         try:
             endpoint = client.get(Endpoints, name=self.cluster_name, namespace=self._namespace)
