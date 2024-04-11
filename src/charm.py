@@ -635,6 +635,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self.set_secret(APP_SCOPE, password, new_password())
 
         self._cleanup_old_cluster_resources()
+
+        # Add this unit to the list of cluster members
+        # (the cluster should start with only this member).
+        if self._endpoint not in self._endpoints:
+            self._add_to_endpoints(self._endpoint)
+
         client = Client()
         try:
             endpoint = client.get(Endpoints, name=self.cluster_name, namespace=self._namespace)
@@ -650,8 +656,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self.app_peer_data.pop("cluster_initialised", None)
         except ApiError as e:
             if e.status.code == 403:
-                if self._endpoint not in self._endpoints:
-                    self._add_to_endpoints(self._endpoint)
                 self.on_deployed_without_trust()
                 return
             # Ignore the error only when the resource doesn't exist.
@@ -665,11 +669,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.exception("failed to create k8s services")
             self.unit.status = BlockedStatus("failed to create k8s services")
             return
-
-        # Add this unit to the list of cluster members
-        # (the cluster should start with only this member).
-        if self._endpoint not in self._endpoints:
-            self._add_to_endpoints(self._endpoint)
 
         # Remove departing units when the leader changes.
         self._remove_from_endpoints(self._get_endpoints_to_remove())
