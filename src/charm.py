@@ -650,6 +650,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self.app_peer_data.pop("cluster_initialised", None)
         except ApiError as e:
             if e.status.code == 403:
+                if self._endpoint not in self._endpoints:
+                    self._add_to_endpoints(self._endpoint)
                 self.on_deployed_without_trust()
                 return
             # Ignore the error only when the resource doesn't exist.
@@ -1607,7 +1609,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def on_deployed_without_trust(self) -> None:
         """Blocks the application and returns a specific error message for deployments made without --trust."""
         self.unit.status = BlockedStatus(
-            "Unauthorized access to k8s resources. Is the app trusted? See logs"
+            f"Insufficient permissions, try: `juju trust {self._name} --scope=cluster`"
         )
         logger.error(
             f"""

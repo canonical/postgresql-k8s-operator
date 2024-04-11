@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 APP_NAME = "untrusted-postgresql-k8s"
 MAX_RETRIES = 20
-UNTRUST_ERROR_MESSAGE = "Unauthorized access to k8s resources. Is the app trusted? See logs"
+UNTRUST_ERROR_MESSAGE = f"Insufficient permissions, try: `juju trust {APP_NAME} --scope=cluster`"
 
 
 @pytest.mark.group(1)
@@ -83,15 +83,13 @@ async def test_model_connectivity(ops_test: OpsTest):
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_deploy_without_trust(ops_test: OpsTest):
+async def test_deploy_without_trust(ops_test: OpsTest, database_charm):
     """Build and deploy the charm with trust set to false.
 
     Assert on the unit status being blocked due to lack of trust.
     """
-    charm = await ops_test.build_charm(".")
-
     await ops_test.model.deploy(
-        charm,
+        database_charm,
         resources={
             "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
         },
@@ -121,6 +119,4 @@ async def test_trust_blocked_deployment(ops_test: OpsTest):
     """
     await ops_test.juju("trust", APP_NAME, "--scope=cluster")
 
-    app = ops_test.model.applications[APP_NAME]
-    await ops_test.model.block_until(lambda: app.status in ("active", "error"), timeout=1000)
-    assert app.status == "active"
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
