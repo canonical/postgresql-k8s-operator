@@ -1,0 +1,26 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.7    unsupported  02:30:52Z
+
+App                  Version  Status   Scale  Charm                Channel  Rev  Address         Exposed  Message
+another-application           active       1  postgresql-test-app  edge     101  10.152.183.253  no       received database credentials of the first database
+another-database     14.11    active       3  postgresql-k8s                  1  10.152.183.70   no       Primary
+database             14.11    waiting      3  postgresql-k8s                  0  10.152.183.39   no       installing agent
+postgresql-test-app           active       2  postgresql-test-app  edge     101  10.152.183.24   no       received database credentials of the second database
+
+Unit                    Workload  Agent  Address      Ports  Message
+another-application/0*  active    idle   10.1.222.86         received database credentials of the first database
+another-database/0*     active    idle   10.1.222.83         Primary
+another-database/1      active    idle   10.1.222.85         
+another-database/2      active    idle   10.1.222.84         
+database/0*             active    idle   10.1.222.80         Primary
+database/1              unknown   idle   10.1.222.88         
+database/2              unknown   idle   10.1.222.87         
+postgresql-test-app/0*  active    idle   10.1.222.72         received database credentials of the second database
+postgresql-test-app/1   active    idle   10.1.222.73         received database credentials of the second database
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
