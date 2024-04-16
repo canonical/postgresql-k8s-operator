@@ -445,7 +445,7 @@ async def get_password(
 @retry(
     retry=retry_if_exception(KeyError),
     stop=stop_after_attempt(10),
-    wait=wait_exponential(multiplier=1, min=2, max=30),
+    wait=wait_exponential(multiplier=1, min=2, max=50),
 )
 async def get_primary(
     ops_test: OpsTest, database_app_name: str = DATABASE_APP_NAME, down_unit: str = None
@@ -460,6 +460,9 @@ async def get_primary(
     Returns:
         the current primary unit.
     """
+    print(f"------------------- APPS: {ops_test.model.applications} -------------------")
+    print(f"------------------- APP: {ops_test.model.applications[database_app_name]} -------------------")
+    print(f"------------------- UNITS: {ops_test.model.applications[database_app_name].units} -------------------")
     for unit in ops_test.model.applications[database_app_name].units:
         if unit.name != down_unit:
             action = await unit.run_action("get-primary")

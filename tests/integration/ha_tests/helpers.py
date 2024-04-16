@@ -1,6 +1,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 import asyncio
+import json
 import os
 import string
 import subprocess
@@ -12,6 +13,8 @@ from typing import Dict, Optional, Set, Tuple
 import kubernetes as kubernetes
 import psycopg2
 import requests
+from juju import tag
+from juju.errors import JujuError
 from kubernetes import config
 from kubernetes.client.api import core_v1_api
 from kubernetes.stream import stream
@@ -34,6 +37,8 @@ from ..helpers import (
     get_password,
     get_primary,
     get_unit_address,
+    execute_query_on_unit,
+    run_command_on_unit,
 )
 
 PORT = 5432
@@ -419,7 +424,7 @@ async def get_postgresql_parameter(ops_test: OpsTest, parameter_name: str) -> Op
 async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
     """Test a connection to a PostgreSQL server."""
     app = unit_name.split("/")[0]
-    password = await get_password(ops_test, database_app_name=app, down_unit=unit_name)
+    password = await get_password(ops_test, database_app_name=app, unit_name=unit_name)
     address = await get_unit_address(ops_test, unit_name)
     try:
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
@@ -431,10 +436,15 @@ async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
                     success = cursor.fetchone()[0] == 1
                 connection.close()
                 return success
-    except (psycopg2.Error, RetryError):
+    except (psycopg2.Error, RetryError) as e:
+        if isinstance(e, RetryError):
+            last_attempt = e.last_attempt
+            last_exception = last_attempt.exception()
+            print(f"is_connection_possible err: {e}, last exception: {last_exception}")
+        else:
+            print(f"is_connection_possible err: {e}")
         # Error raised when the connection is not possible.
         return False
-
 
 async def is_replica(ops_test: OpsTest, unit_name: str) -> bool:
     """Returns whether the unit a replica in the cluster."""
@@ -759,3 +769,92 @@ async def stop_continuous_writes(ops_test: OpsTest) -> int:
     )
     action = await action.wait()
     return int(action.results["writes"])
+
+async def get_storage_id(ops_test: OpsTest, unit_name: str) -> str:
+    for storage in await ops_test.model.list_storage():
+        if storage['owner-tag'] == tag.unit(unit_name):
+            return tag.untag('storage-', storage['storage-tag'])
+    return None
+
+def is_pods_exists(ops_test: OpsTest, unit_name: str) -> bool:
+    client = Client(namespace=ops_test.model.name)
+    pods = client.list(Pod, namespace=ops_test.model.name)
+    
+    for pod in pods:
+        print(f"POD: {pod.metadata.name} STATUS: {pod.status.phase} TAGGED: {unit_name.replace('/', '-')}")
+        if (pod.metadata.name == unit_name.replace('/', '-')) and (pod.status.phase == 'Running'):
+            return True
+        
+    return False
+
+async def is_storage_exists(ops_test: OpsTest, storage_id: str) -> bool:
+    """Returns True if storage exists by provided storage ID 
+    
+    Checks juju storage output
+    """
+    for storage in await ops_test.model.list_storage():
+        if storage['storage-tag'] == tag.storage(storage_id):
+            return True
+        
+    return False
+
+async def create_db(ops_test: OpsTest, app: str, db: str) -> None:
+    """Creates database with specified name
+
+    """
+    unit = ops_test.model.applications[app].units[0]
+    unit_address = await unit.get_public_address()
+    password = await get_password(ops_test, app)
+
+    conn = db_connect(unit_address, password)
+    conn.autocommit = True
+    cursor = conn.cursor()
+    cursor.execute(f"CREATE DATABASE {db};")
+    cursor.close()
+    conn.close()
+
+
+async def check_db(ops_test: OpsTest, app: str, db: str) -> bool:
+    """Returns True if database with specified name is alredy exists
+
+    """
+    unit = ops_test.model.applications[app].units[0]
+    unit_address = await unit.get_public_address()
+    password = await get_password(ops_test, app)
+
+    query = await execute_query_on_unit(
+        unit_address,
+        password,
+        "select datname from pg_catalog.pg_database where datname = '{db}';",
+    )
+
+    if "ERROR" in query:
+        raise Exception (
+            f"Database check is failed with postgresql err: {query}"
+        )
+
+    return db in query
+
+
+async def get_any_deatached_storage(ops_test: OpsTest) -> str:
+    """Returns any of the current avaliable deatached storage
+    
+    """
+    return_code, storages_list, stderr = await ops_test.juju("storage", "-m", f"{ops_test.controller_name}:{ops_test.model.info.name}", "--format=json")
+    if return_code != 0:
+        raise Exception(f"failed to get charm info with error: {stderr}")
+    
+    parsed_storages_list = json.loads(storages_list)
+    for storage_name, storage in parsed_storages_list['storage'].items():
+        if (str(storage['status']['current']) == 'detached') and (str(storage['life'] == 'alive')):
+            return storage_name
+        
+    return None
+
+async def check_password_auth(ops_test: OpsTest, unit_name) -> bool:
+    stdout = await run_command_on_unit(
+        ops_test,
+        unit_name,
+        """grep -E 'password authentication failed for user' /var/log/postgresql/postgresql*""",
+    )
+    return 'password authentication failed for user "operator"' not in stdout
