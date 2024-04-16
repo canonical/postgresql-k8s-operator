@@ -15,6 +15,7 @@ from .helpers import (
     check_database_users_existence,
     check_tls,
     check_tls_patroni_api,
+    check_tls_replication,
     db_connect,
     deploy_and_relate_application_with_postgresql,
     get_password,
@@ -101,6 +102,9 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         for member in cluster_info.json()["members"]:
             if member["role"] == "replica":
                 replica = "/".join(member["name"].rsplit("-", 1))
+
+        # Check if TLS enabled for replication
+        assert await check_tls_replication(ops_test, primary, enabled=True)
 
         # Enable additional logs on the PostgreSQL instance to check TLS
         # being used in a later step.
