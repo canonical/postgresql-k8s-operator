@@ -128,6 +128,7 @@ class TestCharm(unittest.TestCase):
     @patch("charm.PostgresqlOperatorCharm._set_active_status")
     @patch("charm.Patroni.rock_postgresql_version", new_callable=PropertyMock)
     @patch("charm.Patroni.primary_endpoint_ready", new_callable=PropertyMock)
+    @patch("charm.PostgresqlOperatorCharm.enable_disable_extensions")
     @patch("charm.PostgresqlOperatorCharm.update_config")
     @patch("charm.PostgresqlOperatorCharm.postgresql")
     @patch(
@@ -149,6 +150,7 @@ class TestCharm(unittest.TestCase):
         _create_services,
         _postgresql,
         ___,
+        ____,
         _primary_endpoint_ready,
         _rock_postgresql_version,
         _set_active_status,
@@ -1201,6 +1203,7 @@ class TestCharm(unittest.TestCase):
 
     @patch("charm.Patroni.reinitialize_postgresql")
     @patch("charm.Patroni.member_streaming", new_callable=PropertyMock)
+    @patch("charm.PostgresqlOperatorCharm.is_standby_leader", new_callable=PropertyMock)
     @patch("charm.PostgresqlOperatorCharm.is_primary", new_callable=PropertyMock)
     @patch("charm.Patroni.is_database_running", new_callable=PropertyMock)
     @patch("charm.Patroni.member_started", new_callable=PropertyMock)
@@ -1211,6 +1214,7 @@ class TestCharm(unittest.TestCase):
         _member_started,
         _is_database_running,
         _is_primary,
+        _is_standby_leader,
         _member_streaming,
         _reinitialize_postgresql,
     ):
@@ -1270,6 +1274,7 @@ class TestCharm(unittest.TestCase):
         # Test when the unit is a replica and it's not streaming from primary.
         _restart.reset_mock()
         _is_primary.return_value = False
+        _is_standby_leader.return_value = False
         _member_streaming.return_value = False
         for values in itertools.product(
             [None, RetryError(last_attempt=1)], [True, False], [True, False]
@@ -1444,8 +1449,9 @@ class TestCharm(unittest.TestCase):
                     _restart.assert_not_called()
 
     @patch("charm.Patroni.member_started", new_callable=PropertyMock)
+    @patch("charm.PostgresqlOperatorCharm.is_standby_leader", new_callable=PropertyMock)
     @patch("charm.Patroni.get_primary")
-    def test_set_active_status(self, _get_primary, _member_started):
+    def test_set_active_status(self, _get_primary, _is_standby_leader, _member_started):
         for values in itertools.product(
             [
                 RetryError(last_attempt=1),
@@ -1453,26 +1459,42 @@ class TestCharm(unittest.TestCase):
                 self.charm.unit.name,
                 f"{self.charm.app.name}/2",
             ],
+            [
+                RetryError(last_attempt=1),
+                ConnectionError,
+                True,
+                False,
+            ],
             [True, False],
         ):
             self.charm.unit.status = MaintenanceStatus("fake status")
-            _member_started.return_value = values[1]
+            _member_started.return_value = values[2]
             if isinstance(values[0], str):
                 _get_primary.side_effect = None
                 _get_primary.return_value = values[0]
-                self.charm._set_active_status()
-                self.assertIsInstance(
-                    self.charm.unit.status,
-                    ActiveStatus
-                    if values[0] == self.charm.unit.name or values[1]
-                    else MaintenanceStatus,
-                )
-                self.assertEqual(
-                    self.charm.unit.status.message,
-                    "Primary"
-                    if values[0] == self.charm.unit.name
-                    else ("" if values[1] else "fake status"),
-                )
+                if values[0] != self.charm.unit.name and not isinstance(values[1], bool):
+                    _is_standby_leader.side_effect = values[1]
+                    _is_standby_leader.return_value = None
+                    self.charm._set_active_status()
+                    self.assertIsInstance(self.charm.unit.status, MaintenanceStatus)
+                else:
+                    _is_standby_leader.side_effect = None
+                    _is_standby_leader.return_value = values[1]
+                    self.charm._set_active_status()
+                    self.assertIsInstance(
+                        self.charm.unit.status,
+                        ActiveStatus
+                        if values[0] == self.charm.unit.name or values[1] or values[2]
+                        else MaintenanceStatus,
+                    )
+                    self.assertEqual(
+                        self.charm.unit.status.message,
+                        "Primary"
+                        if values[0] == self.charm.unit.name
+                        else (
+                            "Standby Leader" if values[1] else ("" if values[2] else "fake status")
+                        ),
+                    )
             else:
                 _get_primary.side_effect = values[0]
                 _get_primary.return_value = None

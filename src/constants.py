@@ -20,6 +20,7 @@ USER_PASSWORD_KEY = "operator-password"
 WORKLOAD_OS_GROUP = "postgres"
 WORKLOAD_OS_USER = "postgres"
 METRICS_PORT = "9187"
+POSTGRESQL_DATA_PATH = "/var/lib/postgresql/data/pgdata"
 POSTGRES_LOG_FILES = [
     "/var/log/pgbackrest/*",
     "/var/log/postgresql/patroni.log",
