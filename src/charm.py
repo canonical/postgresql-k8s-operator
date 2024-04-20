@@ -21,7 +21,9 @@ from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServ
 from charms.postgresql_k8s.v0.postgresql import (
     REQUIRED_PLUGINS,
     PostgreSQL,
+    PostgreSQLCreateUserError,
     PostgreSQLEnableDisableExtensionError,
+    PostgreSQLListUsersError,
     PostgreSQLUpdateUserPasswordError,
 )
 from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
@@ -52,7 +54,7 @@ from ops.model import (
 )
 from ops.pebble import ChangeError, Layer, PathError, ProtocolError, ServiceStatus
 from requests import ConnectionError
-from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
+from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
 from backups import PostgreSQLBackups
 from config import CharmConfig
@@ -774,17 +776,32 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             event.defer()
             return False
 
-        pg_users = self.postgresql.list_users()
-        # Create the backup user.
-        if BACKUP_USER not in pg_users:
-            self.postgresql.create_user(BACKUP_USER, new_password(), admin=True)
-        # Create the monitoring user.
-        if MONITORING_USER not in pg_users:
-            self.postgresql.create_user(
-                MONITORING_USER,
-                self.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY),
-                extra_user_roles="pg_monitor",
-            )
+        # Create the default postgres database user that is needed for some
+        # applications (not charms) like Landscape Server.
+        try:
+            # This event can be run on a replica if the machines are restarted.
+            # For that case, check whether the postgres user already exits.
+            users = self.postgresql.list_users()
+            if "postgres" not in users:
+                self.postgresql.create_user("postgres", new_password(), admin=True)
+                # Create the backup user.
+            if BACKUP_USER not in users:
+                self.postgresql.create_user(BACKUP_USER, new_password(), admin=True)
+            if MONITORING_USER not in users:
+                # Create the monitoring user.
+                self.postgresql.create_user(
+                    MONITORING_USER,
+                    self.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY),
+                    extra_user_roles="pg_monitor",
+                )
+        except PostgreSQLCreateUserError as e:
+            logger.exception(e)
+            self.unit.status = BlockedStatus("Failed to create postgres user")
+            return
+        except PostgreSQLListUsersError:
+            logger.warning("Deferriing on_start: Unable to list users")
+            event.defer()
+            return
 
         self.postgresql.set_up_database()
 
@@ -1387,6 +1404,17 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         return services[0].current == ServiceStatus.ACTIVE
 
+    @property
+    def _can_connect_to_postgresql(self) -> bool:
+        try:
+            for attempt in Retrying(stop=stop_after_delay(30), wait=wait_fixed(3)):
+                with attempt:
+                    assert self.postgresql.get_postgresql_timezones()
+        except RetryError:
+            logger.debug("Cannot connect to database")
+            return False
+        return True
+
     def update_config(self, is_creating_backup: bool = False) -> bool:
         """Updates Patroni config file based on the existence of the TLS files."""
         # Retrieve PostgreSQL parameters.
@@ -1437,6 +1465,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         if not self._patroni.member_started:
             logger.debug("Early exit update_config: Patroni not started yet")
+            return False
+
+        # Try to connect
+        if not self._can_connect_to_postgresql:
+            logger.warning("Early exit update_config: Cannot connect to Postgresql")
             return False
 
         self._patroni.bulk_update_parameters_controller_by_patroni({
