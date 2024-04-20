@@ -12,6 +12,7 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Tuple, get_args
 
+import psycopg2
 from charms.data_platform_libs.v0.data_interfaces import DataPeer, DataPeerUnit
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
@@ -462,6 +463,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 logger.debug("Defer on_config_changed: cannot update configuration")
                 event.defer()
                 return
+        except psycopg2.OperationalError:
+            logger.debug("Defer on_config_changed: Cannot connect to database")
+            event.defer()
+            return
         except ValueError as e:
             self.unit.status = BlockedStatus("Configuration Error. Please check the logs")
             logger.error("Invalid configuration: %s", str(e))
@@ -476,20 +481,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Enable and/or disable the extensions.
         self.enable_disable_extensions()
 
-        # Unblock the charm after extensions are enabled (only if it's blocked due to application
-        # charms requesting extensions).
-        if self.unit.status.message != EXTENSIONS_BLOCKING_MESSAGE:
-            return
-
-        for relation in [
-            *self.model.relations.get("db", []),
-            *self.model.relations.get("db-admin", []),
-        ]:
-            if not self.legacy_db_relation.set_up_relation(relation):
-                logger.debug(
-                    "Early exit on_config_changed: legacy relation requested extensions that are still disabled"
-                )
-                return
+        self.clear_extensions_blocked_status()
 
     def enable_disable_extensions(self, database: str = None) -> None:
         """Enable/disable PostgreSQL extensions set through config options.
@@ -526,6 +518,21 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.exception("failed to change plugins: %s", str(e))
         if not isinstance(original_status, UnknownStatus):
             self.unit.status = original_status
+
+    def clear_extensions_blocked_status(self):
+        """Unblock the charm after extensions are enabled (only if it's blocked due to application charms requesting extensions)."""
+        if self.unit.status.message != EXTENSIONS_BLOCKING_MESSAGE:
+            return
+
+        for relation in [
+            *self.model.relations.get("db", []),
+            *self.model.relations.get("db-admin", []),
+        ]:
+            if not self.legacy_db_relation.set_up_relation(relation):
+                logger.debug(
+                    "Early exit on_config_changed: legacy relation requested extensions that are still disabled"
+                )
+                return
 
     def _check_extension_dependencies(self, extension: str, enable: bool) -> bool:
         skip = False
