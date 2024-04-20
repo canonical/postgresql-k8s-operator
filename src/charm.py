@@ -12,7 +12,6 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Tuple, get_args
 
-import psycopg2
 from charms.data_platform_libs.v0.data_interfaces import DataPeer, DataPeerUnit
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
@@ -459,11 +458,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         try:
             self._validate_config_options()
             # update config on every run
-            self.update_config()
-        except psycopg2.OperationalError:
-            logger.debug("Defer on_config_changed: Cannot connect to database")
-            event.defer()
-            return
+            if self.update_config():
+                logger.debug("Defer on_config_changed: cannot update configuration")
+                event.defer()
+                return
         except ValueError as e:
             self.unit.status = BlockedStatus("Configuration Error. Please check the logs")
             logger.error("Invalid configuration: %s", str(e))
