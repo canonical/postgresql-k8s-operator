@@ -1390,6 +1390,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.unit.status = BlockedStatus(error_message)
             return
 
+        if not self._can_connect_to_postgresql:
+            logger.warning("Unable to reconnect to postgresql")
+
         # Update health check URL.
         self._update_pebble_layers()
 
