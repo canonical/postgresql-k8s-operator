@@ -459,7 +459,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         try:
             self._validate_config_options()
             # update config on every run
-            if self.update_config():
+            if not self.update_config():
                 logger.debug("Defer on_config_changed: cannot update configuration")
                 event.defer()
                 return
