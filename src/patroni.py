@@ -268,6 +268,18 @@ class Patroni:
 
         return r.json()["state"] in RUNNING_STATES
 
+    def is_restart_pending(self) -> bool:
+        """Check the /patroni endpoint for pending restart."""
+        try:
+            for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+                with attempt:
+                    r = requests.get(f"{self._patroni_url}/patroni", verify=self._verify)
+                    response = r.json()
+        except RetryError:
+            return False
+
+        return response.get("pending_restart", False)
+
     @property
     def member_streaming(self) -> bool:
         """Has the member started to stream data from primary.

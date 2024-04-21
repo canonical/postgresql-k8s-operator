@@ -1405,11 +1405,18 @@ class TestCharm(unittest.TestCase):
 
     @patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_acquire_lock")
     @patch("charm.PostgresqlOperatorCharm._generate_metrics_jobs")
+    @patch("charm.Patroni.is_restart_pending")
     @patch("charm.wait_fixed", return_value=wait_fixed(0))
     @patch("charm.Patroni.reload_patroni_configuration")
     @patch("charm.PostgresqlOperatorCharm.is_tls_enabled", new_callable=PropertyMock)
     def test_handle_postgresql_restart_need(
-        self, _is_tls_enabled, _reload_patroni_configuration, _, _generate_metrics_jobs, _restart
+        self,
+        _is_tls_enabled,
+        _reload_patroni_configuration,
+        _,
+        _is_restart_pending,
+        _generate_metrics_jobs,
+        _restart,
     ):
         with patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock:
             for values in itertools.product([True, False], [True, False], [True, False]):
@@ -1423,7 +1430,7 @@ class TestCharm(unittest.TestCase):
 
                 _is_tls_enabled.return_value = values[0]
                 postgresql_mock.is_tls_enabled = PropertyMock(return_value=values[1])
-                postgresql_mock.is_restart_pending = PropertyMock(return_value=values[2])
+                _is_restart_pending.return_value = values[2]
 
                 self.charm._handle_postgresql_restart_need()
                 _reload_patroni_configuration.assert_called_once()
