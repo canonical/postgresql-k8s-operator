@@ -54,7 +54,7 @@ from ops.model import (
 )
 from ops.pebble import ChangeError, Layer, PathError, ProtocolError, ServiceStatus
 from requests import ConnectionError
-from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
+from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
 from backups import PostgreSQLBackups
 from config import CharmConfig
@@ -1540,7 +1540,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # which tells how much time Patroni will wait before checking the configuration
         # file again to reload it.
         try:
-            for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(3)):
+            for attempt in Retrying(stop=stop_after_delay(70), wait=wait_fixed(3)):
                 with attempt:
                     restart_postgresql = restart_postgresql or self._patroni.is_restart_pending()
                     if not restart_postgresql:
