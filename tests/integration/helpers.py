@@ -676,22 +676,27 @@ async def run_command_on_unit(ops_test: OpsTest, unit_name: str, command: str) -
     return stdout
 
 
-async def scale_application(ops_test: OpsTest, application_name: str, scale: int) -> None:
+async def scale_application(
+    ops_test: OpsTest, application_name: str, scale: int, model: Model = None
+) -> None:
     """Scale a given application to a specific unit count.
 
     Args:
         ops_test: The ops test framework instance
         application_name: The name of the application
         scale: The number of units to scale to
+        model: The model to scale the application in
     """
-    await ops_test.model.applications[application_name].scale(scale)
+    if model is None:
+        model = ops_test.model
+    await model.applications[application_name].scale(scale)
     if scale == 0:
-        await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[DATABASE_APP_NAME].units) == scale,
+        await model.block_until(
+            lambda: len(model.applications[DATABASE_APP_NAME].units) == scale,
             timeout=1000,
         )
     else:
-        await ops_test.model.wait_for_idle(
+        await model.wait_for_idle(
             apps=[application_name],
             status="active",
             timeout=1000,
