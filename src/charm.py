@@ -54,7 +54,7 @@ from ops.model import (
 )
 from ops.pebble import ChangeError, Layer, PathError, ProtocolError, ServiceStatus
 from requests import ConnectionError
-from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
+from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
 from backups import PostgreSQLBackups
 from config import CharmConfig
@@ -68,6 +68,7 @@ from constants import (
     POSTGRES_LOG_FILES,
     REPLICATION_PASSWORD_KEY,
     REPLICATION_USER,
+    RESTART_CONFIG,
     REWIND_PASSWORD_KEY,
     SECRET_DELETED_LABEL,
     SECRET_INTERNAL_LABEL,
@@ -1488,7 +1489,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             "max_prepared_transactions": self.config.memory_max_prepared_transactions,
         })
 
-        self._handle_postgresql_restart_need()
+        self._handle_postgresql_restart_need(postgresql_parameters)
 
         # Restart the monitoring service if the password was rotated
         container = self.unit.get_container("postgresql")
@@ -1532,22 +1533,18 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     f"Value for {parameter} not one of the locales available in the system"
                 )
 
-    def _handle_postgresql_restart_need(self):
+    def _handle_postgresql_restart_need(self, postgresql_parameters):
         """Handle PostgreSQL restart need based on the TLS configuration and configuration changes."""
         restart_postgresql = self.is_tls_enabled != self.postgresql.is_tls_enabled()
+
+        # Check if we need to restart due to config changes
+        if not restart_postgresql:
+            for key, value in self._patroni.get_config_parameters.items():
+                if key in RESTART_CONFIG and value != postgresql_parameters[key]:
+                    restart_postgresql = True
+                    break
+
         self._patroni.reload_patroni_configuration()
-        # Wait for some more time than the Patroni's loop_wait default value (10 seconds),
-        # which tells how much time Patroni will wait before checking the configuration
-        # file again to reload it.
-        try:
-            for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(3)):
-                with attempt:
-                    restart_postgresql = restart_postgresql or self.postgresql.is_restart_pending()
-                    if not restart_postgresql:
-                        raise Exception
-        except RetryError:
-            # Ignore the error, as it happens only to indicate that the configuration has not changed.
-            pass
         self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
 
         # Restart PostgreSQL if TLS configuration has changed

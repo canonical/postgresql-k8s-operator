@@ -37,3 +37,4 @@ APP_SCOPE = "app"
 UNIT_SCOPE = "unit"
 
 SECRET_KEY_OVERRIDES = {"ca": "cauth"}
+RESTART_CONFIG = ["shared_buffers"]
