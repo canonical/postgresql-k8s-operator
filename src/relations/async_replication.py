@@ -6,6 +6,7 @@
 import itertools
 import json
 import logging
+from datetime import datetime
 from typing import List, Optional, Tuple
 
 from lightkube import ApiError, Client
@@ -192,6 +193,17 @@ class PostgreSQLAsyncReplication(Object):
                 self.charm.set_secret(APP_SCOPE, key, password)
                 logger.warning("Synced %s password to %s", user, password)
                 logger.debug("Synced %s password", user)
+        system_identifier, error = self.get_system_identifier()
+        if error is not None:
+            raise Exception(error)
+        if system_identifier != relation.data[relation.app].get("system-id"):
+            # Store current data in a ZIP file, clean folder and generate configuration.
+            logger.info("Creating backup of pgdata folder")
+            filename = f"{POSTGRESQL_DATA_PATH}-{str(datetime.now()).replace(' ', '-').replace(':', '-')}.tar.gz"
+            self.container.exec(
+                f"tar -zcf {filename} {POSTGRESQL_DATA_PATH}".split()
+            ).wait_output()
+            logger.warning("Please review the backup file %s and handle its removal", filename)
         self._remove_previous_cluster_information()
         return True
 
