@@ -1484,6 +1484,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return False
 
         self._patroni.bulk_update_parameters_controller_by_patroni({
+            **postgresql_parameters,
             "max_connections": max(4 * available_cpu_cores, 100),
             "max_prepared_transactions": self.config.memory_max_prepared_transactions,
         })
