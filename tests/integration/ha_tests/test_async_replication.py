@@ -36,8 +36,9 @@ from tests.integration.helpers import (
 logger = logging.getLogger(__name__)
 
 
-FAST_INTERVAL = "30s"
-IDLE_PERIOD = 15
+CLUSTER_SIZE = 3
+FAST_INTERVAL = "10s"
+IDLE_PERIOD = 5
 TIMEOUT = 2000
 
 
@@ -102,8 +103,8 @@ async def test_deploy_async_replication_setup(
     ops_test: OpsTest, first_model: Model, second_model: Model
 ) -> None:
     """Build and deploy two PostgreSQL cluster in two separate models to test async replication."""
-    await build_and_deploy(ops_test, 3, wait_for_idle=False)
-    await build_and_deploy(ops_test, 3, wait_for_idle=False, model=second_model)
+    await build_and_deploy(ops_test, CLUSTER_SIZE, wait_for_idle=False)
+    await build_and_deploy(ops_test, CLUSTER_SIZE, wait_for_idle=False, model=second_model)
     await ops_test.model.deploy(APPLICATION_NAME, num_units=1)
     await second_model.deploy(APPLICATION_NAME, num_units=1)
 
