@@ -51,9 +51,6 @@ logger = logging.getLogger(__name__)
 
 ASYNC_PRIMARY_RELATION = "async-primary"
 ASYNC_REPLICA_RELATION = "async-replica"
-INCOMPATIBLE_CLUSTER_VERSIONS_BLOCKING_MESSAGE = (
-    "Incompatible cluster versions - cannot enable async replication"
-)
 READ_ONLY_MODE_BLOCKING_MESSAGE = "Cluster in read-only mode"
 
 
