@@ -1,0 +1,69 @@
+# Copyright 2023 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: Release to Charmhub
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - 'tests/**'
+      - 'docs/**'
+      - .github/renovate.json5
+      - pyproject.toml
+      - '.github/workflows/ci.yaml'
+      - '.github/workflows/lib-check.yaml'
+
+jobs:
+  ci-tests:
+    name: Tests
+    uses: ./.github/workflows/ci.yaml
+    secrets: inherit
+    permissions:
+      contents: write  # Needed for Allure Report beta
+
+  release-libraries:
+    name: Release libraries
+    needs:
+      - ci-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Set up environment
+        run: |
+          pipx install tox
+          pipx install poetry
+          pipx inject poetry poetry-plugin-export
+          # TODO: Remove after https://github.com/python-poetry/poetry/pull/5980 is closed
+          poetry config warnings.export false
+      - name: Generate requirements
+        run: |
+          tox run -e build-wrapper
+          mv requirements-last-build.txt requirements.txt
+      - name: Release charm libraries
+        uses: canonical/charming-actions/release-libraries@2.4.0
+        with:
+          credentials: "${{ secrets.CHARMHUB_TOKEN }}"
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+  build:
+    name: Build charm
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v13.1.1
+
+  release:
+    name: Release charm
+    needs:
+      - ci-tests
+      - build
+    uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v13.1.1
+    with:
+      channel: 14/edge
+      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
+    secrets:
+      charmhub-token: ${{ secrets.CHARMHUB_TOKEN }}
+    permissions:
+      contents: write  # Needed to create GitHub release

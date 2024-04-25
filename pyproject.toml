@@ -1,0 +1,143 @@
+# Copyright 2021 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+[tool.poetry]
+name = "postgresql-k8s"
+version = "0.0.1-dev.0"
+description = ""
+authors = []
+license = "Apache-2.0"
+readme = "README.md"
+homepage = "https://charmhub.io/postgresql-k8s"
+repository = "https://github.com/canonical/postgresql-k8s-operator"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+ops = "^2.12.0"
+cryptography = "^42.0.5"
+boto3 = "^1.34.84"
+pgconnstr = "^1.0.1"
+requests = "^2.31.0"
+tenacity = "^8.2.3"
+cosl = "^0.0.11"
+pydantic = "^1.10.15"
+poetry-core = "^1.9.0"
+jsonschema = "^4.21.1"
+jinja2 = "^3.1.3"
+lightkube = "^0.15.2"
+lightkube-models = "^1.28.1.4"
+psycopg2 = "^2.9.9"
+
+[tool.poetry.group.charm-libs.dependencies]
+# data_platform_libs/v0/data_interfaces.py
+ops = ">=2.0.0"
+# data_platform_libs/v0/upgrade.py
+poetry-core = "*"
+# data_platform_libs/v0/upgrade.py requires pydantic ^1.10
+# grafana_agent/v0/cos_agent.py requires pydantic <2
+pydantic = "^1.10, <2"
+# grafana_agent/v0/cos_agent.py
+cosl = "*"
+
+[tool.poetry.group.format]
+optional = true
+
+[tool.poetry.group.format.dependencies]
+ruff = "^0.3.7"
+
+[tool.poetry.group.lint]
+optional = true
+
+[tool.poetry.group.lint.dependencies]
+codespell = "^2.2.6"
+
+[tool.poetry.group.unit]
+optional = true
+
+[tool.poetry.group.unit.dependencies]
+coverage = {extras = ["toml"], version = "^7.4.4"}
+pydantic = "^1.10.15"
+pytest = "^8.1.1"
+pytest-mock = "^3.14.0"
+pytest-asyncio = "*"
+parameterized = "^0.9.0"
+
+[tool.poetry.group.integration]
+optional = true
+
+[tool.poetry.group.integration.dependencies]
+lightkube = "^0.15.2"
+pytest = "^8.1.1"
+pytest-github-secrets = {git = "https://github.com/canonical/data-platform-workflows", tag = "v13.1.1", subdirectory = "python/pytest_plugins/github_secrets"}
+pytest-operator = "^0.34.0"
+pytest-operator-cache = {git = "https://github.com/canonical/data-platform-workflows", tag = "v13.1.1", subdirectory = "python/pytest_plugins/pytest_operator_cache"}
+pytest-operator-groups = {git = "https://github.com/canonical/data-platform-workflows", tag = "v13.1.1", subdirectory = "python/pytest_plugins/pytest_operator_groups"}
+juju = "^3.2.2"
+psycopg2-binary = "^2.9.9"
+boto3 = "^1.34.84"
+tenacity = "^8.2.3"
+allure-pytest = "^2.13.5"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+# Testing tools configuration
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+log_cli_level = "INFO"
+asyncio_mode = "auto"
+markers = ["unstable", "juju2", "juju3", "juju_secrets"]
+
+# Formatting tools configuration
+[tool.black]
+line-length = 99
+target-version = ["py38"]
+
+# Linting tools configuration
+[tool.ruff]
+# preview and explicit preview are enabled for CPY001
+preview = true
+target-version = "py38"
+src = ["src", "."]
+line-length = 99
+
+[tool.ruff.lint]
+explicit-preview-rules = true
+select = ["A", "E", "W", "F", "C", "N", "D", "I001", "CPY001"]
+extend-ignore = [
+    "D203",
+    "D204",
+    "D213",
+    "D215",
+    "D400",
+    "D404",
+    "D406",
+    "D407",
+    "D408",
+    "D409",
+    "D413",
+]
+# Ignore E501 because using black creates errors with this
+# Ignore D107 Missing docstring in __init__
+ignore = ["E501", "D107"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["D100", "D101", "D102", "D103", "D104"]
+
+[tool.ruff.lint.flake8-copyright]
+# Check for properly formatted copyright header in each file
+author = "Canonical Ltd."
+notice-rgx = "Copyright\\s\\d{4}([-,]\\d{4})*\\s+"
+
+[tool.ruff.lint.mccabe]
+max-complexity = 10
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"

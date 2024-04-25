@@ -1,0 +1,45 @@
+# Copyright 2023 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+create-backup:
+  description: Creates a backup to s3 storage in AWS.
+get-primary:
+  description: Get the unit with is the primary/leader in the replication.
+get-password:
+  description: Change the system user's password, which is used by charm.
+    It is for internal charm users and SHOULD NOT be used by applications.
+  params:
+    username:
+      type: string
+      description: The username, the default value 'operator'.
+        Possible values - backup, operator, replication, rewind.
+list-backups:
+  description: Lists backups in s3 storage in AWS.
+pre-upgrade-check:
+  description: Run necessary pre-upgrade checks and preparations before executing a charm refresh.
+restore:
+  description: Restore a database backup using pgBackRest.
+    S3 credentials are retrieved from a relation with the S3 integrator charm.
+  params:
+    backup-id:
+      type: string
+      description: A backup-id to identify the backup to restore (format = %Y-%m-%dT%H:%M:%SZ)
+resume-upgrade:
+  description: Resume a rolling upgrade after asserting successful upgrade of a new revision.
+set-password:
+  description: Change the system user's password, which is used by charm.
+    It is for internal charm users and SHOULD NOT be used by applications.
+  params:
+    username:
+      type: string
+      description: The username, the default value 'operator'.
+        Possible values - backup, operator, replication rewind.
+    password:
+      type: string
+      description: The password will be auto-generated if this option is not specified.
+set-tls-private-key:
+  description: Set the private key, which will be used for certificate signing requests (CSR). Run for each unit separately.
+  params:
+    private-key:
+      type: string
+      description: The content of private key for communications with clients. Content will be auto-generated if this option is not specified.

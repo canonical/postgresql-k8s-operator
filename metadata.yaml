@@ -1,0 +1,73 @@
+# Copyright 2023 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: postgresql-k8s
+display-name: Charmed PostgreSQL K8s
+summary: Charmed PostgreSQL K8s operator
+description: |
+  Charm to operate the PostgreSQL database on Kubernetes clusters
+docs: https://discourse.charmhub.io/t/charmed-postgresql-k8s-documenation/9307
+source: https://github.com/canonical/postgresql-k8s-operator
+issues: https://github.com/canonical/postgresql-k8s-operator/issues
+website:
+  - https://ubuntu.com/data/postgresql
+  - https://charmhub.io/postgresql-k8s
+  - https://github.com/canonical/postgresql-k8s-operator
+  - https://chat.charmhub.io/charmhub/channels/data-platform
+maintainers:
+  - Canonical Data Platform <data-platform@lists.launchpad.net>
+
+containers:
+  postgresql:
+    resource: postgresql-image
+    mounts:
+      - storage: pgdata
+        location: /var/lib/postgresql/data
+
+resources:
+  postgresql-image:
+    type: oci-image
+    description: OCI image for PostgreSQL
+    upstream-source: ghcr.io/canonical/charmed-postgresql@sha256:a9b6f25cc6a12b0cb81cb19be76804f4a9452e4388ab2a11efd2d57a316977c5
+
+peers:
+  database-peers:
+    interface: postgresql_peers
+  restart:
+    interface: rolling_op
+  upgrade:
+    interface: upgrade
+
+provides:
+  database:
+    interface: postgresql_client
+  db:
+    interface: pgsql
+  db-admin:
+    interface: pgsql
+  metrics-endpoint:
+    interface: prometheus_scrape
+  grafana-dashboard:
+    interface: grafana_dashboard
+
+requires:
+  certificates:
+    interface: tls-certificates
+    limit: 1
+    optional: true
+  s3-parameters:
+    interface: s3
+    limit: 1
+    optional: true
+  logging:
+    interface: loki_push_api
+    limit: 1
+    optional: true
+
+storage:
+  pgdata:
+    type: filesystem
+    location: /var/lib/postgresql/data
+
+assumes:
+  - k8s-api

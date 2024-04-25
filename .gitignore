@@ -1,0 +1,12 @@
+venv/
+build/
+*.charm
+.tox/
+.coverage
+__pycache__/
+*.py[cod]
+requirements.txt
+requirements-last-build.txt
+
+# PyCharm project folder.
+.idea/

@@ -1,0 +1,138 @@
+bootstrap:
+  dcs:
+    synchronous_mode: true
+    synchronous_node_count: {{ minority_count }}
+    postgresql:
+      use_pg_rewind: true
+      remove_data_directory_on_rewind_failure: true
+      remove_data_directory_on_diverged_timelines: true
+      bin_dir: /usr/lib/postgresql/{{ version }}/bin
+      parameters:
+        synchronous_standby_names: "*"
+        {%- if enable_pgbackrest %}
+        archive_command: 'pgbackrest --stanza={{ stanza }} archive-push %p'
+        {% else %}
+        archive_command: /bin/true
+        {%- endif %}
+        archive_mode: on
+        autovacuum: true
+        fsync: true
+        full_page_writes: true
+        lc_messages: 'en_US.UTF8'
+        log_autovacuum_min_duration: 60000
+        log_checkpoints: 'on'
+        log_destination: 'stderr'
+        log_directory: '/var/log/postgresql'
+        log_file_mode: '0600'
+        log_filename: 'postgresql-%w_%H%M.log'
+        log_hostname: 'off'
+        log_line_prefix: '%t [%p]: user=%u,db=%d,app=%a,client=%h,line=%l '
+        log_min_duration_sample: -1
+        log_recovery_conflict_waits: 'on'
+        log_replication_commands: 'on'
+        log_rotation_age: 1
+        log_rotation_size: 0
+        log_statement: ddl
+        log_statement_sample_rate: 1
+        log_statement_stats: 'off'
+        log_temp_files: 1
+        log_timezone: 'UTC'
+        log_truncate_on_rotation: 'on'
+        logging_collector: 'on'
+        wal_level: logical
+        {%- if pg_parameters %}
+        {%- for key, value in pg_parameters.items() %}
+        {{key}}: {{value}}
+        {%- endfor -%}
+        {% endif %}
+  {%- if restoring_backup %}
+  method: pgbackrest
+  pgbackrest:
+    command: pgbackrest --stanza={{ restore_stanza }} --pg1-path={{ storage_path }}/pgdata --set={{ backup_id }} --type=immediate --target-action=promote restore
+    no_params: True
+    keep_existing_recovery_conf: True
+  {% else %}
+  initdb:
+  - auth-host: md5
+  - auth-local: trust
+  - encoding: UTF8
+  - data-checksums
+  {%- endif %}
+  pg_hba:
+  - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 md5
+  - {{ 'hostssl' if enable_tls else 'host' }} replication replication 127.0.0.1/32 md5
+bypass_api_service: true
+log:
+  dir: /var/log/postgresql
+  dateformat: "%Y-%m-%d %H:%M:%S %Z"
+  format: "%(asctime)s [%(process)d]: %(levelname)s: %(message)s "
+  file_num: 10080
+  file_size: 600
+restapi:
+  connect_address: '{{ endpoint }}:8008'
+  listen: 0.0.0.0:8008
+  {%- if enable_tls %}
+  cafile: {{ storage_path }}/ca.pem
+  certfile: {{ storage_path }}/cert.pem
+  keyfile: {{ storage_path }}/key.pem
+  {%- endif %}
+{%- if enable_tls %}
+ctl:
+  cacert: {{ storage_path }}/ca.pem
+  certfile: {{ storage_path }}/cert.pem
+  keyfile: {{ storage_path }}/key.pem
+{%- endif %}
+pod_ip: '{{ endpoint }}'
+postgresql:
+  connect_address: '{{ endpoint }}:5432'
+  data_dir: {{ storage_path }}/pgdata
+  bin_dir: /usr/lib/postgresql/{{ version }}/bin
+  listen: 0.0.0.0:5432
+  parameters:
+    {%- if enable_pgbackrest %}
+    archive_command: 'pgbackrest --stanza={{ stanza }} archive-push %p'
+    {% else %}
+    archive_command: /bin/true
+    {%- endif %}
+    {%- if enable_tls %}
+    ssl: on
+    ssl_ca_file: {{ storage_path }}/ca.pem
+    ssl_cert_file: {{ storage_path }}/cert.pem
+    ssl_key_file: {{ storage_path }}/key.pem
+    {%- endif %}
+    {%- if pg_parameters %}
+    {%- for key, value in pg_parameters.items() %}
+    {{key}}: {{value}}
+    {%- endfor -%}
+    {% endif %}
+  pgpass: /tmp/pgpass
+  pg_hba:
+  - local all backup peer map=operator
+  - local all monitoring password
+  {%- if not connectivity %}
+  - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 reject
+  - {{ 'hostssl' if enable_tls else 'host' }} all all {{ endpoint }}.{{ namespace }}.svc.cluster.local md5
+  {% else %}
+  - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 md5
+  {%- endif %}
+  - {{ 'hostssl' if enable_tls else 'host' }} replication replication 127.0.0.1/32 md5
+  {%- for endpoint in endpoints %}
+  - {{ 'hostssl' if enable_tls else 'host' }} replication replication {{ endpoint }}.{{ namespace }}.svc.cluster.local md5
+  {%- endfor %}
+  pg_ident:
+  - operator postgres backup
+  authentication:
+    replication:
+      password: {{ replication_password }}
+    rewind:
+      username: {{ rewind_user }}
+      password: {{ rewind_password }}
+    superuser:
+      password: {{ superuser_password }}
+use_endpoints: true
+use_unix_socket: true
+{%- if is_no_sync_member or is_creating_backup %}
+tags:
+  nosync: {{ is_no_sync_member }}
+  is_creating_backup: {{ is_creating_backup }}
+{%- endif %}
