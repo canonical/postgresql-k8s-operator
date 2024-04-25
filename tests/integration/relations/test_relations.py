@@ -123,6 +123,7 @@ async def test_legacy_endpoint_with_multiple_related_endpoints(ops_test: OpsTest
     await check_database_users_existence(ops_test, [], finos_waltz_users)
 
 
+@pytest.mark.group(1)
 async def test_modern_endpoint_with_multiple_related_endpoints(ops_test: OpsTest):
     async with ops_test.fast_forward():
         await ops_test.model.relate(FINOZ_WALTZ_APP_NAME, f"{APP_NAME}:{DB_RELATION}")
