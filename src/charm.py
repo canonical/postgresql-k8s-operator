@@ -261,6 +261,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             raise RuntimeError("Unknown secret scope.")
 
         peers = self.model.get_relation(PEER)
+        if not peers:
+            return None
+        
         secret_key = self._translate_field_to_secret_key(key)
         if scope == APP_SCOPE:
             value = self.peer_relation_app.fetch_my_relation_field(peers.id, secret_key)
