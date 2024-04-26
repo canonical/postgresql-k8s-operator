@@ -1,8 +1,9 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-import unittest
+from unittest import TestCase
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
+import pytest
 import tenacity
 from charms.data_platform_libs.v0.upgrade import (
     ClusterNotReadyError,
@@ -15,56 +16,63 @@ from charm import PostgresqlOperatorCharm
 from patroni import SwitchoverFailedError
 from tests.unit.helpers import _FakeApiError
 
+# used for assert functions
+tc = TestCase()
 
-class TestUpgrade(unittest.TestCase):
-    """Test the upgrade class."""
 
-    @patch("charm.KubernetesServicePatch", lambda x, y: None)
-    def setUp(self):
+@pytest.fixture(autouse=True)
+def harness():
+    with patch("charm.KubernetesServicePatch", lambda x, y: None):
         """Set up the test."""
-        self.patcher = patch("lightkube.core.client.GenericSyncClient")
-        self.patcher.start()
-        self.harness = Harness(PostgresqlOperatorCharm)
-        self.harness.begin()
-        self.upgrade_relation_id = self.harness.add_relation("upgrade", "postgresql-k8s")
-        self.peer_relation_id = self.harness.add_relation("database-peers", "postgresql-k8s")
-        for rel_id in (self.upgrade_relation_id, self.peer_relation_id):
-            self.harness.add_relation_unit(rel_id, "postgresql-k8s/1")
-        with self.harness.hooks_disabled():
-            self.harness.update_relation_data(
-                self.upgrade_relation_id, "postgresql-k8s/1", {"state": "idle"}
+        patcher = patch("lightkube.core.client.GenericSyncClient")
+        patcher.start()
+        harness = Harness(PostgresqlOperatorCharm)
+        harness.begin()
+        upgrade_relation_id = harness.add_relation("upgrade", "postgresql-k8s")
+        peer_relation_id = harness.add_relation("database-peers", "postgresql-k8s")
+        for rel_id in (upgrade_relation_id, peer_relation_id):
+            harness.add_relation_unit(rel_id, "postgresql-k8s/1")
+        with harness.hooks_disabled():
+            harness.update_relation_data(
+                upgrade_relation_id, "postgresql-k8s/1", {"state": "idle"}
             )
-        self.charm = self.harness.charm
+        yield harness
+        harness.cleanup()
 
-    def test_is_no_sync_member(self):
-        # Test when there is no list of sync-standbys in the relation data.
-        self.assertFalse(self.charm.upgrade.is_no_sync_member)
 
-        # Test when the current unit is not part of the list of sync-standbys
-        # from the relation data.
-        with self.harness.hooks_disabled():
-            self.harness.update_relation_data(
-                self.upgrade_relation_id,
-                self.charm.app.name,
-                {"sync-standbys": '["postgresql-k8s/1", "postgresql-k8s/2"]'},
-            )
-        self.assertTrue(self.charm.upgrade.is_no_sync_member)
+def test_is_no_sync_member(harness):
+    # Test when there is no list of sync-standbys in the relation data.
+    tc.assertFalse(harness.charm.upgrade.is_no_sync_member)
+    upgrade_relation_id = harness.model.get_relation("upgrade").id
 
-        # Test when the current unit is part of the list of sync-standbys from the relation data.
-        with self.harness.hooks_disabled():
-            self.harness.update_relation_data(
-                self.upgrade_relation_id,
-                self.charm.app.name,
-                {
-                    "sync-standbys": f'["{self.charm.unit.name}", "postgresql-k8s/1", "postgresql-k8s/2"]'
-                },
-            )
-        self.assertFalse(self.charm.upgrade.is_no_sync_member)
+    # Test when the current unit is not part of the list of sync-standbys
+    # from the relation data.
+    with harness.hooks_disabled():
+        harness.update_relation_data(
+            upgrade_relation_id,
+            harness.charm.app.name,
+            {"sync-standbys": '["postgresql-k8s/1", "postgresql-k8s/2"]'},
+        )
+    tc.assertTrue(harness.charm.upgrade.is_no_sync_member)
 
-    @patch("charm.PostgresqlOperatorCharm.update_config")
-    @patch("upgrade.logger.info")
-    def test_log_rollback(self, mock_logging, _update_config):
-        self.charm.upgrade.log_rollback_instructions()
+    # Test when the current unit is part of the list of sync-standbys from the relation data.
+    with harness.hooks_disabled():
+        harness.update_relation_data(
+            upgrade_relation_id,
+            harness.charm.app.name,
+            {
+                "sync-standbys": f'["{harness.charm.unit.name}", "postgresql-k8s/1", "postgresql-k8s/2"]'
+            },
+        )
+    tc.assertFalse(harness.charm.upgrade.is_no_sync_member)
+
+
+def test_log_rollback(harness):
+    with (
+        patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
+        patch("upgrade.logger.info") as mock_logging,
+    ):
+        harness.charm.upgrade.log_rollback_instructions()
         calls = [
             call(
                 "Run `juju refresh --revision <previous-revision> postgresql-k8s` to initiate the rollback"
@@ -75,38 +83,40 @@ class TestUpgrade(unittest.TestCase):
         ]
         mock_logging.assert_has_calls(calls)
 
-    @patch("charms.data_platform_libs.v0.upgrade.DataUpgrade.set_unit_failed")
-    @patch("charms.data_platform_libs.v0.upgrade.DataUpgrade.set_unit_completed")
-    @patch("charm.Patroni.is_replication_healthy", new_callable=PropertyMock)
-    @patch("charm.Patroni.cluster_members", new_callable=PropertyMock)
-    @patch("upgrade.wait_fixed", return_value=tenacity.wait_fixed(0))
-    @patch("charm.Patroni.member_started", new_callable=PropertyMock)
-    def test_on_postgresql_pebble_ready(
-        self,
-        _member_started,
-        _,
-        _cluster_members,
-        _is_replication_healthy,
-        _set_unit_completed,
-        _set_unit_failed,
+
+def test_on_postgresql_pebble_ready(harness):
+    with (
+        patch(
+            "charms.data_platform_libs.v0.upgrade.DataUpgrade.set_unit_failed"
+        ) as _set_unit_failed,
+        patch(
+            "charms.data_platform_libs.v0.upgrade.DataUpgrade.set_unit_completed"
+        ) as _set_unit_completed,
+        patch(
+            "charm.Patroni.is_replication_healthy", new_callable=PropertyMock
+        ) as _is_replication_healthy,
+        patch("charm.Patroni.cluster_members", new_callable=PropertyMock) as _cluster_members,
+        patch("upgrade.wait_fixed", return_value=tenacity.wait_fixed(0)),
+        patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
     ):
         # Set some side effects to test multiple situations.
         _member_started.side_effect = [False, True, True, True]
+        upgrade_relation_id = harness.model.get_relation("upgrade").id
 
         # Test when the unit status is different from "upgrading".
         mock_event = MagicMock()
-        self.charm.upgrade._on_postgresql_pebble_ready(mock_event)
+        harness.charm.upgrade._on_postgresql_pebble_ready(mock_event)
         _member_started.assert_not_called()
         mock_event.defer.assert_not_called()
         _set_unit_completed.assert_not_called()
         _set_unit_failed.assert_not_called()
 
         # Test when the unit status is equal to "upgrading", but the member hasn't started yet.
-        with self.harness.hooks_disabled():
-            self.harness.update_relation_data(
-                self.upgrade_relation_id, self.charm.unit.name, {"state": "upgrading"}
+        with harness.hooks_disabled():
+            harness.update_relation_data(
+                upgrade_relation_id, harness.charm.unit.name, {"state": "upgrading"}
             )
-        self.charm.upgrade._on_postgresql_pebble_ready(mock_event)
+        harness.charm.upgrade._on_postgresql_pebble_ready(mock_event)
         _member_started.assert_called_once()
         mock_event.defer.assert_called_once()
         _set_unit_completed.assert_not_called()
@@ -117,7 +127,7 @@ class TestUpgrade(unittest.TestCase):
         _member_started.reset_mock()
         mock_event.defer.reset_mock()
         _cluster_members.return_value = ["postgresql-k8s-1"]
-        self.charm.upgrade._on_postgresql_pebble_ready(mock_event)
+        harness.charm.upgrade._on_postgresql_pebble_ready(mock_event)
         _member_started.assert_called_once()
         mock_event.defer.assert_not_called()
         _set_unit_completed.assert_not_called()
@@ -128,11 +138,11 @@ class TestUpgrade(unittest.TestCase):
         _set_unit_failed.reset_mock()
         mock_event.defer.reset_mock()
         _cluster_members.return_value = [
-            self.charm.unit.name.replace("/", "-"),
+            harness.charm.unit.name.replace("/", "-"),
             "postgresql-k8s-1",
         ]
         _is_replication_healthy.return_value = False
-        self.charm.upgrade._on_postgresql_pebble_ready(mock_event)
+        harness.charm.upgrade._on_postgresql_pebble_ready(mock_event)
         mock_event.defer.assert_not_called()
         _set_unit_completed.assert_not_called()
         _set_unit_failed.assert_called_once()
@@ -142,44 +152,44 @@ class TestUpgrade(unittest.TestCase):
         _set_unit_failed.reset_mock()
         mock_event.defer.reset_mock()
         _is_replication_healthy.return_value = True
-        self.charm.upgrade._on_postgresql_pebble_ready(mock_event)
+        harness.charm.upgrade._on_postgresql_pebble_ready(mock_event)
         _member_started.assert_called_once()
         mock_event.defer.assert_not_called()
         _set_unit_completed.assert_called_once()
         _set_unit_failed.assert_not_called()
 
-    @patch("charm.PostgresqlOperatorCharm.update_config")
-    @patch("charm.Patroni.member_started", new_callable=PropertyMock)
-    def test_on_upgrade_changed(self, _member_started, _update_config):
+
+def test_on_upgrade_changed(harness):
+    with (
+        patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
+        patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
+    ):
         _member_started.return_value = False
-        relation = self.harness.model.get_relation("upgrade")
-        self.charm.on.upgrade_relation_changed.emit(relation)
+        relation = harness.model.get_relation("upgrade")
+        harness.charm.on.upgrade_relation_changed.emit(relation)
         _update_config.assert_not_called()
 
         _member_started.return_value = True
-        self.charm.on.upgrade_relation_changed.emit(relation)
+        harness.charm.on.upgrade_relation_changed.emit(relation)
         _update_config.assert_called_once()
 
-    @patch("charm.PostgreSQLUpgrade._set_rolling_update_partition")
-    @patch("charm.PostgreSQLUpgrade._set_list_of_sync_standbys")
-    @patch("charm.Patroni.switchover")
-    @patch("charm.Patroni.get_sync_standby_names")
-    @patch("charm.PostgresqlOperatorCharm.update_config")
-    @patch("charm.Patroni.get_primary")
-    @patch("charm.Patroni.is_creating_backup", new_callable=PropertyMock)
-    @patch("charm.Patroni.are_all_members_ready")
-    def test_pre_upgrade_check(
-        self,
-        _are_all_members_ready,
-        _is_creating_backup,
-        _get_primary,
-        _update_config,
-        _get_sync_standby_names,
-        _switchover,
-        _set_list_of_sync_standbys,
-        _set_rolling_update_partition,
+
+def test_pre_upgrade_check(harness):
+    with (
+        patch(
+            "charm.PostgreSQLUpgrade._set_rolling_update_partition"
+        ) as _set_rolling_update_partition,
+        patch("charm.PostgreSQLUpgrade._set_list_of_sync_standbys") as _set_list_of_sync_standbys,
+        patch("charm.Patroni.switchover") as _switchover,
+        patch("charm.Patroni.get_sync_standby_names") as _get_sync_standby_names,
+        patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
+        patch("charm.Patroni.get_primary") as _get_primary,
+        patch(
+            "charm.Patroni.is_creating_backup", new_callable=PropertyMock
+        ) as _is_creating_backup,
+        patch("charm.Patroni.are_all_members_ready") as _are_all_members_ready,
     ):
-        self.harness.set_leader(True)
+        harness.set_leader(True)
 
         # Set some side effects to test multiple situations.
         _are_all_members_ready.side_effect = [False, True, True, True, True, True, True]
@@ -187,50 +197,54 @@ class TestUpgrade(unittest.TestCase):
         _switchover.side_effect = [None, SwitchoverFailedError]
 
         # Test when not all members are ready.
-        with self.assertRaises(ClusterNotReadyError):
-            self.charm.upgrade.pre_upgrade_check()
+        with tc.assertRaises(ClusterNotReadyError):
+            harness.charm.upgrade.pre_upgrade_check()
         _switchover.assert_not_called()
         _set_list_of_sync_standbys.assert_not_called()
         _set_rolling_update_partition.assert_not_called()
 
         # Test when a backup is being created.
-        with self.assertRaises(ClusterNotReadyError):
-            self.charm.upgrade.pre_upgrade_check()
+        with tc.assertRaises(ClusterNotReadyError):
+            harness.charm.upgrade.pre_upgrade_check()
         _switchover.assert_not_called()
         _set_list_of_sync_standbys.assert_not_called()
         _set_rolling_update_partition.assert_not_called()
 
         # Test when the primary is already the first unit.
-        unit_zero_name = f"{self.charm.app.name}/0"
+        unit_zero_name = f"{harness.charm.app.name}/0"
         _get_primary.return_value = unit_zero_name
-        self.charm.upgrade.pre_upgrade_check()
+        harness.charm.upgrade.pre_upgrade_check()
         _switchover.assert_not_called()
         _set_list_of_sync_standbys.assert_not_called()
-        _set_rolling_update_partition.assert_called_once_with(self.charm.app.planned_units() - 1)
+        _set_rolling_update_partition.assert_called_once_with(
+            harness.charm.app.planned_units() - 1
+        )
 
         # Test when there are no sync-standbys.
         _set_rolling_update_partition.reset_mock()
-        _get_primary.return_value = f"{self.charm.app.name}/1"
+        _get_primary.return_value = f"{harness.charm.app.name}/1"
         _get_sync_standby_names.return_value = []
-        with self.assertRaises(ClusterNotReadyError):
-            self.charm.upgrade.pre_upgrade_check()
+        with tc.assertRaises(ClusterNotReadyError):
+            harness.charm.upgrade.pre_upgrade_check()
         _switchover.assert_not_called()
         _set_list_of_sync_standbys.assert_not_called()
         _set_rolling_update_partition.assert_not_called()
 
         # Test when the first unit is a sync-standby.
         _set_rolling_update_partition.reset_mock()
-        _get_sync_standby_names.return_value = [unit_zero_name, f"{self.charm.app.name}/2"]
-        self.charm.upgrade.pre_upgrade_check()
+        _get_sync_standby_names.return_value = [unit_zero_name, f"{harness.charm.app.name}/2"]
+        harness.charm.upgrade.pre_upgrade_check()
         _switchover.assert_called_once_with(unit_zero_name)
         _set_list_of_sync_standbys.assert_not_called()
-        _set_rolling_update_partition.assert_called_once_with(self.charm.app.planned_units() - 1)
+        _set_rolling_update_partition.assert_called_once_with(
+            harness.charm.app.planned_units() - 1
+        )
 
         # Test when the switchover fails.
         _switchover.reset_mock()
         _set_rolling_update_partition.reset_mock()
-        with self.assertRaises(ClusterNotReadyError):
-            self.charm.upgrade.pre_upgrade_check()
+        with tc.assertRaises(ClusterNotReadyError):
+            harness.charm.upgrade.pre_upgrade_check()
         _switchover.assert_called_once_with(unit_zero_name)
         _set_list_of_sync_standbys.assert_not_called()
         _set_rolling_update_partition.assert_not_called()
@@ -238,15 +252,18 @@ class TestUpgrade(unittest.TestCase):
         # Test when the first unit is neither the primary nor a sync-standby.
         _switchover.reset_mock()
         _set_rolling_update_partition.reset_mock()
-        _get_sync_standby_names.return_value = f'["{self.charm.app.name}/2"]'
-        with self.assertRaises(ClusterNotReadyError):
-            self.charm.upgrade.pre_upgrade_check()
+        _get_sync_standby_names.return_value = f'["{harness.charm.app.name}/2"]'
+        with tc.assertRaises(ClusterNotReadyError):
+            harness.charm.upgrade.pre_upgrade_check()
         _switchover.assert_not_called()
         _set_list_of_sync_standbys.assert_called_once()
         _set_rolling_update_partition.assert_not_called()
 
-    @patch("charm.Patroni.get_sync_standby_names")
-    def test_set_list_of_sync_standbys(self, _get_sync_standby_names):
+
+def test_set_list_of_sync_standbys(harness):
+    with patch("charm.Patroni.get_sync_standby_names") as _get_sync_standby_names:
+        upgrade_relation_id = harness.model.get_relation("upgrade").id
+        peer_relation_id = harness.model.get_relation("database-peers").id
         # Mock some return values.
         _get_sync_standby_names.side_effect = [
             ["postgresql-k8s/1"],
@@ -255,72 +272,67 @@ class TestUpgrade(unittest.TestCase):
         ]
 
         # Test when the there are less than 3 units in the cluster.
-        self.charm.upgrade._set_list_of_sync_standbys()
-        self.assertNotIn(
+        harness.charm.upgrade._set_list_of_sync_standbys()
+        tc.assertNotIn(
             "sync-standbys",
-            self.harness.get_relation_data(self.upgrade_relation_id, self.charm.app),
+            harness.get_relation_data(upgrade_relation_id, harness.charm.app),
         )
 
         # Test when the there are 3 units in the cluster.
-        for rel_id in (self.upgrade_relation_id, self.peer_relation_id):
-            self.harness.add_relation_unit(rel_id, "postgresql-k8s/2")
-        with self.harness.hooks_disabled():
-            self.harness.update_relation_data(
-                self.upgrade_relation_id, "postgresql-k8s/2", {"state": "idle"}
+        for rel_id in (upgrade_relation_id, peer_relation_id):
+            harness.add_relation_unit(rel_id, "postgresql-k8s/2")
+        with harness.hooks_disabled():
+            harness.update_relation_data(
+                upgrade_relation_id, "postgresql-k8s/2", {"state": "idle"}
             )
-        self.charm.upgrade._set_list_of_sync_standbys()
-        self.assertEqual(
-            self.harness.get_relation_data(self.upgrade_relation_id, self.charm.app)[
-                "sync-standbys"
-            ],
+        harness.charm.upgrade._set_list_of_sync_standbys()
+        tc.assertEqual(
+            harness.get_relation_data(upgrade_relation_id, harness.charm.app)["sync-standbys"],
             '["postgresql-k8s/0"]',
         )
 
         # Test when the unit zero is already a sync-standby.
-        for rel_id in (self.upgrade_relation_id, self.peer_relation_id):
-            self.harness.add_relation_unit(rel_id, "postgresql-k8s/3")
-        with self.harness.hooks_disabled():
-            self.harness.update_relation_data(
-                self.upgrade_relation_id, "postgresql-k8s/3", {"state": "idle"}
+        for rel_id in (upgrade_relation_id, peer_relation_id):
+            harness.add_relation_unit(rel_id, "postgresql-k8s/3")
+        with harness.hooks_disabled():
+            harness.update_relation_data(
+                upgrade_relation_id, "postgresql-k8s/3", {"state": "idle"}
             )
-        self.charm.upgrade._set_list_of_sync_standbys()
-        self.assertEqual(
-            self.harness.get_relation_data(self.upgrade_relation_id, self.charm.app)[
-                "sync-standbys"
-            ],
+        harness.charm.upgrade._set_list_of_sync_standbys()
+        tc.assertEqual(
+            harness.get_relation_data(upgrade_relation_id, harness.charm.app)["sync-standbys"],
             '["postgresql-k8s/0", "postgresql-k8s/1"]',
         )
 
         # Test when the unit zero is not a sync-standby yet.
-        self.charm.upgrade._set_list_of_sync_standbys()
-        self.assertEqual(
-            self.harness.get_relation_data(self.upgrade_relation_id, self.charm.app)[
-                "sync-standbys"
-            ],
+        harness.charm.upgrade._set_list_of_sync_standbys()
+        tc.assertEqual(
+            harness.get_relation_data(upgrade_relation_id, harness.charm.app)["sync-standbys"],
             '["postgresql-k8s/1", "postgresql-k8s/0"]',
         )
 
-    @patch("upgrade.Client")
-    def test_set_rolling_update_partition(self, _client):
+
+def test_set_rolling_update_partition(harness):
+    with patch("upgrade.Client") as _client:
         # Test the successful operation.
-        self.charm.upgrade._set_rolling_update_partition(2)
+        harness.charm.upgrade._set_rolling_update_partition(2)
         _client.return_value.patch.assert_called_once_with(
             StatefulSet,
-            name=self.charm.app.name,
-            namespace=self.charm.model.name,
+            name=harness.charm.app.name,
+            namespace=harness.charm.model.name,
             obj={"spec": {"updateStrategy": {"rollingUpdate": {"partition": 2}}}},
         )
 
         # Test an operation that failed due to lack of Juju's trust flag.
         _client.return_value.patch.reset_mock()
         _client.return_value.patch.side_effect = _FakeApiError(403)
-        with self.assertRaises(KubernetesClientError) as exception:
-            self.charm.upgrade._set_rolling_update_partition(2)
-        self.assertEqual(exception.exception.cause, "`juju trust` needed")
+        with tc.assertRaises(KubernetesClientError) as exception:
+            harness.charm.upgrade._set_rolling_update_partition(2)
+        tc.assertEqual(exception.exception.cause, "`juju trust` needed")
 
         # Test an operation that failed due to some other reason.
         _client.return_value.patch.reset_mock()
         _client.return_value.patch.side_effect = _FakeApiError
-        with self.assertRaises(KubernetesClientError) as exception:
-            self.charm.upgrade._set_rolling_update_partition(2)
-        self.assertEqual(exception.exception.cause, "broken")
+        with tc.assertRaises(KubernetesClientError) as exception:
+            harness.charm.upgrade._set_rolling_update_partition(2)
+        tc.assertEqual(exception.exception.cause, "broken")
