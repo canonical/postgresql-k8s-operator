@@ -204,6 +204,7 @@ def test_on_postgresql_pebble_ready_no_connection(harness):
 
 def test_on_get_password(harness):
     # Create a mock event and set passwords in peer relation data.
+    harness.set_leader(True)
     mock_event = MagicMock(params={})
     rel_id = harness.model.get_relation(PEER).id
     harness.update_relation_data(
@@ -804,18 +805,20 @@ def test_get_secret(harness):
         # App level changes require leader privileges
         harness.set_leader()
         # Test application scope.
-        assert harness.charm.get_secret("app", "password") is None
-        harness.update_relation_data(rel_id, harness.charm.app.name, {"password": "test-password"})
-        assert harness.charm.get_secret("app", "password") == "test-password"
+        assert harness.charm.get_secret("app", "operator_password") is None
+        harness.update_relation_data(
+            rel_id, harness.charm.app.name, {"operator_password": "test-password"}
+        )
+        assert harness.charm.get_secret("app", "operator_password") == "test-password"
 
         # Unit level changes don't require leader privileges
         harness.set_leader(False)
         # Test unit scope.
-        assert harness.charm.get_secret("unit", "password") is None
+        assert harness.charm.get_secret("unit", "operator_password") is None
         harness.update_relation_data(
-            rel_id, harness.charm.unit.name, {"password": "test-password"}
+            rel_id, harness.charm.unit.name, {"operator_password": "test-password"}
         )
-        assert harness.charm.get_secret("unit", "password") == "test-password"
+        assert harness.charm.get_secret("unit", "operator_password") == "test-password"
 
 
 @patch_network_get(private_address="1.1.1.1")
@@ -870,20 +873,14 @@ def test_set_secret(harness):
         # Test application scope.
         assert "password" not in harness.get_relation_data(rel_id, harness.charm.app.name)
         harness.charm.set_secret("app", "password", "test-password")
-        assert (
-            harness.get_relation_data(rel_id, harness.charm.app.name)["password"]
-            == "test-password"
-        )
+        assert harness.charm.get_secret("app", "password") == "test-password"
         harness.charm.set_secret("app", "password", None)
         assert "password" not in harness.get_relation_data(rel_id, harness.charm.app.name)
 
         # Test unit scope.
         assert "password" not in harness.get_relation_data(rel_id, harness.charm.unit.name)
         harness.charm.set_secret("unit", "password", "test-password")
-        assert (
-            harness.get_relation_data(rel_id, harness.charm.unit.name)["password"]
-            == "test-password"
-        )
+        assert harness.charm.get_secret("unit", "password") == "test-password"
         harness.charm.set_secret("unit", "password", None)
         assert "password" not in harness.get_relation_data(rel_id, harness.charm.unit.name)
 
@@ -922,7 +919,7 @@ def test_invalid_secret(harness, scope, is_leader):
         # App has to be leader, unit can be either
         harness.set_leader(is_leader)
 
-        with tc.assertRaises(RelationDataTypeError):
+        with tc.assertRaises((RelationDataTypeError, TypeError)):
             harness.charm.set_secret(scope, "somekey", 1)
 
         harness.charm.set_secret(scope, "somekey", "")
@@ -946,7 +943,7 @@ def test_delete_password(harness, juju_has_secrets, caplog):
         assert harness.charm.get_secret("unit", "operator-password") is None
 
         harness.set_leader(True)
-        with caplog.at_level(logging.ERROR):
+        with caplog.at_level(logging.DEBUG):
             if juju_has_secrets:
                 error_message = (
                     "Non-existing secret operator-password was attempted to be removed."
@@ -993,12 +990,12 @@ def test_migration_from_databag(harness, juju_has_secrets, scope, is_leader):
 
         # Getting current password
         entity = getattr(harness.charm, scope)
-        harness.update_relation_data(rel_id, entity.name, {"operator-password": "bla"})
-        assert harness.charm.get_secret(scope, "operator-password") == "bla"
+        harness.update_relation_data(rel_id, entity.name, {"operator_password": "bla"})
+        assert harness.charm.get_secret(scope, "operator_password") == "bla"
 
         # Reset new secret
         harness.charm.set_secret(scope, "operator-password", "blablabla")
-        assert harness.charm.model.get_secret(label=f"postgresql-k8s.{scope}")
+        assert harness.charm.model.get_secret(label=f"{PEER}.postgresql-k8s.{scope}")
         assert harness.charm.get_secret(scope, "operator-password") == "blablabla"
         assert "operator-password" not in harness.get_relation_data(
             rel_id, getattr(harness.charm, scope).name
@@ -1036,7 +1033,7 @@ def test_migration_from_single_secret(harness, juju_has_secrets, scope, is_leade
         harness.charm.set_secret(scope, "operator-password", "blablabla")
         with harness.hooks_disabled():
             harness.set_leader(is_leader)
-        assert harness.charm.model.get_secret(label=f"postgresql-k8s.{scope}")
+        assert harness.charm.model.get_secret(label=f"{PEER}.postgresql-k8s.{scope}")
         assert harness.charm.get_secret(scope, "operator-password") == "blablabla"
         assert SECRET_INTERNAL_LABEL not in harness.get_relation_data(
             rel_id, getattr(harness.charm, scope).name
