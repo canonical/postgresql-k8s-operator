@@ -341,10 +341,13 @@ async def test_restore_on_new_cluster(ops_test: OpsTest, github_secrets) -> None
             assert restore_status, "restore hasn't succeeded"
 
     # Wait for the restore to complete.
-    async with ops_test.fast_forward(fast_interval="60s"):
-        unit = ops_test.model.units.get(f"{database_app_name}/0")
-        await ops_test.model.block_until(
-            lambda: unit.workload_status_message == ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE
+    async with ops_test.fast_forward():
+        await wait_for_idle_on_blocked(
+            ops_test,
+            database_app_name,
+            0,
+            S3_INTEGRATOR_APP_NAME,
+            ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE,
         )
 
     # Check that the backup was correctly restored by having only the first created table.
@@ -386,9 +389,12 @@ async def test_invalid_config_and_recovery_after_fixing_it(
     )
     await action.wait()
     logger.info("waiting for the database charm to become blocked")
-    unit = ops_test.model.units.get(f"{database_app_name}/0")
-    await ops_test.model.block_until(
-        lambda: unit.workload_status_message == FAILED_TO_ACCESS_CREATE_BUCKET_ERROR_MESSAGE
+    await wait_for_idle_on_blocked(
+        ops_test,
+        database_app_name,
+        0,
+        S3_INTEGRATOR_APP_NAME,
+        FAILED_TO_ACCESS_CREATE_BUCKET_ERROR_MESSAGE,
     )
 
     # Provide valid backup configurations, but from another cluster repository.
@@ -401,9 +407,12 @@ async def test_invalid_config_and_recovery_after_fixing_it(
         **cloud_configs[1][AWS],
     )
     await action.wait()
-    unit = ops_test.model.units.get(f"{database_app_name}/0")
-    await ops_test.model.block_until(
-        lambda: unit.workload_status_message == ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE
+    await wait_for_idle_on_blocked(
+        ops_test,
+        database_app_name,
+        0,
+        S3_INTEGRATOR_APP_NAME,
+        ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE,
     )
 
     # Provide valid backup configurations, with another path in the S3 bucket.

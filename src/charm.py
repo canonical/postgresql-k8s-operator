@@ -21,9 +21,7 @@ from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServ
 from charms.postgresql_k8s.v0.postgresql import (
     REQUIRED_PLUGINS,
     PostgreSQL,
-    PostgreSQLCreateUserError,
     PostgreSQLEnableDisableExtensionError,
-    PostgreSQLListUsersError,
     PostgreSQLUpdateUserPasswordError,
 )
 from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
@@ -54,7 +52,7 @@ from ops.model import (
 )
 from ops.pebble import ChangeError, Layer, PathError, ProtocolError, ServiceStatus
 from requests import ConnectionError
-from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
+from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from backups import PostgreSQLBackups
 from config import CharmConfig
@@ -459,10 +457,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         try:
             self._validate_config_options()
             # update config on every run
-            if not self.update_config():
-                logger.debug("Defer on_config_changed: cannot update configuration")
-                event.defer()
-                return
+            self.update_config()
         except psycopg2.OperationalError:
             logger.debug("Defer on_config_changed: Cannot connect to database")
             event.defer()
@@ -481,7 +476,20 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Enable and/or disable the extensions.
         self.enable_disable_extensions()
 
-        self.clear_extensions_blocked_status()
+        # Unblock the charm after extensions are enabled (only if it's blocked due to application
+        # charms requesting extensions).
+        if self.unit.status.message != EXTENSIONS_BLOCKING_MESSAGE:
+            return
+
+        for relation in [
+            *self.model.relations.get("db", []),
+            *self.model.relations.get("db-admin", []),
+        ]:
+            if not self.legacy_db_relation.set_up_relation(relation):
+                logger.debug(
+                    "Early exit on_config_changed: legacy relation requested extensions that are still disabled"
+                )
+                return
 
     def enable_disable_extensions(self, database: str = None) -> None:
         """Enable/disable PostgreSQL extensions set through config options.
@@ -518,21 +526,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.exception("failed to change plugins: %s", str(e))
         if not isinstance(original_status, UnknownStatus):
             self.unit.status = original_status
-
-    def clear_extensions_blocked_status(self):
-        """Unblock the charm after extensions are enabled (only if it's blocked due to application charms requesting extensions)."""
-        if self.unit.status.message != EXTENSIONS_BLOCKING_MESSAGE:
-            return
-
-        for relation in [
-            *self.model.relations.get("db", []),
-            *self.model.relations.get("db-admin", []),
-        ]:
-            if not self.legacy_db_relation.set_up_relation(relation):
-                logger.debug(
-                    "Early exit on_config_changed: legacy relation requested extensions that are still disabled"
-                )
-                return
 
     def _check_extension_dependencies(self, extension: str, enable: bool) -> bool:
         skip = False
@@ -781,32 +774,17 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             event.defer()
             return False
 
-        # Create the default postgres database user that is needed for some
-        # applications (not charms) like Landscape Server.
-        try:
-            # This event can be run on a replica if the machines are restarted.
-            # For that case, check whether the postgres user already exits.
-            users = self.postgresql.list_users()
-            if "postgres" not in users:
-                self.postgresql.create_user("postgres", new_password(), admin=True)
-                # Create the backup user.
-            if BACKUP_USER not in users:
-                self.postgresql.create_user(BACKUP_USER, new_password(), admin=True)
-            if MONITORING_USER not in users:
-                # Create the monitoring user.
-                self.postgresql.create_user(
-                    MONITORING_USER,
-                    self.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY),
-                    extra_user_roles="pg_monitor",
-                )
-        except PostgreSQLCreateUserError as e:
-            logger.exception(e)
-            self.unit.status = BlockedStatus("Failed to create postgres user")
-            return
-        except PostgreSQLListUsersError:
-            logger.warning("Deferriing on_start: Unable to list users")
-            event.defer()
-            return
+        pg_users = self.postgresql.list_users()
+        # Create the backup user.
+        if BACKUP_USER not in pg_users:
+            self.postgresql.create_user(BACKUP_USER, new_password(), admin=True)
+        # Create the monitoring user.
+        if MONITORING_USER not in pg_users:
+            self.postgresql.create_user(
+                MONITORING_USER,
+                self.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY),
+                extra_user_roles="pg_monitor",
+            )
 
         self.postgresql.set_up_database()
 
@@ -1390,14 +1368,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.unit.status = BlockedStatus(error_message)
             return
 
-        try:
-            for attempt in Retrying(wait=wait_fixed(3), stop_after_delay=stop_after_delay(300)):
-                with attempt:
-                    if not self._can_connect_to_postgresql:
-                        assert False
-        except Exception:
-            logger.exception("Unable to reconnect to postgresql")
-
         # Update health check URL.
         self._update_pebble_layers()
 
@@ -1416,17 +1386,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return False
 
         return services[0].current == ServiceStatus.ACTIVE
-
-    @property
-    def _can_connect_to_postgresql(self) -> bool:
-        try:
-            for attempt in Retrying(stop=stop_after_delay(30), wait=wait_fixed(3)):
-                with attempt:
-                    assert self.postgresql.get_postgresql_timezones()
-        except RetryError:
-            logger.debug("Cannot connect to database")
-            return False
-        return True
 
     def update_config(self, is_creating_backup: bool = False) -> bool:
         """Updates Patroni config file based on the existence of the TLS files."""
@@ -1478,11 +1437,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         if not self._patroni.member_started:
             logger.debug("Early exit update_config: Patroni not started yet")
-            return False
-
-        # Try to connect
-        if not self._can_connect_to_postgresql:
-            logger.warning("Early exit update_config: Cannot connect to Postgresql")
             return False
 
         self._patroni.bulk_update_parameters_controller_by_patroni({
@@ -1542,7 +1496,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # which tells how much time Patroni will wait before checking the configuration
         # file again to reload it.
         try:
-            for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(3)):
+            for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3)):
                 with attempt:
                     restart_postgresql = restart_postgresql or self.postgresql.is_restart_pending()
                     if not restart_postgresql:
