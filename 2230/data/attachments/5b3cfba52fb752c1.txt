@@ -1,0 +1,104 @@
+[32mINFO    [0m integration.test_backups:test_backups.py:376 configuring S3 integrator for an invalid cloud
+[32mINFO    [0m integration.test_backups:test_backups.py:391 waiting for the database charm to become blocked
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  new-postgresql-k8s/0 [executing] blocked: the S3 repository has backups from another cluster
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  s3-integrator/0 [executing] active: 
+[32mINFO    [0m integration.test_backups:test_backups.py:401 configuring S3 integrator for a valid cloud, but with the path of another cluster repository
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  s3-integrator/0 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  new-postgresql-k8s/0 [executing] blocked: failed to access/create the bucket, check your S3 settings
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  new-postgresql-k8s/0 [idle] blocked: the S3 repository has backups from another cluster
+[32mINFO    [0m integration.test_backups:test_backups.py:419 configuring S3 integrator for a valid cloud
+[32mINFO    [0m integration.test_backups:test_backups.py:423 waiting for the database charm to become active
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  new-postgresql-k8s/0 [idle] blocked: the S3 repository has backups from another cluster
+  s3-integrator/0 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  new-postgresql-k8s/0 [executing] maintenance: checking stanza
+[32mINFO    [0m integration.test_backups:test_backups.py:77 deleting the previously created backups
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.7    unsupported  02:39:55Z
+
+App                 Version  Status  Scale  Charm           Channel        Rev  Address        Exposed  Message
+new-postgresql-k8s  14.11    active      1  postgresql-k8s                   3  10.152.183.24  no       Primary
+s3-integrator                active      1  s3-integrator   latest/stable   17  10.152.183.47  no       
+
+Unit                   Workload  Agent  Address       Ports  Message
+new-postgresql-k8s/0*  active    idle   10.1.135.150         Primary
+s3-integrator/0*       active    idle   10.1.135.136         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-postgresql-k8s-aws-1: 02:00:00 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Non-existing secret cauth was attempted to be removed.
+unit-postgresql-k8s-aws-1: 02:00:00 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Can't update secret for relation 3
+unit-postgresql-k8s-aws-1: 02:00:00 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Non-existing field 'cauth' was attempted to be removed from the databag (relation ID: 3)
+unit-postgresql-k8s-aws-1: 02:00:00 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Non-existing secret cert was attempted to be removed.
+unit-postgresql-k8s-aws-1: 02:00:00 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Can't update secret for relation 3
+unit-postgresql-k8s-aws-1: 02:00:00 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Non-existing field 'cert' was attempted to be removed from the databag (relation ID: 3)
+unit-postgresql-k8s-aws-1: 02:00:00 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Non-existing secret chain was attempted to be removed.
+unit-postgresql-k8s-aws-1: 02:00:00 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Can't update secret for relation 3
+unit-postgresql-k8s-aws-1: 02:00:00 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Non-existing field 'chain' was attempted to be removed from the databag (relation ID: 3)
+controller-0: 02:06:22 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql-k8s-aws": getting OCI image resources: unable to fetch OCI image resources for postgresql-k8s-aws: application "postgresql-k8s-aws" dying or dead
+unit-postgresql-k8s-gcp-1: 02:23:33 ERROR unit.postgresql-k8s-gcp/1.juju-log certificates:10: Non-existing secret cauth was attempted to be removed.
+unit-postgresql-k8s-gcp-1: 02:23:33 ERROR unit.postgresql-k8s-gcp/1.juju-log certificates:10: Can't update secret for relation 6
+unit-postgresql-k8s-gcp-1: 02:23:33 ERROR unit.postgresql-k8s-gcp/1.juju-log certificates:10: Non-existing field 'cauth' was attempted to be removed from the databag (relation ID: 6)
+unit-postgresql-k8s-gcp-1: 02:23:33 ERROR unit.postgresql-k8s-gcp/1.juju-log certificates:10: Non-existing secret cert was attempted to be removed.
+unit-postgresql-k8s-gcp-1: 02:23:33 ERROR unit.postgresql-k8s-gcp/1.juju-log certificates:10: Can't update secret for relation 6
+unit-postgresql-k8s-gcp-1: 02:23:33 ERROR unit.postgresql-k8s-gcp/1.juju-log certificates:10: Non-existing field 'cert' was attempted to be removed from the databag (relation ID: 6)
+unit-postgresql-k8s-gcp-1: 02:23:33 ERROR unit.postgresql-k8s-gcp/1.juju-log certificates:10: Non-existing secret chain was attempted to be removed.
+unit-postgresql-k8s-gcp-1: 02:23:33 ERROR unit.postgresql-k8s-gcp/1.juju-log certificates:10: Can't update secret for relation 6
+unit-postgresql-k8s-gcp-1: 02:23:33 ERROR unit.postgresql-k8s-gcp/1.juju-log certificates:10: Non-existing field 'chain' was attempted to be removed from the databag (relation ID: 6)
+unit-postgresql-k8s-gcp-0: 02:27:00 ERROR unit.postgresql-k8s-gcp/0.juju-log certificates:10: Non-existing secret cauth was attempted to be removed.
+unit-postgresql-k8s-gcp-0: 02:27:00 ERROR unit.postgresql-k8s-gcp/0.juju-log certificates:10: Can't update secret for relation 6
+unit-postgresql-k8s-gcp-0: 02:27:00 ERROR unit.postgresql-k8s-gcp/0.juju-log certificates:10: Non-existing field 'cauth' was attempted to be removed from the databag (relation ID: 6)
+unit-postgresql-k8s-gcp-0: 02:27:00 ERROR unit.postgresql-k8s-gcp/0.juju-log certificates:10: Non-existing secret cert was attempted to be removed.
+unit-postgresql-k8s-gcp-0: 02:27:00 ERROR unit.postgresql-k8s-gcp/0.juju-log certificates:10: Can't update secret for relation 6
+unit-postgresql-k8s-gcp-0: 02:27:00 ERROR unit.postgresql-k8s-gcp/0.juju-log certificates:10: Non-existing field 'cert' was attempted to be removed from the databag (relation ID: 6)
+unit-postgresql-k8s-gcp-0: 02:27:00 ERROR unit.postgresql-k8s-gcp/0.juju-log certificates:10: Non-existing secret chain was attempted to be removed.
+unit-postgresql-k8s-gcp-0: 02:27:00 ERROR unit.postgresql-k8s-gcp/0.juju-log certificates:10: Can't update secret for relation 6
+unit-postgresql-k8s-gcp-0: 02:27:00 ERROR unit.postgresql-k8s-gcp/0.juju-log certificates:10: Non-existing field 'chain' was attempted to be removed from the databag (relation ID: 6)
+unit-new-postgresql-k8s-0: 02:35:31 ERROR unit.new-postgresql-k8s/0.juju-log s3-parameters:18: Failed to create a session 'bucket' in region=region.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/src/backups.py", line 185, in _create_bucket_if_not_exists
+    s3 = session.resource("s3", endpoint_url=self._construct_endpoint(s3_parameters))
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/boto3/session.py", line 446, in resource
+    client = self.client(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/boto3/session.py", line 299, in client
+    return self._session.create_client(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/session.py", line 997, in create_client
+    client = client_creator.create_client(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/client.py", line 161, in create_client
+    client_args = self._get_client_args(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/client.py", line 520, in _get_client_args
+    return args_creator.get_client_args(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/args.py", line 137, in get_client_args
+    endpoint = endpoint_creator.create_endpoint(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/endpoint.py", line 402, in create_endpoint
+    raise ValueError("Invalid endpoint: %s" % endpoint_url)
+ValueError: Invalid endpoint: endpoint
+unit-new-postgresql-k8s-0: 02:35:32 ERROR unit.new-postgresql-k8s/0.juju-log s3-parameters:18: Failed to create a session 'bucket' in region=region.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/src/backups.py", line 185, in _create_bucket_if_not_exists
+    s3 = session.resource("s3", endpoint_url=self._construct_endpoint(s3_parameters))
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/boto3/session.py", line 446, in resource
+    client = self.client(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/boto3/session.py", line 299, in client
+    return self._session.create_client(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/session.py", line 997, in create_client
+    client = client_creator.create_client(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/client.py", line 161, in create_client
+    client_args = self._get_client_args(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/client.py", line 520, in _get_client_args
+    return args_creator.get_client_args(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/args.py", line 137, in get_client_args
+    endpoint = endpoint_creator.create_endpoint(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/endpoint.py", line 402, in create_endpoint
+    raise ValueError("Invalid endpoint: %s" % endpoint_url)
+ValueError: Invalid endpoint: endpoint
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
