@@ -865,7 +865,43 @@ def test_get_secret_secrets(harness, scope):
 
 
 @patch_network_get(private_address="1.1.1.1")
-def test_set_secret(harness):
+def test_set_secret_in_databag(harness, juju_has_secrets):
+    # As this test set secrets using set_secret and checks if they end up
+    # inside the relation databag, this is meant to run on juju2 only
+    if juju_has_secrets:
+        return
+    with patch("charm.PostgresqlOperatorCharm._on_leader_elected"):
+        rel_id = harness.model.get_relation(PEER).id
+        harness.set_leader()
+
+        # Test application scope.
+        assert "password" not in harness.get_relation_data(rel_id, harness.charm.app.name)
+        harness.charm.set_secret("app", "password", "test-password")
+        assert (
+            harness.get_relation_data(rel_id, harness.charm.app.name)["password"]
+            == "test-password"
+        )
+        harness.charm.set_secret("app", "password", None)
+        assert "password" not in harness.get_relation_data(rel_id, harness.charm.app.name)
+
+        # Test unit scope.
+        assert "password" not in harness.get_relation_data(rel_id, harness.charm.unit.name)
+        harness.charm.set_secret("unit", "password", "test-password")
+        assert (
+            harness.get_relation_data(rel_id, harness.charm.unit.name)["password"]
+            == "test-password"
+        )
+        harness.charm.set_secret("unit", "password", None)
+        assert "password" not in harness.get_relation_data(rel_id, harness.charm.unit.name)
+
+        with tc.assertRaises(RuntimeError):
+            harness.charm.set_secret("test", "password", "test")
+
+
+@patch_network_get(private_address="1.1.1.1")
+def test_set_secret_with_juju_secret(harness):
+    # this test is the juju3 version of the previous test, but it can run on both versions
+    # as it is backwards compatible behavior (usage of set_secret/get_secret)
     with patch("charm.PostgresqlOperatorCharm._on_leader_elected"):
         rel_id = harness.model.get_relation(PEER).id
         harness.set_leader()
