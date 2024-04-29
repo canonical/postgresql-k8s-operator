@@ -14,6 +14,7 @@ from lightkube.resources.core_v1 import Pod
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
+from tests.integration import markers
 from tests.integration.ha_tests.helpers import (
     are_writes_increasing,
     check_writes,
@@ -97,7 +98,7 @@ async def second_model_continuous_writes(second_model) -> None:
 
 
 @pytest.mark.group(1)
-@pytest.mark.juju3
+@markers.juju3
 @pytest.mark.abort_on_fail
 async def test_deploy_async_replication_setup(
     ops_test: OpsTest, first_model: Model, second_model: Model
@@ -124,7 +125,7 @@ async def test_deploy_async_replication_setup(
 
 
 @pytest.mark.group(1)
-@pytest.mark.juju3
+@markers.juju3
 @pytest.mark.abort_on_fail
 async def test_async_replication(
     ops_test: OpsTest,
@@ -202,7 +203,7 @@ async def test_async_replication(
 
 
 @pytest.mark.group(1)
-@pytest.mark.juju3
+@markers.juju3
 @pytest.mark.abort_on_fail
 async def test_switchover(
     ops_test: OpsTest,
@@ -257,7 +258,7 @@ async def test_switchover(
 
 
 @pytest.mark.group(1)
-@pytest.mark.juju3
+@markers.juju3
 @pytest.mark.abort_on_fail
 async def test_promote_standby(
     ops_test: OpsTest,
@@ -332,7 +333,7 @@ async def test_promote_standby(
 
 
 @pytest.mark.group(1)
-@pytest.mark.juju3
+@markers.juju3
 @pytest.mark.abort_on_fail
 async def test_reestablish_relation(
     ops_test: OpsTest, first_model: Model, second_model: Model, continuous_writes
@@ -390,7 +391,7 @@ async def test_reestablish_relation(
 
 
 @pytest.mark.group(1)
-@pytest.mark.juju3
+@markers.juju3
 @pytest.mark.abort_on_fail
 async def test_async_replication_failover_in_main_cluster(
     ops_test: OpsTest, first_model: Model, second_model: Model, continuous_writes
@@ -433,7 +434,7 @@ async def test_async_replication_failover_in_main_cluster(
 
 
 @pytest.mark.group(1)
-@pytest.mark.juju3
+@markers.juju3
 @pytest.mark.abort_on_fail
 async def test_async_replication_failover_in_secondary_cluster(
     ops_test: OpsTest, first_model: Model, second_model: Model, continuous_writes
@@ -471,7 +472,7 @@ async def test_async_replication_failover_in_secondary_cluster(
 
 
 @pytest.mark.group(1)
-@pytest.mark.juju3
+@markers.juju3
 @pytest.mark.abort_on_fail
 async def test_scaling(
     ops_test: OpsTest, first_model: Model, second_model: Model, continuous_writes
