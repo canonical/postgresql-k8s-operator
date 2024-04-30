@@ -865,11 +865,7 @@ def test_get_secret_secrets(harness, scope):
 
 
 @patch_network_get(private_address="1.1.1.1")
-def test_set_secret_in_databag(harness, juju_has_secrets):
-    # As this test set secrets using set_secret and checks if they end up
-    # inside the relation databag, this is meant to run on juju2 only
-    if juju_has_secrets:
-        return
+def test_set_secret_in_databag(harness, only_without_juju_secrets):
     with patch("charm.PostgresqlOperatorCharm._on_leader_elected"):
         rel_id = harness.model.get_relation(PEER).id
         harness.set_leader()
@@ -1010,16 +1006,11 @@ def test_delete_password(harness, juju_has_secrets, caplog):
 
 @pytest.mark.parametrize("scope,is_leader", [("app", True), ("unit", True), ("unit", False)])
 @patch_network_get(private_address="1.1.1.1")
-def test_migration_from_databag(harness, juju_has_secrets, scope, is_leader):
+def test_migration_from_databag(harness, only_with_juju_secrets, scope, is_leader):
     """Check if we're moving on to use secrets when live upgrade from databag to Secrets usage."""
     with (
         patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
     ):
-        # as this test checks for a migration from databag to secrets,
-        # there's no need for this test when secrets are not enabled.
-        if not juju_has_secrets:
-            return
-
         rel_id = harness.model.get_relation(PEER).id
         # App has to be leader, unit can be either
         harness.set_leader(is_leader)
@@ -1040,16 +1031,11 @@ def test_migration_from_databag(harness, juju_has_secrets, scope, is_leader):
 
 @pytest.mark.parametrize("scope,is_leader", [("app", True), ("unit", True), ("unit", False)])
 @patch_network_get(private_address="1.1.1.1")
-def test_migration_from_single_secret(harness, juju_has_secrets, scope, is_leader):
+def test_migration_from_single_secret(harness, only_with_juju_secrets, scope, is_leader):
     """Check if we're moving on to use secrets when live upgrade from databag to Secrets usage."""
     with (
         patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
     ):
-        # as this test checks for a migration from databag to secrets,
-        # there's no need for this test when secrets are not enabled.
-        if not juju_has_secrets:
-            return
-
         rel_id = harness.model.get_relation(PEER).id
 
         # App has to be leader, unit can be either
