@@ -7,12 +7,15 @@ from typing import Dict, Tuple
 
 import boto3
 import pytest as pytest
+from lightkube.core.client import Client
+from lightkube.resources.core_v1 import Pod
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_exponential
 
 from .helpers import (
     DATABASE_APP_NAME,
     build_and_deploy,
+    cat_file_from_unit,
     construct_endpoint,
     db_connect,
     get_password,
@@ -424,3 +427,24 @@ async def test_invalid_config_and_recovery_after_fixing_it(
     await ops_test.model.wait_for_idle(
         apps=[database_app_name, S3_INTEGRATOR_APP_NAME], status="active"
     )
+
+
+@pytest.mark.group(1)
+async def test_delete_pod(ops_test: OpsTest):
+    database_app_name = f"new-{DATABASE_APP_NAME}"
+    original_pgbackrest_config = await cat_file_from_unit(
+        ops_test, "/etc/pgbackrest.conf", f"{database_app_name}/0"
+    )
+
+    # delete the pod
+    client = Client(namespace=ops_test.model.info.name)
+    client.delete(Pod, name=f"{database_app_name}-0")
+
+    # Wait and get the primary again (which can be any unit, including the previous primary).
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(apps=[database_app_name], status="active")
+
+    new_pgbackrest_config = await cat_file_from_unit(
+        ops_test, "/etc/pgbackrest.conf", f"{database_app_name}/0"
+    )
+    assert original_pgbackrest_config == new_pgbackrest_config
