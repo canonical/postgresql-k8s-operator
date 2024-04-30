@@ -431,12 +431,15 @@ async def test_invalid_config_and_recovery_after_fixing_it(
 
 @pytest.mark.group(1)
 async def test_delete_pod(ops_test: OpsTest):
+    logger.info("Getting original backup config")
     database_app_name = f"new-{DATABASE_APP_NAME}"
     original_pgbackrest_config = await cat_file_from_unit(
         ops_test, "/etc/pgbackrest.conf", f"{database_app_name}/0"
     )
+    logger.info(original_pgbackrest_config)
 
     # delete the pod
+    logger.info("Deleting the pod")
     client = Client(namespace=ops_test.model.info.name)
     client.delete(Pod, name=f"{database_app_name}-0")
 
