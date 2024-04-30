@@ -737,6 +737,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # was fully initialised.
         self.enable_disable_extensions()
 
+        # Enable pgbackrest service
+        self.backup.start_stop_pgbackrest_service()
+
         # All is well, set an ActiveStatus.
         self._set_active_status()
 
