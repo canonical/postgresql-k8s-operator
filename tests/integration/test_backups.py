@@ -436,7 +436,6 @@ async def test_delete_pod(ops_test: OpsTest):
     original_pgbackrest_config = await cat_file_from_unit(
         ops_test, "/etc/pgbackrest.conf", f"{database_app_name}/0"
     )
-    logger.info(original_pgbackrest_config)
 
     # delete the pod
     logger.info("Deleting the pod")
@@ -450,4 +449,4 @@ async def test_delete_pod(ops_test: OpsTest):
     new_pgbackrest_config = await cat_file_from_unit(
         ops_test, "/etc/pgbackrest.conf", f"{database_app_name}/0"
     )
-    assert original_pgbackrest_config == new_pgbackrest_config
+    assert original_pgbackrest_config == new_pgbackrest_config, "Pgbackrest config not rerendered"
