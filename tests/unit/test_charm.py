@@ -204,7 +204,6 @@ def test_on_postgresql_pebble_ready_no_connection(harness):
 
 def test_on_get_password(harness):
     # Create a mock event and set passwords in peer relation data.
-    harness.set_leader(True)
     mock_event = MagicMock(params={})
     rel_id = harness.model.get_relation(PEER).id
     harness.update_relation_data(
