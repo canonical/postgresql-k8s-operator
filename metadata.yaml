@@ -39,6 +39,10 @@ peers:
     interface: upgrade
 
 provides:
+  async-primary:
+    interface: async_replication
+    limit: 1
+    optional: true
   database:
     interface: postgresql_client
   db:
@@ -51,6 +55,10 @@ provides:
     interface: grafana_dashboard
 
 requires:
+  async-replica:
+    interface: async_replication
+    limit: 1
+    optional: true
   certificates:
     interface: tls-certificates
     limit: 1
