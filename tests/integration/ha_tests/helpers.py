@@ -19,7 +19,7 @@ from kubernetes import config
 from kubernetes.client.api import core_v1_api
 from kubernetes.stream import stream
 from lightkube.core.client import Client
-from lightkube.resources.core_v1 import Pod
+from lightkube.resources.core_v1 import Pod, Endpoints, Service
 from pytest_operator.plugin import OpsTest
 from tenacity import (
     RetryError,
@@ -35,6 +35,7 @@ from ..helpers import (
     app_name,
     db_connect,
     get_password,
+    get_password_on_unit,
     get_primary,
     get_unit_address,
     execute_query_on_unit,
@@ -771,40 +772,66 @@ async def stop_continuous_writes(ops_test: OpsTest) -> int:
     return int(action.results["writes"])
 
 async def get_storage_id(ops_test: OpsTest, unit_name: str) -> str:
-    for storage in await ops_test.model.list_storage():
-        if storage['owner-tag'] == tag.unit(unit_name):
-            return tag.untag('storage-', storage['storage-tag'])
-    return None
+    """Retrieves  storage id associated with provided unit.
+
+    Note: this function exists as a temporary solution until this issue is ported to libjuju 2:
+    https://github.com/juju/python-libjuju/issues/694
+    """
+    model_name = ops_test.model.info.name
+    proc = subprocess.check_output(f"juju storage --model={model_name}".split())
+    proc = proc.decode("utf-8")
+    for line in proc.splitlines():
+        if "Storage" in line:
+            continue
+
+        if len(line) == 0:
+            continue
+
+        if "detached" in line:
+            continue
+
+        if line.split()[0] == unit_name:
+            return line.split()[1]
 
 def is_pods_exists(ops_test: OpsTest, unit_name: str) -> bool:
     client = Client(namespace=ops_test.model.name)
     pods = client.list(Pod, namespace=ops_test.model.name)
     
     for pod in pods:
-        print(f"POD: {pod.metadata.name} STATUS: {pod.status.phase} TAGGED: {unit_name.replace('/', '-')}")
+        print(f"Pod: {pod.metadata.name} STATUS: {pod.status.phase} TAGGED: {unit_name.replace('/', '-')}")
         if (pod.metadata.name == unit_name.replace('/', '-')) and (pod.status.phase == 'Running'):
             return True
         
     return False
 
-async def is_storage_exists(ops_test: OpsTest, storage_id: str) -> bool:
+async def is_storage_exists(ops_test: OpsTest, storage_id: str, include_detached: bool = False) -> bool:
     """Returns True if storage exists by provided storage ID 
     
     Checks juju storage output
     """
-    for storage in await ops_test.model.list_storage():
-        if storage['storage-tag'] == tag.storage(storage_id):
+    model_name = ops_test.model.info.name
+    proc = subprocess.check_output(f"juju storage --model={model_name} --format=json".split())
+    parsed_storage = json.loads(proc)
+    for storage_name, storage_info in parsed_storage["storage"].items():
+        print(f"-------------------------- {storage_name} --------------------------")
+        if storage_info["status"]["current"] == "detached" and not include_detached:
+            continue
+
+        if storage_id == storage_name:
             return True
         
     return False
 
+@retry(stop=stop_after_attempt(8), wait=wait_fixed(15), reraise=True)
 async def create_db(ops_test: OpsTest, app: str, db: str) -> None:
     """Creates database with specified name
 
     """
     unit = ops_test.model.applications[app].units[0]
-    unit_address = await unit.get_public_address()
-    password = await get_password(ops_test, app)
+    unit_address = await get_unit_address(ops_test, unit.name)
+    password = await get_password_on_unit(ops_test, "operator", unit, app)
+
+    print(f"----------------- Trying to connect: {unit_address} | {password} -----------------")
 
     conn = db_connect(unit_address, password)
     conn.autocommit = True
@@ -814,13 +841,14 @@ async def create_db(ops_test: OpsTest, app: str, db: str) -> None:
     conn.close()
 
 
+@retry(stop=stop_after_attempt(8), wait=wait_fixed(15), reraise=True)
 async def check_db(ops_test: OpsTest, app: str, db: str) -> bool:
     """Returns True if database with specified name is alredy exists
 
     """
     unit = ops_test.model.applications[app].units[0]
-    unit_address = await unit.get_public_address()
-    password = await get_password(ops_test, app)
+    unit_address = await get_unit_address(ops_test, unit.name)
+    password = await get_password_on_unit(ops_test, "operator", unit, app)
 
     query = await execute_query_on_unit(
         unit_address,
@@ -858,3 +886,20 @@ async def check_password_auth(ops_test: OpsTest, unit_name) -> bool:
         """grep -E 'password authentication failed for user' /var/log/postgresql/postgresql*""",
     )
     return 'password authentication failed for user "operator"' not in stdout
+
+async def remove_unit_force(ops_test: OpsTest, unit_name: str):
+    """Removes unit with --force --no-wait."""
+    app_name = unit_name.split("/")[0]
+    complete_command = ["remove-unit", f"{unit_name}", "--force", "--no-wait", "--no-prompt"]
+    return_code, stdout, stderr = await ops_test.juju(*complete_command)
+    if return_code != 0:
+        raise Exception(
+            "Expected command %s to succeed instead it failed: %s with code: %s with output: %s",
+            complete_command,
+            stderr,
+            return_code,
+            stdout,
+        )
+
+    for unit in ops_test.model.applications[app_name].units:
+        assert unit != unit_name

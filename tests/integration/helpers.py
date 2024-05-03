@@ -423,6 +423,7 @@ async def get_password_on_unit(
 ) -> str:
     action = await unit.run_action("get-password", **{"username": username})
     result = await action.wait()
+    print(f"-------------------- GET PASSWORD RES: {result.results} --------------------")
     return result.results["password"]
 
 
