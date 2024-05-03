@@ -4,6 +4,7 @@
 import asyncio
 import itertools
 from datetime import datetime
+from multiprocessing import ProcessError
 from pathlib import Path
 from typing import List, Optional
 
@@ -782,3 +783,14 @@ def wait_for_relation_removed_between(
                     break
     except RetryError:
         assert False, "Relation failed to exit after 3 minutes."
+
+
+async def cat_file_from_unit(ops_test: OpsTest, filepath: str, unit_name: str) -> str:
+    """Gets a file from the postgresql container of an application unit."""
+    cat_cmd = f"ssh --container postgresql {unit_name} cat {filepath}"
+    return_code, output, _ = await ops_test.juju(*cat_cmd.split(" "))
+    if return_code != 0:
+        raise ProcessError(
+            "Expected cat command %s to succeed instead it failed: %s", cat_cmd, return_code
+        )
+    return output
