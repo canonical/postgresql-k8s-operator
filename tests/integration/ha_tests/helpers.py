@@ -34,6 +34,9 @@ from ..helpers import (
     get_password,
     get_primary,
     get_unit_address,
+    get_password_on_unit,
+    execute_query_on_unit,
+    run_command_on_unit,
 )
 
 PORT = 5432
@@ -759,3 +762,70 @@ async def stop_continuous_writes(ops_test: OpsTest) -> int:
     )
     action = await action.wait()
     return int(action.results["writes"])
+
+@retry(stop=stop_after_attempt(8), wait=wait_fixed(15), reraise=True)
+async def create_db(ops_test: OpsTest, app: str, db: str) -> None:
+    """Creates database with specified name
+
+    """
+    unit = ops_test.model.applications[app].units[0]
+    unit_address = await get_unit_address(ops_test, unit.name)
+    password = await get_password_on_unit(ops_test, "operator", unit, app)
+
+    print(f"----------------- Trying to connect: {unit_address} | {password} -----------------")
+
+    conn = db_connect(unit_address, password)
+    conn.autocommit = True
+    cursor = conn.cursor()
+    cursor.execute(f"CREATE DATABASE {db};")
+    cursor.close()
+    conn.close()
+
+
+@retry(stop=stop_after_attempt(8), wait=wait_fixed(15), reraise=True)
+async def check_db(ops_test: OpsTest, app: str, db: str) -> bool:
+    """Returns True if database with specified name is alredy exists
+
+    """
+    unit = ops_test.model.applications[app].units[0]
+    unit_address = await get_unit_address(ops_test, unit.name)
+    password = await get_password_on_unit(ops_test, "operator", unit, app)
+
+    query = await execute_query_on_unit(
+        unit_address,
+        password,
+        "select datname from pg_catalog.pg_database where datname = '{db}';",
+    )
+
+    if "ERROR" in query:
+        raise Exception (
+            f"Database check is failed with postgresql err: {query}"
+        )
+
+    return db in query
+
+async def restart_service(machine_name: str, force: bool = False):
+    restart_command = f"lxc restart {machine_name}"
+    if force:
+        restart_command = restart_command + " --force"
+    subprocess.check_call(restart_command.split())
+
+
+async def check_graceful_shutdown(ops_test: OpsTest, unit_name: str) -> bool:
+    log_str = "shutting down"
+    stdout = await run_command_on_unit(
+        ops_test,
+        unit_name,
+        f"""grep -E '{log_str}' /var/snap/charmed-postgresql/common/var/log/postgresql/postgresql*""",
+    )
+    return log_str in stdout
+
+
+async def check_success_recovery(ops_test: OpsTest, unit_name: str) -> bool:
+    log_str = "consistent recovery state reached"
+    stdout = await run_command_on_unit(
+        ops_test,
+        unit_name,
+        f"""grep -E '{log_str}' /var/snap/charmed-postgresql/common/var/log/postgresql/postgresql*""",
+    )
+    return log_str in stdout
