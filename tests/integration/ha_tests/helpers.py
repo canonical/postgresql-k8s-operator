@@ -31,11 +31,11 @@ from ..helpers import (
     APPLICATION_NAME,
     app_name,
     db_connect,
+    execute_query_on_unit,
     get_password,
+    get_password_on_unit,
     get_primary,
     get_unit_address,
-    get_password_on_unit,
-    execute_query_on_unit,
     run_command_on_unit,
 )
 
@@ -763,11 +763,10 @@ async def stop_continuous_writes(ops_test: OpsTest) -> int:
     action = await action.wait()
     return int(action.results["writes"])
 
+
 @retry(stop=stop_after_attempt(8), wait=wait_fixed(15), reraise=True)
 async def create_db(ops_test: OpsTest, app: str, db: str) -> None:
-    """Creates database with specified name
-
-    """
+    """Creates database with specified name."""
     unit = ops_test.model.applications[app].units[0]
     unit_address = await get_unit_address(ops_test, unit.name)
     password = await get_password_on_unit(ops_test, "operator", unit, app)
@@ -784,9 +783,7 @@ async def create_db(ops_test: OpsTest, app: str, db: str) -> None:
 
 @retry(stop=stop_after_attempt(8), wait=wait_fixed(15), reraise=True)
 async def check_db(ops_test: OpsTest, app: str, db: str) -> bool:
-    """Returns True if database with specified name is alredy exists
-
-    """
+    """Returns True if database with specified name is already exists."""
     unit = ops_test.model.applications[app].units[0]
     unit_address = await get_unit_address(ops_test, unit.name)
     password = await get_password_on_unit(ops_test, "operator", unit, app)
@@ -798,27 +795,40 @@ async def check_db(ops_test: OpsTest, app: str, db: str) -> bool:
     )
 
     if "ERROR" in query:
-        raise Exception (
-            f"Database check is failed with postgresql err: {query}"
-        )
+        raise Exception(f"Database check is failed with postgresql err: {query}")
 
     return db in query
 
-async def restart_service(machine_name: str, force: bool = False):
-    restart_command = f"lxc restart {machine_name}"
+
+def restart_pod(ops_test: OpsTest, pod_name: str, force: bool = False):
+    cmd = f"kubectl -n {ops_test.model.info.name} delete pod {pod_name}"
+    grace_period = 1000
     if force:
-        restart_command = restart_command + " --force"
-    subprocess.check_call(restart_command.split())
+        cmd = cmd + " --force"
+        grace_period = 0
+
+    cmd = cmd + f" --grace-period={grace_period}"
+
+    env = os.environ
+    env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
+    subprocess.check_output(
+        cmd,
+        shell=True,
+        env=env,
+    )
 
 
 async def check_graceful_shutdown(ops_test: OpsTest, unit_name: str) -> bool:
-    log_str = "shutting down"
+    log_str = "doing crash recovery in a single user mode."
     stdout = await run_command_on_unit(
         ops_test,
         unit_name,
-        f"""grep -E '{log_str}' /var/snap/charmed-postgresql/common/var/log/postgresql/postgresql*""",
+        """cat /var/log/postgresql/patroni*""",
     )
-    return log_str in stdout
+
+    print(f"GOT LOG: {stdout}")
+
+    return log_str not in stdout
 
 
 async def check_success_recovery(ops_test: OpsTest, unit_name: str) -> bool:
@@ -826,6 +836,6 @@ async def check_success_recovery(ops_test: OpsTest, unit_name: str) -> bool:
     stdout = await run_command_on_unit(
         ops_test,
         unit_name,
-        f"""grep -E '{log_str}' /var/snap/charmed-postgresql/common/var/log/postgresql/postgresql*""",
+        f"""grep -E '{log_str}' /var/log/postgresql/postgresql*""",
     )
     return log_str in stdout

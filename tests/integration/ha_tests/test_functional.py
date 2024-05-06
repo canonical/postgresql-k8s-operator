@@ -12,20 +12,17 @@ from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, stop_after_delay, wait_exponential, wait_fixed
 
 from ..helpers import (
-    APPLICATION_NAME,
-    CHARM_SERIES,
     DATABASE_APP_NAME,
-    construct_endpoint,
-    get_machine_from_unit,
     build_and_deploy,
+    construct_endpoint,
 )
 from .helpers import (
     check_db,
-    create_db,
     check_graceful_shutdown,
     check_success_recovery,
-    lxc_restart_service,
+    create_db,
     is_postgresql_ready,
+    restart_pod,
 )
 
 TEST_DATABASE_NAME = "test_database"
@@ -70,6 +67,93 @@ async def cloud_configs(ops_test: OpsTest, github_secrets) -> None:
         for bucket_object in bucket.objects.filter(Prefix=config["path"].lstrip("/")):
             bucket_object.delete()
 
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_instance_graceful_restart(ops_test: OpsTest) -> None:
+    """Test graceful restart of a service."""
+    async with ops_test.fast_forward():
+        # Deploy the charm.
+        logger.info("deploying charm")
+        await build_and_deploy(
+            ops_test, 1, database_app_name=DATABASE_APP_NAME, wait_for_idle=False
+        )
+
+        primary_name = ops_test.model.applications[DATABASE_APP_NAME].units[0].name
+
+        logger.info("waiting for postgresql")
+        for attempt in Retrying(
+            stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
+        ):
+            with attempt:
+                assert await is_postgresql_ready(ops_test, primary_name)
+
+        logger.info("restarting pod")
+        restart_pod(ops_test, primary_name.replace("/", "-"))
+
+        logger.info("waiting for idle")
+        await ops_test.model.wait_for_idle(
+            apps=[DATABASE_APP_NAME], status="active", timeout=1500, raise_on_error=False
+        )
+        assert ops_test.model.applications[DATABASE_APP_NAME].units[0].workload_status == "active"
+
+        logger.info("check graceful shutdown")
+        for attempt in Retrying(stop=stop_after_delay(15 * 3), wait=wait_fixed(3), reraise=True):
+            with attempt:
+                assert await check_graceful_shutdown(ops_test, primary_name)
+
+        logger.info("check success recovery")
+        assert await check_success_recovery(ops_test, primary_name)
+
+        logger.info("remove application")
+        for attempt in Retrying(stop=stop_after_delay(15 * 3), wait=wait_fixed(3), reraise=True):
+            with attempt:
+                await ops_test.model.remove_application(DATABASE_APP_NAME, block_until_done=True)
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_instance_forceful_restart(ops_test: OpsTest) -> None:
+    """Test forceful restart of a service."""
+    async with ops_test.fast_forward():
+        # Deploy the charm.
+        logger.info("deploying charm")
+        await build_and_deploy(
+            ops_test, 1, database_app_name=DATABASE_APP_NAME, wait_for_idle=False
+        )
+
+        primary_name = ops_test.model.applications[DATABASE_APP_NAME].units[0].name
+
+        logger.info("waiting for postgresql")
+        for attempt in Retrying(
+            stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
+        ):
+            with attempt:
+                assert await is_postgresql_ready(ops_test, primary_name)
+
+        logger.info("restarting pod with force")
+        restart_pod(ops_test, primary_name.replace("/", "-"), force=True)
+
+        logger.info("waiting for idle")
+        await ops_test.model.wait_for_idle(
+            apps=[DATABASE_APP_NAME], status="active", timeout=1500, raise_on_error=False
+        )
+        assert ops_test.model.applications[DATABASE_APP_NAME].units[0].workload_status == "active"
+
+        logger.info("check forceful shutdown")
+        for attempt in Retrying(stop=stop_after_delay(15 * 3), wait=wait_fixed(3), reraise=True):
+            with attempt:
+                assert not await check_graceful_shutdown(ops_test, primary_name)
+
+        logger.info("check success recovery")
+        assert await check_success_recovery(ops_test, primary_name)
+
+        logger.info("remove application")
+        for attempt in Retrying(stop=stop_after_delay(15 * 3), wait=wait_fixed(3), reraise=True):
+            with attempt:
+                await ops_test.model.remove_application(DATABASE_APP_NAME, block_until_done=True)
+
+
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_instance_backup_with_restart(
@@ -85,7 +169,7 @@ async def test_instance_backup_with_restart(
             # as archive_mode is disabled after restoring the backup)
             logger.info("deploying charm")
             await build_and_deploy(
-                ops_test, 2, database_app_name=DATABASE_APP_NAME, wait_for_idle=False
+                ops_test, 1, database_app_name=DATABASE_APP_NAME, wait_for_idle=False
             )
 
             logger.info("relate s3")
@@ -132,11 +216,8 @@ async def test_instance_backup_with_restart(
             logger.info("write data after backup")
             await create_db(ops_test, DATABASE_APP_NAME, TEST_DATABASE_NAME + "_dup")
 
-            logger.info("wait for hostname")
-            primary_hostname = await get_machine_from_unit(ops_test, primary_name)
-
-            logger.info("restarting service with force")
-            await lxc_restart_service(primary_hostname, force=True)
+            logger.info("restarting pod with force")
+            restart_pod(ops_test, primary_name.replace("/", "-"), force=True)
 
             logger.info("waiting for idle")
             await ops_test.model.wait_for_idle(
@@ -148,7 +229,7 @@ async def test_instance_backup_with_restart(
 
             # Run the "restore backup" action.
             for attempt in Retrying(
-                stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
+                stop=stop_after_delay(15 * 3), wait=wait_fixed(3), reraise=True
             ):
                 with attempt:
                     logger.info("restoring the backup")
