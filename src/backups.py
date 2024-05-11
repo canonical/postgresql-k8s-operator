@@ -454,8 +454,18 @@ class PostgreSQLBackups(Object):
 
         self._initialise_stanza()
 
-    def _on_create_backup_action(self, event) -> None:
+    def _on_create_backup_action(self, event) -> None:  # noqa: C901
         """Request that pgBackRest creates a backup."""
+        backup_type = event.params.get("type", "full").lower()[:4]
+        if backup_type not in ["full", "diff"]:
+            error_message = (
+                f"Invalid backup type: {backup_type}. Possible values: full, differential."
+            )
+            logger.error(f"Backup failed: {error_message}")
+            event.fail(error_message)
+            return
+
+        logger.info(f"A {backup_type} backup  has been requested on unit")
         can_unit_perform_backup, validation_message = self._can_unit_perform_backup()
         if not can_unit_perform_backup:
             logger.error(f"Backup failed: {validation_message}")
@@ -502,7 +512,7 @@ Juju Version: {str(juju_version)}
                 "pgbackrest",
                 f"--stanza={self.stanza_name}",
                 "--log-level-console=debug",
-                "--type=full",
+                f"--type={backup_type}",
                 "backup",
             ]
             if self.charm.is_primary:

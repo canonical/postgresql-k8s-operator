@@ -1064,8 +1064,16 @@ def test_on_create_backup_action(harness):
         patch("charm.PostgreSQLBackups._retrieve_s3_parameters") as _retrieve_s3_parameters,
         patch("charm.PostgreSQLBackups._can_unit_perform_backup") as _can_unit_perform_backup,
     ):
-        # Test when the unit cannot perform a backup.
+        # Test when the unit cannot perform a backup because of type.
         mock_event = MagicMock()
+        mock_event.params = {"type": "wrong"}
+        harness.charm.backup._on_create_backup_action(mock_event)
+        mock_event.fail.assert_called_once()
+        mock_event.set_results.assert_not_called()
+
+        # Test when the unit cannot perform a backup because of preflight check.
+        mock_event = MagicMock()
+        mock_event.params = {"type": "full"}
         _can_unit_perform_backup.return_value = (False, "fake validation message")
         harness.charm.backup._on_create_backup_action(mock_event)
         mock_event.fail.assert_called_once()
@@ -1073,6 +1081,7 @@ def test_on_create_backup_action(harness):
 
         # Test when the charm fails to upload a file to S3.
         mock_event.reset_mock()
+        mock_event.params = {"type": "full"}
         _can_unit_perform_backup.return_value = (True, None)
         mock_s3_parameters = {
             "bucket": "test-bucket",
@@ -1106,6 +1115,7 @@ Juju Version: test-juju-version
 
         # Test when the backup fails.
         mock_event.reset_mock()
+        mock_event.params = {"type": "full"}
         _upload_content_to_s3.return_value = True
         _is_primary.return_value = True
         _execute_command.side_effect = ExecError(
@@ -1122,12 +1132,14 @@ Juju Version: test-juju-version
 
         # Test when the backup succeeds but the charm fails to upload the backup logs.
         mock_event.reset_mock()
+        mock_event.params = {"type": "full"}
         _upload_content_to_s3.reset_mock()
         _upload_content_to_s3.side_effect = [True, False]
         _execute_command.side_effect = None
         _execute_command.return_value = "fake stdout", "fake stderr"
         _list_backups.return_value = {"2023-01-01T09:00:00Z": harness.charm.backup.stanza_name}
         _update_config.reset_mock()
+        mock_event.params = {"type": "full"}
         harness.charm.backup._on_create_backup_action(mock_event)
         _upload_content_to_s3.assert_has_calls([
             call(
@@ -1147,6 +1159,7 @@ Juju Version: test-juju-version
 
         # Test when the backup succeeds (including the upload of the backup logs).
         mock_event.reset_mock()
+        mock_event.params = {"type": "full"}
         _upload_content_to_s3.reset_mock()
         _upload_content_to_s3.side_effect = None
         _upload_content_to_s3.return_value = True
@@ -1171,6 +1184,7 @@ Juju Version: test-juju-version
 
         # Test when this unit is a replica (the connectivity to the database should be changed).
         mock_event.reset_mock()
+        mock_event.params = {"type": "full"}
         _upload_content_to_s3.reset_mock()
         _is_primary.return_value = False
         harness.charm.backup._on_create_backup_action(mock_event)
