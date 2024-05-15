@@ -109,8 +109,6 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
         await build_and_deploy(
             ops_test, 2, database_app_name=database_app_name, wait_for_idle=False
         )
-        await ops_test.model.relate(database_app_name, S3_INTEGRATOR_APP_NAME)
-        await ops_test.model.relate(database_app_name, TLS_CERTIFICATES_APP_NAME)
 
         # Configure and set access and secret keys.
         logger.info(f"configuring S3 integrator for {cloud}")
@@ -120,6 +118,10 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
             **cloud_configs[1][cloud],
         )
         await action.wait()
+
+        await ops_test.model.relate(database_app_name, TLS_CERTIFICATES_APP_NAME)
+        await ops_test.model.relate(database_app_name, S3_INTEGRATOR_APP_NAME)
+
         async with ops_test.fast_forward(fast_interval="60s"):
             await ops_test.model.wait_for_idle(
                 apps=[database_app_name, S3_INTEGRATOR_APP_NAME], status="active", timeout=1000
@@ -156,7 +158,7 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
         action = await ops_test.model.units.get(replica).run_action("list-backups")
         await action.wait()
         backups = action.results.get("backups")
-        # two lines for header output, one backup line ==> 3 total lines
+        # 2 lines for header output, 1 backup line ==> 3 total lines
         assert len(backups.split("\n")) == 3, "full backup is not outputted"
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
@@ -183,6 +185,7 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
         action = await ops_test.model.units.get(replica).run_action("list-backups")
         await action.wait()
         backups = action.results.get("backups")
+        # 2 lines for header output, 2 backup lines ==> 4 total lines
         assert len(backups.split("\n")) == 4, "differential backup is not outputted"
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
@@ -197,19 +200,15 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
             await scale_application(ops_test, database_app_name, 1)
 
         # Run the "restore backup" action for differential backup.
-        for attempt in Retrying(
-            stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
-        ):
-            with attempt:
-                logger.info("restoring the backup")
-                most_recent_backup = backups.split("\n")[-1]
-                backup_id = most_recent_backup.split()[0]
-                action = await ops_test.model.units.get(f"{database_app_name}/0").run_action(
-                    "restore", **{"backup-id": backup_id}
-                )
-                await action.wait()
-                restore_status = action.results.get("restore-status")
-                assert restore_status, "restore hasn't succeeded"
+        logger.info("restoring the backup")
+        last_diff_backup = backups.split("\n")[-1]
+        backup_id = last_diff_backup.split()[0]
+        action = await ops_test.model.units.get(f"{database_app_name}/0").run_action(
+            "restore", **{"backup-id": backup_id}
+        )
+        await action.wait()
+        restore_status = action.results.get("restore-status")
+        assert restore_status, "restore hasn't succeeded"
 
         # Wait for the restore to complete.
         async with ops_test.fast_forward():
@@ -246,19 +245,15 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
         connection.close()
 
         # Run the "restore backup" action for full backup.
-        for attempt in Retrying(
-            stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
-        ):
-            with attempt:
-                logger.info("restoring the backup")
-                most_recent_backup = backups.split("\n")[-2]
-                backup_id = most_recent_backup.split()[0]
-                action = await ops_test.model.units.get(f"{database_app_name}/0").run_action(
-                    "restore", **{"backup-id": backup_id}
-                )
-                await action.wait()
-                restore_status = action.results.get("restore-status")
-                assert restore_status, "restore hasn't succeeded"
+        logger.info("restoring the backup")
+        last_full_backup = backups.split("\n")[-2]
+        backup_id = last_full_backup.split()[0]
+        action = await ops_test.model.units.get(f"{database_app_name}/0").run_action(
+            "restore", **{"backup-id": backup_id}
+        )
+        await action.wait()
+        restore_status = action.results.get("restore-status")
+        assert restore_status, "restore hasn't succeeded"
 
         # Wait for the restore to complete.
         async with ops_test.fast_forward():
@@ -307,7 +302,7 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
                 )
 
                 # Scale up to be able to test primary and leader being different.
-                async with ops_test.fast_forward():
+                async with ops_test.fast_forward(fast_interval="60s"):
                     await scale_application(ops_test, database_app_name, 2)
 
                 logger.info("ensuring that the replication is working correctly")
@@ -411,19 +406,15 @@ async def test_restore_on_new_cluster(ops_test: OpsTest, github_secrets) -> None
     )
 
     # Run the "restore backup" action.
-    for attempt in Retrying(
-        stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
-    ):
-        with attempt:
-            logger.info("restoring the backup")
-            most_recent_backup = backups.split("\n")[-1]
-            backup_id = most_recent_backup.split()[0]
-            action = await ops_test.model.units.get(f"{database_app_name}/0").run_action(
-                "restore", **{"backup-id": backup_id}
-            )
-            await action.wait()
-            restore_status = action.results.get("restore-status")
-            assert restore_status, "restore hasn't succeeded"
+    logger.info("restoring the backup")
+    most_recent_backup = backups.split("\n")[-1]
+    backup_id = most_recent_backup.split()[0]
+    action = await ops_test.model.units.get(f"{database_app_name}/0").run_action(
+        "restore", **{"backup-id": backup_id}
+    )
+    await action.wait()
+    restore_status = action.results.get("restore-status")
+    assert restore_status, "restore hasn't succeeded"
 
     # Wait for the restore to complete.
     async with ops_test.fast_forward():

@@ -704,6 +704,7 @@ Stderr:
         event.set_results({"restore-status": "restore started"})
 
     def _generate_fake_backup_id(self, backup_type: str) -> str:
+        """Creates a backup id for failed backup operations (to store log file)."""
         if backup_type == "F":
             return datetime.strftime(datetime.now(), "%Y%m%d-%H%M%SF")
         if backup_type == "D":
@@ -719,6 +720,7 @@ Stderr:
             return f'{last_full_backup}_{datetime.strftime(datetime.now(), "%Y%m%d-%H%M%SD")}'
 
     def _fetch_backup_from_id(self, backup_id: str) -> str:
+        """Fetches backup's pgbackrest label from backup id."""
         timestamp = f'{datetime.strftime(datetime.strptime(backup_id, "%Y-%m-%dT%H:%M:%SZ"), "%Y%m%d-%H%M%S")}'
         backups = self._list_backups(show_failed=False, parse=False).keys()
         for label in backups:
