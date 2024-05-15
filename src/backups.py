@@ -300,6 +300,9 @@ class PostgreSQLBackups(Object):
         elif label[-1] == "D":
             timestamp = label.split("_")[1]
             backup_type = "differential"
+        elif label[-1] == "I":
+            timestamp = label.split("_")[1]
+            backup_type = "incremental"
         else:
             raise ValueError("Unknown label format for backup ID: %s", label)
 

@@ -156,7 +156,8 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
         action = await ops_test.model.units.get(replica).run_action("list-backups")
         await action.wait()
         backups = action.results.get("backups")
-        assert len(backups.split("\n")) == 1, "full backup is not outputted"
+        # two lines for header output, one backup line ==> 3 total lines
+        assert len(backups.split("\n")) == 3, "full backup is not outputted"
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
         # Write some data.
@@ -182,7 +183,7 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
         action = await ops_test.model.units.get(replica).run_action("list-backups")
         await action.wait()
         backups = action.results.get("backups")
-        assert len(backups.split("\n")) == 2, "differential backup is not outputted"
+        assert len(backups.split("\n")) == 4, "differential backup is not outputted"
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
         # Write some data.
