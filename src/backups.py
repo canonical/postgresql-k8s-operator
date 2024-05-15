@@ -268,6 +268,7 @@ class PostgreSQLBackups(Object):
 
         Args:
             show_failed: whether to also return the failed backups.
+            parse: whether to convert backup labels to their IDs or not.
 
         Returns:
             a dict of previously created backups (id + stanza name) or an empty list
@@ -292,7 +293,7 @@ class PostgreSQLBackups(Object):
         )
 
     def _parse_backup_id(self, label) -> Tuple[str, str]:
-        """parse backup ID as a timestamp"""
+        """Parse backup ID as a timestamp."""
         if label[-1] == "F":
             timestamp = label
             backup_type = "full"
@@ -301,11 +302,13 @@ class PostgreSQLBackups(Object):
             backup_type = "differential"
         else:
             raise ValueError("Unknown label format for backup ID: %s", label)
-        
-        return (datetime.strftime(
-            datetime.strptime(timestamp[:-1], "%Y%m%d-%H%M%S"), "%Y-%m-%dT%H:%M:%SZ"
-        ), backup_type)
-            
+
+        return (
+            datetime.strftime(
+                datetime.strptime(timestamp[:-1], "%Y%m%d-%H%M%S"), "%Y-%m-%dT%H:%M:%SZ"
+            ),
+            backup_type,
+        )
 
     def _initialise_stanza(self) -> None:
         """Initialize the stanza.
