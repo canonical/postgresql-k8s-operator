@@ -4,6 +4,7 @@
 import asyncio
 import itertools
 from datetime import datetime
+from multiprocessing import ProcessError
 from pathlib import Path
 from typing import List, Optional
 
@@ -531,6 +532,35 @@ async def check_tls(ops_test: OpsTest, unit_name: str, enabled: bool) -> bool:
         return False
 
 
+async def check_tls_replication(ops_test: OpsTest, unit_name: str, enabled: bool) -> bool:
+    """Returns whether TLS is enabled on the replica PostgreSQL instance.
+
+    Args:
+        ops_test: The ops test framework instance.
+        unit_name: The name of the replica of the PostgreSQL instance.
+        enabled: check if TLS is enabled/disabled
+
+    Returns:
+        Whether TLS is enabled/disabled.
+    """
+    unit_address = await get_unit_address(ops_test, unit_name)
+    password = await get_password(ops_test)
+
+    # Check for the all replicas using encrypted connection
+    output = await execute_query_on_unit(
+        unit_address,
+        password,
+        "SELECT pg_ssl.ssl, pg_sa.client_addr FROM pg_stat_ssl pg_ssl"
+        " JOIN pg_stat_activity pg_sa ON pg_ssl.pid = pg_sa.pid"
+        " AND pg_sa.usename = 'replication';",
+    )
+
+    for i in range(0, len(output), 2):
+        if output[i] != enabled:
+            return False
+    return True
+
+
 async def check_tls_patroni_api(ops_test: OpsTest, unit_name: str, enabled: bool) -> bool:
     """Returns whether TLS is enabled on Patroni REST API.
 
@@ -736,3 +766,14 @@ def wait_for_relation_removed_between(
                     break
     except RetryError:
         assert False, "Relation failed to exit after 3 minutes."
+
+
+async def cat_file_from_unit(ops_test: OpsTest, filepath: str, unit_name: str) -> str:
+    """Gets a file from the postgresql container of an application unit."""
+    cat_cmd = f"ssh --container postgresql {unit_name} cat {filepath}"
+    return_code, output, _ = await ops_test.juju(*cat_cmd.split(" "))
+    if return_code != 0:
+        raise ProcessError(
+            "Expected cat command %s to succeed instead it failed: %s", cat_cmd, return_code
+        )
+    return output

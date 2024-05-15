@@ -362,7 +362,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 44
+LIBPATCH = 46
 
 PYDEPS = ["cosl"]
 
@@ -521,8 +521,8 @@ class PrometheusConfig:
                         # for such a target. Therefore labeling with Juju topology, excluding the
                         # unit name.
                         non_wildcard_static_config["labels"] = {
-                            **non_wildcard_static_config.get("labels", {}),
                             **topology.label_matcher_dict,
+                            **non_wildcard_static_config.get("labels", {}),
                         }
 
                     non_wildcard_static_configs.append(non_wildcard_static_config)
@@ -547,9 +547,9 @@ class PrometheusConfig:
                         if topology:
                             # Add topology labels
                             modified_static_config["labels"] = {
-                                **modified_static_config.get("labels", {}),
                                 **topology.label_matcher_dict,
                                 **{"juju_unit": unit_name},
+                                **modified_static_config.get("labels", {}),
                             }
 
                             # Instance relabeling for topology should be last in order.
@@ -1537,12 +1537,11 @@ class MetricsEndpointProvider(Object):
             relation.data[self._charm.app]["scrape_metadata"] = json.dumps(self._scrape_metadata)
             relation.data[self._charm.app]["scrape_jobs"] = json.dumps(self._scrape_jobs)
 
-            if alert_rules_as_dict:
-                # Update relation data with the string representation of the rule file.
-                # Juju topology is already included in the "scrape_metadata" field above.
-                # The consumer side of the relation uses this information to name the rules file
-                # that is written to the filesystem.
-                relation.data[self._charm.app]["alert_rules"] = json.dumps(alert_rules_as_dict)
+            # Update relation data with the string representation of the rule file.
+            # Juju topology is already included in the "scrape_metadata" field above.
+            # The consumer side of the relation uses this information to name the rules file
+            # that is written to the filesystem.
+            relation.data[self._charm.app]["alert_rules"] = json.dumps(alert_rules_as_dict)
 
     def _set_unit_ip(self, _=None):
         """Set unit host address.
