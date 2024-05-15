@@ -251,7 +251,7 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
         ):
             with attempt:
                 logger.info("restoring the backup")
-                most_recent_backup = backups.split("\n")[-1]
+                most_recent_backup = backups.split("\n")[-2]
                 backup_id = most_recent_backup.split()[0]
                 action = await ops_test.model.units.get(f"{database_app_name}/0").run_action(
                     "restore", **{"backup-id": backup_id}
