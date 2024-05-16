@@ -1432,7 +1432,6 @@ def test_handle_postgresql_restart_need(harness):
             postgresql_mock.is_restart_pending = PropertyMock(return_value=values[2])
 
             harness.charm._handle_postgresql_restart_need()
-            _reload_patroni_configuration.assert_called_once()
             (
                 tc.assertIn("tls", harness.get_relation_data(rel_id, harness.charm.unit))
                 if values[0]
@@ -1444,6 +1443,7 @@ def test_handle_postgresql_restart_need(harness):
             else:
                 _generate_metrics_jobs.assert_not_called()
                 _restart.assert_not_called()
+                _reload_patroni_configuration.assert_called_once()
 
 
 def test_set_active_status(harness):
