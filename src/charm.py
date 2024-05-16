@@ -1428,13 +1428,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.unit.status = BlockedStatus(error_message)
             return
 
-        try:
-            self._patroni.reload_patroni_configuration()
-        except RetryError:
-            error_message = "failed to restart patroni, exceeded number of retries"
-            logger.exception(error_message)
-            pass
-
         # Update health check URL.
         self._update_pebble_layers()
 
@@ -1558,23 +1551,19 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def _handle_postgresql_restart_need(self):
         """Handle PostgreSQL restart need based on the TLS configuration and configuration changes."""
         restart_postgresql = self.is_tls_enabled != self.postgresql.is_tls_enabled()
-        if not restart_postgresql:
-            self._patroni.reload_patroni_configuration()
-            # Wait for some more time than the Patroni's loop_wait default value (10 seconds),
-            # which tells how much time Patroni will wait before checking the configuration
-            # file again to reload it.
-            try:
-                for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3)):
-                    with attempt:
-                        restart_postgresql = (
-                            restart_postgresql or self.postgresql.is_restart_pending()
-                        )
-                        if not restart_postgresql:
-                            raise Exception
-            except RetryError:
-                # Ignore the error, as it happens only to indicate that the configuration has not changed.
-                pass
-
+        self._patroni.reload_patroni_configuration()
+        # Wait for some more time than the Patroni's loop_wait default value (10 seconds),
+        # which tells how much time Patroni will wait before checking the configuration
+        # file again to reload it.
+        try:
+            for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3)):
+                with attempt:
+                    restart_postgresql = restart_postgresql or self.postgresql.is_restart_pending()
+                    if not restart_postgresql:
+                        raise Exception
+        except RetryError:
+            # Ignore the error, as it happens only to indicate that the configuration has not changed.
+            pass
         self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
 
         # Restart PostgreSQL if TLS configuration has changed
