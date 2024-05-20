@@ -7,10 +7,13 @@
 import itertools
 import json
 import logging
+import os
+import sys
+from pathlib import Path
 from typing import Dict, List, Literal, Optional, Tuple, get_args
 
 import psycopg2
-from charms.data_platform_libs.v0.data_interfaces import DataPeer, DataPeerUnit
+from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerUnitData
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v0.loki_push_api import LogProxyConsumer
@@ -78,6 +81,7 @@ from constants import (
     WORKLOAD_OS_USER,
 )
 from patroni import NotReadyError, Patroni
+from relations.async_replication import PostgreSQLAsyncReplication
 from relations.db import EXTENSIONS_BLOCKING_MESSAGE, DbProvides
 from relations.postgresql_provider import PostgreSQLProvider
 from upgrade import PostgreSQLUpgrade, get_postgresql_k8s_dependencies_model
@@ -102,28 +106,25 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def __init__(self, *args):
         super().__init__(*args)
 
-        self.peer_relation_app = DataPeer(
-            self,
+        # Support for disabling the operator.
+        disable_file = Path(f"{os.environ.get('CHARM_DIR')}/disable")
+        if disable_file.exists():
+            logger.warning(
+                f"\n\tDisable file `{disable_file.resolve()}` found, the charm will skip all events."
+                "\n\tTo resume normal operations, please remove the file."
+            )
+            self.unit.status = BlockedStatus("Disabled")
+            sys.exit(0)
+
+        self.peer_relation_app = DataPeerData(
+            self.model,
             relation_name=PEER,
-            additional_secret_fields=[
-                "monitoring-password",
-                "operator-password",
-                "replication-password",
-                "rewind-password",
-            ],
             secret_field_name=SECRET_INTERNAL_LABEL,
             deleted_label=SECRET_DELETED_LABEL,
         )
-        self.peer_relation_unit = DataPeerUnit(
-            self,
+        self.peer_relation_unit = DataPeerUnitData(
+            self.model,
             relation_name=PEER,
-            additional_secret_fields=[
-                "key",
-                "csr",
-                "cauth",
-                "cert",
-                "chain",
-            ],
             secret_field_name=SECRET_INTERNAL_LABEL,
             deleted_label=SECRET_DELETED_LABEL,
         )
@@ -163,6 +164,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.legacy_db_admin_relation = DbProvides(self, admin=True)
         self.backup = PostgreSQLBackups(self, "s3-parameters")
         self.tls = PostgreSQLTLS(self, PEER, [self.primary_endpoint, self.replicas_endpoint])
+        self.async_replication = PostgreSQLAsyncReplication(self)
         self.restart_manager = RollingOpsManager(
             charm=self, relation="restart", callback=self._restart
         )
@@ -234,6 +236,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if scope == UNIT_SCOPE:
             return self.unit
 
+    def peer_relation_data(self, scope: Scopes) -> DataPeerData:
+        """Returns the peer relation data per scope."""
+        if scope == APP_SCOPE:
+            return self.peer_relation_app
+        elif scope == UNIT_SCOPE:
+            return self.peer_relation_unit
+
     def _translate_field_to_secret_key(self, key: str) -> str:
         """Change 'key' to secrets-compatible key field."""
         if not JujuVersion.from_environ().has_secrets:
@@ -248,12 +257,17 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             raise RuntimeError("Unknown secret scope.")
 
         peers = self.model.get_relation(PEER)
+        if not peers:
+            return None
+
         secret_key = self._translate_field_to_secret_key(key)
-        if scope == APP_SCOPE:
-            value = self.peer_relation_app.fetch_my_relation_field(peers.id, secret_key)
-        else:
-            value = self.peer_relation_unit.fetch_my_relation_field(peers.id, secret_key)
-        return value
+        # Old translation in databag is to be taken
+        if key != secret_key and (
+            result := self.peer_relation_data(scope).fetch_my_relation_field(peers.id, key)
+        ):
+            return result
+
+        return self.peer_relation_data(scope).get_secret(peers.id, secret_key)
 
     def set_secret(self, scope: Scopes, key: str, value: Optional[str]) -> Optional[str]:
         """Set secret from the secret storage."""
@@ -265,10 +279,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         peers = self.model.get_relation(PEER)
         secret_key = self._translate_field_to_secret_key(key)
-        if scope == APP_SCOPE:
-            self.peer_relation_app.update_relation_data(peers.id, {secret_key: value})
-        else:
-            self.peer_relation_unit.update_relation_data(peers.id, {secret_key: value})
+        # Old translation in databag is to be deleted
+        if key != secret_key and self.peer_relation_data(scope).fetch_my_relation_field(
+            peers.id, key
+        ):
+            self.peer_relation_data(scope).delete_relation_data(peers.id, [key])
+        self.peer_relation_data(scope).set_secret(peers.id, secret_key, value)
 
     def remove_secret(self, scope: Scopes, key: str) -> None:
         """Removing a secret."""
@@ -337,6 +353,18 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         endpoints_to_remove = list(set(old) - set(current))
         return endpoints_to_remove
 
+    def get_unit_ip(self, unit: Unit) -> Optional[str]:
+        """Get the IP address of a specific unit."""
+        # Check if host is current host.
+        if unit == self.unit:
+            return str(self.model.get_binding(PEER).network.bind_address)
+        # Check if host is a peer.
+        elif unit in self._peers.data:
+            return str(self._peers.data[unit].get("private-address"))
+        # Return None if the unit is not a peer neither the current unit.
+        else:
+            return None
+
     def _on_peer_relation_departed(self, event: RelationDepartedEvent) -> None:
         """The leader removes the departing units from the list of cluster members."""
         # Allow leader to update endpoints if it isn't leaving.
@@ -353,6 +381,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         endpoints_to_remove = self._get_endpoints_to_remove()
         self.postgresql_client_relation.update_read_only_endpoint()
         self._remove_from_endpoints(endpoints_to_remove)
+
+        # Update the sync-standby endpoint in the async replication data.
+        self.async_replication.update_async_replication_data()
 
     def _on_peer_relation_changed(self, event: HookEvent) -> None:
         """Reconfigure cluster members."""
@@ -398,9 +429,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         # Restart the workload if it's stuck on the starting state after a timeline divergence
         # due to a backup that was restored.
-        if not self.is_primary and (
-            self._patroni.member_replication_lag == "unknown"
-            or int(self._patroni.member_replication_lag) > 1000
+        if (
+            not self.is_primary
+            and not self.is_standby_leader
+            and (
+                self._patroni.member_replication_lag == "unknown"
+                or int(self._patroni.member_replication_lag) > 1000
+            )
         ):
             self._patroni.reinitialize_postgresql()
             logger.debug("Deferring on_peer_relation_changed: reinitialising replica")
@@ -426,8 +461,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         else:
             self.unit_peer_data.pop("start-tls-server", None)
 
-        if not self.is_blocked:
-            self.unit.status = ActiveStatus()
+        self.async_replication.handle_read_only_mode()
 
     def _on_config_changed(self, event) -> None:
         """Handle configuration changes, like enabling plugins."""
@@ -455,7 +489,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
 
         if self.is_blocked and "Configuration Error" in self.unit.status.message:
-            self.unit.status = ActiveStatus()
+            self._set_active_status()
+
+        # Update the sync-standby endpoint in the async replication data.
+        self.async_replication.update_async_replication_data()
 
         if not self.unit.is_leader():
             return
@@ -484,6 +521,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         Args:
             database: optional database where to enable/disable the extension.
         """
+        if self._patroni.get_primary() is None:
+            logger.debug("Early exit enable_disable_extensions: standby cluster")
+            return
         spi_module = ["refint", "autoinc", "insert_username", "moddatetime"]
         plugins_exception = {"uuid_ossp": '"uuid-ossp"'}
         original_status = self.unit.status
@@ -504,7 +544,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 return
             extensions[extension] = enable
         if self.is_blocked and self.unit.status.message == EXTENSIONS_DEPENDENCY_MESSAGE:
-            self.unit.status = ActiveStatus()
+            self._set_active_status()
         if not isinstance(original_status, UnknownStatus):
             self.unit.status = WaitingStatus("Updating extensions")
         try:
@@ -612,19 +652,40 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _on_leader_elected(self, event: LeaderElectedEvent) -> None:
         """Handle the leader-elected event."""
-        if self.get_secret(APP_SCOPE, USER_PASSWORD_KEY) is None:
-            self.set_secret(APP_SCOPE, USER_PASSWORD_KEY, new_password())
+        for password in {
+            USER_PASSWORD_KEY,
+            REPLICATION_PASSWORD_KEY,
+            REWIND_PASSWORD_KEY,
+            MONITORING_PASSWORD_KEY,
+        }:
+            if self.get_secret(APP_SCOPE, password) is None:
+                self.set_secret(APP_SCOPE, password, new_password())
 
-        if self.get_secret(APP_SCOPE, REPLICATION_PASSWORD_KEY) is None:
-            self.set_secret(APP_SCOPE, REPLICATION_PASSWORD_KEY, new_password())
-
-        if self.get_secret(APP_SCOPE, REWIND_PASSWORD_KEY) is None:
-            self.set_secret(APP_SCOPE, REWIND_PASSWORD_KEY, new_password())
-
-        if self.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY) is None:
-            self.set_secret(APP_SCOPE, MONITORING_PASSWORD_KEY, new_password())
+        # Add this unit to the list of cluster members
+        # (the cluster should start with only this member).
+        if self._endpoint not in self._endpoints:
+            self._add_to_endpoints(self._endpoint)
 
         self._cleanup_old_cluster_resources()
+
+        if not self.fix_leader_annotation():
+            return
+
+        # Create resources and add labels needed for replication.
+        try:
+            self._create_services()
+        except ApiError:
+            logger.exception("failed to create k8s services")
+            self.unit.status = BlockedStatus("failed to create k8s services")
+            return
+
+        # Remove departing units when the leader changes.
+        self._remove_from_endpoints(self._get_endpoints_to_remove())
+
+        self._add_members(event)
+
+    def fix_leader_annotation(self) -> bool:
+        """Fix the leader annotation if it's missing."""
         client = Client()
         try:
             endpoint = client.get(Endpoints, name=self.cluster_name, namespace=self._namespace)
@@ -639,27 +700,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 )
                 self.app_peer_data.pop("cluster_initialised", None)
         except ApiError as e:
+            if e.status.code == 403:
+                self.on_deployed_without_trust()
+                return False
             # Ignore the error only when the resource doesn't exist.
             if e.status.code != 404:
                 raise e
-
-        # Create resources and add labels needed for replication.
-        try:
-            self._create_services()
-        except ApiError:
-            logger.exception("failed to create k8s services")
-            self.unit.status = BlockedStatus("failed to create k8s services")
-            return
-
-        # Add this unit to the list of cluster members
-        # (the cluster should start with only this member).
-        if self._endpoint not in self._endpoints:
-            self._add_to_endpoints(self._endpoint)
-
-        # Remove departing units when the leader changes.
-        self._remove_from_endpoints(self._get_endpoints_to_remove())
-
-        self._add_members(event)
+        return True
 
     def _create_pgdata(self, container: Container):
         """Create the PostgreSQL data directory."""
@@ -723,8 +770,22 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # was fully initialised.
         self.enable_disable_extensions()
 
+        # Enable pgbackrest service
+        self.backup.start_stop_pgbackrest_service()
+
         # All is well, set an ActiveStatus.
-        self.unit.status = ActiveStatus()
+        self._set_active_status()
+
+    def _set_active_status(self):
+        try:
+            if self._patroni.get_primary(unit_name_pattern=True) == self.unit.name:
+                self.unit.status = ActiveStatus("Primary")
+            elif self.is_standby_leader:
+                self.unit.status = ActiveStatus("Standby Leader")
+            elif self._patroni.member_started:
+                self.unit.status = ActiveStatus()
+        except (RetryError, ConnectionError) as e:
+            logger.error(f"failed to get primary with error {e}")
 
     def _initialize_cluster(self, event: WorkloadEvent) -> bool:
         # Add the labels needed for replication in this pod.
@@ -792,6 +853,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.error("failed to patch pod")
             self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
             return
+
+        # Update the sync-standby endpoint in the async replication data.
+        self.async_replication.update_async_replication_data()
 
     def _patch_pod_labels(self, member: str) -> None:
         """Add labels required for replication to the current pod.
@@ -881,6 +945,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 )
                 logger.info(f"deleted {kind.__name__}/{self.cluster_name}{suffix}")
             except ApiError as e:
+                if e.status.code == 403:
+                    self.on_deployed_without_trust()
+                    return
                 # Ignore the error only when the resource doesn't exist.
                 if e.status.code != 404:
                     raise e
@@ -958,6 +1025,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Update and reload Patroni configuration in this unit to use the new password.
         # Other units Patroni configuration will be reloaded in the peer relation changed event.
         self.update_config()
+
+        # Update the password in the async replication data.
+        self.async_replication.update_async_replication_data()
 
         event.set_results({"password": password})
 
@@ -1080,7 +1150,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if self._handle_processes_failures():
             return
 
-        self._set_primary_status_message()
+        # Update the sync-standby endpoint in the async replication data.
+        self.async_replication.update_async_replication_data()
+
+        self._set_active_status()
 
     def _handle_processes_failures(self) -> bool:
         """Handle Patroni and PostgreSQL OS processes failures.
@@ -1102,8 +1175,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 return False
             return True
 
+        try:
+            is_primary = self.is_primary
+            is_standby_leader = self.is_standby_leader
+        except RetryError:
+            return False
+
         if (
-            not self.is_primary
+            not is_primary
+            and not is_standby_leader
             and self._patroni.member_started
             and not self._patroni.member_streaming
         ):
@@ -1119,16 +1199,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return True
 
         return False
-
-    def _set_primary_status_message(self) -> None:
-        """Display 'Primary' in the unit status message if the current unit is the primary."""
-        try:
-            if self._patroni.get_primary(unit_name_pattern=True) == self.unit.name:
-                self.unit.status = ActiveStatus("Primary")
-            elif self._patroni.member_started:
-                self.unit.status = ActiveStatus()
-        except (RetryError, ConnectionError) as e:
-            logger.error(f"failed to get primary with error {e}")
 
     @property
     def _patroni(self):
@@ -1150,6 +1220,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def is_primary(self) -> bool:
         """Return whether this unit is the primary instance."""
         return self._unit == self._patroni.get_primary(unit_name_pattern=True)
+
+    @property
+    def is_standby_leader(self) -> bool:
+        """Return whether this unit is the standby leader instance."""
+        return self._unit == self._patroni.get_standby_leader(unit_name_pattern=True)
 
     @property
     def is_tls_enabled(self) -> bool:
@@ -1386,7 +1461,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             limit_memory = self.config.profile_limit_memory * 10**6
         else:
             limit_memory = None
-        available_cpu_cores, available_memory = self.get_available_resources()
+        try:
+            available_cpu_cores, available_memory = self.get_available_resources()
+        except ApiError as e:
+            if e.status.code == 403:
+                self.on_deployed_without_trust()
+                return
+            raise e
+
         postgresql_parameters = self.postgresql.build_postgresql_parameters(
             self.model.config, available_memory, limit_memory
         )
@@ -1581,6 +1663,18 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 allocable_memory = constrained_memory
 
         return cpu_cores, allocable_memory
+
+    def on_deployed_without_trust(self) -> None:
+        """Blocks the application and returns a specific error message for deployments made without --trust."""
+        self.unit.status = BlockedStatus(
+            f"Insufficient permissions, try: `juju trust {self._name} --scope=cluster`"
+        )
+        logger.error(
+            f"""
+            Access to k8s cluster resources is not authorized. This happens when RBAC is enabled and the deployed application was not trusted by the juju admin.
+            To fix this issue, run `juju trust {self._name} --scope=cluster` (or remove & re-deploy {self._name} with `--trust`)
+            """
+        )
 
     @property
     def client_relations(self) -> List[Relation]:
