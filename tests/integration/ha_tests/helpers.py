@@ -963,11 +963,20 @@ def apply_pvc_config(ops_test: OpsTest, pvc_config: PersistentVolumeClaim):
     pvc_config.metadata.managedFields = None
     client.apply(pvc_config, namespace=ops_test.model.name, field_manager="lightkube")
 
+
 async def remove_unit_force(ops_test: OpsTest, num_units: int):
     """Removes unit with --force --no-wait."""
     app_name_str = await app_name(ops_test)
-    scale = len(ops_test.model.applications[app_name_str].units)-num_units
-    complete_command = ["remove-unit", f"{app_name_str}", "--force", "--no-wait", "--no-prompt", "--num-units", num_units]
+    scale = len(ops_test.model.applications[app_name_str].units) - num_units
+    complete_command = [
+        "remove-unit",
+        f"{app_name_str}",
+        "--force",
+        "--no-wait",
+        "--no-prompt",
+        "--num-units",
+        num_units,
+    ]
     return_code, stdout, stderr = await ops_test.juju(*complete_command)
     if return_code != 0:
         raise Exception(
