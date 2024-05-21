@@ -2,6 +2,7 @@
 backup-standby=y
 repo1-retention-full-type=time
 repo1-retention-full={{ retention_full }}
+repo1-retention-history=365
 repo1-type=s3
 repo1-path={{ path }}
 repo1-s3-region={{ region }}
@@ -10,6 +11,8 @@ repo1-s3-bucket={{ bucket }}
 repo1-s3-uri-style={{ s3_uri_style }}
 repo1-s3-key={{ access_key }}
 repo1-s3-key-secret={{ secret_key }}
+repo1-block=y
+repo1-bundle=y
 start-fast=y
 {%- if enable_tls %}
 tls-server-address=*
