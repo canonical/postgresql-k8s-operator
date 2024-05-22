@@ -27,6 +27,7 @@ from constants import PEER, SECRET_INTERNAL_LABEL
 from tests.helpers import patch_network_get
 from tests.unit.helpers import _FakeApiError
 
+GROUPS = ["postgres", "token"]
 POSTGRESQL_CONTAINER = "postgresql"
 POSTGRESQL_SERVICE = "postgresql"
 METRICS_SERVICE = "metrics_server"
@@ -175,7 +176,7 @@ def test_on_postgresql_pebble_ready(harness):
         _push_tls_files_to_workload.reset_mock()
         harness.container_pebble_ready(POSTGRESQL_CONTAINER)
         plan = harness.get_container_pebble_plan(POSTGRESQL_CONTAINER)
-        expected = harness.charm._postgresql_layer().to_dict()
+        expected = harness.charm._postgresql_layer(GROUPS[0]).to_dict()
         expected.pop("summary", "")
         expected.pop("description", "")
         # Check the plan is as expected.
@@ -586,64 +587,65 @@ def test_postgresql_layer(harness):
     ):
         # Test with the already generated password.
         harness.set_leader()
-        plan = harness.charm._postgresql_layer().to_dict()
-        expected = {
-            "summary": "postgresql + patroni layer",
-            "description": "pebble config layer for postgresql + patroni",
-            "services": {
-                POSTGRESQL_SERVICE: {
-                    "override": "replace",
-                    "summary": "entrypoint of the postgresql + patroni image",
-                    "command": "patroni /var/lib/postgresql/data/patroni.yml",
-                    "startup": "enabled",
-                    "user": "postgres",
-                    "group": "postgres",
-                    "environment": {
-                        "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: patroni-{harness.charm._name}}}",
-                        "PATRONI_KUBERNETES_NAMESPACE": harness.charm._namespace,
-                        "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
-                        "PATRONI_NAME": "postgresql-k8s-0",
-                        "PATRONI_SCOPE": f"patroni-{harness.charm._name}",
-                        "PATRONI_REPLICATION_USERNAME": "replication",
-                        "PATRONI_SUPERUSER_USERNAME": "operator",
+        for group in GROUPS:
+            plan = harness.charm._postgresql_layer(group).to_dict()
+            expected = {
+                "summary": "postgresql + patroni layer",
+                "description": "pebble config layer for postgresql + patroni",
+                "services": {
+                    POSTGRESQL_SERVICE: {
+                        "override": "replace",
+                        "summary": "entrypoint of the postgresql + patroni image",
+                        "command": "patroni /var/lib/postgresql/data/patroni.yml",
+                        "startup": "enabled",
+                        "user": "postgres",
+                        "group": group,
+                        "environment": {
+                            "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: patroni-{harness.charm._name}}}",
+                            "PATRONI_KUBERNETES_NAMESPACE": harness.charm._namespace,
+                            "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
+                            "PATRONI_NAME": "postgresql-k8s-0",
+                            "PATRONI_SCOPE": f"patroni-{harness.charm._name}",
+                            "PATRONI_REPLICATION_USERNAME": "replication",
+                            "PATRONI_SUPERUSER_USERNAME": "operator",
+                        },
+                    },
+                    METRICS_SERVICE: {
+                        "override": "replace",
+                        "summary": "postgresql metrics exporter",
+                        "command": "/start-exporter.sh",
+                        "startup": "enabled",
+                        "after": [POSTGRESQL_SERVICE],
+                        "user": "postgres",
+                        "group": "postgres",
+                        "environment": {
+                            "DATA_SOURCE_NAME": (
+                                f"user=monitoring "
+                                f"password={harness.charm.get_secret('app', 'monitoring-password')} "
+                                "host=/var/run/postgresql port=5432 database=postgres"
+                            ),
+                        },
+                    },
+                    PGBACKREST_SERVER_SERVICE: {
+                        "override": "replace",
+                        "summary": "pgBackRest server",
+                        "command": PGBACKREST_SERVER_SERVICE,
+                        "startup": "disabled",
+                        "user": "postgres",
+                        "group": "postgres",
                     },
                 },
-                METRICS_SERVICE: {
-                    "override": "replace",
-                    "summary": "postgresql metrics exporter",
-                    "command": "/start-exporter.sh",
-                    "startup": "enabled",
-                    "after": [POSTGRESQL_SERVICE],
-                    "user": "postgres",
-                    "group": "postgres",
-                    "environment": {
-                        "DATA_SOURCE_NAME": (
-                            f"user=monitoring "
-                            f"password={harness.charm.get_secret('app', 'monitoring-password')} "
-                            "host=/var/run/postgresql port=5432 database=postgres"
-                        ),
-                    },
+                "checks": {
+                    POSTGRESQL_SERVICE: {
+                        "override": "replace",
+                        "level": "ready",
+                        "http": {
+                            "url": "http://postgresql-k8s-0.postgresql-k8s-endpoints:8008/health",
+                        },
+                    }
                 },
-                PGBACKREST_SERVER_SERVICE: {
-                    "override": "replace",
-                    "summary": "pgBackRest server",
-                    "command": PGBACKREST_SERVER_SERVICE,
-                    "startup": "disabled",
-                    "user": "postgres",
-                    "group": "postgres",
-                },
-            },
-            "checks": {
-                POSTGRESQL_SERVICE: {
-                    "override": "replace",
-                    "level": "ready",
-                    "http": {
-                        "url": "http://postgresql-k8s-0.postgresql-k8s-endpoints:8008/health",
-                    },
-                }
-            },
-        }
-        tc.assertDictEqual(plan, expected)
+            }
+            tc.assertDictEqual(plan, expected)
 
 
 def test_on_stop(harness):

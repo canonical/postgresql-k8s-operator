@@ -50,7 +50,7 @@ from ops.model import (
     UnknownStatus,
     WaitingStatus,
 )
-from ops.pebble import ChangeError, Layer, PathError, ProtocolError, ServiceStatus
+from ops.pebble import ChangeError, ExecError, Layer, PathError, ProtocolError, ServiceStatus
 from requests import ConnectionError
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
@@ -1310,7 +1310,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             },
         }
 
-    def _postgresql_layer(self) -> Layer:
+    def _postgresql_layer(self, group: str) -> Layer:
         """Returns a Pebble configuration layer for PostgreSQL."""
         pod_name = self._unit_name_to_pod_name(self._unit)
         layer_config = {
@@ -1323,7 +1323,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     "command": f"patroni {self._storage_path}/patroni.yml",
                     "startup": "enabled",
                     "user": WORKLOAD_OS_USER,
-                    "group": WORKLOAD_OS_GROUP,
+                    "group": group,
                     "environment": {
                         "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: {self.cluster_name}}}",
                         "PATRONI_KUBERNETES_NAMESPACE": self._namespace,
@@ -1582,8 +1582,21 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Get the current layer.
         current_layer = container.get_plan()
 
+        # Retrieve the group which has access to the K8s service account token.
+        juju_version = JujuVersion.from_environ()
+        group = (
+            "token"
+            if (juju_version.major > 3 or (juju_version.major == 3 and juju_version.minor >= 5))
+            else WORKLOAD_OS_GROUP
+        )
+        if group != WORKLOAD_OS_GROUP:
+            try:
+                container.exec(["getent", "group", group]).wait()
+            except ExecError:
+                container.exec(["groupadd", "-g", "170", group]).wait()
+
         # Create a new config layer.
-        new_layer = self._postgresql_layer()
+        new_layer = self._postgresql_layer(group)
 
         # Check if there are any changes to layer services.
         if current_layer.services != new_layer.services:
