@@ -513,7 +513,7 @@ async def test_invalid_config_and_recovery_after_fixing_it(
 
 
 @pytest.mark.group(1)
-async def test_delete_pod(ops_test: OpsTest):
+async def test_delete_pod(ops_test: OpsTest, github_secrets) -> None:
     logger.info("Getting original backup config")
     database_app_name = f"new-{DATABASE_APP_NAME}"
     original_pgbackrest_config = await cat_file_from_unit(
