@@ -255,21 +255,20 @@ class PostgreSQLBackups(Object):
         output, _ = self._execute_command(["pgbackrest", "info", "--output=json"])
         backups = json.loads(output)[0]["backup"]
         for backup in backups:
-            backup_id = datetime.strftime(
-                datetime.strptime(backup["label"][:-1], "%Y%m%d-%H%M%S"), "%Y-%m-%dT%H:%M:%SZ"
-            )
+            backup_id, backup_type = self._parse_backup_id(backup["label"])
             error = backup["error"]
             backup_status = "finished"
             if error:
                 backup_status = f"failed: {error}"
-            backup_list.append((backup_id, "physical", backup_status))
+            backup_list.append((backup_id, backup_type, backup_status))
         return self._format_backup_list(backup_list)
 
-    def _list_backups(self, show_failed: bool) -> OrderedDict[str, str]:
+    def _list_backups(self, show_failed: bool, parse=True) -> OrderedDict[str, str]:
         """Retrieve the list of backups.
 
         Args:
             show_failed: whether to also return the failed backups.
+            parse: whether to convert backup labels to their IDs or not.
 
         Returns:
             a dict of previously created backups (id + stanza name) or an empty list
@@ -286,13 +285,32 @@ class PostgreSQLBackups(Object):
         stanza_name = repository_info["name"]
         return OrderedDict[str, str](
             (
-                datetime.strftime(
-                    datetime.strptime(backup["label"][:-1], "%Y%m%d-%H%M%S"), "%Y-%m-%dT%H:%M:%SZ"
-                ),
+                self._parse_backup_id(backup["label"])[0] if parse else backup["label"],
                 stanza_name,
             )
             for backup in backups
             if show_failed or not backup["error"]
+        )
+
+    def _parse_backup_id(self, label) -> Tuple[str, str]:
+        """Parse backup ID as a timestamp."""
+        if label[-1] == "F":
+            timestamp = label
+            backup_type = "full"
+        elif label[-1] == "D":
+            timestamp = label.split("_")[1]
+            backup_type = "differential"
+        elif label[-1] == "I":
+            timestamp = label.split("_")[1]
+            backup_type = "incremental"
+        else:
+            raise ValueError("Unknown label format for backup ID: %s", label)
+
+        return (
+            datetime.strftime(
+                datetime.strptime(timestamp[:-1], "%Y%m%d-%H%M%S"), "%Y-%m-%dT%H:%M:%SZ"
+            ),
+            backup_type,
         )
 
     def _initialise_stanza(self) -> None:
@@ -454,8 +472,18 @@ class PostgreSQLBackups(Object):
 
         self._initialise_stanza()
 
-    def _on_create_backup_action(self, event) -> None:
+    def _on_create_backup_action(self, event) -> None:  # noqa: C901
         """Request that pgBackRest creates a backup."""
+        backup_type = event.params.get("type", "full").lower()[:4]
+        if backup_type not in ["full", "diff"]:
+            error_message = (
+                f"Invalid backup type: {backup_type}. Possible values: full, differential."
+            )
+            logger.error(f"Backup failed: {error_message}")
+            event.fail(error_message)
+            return
+
+        logger.info(f"A {backup_type} backup  has been requested on unit")
         can_unit_perform_backup, validation_message = self._can_unit_perform_backup()
         if not can_unit_perform_backup:
             logger.error(f"Backup failed: {validation_message}")
@@ -502,7 +530,7 @@ Juju Version: {str(juju_version)}
                 "pgbackrest",
                 f"--stanza={self.stanza_name}",
                 "--log-level-console=debug",
-                "--type=full",
+                f"--type={backup_type}",
                 "backup",
             ]
             if self.charm.is_primary:
@@ -523,7 +551,7 @@ Juju Version: {str(juju_version)}
             else:
                 # Generate a backup id from the current date and time if the backup failed before
                 # generating the backup label (our backup id).
-                backup_id = datetime.strftime(datetime.now(), "%Y%m%d-%H%M%SF")
+                backup_id = self._generate_fake_backup_id(backup_type)
 
             # Upload the logs to S3.
             logs = f"""Stdout:
@@ -664,7 +692,7 @@ Stderr:
         # Mark the cluster as in a restoring backup state and update the Patroni configuration.
         logger.info("Configuring Patroni to restore the backup")
         self.charm.app_peer_data.update({
-            "restoring-backup": f'{datetime.strftime(datetime.strptime(backup_id, "%Y-%m-%dT%H:%M:%SZ"), "%Y%m%d-%H%M%S")}F',
+            "restoring-backup": self._fetch_backup_from_id(backup_id),
             "restore-stanza": backups[backup_id],
         })
         self.charm.update_config()
@@ -674,6 +702,32 @@ Stderr:
         self.container.start(self.charm._postgresql_service)
 
         event.set_results({"restore-status": "restore started"})
+
+    def _generate_fake_backup_id(self, backup_type: str) -> str:
+        """Creates a backup id for failed backup operations (to store log file)."""
+        if backup_type == "F":
+            return datetime.strftime(datetime.now(), "%Y%m%d-%H%M%SF")
+        if backup_type == "D":
+            backups = self._list_backups(show_failed=False, parse=False).keys()
+            last_full_backup = None
+            for label in backups[::-1]:
+                if label.endswith("F"):
+                    last_full_backup = label
+                    break
+
+            if last_full_backup is None:
+                raise TypeError("Differential backup requested but no previous full backup")
+            return f'{last_full_backup}_{datetime.strftime(datetime.now(), "%Y%m%d-%H%M%SD")}'
+
+    def _fetch_backup_from_id(self, backup_id: str) -> str:
+        """Fetches backup's pgbackrest label from backup id."""
+        timestamp = f'{datetime.strftime(datetime.strptime(backup_id, "%Y-%m-%dT%H:%M:%SZ"), "%Y%m%d-%H%M%S")}'
+        backups = self._list_backups(show_failed=False, parse=False).keys()
+        for label in backups:
+            if timestamp in label:
+                return label
+
+        return None
 
     def _pre_restore_checks(self, event: ActionEvent) -> bool:
         """Run some checks before starting the restore.
@@ -765,6 +819,7 @@ Stderr:
             stanza=self.stanza_name,
             storage_path=self.charm._storage_path,
             user=BACKUP_USER,
+            retention_full=s3_parameters["delete-older-than-days"],
         )
         # Delete the original file and render the one with the right info.
         filename = "/etc/pgbackrest.conf"
@@ -805,6 +860,7 @@ Stderr:
         s3_parameters.setdefault("region")
         s3_parameters.setdefault("path", "")
         s3_parameters.setdefault("s3-uri-style", "host")
+        s3_parameters.setdefault("delete-older-than-days", "9999999")
 
         # Strip whitespaces from all parameters.
         for key, value in s3_parameters.items():
