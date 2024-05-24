@@ -107,7 +107,7 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
         # (to be able to create backups from replicas).
         database_app_name = f"{DATABASE_APP_NAME}-{cloud.lower()}"
         await build_and_deploy(
-            ops_test, 2, database_app_name=database_app_name, wait_for_idle=True
+            ops_test, 2, database_app_name=database_app_name, wait_for_idle=False
         )
         await ops_test.model.relate(database_app_name, S3_INTEGRATOR_APP_NAME)
         await ops_test.model.relate(database_app_name, TLS_CERTIFICATES_APP_NAME)
@@ -366,9 +366,9 @@ async def test_restore_on_new_cluster(ops_test: OpsTest, github_secrets) -> None
     previous_database_app_name = f"{DATABASE_APP_NAME}-gcp"
     database_app_name = f"new-{DATABASE_APP_NAME}"
     await build_and_deploy(
-        ops_test, 1, database_app_name=previous_database_app_name, wait_for_idle=True
+        ops_test, 1, database_app_name=previous_database_app_name, wait_for_idle=False
     )
-    await build_and_deploy(ops_test, 1, database_app_name=database_app_name, wait_for_idle=True)
+    await build_and_deploy(ops_test, 1, database_app_name=database_app_name, wait_for_idle=False)
     await ops_test.model.relate(previous_database_app_name, S3_INTEGRATOR_APP_NAME)
     await ops_test.model.relate(database_app_name, S3_INTEGRATOR_APP_NAME)
     async with ops_test.fast_forward():
