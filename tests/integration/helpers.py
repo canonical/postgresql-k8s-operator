@@ -12,6 +12,7 @@ import botocore
 import psycopg2
 import requests
 import yaml
+from juju.model import Model
 from juju.unit import Unit
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
@@ -39,7 +40,9 @@ STORAGE_PATH = METADATA["storage"]["pgdata"]["location"]
 charm = None
 
 
-async def app_name(ops_test: OpsTest, application_name: str = "postgresql-k8s") -> Optional[str]:
+async def app_name(
+    ops_test: OpsTest, application_name: str = "postgresql-k8s", model: Model = None
+) -> Optional[str]:
     """Returns the name of the cluster running PostgreSQL.
 
     This is important since not all deployments of the PostgreSQL charm have the application name
@@ -47,8 +50,10 @@ async def app_name(ops_test: OpsTest, application_name: str = "postgresql-k8s") 
 
     Note: if multiple clusters are running PostgreSQL this will return the one first found.
     """
-    status = await ops_test.model.get_status()
-    for app in ops_test.model.applications:
+    if model is None:
+        model = ops_test.model
+    status = await model.get_status()
+    for app in model.applications:
         if application_name in status["applications"][app]["charm"]:
             return app
 
@@ -61,11 +66,15 @@ async def build_and_deploy(
     database_app_name: str = DATABASE_APP_NAME,
     wait_for_idle: bool = True,
     status: str = "active",
+    model: Model = None,
 ) -> None:
     """Builds the charm and deploys a specified number of units."""
+    if model is None:
+        model = ops_test.model
+
     # It is possible for users to provide their own cluster for testing. Hence, check if there
     # is a pre-existing cluster.
-    if await app_name(ops_test, database_app_name):
+    if await app_name(ops_test, database_app_name, model):
         return
 
     global charm
@@ -75,7 +84,7 @@ async def build_and_deploy(
         "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
     }
     (
-        await ops_test.model.deploy(
+        await model.deploy(
             charm,
             resources=resources,
             application_name=database_app_name,
@@ -87,7 +96,7 @@ async def build_and_deploy(
     )
     if wait_for_idle:
         # Wait until the PostgreSQL charm is successfully deployed.
-        await ops_test.model.wait_for_idle(
+        await model.wait_for_idle(
             apps=[database_app_name],
             status=status,
             raise_on_blocked=True,
@@ -409,9 +418,11 @@ def get_expected_k8s_resources(application: str) -> set:
     }
 
 
-async def get_leader_unit(ops_test: OpsTest, app: str) -> Optional[Unit]:
+async def get_leader_unit(ops_test: OpsTest, app: str, model: Model = None) -> Optional[Unit]:
     leader_unit = None
-    for unit in ops_test.model.applications[app].units:
+    if model is None:
+        model = ops_test.model
+    for unit in model.applications[app].units:
         if await unit.is_leader_from_status():
             leader_unit = unit
             break
@@ -589,13 +600,16 @@ async def check_tls_patroni_api(ops_test: OpsTest, unit_name: str, enabled: bool
         return False
 
 
-def has_relation_exited(ops_test: OpsTest, endpoint_one: str, endpoint_two: str) -> bool:
+def has_relation_exited(
+    ops_test: OpsTest, endpoint_one: str, endpoint_two: str, model: Model = None
+) -> bool:
     """Returns true if the relation between endpoint_one and endpoint_two has been removed."""
-    for rel in ops_test.model.relations:
+    relations = model.relations if model is not None else ops_test.model.relations
+    for rel in relations:
         endpoints = [endpoint.name for endpoint in rel.endpoints]
-        if endpoint_one not in endpoints and endpoint_two not in endpoints:
-            return True
-    return False
+        if endpoint_one in endpoints and endpoint_two in endpoints:
+            return False
+    return True
 
 
 @retry(
@@ -663,22 +677,27 @@ async def run_command_on_unit(ops_test: OpsTest, unit_name: str, command: str) -
     return stdout
 
 
-async def scale_application(ops_test: OpsTest, application_name: str, scale: int) -> None:
+async def scale_application(
+    ops_test: OpsTest, application_name: str, scale: int, model: Model = None
+) -> None:
     """Scale a given application to a specific unit count.
 
     Args:
         ops_test: The ops test framework instance
         application_name: The name of the application
         scale: The number of units to scale to
+        model: The model to scale the application in
     """
-    await ops_test.model.applications[application_name].scale(scale)
+    if model is None:
+        model = ops_test.model
+    await model.applications[application_name].scale(scale)
     if scale == 0:
-        await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[DATABASE_APP_NAME].units) == scale,
+        await model.block_until(
+            lambda: len(model.applications[DATABASE_APP_NAME].units) == scale,
             timeout=1000,
         )
     else:
-        await ops_test.model.wait_for_idle(
+        await model.wait_for_idle(
             apps=[application_name],
             status="active",
             timeout=1000,
@@ -747,7 +766,7 @@ async def wait_for_idle_on_blocked(
 
 
 def wait_for_relation_removed_between(
-    ops_test: OpsTest, endpoint_one: str, endpoint_two: str
+    ops_test: OpsTest, endpoint_one: str, endpoint_two: str, model: Model = None
 ) -> None:
     """Wait for relation to be removed before checking if it's waiting or idle.
 
@@ -755,11 +774,12 @@ def wait_for_relation_removed_between(
         ops_test: running OpsTest instance
         endpoint_one: one endpoint of the relation. Doesn't matter if it's provider or requirer.
         endpoint_two: the other endpoint of the relation.
+        model: optional model to check for the relation.
     """
     try:
         for attempt in Retrying(stop=stop_after_delay(3 * 60), wait=wait_fixed(3)):
             with attempt:
-                if has_relation_exited(ops_test, endpoint_one, endpoint_two):
+                if has_relation_exited(ops_test, endpoint_one, endpoint_two, model):
                     break
     except RetryError:
         assert False, "Relation failed to exit after 3 minutes."

@@ -722,6 +722,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # config-changed hook.
         # Get the postgresql container so we can configure/manipulate it.
         container = event.workload
+        if not container.can_connect():
+            logger.debug(
+                "Defer on_postgresql_pebble_ready: Waiting for container to become available"
+            )
+            event.defer()
+            return
 
         # Create the PostgreSQL data directory. This is needed on cloud environments
         # where the volume is mounted with more restrictive permissions.
