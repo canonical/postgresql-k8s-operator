@@ -10,6 +10,13 @@ create-backup:
         Full backup is a full copy of all data.
         Differential backup is a copy only of changed data since the last full backup.
         Possible values - full, differential.
+create-replication:
+  description: Set up asynchronous replication between two clusters.
+  params:
+    name:
+      type: string
+      description: The name of the replication (defaults to 'default').
+      default: default
 get-primary:
   description: Get the unit with is the primary/leader in the replication.
 get-password:
@@ -24,7 +31,7 @@ list-backups:
   description: Lists backups in s3 storage in AWS.
 pre-upgrade-check:
   description: Run necessary pre-upgrade checks and preparations before executing a charm refresh.
-promote-cluster:
+promote-to-primary:
   description: Promotes the cluster of choice to a primary cluster. Must be ran against the leader unit.
   params:
     force-promotion:
