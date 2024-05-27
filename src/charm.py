@@ -175,9 +175,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         )
         self.loki_push = LogProxyConsumer(
             self,
-            log_files=POSTGRES_LOG_FILES,
+            logs_scheme={"postgresql": {"log-files": POSTGRES_LOG_FILES}},
             relation_name="logging",
-            container_name="postgresql",
         )
 
         postgresql_db_port = ServicePort(5432, name="database")
