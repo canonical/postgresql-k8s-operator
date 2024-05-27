@@ -178,7 +178,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self,
                 relation_name="logging",
             )
-            if self._is_pebble_log_forwarding_supported
+            if self._pebble_log_forwarding_supported
             else LogProxyConsumer(
                 self,
                 logs_scheme={"postgresql": {"log-files": POSTGRES_LOG_FILES}},
@@ -190,7 +190,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         patroni_api_port = ServicePort(8008, name="api")
         self.service_patcher = KubernetesServicePatch(self, [postgresql_db_port, patroni_api_port])
 
-    def _is_pebble_log_forwarding_supported(self) -> bool:
+    @property
+    def _pebble_log_forwarding_supported(self) -> bool:
         # https://github.com/canonical/operator/issues/1230
         from ops.jujuversion import JujuVersion
 
