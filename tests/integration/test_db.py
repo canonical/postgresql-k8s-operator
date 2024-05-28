@@ -7,6 +7,7 @@ from asyncio import gather
 import pytest
 from pytest_operator.plugin import OpsTest
 
+from . import markers
 from .helpers import (
     APPLICATION_NAME,
     CHARM_SERIES,
@@ -32,6 +33,7 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.group(1)
+@markers.amd64_only  # finos-waltz-k8s charm not available for arm64
 async def test_finos_waltz_db(ops_test: OpsTest) -> None:
     """Deploy Finos Waltz to test the 'db' relation.
 
