@@ -507,15 +507,15 @@ def test_format_backup_list(harness):
 
     # Test when there are backups.
     backup_list = [
-        ("2023-01-01T09:00:00Z", "full", "failed: fake error"),
-        ("2023-01-01T10:00:00Z", "full", "finished"),
+        ("2023-01-01T09:00:00Z", "FULL", "failed: fake error"),
+        ("2023-01-01T10:00:00Z", "FULL", "finished"),
     ]
     tc.assertEqual(
         harness.charm.backup._format_backup_list(backup_list),
         """backup-id             | backup-type  | backup-status
 ----------------------------------------------------
-2023-01-01T09:00:00Z  | full         | failed: fake error
-2023-01-01T10:00:00Z  | full         | finished""",
+2023-01-01T09:00:00Z  | FULL         | failed: fake error
+2023-01-01T10:00:00Z  | FULL         | finished""",
     )
 
 
@@ -538,8 +538,8 @@ def test_generate_backup_list_output(harness):
             harness.charm.backup._generate_backup_list_output(),
             """backup-id             | backup-type  | backup-status
 ----------------------------------------------------
-2023-01-01T09:00:00Z  | full         | failed: fake error
-2023-01-01T10:00:00Z  | full         | finished""",
+2023-01-01T09:00:00Z  | FULL         | failed: fake error
+2023-01-01T10:00:00Z  | FULL         | finished""",
         )
 
 
@@ -1073,7 +1073,7 @@ def test_on_create_backup_action(harness):
 
         # Test when the unit cannot perform a backup because of preflight check.
         mock_event = MagicMock()
-        mock_event.params = {"type": "full"}
+        mock_event.params = {"type": "FULL"}
         _can_unit_perform_backup.return_value = (False, "fake validation message")
         harness.charm.backup._on_create_backup_action(mock_event)
         mock_event.fail.assert_called_once()
@@ -1081,7 +1081,7 @@ def test_on_create_backup_action(harness):
 
         # Test when the charm fails to upload a file to S3.
         mock_event.reset_mock()
-        mock_event.params = {"type": "full"}
+        mock_event.params = {"type": "FULL"}
         _can_unit_perform_backup.return_value = (True, None)
         mock_s3_parameters = {
             "bucket": "test-bucket",
@@ -1115,7 +1115,7 @@ Juju Version: test-juju-version
 
         # Test when the backup fails.
         mock_event.reset_mock()
-        mock_event.params = {"type": "full"}
+        mock_event.params = {"type": "FULL"}
         _upload_content_to_s3.return_value = True
         _is_primary.return_value = True
         _execute_command.side_effect = ExecError(
@@ -1132,14 +1132,14 @@ Juju Version: test-juju-version
 
         # Test when the backup succeeds but the charm fails to upload the backup logs.
         mock_event.reset_mock()
-        mock_event.params = {"type": "full"}
+        mock_event.params = {"type": "FULL"}
         _upload_content_to_s3.reset_mock()
         _upload_content_to_s3.side_effect = [True, False]
         _execute_command.side_effect = None
         _execute_command.return_value = "fake stdout", "fake stderr"
         _list_backups.return_value = {"2023-01-01T09:00:00Z": harness.charm.backup.stanza_name}
         _update_config.reset_mock()
-        mock_event.params = {"type": "full"}
+        mock_event.params = {"type": "FULL"}
         harness.charm.backup._on_create_backup_action(mock_event)
         _upload_content_to_s3.assert_has_calls([
             call(
@@ -1159,7 +1159,7 @@ Juju Version: test-juju-version
 
         # Test when the backup succeeds (including the upload of the backup logs).
         mock_event.reset_mock()
-        mock_event.params = {"type": "full"}
+        mock_event.params = {"type": "FULL"}
         _upload_content_to_s3.reset_mock()
         _upload_content_to_s3.side_effect = None
         _upload_content_to_s3.return_value = True
@@ -1184,7 +1184,7 @@ Juju Version: test-juju-version
 
         # Test when this unit is a replica (the connectivity to the database should be changed).
         mock_event.reset_mock()
-        mock_event.params = {"type": "full"}
+        mock_event.params = {"type": "FULL"}
         _upload_content_to_s3.reset_mock()
         _is_primary.return_value = False
         harness.charm.backup._on_create_backup_action(mock_event)
@@ -1238,15 +1238,15 @@ def test_on_list_backups_action(harness):
         _generate_backup_list_output.side_effect = None
         _generate_backup_list_output.return_value = """backup-id             | backup-type  | backup-status
 ----------------------------------------------------
-2023-01-01T09:00:00Z  | full     | failed: fake error
-2023-01-01T10:00:00Z  | full     | finished"""
+2023-01-01T09:00:00Z  | FULL     | failed: fake error
+2023-01-01T10:00:00Z  | FULL     | finished"""
         harness.charm.backup._on_list_backups_action(mock_event)
         _generate_backup_list_output.assert_called_once()
         mock_event.set_results.assert_called_once_with({
             "backups": """backup-id             | backup-type  | backup-status
 ----------------------------------------------------
-2023-01-01T09:00:00Z  | full     | failed: fake error
-2023-01-01T10:00:00Z  | full     | finished"""
+2023-01-01T09:00:00Z  | FULL     | failed: fake error
+2023-01-01T10:00:00Z  | FULL     | finished"""
         })
         mock_event.fail.assert_not_called()
 

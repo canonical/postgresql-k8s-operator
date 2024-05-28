@@ -170,7 +170,7 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
         # Run the "create backup" action.
         logger.info("creating a backup")
         action = await ops_test.model.units.get(replica).run_action(
-            "create-backup", **{"type": "diff"}
+            "create-backup", **{"type": "DIFFERENTIAL"}
         )
         await action.wait()
         backup_status = action.results.get("backup-status")
