@@ -38,4 +38,4 @@ APP_SCOPE = "app"
 UNIT_SCOPE = "unit"
 
 SECRET_KEY_OVERRIDES = {"ca": "cauth"}
-BACKUP_TYPE_OVERRIDES = {"FULL": "full", "DIFFERENTIAL": "diff", "INCREMENTAL": "incr"}
+BACKUP_TYPE_OVERRIDES = {"full": "full", "differential": "diff", "incremental": "incr"}

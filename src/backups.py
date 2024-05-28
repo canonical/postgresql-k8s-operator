@@ -296,13 +296,13 @@ class PostgreSQLBackups(Object):
         """Parse backup ID as a timestamp."""
         if label[-1] == "F":
             timestamp = label
-            backup_type = "FULL"
+            backup_type = "full"
         elif label[-1] == "D":
             timestamp = label.split("_")[1]
-            backup_type = "DIFFERENTIAL"
+            backup_type = "differential"
         elif label[-1] == "I":
             timestamp = label.split("_")[1]
-            backup_type = "INCREMENTAL"
+            backup_type = "incremental"
         else:
             raise ValueError("Unknown label format for backup ID: %s", label)
 
@@ -474,7 +474,7 @@ class PostgreSQLBackups(Object):
 
     def _on_create_backup_action(self, event) -> None:  # noqa: C901
         """Request that pgBackRest creates a backup."""
-        backup_type = event.params.get("type", "FULL")
+        backup_type = event.params.get("type", "full")
         if backup_type not in BACKUP_TYPE_OVERRIDES:
             error_message = f"Invalid backup type: {backup_type}. Possible values: {', '.join(BACKUP_TYPE_OVERRIDES.keys())}."
             logger.error(f"Backup failed: {error_message}")
@@ -703,9 +703,9 @@ Stderr:
 
     def _generate_fake_backup_id(self, backup_type: str) -> str:
         """Creates a backup id for failed backup operations (to store log file)."""
-        if backup_type == "FULL":
+        if backup_type == "full":
             return datetime.strftime(datetime.now(), "%Y%m%d-%H%M%SF")
-        if backup_type == "DIFFERENTIAL":
+        if backup_type == "differential":
             backups = self._list_backups(show_failed=False, parse=False).keys()
             last_full_backup = None
             for label in backups[::-1]:
@@ -716,7 +716,7 @@ Stderr:
             if last_full_backup is None:
                 raise TypeError("Differential backup requested but no previous full backup")
             return f'{last_full_backup}_{datetime.strftime(datetime.now(), "%Y%m%d-%H%M%SD")}'
-        if backup_type == "INCREMENTAL":
+        if backup_type == "incremental":
             backups = self._list_backups(show_failed=False, parse=False).keys()
             if not backups:
                 raise TypeError("Incremental backup requested but no previous successful backup")
