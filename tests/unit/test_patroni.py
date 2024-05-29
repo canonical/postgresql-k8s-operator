@@ -62,13 +62,17 @@ def test_get_primary(harness, patroni):
         # Test returning pod name.
         primary = patroni.get_primary()
         tc.assertEqual(primary, "postgresql-k8s-1")
-        _get.assert_called_once_with("http://postgresql-k8s-0:8008/cluster", verify=True)
+        _get.assert_called_once_with(
+            "http://postgresql-k8s-0:8008/cluster", verify=True, timeout=5
+        )
 
         # Test returning unit name.
         _get.reset_mock()
         primary = patroni.get_primary(unit_name_pattern=True)
         tc.assertEqual(primary, "postgresql-k8s/1")
-        _get.assert_called_once_with("http://postgresql-k8s-0:8008/cluster", verify=True)
+        _get.assert_called_once_with(
+            "http://postgresql-k8s-0:8008/cluster", verify=True, timeout=5
+        )
 
 
 def test_is_creating_backup(harness, patroni):
