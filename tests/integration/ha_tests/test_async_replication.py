@@ -365,7 +365,7 @@ async def test_reestablish_relation(
     leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
     assert leader_unit is not None, "No leader unit found"
     logger.info("promoting the first cluster")
-    run_action = await leader_unit.run_action("promote-to-primary")
+    run_action = await leader_unit.run_action("create-replication")
     await run_action.wait()
     assert (run_action.results.get("return-code", None) == 0) or (
         run_action.results.get("Code", None) == "0"

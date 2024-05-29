@@ -24,6 +24,7 @@ from lightkube import ApiError, Client
 from lightkube.resources.core_v1 import Endpoints, Service
 from ops import (
     ActionEvent,
+    ActiveStatus,
     Application,
     BlockedStatus,
     MaintenanceStatus,
@@ -51,7 +52,7 @@ from patroni import ClusterNotPromotedError, NotReadyError, StandbyClusterAlread
 logger = logging.getLogger(__name__)
 
 
-READ_ONLY_MODE_BLOCKING_MESSAGE = "Cluster in read-only mode"
+READ_ONLY_MODE_BLOCKING_MESSAGE = "Standalone read-only cluster"
 REPLICATION_CONSUMER_RELATION = "replication"
 REPLICATION_OFFER_RELATION = "replication-offer"
 SECRET_LABEL = "async-replication-secret"
@@ -125,13 +126,11 @@ class PostgreSQLAsyncReplication(Object):
             if standby_leader is not None:
                 try:
                     self.charm._patroni.promote_standby_cluster()
-                    if (
-                        self.charm.is_blocked
-                        and self.charm.unit.status.message == READ_ONLY_MODE_BLOCKING_MESSAGE
-                    ):
+                    if self.charm.app.status.message == READ_ONLY_MODE_BLOCKING_MESSAGE:
                         self.charm._peers.data[self.charm.app].update({
                             "promoted-cluster-counter": ""
                         })
+                        self._set_app_status()
                         self.charm._set_active_status()
                 except (StandbyClusterAlreadyPromotedError, ClusterNotPromotedError) as e:
                     event.fail(str(e))
@@ -413,19 +412,11 @@ class PostgreSQLAsyncReplication(Object):
 
     def handle_read_only_mode(self) -> None:
         """Handle read-only mode (standby cluster that lost the relation with the primary cluster)."""
-        promoted_cluster_counter = self.charm._peers.data[self.charm.app].get(
-            "promoted-cluster-counter", ""
-        )
-        if not self.charm.is_blocked or (
-            promoted_cluster_counter != "0"
-            and self.charm.unit.status.message == READ_ONLY_MODE_BLOCKING_MESSAGE
-        ):
+        if not self.charm.is_blocked:
             self.charm._set_active_status()
-        if (
-            promoted_cluster_counter == "0"
-            and self.charm.unit.status.message != READ_ONLY_MODE_BLOCKING_MESSAGE
-        ):
-            self.charm.unit.status = BlockedStatus(READ_ONLY_MODE_BLOCKING_MESSAGE)
+
+        if self.charm.unit.is_leader():
+            self._set_app_status()
 
     def _handle_replication_change(self, event: ActionEvent) -> bool:
         if not self._can_promote_cluster(event):
@@ -491,7 +482,7 @@ class PostgreSQLAsyncReplication(Object):
         if self.charm._patroni.get_standby_leader() is not None:
             if self.charm.unit.is_leader():
                 self.charm._peers.data[self.charm.app].update({"promoted-cluster-counter": "0"})
-            self.charm.unit.status = BlockedStatus(READ_ONLY_MODE_BLOCKING_MESSAGE)
+                self._set_app_status()
         else:
             if self.charm.unit.is_leader():
                 self.charm._peers.data[self.charm.app].update({"promoted-cluster-counter": ""})
@@ -499,6 +490,9 @@ class PostgreSQLAsyncReplication(Object):
 
     def _on_async_relation_changed(self, event: RelationChangedEvent) -> None:
         """Update the Patroni configuration if one of the clusters was already promoted."""
+        if self.charm.unit.is_leader():
+            self._set_app_status()
+
         primary_cluster = self._get_primary_cluster()
         logger.debug("Primary cluster: %s", primary_cluster)
         if primary_cluster is None:
@@ -576,7 +570,10 @@ class PostgreSQLAsyncReplication(Object):
 
     def _on_promote_to_primary(self, event: ActionEvent) -> None:
         """Promote this cluster to the primary cluster."""
-        if self._get_primary_cluster() is None:
+        if (
+            self.charm.app.status.message != READ_ONLY_MODE_BLOCKING_MESSAGE
+            and self._get_primary_cluster() is None
+        ):
             event.fail(
                 "No primary cluster found. Run `create-replication` action in the cluster where the offer was created."
             )
@@ -669,6 +666,22 @@ class PostgreSQLAsyncReplication(Object):
                 if e.status.code != 404:
                     raise e
                 logger.debug(f"{values[0]} {values[1]} not found")
+
+    def _set_app_status(self) -> None:
+        """Set the app status."""
+        if self.charm._peers.data[self.charm.app].get("promoted-cluster-counter") == "0":
+            self.charm.app.status = BlockedStatus(READ_ONLY_MODE_BLOCKING_MESSAGE)
+            return
+        if self._relation is None:
+            self.charm.app.status = ActiveStatus()
+            return
+        primary_cluster = self._get_primary_cluster()
+        if primary_cluster is None:
+            self.charm.app.status = ActiveStatus()
+        else:
+            self.charm.app.status = ActiveStatus(
+                "Primary" if self.charm.app == primary_cluster else "Standby"
+            )
 
     def _stop_database(self, event: RelationChangedEvent) -> bool:
         """Stop the database."""
