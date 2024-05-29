@@ -44,6 +44,18 @@ jobs:
     with:
       cache: true
 
+  release:
+    name: Release charm
+    needs:
+      - build
+    uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v13.1.1
+    with:
+      channel: 14/edge/test-dpw
+      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
+      create-github-release: false
+    secrets:
+      charmhub-token: ${{ secrets.CHARMHUB_TOKEN }}
+
   integration-test:
     strategy:
       fail-fast: false
