@@ -25,7 +25,7 @@ from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 from ops.pebble import ChangeError, ExecError
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
-from constants import BACKUP_USER, WORKLOAD_OS_GROUP, WORKLOAD_OS_USER
+from constants import BACKUP_TYPE_OVERRIDES, BACKUP_USER, WORKLOAD_OS_GROUP, WORKLOAD_OS_USER
 from relations.async_replication import ASYNC_PRIMARY_RELATION, ASYNC_REPLICA_RELATION
 
 logger = logging.getLogger(__name__)
@@ -474,16 +474,14 @@ class PostgreSQLBackups(Object):
 
     def _on_create_backup_action(self, event) -> None:  # noqa: C901
         """Request that pgBackRest creates a backup."""
-        backup_type = event.params.get("type", "full").lower()[:4]
-        if backup_type not in ["full", "diff"]:
-            error_message = (
-                f"Invalid backup type: {backup_type}. Possible values: full, differential."
-            )
+        backup_type = event.params.get("type", "full")
+        if backup_type not in BACKUP_TYPE_OVERRIDES:
+            error_message = f"Invalid backup type: {backup_type}. Possible values: {', '.join(BACKUP_TYPE_OVERRIDES.keys())}."
             logger.error(f"Backup failed: {error_message}")
             event.fail(error_message)
             return
 
-        logger.info(f"A {backup_type} backup  has been requested on unit")
+        logger.info(f"A {backup_type} backup has been requested on unit")
         can_unit_perform_backup, validation_message = self._can_unit_perform_backup()
         if not can_unit_perform_backup:
             logger.error(f"Backup failed: {validation_message}")
@@ -530,7 +528,7 @@ Juju Version: {str(juju_version)}
                 "pgbackrest",
                 f"--stanza={self.stanza_name}",
                 "--log-level-console=debug",
-                f"--type={backup_type}",
+                f"--type={BACKUP_TYPE_OVERRIDES[backup_type]}",
                 "backup",
             ]
             if self.charm.is_primary:
@@ -705,9 +703,9 @@ Stderr:
 
     def _generate_fake_backup_id(self, backup_type: str) -> str:
         """Creates a backup id for failed backup operations (to store log file)."""
-        if backup_type == "F":
+        if backup_type == "full":
             return datetime.strftime(datetime.now(), "%Y%m%d-%H%M%SF")
-        if backup_type == "D":
+        if backup_type == "differential":
             backups = self._list_backups(show_failed=False, parse=False).keys()
             last_full_backup = None
             for label in backups[::-1]:
@@ -718,6 +716,11 @@ Stderr:
             if last_full_backup is None:
                 raise TypeError("Differential backup requested but no previous full backup")
             return f'{last_full_backup}_{datetime.strftime(datetime.now(), "%Y%m%d-%H%M%SD")}'
+        if backup_type == "incremental":
+            backups = self._list_backups(show_failed=False, parse=False).keys()
+            if not backups:
+                raise TypeError("Incremental backup requested but no previous successful backup")
+            return f'{backups[-1]}_{datetime.strftime(datetime.now(), "%Y%m%d-%H%M%SI")}'
 
     def _fetch_backup_from_id(self, backup_id: str) -> str:
         """Fetches backup's pgbackrest label from backup id."""
