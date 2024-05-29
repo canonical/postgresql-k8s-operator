@@ -76,6 +76,7 @@ async def check_tls_rewind(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.group(1)
+@markers.amd64_only  # mattermost-k8s charm not available for arm64
 async def test_mattermost_db(ops_test: OpsTest) -> None:
     """Deploy Mattermost to test the 'db' relation.
 
