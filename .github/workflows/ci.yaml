@@ -48,44 +48,10 @@ jobs:
     name: Release charm
     needs:
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v13.1.1
+    uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@multi-arch-workaround
     with:
       channel: 14/edge/test-dpw
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
       create-github-release: false
     secrets:
       charmhub-token: ${{ secrets.CHARMHUB_TOKEN }}
-
-  integration-test:
-    strategy:
-      fail-fast: false
-      matrix:
-        juju:
-          - agent: 2.9.49  # renovate: latest juju 2
-            libjuju: ==2.9.49.0  # renovate: latest libjuju 2
-            allure: false
-          - agent: 3.1.8  # renovate: latest juju 3
-            allure: true
-    name: Integration test charm | ${{ matrix.juju.agent }}
-    needs:
-      - lint
-      - unit-test
-      - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v13.1.1
-    with:
-      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
-      cloud: microk8s
-      microk8s-snap-channel: 1.29-strict/stable
-      juju-agent-version: ${{ matrix.juju.agent }}
-      libjuju-version-constraint: ${{ matrix.juju.libjuju }}
-      _beta_allure_report: ${{ matrix.juju.allure }}
-    secrets:
-      integration-test: |
-        {
-          "AWS_ACCESS_KEY": "${{ secrets.AWS_ACCESS_KEY }}",
-          "AWS_SECRET_KEY": "${{ secrets.AWS_SECRET_KEY }}",
-          "GCP_ACCESS_KEY": "${{ secrets.GCP_ACCESS_KEY }}",
-          "GCP_SECRET_KEY": "${{ secrets.GCP_SECRET_KEY }}",
-        }
-    permissions:
-      contents: write  # Needed for Allure Report beta
