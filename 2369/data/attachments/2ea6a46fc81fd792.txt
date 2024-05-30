@@ -1,0 +1,20 @@
+[32mINFO    [0m integration.test_backups:test_backups.py:462 configuring S3 integrator for an invalid cloud
+[32mINFO    [0m integration.test_backups:test_backups.py:477 waiting for the database charm to become blocked
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  s3-integrator/0 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  new-postgresql-k8s/0 [executing] blocked: the S3 repository has backups from another cluster
+[32mINFO    [0m integration.test_backups:test_backups.py:487 configuring S3 integrator for a valid cloud, but with the path of another cluster repository
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  s3-integrator/0 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  new-postgresql-k8s/0 [executing] blocked: failed to access/create the bucket, check your S3 settings
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  new-postgresql-k8s/0 [idle] blocked: the S3 repository has backups from another cluster
+[32mINFO    [0m integration.test_backups:test_backups.py:505 configuring S3 integrator for a valid cloud
+[32mINFO    [0m integration.test_backups:test_backups.py:509 waiting for the database charm to become active
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  new-postgresql-k8s/0 [idle] blocked: the S3 repository has backups from another cluster
+  s3-integrator/0 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  new-postgresql-k8s/0 [executing] maintenance: initialising stanza

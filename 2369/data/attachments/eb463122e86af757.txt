@@ -1,0 +1,44 @@
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:270 breaking the relation
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  postgresql-k8s/0 [executing] active: Primary
+  postgresql-k8s/1 [executing] active: 
+  postgresql-k8s/2 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  postgresql-k8s/0 [idle] active: Standby Leader
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  postgresql-k8s/0 [executing] active: Primary
+  postgresql-k8s/1 [executing] active: 
+  postgresql-k8s/2 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  postgresql-k8s/0 [executing] blocked: Cluster in read-only mode
+  postgresql-k8s/1 [executing] blocked: Cluster in read-only mode
+  postgresql-k8s/2 [executing] blocked: Cluster in read-only mode
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  postgresql-k8s/0 [executing] active: Primary
+  postgresql-k8s/1 [executing] active: 
+  postgresql-k8s/2 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  postgresql-k8s/0 [idle] blocked: Cluster in read-only mode
+  postgresql-k8s/1 [idle] blocked: Cluster in read-only mode
+  postgresql-k8s/2 [idle] blocked: Cluster in read-only mode
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:289 Get leader unit
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:292 promoting the first cluster
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  postgresql-k8s/0 [executing] active: Primary
+  postgresql-k8s/1 [executing] blocked: Cluster in read-only mode
+  postgresql-k8s/2 [executing] blocked: Cluster in read-only mode
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:309 removing the previous data
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:328 starting continuous writes to the database
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:331 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.0.88:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.0.88:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.0.88:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.0.88:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.0.88:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.0.88:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
