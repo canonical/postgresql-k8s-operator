@@ -826,6 +826,16 @@ Stderr:
             )
             return False
 
+        tls_ca_chain_filename = ""
+        if s3_parameters.get("tls-ca-chain") is not None:
+            tls_ca_chain_filename = f"{self.charm._storage_path}/pgbackrest-tls-ca-chain.crt"
+            self.container.push(
+                tls_ca_chain_filename,
+                "\n".join(s3_parameters["tls-ca-chain"]),
+                user=WORKLOAD_OS_USER,
+                group=WORKLOAD_OS_GROUP,
+            )
+
         # Open the template pgbackrest.conf file.
         with open("templates/pgbackrest.conf.j2", "r") as file:
             template = Template(file.read())
@@ -838,6 +848,7 @@ Stderr:
             endpoint=s3_parameters["endpoint"],
             bucket=s3_parameters["bucket"],
             s3_uri_style=s3_parameters["s3-uri-style"],
+            tls_ca_chain=tls_ca_chain_filename,
             access_key=s3_parameters["access-key"],
             secret_key=s3_parameters["secret-key"],
             stanza=self.stanza_name,
