@@ -9,7 +9,8 @@ create-backup:
       description: The backup type, the default value is 'full'.
         Full backup is a full copy of all data.
         Differential backup is a copy only of changed data since the last full backup.
-        Possible values - full, differential.
+        Incremental backup is a copy only of changed data since the last backup (any type).
+        Possible values - full, differential, incremental.
 create-replication:
   description: Set up asynchronous replication between two clusters.
   params:
