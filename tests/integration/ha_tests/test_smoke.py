@@ -40,7 +40,6 @@ logger = logging.getLogger(__name__)
 
 env = os.environ
 env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
-print(f"Model Name: {DATABASE_APP_NAME}")
 
 
 @pytest.mark.group(1)

@@ -439,13 +439,7 @@ async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
                     success = cursor.fetchone()[0] == 1
                 connection.close()
                 return success
-    except (psycopg2.Error, RetryError) as e:
-        if isinstance(e, RetryError):
-            last_attempt = e.last_attempt
-            last_exception = last_attempt.exception()
-            print(f"is_connection_possible err: {e}, last exception: {last_exception}")
-        else:
-            print(f"is_connection_possible err: {e}")
+    except (psycopg2.Error, RetryError):
         # Error raised when the connection is not possible.
         return False
 
@@ -812,9 +806,7 @@ def is_pods_exists(ops_test: OpsTest, unit_name: str) -> bool:
     return False
 
 
-async def is_storage_exists(
-    ops_test: OpsTest, storage_id: str, include_detached: bool = False
-) -> bool:
+async def is_storage_exists(ops_test: OpsTest, storage_id: str) -> bool:
     """Returns True if storage exists by provided storage ID."""
     complete_command = [
         "show-storage",
