@@ -1529,6 +1529,7 @@ def test_render_pgbackrest_conf_file(harness):
             endpoint="https://storage.googleapis.com",
             bucket="test-bucket",
             s3_uri_style="path",
+            tls_ca_chain=harness.charm.backup._tls_ca_chain_filename,
             access_key="test-access-key",
             secret_key="test-secret-key",
             stanza=harness.charm.backup.stanza_name,
@@ -1762,7 +1763,9 @@ def test_upload_content_to_s3(harness):
             harness.charm.backup._upload_content_to_s3(content, s3_path, s3_parameters),
             False,
         )
-        _resource.assert_called_once_with("s3", endpoint_url="https://s3.us-east-1.amazonaws.com")
+        _resource.assert_called_once_with(
+            "s3", endpoint_url="https://s3.us-east-1.amazonaws.com", verify=None
+        )
         _named_temporary_file.assert_not_called()
         upload_file.assert_not_called()
 
@@ -1773,7 +1776,9 @@ def test_upload_content_to_s3(harness):
             harness.charm.backup._upload_content_to_s3(content, s3_path, s3_parameters),
             False,
         )
-        _resource.assert_called_once_with("s3", endpoint_url="https://s3.us-east-1.amazonaws.com")
+        _resource.assert_called_once_with(
+            "s3", endpoint_url="https://s3.us-east-1.amazonaws.com", verify=None
+        )
         _named_temporary_file.assert_called_once()
         upload_file.assert_called_once_with("/tmp/test-file", "test-path/test-file.")
 
@@ -1786,6 +1791,8 @@ def test_upload_content_to_s3(harness):
             harness.charm.backup._upload_content_to_s3(content, s3_path, s3_parameters),
             True,
         )
-        _resource.assert_called_once_with("s3", endpoint_url="https://s3.us-east-1.amazonaws.com")
+        _resource.assert_called_once_with(
+            "s3", endpoint_url="https://s3.us-east-1.amazonaws.com", verify=None
+        )
         _named_temporary_file.assert_called_once()
         upload_file.assert_called_once_with("/tmp/test-file", "test-path/test-file.")
