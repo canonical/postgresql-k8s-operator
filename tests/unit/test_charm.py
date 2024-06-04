@@ -84,7 +84,7 @@ def test_on_leader_elected(harness):
             Endpoints, name=f"patroni-{harness.charm.app.name}", namespace=harness.charm.model.name
         )
         _client.return_value.patch.assert_not_called()
-        tc.assertIn("cluster_initialised", harness.get_relation_data(rel_id, harness.charm.app))
+        assert "cluster_initialised" in harness.get_relation_data(rel_id, harness.charm.app)
 
         # Trigger a new leader election and check that the password is still the same, and that the charm
         # fixes the missing "leader" key in the endpoint annotations.
@@ -397,8 +397,9 @@ def test_on_update_status_with_error_on_get_primary(harness):
 
         with tc.assertLogs("charm", "ERROR") as logs:
             harness.charm.on.update_status.emit()
-            tc.assertIn(
-                "ERROR:charm:failed to get primary with error RetryError[fake error]", logs.output
+            assert (
+                "ERROR:charm:failed to get primary with error RetryError[fake error]"
+                in logs.output
             )
 
 
@@ -694,7 +695,7 @@ def test_on_stop(harness):
             )
             _client.return_value.list.assert_not_called()
             _client.return_value.apply.assert_not_called()
-            tc.assertIn("failed to get first pod info", "".join(logs.output))
+            assert "failed to get first pod info" in "".join(logs.output)
 
         # Test when the charm fails to get the k8s resources created by the charm and Patroni.
         _client.return_value.get.side_effect = None
@@ -708,9 +709,8 @@ def test_on_stop(harness):
                     labels={"app.juju.is/created-by": harness.charm.app.name},
                 )
             _client.return_value.apply.assert_not_called()
-            tc.assertIn(
-                "failed to get the k8s resources created by the charm and Patroni",
-                "".join(logs.output),
+            assert "failed to get the k8s resources created by the charm and Patroni" in "".join(
+                logs.output
             )
 
         # Test when the charm fails to patch a k8s resource.
@@ -724,8 +724,8 @@ def test_on_stop(harness):
         _client.return_value.apply.side_effect = [None, _FakeApiError]
         with tc.assertLogs("charm", "ERROR") as logs:
             harness.charm.on.stop.emit()
-            tc.assertEqual(_client.return_value.apply.call_count, 2)
-            tc.assertIn("failed to patch k8s MagicMock", "".join(logs.output))
+            assert _client.return_value.apply.call_count == 2
+            assert "failed to patch k8s MagicMock" in "".join(logs.output)
 
 
 def test_client_relations(harness):
@@ -1433,11 +1433,10 @@ def test_handle_postgresql_restart_need(harness):
 
             harness.charm._handle_postgresql_restart_need()
             _reload_patroni_configuration.assert_called_once()
-            (
-                tc.assertIn("tls", harness.get_relation_data(rel_id, harness.charm.unit))
-                if values[0]
-                else tc.assertNotIn("tls", harness.get_relation_data(rel_id, harness.charm.unit))
-            )
+            if values[0]:
+                assert "tls" in harness.get_relation_data(rel_id, harness.charm.unit)
+            else:
+                assert "tls" not in harness.get_relation_data(rel_id, harness.charm.unit)
             if (values[0] != values[1]) or values[2]:
                 _generate_metrics_jobs.assert_called_once_with(values[0])
                 _restart.assert_called_once()
@@ -1501,4 +1500,4 @@ def test_set_active_status(harness):
                 _get_primary.side_effect = values[0]
                 _get_primary.return_value = None
                 harness.charm._set_active_status()
-                tc.assertIsInstance(harness.charm.unit.status, MaintenanceStatus)
+                assert isinstance(harness.charm.unit.status, MaintenanceStatus)

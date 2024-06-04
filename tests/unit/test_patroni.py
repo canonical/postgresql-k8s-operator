@@ -234,10 +234,10 @@ def test_render_patroni_yml_file(harness, patroni):
 
         # Also, ensure the right parameters are in the expected content
         # (as it was already validated with the above render file call).
-        tc.assertIn("ssl: on", expected_content_with_tls)
-        tc.assertIn("ssl_ca_file: /var/lib/postgresql/data/ca.pem", expected_content_with_tls)
-        tc.assertIn("ssl_cert_file: /var/lib/postgresql/data/cert.pem", expected_content_with_tls)
-        tc.assertIn("ssl_key_file: /var/lib/postgresql/data/key.pem", expected_content_with_tls)
+        assert "ssl: on" in expected_content_with_tls
+        assert "ssl_ca_file: /var/lib/postgresql/data/ca.pem" in expected_content_with_tls
+        assert "ssl_cert_file: /var/lib/postgresql/data/cert.pem" in expected_content_with_tls
+        assert "ssl_key_file: /var/lib/postgresql/data/key.pem" in expected_content_with_tls
 
 
 def test_primary_endpoint_ready(harness, patroni):
