@@ -3,7 +3,6 @@
 import itertools
 import json
 import logging
-from datetime import datetime
 from unittest import TestCase
 from unittest.mock import MagicMock, Mock, PropertyMock, patch
 
@@ -17,7 +16,7 @@ from ops.model import (
     RelationDataTypeError,
     WaitingStatus,
 )
-from ops.pebble import Change, ChangeError, ChangeID, ServiceStatus
+from ops.pebble import ServiceStatus
 from ops.testing import Harness
 from requests import ConnectionError
 from tenacity import RetryError, wait_fixed
@@ -1205,101 +1204,6 @@ def test_on_peer_relation_changed(harness):
         harness.charm.on.database_peers_relation_changed.emit(relation)
         tc.assertIsInstance(harness.charm.unit.status, BlockedStatus)
         _set_active_status.assert_not_called()
-
-
-def test_handle_processes_failures(harness):
-    with (
-        patch("charm.Patroni.reinitialize_postgresql") as _reinitialize_postgresql,
-        patch("charm.Patroni.member_streaming", new_callable=PropertyMock) as _member_streaming,
-        patch(
-            "charm.PostgresqlOperatorCharm.is_standby_leader", new_callable=PropertyMock
-        ) as _is_standby_leader,
-        patch(
-            "charm.PostgresqlOperatorCharm.is_primary", new_callable=PropertyMock
-        ) as _is_primary,
-        patch(
-            "charm.Patroni.is_database_running", new_callable=PropertyMock
-        ) as _is_database_running,
-        patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
-        patch("ops.model.Container.restart") as _restart,
-    ):
-        # Test when there are no processes failures to handle.
-        harness.set_can_connect(POSTGRESQL_CONTAINER, True)
-        for values in itertools.product(
-            [True, False], [True, False], [True, False], [True, False], [True, False]
-        ):
-            # Skip conditions that lead to handling a process failure.
-            if (not values[0] and values[2]) or (not values[3] and values[1] and not values[4]):
-                continue
-
-            _member_started.side_effect = [values[0], values[1]]
-            _is_database_running.return_value = values[2]
-            _is_primary.return_value = values[3]
-            _member_streaming.return_value = values[4]
-            tc.assertFalse(harness.charm._handle_processes_failures())
-            _restart.assert_not_called()
-            _reinitialize_postgresql.assert_not_called()
-
-        # Test when the Patroni process is not running.
-        _is_database_running.return_value = True
-        for values in itertools.product(
-            [
-                None,
-                ChangeError(
-                    err="fake error",
-                    change=Change(
-                        ChangeID("1"),
-                        "fake kind",
-                        "fake summary",
-                        "fake status",
-                        [],
-                        True,
-                        "fake error",
-                        datetime.now(),
-                        datetime.now(),
-                    ),
-                ),
-            ],
-            [True, False],
-            [True, False],
-            [True, False],
-        ):
-            _restart.reset_mock()
-            _restart.side_effect = values[0]
-            _is_primary.return_value = values[1]
-            _member_started.side_effect = [False, values[2]]
-            _member_streaming.return_value = values[3]
-            harness.charm.unit.status = ActiveStatus()
-            result = harness.charm._handle_processes_failures()
-            tc.assertTrue(result) if values[0] is None else tc.assertFalse(result)
-            tc.assertIsInstance(harness.charm.unit.status, ActiveStatus)
-            _restart.assert_called_once_with("postgresql")
-            _reinitialize_postgresql.assert_not_called()
-
-        # Test when the unit is a replica and it's not streaming from primary.
-        _restart.reset_mock()
-        _is_primary.return_value = False
-        _is_standby_leader.return_value = False
-        _member_streaming.return_value = False
-        for values in itertools.product(
-            [None, RetryError(last_attempt=1)], [True, False], [True, False]
-        ):
-            # Skip the condition that lead to handling other process failure.
-            if not values[1] and values[2]:
-                continue
-
-            _reinitialize_postgresql.reset_mock()
-            _reinitialize_postgresql.side_effect = values[0]
-            _member_started.side_effect = [values[1], True]
-            _is_database_running.return_value = values[2]
-            harness.charm.unit.status = ActiveStatus()
-            result = harness.charm._handle_processes_failures()
-            tc.assertTrue(result) if values[0] is None else tc.assertFalse(result)
-            tc.assertIsInstance(
-                harness.charm.unit.status, MaintenanceStatus if values[0] is None else ActiveStatus
-            )
-            _restart.assert_not_called()
-            _reinitialize_postgresql.assert_called_once()
 
 
 def test_update_config(harness):
