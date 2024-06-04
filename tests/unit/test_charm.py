@@ -58,6 +58,7 @@ def test_on_leader_elected(harness):
         patch("charm.Patroni.reload_patroni_configuration"),
         patch("charm.PostgresqlOperatorCharm._patch_pod_labels"),
         patch("charm.PostgresqlOperatorCharm._create_services"),
+        patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks"),
     ):
         rel_id = harness.model.get_relation(PEER).id
         # Check that a new password was generated on leader election and nothing is done
@@ -144,6 +145,7 @@ def test_on_postgresql_pebble_ready(harness):
         patch("charm.PostgresqlOperatorCharm._patch_pod_labels"),
         patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
         patch("charm.PostgresqlOperatorCharm._create_pgdata") as _create_pgdata,
+        patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks"),
     ):
         _rock_postgresql_version.return_value = "14.7"
 
@@ -206,36 +208,37 @@ def test_on_postgresql_pebble_ready_no_connection(harness):
 
 
 def test_on_get_password(harness):
-    # Create a mock event and set passwords in peer relation data.
-    harness.set_leader(True)
-    mock_event = MagicMock(params={})
-    rel_id = harness.model.get_relation(PEER).id
-    harness.update_relation_data(
-        rel_id,
-        harness.charm.app.name,
-        {
-            "operator-password": "test-password",
-            "replication-password": "replication-test-password",
-        },
-    )
+    with patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks"):
+        # Create a mock event and set passwords in peer relation data.
+        harness.set_leader(True)
+        mock_event = MagicMock(params={})
+        rel_id = harness.model.get_relation(PEER).id
+        harness.update_relation_data(
+            rel_id,
+            harness.charm.app.name,
+            {
+                "operator-password": "test-password",
+                "replication-password": "replication-test-password",
+            },
+        )
 
-    # Test providing an invalid username.
-    mock_event.params["username"] = "user"
-    harness.charm._on_get_password(mock_event)
-    mock_event.fail.assert_called_once()
-    mock_event.set_results.assert_not_called()
+        # Test providing an invalid username.
+        mock_event.params["username"] = "user"
+        harness.charm._on_get_password(mock_event)
+        mock_event.fail.assert_called_once()
+        mock_event.set_results.assert_not_called()
 
-    # Test without providing the username option.
-    mock_event.reset_mock()
-    del mock_event.params["username"]
-    harness.charm._on_get_password(mock_event)
-    mock_event.set_results.assert_called_once_with({"password": "test-password"})
+        # Test without providing the username option.
+        mock_event.reset_mock()
+        del mock_event.params["username"]
+        harness.charm._on_get_password(mock_event)
+        mock_event.set_results.assert_called_once_with({"password": "test-password"})
 
-    # Also test providing the username option.
-    mock_event.reset_mock()
-    mock_event.params["username"] = "replication"
-    harness.charm._on_get_password(mock_event)
-    mock_event.set_results.assert_called_once_with({"password": "replication-test-password"})
+        # Also test providing the username option.
+        mock_event.reset_mock()
+        mock_event.params["username"] = "replication"
+        harness.charm._on_get_password(mock_event)
+        mock_event.set_results.assert_called_once_with({"password": "replication-test-password"})
 
 
 def test_on_set_password(harness):
@@ -246,6 +249,7 @@ def test_on_set_password(harness):
         patch("charm.PostgresqlOperatorCharm.postgresql") as _postgresql,
         patch("charm.Patroni.are_all_members_ready") as _are_all_members_ready,
         patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
+        patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks"),
     ):
         # Create a mock event.
         mock_event = MagicMock(params={})
@@ -584,6 +588,7 @@ def test_postgresql_layer(harness):
         patch("charm.Patroni.reload_patroni_configuration"),
         patch("charm.PostgresqlOperatorCharm._patch_pod_labels"),
         patch("charm.PostgresqlOperatorCharm._create_services"),
+        patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks"),
     ):
         # Test with the already generated password.
         harness.set_leader()
@@ -807,7 +812,10 @@ def test_get_secret_from_databag(harness):
 
     This must be backwards-compatible so it runs on both juju2 and juju3.
     """
-    with patch("charm.PostgresqlOperatorCharm._on_leader_elected"):
+    with (
+        patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
+        patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks"),
+    ):
         rel_id = harness.model.get_relation(PEER).id
         # App level changes require leader privileges
         harness.set_leader()
@@ -832,6 +840,7 @@ def test_get_secret_from_databag(harness):
 def test_on_get_password_secrets(harness):
     with (
         patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
+        patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks"),
     ):
         # Create a mock event and set passwords in peer relation data.
         harness.set_leader()
@@ -863,6 +872,7 @@ def test_on_get_password_secrets(harness):
 def test_get_secret_secrets(harness, scope):
     with (
         patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
+        patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks"),
     ):
         harness.set_leader()
 
@@ -877,7 +887,10 @@ def test_set_secret_in_databag(harness, only_without_juju_secrets):
 
     This is juju2 specific. In juju3, set_secret writes to juju secrets.
     """
-    with patch("charm.PostgresqlOperatorCharm._on_leader_elected"):
+    with (
+        patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
+        patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks"),
+    ):
         rel_id = harness.model.get_relation(PEER).id
         harness.set_leader()
 
@@ -911,6 +924,7 @@ def test_set_reset_new_secret(harness, scope, is_leader):
     """NOTE: currently ops.testing seems to allow for non-leader to set secrets too!"""
     with (
         patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
+        patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks"),
     ):
         # App has to be leader, unit can be either
         harness.set_leader(is_leader)
@@ -932,6 +946,7 @@ def test_set_reset_new_secret(harness, scope, is_leader):
 def test_invalid_secret(harness, scope, is_leader):
     with (
         patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
+        patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks"),
     ):
         # App has to be leader, unit can be either
         harness.set_leader(is_leader)
@@ -948,6 +963,7 @@ def test_delete_password(harness, juju_has_secrets, caplog):
     """NOTE: currently ops.testing seems to allow for non-leader to remove secrets too!"""
     with (
         patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
+        patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks"),
     ):
         harness.set_leader(True)
         harness.charm.set_secret("app", "operator-password", "somepw")
@@ -998,6 +1014,7 @@ def test_migration_from_databag(harness, only_with_juju_secrets, scope, is_leade
     """
     with (
         patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
+        patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks"),
     ):
         rel_id = harness.model.get_relation(PEER).id
         # App has to be leader, unit can be either
@@ -1026,6 +1043,7 @@ def test_migration_from_single_secret(harness, only_with_juju_secrets, scope, is
     """
     with (
         patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
+        patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks"),
     ):
         rel_id = harness.model.get_relation(PEER).id
 

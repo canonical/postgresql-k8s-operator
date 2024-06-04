@@ -86,12 +86,8 @@ def test_log_rollback(harness):
 
 def test_on_postgresql_pebble_ready(harness):
     with (
-        patch(
-            "charm.PostgreSQLUpgrade.set_unit_failed"
-        ) as _set_unit_failed,
-        patch(
-            "charm.PostgreSQLUpgrade.set_unit_completed"
-        ) as _set_unit_completed,
+        patch("charm.PostgreSQLUpgrade.set_unit_failed") as _set_unit_failed,
+        patch("charm.PostgreSQLUpgrade.set_unit_completed") as _set_unit_completed,
         patch(
             "charm.Patroni.is_replication_healthy", new_callable=PropertyMock
         ) as _is_replication_healthy,
@@ -188,6 +184,7 @@ def test_pre_upgrade_check(harness):
             "charm.Patroni.is_creating_backup", new_callable=PropertyMock
         ) as _is_creating_backup,
         patch("charm.Patroni.are_all_members_ready") as _are_all_members_ready,
+        patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks"),
     ):
         harness.set_leader(True)
 
