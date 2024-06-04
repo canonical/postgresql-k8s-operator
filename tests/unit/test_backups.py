@@ -76,6 +76,39 @@ def test_are_backup_settings_ok(harness):
         )
 
 
+def test_can_initialise_stanza(harness):
+    with patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started:
+        # Test when Patroni or PostgreSQL hasn't started yet
+        # and the unit hasn't joined the peer relation yet.
+        _member_started.return_value = False
+        tc.assertEqual(
+            harness.charm.backup._can_initialise_stanza,
+            False,
+        )
+
+        # Test when the unit hasn't configured TLS yet while other unit already has TLS enabled.
+        harness.add_relation_unit(
+            harness.model.get_relation(PEER).id, f"{harness.charm.app.name}/1"
+        )
+        with harness.hooks_disabled():
+            harness.update_relation_data(
+                harness.model.get_relation(PEER).id,
+                f"{harness.charm.app.name}/1",
+                {"tls": "enabled"},
+            )
+        tc.assertEqual(
+            harness.charm.backup._can_initialise_stanza,
+            False,
+        )
+
+        # Test when everything is ok to initialise the stanza.
+        _member_started.return_value = True
+        tc.assertEqual(
+            harness.charm.backup._can_initialise_stanza,
+            True,
+        )
+
+
 def test_can_unit_perform_backup(harness):
     with (
         patch("charm.PostgreSQLBackups._are_backup_settings_ok") as _are_backup_settings_ok,
@@ -507,15 +540,15 @@ def test_format_backup_list(harness):
 
     # Test when there are backups.
     backup_list = [
-        ("2023-01-01T09:00:00Z", "physical", "failed: fake error"),
-        ("2023-01-01T10:00:00Z", "physical", "finished"),
+        ("2023-01-01T09:00:00Z", "full", "failed: fake error"),
+        ("2023-01-01T10:00:00Z", "full", "finished"),
     ]
     tc.assertEqual(
         harness.charm.backup._format_backup_list(backup_list),
         """backup-id             | backup-type  | backup-status
 ----------------------------------------------------
-2023-01-01T09:00:00Z  | physical     | failed: fake error
-2023-01-01T10:00:00Z  | physical     | finished""",
+2023-01-01T09:00:00Z  | full         | failed: fake error
+2023-01-01T10:00:00Z  | full         | finished""",
     )
 
 
@@ -538,8 +571,8 @@ def test_generate_backup_list_output(harness):
             harness.charm.backup._generate_backup_list_output(),
             """backup-id             | backup-type  | backup-status
 ----------------------------------------------------
-2023-01-01T09:00:00Z  | physical     | failed: fake error
-2023-01-01T10:00:00Z  | physical     | finished""",
+2023-01-01T09:00:00Z  | full         | failed: fake error
+2023-01-01T10:00:00Z  | full         | finished""",
         )
 
 
@@ -899,6 +932,9 @@ def test_on_s3_credential_changed(harness):
             "charm.PostgresqlOperatorCharm.is_primary", new_callable=PropertyMock
         ) as _is_primary,
         patch(
+            "charm.PostgreSQLBackups._can_initialise_stanza", new_callable=PropertyMock
+        ) as _can_initialise_stanza,
+        patch(
             "charm.PostgreSQLBackups._render_pgbackrest_conf_file"
         ) as _render_pgbackrest_conf_file,
         patch("ops.framework.EventBase.defer") as _defer,
@@ -930,9 +966,20 @@ def test_on_s3_credential_changed(harness):
         )
         _defer.assert_not_called()
         _render_pgbackrest_conf_file.assert_called_once()
+        _can_initialise_stanza.assert_not_called()
         _create_bucket_if_not_exists.assert_not_called()
         _can_use_s3_repository.assert_not_called()
         _initialise_stanza.assert_not_called()
+
+        # Test when it's not possible to initialise the stanza in this unit.
+        _render_pgbackrest_conf_file.return_value = True
+        _can_initialise_stanza.return_value = False
+        harness.charm.backup.s3_client.on.credentials_changed.emit(
+            relation=harness.model.get_relation(S3_PARAMETERS_RELATION, s3_rel_id)
+        )
+        _defer.assert_called_once()
+        _can_initialise_stanza.assert_called_once()
+        _is_primary.assert_not_called()
 
         # Test that followers will not initialise the bucket
         harness.charm.unit.status = ActiveStatus()
@@ -943,13 +990,13 @@ def test_on_s3_credential_changed(harness):
                 harness.charm.app.name,
                 {"cluster_initialised": "True"},
             )
-        _render_pgbackrest_conf_file.return_value = True
+        _can_initialise_stanza.return_value = True
         _is_primary.return_value = False
-
         harness.charm.backup.s3_client.on.credentials_changed.emit(
             relation=harness.model.get_relation(S3_PARAMETERS_RELATION, s3_rel_id)
         )
         _render_pgbackrest_conf_file.assert_called_once()
+        _is_primary.assert_called_once()
         _create_bucket_if_not_exists.assert_not_called()
         tc.assertIsInstance(harness.charm.unit.status, ActiveStatus)
         _can_use_s3_repository.assert_not_called()
@@ -1064,8 +1111,16 @@ def test_on_create_backup_action(harness):
         patch("charm.PostgreSQLBackups._retrieve_s3_parameters") as _retrieve_s3_parameters,
         patch("charm.PostgreSQLBackups._can_unit_perform_backup") as _can_unit_perform_backup,
     ):
-        # Test when the unit cannot perform a backup.
+        # Test when the unit cannot perform a backup because of type.
         mock_event = MagicMock()
+        mock_event.params = {"type": "wrong"}
+        harness.charm.backup._on_create_backup_action(mock_event)
+        mock_event.fail.assert_called_once()
+        mock_event.set_results.assert_not_called()
+
+        # Test when the unit cannot perform a backup because of preflight check.
+        mock_event = MagicMock()
+        mock_event.params = {"type": "full"}
         _can_unit_perform_backup.return_value = (False, "fake validation message")
         harness.charm.backup._on_create_backup_action(mock_event)
         mock_event.fail.assert_called_once()
@@ -1073,6 +1128,7 @@ def test_on_create_backup_action(harness):
 
         # Test when the charm fails to upload a file to S3.
         mock_event.reset_mock()
+        mock_event.params = {"type": "full"}
         _can_unit_perform_backup.return_value = (True, None)
         mock_s3_parameters = {
             "bucket": "test-bucket",
@@ -1106,6 +1162,7 @@ Juju Version: test-juju-version
 
         # Test when the backup fails.
         mock_event.reset_mock()
+        mock_event.params = {"type": "full"}
         _upload_content_to_s3.return_value = True
         _is_primary.return_value = True
         _execute_command.side_effect = ExecError(
@@ -1122,12 +1179,14 @@ Juju Version: test-juju-version
 
         # Test when the backup succeeds but the charm fails to upload the backup logs.
         mock_event.reset_mock()
+        mock_event.params = {"type": "full"}
         _upload_content_to_s3.reset_mock()
         _upload_content_to_s3.side_effect = [True, False]
         _execute_command.side_effect = None
         _execute_command.return_value = "fake stdout", "fake stderr"
         _list_backups.return_value = {"2023-01-01T09:00:00Z": harness.charm.backup.stanza_name}
         _update_config.reset_mock()
+        mock_event.params = {"type": "full"}
         harness.charm.backup._on_create_backup_action(mock_event)
         _upload_content_to_s3.assert_has_calls([
             call(
@@ -1147,6 +1206,7 @@ Juju Version: test-juju-version
 
         # Test when the backup succeeds (including the upload of the backup logs).
         mock_event.reset_mock()
+        mock_event.params = {"type": "full"}
         _upload_content_to_s3.reset_mock()
         _upload_content_to_s3.side_effect = None
         _upload_content_to_s3.return_value = True
@@ -1171,6 +1231,7 @@ Juju Version: test-juju-version
 
         # Test when this unit is a replica (the connectivity to the database should be changed).
         mock_event.reset_mock()
+        mock_event.params = {"type": "full"}
         _upload_content_to_s3.reset_mock()
         _is_primary.return_value = False
         harness.charm.backup._on_create_backup_action(mock_event)
@@ -1224,15 +1285,15 @@ def test_on_list_backups_action(harness):
         _generate_backup_list_output.side_effect = None
         _generate_backup_list_output.return_value = """backup-id             | backup-type  | backup-status
 ----------------------------------------------------
-2023-01-01T09:00:00Z  | physical     | failed: fake error
-2023-01-01T10:00:00Z  | physical     | finished"""
+2023-01-01T09:00:00Z  | full     | failed: fake error
+2023-01-01T10:00:00Z  | full     | finished"""
         harness.charm.backup._on_list_backups_action(mock_event)
         _generate_backup_list_output.assert_called_once()
         mock_event.set_results.assert_called_once_with({
             "backups": """backup-id             | backup-type  | backup-status
 ----------------------------------------------------
-2023-01-01T09:00:00Z  | physical     | failed: fake error
-2023-01-01T10:00:00Z  | physical     | finished"""
+2023-01-01T09:00:00Z  | full     | failed: fake error
+2023-01-01T10:00:00Z  | full     | finished"""
         })
         mock_event.fail.assert_not_called()
 
@@ -1247,6 +1308,7 @@ def test_on_restore_action(harness):
         patch("lightkube.Client.delete") as _delete,
         patch("ops.model.Container.stop") as _stop,
         patch("charm.PostgreSQLBackups._list_backups") as _list_backups,
+        patch("charm.PostgreSQLBackups._fetch_backup_from_id") as _fetch_backup_from_id,
         patch("charm.PostgreSQLBackups._pre_restore_checks") as _pre_restore_checks,
     ):
         peer_rel_id = harness.model.get_relation(PEER).id
@@ -1274,6 +1336,7 @@ def test_on_restore_action(harness):
         harness.charm.unit.status = ActiveStatus()
         harness.charm.backup._on_restore_action(mock_event)
         _list_backups.assert_called_once_with(show_failed=False)
+        _fetch_backup_from_id.assert_not_called()
         mock_event.fail.assert_called_once()
         _stop.assert_not_called()
         _delete.assert_not_called()
@@ -1348,6 +1411,7 @@ def test_on_restore_action(harness):
         mock_event.reset_mock()
         _restart_database.reset_mock()
         _empty_data_files.side_effect = None
+        _fetch_backup_from_id.return_value = "20230101-090000F"
         tc.assertEqual(harness.get_relation_data(peer_rel_id, harness.charm.app), {})
         harness.charm.backup._on_restore_action(mock_event)
         _restart_database.assert_not_called()
@@ -1448,6 +1512,7 @@ def test_render_pgbackrest_conf_file(harness):
                 "path": "test-path/",
                 "region": "us-east-1",
                 "s3-uri-style": "path",
+                "delete-older-than-days": "30",
             },
             [],
         )
@@ -1469,6 +1534,7 @@ def test_render_pgbackrest_conf_file(harness):
             stanza=harness.charm.backup.stanza_name,
             storage_path=harness.charm._storage_path,
             user="backup",
+            retention_full=30,
         )
 
         # Patch the `open` method with our mock.
@@ -1534,6 +1600,7 @@ def test_retrieve_s3_parameters(
                 {
                     "access-key": "test-access-key",
                     "bucket": "test-bucket",
+                    "delete-older-than-days": "9999999",
                     "endpoint": "https://s3.amazonaws.com",
                     "path": "/",
                     "region": None,
@@ -1553,6 +1620,7 @@ def test_retrieve_s3_parameters(
             "path": " test-path/ ",
             "region": " us-east-1 ",
             "s3-uri-style": " path ",
+            "delete-older-than-days": "30",
         }
         tc.assertEqual(
             harness.charm.backup._retrieve_s3_parameters(),
@@ -1565,6 +1633,7 @@ def test_retrieve_s3_parameters(
                     "region": "us-east-1",
                     "s3-uri-style": "path",
                     "secret-key": "test-secret-key",
+                    "delete-older-than-days": "30",
                 },
                 [],
             ),

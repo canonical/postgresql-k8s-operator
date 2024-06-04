@@ -94,7 +94,7 @@ juju relate postgresql-k8s:db finos-waltz-k8s
 **Note:** The endpoint `db-admin` provides the same legacy interface `pgsql` with PostgreSQL admin-level privileges. It is NOT recommended to use it from security point of view.
 
 ## OCI Images
-This charm uses pinned and tested version of the [charmed-postgresql](https://github.com/canonical/charmed-postgresql-rock/pkgs/container/charmed-postgresql) ROCK image.
+This charm uses pinned and tested version of the [charmed-postgresql](https://github.com/canonical/charmed-postgresql-rock/pkgs/container/charmed-postgresql) rock.
 
 ## Security
 Security issues in the Charmed PostgreSQL K8s Operator can be reported through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). Please do not file GitHub issues about security issues.

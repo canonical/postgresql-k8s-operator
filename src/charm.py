@@ -142,7 +142,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
         self.framework.observe(self.on.secret_changed, self._on_peer_relation_changed)
-        self.framework.observe(self.on.secret_remove, self._on_peer_relation_changed)
         self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
         self.framework.observe(self.on.stop, self._on_stop)
@@ -545,6 +544,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             extensions[extension] = enable
         if self.is_blocked and self.unit.status.message == EXTENSIONS_DEPENDENCY_MESSAGE:
             self._set_active_status()
+            original_status = self.unit.status
         if not isinstance(original_status, UnknownStatus):
             self.unit.status = WaitingStatus("Updating extensions")
         try:
@@ -722,6 +722,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # config-changed hook.
         # Get the postgresql container so we can configure/manipulate it.
         container = event.workload
+        if not container.can_connect():
+            logger.debug(
+                "Defer on_postgresql_pebble_ready: Waiting for container to become available"
+            )
+            event.defer()
+            return
 
         # Create the PostgreSQL data directory. This is needed on cloud environments
         # where the volume is mounted with more restrictive permissions.
