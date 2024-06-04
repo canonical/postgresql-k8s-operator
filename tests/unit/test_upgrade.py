@@ -87,10 +87,10 @@ def test_log_rollback(harness):
 def test_on_postgresql_pebble_ready(harness):
     with (
         patch(
-            "charms.data_platform_libs.v0.upgrade.DataUpgrade.set_unit_failed"
+            "charm.PostgreSQLUpgrade.set_unit_failed"
         ) as _set_unit_failed,
         patch(
-            "charms.data_platform_libs.v0.upgrade.DataUpgrade.set_unit_completed"
+            "charm.PostgreSQLUpgrade.set_unit_completed"
         ) as _set_unit_completed,
         patch(
             "charm.Patroni.is_replication_healthy", new_callable=PropertyMock
