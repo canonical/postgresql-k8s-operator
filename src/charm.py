@@ -27,6 +27,8 @@ from charms.postgresql_k8s.v0.postgresql import (
 from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
+from charms.tempo_k8s.v1.charm_tracing import trace_charm
+from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
 from lightkube import ApiError, Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
@@ -74,6 +76,8 @@ from constants import (
     TLS_CA_FILE,
     TLS_CERT_FILE,
     TLS_KEY_FILE,
+    TRACING_PROTOCOL,
+    TRACING_RELATION_NAME,
     UNIT_SCOPE,
     USER,
     USER_PASSWORD_KEY,
@@ -98,6 +102,23 @@ logging.getLogger("httpx").setLevel(logging.ERROR)
 Scopes = Literal[APP_SCOPE, UNIT_SCOPE]
 
 
+@trace_charm(
+    tracing_endpoint="tracing_endpoint",
+    extra_types=(
+        DbProvides,
+        GrafanaDashboardProvider,
+        LogProxyConsumer,
+        MetricsEndpointProvider,
+        Patroni,
+        PostgreSQL,
+        PostgreSQLAsyncReplication,
+        PostgreSQLBackups,
+        PostgreSQLProvider,
+        PostgreSQLTLS,
+        PostgreSQLUpgrade,
+        RollingOpsManager,
+    ),
+)
 class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     """Charmed Operator for the PostgreSQL database."""
 
@@ -183,6 +204,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         postgresql_db_port = ServicePort(5432, name="database")
         patroni_api_port = ServicePort(8008, name="api")
         self.service_patcher = KubernetesServicePatch(self, [postgresql_db_port, patroni_api_port])
+        self.tracing = TracingEndpointRequirer(
+            self, relation_name=TRACING_RELATION_NAME, protocols=[TRACING_PROTOCOL]
+        )
+
+    @property
+    def tracing_endpoint(self) -> Optional[str]:
+        """Otlp http endpoint for charm instrumentation."""
+        if self.tracing.is_ready():
+            return self.tracing.get_endpoint(TRACING_PROTOCOL)
 
     def _generate_metrics_jobs(self, enable_tls: bool) -> Dict:
         """Generate spec for Prometheus scraping."""
