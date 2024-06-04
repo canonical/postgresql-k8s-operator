@@ -99,7 +99,7 @@ async def test_app_force_removal(ops_test: OpsTest):
         logger.info("werifing is storage exists")
         for attempt in Retrying(stop=stop_after_delay(15 * 3), wait=wait_fixed(3), reraise=True):
             with attempt:
-                assert await is_storage_exists(ops_test, storage_id, include_detached=True)
+                assert await is_storage_exists(ops_test, storage_id)
 
 
 @pytest.mark.group(1)
