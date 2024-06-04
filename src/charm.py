@@ -52,7 +52,7 @@ from ops.model import (
 )
 from ops.pebble import ChangeError, Layer, PathError, ProtocolError, ServiceStatus
 from requests import ConnectionError
-from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
+from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
 from backups import PostgreSQLBackups
 from config import CharmConfig
@@ -1437,6 +1437,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Update health check URL.
         self._update_pebble_layers()
 
+        try:
+            for attempt in Retrying(wait=wait_fixed(3), stop=stop_after_delay(300)):
+                with attempt:
+                    if not self._can_connect_to_postgresql:
+                        assert False
+        except Exception:
+            logger.exception("Unable to reconnect to postgresql")
+
         # Start or stop the pgBackRest TLS server service when TLS certificate change.
         self.backup.start_stop_pgbackrest_service()
 
@@ -1452,6 +1460,17 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return False
 
         return services[0].current == ServiceStatus.ACTIVE
+
+    @property
+    def _can_connect_to_postgresql(self) -> bool:
+        try:
+            for attempt in Retrying(stop=stop_after_delay(30), wait=wait_fixed(3)):
+                with attempt:
+                    assert self.postgresql.get_postgresql_timezones()
+        except RetryError:
+            logger.debug("Cannot connect to database")
+            return False
+        return True
 
     def update_config(self, is_creating_backup: bool = False) -> bool:
         """Updates Patroni config file based on the existence of the TLS files."""
