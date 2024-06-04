@@ -402,7 +402,7 @@ def test_on_relation_departed(harness):
         event.relation.data = {harness.charm.app: {}, harness.charm.unit: {}}
         event.departing_unit = harness.charm.unit
         harness.charm.legacy_db_relation._on_relation_departed(event)
-        tc.assertIn("departing", harness.get_relation_data(peer_rel_id, harness.charm.unit))
+        assert "departing" in harness.get_relation_data(peer_rel_id, harness.charm.unit)
 
         # Test when this unit is departing the relation (due to the relation being broken between the apps).
         with harness.hooks_disabled():
