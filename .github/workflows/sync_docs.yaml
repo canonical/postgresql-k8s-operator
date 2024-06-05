@@ -6,9 +6,6 @@ on:
   workflow_dispatch:
   schedule:
     - cron: 50 00 * * *
-  push:
-    branches:
-      - main
 
 jobs:
   sync-docs:
