@@ -25,7 +25,8 @@ from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 from ops.pebble import ChangeError, ExecError
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
-from constants import BACKUP_USER, WORKLOAD_OS_GROUP, WORKLOAD_OS_USER
+from constants import BACKUP_TYPE_OVERRIDES, BACKUP_USER, WORKLOAD_OS_GROUP, WORKLOAD_OS_USER
+from relations.async_replication import ASYNC_PRIMARY_RELATION, ASYNC_REPLICA_RELATION
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,14 @@ class PostgreSQLBackups(Object):
         """Stanza name, composed by model and cluster name."""
         return f"{self.model.name}.{self.charm.cluster_name}"
 
+    @property
+    def _tls_ca_chain_filename(self) -> str:
+        """Returns the path to the TLS CA chain file."""
+        s3_parameters, _ = self._retrieve_s3_parameters()
+        if s3_parameters.get("tls-ca-chain") is not None:
+            return f"{self.charm._storage_path}/pgbackrest-tls-ca-chain.crt"
+        return ""
+
     def _are_backup_settings_ok(self) -> Tuple[bool, Optional[str]]:
         """Validates whether backup settings are OK."""
         if self.model.get_relation(self.relation_name) is None:
@@ -80,6 +89,22 @@ class PostgreSQLBackups(Object):
             return False, f"Missing S3 parameters: {missing_parameters}"
 
         return True, None
+
+    @property
+    def _can_initialise_stanza(self) -> bool:
+        """Validates whether this unit can initialise a stanza."""
+        # Don't allow stanza initialisation if this unit hasn't started the database
+        # yet and either hasn't joined the peer relation yet or hasn't configured TLS
+        # yet while other unit already has TLS enabled.
+        if not self.charm._patroni.member_started and (
+            (len(self.charm._peers.data.keys()) == 2)
+            or (
+                "tls" not in self.charm.unit_peer_data
+                and any("tls" in unit_data for _, unit_data in self.charm._peers.data.items())
+            )
+        ):
+            return False
+        return True
 
     def _can_unit_perform_backup(self) -> Tuple[bool, Optional[str]]:
         """Validates whether this unit can perform a backup."""
@@ -182,7 +207,11 @@ class PostgreSQLBackups(Object):
         )
 
         try:
-            s3 = session.resource("s3", endpoint_url=self._construct_endpoint(s3_parameters))
+            s3 = session.resource(
+                "s3",
+                endpoint_url=self._construct_endpoint(s3_parameters),
+                verify=(self._tls_ca_chain_filename or None),
+            )
         except ValueError as e:
             logger.exception("Failed to create a session '%s' in region=%s.", bucket_name, region)
             raise e
@@ -254,21 +283,20 @@ class PostgreSQLBackups(Object):
         output, _ = self._execute_command(["pgbackrest", "info", "--output=json"])
         backups = json.loads(output)[0]["backup"]
         for backup in backups:
-            backup_id = datetime.strftime(
-                datetime.strptime(backup["label"][:-1], "%Y%m%d-%H%M%S"), "%Y-%m-%dT%H:%M:%SZ"
-            )
+            backup_id, backup_type = self._parse_backup_id(backup["label"])
             error = backup["error"]
             backup_status = "finished"
             if error:
                 backup_status = f"failed: {error}"
-            backup_list.append((backup_id, "physical", backup_status))
+            backup_list.append((backup_id, backup_type, backup_status))
         return self._format_backup_list(backup_list)
 
-    def _list_backups(self, show_failed: bool) -> OrderedDict[str, str]:
+    def _list_backups(self, show_failed: bool, parse=True) -> OrderedDict[str, str]:
         """Retrieve the list of backups.
 
         Args:
             show_failed: whether to also return the failed backups.
+            parse: whether to convert backup labels to their IDs or not.
 
         Returns:
             a dict of previously created backups (id + stanza name) or an empty list
@@ -285,13 +313,32 @@ class PostgreSQLBackups(Object):
         stanza_name = repository_info["name"]
         return OrderedDict[str, str](
             (
-                datetime.strftime(
-                    datetime.strptime(backup["label"][:-1], "%Y%m%d-%H%M%S"), "%Y-%m-%dT%H:%M:%SZ"
-                ),
+                self._parse_backup_id(backup["label"])[0] if parse else backup["label"],
                 stanza_name,
             )
             for backup in backups
             if show_failed or not backup["error"]
+        )
+
+    def _parse_backup_id(self, label) -> Tuple[str, str]:
+        """Parse backup ID as a timestamp."""
+        if label[-1] == "F":
+            timestamp = label
+            backup_type = "full"
+        elif label[-1] == "D":
+            timestamp = label.split("_")[1]
+            backup_type = "differential"
+        elif label[-1] == "I":
+            timestamp = label.split("_")[1]
+            backup_type = "incremental"
+        else:
+            raise ValueError("Unknown label format for backup ID: %s", label)
+
+        return (
+            datetime.strftime(
+                datetime.strptime(timestamp[:-1], "%Y%m%d-%H%M%S"), "%Y-%m-%dT%H:%M:%SZ"
+            ),
+            backup_type,
         )
 
     def _initialise_stanza(self) -> None:
@@ -436,6 +483,11 @@ class PostgreSQLBackups(Object):
             logger.debug("Cannot set pgBackRest configurations, missing configurations.")
             return
 
+        if not self._can_initialise_stanza:
+            logger.debug("Cannot initialise stanza yet.")
+            event.defer()
+            return
+
         # Verify the s3 relation only on the primary.
         if not self.charm.is_primary:
             return
@@ -453,8 +505,16 @@ class PostgreSQLBackups(Object):
 
         self._initialise_stanza()
 
-    def _on_create_backup_action(self, event) -> None:
+    def _on_create_backup_action(self, event) -> None:  # noqa: C901
         """Request that pgBackRest creates a backup."""
+        backup_type = event.params.get("type", "full")
+        if backup_type not in BACKUP_TYPE_OVERRIDES:
+            error_message = f"Invalid backup type: {backup_type}. Possible values: {', '.join(BACKUP_TYPE_OVERRIDES.keys())}."
+            logger.error(f"Backup failed: {error_message}")
+            event.fail(error_message)
+            return
+
+        logger.info(f"A {backup_type} backup has been requested on unit")
         can_unit_perform_backup, validation_message = self._can_unit_perform_backup()
         if not can_unit_perform_backup:
             logger.error(f"Backup failed: {validation_message}")
@@ -501,7 +561,7 @@ Juju Version: {str(juju_version)}
                 "pgbackrest",
                 f"--stanza={self.stanza_name}",
                 "--log-level-console=debug",
-                "--type=full",
+                f"--type={BACKUP_TYPE_OVERRIDES[backup_type]}",
                 "backup",
             ]
             if self.charm.is_primary:
@@ -522,7 +582,7 @@ Juju Version: {str(juju_version)}
             else:
                 # Generate a backup id from the current date and time if the backup failed before
                 # generating the backup label (our backup id).
-                backup_id = datetime.strftime(datetime.now(), "%Y%m%d-%H%M%SF")
+                backup_id = self._generate_fake_backup_id(backup_type)
 
             # Upload the logs to S3.
             logs = f"""Stdout:
@@ -663,7 +723,7 @@ Stderr:
         # Mark the cluster as in a restoring backup state and update the Patroni configuration.
         logger.info("Configuring Patroni to restore the backup")
         self.charm.app_peer_data.update({
-            "restoring-backup": f'{datetime.strftime(datetime.strptime(backup_id, "%Y-%m-%dT%H:%M:%SZ"), "%Y%m%d-%H%M%S")}F',
+            "restoring-backup": self._fetch_backup_from_id(backup_id),
             "restore-stanza": backups[backup_id],
         })
         self.charm.update_config()
@@ -673,6 +733,37 @@ Stderr:
         self.container.start(self.charm._postgresql_service)
 
         event.set_results({"restore-status": "restore started"})
+
+    def _generate_fake_backup_id(self, backup_type: str) -> str:
+        """Creates a backup id for failed backup operations (to store log file)."""
+        if backup_type == "full":
+            return datetime.strftime(datetime.now(), "%Y%m%d-%H%M%SF")
+        if backup_type == "differential":
+            backups = self._list_backups(show_failed=False, parse=False).keys()
+            last_full_backup = None
+            for label in backups[::-1]:
+                if label.endswith("F"):
+                    last_full_backup = label
+                    break
+
+            if last_full_backup is None:
+                raise TypeError("Differential backup requested but no previous full backup")
+            return f'{last_full_backup}_{datetime.strftime(datetime.now(), "%Y%m%d-%H%M%SD")}'
+        if backup_type == "incremental":
+            backups = self._list_backups(show_failed=False, parse=False).keys()
+            if not backups:
+                raise TypeError("Incremental backup requested but no previous successful backup")
+            return f'{backups[-1]}_{datetime.strftime(datetime.now(), "%Y%m%d-%H%M%SI")}'
+
+    def _fetch_backup_from_id(self, backup_id: str) -> str:
+        """Fetches backup's pgbackrest label from backup id."""
+        timestamp = f'{datetime.strftime(datetime.strptime(backup_id, "%Y-%m-%dT%H:%M:%SZ"), "%Y%m%d-%H%M%S")}'
+        backups = self._list_backups(show_failed=False, parse=False).keys()
+        for label in backups:
+            if timestamp in label:
+                return label
+
+        return None
 
     def _pre_restore_checks(self, event: ActionEvent) -> bool:
         """Run some checks before starting the restore.
@@ -717,6 +808,18 @@ Stderr:
             event.fail(error_message)
             return False
 
+        logger.info("Checking that the cluster is not replicating data to a standby cluster")
+        for relation in [
+            self.model.get_relation(ASYNC_REPLICA_RELATION),
+            self.model.get_relation(ASYNC_PRIMARY_RELATION),
+        ]:
+            if not relation:
+                continue
+            error_message = "Unit cannot restore backup as the cluster is replicating data to a standby cluster"
+            logger.error(f"Restore failed: {error_message}")
+            event.fail(error_message)
+            return False
+
         logger.info("Checking that this unit was already elected the leader unit")
         if not self.charm.unit.is_leader():
             error_message = "Unit cannot restore backup as it was not elected the leader unit yet"
@@ -735,6 +838,14 @@ Stderr:
             )
             return False
 
+        if self._tls_ca_chain_filename != "":
+            self.container.push(
+                self._tls_ca_chain_filename,
+                "\n".join(s3_parameters["tls-ca-chain"]),
+                user=WORKLOAD_OS_USER,
+                group=WORKLOAD_OS_GROUP,
+            )
+
         # Open the template pgbackrest.conf file.
         with open("templates/pgbackrest.conf.j2", "r") as file:
             template = Template(file.read())
@@ -747,11 +858,13 @@ Stderr:
             endpoint=s3_parameters["endpoint"],
             bucket=s3_parameters["bucket"],
             s3_uri_style=s3_parameters["s3-uri-style"],
+            tls_ca_chain=self._tls_ca_chain_filename,
             access_key=s3_parameters["access-key"],
             secret_key=s3_parameters["secret-key"],
             stanza=self.stanza_name,
             storage_path=self.charm._storage_path,
             user=BACKUP_USER,
+            retention_full=s3_parameters["delete-older-than-days"],
         )
         # Delete the original file and render the one with the right info.
         filename = "/etc/pgbackrest.conf"
@@ -792,6 +905,7 @@ Stderr:
         s3_parameters.setdefault("region")
         s3_parameters.setdefault("path", "")
         s3_parameters.setdefault("s3-uri-style", "host")
+        s3_parameters.setdefault("delete-older-than-days", "9999999")
 
         # Strip whitespaces from all parameters.
         for key, value in s3_parameters.items():
@@ -865,7 +979,11 @@ Stderr:
                 region_name=s3_parameters["region"],
             )
 
-            s3 = session.resource("s3", endpoint_url=self._construct_endpoint(s3_parameters))
+            s3 = session.resource(
+                "s3",
+                endpoint_url=self._construct_endpoint(s3_parameters),
+                verify=(self._tls_ca_chain_filename or None),
+            )
             bucket = s3.Bucket(bucket_name)
 
             with tempfile.NamedTemporaryFile() as temp_file:

@@ -30,12 +30,20 @@ RUNNING_STATES = ["running", "streaming"]
 logger = logging.getLogger(__name__)
 
 
+class ClusterNotPromotedError(Exception):
+    """Raised when a cluster is not promoted."""
+
+
 class NotReadyError(Exception):
     """Raised when not all cluster members healthy or finished initial sync."""
 
 
 class EndpointNotReadyError(Exception):
     """Raised when an endpoint is not ready."""
+
+
+class StandbyClusterAlreadyPromotedError(Exception):
+    """Raised when a standby cluster is already promoted."""
 
 
 class SwitchoverFailedError(Exception):
@@ -78,6 +86,20 @@ class Patroni:
     def _patroni_url(self) -> str:
         """Patroni REST API URL."""
         return f"{'https' if self._tls_enabled else 'http'}://{self._endpoint}:8008"
+
+    # def configure_standby_cluster(self, host: str) -> None:
+    #     """Configure this cluster as a standby cluster."""
+    #     requests.patch(
+    #         f"{self._patroni_url}/config",
+    #         verify=self._verify,
+    #         json={
+    #             "standby_cluster": {
+    #                 "create_replica_methods": ["basebackup"],
+    #                 "host": host,
+    #                 "port": 5432,
+    #             }
+    #         },
+    #     )
 
     @property
     def rock_postgresql_version(self) -> Optional[str]:
@@ -126,6 +148,36 @@ class Patroni:
                             primary = "/".join(primary.rsplit("-", 1))
                         break
         return primary
+
+    def get_standby_leader(
+        self, unit_name_pattern=False, check_whether_is_running: bool = False
+    ) -> Optional[str]:
+        """Get standby leader instance.
+
+        Args:
+            unit_name_pattern: whether to convert pod name to unit name
+            check_whether_is_running: whether to check if the standby leader is running
+
+        Returns:
+            standby leader pod or unit name.
+        """
+        standby_leader = None
+        # Request info from cluster endpoint (which returns all members of the cluster).
+        for attempt in Retrying(stop=stop_after_attempt(len(self._endpoints) + 1)):
+            with attempt:
+                url = self._get_alternative_patroni_url(attempt)
+                r = requests.get(f"{url}/cluster", verify=self._verify)
+                for member in r.json()["members"]:
+                    if member["role"] == "standby_leader":
+                        if check_whether_is_running and member["state"] not in RUNNING_STATES:
+                            logger.warning(f"standby leader {member['name']} is not running")
+                            continue
+                        standby_leader = member["name"]
+                        if unit_name_pattern:
+                            # Change the last dash to / in order to match unit name pattern.
+                            standby_leader = "/".join(standby_leader.rsplit("-", 1))
+                        break
+        return standby_leader
 
     def get_sync_standby_names(self) -> List[str]:
         """Get the list of sync standby unit names."""
@@ -260,7 +312,7 @@ class Patroni:
             allow server time to start up.
         """
         try:
-            for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+            for attempt in Retrying(stop=stop_after_delay(90), wait=wait_fixed(3)):
                 with attempt:
                     r = requests.get(f"{self._patroni_url}/health", verify=self._verify)
         except RetryError:
@@ -309,6 +361,19 @@ class Patroni:
             verify=self._verify,
             json={"postgresql": {"parameters": parameters}},
         )
+
+    def promote_standby_cluster(self) -> None:
+        """Promote a standby cluster to be a regular cluster."""
+        config_response = requests.get(f"{self._patroni_url}/config", verify=self._verify)
+        if "standby_cluster" not in config_response.json():
+            raise StandbyClusterAlreadyPromotedError("standby cluster is already promoted")
+        requests.patch(
+            f"{self._patroni_url}/config", verify=self._verify, json={"standby_cluster": None}
+        )
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+            with attempt:
+                if self.get_primary() is None:
+                    raise ClusterNotPromotedError("cluster not promoted")
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def reinitialize_postgresql(self) -> None:
@@ -386,10 +451,12 @@ class Patroni:
             minority_count=self._members_count // 2,
             version=self.rock_postgresql_version.split(".")[0],
             pg_parameters=parameters,
+            primary_cluster_endpoint=self._charm.async_replication.get_primary_cluster_endpoint(),
+            extra_replication_endpoints=self._charm.async_replication.get_standby_endpoints(),
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
+    @retry(stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30))
     def reload_patroni_configuration(self) -> None:
         """Reloads the configuration after it was updated in the file."""
         requests.post(f"{self._patroni_url}/reload", verify=self._verify)

@@ -7,12 +7,15 @@ from typing import Dict, Tuple
 
 import boto3
 import pytest as pytest
+from lightkube.core.client import Client
+from lightkube.resources.core_v1 import Pod
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_exponential
 
 from .helpers import (
     DATABASE_APP_NAME,
     build_and_deploy,
+    cat_file_from_unit,
     construct_endpoint,
     db_connect,
     get_password,
@@ -153,7 +156,8 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
         action = await ops_test.model.units.get(replica).run_action("list-backups")
         await action.wait()
         backups = action.results.get("backups")
-        assert backups, "backups not outputted"
+        # 2 lines for header output, 1 backup line ==> 3 total lines
+        assert len(backups.split("\n")) == 3, "full backup is not outputted"
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
         # Write some data.
@@ -163,18 +167,93 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
             connection.cursor().execute("CREATE TABLE backup_table_2 (test_collumn INT );")
         connection.close()
 
+        # Run the "create backup" action.
+        logger.info("creating a backup")
+        action = await ops_test.model.units.get(replica).run_action(
+            "create-backup", **{"type": "differential"}
+        )
+        await action.wait()
+        backup_status = action.results.get("backup-status")
+        assert backup_status, "backup hasn't succeeded"
+        async with ops_test.fast_forward():
+            await ops_test.model.wait_for_idle(status="active", timeout=1000)
+
+        # Run the "list backups" action.
+        logger.info("listing the available backups")
+        action = await ops_test.model.units.get(replica).run_action("list-backups")
+        await action.wait()
+        backups = action.results.get("backups")
+        # 2 lines for header output, 2 backup lines ==> 4 total lines
+        assert len(backups.split("\n")) == 4, "differential backup is not outputted"
+        await ops_test.model.wait_for_idle(status="active", timeout=1000)
+
+        # Write some data.
+        logger.info("creating a second table in the database")
+        with db_connect(host=address, password=password) as connection:
+            connection.autocommit = True
+            connection.cursor().execute("CREATE TABLE backup_table_3 (test_collumn INT );")
+        connection.close()
         # Scale down to be able to restore.
         async with ops_test.fast_forward(fast_interval="60s"):
             await scale_application(ops_test, database_app_name, 1)
 
-        # Run the "restore backup" action.
+        # Run the "restore backup" action for differential backup.
         for attempt in Retrying(
             stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
         ):
             with attempt:
                 logger.info("restoring the backup")
-                most_recent_backup = backups.split("\n")[-1]
-                backup_id = most_recent_backup.split()[0]
+                last_diff_backup = backups.split("\n")[-1]
+                backup_id = last_diff_backup.split()[0]
+                action = await ops_test.model.units.get(f"{database_app_name}/0").run_action(
+                    "restore", **{"backup-id": backup_id}
+                )
+                await action.wait()
+                restore_status = action.results.get("restore-status")
+                assert restore_status, "restore hasn't succeeded"
+
+        # Wait for the restore to complete.
+        async with ops_test.fast_forward():
+            await ops_test.model.wait_for_idle(status="active", timeout=1000)
+
+        # Check that the backup was correctly restored by having only the first created table.
+        logger.info("checking that the backup was correctly restored")
+        primary = await get_primary(ops_test, database_app_name)
+        address = await get_unit_address(ops_test, primary)
+        with db_connect(
+            host=address, password=password
+        ) as connection, connection.cursor() as cursor:
+            cursor.execute(
+                "SELECT EXISTS (SELECT FROM information_schema.tables"
+                " WHERE table_schema = 'public' AND table_name = 'backup_table_1');"
+            )
+            assert cursor.fetchone()[
+                0
+            ], "backup wasn't correctly restored: table 'backup_table_1' doesn't exist"
+            cursor.execute(
+                "SELECT EXISTS (SELECT FROM information_schema.tables"
+                " WHERE table_schema = 'public' AND table_name = 'backup_table_2');"
+            )
+            assert cursor.fetchone()[
+                0
+            ], "backup wasn't correctly restored: table 'backup_table_2' doesn't exist"
+            cursor.execute(
+                "SELECT EXISTS (SELECT FROM information_schema.tables"
+                " WHERE table_schema = 'public' AND table_name = 'backup_table_3');"
+            )
+            assert not cursor.fetchone()[
+                0
+            ], "backup wasn't correctly restored: table 'backup_table_3' exists"
+        connection.close()
+
+        # Run the "restore backup" action for full backup.
+        for attempt in Retrying(
+            stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
+        ):
+            with attempt:
+                logger.info("restoring the backup")
+                last_full_backup = backups.split("\n")[-2]
+                backup_id = last_full_backup.split()[0]
                 action = await ops_test.model.units.get(f"{database_app_name}/0").run_action(
                     "restore", **{"backup-id": backup_id}
                 )
@@ -207,6 +286,13 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
             assert not cursor.fetchone()[
                 0
             ], "backup wasn't correctly restored: table 'backup_table_2' exists"
+            cursor.execute(
+                "SELECT EXISTS (SELECT FROM information_schema.tables"
+                " WHERE table_schema = 'public' AND table_name = 'backup_table_3');"
+            )
+            assert not cursor.fetchone()[
+                0
+            ], "backup wasn't correctly restored: table 'backup_table_3' exists"
         connection.close()
 
         # Run the following steps only in one cloud (it's enough for those checks).
@@ -222,7 +308,7 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
                 )
 
                 # Scale up to be able to test primary and leader being different.
-                async with ops_test.fast_forward():
+                async with ops_test.fast_forward(fast_interval="60s"):
                     await scale_application(ops_test, database_app_name, 2)
 
                 logger.info("ensuring that the replication is working correctly")
@@ -424,3 +510,26 @@ async def test_invalid_config_and_recovery_after_fixing_it(
     await ops_test.model.wait_for_idle(
         apps=[database_app_name, S3_INTEGRATOR_APP_NAME], status="active"
     )
+
+
+@pytest.mark.group(1)
+async def test_delete_pod(ops_test: OpsTest, github_secrets) -> None:
+    logger.info("Getting original backup config")
+    database_app_name = f"new-{DATABASE_APP_NAME}"
+    original_pgbackrest_config = await cat_file_from_unit(
+        ops_test, "/etc/pgbackrest.conf", f"{database_app_name}/0"
+    )
+
+    # delete the pod
+    logger.info("Deleting the pod")
+    client = Client(namespace=ops_test.model.info.name)
+    client.delete(Pod, name=f"{database_app_name}-0")
+
+    # Wait and get the primary again (which can be any unit, including the previous primary).
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(apps=[database_app_name], status="active")
+
+    new_pgbackrest_config = await cat_file_from_unit(
+        ops_test, "/etc/pgbackrest.conf", f"{database_app_name}/0"
+    )
+    assert original_pgbackrest_config == new_pgbackrest_config, "Pgbackrest config not rerendered"

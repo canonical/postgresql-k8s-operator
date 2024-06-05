@@ -20,6 +20,7 @@ USER_PASSWORD_KEY = "operator-password"
 WORKLOAD_OS_GROUP = "postgres"
 WORKLOAD_OS_USER = "postgres"
 METRICS_PORT = "9187"
+POSTGRESQL_DATA_PATH = "/var/lib/postgresql/data/pgdata"
 POSTGRES_LOG_FILES = [
     "/var/log/pgbackrest/*",
     "/var/log/postgresql/patroni.log",
@@ -37,3 +38,4 @@ APP_SCOPE = "app"
 UNIT_SCOPE = "unit"
 
 SECRET_KEY_OVERRIDES = {"ca": "cauth"}
+BACKUP_TYPE_OVERRIDES = {"full": "full", "differential": "diff", "incremental": "incr"}

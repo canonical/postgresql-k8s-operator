@@ -84,7 +84,7 @@ def test_on_leader_elected(harness):
             Endpoints, name=f"patroni-{harness.charm.app.name}", namespace=harness.charm.model.name
         )
         _client.return_value.patch.assert_not_called()
-        tc.assertIn("cluster_initialised", harness.get_relation_data(rel_id, harness.charm.app))
+        assert "cluster_initialised" in harness.get_relation_data(rel_id, harness.charm.app)
 
         # Trigger a new leader election and check that the password is still the same, and that the charm
         # fixes the missing "leader" key in the endpoint annotations.
@@ -128,6 +128,9 @@ def test_on_postgresql_pebble_ready(harness):
         patch(
             "charm.Patroni.primary_endpoint_ready", new_callable=PropertyMock
         ) as _primary_endpoint_ready,
+        patch(
+            "charm.PostgresqlOperatorCharm.enable_disable_extensions"
+        ) as _enable_disable_extensions,
         patch("charm.PostgresqlOperatorCharm.update_config"),
         patch("charm.PostgresqlOperatorCharm.postgresql") as _postgresql,
         patch(
@@ -393,8 +396,9 @@ def test_on_update_status_with_error_on_get_primary(harness):
 
         with tc.assertLogs("charm", "ERROR") as logs:
             harness.charm.on.update_status.emit()
-            tc.assertIn(
-                "ERROR:charm:failed to get primary with error RetryError[fake error]", logs.output
+            assert (
+                "ERROR:charm:failed to get primary with error RetryError[fake error]"
+                in logs.output
             )
 
 
@@ -690,7 +694,7 @@ def test_on_stop(harness):
             )
             _client.return_value.list.assert_not_called()
             _client.return_value.apply.assert_not_called()
-            tc.assertIn("failed to get first pod info", "".join(logs.output))
+            assert "failed to get first pod info" in "".join(logs.output)
 
         # Test when the charm fails to get the k8s resources created by the charm and Patroni.
         _client.return_value.get.side_effect = None
@@ -704,9 +708,8 @@ def test_on_stop(harness):
                     labels={"app.juju.is/created-by": harness.charm.app.name},
                 )
             _client.return_value.apply.assert_not_called()
-            tc.assertIn(
-                "failed to get the k8s resources created by the charm and Patroni",
-                "".join(logs.output),
+            assert "failed to get the k8s resources created by the charm and Patroni" in "".join(
+                logs.output
             )
 
         # Test when the charm fails to patch a k8s resource.
@@ -720,8 +723,8 @@ def test_on_stop(harness):
         _client.return_value.apply.side_effect = [None, _FakeApiError]
         with tc.assertLogs("charm", "ERROR") as logs:
             harness.charm.on.stop.emit()
-            tc.assertEqual(_client.return_value.apply.call_count, 2)
-            tc.assertIn("failed to patch k8s MagicMock", "".join(logs.output))
+            assert _client.return_value.apply.call_count == 2
+            assert "failed to patch k8s MagicMock" in "".join(logs.output)
 
 
 def test_client_relations(harness):
@@ -1208,6 +1211,9 @@ def test_handle_processes_failures(harness):
         patch("charm.Patroni.reinitialize_postgresql") as _reinitialize_postgresql,
         patch("charm.Patroni.member_streaming", new_callable=PropertyMock) as _member_streaming,
         patch(
+            "charm.PostgresqlOperatorCharm.is_standby_leader", new_callable=PropertyMock
+        ) as _is_standby_leader,
+        patch(
             "charm.PostgresqlOperatorCharm.is_primary", new_callable=PropertyMock
         ) as _is_primary,
         patch(
@@ -1272,6 +1278,7 @@ def test_handle_processes_failures(harness):
         # Test when the unit is a replica and it's not streaming from primary.
         _restart.reset_mock()
         _is_primary.return_value = False
+        _is_standby_leader.return_value = False
         _member_streaming.return_value = False
         for values in itertools.product(
             [None, RetryError(last_attempt=1)], [True, False], [True, False]
@@ -1425,11 +1432,10 @@ def test_handle_postgresql_restart_need(harness):
 
             harness.charm._handle_postgresql_restart_need()
             _reload_patroni_configuration.assert_called_once()
-            (
-                tc.assertIn("tls", harness.get_relation_data(rel_id, harness.charm.unit))
-                if values[0]
-                else tc.assertNotIn("tls", harness.get_relation_data(rel_id, harness.charm.unit))
-            )
+            if values[0]:
+                assert "tls" in harness.get_relation_data(rel_id, harness.charm.unit)
+            else:
+                assert "tls" not in harness.get_relation_data(rel_id, harness.charm.unit)
             if (values[0] != values[1]) or values[2]:
                 _generate_metrics_jobs.assert_called_once_with(values[0])
                 _restart.assert_called_once()
@@ -1441,6 +1447,9 @@ def test_handle_postgresql_restart_need(harness):
 def test_set_active_status(harness):
     with (
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
+        patch(
+            "charm.PostgresqlOperatorCharm.is_standby_leader", new_callable=PropertyMock
+        ) as _is_standby_leader,
         patch("charm.Patroni.get_primary") as _get_primary,
     ):
         for values in itertools.product(
@@ -1450,28 +1459,44 @@ def test_set_active_status(harness):
                 harness.charm.unit.name,
                 f"{harness.charm.app.name}/2",
             ],
+            [
+                RetryError(last_attempt=1),
+                ConnectionError,
+                True,
+                False,
+            ],
             [True, False],
         ):
             harness.charm.unit.status = MaintenanceStatus("fake status")
-            _member_started.return_value = values[1]
+            _member_started.return_value = values[2]
             if isinstance(values[0], str):
                 _get_primary.side_effect = None
                 _get_primary.return_value = values[0]
-                harness.charm._set_active_status()
-                tc.assertIsInstance(
-                    harness.charm.unit.status,
-                    ActiveStatus
-                    if values[0] == harness.charm.unit.name or values[1]
-                    else MaintenanceStatus,
-                )
-                tc.assertEqual(
-                    harness.charm.unit.status.message,
-                    "Primary"
-                    if values[0] == harness.charm.unit.name
-                    else ("" if values[1] else "fake status"),
-                )
+                if values[0] != harness.charm.unit.name and not isinstance(values[1], bool):
+                    _is_standby_leader.side_effect = values[1]
+                    _is_standby_leader.return_value = None
+                    harness.charm._set_active_status()
+                    tc.assertIsInstance(harness.charm.unit.status, MaintenanceStatus)
+                else:
+                    _is_standby_leader.side_effect = None
+                    _is_standby_leader.return_value = values[1]
+                    harness.charm._set_active_status()
+                    tc.assertIsInstance(
+                        harness.charm.unit.status,
+                        ActiveStatus
+                        if values[0] == harness.charm.unit.name or values[1] or values[2]
+                        else MaintenanceStatus,
+                    )
+                    tc.assertEqual(
+                        harness.charm.unit.status.message,
+                        "Primary"
+                        if values[0] == harness.charm.unit.name
+                        else (
+                            "Standby Leader" if values[1] else ("" if values[2] else "fake status")
+                        ),
+                    )
             else:
                 _get_primary.side_effect = values[0]
                 _get_primary.return_value = None
                 harness.charm._set_active_status()
-                tc.assertIsInstance(harness.charm.unit.status, MaintenanceStatus)
+                assert isinstance(harness.charm.unit.status, MaintenanceStatus)
