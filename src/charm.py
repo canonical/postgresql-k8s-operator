@@ -388,7 +388,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Reconfigure cluster members."""
         # The cluster must be initialized first in the leader unit
         # before any other member joins the cluster.
-        if not self.unit.is_leader() and "cluster_initialised" not in self._peers.data[self.app]:
+        if "cluster_initialised" not in self._peers.data[self.app]:
+            if self.unit.is_leader() and not self._initialize_cluster(event):
+                return
+
             logger.debug(
                 "Deferring on_peer_relation_changed: Cluster must be initialized before members can join"
             )
