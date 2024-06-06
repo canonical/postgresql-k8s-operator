@@ -50,7 +50,7 @@ from ops.model import (
     UnknownStatus,
     WaitingStatus,
 )
-from ops.pebble import Layer, PathError, ProtocolError, ServiceStatus
+from ops.pebble import ChangeError, Layer, PathError, ProtocolError, ServiceStatus
 from requests import ConnectionError
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
@@ -1218,6 +1218,20 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         Returns:
             a bool indicating whether the charm performed any action.
         """
+        container = self.unit.get_container("postgresql")
+
+        # Restart the Patroni process if it was killed (in that case, the PostgreSQL
+        # process is still running). This is needed until
+        # https://github.com/canonical/pebble/issues/149 is resolved.
+        if not self._patroni.member_started and self._patroni.is_database_running:
+            try:
+                container.restart(self._postgresql_service)
+                logger.info("restarted Patroni because it was not running")
+            except ChangeError:
+                logger.error("failed to restart Patroni after checking that it was not running")
+                return False
+            return True
+
         try:
             is_primary = self.is_primary
             is_standby_leader = self.is_standby_leader
