@@ -654,6 +654,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         except NotReadyError:
             logger.info("Deferring reconfigure: another member doing sync right now")
             event.defer()
+        except RetryError:
+            logger.info("Deferring reconfigure: failed to obtain cluster members from Patroni")
+            event.defer()
 
     def add_cluster_member(self, member: str) -> None:
         """Add member to the cluster if all members are already up and running.
@@ -1636,7 +1639,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # which tells how much time Patroni will wait before checking the configuration
         # file again to reload it.
         try:
-            for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3)):
+            for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(3)):
                 with attempt:
                     restart_postgresql = restart_postgresql or self.postgresql.is_restart_pending()
                     if not restart_postgresql:
