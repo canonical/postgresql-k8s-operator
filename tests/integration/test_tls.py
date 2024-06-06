@@ -2,6 +2,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 import logging
+import time
 
 import pytest as pytest
 import requests
@@ -63,6 +64,7 @@ async def check_tls_rewind(ops_test: OpsTest) -> None:
             continue
         if "connection authorized: user=rewind database=postgres SSL enabled" in logs:
             break
+        time.sleep(5)
     assert (
         "connection authorized: user=rewind database=postgres SSL enabled" in logs
     ), "TLS is not being used on pg_rewind connections"

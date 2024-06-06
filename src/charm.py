@@ -45,6 +45,7 @@ from ops.model import (
     Container,
     JujuVersion,
     MaintenanceStatus,
+    ModelError,
     Relation,
     Unit,
     UnknownStatus,
@@ -432,7 +433,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.postgresql_client_relation.update_read_only_endpoint()
         self._remove_from_endpoints(endpoints_to_remove)
 
-    def _on_peer_relation_changed(self, event: HookEvent) -> None:
+    def _on_peer_relation_changed(self, event: HookEvent) -> None:  # noqa: C901
         """Reconfigure cluster members."""
         # The cluster must be initialized first in the leader unit
         # before any other member joins the cluster.
@@ -493,7 +494,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             event.defer()
             return
 
-        self.postgresql_client_relation.update_read_only_endpoint()
+        try:
+            self.postgresql_client_relation.update_read_only_endpoint()
+        except ModelError as e:
+            logger.debug("Cannot update read_only endpoints: %s", str(e))
 
         self.backup.coordinate_stanza_fields()
 
