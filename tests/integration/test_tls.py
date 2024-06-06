@@ -156,6 +156,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         # Restart the initial primary and check the logs to ensure TLS is being used by pg_rewind.
         logger.info(f"starting database on {primary}")
         await run_command_on_unit(ops_test, primary, "/charm/bin/pebble start postgresql")
+        await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=1000)
         for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(2), reraise=True):
             with attempt:
                 await check_tls_rewind(ops_test)

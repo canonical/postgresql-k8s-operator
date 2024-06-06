@@ -142,9 +142,9 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
             )
         connection.close()
 
-        # Run the "create backup" action.
+        # With a stable cluster, Run the "create backup" action
         async with ops_test.fast_forward():
-            await ops_test.model.wait_for_idle(status="active", timeout=1000)
+            await ops_test.model.wait_for_idle(status="active", timeout=1000, idle_period=30)
         logger.info("creating a backup")
         action = await ops_test.model.units.get(replica).run_action("create-backup")
         await action.wait()
