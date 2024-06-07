@@ -1500,8 +1500,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("Early exit update_config: Patroni not started yet")
             return False
 
+        # Use config value if set, calculate otherwise
+        if self.config.experimental_max_connections:
+            max_connections = self.config.experimental_max_connections
+        else:
+            max_connections = max(4 * available_cpu_cores, 100)
+
         self._patroni.bulk_update_parameters_controller_by_patroni({
-            "max_connections": max(4 * available_cpu_cores, 100),
+            "max_connections": max_connections,
             "max_prepared_transactions": self.config.memory_max_prepared_transactions,
         })
 
