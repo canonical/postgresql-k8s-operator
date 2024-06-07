@@ -1639,7 +1639,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # which tells how much time Patroni will wait before checking the configuration
         # file again to reload it.
         try:
-            for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(3)):
+            for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3)):
                 with attempt:
                     restart_postgresql = restart_postgresql or self.postgresql.is_restart_pending()
                     if not restart_postgresql:
