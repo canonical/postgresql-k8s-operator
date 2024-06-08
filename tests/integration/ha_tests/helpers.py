@@ -473,14 +473,14 @@ async def get_sync_standby(model: Model, application_name: str) -> str:
             return member["name"]
 
 
-@retry(stop=stop_after_attempt(8), wait=wait_fixed(15), reraise=True)
+@retry(stop=stop_after_attempt(3), wait=wait_fixed(15), reraise=True)
 async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
     """Test a connection to a PostgreSQL server."""
     app = unit_name.split("/")[0]
     password = await get_password(ops_test, database_app_name=app, down_unit=unit_name)
     address = await get_unit_address(ops_test, unit_name)
     try:
-        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+        for attempt in Retrying(stop=stop_after_delay(30), wait=wait_fixed(3)):
             with attempt:
                 with db_connect(
                     host=address, password=password

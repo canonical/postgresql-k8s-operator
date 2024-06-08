@@ -438,12 +438,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # The cluster must be initialized first in the leader unit
         # before any other member joins the cluster.
         if "cluster_initialised" not in self._peers.data[self.app]:
-            if self.unit.is_leader() and not self._initialize_cluster(event):
-                return
-
-            logger.debug(
-                "Deferring on_peer_relation_changed: Cluster must be initialized before members can join"
-            )
+            if self.unit.is_leader():
+                if self._initialize_cluster(event):
+                    logger.debug("Deferring on_peer_relation_changed: Leader initialized cluster")
+                else:
+                    logger.debug("_initialized_cluster failed on _peer_relation_changed")
+                    return
+            else:
+                logger.debug(
+                    "Deferring on_peer_relation_changed: Cluster must be initialized before members can join"
+                )
             event.defer()
             return
 
@@ -870,9 +874,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return False
 
         if not self._patroni.primary_endpoint_ready:
-            logger.debug(
-                "Deferring on_postgresql_pebble_ready: Waiting for primary endpoint to be ready"
-            )
+            logger.debug("Deferring _initialize_cluster: Waiting for primary endpoint to be ready")
             self.unit.status = WaitingStatus("awaiting for primary endpoint to be ready")
             event.defer()
             return False
