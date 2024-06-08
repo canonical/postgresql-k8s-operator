@@ -669,10 +669,13 @@ async def run_command_on_unit(ops_test: OpsTest, unit_name: str, command: str) -
         the command output if it succeeds, otherwise raises an exception.
     """
     complete_command = f"ssh --container postgresql {unit_name} {command}"
-    return_code, stdout, _ = await ops_test.juju(*complete_command.split())
+    return_code, stdout, stderr = await ops_test.juju(*complete_command.split())
     if return_code != 0:
         raise Exception(
-            "Expected command %s to succeed instead it failed: %s", command, return_code
+            "Expected command %s to succeed instead it failed: %s. Code: %s",
+            command,
+            stderr,
+            return_code,
         )
     return stdout
 
@@ -693,7 +696,7 @@ async def scale_application(
     await model.applications[application_name].scale(scale)
     if scale == 0:
         await model.block_until(
-            lambda: len(model.applications[DATABASE_APP_NAME].units) == scale,
+            lambda: len(model.applications[application_name].units) == scale,
             timeout=1000,
         )
     else:
