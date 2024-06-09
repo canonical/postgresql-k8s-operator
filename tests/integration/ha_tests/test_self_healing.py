@@ -340,7 +340,6 @@ async def test_forceful_restart_without_data_and_transaction_logs(
 
 
 @pytest.mark.group(1)
-@pytest.mark.abort_on_fail
 async def test_network_cut(
     ops_test: OpsTest, continuous_writes, primary_start_timeout, chaos_mesh
 ) -> None:

@@ -107,7 +107,7 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
         # (to be able to create backups from replicas).
         database_app_name = f"{DATABASE_APP_NAME}-{cloud.lower()}"
         await build_and_deploy(
-            ops_test, 2, database_app_name=database_app_name, wait_for_idle=False
+            ops_test, 2, database_app_name=database_app_name, wait_for_idle=True
         )
         await ops_test.model.relate(database_app_name, S3_INTEGRATOR_APP_NAME)
         await ops_test.model.relate(database_app_name, TLS_CERTIFICATES_APP_NAME)

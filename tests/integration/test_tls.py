@@ -60,11 +60,9 @@ async def check_tls_rewind(ops_test: OpsTest) -> None:
                 "grep rewind /var/log/postgresql/postgresql-*.log",
             )
         except Exception:
-            logger.info("Check failed on %s: 'rewind' not found on logs", unit.name)
-        else:
-            if "connection authorized: user=rewind database=postgres SSL enabled" in logs:
-                break
-            logger.info("TLS not detected on %s pg_rewind connections", unit.name)
+            continue
+        if "connection authorized: user=rewind database=postgres SSL enabled" in logs:
+            break
     assert (
         "connection authorized: user=rewind database=postgres SSL enabled" in logs
     ), "TLS is not being used on pg_rewind connections"
