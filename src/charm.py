@@ -1588,6 +1588,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._patroni.bulk_update_parameters_controller_by_patroni({
             "max_connections": max_connections,
             "max_prepared_transactions": self.config.memory_max_prepared_transactions,
+            "shared_buffers": self.config.memory_shared_buffers,
         })
 
         self._handle_postgresql_restart_need()
