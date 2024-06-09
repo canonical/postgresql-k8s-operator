@@ -869,7 +869,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return False
 
         if not self._patroni.primary_endpoint_ready:
-            logger.debug("Deferring _initialize_cluster: Waiting for primary endpoint to be ready")
+            logger.debug(
+                "Deferring on_postgresql_pebble_ready: Waiting for primary endpoint to be ready"
+            )
             self.unit.status = WaitingStatus("awaiting for primary endpoint to be ready")
             event.defer()
             return False
@@ -1588,7 +1590,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._patroni.bulk_update_parameters_controller_by_patroni({
             "max_connections": max_connections,
             "max_prepared_transactions": self.config.memory_max_prepared_transactions,
-            "shared_buffers": self.config.memory_shared_buffers,
         })
 
         self._handle_postgresql_restart_need()
