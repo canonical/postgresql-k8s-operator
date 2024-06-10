@@ -84,7 +84,7 @@ def test_on_leader_elected(harness):
             Endpoints, name=f"patroni-{harness.charm.app.name}", namespace=harness.charm.model.name
         )
         _client.return_value.patch.assert_not_called()
-        tc.assertIn("cluster_initialised", harness.get_relation_data(rel_id, harness.charm.app))
+        assert "cluster_initialised" in harness.get_relation_data(rel_id, harness.charm.app)
 
         # Trigger a new leader election and check that the password is still the same, and that the charm
         # fixes the missing "leader" key in the endpoint annotations.
@@ -128,6 +128,9 @@ def test_on_postgresql_pebble_ready(harness):
         patch(
             "charm.Patroni.primary_endpoint_ready", new_callable=PropertyMock
         ) as _primary_endpoint_ready,
+        patch(
+            "charm.PostgresqlOperatorCharm.enable_disable_extensions"
+        ) as _enable_disable_extensions,
         patch("charm.PostgresqlOperatorCharm.update_config"),
         patch("charm.PostgresqlOperatorCharm.postgresql") as _postgresql,
         patch(
@@ -393,8 +396,9 @@ def test_on_update_status_with_error_on_get_primary(harness):
 
         with tc.assertLogs("charm", "ERROR") as logs:
             harness.charm.on.update_status.emit()
-            tc.assertIn(
-                "ERROR:charm:failed to get primary with error RetryError[fake error]", logs.output
+            assert (
+                "ERROR:charm:failed to get primary with error RetryError[fake error]"
+                in logs.output
             )
 
 
@@ -690,7 +694,7 @@ def test_on_stop(harness):
             )
             _client.return_value.list.assert_not_called()
             _client.return_value.apply.assert_not_called()
-            tc.assertIn("failed to get first pod info", "".join(logs.output))
+            assert "failed to get first pod info" in "".join(logs.output)
 
         # Test when the charm fails to get the k8s resources created by the charm and Patroni.
         _client.return_value.get.side_effect = None
@@ -704,9 +708,8 @@ def test_on_stop(harness):
                     labels={"app.juju.is/created-by": harness.charm.app.name},
                 )
             _client.return_value.apply.assert_not_called()
-            tc.assertIn(
-                "failed to get the k8s resources created by the charm and Patroni",
-                "".join(logs.output),
+            assert "failed to get the k8s resources created by the charm and Patroni" in "".join(
+                logs.output
             )
 
         # Test when the charm fails to patch a k8s resource.
@@ -720,8 +723,8 @@ def test_on_stop(harness):
         _client.return_value.apply.side_effect = [None, _FakeApiError]
         with tc.assertLogs("charm", "ERROR") as logs:
             harness.charm.on.stop.emit()
-            tc.assertEqual(_client.return_value.apply.call_count, 2)
-            tc.assertIn("failed to patch k8s MagicMock", "".join(logs.output))
+            assert _client.return_value.apply.call_count == 2
+            assert "failed to patch k8s MagicMock" in "".join(logs.output)
 
 
 def test_client_relations(harness):
@@ -798,24 +801,30 @@ def test_scope_obj(harness):
 
 
 @patch_network_get(private_address="1.1.1.1")
-def test_get_secret(harness):
+def test_get_secret_from_databag(harness):
+    """Asserts that get_secret method can read secrets from databag.
+
+    This must be backwards-compatible so it runs on both juju2 and juju3.
+    """
     with patch("charm.PostgresqlOperatorCharm._on_leader_elected"):
         rel_id = harness.model.get_relation(PEER).id
         # App level changes require leader privileges
         harness.set_leader()
         # Test application scope.
-        assert harness.charm.get_secret("app", "password") is None
-        harness.update_relation_data(rel_id, harness.charm.app.name, {"password": "test-password"})
-        assert harness.charm.get_secret("app", "password") == "test-password"
+        assert harness.charm.get_secret("app", "operator_password") is None
+        harness.update_relation_data(
+            rel_id, harness.charm.app.name, {"operator_password": "test-password"}
+        )
+        assert harness.charm.get_secret("app", "operator_password") == "test-password"
 
         # Unit level changes don't require leader privileges
         harness.set_leader(False)
         # Test unit scope.
-        assert harness.charm.get_secret("unit", "password") is None
+        assert harness.charm.get_secret("unit", "operator_password") is None
         harness.update_relation_data(
-            rel_id, harness.charm.unit.name, {"password": "test-password"}
+            rel_id, harness.charm.unit.name, {"operator_password": "test-password"}
         )
-        assert harness.charm.get_secret("unit", "password") == "test-password"
+        assert harness.charm.get_secret("unit", "operator_password") == "test-password"
 
 
 @patch_network_get(private_address="1.1.1.1")
@@ -862,7 +871,11 @@ def test_get_secret_secrets(harness, scope):
 
 
 @patch_network_get(private_address="1.1.1.1")
-def test_set_secret(harness):
+def test_set_secret_in_databag(harness, only_without_juju_secrets):
+    """Asserts that set_secret method writes to relation databag.
+
+    This is juju2 specific. In juju3, set_secret writes to juju secrets.
+    """
     with patch("charm.PostgresqlOperatorCharm._on_leader_elected"):
         rel_id = harness.model.get_relation(PEER).id
         harness.set_leader()
@@ -922,7 +935,7 @@ def test_invalid_secret(harness, scope, is_leader):
         # App has to be leader, unit can be either
         harness.set_leader(is_leader)
 
-        with tc.assertRaises(RelationDataTypeError):
+        with tc.assertRaises((RelationDataTypeError, TypeError)):
             harness.charm.set_secret(scope, "somekey", 1)
 
         harness.charm.set_secret(scope, "somekey", "")
@@ -946,7 +959,7 @@ def test_delete_password(harness, juju_has_secrets, caplog):
         assert harness.charm.get_secret("unit", "operator-password") is None
 
         harness.set_leader(True)
-        with caplog.at_level(logging.ERROR):
+        with caplog.at_level(logging.DEBUG):
             if juju_has_secrets:
                 error_message = (
                     "Non-existing secret operator-password was attempted to be removed."
@@ -977,28 +990,26 @@ def test_delete_password(harness, juju_has_secrets, caplog):
 
 @pytest.mark.parametrize("scope,is_leader", [("app", True), ("unit", True), ("unit", False)])
 @patch_network_get(private_address="1.1.1.1")
-def test_migration_from_databag(harness, juju_has_secrets, scope, is_leader):
-    """Check if we're moving on to use secrets when live upgrade from databag to Secrets usage."""
+def test_migration_from_databag(harness, only_with_juju_secrets, scope, is_leader):
+    """Check if we're moving on to use secrets when live upgrade from databag to Secrets usage.
+
+    Since it checks for a migration from databag to juju secrets, it's specific to juju3.
+    """
     with (
         patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
     ):
-        # as this test checks for a migration from databag to secrets,
-        # there's no need for this test when secrets are not enabled.
-        if not juju_has_secrets:
-            return
-
         rel_id = harness.model.get_relation(PEER).id
         # App has to be leader, unit can be either
         harness.set_leader(is_leader)
 
         # Getting current password
         entity = getattr(harness.charm, scope)
-        harness.update_relation_data(rel_id, entity.name, {"operator-password": "bla"})
-        assert harness.charm.get_secret(scope, "operator-password") == "bla"
+        harness.update_relation_data(rel_id, entity.name, {"operator_password": "bla"})
+        assert harness.charm.get_secret(scope, "operator_password") == "bla"
 
         # Reset new secret
         harness.charm.set_secret(scope, "operator-password", "blablabla")
-        assert harness.charm.model.get_secret(label=f"postgresql-k8s.{scope}")
+        assert harness.charm.model.get_secret(label=f"{PEER}.postgresql-k8s.{scope}")
         assert harness.charm.get_secret(scope, "operator-password") == "blablabla"
         assert "operator-password" not in harness.get_relation_data(
             rel_id, getattr(harness.charm, scope).name
@@ -1007,16 +1018,14 @@ def test_migration_from_databag(harness, juju_has_secrets, scope, is_leader):
 
 @pytest.mark.parametrize("scope,is_leader", [("app", True), ("unit", True), ("unit", False)])
 @patch_network_get(private_address="1.1.1.1")
-def test_migration_from_single_secret(harness, juju_has_secrets, scope, is_leader):
-    """Check if we're moving on to use secrets when live upgrade from databag to Secrets usage."""
+def test_migration_from_single_secret(harness, only_with_juju_secrets, scope, is_leader):
+    """Check if we're moving on to use secrets when live upgrade from databag to Secrets usage.
+
+    Since it checks for a migration from databag to juju secrets, it's specific to juju3.
+    """
     with (
         patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
     ):
-        # as this test checks for a migration from databag to secrets,
-        # there's no need for this test when secrets are not enabled.
-        if not juju_has_secrets:
-            return
-
         rel_id = harness.model.get_relation(PEER).id
 
         # App has to be leader, unit can be either
@@ -1036,7 +1045,7 @@ def test_migration_from_single_secret(harness, juju_has_secrets, scope, is_leade
         harness.charm.set_secret(scope, "operator-password", "blablabla")
         with harness.hooks_disabled():
             harness.set_leader(is_leader)
-        assert harness.charm.model.get_secret(label=f"postgresql-k8s.{scope}")
+        assert harness.charm.model.get_secret(label=f"{PEER}.postgresql-k8s.{scope}")
         assert harness.charm.get_secret(scope, "operator-password") == "blablabla"
         assert SECRET_INTERNAL_LABEL not in harness.get_relation_data(
             rel_id, getattr(harness.charm, scope).name
@@ -1202,6 +1211,9 @@ def test_handle_processes_failures(harness):
         patch("charm.Patroni.reinitialize_postgresql") as _reinitialize_postgresql,
         patch("charm.Patroni.member_streaming", new_callable=PropertyMock) as _member_streaming,
         patch(
+            "charm.PostgresqlOperatorCharm.is_standby_leader", new_callable=PropertyMock
+        ) as _is_standby_leader,
+        patch(
             "charm.PostgresqlOperatorCharm.is_primary", new_callable=PropertyMock
         ) as _is_primary,
         patch(
@@ -1266,6 +1278,7 @@ def test_handle_processes_failures(harness):
         # Test when the unit is a replica and it's not streaming from primary.
         _restart.reset_mock()
         _is_primary.return_value = False
+        _is_standby_leader.return_value = False
         _member_streaming.return_value = False
         for values in itertools.product(
             [None, RetryError(last_attempt=1)], [True, False], [True, False]
@@ -1419,11 +1432,10 @@ def test_handle_postgresql_restart_need(harness):
 
             harness.charm._handle_postgresql_restart_need()
             _reload_patroni_configuration.assert_called_once()
-            (
-                tc.assertIn("tls", harness.get_relation_data(rel_id, harness.charm.unit))
-                if values[0]
-                else tc.assertNotIn("tls", harness.get_relation_data(rel_id, harness.charm.unit))
-            )
+            if values[0]:
+                assert "tls" in harness.get_relation_data(rel_id, harness.charm.unit)
+            else:
+                assert "tls" not in harness.get_relation_data(rel_id, harness.charm.unit)
             if (values[0] != values[1]) or values[2]:
                 _generate_metrics_jobs.assert_called_once_with(values[0])
                 _restart.assert_called_once()
@@ -1435,6 +1447,9 @@ def test_handle_postgresql_restart_need(harness):
 def test_set_active_status(harness):
     with (
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
+        patch(
+            "charm.PostgresqlOperatorCharm.is_standby_leader", new_callable=PropertyMock
+        ) as _is_standby_leader,
         patch("charm.Patroni.get_primary") as _get_primary,
     ):
         for values in itertools.product(
@@ -1444,28 +1459,44 @@ def test_set_active_status(harness):
                 harness.charm.unit.name,
                 f"{harness.charm.app.name}/2",
             ],
+            [
+                RetryError(last_attempt=1),
+                ConnectionError,
+                True,
+                False,
+            ],
             [True, False],
         ):
             harness.charm.unit.status = MaintenanceStatus("fake status")
-            _member_started.return_value = values[1]
+            _member_started.return_value = values[2]
             if isinstance(values[0], str):
                 _get_primary.side_effect = None
                 _get_primary.return_value = values[0]
-                harness.charm._set_active_status()
-                tc.assertIsInstance(
-                    harness.charm.unit.status,
-                    ActiveStatus
-                    if values[0] == harness.charm.unit.name or values[1]
-                    else MaintenanceStatus,
-                )
-                tc.assertEqual(
-                    harness.charm.unit.status.message,
-                    "Primary"
-                    if values[0] == harness.charm.unit.name
-                    else ("" if values[1] else "fake status"),
-                )
+                if values[0] != harness.charm.unit.name and not isinstance(values[1], bool):
+                    _is_standby_leader.side_effect = values[1]
+                    _is_standby_leader.return_value = None
+                    harness.charm._set_active_status()
+                    tc.assertIsInstance(harness.charm.unit.status, MaintenanceStatus)
+                else:
+                    _is_standby_leader.side_effect = None
+                    _is_standby_leader.return_value = values[1]
+                    harness.charm._set_active_status()
+                    tc.assertIsInstance(
+                        harness.charm.unit.status,
+                        ActiveStatus
+                        if values[0] == harness.charm.unit.name or values[1] or values[2]
+                        else MaintenanceStatus,
+                    )
+                    tc.assertEqual(
+                        harness.charm.unit.status.message,
+                        "Primary"
+                        if values[0] == harness.charm.unit.name
+                        else (
+                            "Standby Leader" if values[1] else ("" if values[2] else "fake status")
+                        ),
+                    )
             else:
                 _get_primary.side_effect = values[0]
                 _get_primary.return_value = None
                 harness.charm._set_active_status()
-                tc.assertIsInstance(harness.charm.unit.status, MaintenanceStatus)
+                assert isinstance(harness.charm.unit.status, MaintenanceStatus)

@@ -36,7 +36,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 25
+LIBPATCH = 26
 
 INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE = "invalid role(s) for extra user roles"
 
@@ -476,11 +476,11 @@ WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}');""".format(user
         """Set up postgres database with the right permissions."""
         connection = None
         try:
-            self.create_user(
-                "admin",
-                extra_user_roles="pg_read_all_data,pg_write_all_data",
-            )
             with self._connect_to_database() as connection, connection.cursor() as cursor:
+                cursor.execute("SELECT TRUE FROM pg_roles WHERE rolname='admin';")
+                if cursor.fetchone() is not None:
+                    return
+
                 # Allow access to the postgres database only to the system users.
                 cursor.execute("REVOKE ALL PRIVILEGES ON DATABASE postgres FROM PUBLIC;")
                 cursor.execute("REVOKE CREATE ON SCHEMA public FROM PUBLIC;")
@@ -490,6 +490,10 @@ WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}');""".format(user
                             sql.Identifier(user)
                         )
                     )
+                self.create_user(
+                    "admin",
+                    extra_user_roles="pg_read_all_data,pg_write_all_data",
+                )
                 cursor.execute("GRANT CONNECT ON DATABASE postgres TO admin;")
         except psycopg2.Error as e:
             logger.error(f"Failed to set up databases: {e}")
