@@ -32,6 +32,7 @@ def harness():
         peer_relation_id = harness.add_relation("database-peers", "postgresql-k8s")
         for rel_id in (upgrade_relation_id, peer_relation_id):
             harness.add_relation_unit(rel_id, "postgresql-k8s/1")
+        harness.add_relation("restart", harness.charm.app.name)
         with harness.hooks_disabled():
             harness.update_relation_data(
                 upgrade_relation_id, "postgresql-k8s/1", {"state": "idle"}
@@ -184,7 +185,6 @@ def test_pre_upgrade_check(harness):
             "charm.Patroni.is_creating_backup", new_callable=PropertyMock
         ) as _is_creating_backup,
         patch("charm.Patroni.are_all_members_ready") as _are_all_members_ready,
-        patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_process_locks"),
     ):
         harness.set_leader(True)
 
