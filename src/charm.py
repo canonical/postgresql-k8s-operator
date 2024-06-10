@@ -291,9 +291,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         secret_key = self._translate_field_to_secret_key(key)
         # Old translation in databag is to be taken
-        if key != secret_key and (
-            result := self.peer_relation_data(scope).fetch_my_relation_field(peers.id, key)
-        ):
+        if result := self.peer_relation_data(scope).fetch_my_relation_field(peers.id, key):
             return result
 
         return self.peer_relation_data(scope).get_secret(peers.id, secret_key)
@@ -309,10 +307,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         peers = self.model.get_relation(PEER)
         secret_key = self._translate_field_to_secret_key(key)
         # Old translation in databag is to be deleted
-        if key != secret_key and self.peer_relation_data(scope).fetch_my_relation_field(
-            peers.id, key
-        ):
-            self.peer_relation_data(scope).delete_relation_data(peers.id, [key])
+        self.peer_relation_data(scope).delete_relation_data(peers.id, [key])
         self.peer_relation_data(scope).set_secret(peers.id, secret_key, value)
 
     def remove_secret(self, scope: Scopes, key: str) -> None:
@@ -1535,8 +1530,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("Early exit update_config: Patroni not started yet")
             return False
 
+        # Use config value if set, calculate otherwise
+        if self.config.experimental_max_connections:
+            max_connections = self.config.experimental_max_connections
+        else:
+            max_connections = max(4 * available_cpu_cores, 100)
+
         self._patroni.bulk_update_parameters_controller_by_patroni({
-            "max_connections": max(4 * available_cpu_cores, 100),
+            "max_connections": max_connections,
             "max_prepared_transactions": self.config.memory_max_prepared_transactions,
         })
 
