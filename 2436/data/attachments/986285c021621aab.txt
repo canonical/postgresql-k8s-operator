@@ -1,0 +1,77 @@
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:80 Destroying second model
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.8    unsupported  02:02:48Z
+
+App                  Version  Status   Scale  Charm                Channel        Rev  Address         Exposed  Message
+postgresql-k8s       14.11    waiting      3  postgresql-k8s                        0  10.152.183.242  no       installing agent
+postgresql-test-app           active       1  postgresql-test-app  latest/stable  144  10.152.183.58   no       received database credentials of the first database
+
+Unit                    Workload  Agent      Address     Ports  Message
+postgresql-k8s/0        blocked   executing  10.1.94.76         Cluster in read-only mode
+postgresql-k8s/1        blocked   executing  10.1.94.78         Cluster in read-only mode
+postgresql-k8s/2*       error     idle       10.1.94.77         hook failed: "database-peers-relation-changed"
+postgresql-test-app/0*  active    idle       10.1.94.85         received database credentials of the first database
+
+Offer          Application     Charm           Rev  Connected  Endpoint       Interface          Role
+async-primary  postgresql-k8s  postgresql-k8s  0    0/0        async-primary  async_replication  provider
+async-replica  postgresql-k8s  postgresql-k8s  0    0/0        async-replica  async_replication  requirer
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+unit-postgresql-k8s-2: 02:02:46 ERROR unit.postgresql-k8s/2.juju-log database-peers:1: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/model.py", line 3022, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-postgresql-k8s-2/relation-get', '-r', '4', '-', 'postgresql-k8s', '--app', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 1697, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 544, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 520, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 509, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 143, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 851, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 941, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 440, in _on_peer_relation_changed
+    self.postgresql_client_relation.update_read_only_endpoint()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/relations/postgresql_provider.py", line 191, in update_read_only_endpoint
+    self.database_provides.set_read_only_endpoints(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2572, in set_read_only_endpoints
+    self.update_relation_data(relation_id, {"read-only-endpoints": connection_strings})
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 494, in wrapper
+    return f(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1264, in update_relation_data
+    return self._update_relation_data(relation, data)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1485, in _update_relation_data
+    _, normal_fields = self._process_secret_fields(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1051, in _process_secret_fields
+    and set(req_secret_fields) & set(relation.data[self.component])
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/model.py", line 803, in __iter__
+    return iter(self._data)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/model.py", line 790, in _data
+    data = self._lazy_data = self._load()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/model.py", line 1589, in _load
+    return self._backend.relation_get(self.relation.id, self._entity.name, self._is_app)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/model.py", line 3095, in relation_get
+    raw_data_content = self._run(*args, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/model.py", line 3024, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR permission denied
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
