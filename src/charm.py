@@ -496,7 +496,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         try:
             self.postgresql_client_relation.update_read_only_endpoint()
         except ModelError as e:
-            logger.debug("Cannot update read_only endpoints: %s", str(e))
+            logger.warning("Cannot update read_only endpoints: %s", str(e))
 
         self.backup.coordinate_stanza_fields()
 
