@@ -174,8 +174,9 @@ async def test_postgresql_parameters_change(ops_test: OpsTest) -> None:
     """Test that's possible to change PostgreSQL parameters."""
     await ops_test.model.applications[APP_NAME].set_config({
         "memory_max_prepared_transactions": "100",
-        "memory_shared_buffers": "128",
+        "memory_shared_buffers": "32768",  # 2 * 128MB. Patroni may refuse the config if < 128MB
         "response_lc_monetary": "en_GB.utf8",
+        "experimental_max_connections": "200",
     })
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=30)
     password = await get_password(ops_test)
@@ -188,7 +189,12 @@ async def test_postgresql_parameters_change(ops_test: OpsTest) -> None:
             with psycopg2.connect(
                 f"dbname='postgres' user='operator' host='{host}' password='{password}' connect_timeout=1"
             ) as connection, connection.cursor() as cursor:
-                settings_names = ["max_prepared_transactions", "shared_buffers", "lc_monetary"]
+                settings_names = [
+                    "max_prepared_transactions",
+                    "shared_buffers",
+                    "lc_monetary",
+                    "max_connections",
+                ]
                 cursor.execute(
                     sql.SQL("SELECT name,setting FROM pg_settings WHERE name IN ({});").format(
                         sql.SQL(", ").join(sql.Placeholder() * len(settings_names))
@@ -200,8 +206,9 @@ async def test_postgresql_parameters_change(ops_test: OpsTest) -> None:
 
                 # Validate each configuration set by Patroni on PostgreSQL.
                 assert settings["max_prepared_transactions"] == "100"
-                assert settings["shared_buffers"] == "128"
+                assert settings["shared_buffers"] == "32768"
                 assert settings["lc_monetary"] == "en_GB.utf8"
+                assert settings["max_connections"] == "200"
         finally:
             connection.close()
 
