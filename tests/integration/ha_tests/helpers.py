@@ -1,7 +1,9 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 import asyncio
+import copy
 import json
+import logging
 import os
 import string
 import subprocess
@@ -17,7 +19,7 @@ from juju.model import Model
 from kubernetes import config
 from kubernetes.client.api import core_v1_api
 from kubernetes.stream import stream
-from lightkube.core.client import Client, GlobalResource
+from lightkube.core.client import Client
 from lightkube.resources.core_v1 import (
     PersistentVolume,
     PersistentVolumeClaim,
@@ -46,6 +48,7 @@ from ..helpers import (
 )
 
 PORT = 5432
+logger = logging.getLogger(__name__)
 
 
 class MemberNotListedOnClusterError(Exception):
@@ -950,7 +953,7 @@ async def check_system_id_mismatch(ops_test: OpsTest, unit_name: str) -> bool:
     return log_str in str(stdout)
 
 
-def delete_pvc(ops_test: OpsTest, pvc: GlobalResource):
+def delete_pvc(ops_test: OpsTest, pvc: PersistentVolumeClaim):
     """Deletes PersistentVolumeClaim."""
     client = Client(namespace=ops_test.model.name)
     client.delete(PersistentVolumeClaim, namespace=ops_test.model.name, name=pvc.metadata.name)
@@ -958,16 +961,17 @@ def delete_pvc(ops_test: OpsTest, pvc: GlobalResource):
 
 def get_pvc(ops_test: OpsTest, unit_name: str):
     """Get PersistentVolumeClaim for unit."""
+    logger.info(f"----------------  ${unit_name}")
     client = Client(namespace=ops_test.model.name)
     pvc_list = client.list(PersistentVolumeClaim, namespace=ops_test.model.name)
     for pvc in pvc_list:
         if unit_name.replace("/", "-") in pvc.metadata.name:
             return pvc
-    return None
 
 
 def get_pv(ops_test: OpsTest, unit_name: str):
     """Get PersistentVolume for unit."""
+    logger.info(f"----------------  ${unit_name}")
     client = Client(namespace=ops_test.model.name)
     pv_list = client.list(PersistentVolume, namespace=ops_test.model.name)
     for pv in pv_list:
@@ -976,12 +980,12 @@ def get_pv(ops_test: OpsTest, unit_name: str):
     return None
 
 
-def change_pv_reclaim_policy(ops_test: OpsTest, pvc_config: PersistentVolumeClaim, policy: str):
+def change_pv_reclaim_policy(ops_test: OpsTest, pv_config: PersistentVolume, policy: str):
     """Change PersistentVolume reclaim policy config value."""
     client = Client(namespace=ops_test.model.name)
     res = client.patch(
         PersistentVolume,
-        pvc_config.metadata.name,
+        pv_config.metadata.name,
         {"spec": {"persistentVolumeReclaimPolicy": f"{policy}"}},
         namespace=ops_test.model.name,
     )
@@ -1051,3 +1055,135 @@ async def remove_unit_force(ops_test: OpsTest, num_units: int):
             timeout=1000,
             wait_for_exact_units=scale,
         )
+
+
+async def create_test_data(connection_string: str):
+    """Creating test data in the database.
+
+    Args:
+      connection_string: Database connection string
+    """
+    with psycopg2.connect(connection_string) as connection:
+        connection.autocommit = True
+        with connection.cursor() as cursor:
+            # Check that it's possible to write and read data from the database that
+            # was created for the application.
+            cursor.execute("DROP TABLE IF EXISTS test;")
+            cursor.execute("CREATE TABLE test(data TEXT);")
+            cursor.execute("INSERT INTO test(data) VALUES('some data');")
+            cursor.execute("SELECT data FROM test;")
+            data = cursor.fetchone()
+            assert data[0] == "some data"
+    connection.close()
+
+
+async def validate_test_data(connection_string):
+    """Checking test data.
+
+    Args:
+      connection_string: Database connection string
+    """
+    with psycopg2.connect(connection_string) as connection:
+        connection.autocommit = True
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT data FROM test;")
+            data = cursor.fetchone()
+            assert data[0] == "some data"
+    connection.close()
+
+
+class Storage:
+    """Used to store PV in the PVC of the primary and secondary cluster."""
+
+    class Volume:
+        """Used to store PV in the PVC of cluster."""
+
+        def __init__(self, pv: PersistentVolume, pvc: PersistentVolumeClaim):
+            self.pv = pv
+            self.pvc = pvc
+
+    def __init__(self, primary: Volume, secondary: Volume):
+        self.pvc_updated = None
+        self.volumeName = primary.pv.metadata.name
+        self.primary = primary
+        self.secondary = secondary
+
+    def set_pvc_updated(self, pvc: PersistentVolumeClaim):
+        """Setting up claims using a storage of another cluster.
+
+        Args:
+          pvc: Persistent volume claim with third-party storage
+        """
+        self.pvc_updated = pvc
+
+
+async def restore_own_storage(ops_test, storage: Storage):
+    """Restore own storage of primary cluster.
+
+    Args:
+       ops_test: Instance of ops_test.
+       storage: Storage of PV, PVC of the primary and secondary cluster and
+            the original volumeName of the primary cluster
+    """
+    storage.pvc_updated.spec.volumeName = storage.volumeName
+    new_pvc = copy.deepcopy(storage.pvc_updated)
+
+    delete_pvc(ops_test, storage.pvc_updated)
+    remove_pv_claimref(ops_test, pv_config=storage.secondary.pv)
+    remove_pv_claimref(ops_test, pv_config=storage.primary.pv)
+    apply_pvc_config(ops_test, pvc_config=new_pvc)
+    change_pv_reclaim_policy(ops_test, pv_config=storage.secondary.pv, policy="Delete")
+    change_pv_reclaim_policy(ops_test, pv_config=storage.primary.pv, policy="Delete")
+
+
+async def apply_pvc_with_third_party_storage(
+    ops_test, secondary_application: str, primary_unit_name: str, secondary_unit_name: str
+) -> Storage:
+    """Apply PVC with third-party cluster storage.
+
+    Args:
+       ops_test: Instance of ops_test.
+       secondary_application: Storage of PV, PVC of the primary and secondary cluster and
+            the original volumeName of the primary cluster
+       primary_unit_name: Storage of PV, PVC of the primary and secondary cluster and
+            the original volumeName of the primary cluster
+       secondary_unit_name: Storage of PV, PVC of the primary and secondary cluster and
+            the original volumeName of the primary cluster
+    """
+    storage = Storage(
+        primary=Storage.Volume(
+            pvc=get_pvc(ops_test, unit_name=primary_unit_name),
+            pv=get_pv(ops_test, unit_name=primary_unit_name),
+        ),
+        secondary=Storage.Volume(
+            pv=get_pv(ops_test, unit_name=secondary_unit_name),
+            pvc=get_pvc(ops_test, unit_name=secondary_unit_name),
+        ),
+    )
+
+    storage.secondary.pv = change_pv_reclaim_policy(
+        ops_test, pv_config=storage.secondary.pv, policy="Retain"
+    )
+    storage.primary.pv = change_pv_reclaim_policy(
+        ops_test, pv_config=storage.primary.pv, policy="Retain"
+    )
+
+    logger.info("remove application")
+    await ops_test.model.remove_application(secondary_application, block_until_done=True)
+
+    delete_pvc(ops_test, pvc=storage.secondary.pvc)
+
+    pvc_config = change_pvc_pv_name(storage.primary.pvc, storage.secondary.pv.metadata.name)
+
+    logger.info(f"delete pvc ={storage.primary.pvc}")
+    delete_pvc(ops_test, pvc=storage.primary.pvc)
+
+    logger.info("remove pv claimref")
+    remove_pv_claimref(ops_test, pv_config=storage.secondary.pv)
+    logger.info("apply pvc config")
+    apply_pvc_config(ops_test, pvc_config=pvc_config)
+
+    logger.info(f"updated volumeName = {pvc_config.spec.volumeName}")
+    logger.info(f"original volumeName = {storage.volumeName}")
+    storage.set_pvc_updated(pvc_config)
+    return storage

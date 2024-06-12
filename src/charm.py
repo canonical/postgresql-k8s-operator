@@ -91,6 +91,9 @@ from utils import any_cpu_to_cores, any_memory_to_bytes, new_password
 logger = logging.getLogger(__name__)
 
 EXTENSIONS_DEPENDENCY_MESSAGE = "Unsatisfied plugin dependencies. Please check the logs"
+THIRD_PARTY_STORAGE_MESSAGE = (
+    "Failed to start postgresql. The storage belongs to a third-party cluster"
+)
 
 # http{x,core} clutter the logs with debug messages
 logging.getLogger("httpcore").setLevel(logging.ERROR)
@@ -819,7 +822,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Ensure the member is up and running before marking the cluster as initialised.
         if not self._patroni.member_started:
             logger.debug("Deferring on_postgresql_pebble_ready: Waiting for cluster to start")
-            self.unit.status = WaitingStatus("awaiting for cluster to start")
+            if self._patroni.cluster_system_id_mismatch(unit_name=self.unit.name):
+                self.unit.status = BlockedStatus(THIRD_PARTY_STORAGE_MESSAGE)
+            else:
+                self.unit.status = WaitingStatus("awaiting for cluster to start")
             event.defer()
             return
 

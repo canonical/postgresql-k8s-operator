@@ -6,6 +6,7 @@ import logging
 from time import sleep
 
 import pytest
+import requests
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
@@ -13,6 +14,7 @@ from .. import markers
 from ..helpers import (
     APPLICATION_NAME,
     CHARM_SERIES,
+    DATABASE_APP_NAME,
     METADATA,
     app_name,
     build_and_deploy,
@@ -21,13 +23,18 @@ from ..helpers import (
     get_unit_address,
     run_command_on_unit,
     scale_application,
+    set_password,
 )
+from ..new_relations.helpers import build_connection_string
+from ..new_relations.test_new_relations import APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME
 from .helpers import (
+    apply_pvc_with_third_party_storage,
     are_all_db_processes_down,
     are_writes_increasing,
     change_patroni_setting,
     change_wal_settings,
     check_writes,
+    create_test_data,
     fetch_cluster_members,
     get_patroni_setting,
     get_primary,
@@ -39,29 +46,36 @@ from .helpers import (
     list_wal_files,
     modify_pebble_restart_delay,
     remove_instance_isolation,
+    restore_own_storage,
     send_signal_to_process,
     start_continuous_writes,
+    validate_test_data,
 )
 
 logger = logging.getLogger(__name__)
 
 APP_NAME = METADATA["name"]
+SECOND_APP_NAME = f"second-{APP_NAME}"
 PATRONI_PROCESS = "/usr/bin/patroni"
 POSTGRESQL_PROCESS = "postgres"
 DB_PROCESSES = [POSTGRESQL_PROCESS, PATRONI_PROCESS]
 MEDIAN_ELECTION_TIME = 10
+THIRD_PARTY_STORAGE_MESSAGE = (
+    "Failed to start postgresql. The storage belongs to a third-party cluster"
+)
 
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy three unit of PostgreSQL."""
-    wait_for_apps = False
+    wait_for_apps: bool = False
     # It is possible for users to provide their own cluster for HA testing. Hence, check if there
     # is a pre-existing cluster.
     if not await app_name(ops_test):
         wait_for_apps = True
         await build_and_deploy(ops_test, 3, wait_for_idle=False)
+        await build_and_deploy(ops_test, 1, database_app_name=SECOND_APP_NAME, wait_for_idle=False)
     # Deploy the continuous writes application charm if it wasn't already deployed.
     if not await app_name(ops_test, APPLICATION_NAME):
         wait_for_apps = True
@@ -75,7 +89,15 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
     if wait_for_apps:
         async with ops_test.fast_forward():
-            await ops_test.model.wait_for_idle(status="active", timeout=1000)
+            await ops_test.model.wait_for_idle(status="active", timeout=3000)
+
+    await ops_test.model.relate(DATABASE_APP_NAME, f"{APPLICATION_NAME}:first-database")
+    await ops_test.model.wait_for_idle(status="active", timeout=3000)
+
+    for user in ["operator", "replication", "rewind"]:
+        password = await get_password(ops_test, username=user, database_app_name=APP_NAME)
+        second_primary = ops_test.model.applications[SECOND_APP_NAME].units[0].name
+        await set_password(ops_test, second_primary, user, password)
 
 
 @pytest.mark.group(1)
@@ -409,12 +431,73 @@ async def test_scaling_to_zero(ops_test: OpsTest, continuous_writes) -> None:
     # Locate primary unit.
     app = await app_name(ops_test)
 
-    # Start an application that continuously writes data to the database.
+    # # Start an application that continuously writes data to the database.
     await start_continuous_writes(ops_test, app)
+
+    # Get the connection string to connect to the database using the read/write endpoint.
+    connection_string = await build_connection_string(
+        ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME
+    )
+
+    logger.info("connect to DB and create test table")
+    await create_test_data(connection_string)
+
+    primary_name = ops_test.model.applications[app].units[0].name
+    secondary_name = ops_test.model.applications[SECOND_APP_NAME].units[0].name
+
+    unit_ip_addresses = []
+    for unit in ops_test.model.applications[app].units:
+        # Save IP addresses of units
+        unit_ip_addresses.append(await get_unit_address(ops_test, unit.name))
 
     # Scale the database to zero units.
     logger.info("scaling database to zero units")
     await scale_application(ops_test, app, 0)
+    await scale_application(ops_test, SECOND_APP_NAME, 0)
+
+    logger.info("checking shutdown units")
+    for unit_ip in unit_ip_addresses:
+        try:
+            resp = requests.get(f"http://{unit_ip}:8008")
+            assert (
+                resp.status_code != 200
+            ), f"status code = {resp.status_code}, message = {resp.text}"
+        except requests.exceptions.ConnectionError:
+            assert True, f"unit host = http://{unit_ip}:8008, all units shutdown"
+        except Exception as e:
+            assert False, f"{e} unit host = http://{unit_ip}:8008, something went wrong"
+
+    logger.info("apply pvc with third party storage")
+    storage = await apply_pvc_with_third_party_storage(
+        ops_test,
+        secondary_application=SECOND_APP_NAME,
+        primary_unit_name=primary_name,
+        secondary_unit_name=secondary_name,
+    )
+
+    logger.info("scaling database to one unit")
+    await scale_application(ops_test, app, 1, is_blocked=True)
+
+    logger.info("checking blocked status using third-party cluster storage")
+    assert any(
+        unit.workload_status == "blocked"
+        and unit.workload_status_message == THIRD_PARTY_STORAGE_MESSAGE
+        for unit in ops_test.model.applications[app].units
+    ), "The blocked status check should be checked along with the message"
+
+    logger.info("scaling database to zero unit")
+    await scale_application(ops_test, app, 0)
+
+    await restore_own_storage(ops_test, storage)
+
+    logger.info("scaling to one unit")
+    await scale_application(ops_test, app, 1)
+
+    logger.info("check test database data")
+    await validate_test_data(connection_string)
+
+    logger.info("check are_writes_increasing")
+    await are_writes_increasing(ops_test)
 
     # Scale the database to three units.
     logger.info("scaling database to three units")
@@ -427,7 +510,10 @@ async def test_scaling_to_zero(ops_test: OpsTest, continuous_writes) -> None:
             ops_test, unit.name
         ), f"unit {unit.name} not restarted after cluster restart."
 
-    logger.info("checking whether writes are increasing")
+    logger.info("check test database data")
+    await validate_test_data(connection_string)
+
+    logger.info("check are_writes_increasing")
     await are_writes_increasing(ops_test)
 
     # Verify that all units are part of the same cluster.
