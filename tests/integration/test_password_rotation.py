@@ -19,6 +19,7 @@ from .helpers import (
     get_primary,
     get_unit_address,
     restart_patroni,
+    run_command_on_unit,
     set_password,
 )
 
@@ -125,8 +126,8 @@ async def test_password_from_secret_same_as_cli(ops_test: OpsTest):
     I.e. we're manipulating the secret we think we're manipulating.
     """
     #
-    # No way to retrieve a secet by label for now (https://bugs.launchpad.net/juju/+bug/2037104)
-    # Therefore we take advantage of the fact, that we only have ONE single secret a this point
+    # No way to retrieve a secret by label for now (https://bugs.launchpad.net/juju/+bug/2037104)
+    # Therefore we take advantage of the fact, that we only have ONE single secret at this point
     # So we take the single member of the list
     # NOTE: This would BREAK if for instance units had secrets at the start...
     #
@@ -176,3 +177,18 @@ async def test_no_password_change_on_invalid_password(ops_test: OpsTest) -> None
     password2 = await get_password(ops_test, username="replication")
     # The password didn't change
     assert password1 == password2
+
+
+@pytest.mark.group(1)
+async def test_no_password_exposed_on_logs(ops_test: OpsTest) -> None:
+    """Test that passwords don't get exposed on postgresql logs."""
+    for unit in ops_test.model.applications[APP_NAME].units:
+        try:
+            logs = await run_command_on_unit(
+                ops_test,
+                unit.name,
+                "grep PASSWORD /var/log/postgresql/postgresql-*.log",
+            )
+        except Exception:
+            continue
+        assert len(logs) == 0, f"Sensitive information detected on {unit.name} logs"
