@@ -45,6 +45,7 @@ from ops.model import (
     Container,
     JujuVersion,
     MaintenanceStatus,
+    ModelError,
     Relation,
     Unit,
     UnknownStatus,
@@ -52,7 +53,7 @@ from ops.model import (
 )
 from ops.pebble import ChangeError, Layer, PathError, ProtocolError, ServiceStatus
 from requests import ConnectionError
-from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
+from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
 from backups import PostgreSQLBackups
 from config import CharmConfig
@@ -80,7 +81,7 @@ from constants import (
     WORKLOAD_OS_GROUP,
     WORKLOAD_OS_USER,
 )
-from patroni import NotReadyError, Patroni
+from patroni import NotReadyError, Patroni, SwitchoverFailedError
 from relations.async_replication import PostgreSQLAsyncReplication
 from relations.db import EXTENSIONS_BLOCKING_MESSAGE, DbProvides
 from relations.postgresql_provider import PostgreSQLProvider
@@ -144,6 +145,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.framework.observe(self.on.secret_changed, self._on_peer_relation_changed)
         self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
+        self.framework.observe(self.on.pgdata_storage_detaching, self._on_pgdata_storage_detaching)
         self.framework.observe(self.on.stop, self._on_stop)
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(self.on.get_password_action, self._on_get_password)
@@ -379,14 +381,68 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Update the sync-standby endpoint in the async replication data.
         self.async_replication.update_async_replication_data()
 
-    def _on_peer_relation_changed(self, event: HookEvent) -> None:
+    def _on_pgdata_storage_detaching(self, _) -> None:
+        # Change the primary if it's the unit that is being removed.
+        try:
+            primary = self._patroni.get_primary(unit_name_pattern=True)
+        except RetryError:
+            # Ignore the event if the primary couldn't be retrieved.
+            # If a switchover is needed, an automatic failover will be triggered
+            # when the unit is removed.
+            logger.debug("Early exit on_pgdata_storage_detaching: primary cannot be retrieved")
+            return
+
+        if self.unit.name != primary:
+            return
+
+        if not self._patroni.are_all_members_ready():
+            logger.warning(
+                "could not switchover because not all members are ready"
+                " - an automatic failover will be triggered"
+            )
+            return
+
+        # Try to switchover to another member and raise an exception if it doesn't succeed.
+        # If it doesn't happen on time, Patroni will automatically run a fail-over.
+        try:
+            # Get the current primary to check if it has changed later.
+            current_primary = self._patroni.get_primary()
+
+            # Trigger the switchover.
+            self._patroni.switchover()
+
+            # Wait for the switchover to complete.
+            self._patroni.primary_changed(current_primary)
+
+            logger.info("successful switchover")
+        except (RetryError, SwitchoverFailedError) as e:
+            logger.warning(
+                f"switchover failed with reason: {e} - an automatic failover will be triggered"
+            )
+            return
+
+        # Only update the connection endpoints if there is a primary.
+        # A cluster can have all members as replicas for some time after
+        # a failed switchover, so wait until the primary is elected.
+        endpoints_to_remove = self._get_endpoints_to_remove()
+        self.postgresql_client_relation.update_read_only_endpoint()
+        self._remove_from_endpoints(endpoints_to_remove)
+
+    def _on_peer_relation_changed(self, event: HookEvent) -> None:  # noqa: C901
         """Reconfigure cluster members."""
         # The cluster must be initialized first in the leader unit
         # before any other member joins the cluster.
         if "cluster_initialised" not in self._peers.data[self.app]:
-            logger.debug(
-                "Deferring on_peer_relation_changed: Cluster must be initialized before members can join"
-            )
+            if self.unit.is_leader():
+                if self._initialize_cluster(event):
+                    logger.debug("Deferring on_peer_relation_changed: Leader initialized cluster")
+                else:
+                    logger.debug("_initialized_cluster failed on _peer_relation_changed")
+                    return
+            else:
+                logger.debug(
+                    "Deferring on_peer_relation_changed: Cluster must be initialized before members can join"
+                )
             event.defer()
             return
 
@@ -437,7 +493,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             event.defer()
             return
 
-        self.postgresql_client_relation.update_read_only_endpoint()
+        try:
+            self.postgresql_client_relation.update_read_only_endpoint()
+        except ModelError as e:
+            logger.warning("Cannot update read_only endpoints: %s", str(e))
 
         self.backup.coordinate_stanza_fields()
 
@@ -593,6 +652,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self.add_cluster_member(member)
         except NotReadyError:
             logger.info("Deferring reconfigure: another member doing sync right now")
+            event.defer()
+        except RetryError:
+            logger.info("Deferring reconfigure: failed to obtain cluster members from Patroni")
             event.defer()
 
     def add_cluster_member(self, member: str) -> None:
@@ -1432,6 +1494,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Update health check URL.
         self._update_pebble_layers()
 
+        try:
+            for attempt in Retrying(wait=wait_fixed(3), stop=stop_after_delay(300)):
+                with attempt:
+                    if not self._can_connect_to_postgresql:
+                        assert False
+        except Exception:
+            logger.exception("Unable to reconnect to postgresql")
+
         # Start or stop the pgBackRest TLS server service when TLS certificate change.
         self.backup.start_stop_pgbackrest_service()
 
@@ -1447,6 +1517,17 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return False
 
         return services[0].current == ServiceStatus.ACTIVE
+
+    @property
+    def _can_connect_to_postgresql(self) -> bool:
+        try:
+            for attempt in Retrying(stop=stop_after_delay(30), wait=wait_fixed(3)):
+                with attempt:
+                    assert self.postgresql.get_postgresql_timezones()
+        except RetryError:
+            logger.debug("Cannot connect to database")
+            return False
+        return True
 
     def update_config(self, is_creating_backup: bool = False) -> bool:
         """Updates Patroni config file based on the existence of the TLS files."""
