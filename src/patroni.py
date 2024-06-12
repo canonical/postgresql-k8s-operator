@@ -17,6 +17,7 @@ from tenacity import (
     RetryError,
     Retrying,
     retry,
+    retry_if_result,
     stop_after_attempt,
     stop_after_delay,
     wait_exponential,
@@ -483,3 +484,13 @@ class Patroni:
                 new_primary = self.get_primary()
                 if (candidate is not None and new_primary != candidate) or new_primary == primary:
                     raise SwitchoverFailedError("primary was not switched correctly")
+
+    @retry(
+        retry=retry_if_result(lambda x: not x),
+        stop=stop_after_attempt(10),
+        wait=wait_exponential(multiplier=1, min=2, max=30),
+    )
+    def primary_changed(self, old_primary: str) -> bool:
+        """Checks whether the primary unit has changed."""
+        primary = self.get_primary()
+        return primary != old_primary
