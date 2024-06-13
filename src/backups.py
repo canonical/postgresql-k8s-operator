@@ -26,7 +26,7 @@ from ops.pebble import ChangeError, ExecError
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from constants import BACKUP_TYPE_OVERRIDES, BACKUP_USER, WORKLOAD_OS_GROUP, WORKLOAD_OS_USER
-from relations.async_replication import ASYNC_PRIMARY_RELATION, ASYNC_REPLICA_RELATION
+from relations.async_replication import REPLICATION_CONSUMER_RELATION, REPLICATION_OFFER_RELATION
 
 logger = logging.getLogger(__name__)
 
@@ -810,8 +810,8 @@ Stderr:
 
         logger.info("Checking that the cluster is not replicating data to a standby cluster")
         for relation in [
-            self.model.get_relation(ASYNC_REPLICA_RELATION),
-            self.model.get_relation(ASYNC_PRIMARY_RELATION),
+            self.model.get_relation(REPLICATION_CONSUMER_RELATION),
+            self.model.get_relation(REPLICATION_OFFER_RELATION),
         ]:
             if not relation:
                 continue
