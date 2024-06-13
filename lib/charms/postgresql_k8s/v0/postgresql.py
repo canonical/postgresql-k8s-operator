@@ -111,20 +111,19 @@ class PostgreSQL:
         self.system_users = system_users
 
     def _connect_to_database(
-        self, database: str = None, connect_to_current_host: bool = False
+        self, database: str = None, database_host: str = None
     ) -> psycopg2.extensions.connection:
         """Creates a connection to the database.
 
         Args:
             database: database to connect to (defaults to the database
                 provided when the object for this class was created).
-            connect_to_current_host: whether to connect to the current host
-                instead of the primary host.
+            database_host: host to connect to instead of the primary host.
 
         Returns:
              psycopg2 connection object.
         """
-        host = self.current_host if connect_to_current_host else self.primary_host
+        host = database_host if database_host is not None else self.primary_host
         connection = psycopg2.connect(
             f"dbname='{database if database else self.database}' user='{self.user}' host='{host}'"
             f"password='{self.password}' connect_timeout=1"
@@ -391,7 +390,7 @@ WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}');""".format(user
             Set of PostgreSQL text search configs.
         """
         with self._connect_to_database(
-            connect_to_current_host=True
+            database_host=self.current_host
         ) as connection, connection.cursor() as cursor:
             cursor.execute("SELECT CONCAT('pg_catalog.', cfgname) FROM pg_ts_config;")
             text_search_configs = cursor.fetchall()
@@ -404,7 +403,7 @@ WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}');""".format(user
             Set of PostgreSQL timezones.
         """
         with self._connect_to_database(
-            connect_to_current_host=True
+            database_host=self.current_host
         ) as connection, connection.cursor() as cursor:
             cursor.execute("SELECT name FROM pg_timezone_names;")
             timezones = cursor.fetchall()
@@ -437,7 +436,7 @@ WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}');""".format(user
         """
         try:
             with self._connect_to_database(
-                connect_to_current_host=check_current_host
+                database_host=self.current_host if check_current_host else None
             ) as connection, connection.cursor() as cursor:
                 cursor.execute("SHOW ssl;")
                 return "on" in cursor.fetchone()[0]
@@ -505,19 +504,24 @@ WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}');""".format(user
             if connection is not None:
                 connection.close()
 
-    def update_user_password(self, username: str, password: str) -> None:
+    def update_user_password(
+        self, username: str, password: str, database_host: str = None
+    ) -> None:
         """Update a user password.
 
         Args:
             username: the user to update the password.
             password: the new password for the user.
+            database_host: the host to connect to.
 
         Raises:
             PostgreSQLUpdateUserPasswordError if the password couldn't be changed.
         """
         connection = None
         try:
-            with self._connect_to_database() as connection, connection.cursor() as cursor:
+            with self._connect_to_database(
+                database_host=database_host
+            ) as connection, connection.cursor() as cursor:
                 cursor.execute(sql.SQL("BEGIN;"))
                 cursor.execute(sql.SQL("SET LOCAL log_statement = 'none';"))
                 cursor.execute(
@@ -616,7 +620,7 @@ WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}');""".format(user
         """
         try:
             with self._connect_to_database(
-                connect_to_current_host=True
+                database_host=self.current_host
             ) as connection, connection.cursor() as cursor:
                 cursor.execute(
                     sql.SQL(

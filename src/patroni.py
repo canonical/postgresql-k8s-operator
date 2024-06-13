@@ -88,20 +88,6 @@ class Patroni:
         """Patroni REST API URL."""
         return f"{'https' if self._tls_enabled else 'http'}://{self._endpoint}:8008"
 
-    # def configure_standby_cluster(self, host: str) -> None:
-    #     """Configure this cluster as a standby cluster."""
-    #     requests.patch(
-    #         f"{self._patroni_url}/config",
-    #         verify=self._verify,
-    #         json={
-    #             "standby_cluster": {
-    #                 "create_replica_methods": ["basebackup"],
-    #                 "host": host,
-    #                 "port": 5432,
-    #             }
-    #         },
-    #     )
-
     @property
     def rock_postgresql_version(self) -> Optional[str]:
         """Version of Postgresql installed in the Rock image."""
@@ -112,12 +98,18 @@ class Patroni:
         snap_meta = container.pull("/meta.charmed-postgresql/snap.yaml")
         return yaml.safe_load(snap_meta)["version"]
 
-    def _get_alternative_patroni_url(self, attempt: AttemptManager) -> str:
+    def _get_alternative_patroni_url(
+        self, attempt: AttemptManager, alternative_endpoints: List[str] = None
+    ) -> str:
         """Get an alternative REST API URL from another member each time.
 
         When the Patroni process is not running in the current unit it's needed
         to use a URL from another cluster member REST API to do some operations.
         """
+        if alternative_endpoints is not None:
+            return self._patroni_url.replace(
+                self._endpoint, alternative_endpoints[attempt.retry_state.attempt_number - 1]
+            )
         if attempt.retry_state.attempt_number > 1:
             url = self._patroni_url.replace(
                 self._endpoint, list(self._endpoints)[attempt.retry_state.attempt_number - 2]
@@ -126,11 +118,12 @@ class Patroni:
             url = self._patroni_url
         return url
 
-    def get_primary(self, unit_name_pattern=False) -> str:
+    def get_primary(self, unit_name_pattern=False, alternative_endpoints: List[str] = None) -> str:
         """Get primary instance.
 
         Args:
             unit_name_pattern: whether or not to convert pod name to unit name
+            alternative_endpoints: list of alternative endpoints to check for the primary.
 
         Returns:
             primary pod or unit name.
@@ -139,8 +132,8 @@ class Patroni:
         # Request info from cluster endpoint (which returns all members of the cluster).
         for attempt in Retrying(stop=stop_after_attempt(len(self._endpoints) + 1)):
             with attempt:
-                url = self._get_alternative_patroni_url(attempt)
-                r = requests.get(f"{url}/cluster", verify=self._verify)
+                url = self._get_alternative_patroni_url(attempt, alternative_endpoints)
+                r = requests.get(f"{url}/cluster", verify=self._verify, timeout=5)
                 for member in r.json()["members"]:
                     if member["role"] == "leader":
                         primary = member["name"]
