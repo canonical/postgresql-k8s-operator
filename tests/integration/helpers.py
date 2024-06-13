@@ -681,7 +681,11 @@ async def run_command_on_unit(ops_test: OpsTest, unit_name: str, command: str) -
 
 
 async def scale_application(
-    ops_test: OpsTest, application_name: str, scale: int, is_blocked: bool = False
+    ops_test: OpsTest,
+    application_name: str,
+    scale: int,
+    model: Model = None,
+    is_blocked: bool = False,
 ) -> None:
     """Scale a given application to a specific unit count.
 
@@ -689,15 +693,17 @@ async def scale_application(
         ops_test: The ops test framework instance
         application_name: The name of the application
         scale: The number of units to scale to
+        model: The model to scale the application in
         is_blocked: Checking blocked status
     """
-    await ops_test.model.applications[application_name].scale(scale)
+    if model is None:
+        model = ops_test.model
+    await model.applications[application_name].scale(scale)
     if scale == 0:
-        await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[DATABASE_APP_NAME].units) == scale,
+        await model.block_until(
+            lambda: len(model.applications[application_name].units) == scale,
             timeout=1000,
         )
-        return
 
     if is_blocked:
         app = ops_test.model.applications[application_name]

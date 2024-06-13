@@ -69,7 +69,7 @@ THIRD_PARTY_STORAGE_MESSAGE = (
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy three unit of PostgreSQL."""
-    wait_for_apps: bool = False
+    wait_for_apps = False
     # It is possible for users to provide their own cluster for HA testing. Hence, check if there
     # is a pre-existing cluster.
     if not await app_name(ops_test):
@@ -89,10 +89,10 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
     if wait_for_apps:
         async with ops_test.fast_forward():
-            await ops_test.model.wait_for_idle(status="active", timeout=3000)
+            await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
     await ops_test.model.relate(DATABASE_APP_NAME, f"{APPLICATION_NAME}:first-database")
-    await ops_test.model.wait_for_idle(status="active", timeout=3000)
+    await ops_test.model.wait_for_idle(status="active", timeout=1500)
 
     for user in ["operator", "replication", "rewind"]:
         password = await get_password(ops_test, username=user, database_app_name=APP_NAME)
@@ -431,7 +431,7 @@ async def test_scaling_to_zero(ops_test: OpsTest, continuous_writes) -> None:
     # Locate primary unit.
     app = await app_name(ops_test)
 
-    # # Start an application that continuously writes data to the database.
+    # Start an application that continuously writes data to the database.
     await start_continuous_writes(ops_test, app)
 
     # Get the connection string to connect to the database using the read/write endpoint.
@@ -496,7 +496,7 @@ async def test_scaling_to_zero(ops_test: OpsTest, continuous_writes) -> None:
     logger.info("check test database data")
     await validate_test_data(connection_string)
 
-    logger.info("check are_writes_increasing")
+    logger.info("checking whether writes are increasing")
     await are_writes_increasing(ops_test)
 
     # Scale the database to three units.
@@ -513,7 +513,7 @@ async def test_scaling_to_zero(ops_test: OpsTest, continuous_writes) -> None:
     logger.info("check test database data")
     await validate_test_data(connection_string)
 
-    logger.info("check are_writes_increasing")
+    logger.info("checking whether writes are increasing")
     await are_writes_increasing(ops_test)
 
     # Verify that all units are part of the same cluster.

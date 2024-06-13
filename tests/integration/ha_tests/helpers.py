@@ -961,17 +961,16 @@ def delete_pvc(ops_test: OpsTest, pvc: PersistentVolumeClaim):
 
 def get_pvc(ops_test: OpsTest, unit_name: str):
     """Get PersistentVolumeClaim for unit."""
-    logger.info(f"----------------  ${unit_name}")
     client = Client(namespace=ops_test.model.name)
     pvc_list = client.list(PersistentVolumeClaim, namespace=ops_test.model.name)
     for pvc in pvc_list:
         if unit_name.replace("/", "-") in pvc.metadata.name:
             return pvc
+    return None
 
 
 def get_pv(ops_test: OpsTest, unit_name: str):
     """Get PersistentVolume for unit."""
-    logger.info(f"----------------  ${unit_name}")
     client = Client(namespace=ops_test.model.name)
     pv_list = client.list(PersistentVolume, namespace=ops_test.model.name)
     for pv in pv_list:
@@ -1093,10 +1092,10 @@ async def validate_test_data(connection_string):
 
 
 class Storage:
-    """Used to store PV in the PVC of the primary and secondary cluster."""
+    """Used to store PV and PVC of the primary and secondary cluster."""
 
     class Volume:
-        """Used to store PV in the PVC of cluster."""
+        """Used to store PV and PVC of cluster."""
 
         def __init__(self, pv: PersistentVolume, pvc: PersistentVolumeClaim):
             self.pv = pv
@@ -1143,12 +1142,9 @@ async def apply_pvc_with_third_party_storage(
 
     Args:
        ops_test: Instance of ops_test.
-       secondary_application: Storage of PV, PVC of the primary and secondary cluster and
-            the original volumeName of the primary cluster
-       primary_unit_name: Storage of PV, PVC of the primary and secondary cluster and
-            the original volumeName of the primary cluster
-       secondary_unit_name: Storage of PV, PVC of the primary and secondary cluster and
-            the original volumeName of the primary cluster
+       secondary_application: Name of secondary application
+       primary_unit_name: Unit name of primary application
+       secondary_unit_name: Unit name of secondary application
     """
     storage = Storage(
         primary=Storage.Volume(
