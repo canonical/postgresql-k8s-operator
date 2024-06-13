@@ -1491,9 +1491,7 @@ def test_set_active_status(harness):
                         harness.charm.unit.status.message,
                         "Primary"
                         if values[0] == harness.charm.unit.name
-                        else (
-                            "Standby Leader" if values[1] else ("" if values[2] else "fake status")
-                        ),
+                        else ("Standby" if values[1] else ("" if values[2] else "fake status")),
                     )
             else:
                 _get_primary.side_effect = values[0]

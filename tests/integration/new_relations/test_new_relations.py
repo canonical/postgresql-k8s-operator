@@ -590,8 +590,13 @@ async def test_discourse(ops_test: OpsTest):
     # Deploy Discourse and Redis.
     await gather(
         ops_test.model.deploy(DISCOURSE_APP_NAME, application_name=DISCOURSE_APP_NAME),
+        # Revision 28 is being used due to https://github.com/canonical/redis-k8s-operator/issues/87.
         ops_test.model.deploy(
-            REDIS_APP_NAME, application_name=REDIS_APP_NAME, channel="latest/edge"
+            REDIS_APP_NAME,
+            application_name=REDIS_APP_NAME,
+            channel="latest/edge",
+            revision=28,
+            series="jammy",
         ),
     )
 
