@@ -16,6 +16,26 @@ allure-python-commons = "2.13.5"
 pytest = ">=4.5.0"
 
 [[package]]
+name = "allure-pytest-collection-report"
+version = "0.1.0"
+description = ""
+optional = false
+python-versions = "^3.8"
+files = []
+develop = false
+
+[package.dependencies]
+allure-pytest = ">=2.13.5"
+pytest = "*"
+
+[package.source]
+type = "git"
+url = "https://github.com/canonical/data-platform-workflows"
+reference = "v13.3.5"
+resolved_reference = "4885220b28fecc7ee684b6b59b55c58cbd92995f"
+subdirectory = "python/pytest_plugins/allure_pytest_collection_report"
+
+[[package]]
 name = "allure-python-commons"
 version = "2.13.5"
 description = "('Contains the API for end users as well as helper functions and classes to build Allure adapters for Python test frameworks',)"
@@ -1675,8 +1695,8 @@ develop = false
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v13.3.0"
-resolved_reference = "e90eb63f28c9abc39c9a4a40dee277ae21896790"
+reference = "v13.3.5"
+resolved_reference = "4885220b28fecc7ee684b6b59b55c58cbd92995f"
 subdirectory = "python/pytest_plugins/github_secrets"
 
 [[package]]
@@ -1730,8 +1750,8 @@ pyyaml = "*"
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v13.3.0"
-resolved_reference = "e90eb63f28c9abc39c9a4a40dee277ae21896790"
+reference = "v13.3.5"
+resolved_reference = "4885220b28fecc7ee684b6b59b55c58cbd92995f"
 subdirectory = "python/pytest_plugins/pytest_operator_cache"
 
 [[package]]
@@ -1749,8 +1769,8 @@ pytest = "*"
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v13.3.0"
-resolved_reference = "e90eb63f28c9abc39c9a4a40dee277ae21896790"
+reference = "v13.3.5"
+resolved_reference = "4885220b28fecc7ee684b6b59b55c58cbd92995f"
 subdirectory = "python/pytest_plugins/pytest_operator_groups"
 
 [[package]]
@@ -2397,4 +2417,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "bdd5fcf4f1ecf2038705a231e2a5d02566fbb8db0f20aa0fbbd342b4afaa7ffc"
+content-hash = "f7b4797b3a3815e6230661e65489cf792368534288b39d76cdacb09fc2e2b2a9"
