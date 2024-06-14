@@ -605,7 +605,7 @@ WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}');""".format(user
                 # and the remaining as cache memory.
                 shared_buffers = int(available_memory * 0.25)
             effective_cache_size = int(available_memory - shared_buffers)
-            parameters.setdefault("shared_buffers", f"{int(shared_buffers / 10**6)}MB")
+            parameters.update("shared_buffers", f"{int(shared_buffers / 10**6)}MB")
             parameters.update({"effective_cache_size": f"{int(effective_cache_size / 10**6)}MB"})
         else:
             # Return default
