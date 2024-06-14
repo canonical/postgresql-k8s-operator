@@ -591,7 +591,7 @@ WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}');""".format(user
                 parameter = "".join(x.capitalize() for x in parameter.split("_"))
             parameters[parameter] = value
         shared_buffers_max_value_in_mb = int(available_memory * 0.4 / 10**6)
-        shared_buffers_max_value = int(shared_buffers_max_value_in_mb * 10**3 / 8)
+        shared_buffers_max_value = int(shared_buffers_max_value_in_mb * 125)
         if parameters.get("shared_buffers", 0) > shared_buffers_max_value:
             raise Exception(
                 f"Shared buffers config option should be at most 40% of the available memory, which is {shared_buffers_max_value_in_mb}MB"
@@ -604,12 +604,11 @@ WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}');""".format(user
                 # Use 25% of the available memory for shared_buffers.
                 # and the remaining as cache memory.
                 shared_buffers = int(available_memory * 0.25)
+                parameters["shared_buffers"] = f"{int(shared_buffers * 128 / 10**6)}"
             effective_cache_size = int(available_memory - shared_buffers)
-            parameters.update("shared_buffers", f"{int(shared_buffers / 10**6)}MB")
-            parameters.update({"effective_cache_size": f"{int(effective_cache_size / 10**6)}MB"})
-        else:
-            # Return default
-            parameters.setdefault("shared_buffers", "128MB")
+            parameters.update({
+                "effective_cache_size": f"{int(effective_cache_size / 10**6) * 128}"
+            })
         return parameters
 
     def validate_date_style(self, date_style: str) -> bool:

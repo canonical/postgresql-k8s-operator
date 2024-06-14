@@ -268,8 +268,8 @@ def test_build_postgresql_parameters(harness):
             "TimeZone": "UTC",
             "test_config_option_8": "partial",
             "test_config_option_9": 10.5,
-            "shared_buffers": "250MB",
-            "effective_cache_size": "750MB",
+            "shared_buffers": f"{250 * 128}",
+            "effective_cache_size": f"{750 * 128}",
         },
     )
 
@@ -277,8 +277,8 @@ def test_build_postgresql_parameters(harness):
     parameters = harness.charm.postgresql.build_postgresql_parameters(
         config_options, 1000000000, 600000000
     )
-    tc.assertEqual(parameters["shared_buffers"], "150MB")
-    tc.assertEqual(parameters["effective_cache_size"], "450MB")
+    tc.assertEqual(parameters["shared_buffers"], f"{150 * 128}")
+    tc.assertEqual(parameters["effective_cache_size"], f"{450 * 128}")
 
     # Test when the requested shared buffers are greater than 40% of the available memory.
     config_options["memory_shared_buffers"] = 50001
@@ -290,7 +290,7 @@ def test_build_postgresql_parameters(harness):
     config_options["memory_shared_buffers"] = 50000
     parameters = harness.charm.postgresql.build_postgresql_parameters(config_options, 1000000000)
     tc.assertEqual(parameters["shared_buffers"], 50000)
-    tc.assertEqual(parameters["effective_cache_size"], "600MB")
+    tc.assertEqual(parameters["effective_cache_size"], f"{600 * 128}")
 
     # Test when the profile is set to "testing".
     config_options["profile"] = "testing"
@@ -301,5 +301,5 @@ def test_build_postgresql_parameters(harness):
     # Test when there is no shared_buffers value set in the config option.
     del config_options["memory_shared_buffers"]
     parameters = harness.charm.postgresql.build_postgresql_parameters(config_options, 1000000000)
-    tc.assertEqual(parameters["shared_buffers"], "128MB")
+    tc.assertNotIn("shared_buffers", parameters)
     tc.assertNotIn("effective_cache_size", parameters)
