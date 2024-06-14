@@ -1380,8 +1380,11 @@ def test_update_config(harness):
             parameters={"test": "test"},
         )
         _handle_postgresql_restart_need.assert_called_once()
-        tc.assertEqual(
-            harness.get_relation_data(rel_id, harness.charm.unit.name)["tls"], "enabled"
+        tc.assertNotIn(
+            "tls",
+            harness.get_relation_data(
+                rel_id, harness.charm.unit.name
+            ),  # The "tls" flag is set in handle_postgresql_restart_need.
         )
 
         # Test with workload not running yet.
@@ -1401,7 +1404,7 @@ def test_update_config(harness):
         )  # Mock some data in the relation to test that it doesn't change.
         harness.charm.update_config()
         _handle_postgresql_restart_need.assert_not_called()
-        # tc.assertNotIn("tls", harness.get_relation_data(rel_id, harness.charm.unit.name))
+        tc.assertNotIn("tls", harness.get_relation_data(rel_id, harness.charm.unit.name))
 
 
 def test_handle_postgresql_restart_need(harness):
