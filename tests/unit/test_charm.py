@@ -598,6 +598,53 @@ def test_enable_disable_extensions(harness):
         )
 
 
+def test_on_peer_relation_departed(harness):
+    with (
+        patch(
+            "charm.PostgresqlOperatorCharm._get_endpoints_to_remove"
+        ) as _get_endpoints_to_remove,
+        patch("charm.PostgresqlOperatorCharm._peers", new_callable=PropertyMock) as _peers,
+        patch(
+            "charm.PostgresqlOperatorCharm._get_endpoints_to_remove", return_value=sentinel.units
+        ) as _get_endpoints_to_remove,
+        patch("charm.PostgresqlOperatorCharm._remove_from_endpoints") as _remove_from_endpoints,
+    ):
+        # Early exit if not leader
+        event = Mock()
+        harness.charm._on_peer_relation_departed(event)
+        assert not _get_endpoints_to_remove.called
+
+        # Defer if cluster is not initialised
+        with harness.hooks_disabled():
+            harness.set_leader()
+        harness.charm._on_peer_relation_departed(event)
+        event.defer.assert_called_once_with()
+
+        _peers.return_value.data = {harness.charm.app: {"cluster_initialised": True}}
+        harness.charm._on_peer_relation_departed(event)
+        _get_endpoints_to_remove.assert_called_once_with()
+        _remove_from_endpoints.assert_called_once_with(sentinel.units)
+
+
+def test_on_pgdata_storage_detaching(harness):
+    with (
+        patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
+        patch("charm.Patroni.are_all_members_ready", new_callable=PropertyMock),
+        patch("charm.Patroni.get_primary", return_value="primary") as _get_primary,
+        patch("charm.Patroni.switchover") as _switchover,
+        patch("charm.Patroni.primary_changed") as _primary_changed,
+    ):
+        # Early exit if not primary
+        event = Mock()
+        harness.charm._on_pgdata_storage_detaching(event)
+        assert not _member_started.called
+
+        _get_primary.side_effect = [harness.charm.unit.name, "primary"]
+        harness.charm._on_pgdata_storage_detaching(event)
+        _switchover.assert_called_once_with()
+        _primary_changed.assert_called_once_with("primary")
+
+
 def test_on_update_status_after_restore_operation(harness):
     with (
         patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
