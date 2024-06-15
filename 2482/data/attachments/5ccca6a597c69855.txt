@@ -1,0 +1,69 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.8    unsupported  01:40:50Z
+
+App                   Version  Status   Scale  Charm                Channel  Rev  Address         Exposed  Message
+another-finos-waltz            waiting      1  finos-waltz-k8s      edge      33  10.152.183.207  no       installing agent
+finos-waltz                    waiting      1  finos-waltz-k8s      edge      33  10.152.183.87   no       installing agent
+postgresql-k8s        14.11    active       3  postgresql-k8s                  0  10.152.183.85   no       
+postgresql-test-app            active       1  postgresql-test-app  edge     150  10.152.183.67   no       
+postgresql-test-app2           active       1  postgresql-test-app  edge     150  10.152.183.52   no       
+
+Unit                     Workload  Agent      Address       Ports  Message
+another-finos-waltz/0*   blocked   idle       10.1.138.207         Waiting for database configuration.
+finos-waltz/0*           blocked   idle       10.1.138.206         Waiting for database configuration.
+postgresql-k8s/0         active    executing  10.1.138.203         
+postgresql-k8s/1         active    idle       10.1.138.204         Primary
+postgresql-k8s/2*        error     idle       10.1.138.205         hook failed: "db-relation-broken"
+postgresql-test-app2/0*  active    executing  10.1.138.209         (config-changed) 
+postgresql-test-app/0*   active    executing  10.1.138.208         (config-changed) 
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+unit-postgresql-k8s-2: 01:40:45 ERROR unit.postgresql-k8s/2.juju-log db:7: ERROR - `extensions` (unaccent, pg_trgm) cannot be requested through relations - Please enable extensions through `juju config` and add the relation again.
+unit-postgresql-k8s-2: 01:40:48 ERROR unit.postgresql-k8s/2.juju-log db:7: ERROR - `extensions` (pg_trgm, unaccent) cannot be requested through relations - Please enable extensions through `juju config` and add the relation again.
+unit-postgresql-k8s-2: 01:40:49 ERROR unit.postgresql-k8s/2.juju-log db:8: Failed to list PostgreSQL database users: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.94), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-k8s-2: 01:40:49 ERROR unit.postgresql-k8s/2.juju-log db:8: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 454, in list_users
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 127, in _connect_to_database
+    connection = psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.94), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 1806, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 544, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 520, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 509, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/main.py", line 143, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 851, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/ops/framework.py", line 941, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/relations/db.py", line 324, in _on_relation_broken
+    self.charm.postgresql.delete_user(user)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 257, in delete_user
+    users = self.list_users()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 460, in list_users
+    raise PostgreSQLListUsersError()
+charms.postgresql_k8s.v0.postgresql.PostgreSQLListUsersError
+unit-postgresql-k8s-2: 01:40:49 ERROR juju.worker.uniter.operation hook "db-relation-broken" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
