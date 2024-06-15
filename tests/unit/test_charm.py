@@ -26,6 +26,7 @@ from tenacity import RetryError, wait_fixed
 
 from charm import PostgresqlOperatorCharm
 from constants import PEER, SECRET_INTERNAL_LABEL
+from patroni import NotReadyError
 from tests.helpers import patch_network_get
 from tests.unit.helpers import _FakeApiError
 
@@ -507,6 +508,94 @@ def test_on_update_status_with_error_on_get_primary(harness):
                 "ERROR:charm:failed to get primary with error RetryError[fake error]"
                 in logs.output
             )
+
+
+def test_add_cluster_member(harness):
+    with (
+        patch("charm.PostgresqlOperatorCharm._get_hostname_from_unit", return_value="hostname"),
+        patch("charm.PostgresqlOperatorCharm._patch_pod_labels") as _patch_pod_labels,
+        patch("charm.PostgresqlOperatorCharm._add_to_endpoints") as _add_to_endpoints,
+        patch("charm.Patroni.are_all_members_ready") as _are_all_members_ready,
+    ):
+        harness.charm.add_cluster_member(sentinel.member)
+
+        _add_to_endpoints.assert_called_once_with("hostname")
+        _patch_pod_labels.assert_called_once_with(sentinel.member)
+
+        # Block on k8s error
+        response = Mock()
+        response.json.return_value = {}
+        _patch_pod_labels.side_effect = ApiError(response=response)
+        harness.charm.add_cluster_member(sentinel.member)
+        assert isinstance(harness.charm.unit.status, BlockedStatus)
+        assert harness.charm.unit.status.message == "failed to patch pod with error None"
+
+        # Not ready error if not all members are readu
+        _are_all_members_ready.return_value = False
+        try:
+            harness.charm.add_cluster_member(sentinel.member)
+            assert False
+        except NotReadyError:
+            pass
+
+
+def test_enable_disable_extensions(harness):
+    with (
+        patch("charm.CharmConfig.plugin_keys") as _plugin_keys,
+        patch("charm.PostgreSQL.enable_disable_extensions") as _enable_disable_extensions,
+        patch("charm.Patroni.get_primary", return_value=None) as _get_primary,
+        patch("charm.Patroni.member_started", return_value=True, new_callable=PropertyMock),
+        patch(
+            "charm.PostgresqlOperatorCharm.is_standby_leader",
+            return_value=False,
+            new_callable=PropertyMock,
+        ),
+    ):
+        # Early exit if no primary
+        harness.charm.enable_disable_extensions()
+        assert not _plugin_keys.called
+
+        # Blocks on missing extension dependencies
+        with harness.hooks_disabled():
+            harness.update_config({
+                "plugin_cube_enable": False,
+                "plugin_spi_enable": False,
+                "plugin_jsonb_plperl_enable": True,
+                "plugin_plperl_enable": False,
+            })
+        _get_primary.return_value = "primary"
+        _plugin_keys.return_value = [
+            "plugin_cube_enable",
+            "plugin_spi_enable",
+            "plugin_jsonb_plperl_enable",
+            "plugin_plperl_enable",
+        ]
+        harness.charm.enable_disable_extensions()
+        assert isinstance(harness.charm.unit.status, BlockedStatus)
+        assert (
+            harness.charm.unit.status.message
+            == "Unsatisfied plugin dependencies. Please check the logs"
+        )
+
+        # Unblock if dependencies are met
+        with harness.hooks_disabled():
+            harness.update_config({
+                "plugin_plperl_enable": True,
+            })
+        harness.charm.enable_disable_extensions()
+        assert isinstance(harness.charm.unit.status, ActiveStatus)
+        _enable_disable_extensions.assert_called_once_with(
+            {
+                "cube": False,
+                "refint": False,
+                "autoinc": False,
+                "insert_username": False,
+                "moddatetime": False,
+                "jsonb_plperl": True,
+                "plperl": True,
+            },
+            None,
+        )
 
 
 def test_on_update_status_after_restore_operation(harness):
