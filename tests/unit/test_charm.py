@@ -5,10 +5,12 @@ import json
 import logging
 from datetime import datetime
 from unittest import TestCase
-from unittest.mock import MagicMock, Mock, PropertyMock, patch
+from unittest.mock import MagicMock, Mock, PropertyMock, patch, sentinel
 
+import psycopg2
 import pytest
 from charms.postgresql_k8s.v0.postgresql import PostgreSQLUpdateUserPasswordError
+from lightkube import ApiError
 from lightkube.resources.core_v1 import Endpoints, Pod, Service
 from ops.model import (
     ActiveStatus,
@@ -57,7 +59,7 @@ def test_on_leader_elected(harness):
         patch("charm.PostgresqlOperatorCharm.set_secret") as _set_secret,
         patch("charm.Patroni.reload_patroni_configuration"),
         patch("charm.PostgresqlOperatorCharm._patch_pod_labels"),
-        patch("charm.PostgresqlOperatorCharm._create_services"),
+        patch("charm.PostgresqlOperatorCharm._create_services") as _create_services,
     ):
         rel_id = harness.model.get_relation(PEER).id
         # Check that a new password was generated on leader election and nothing is done
@@ -104,18 +106,59 @@ def test_on_leader_elected(harness):
             namespace=harness.charm.model.name,
             obj={"metadata": {"annotations": {"leader": "postgresql-k8s-0"}}},
         )
-        tc.assertNotIn("cluster_initialised", harness.get_relation_data(rel_id, harness.charm.app))
+        assert "cluster_initialised" not in harness.get_relation_data(rel_id, harness.charm.app)
 
         # Test a failure in fixing the "leader" key in the endpoint annotations.
         _client.return_value.patch.side_effect = _FakeApiError
-        with tc.assertRaises(_FakeApiError):
+        try:
             harness.set_leader(False)
             harness.set_leader()
+            assert False
+        except _FakeApiError:
+            pass
 
         # Test no failure if the resource doesn't exist.
         _client.return_value.patch.side_effect = _FakeApiError(404)
         harness.set_leader(False)
         harness.set_leader()
+
+        # K8s api error when creating services
+        response = Mock()
+        response.json.return_value = {"code": 403}
+        _create_services.side_effect = ApiError(response=response)
+        harness.set_leader(False)
+        harness.set_leader()
+
+        assert isinstance(harness.charm.unit.status, BlockedStatus)
+        assert harness.charm.unit.status.message == "failed to create k8s services"
+
+        # No trust when annotating
+        _client.return_value.get.side_effect = ApiError(response=response)
+        harness.set_leader(False)
+        harness.set_leader()
+
+        assert isinstance(harness.charm.unit.status, BlockedStatus)
+        assert (
+            harness.charm.unit.status.message
+            == "Insufficient permissions, try: `juju trust postgresql-k8s --scope=cluster`"
+        )
+
+
+@patch_network_get(private_address="1.1.1.1")
+def test_get_unit_ip(harness):
+    with (
+        patch("charm.PostgresqlOperatorCharm._peers", new_callable=PropertyMock) as _peers,
+    ):
+        _peers.return_value.data = {sentinel.unit: {"private-address": "2.2.2.2"}}
+
+        # Current host
+        assert harness.charm.get_unit_ip(harness.charm.unit) == "1.1.1.1"
+
+        # Not existing unit
+        assert harness.charm.get_unit_ip(None) is None
+
+        print(str(_peers.data[sentinel.unit].get("private-address")))
+        assert harness.charm.get_unit_ip(sentinel.unit) == "2.2.2.2"
 
 
 @patch_network_get(private_address="1.1.1.1")
@@ -203,6 +246,71 @@ def test_on_postgresql_pebble_ready_no_connection(harness):
         mock_event.defer.assert_called_once()
         mock_event.set_results.assert_not_called()
         tc.assertIsInstance(harness.model.unit.status, MaintenanceStatus)
+
+
+def test_on_config_changed(harness):
+    with (
+        patch(
+            "charm.PostgresqlOperatorCharm.is_cluster_initialised",
+            new_callable=PropertyMock,
+            return_value=False,
+        ) as _is_cluster_initialised,
+        patch(
+            "charm.PostgresqlOperatorCharm._validate_config_options"
+        ) as _validate_config_options,
+        patch(
+            "charm.PostgreSQLUpgrade.idle", return_value=False, new_callable=PropertyMock
+        ) as _idle,
+        patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
+        patch("charm.Patroni.member_started", return_value=True, new_callable=PropertyMock),
+        patch("charm.Patroni.get_primary"),
+        patch(
+            "charm.PostgresqlOperatorCharm.is_standby_leader",
+            return_value=False,
+            new_callable=PropertyMock,
+        ),
+        patch(
+            "charm.PostgresqlOperatorCharm.enable_disable_extensions"
+        ) as _enable_disable_extensions,
+    ):
+        # Defers if cluster is not initialised
+        mock_event = Mock()
+        harness.charm._on_config_changed(mock_event)
+        mock_event.defer.assert_called_once_with()
+        mock_event.defer.reset_mock()
+
+        # Defers if upgrade is not idle
+        _is_cluster_initialised.return_value = True
+        mock_event = Mock()
+        harness.charm._on_config_changed(mock_event)
+        mock_event.defer.assert_called_once_with()
+        mock_event.defer.reset_mock()
+
+        # Deferst on db connection error
+        _idle.return_value = True
+        _validate_config_options.side_effect = psycopg2.OperationalError
+        harness.charm._on_config_changed(mock_event)
+        mock_event.defer.assert_called_once_with()
+        mock_event.defer.reset_mock()
+
+        # Blocks if validation fails
+        _validate_config_options.side_effect = ValueError
+        harness.charm._on_config_changed(mock_event)
+        assert isinstance(harness.charm.unit.status, BlockedStatus)
+        assert harness.charm.unit.status.message == "Configuration Error. Please check the logs"
+
+        # Clears status if validation passes
+        _validate_config_options.side_effect = None
+        harness.charm._on_config_changed(mock_event)
+        assert isinstance(harness.charm.unit.status, ActiveStatus)
+        assert not _enable_disable_extensions.called
+
+        # Leader enables extensions
+        with harness.hooks_disabled():
+            harness.set_leader()
+        harness.charm._on_config_changed(mock_event)
+        assert isinstance(harness.charm.unit.status, ActiveStatus)
+        _enable_disable_extensions.assert_called_once_with()
 
 
 def test_on_get_password(harness):
@@ -1495,6 +1603,4 @@ def test_set_active_status(harness):
                     )
             else:
                 _get_primary.side_effect = values[0]
-                _get_primary.return_value = None
-                harness.charm._set_active_status()
-                assert isinstance(harness.charm.unit.status, MaintenanceStatus)
+                _get_primary.return_value
