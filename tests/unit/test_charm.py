@@ -157,7 +157,6 @@ def test_get_unit_ip(harness):
         # Not existing unit
         assert harness.charm.get_unit_ip(None) is None
 
-        print(str(_peers.data[sentinel.unit].get("private-address")))
         assert harness.charm.get_unit_ip(sentinel.unit) == "2.2.2.2"
 
 
