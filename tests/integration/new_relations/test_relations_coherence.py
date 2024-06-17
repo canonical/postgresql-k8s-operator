@@ -9,7 +9,7 @@ import psycopg2
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..helpers import CHARM_SERIES, DATABASE_APP_NAME
+from ..helpers import DATABASE_APP_NAME, build_and_deploy
 from .helpers import build_connection_string
 from .test_new_relations import DATA_INTEGRATOR_APP_NAME
 
@@ -25,13 +25,8 @@ FIRST_DATABASE_RELATION_NAME = "first-database"
 async def test_relations(ops_test: OpsTest, database_charm):
     """Test that check relation data."""
     async with ops_test.fast_forward():
-        await ops_test.model.deploy(
-            database_charm,
-            application_name=DATABASE_APP_NAME,
-            num_units=1,
-            series=CHARM_SERIES,
-            config={"profile": "testing"},
-        )
+        await build_and_deploy(ops_test, 1, DATABASE_APP_NAME)
+
         await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=3000)
 
         # Creating first time relation with user role
