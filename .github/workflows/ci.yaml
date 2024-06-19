@@ -48,7 +48,7 @@ jobs:
     name: Release charm
     needs:
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@multi-arch-workaround
+    uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@charmcraft-multi-arch
     with:
       channel: 14/edge/test-dpw
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
