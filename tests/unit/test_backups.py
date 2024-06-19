@@ -2,7 +2,6 @@
 # See LICENSE file for licensing details.
 import datetime
 from typing import OrderedDict
-from unittest import TestCase
 from unittest.mock import MagicMock, PropertyMock, call, mock_open, patch
 
 import pytest
@@ -25,9 +24,6 @@ FAILED_TO_ACCESS_CREATE_BUCKET_ERROR_MESSAGE = (
 FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE = "failed to initialize stanza, check your S3 settings"
 S3_PARAMETERS_RELATION = "s3-parameters"
 
-# used for assert functions
-tc = TestCase()
-
 
 @pytest.fixture(autouse=True)
 def harness():
@@ -47,18 +43,15 @@ def harness():
 
 
 def test_stanza_name(harness):
-    tc.assertEqual(
-        harness.charm.backup.stanza_name,
-        f"{harness.charm.model.name}.{harness.charm.cluster_name}",
+    assert (
+        harness.charm.backup.stanza_name
+        == f"{harness.charm.model.name}.{harness.charm.cluster_name}"
     )
 
 
 def test_tls_ca_chain_filename(harness):
     # Test when the TLS CA chain is not available.
-    tc.assertEqual(
-        harness.charm.backup._tls_ca_chain_filename,
-        "",
-    )
+    assert harness.charm.backup._tls_ca_chain_filename == ""
 
     # Test when the TLS CA chain is available.
     with harness.hooks_disabled():
@@ -74,33 +67,30 @@ def test_tls_ca_chain_filename(harness):
                 "tls-ca-chain": '["fake-tls-ca-chain"]',
             },
         )
-    tc.assertEqual(
-        harness.charm.backup._tls_ca_chain_filename,
-        "/var/lib/postgresql/data/pgbackrest-tls-ca-chain.crt",
+    assert (
+        harness.charm.backup._tls_ca_chain_filename
+        == "/var/lib/postgresql/data/pgbackrest-tls-ca-chain.crt"
     )
 
 
 def test_are_backup_settings_ok(harness):
     # Test without S3 relation.
-    tc.assertEqual(
-        harness.charm.backup._are_backup_settings_ok(),
-        (False, "Relation with s3-integrator charm missing, cannot create/restore backup."),
+    assert harness.charm.backup._are_backup_settings_ok() == (
+        False,
+        "Relation with s3-integrator charm missing, cannot create/restore backup.",
     )
 
     # Test when there are missing S3 parameters.
     harness.add_relation(S3_PARAMETERS_RELATION, "s3-integrator")
-    tc.assertEqual(
-        harness.charm.backup._are_backup_settings_ok(),
-        (False, "Missing S3 parameters: ['bucket', 'access-key', 'secret-key']"),
+    assert harness.charm.backup._are_backup_settings_ok() == (
+        False,
+        "Missing S3 parameters: ['bucket', 'access-key', 'secret-key']",
     )
 
     # Test when all required parameters are provided.
     with patch("charm.PostgreSQLBackups._retrieve_s3_parameters") as _retrieve_s3_parameters:
         _retrieve_s3_parameters.return_value = ["bucket", "access-key", "secret-key"], []
-        tc.assertEqual(
-            harness.charm.backup._are_backup_settings_ok(),
-            (True, None),
-        )
+        assert harness.charm.backup._are_backup_settings_ok() == (True, None)
 
 
 def test_can_initialise_stanza(harness):
@@ -108,10 +98,7 @@ def test_can_initialise_stanza(harness):
         # Test when Patroni or PostgreSQL hasn't started yet
         # and the unit hasn't joined the peer relation yet.
         _member_started.return_value = False
-        tc.assertEqual(
-            harness.charm.backup._can_initialise_stanza,
-            False,
-        )
+        assert harness.charm.backup._can_initialise_stanza is False
 
         # Test when the unit hasn't configured TLS yet while other unit already has TLS enabled.
         harness.add_relation_unit(
@@ -123,17 +110,11 @@ def test_can_initialise_stanza(harness):
                 f"{harness.charm.app.name}/1",
                 {"tls": "enabled"},
             )
-        tc.assertEqual(
-            harness.charm.backup._can_initialise_stanza,
-            False,
-        )
+        assert harness.charm.backup._can_initialise_stanza is False
 
         # Test when everything is ok to initialise the stanza.
         _member_started.return_value = True
-        tc.assertEqual(
-            harness.charm.backup._can_initialise_stanza,
-            True,
-        )
+        assert harness.charm.backup._can_initialise_stanza is True
 
 
 def test_can_unit_perform_backup(harness):
@@ -148,17 +129,17 @@ def test_can_unit_perform_backup(harness):
         # Test when the charm fails to retrieve the primary.
         peer_rel_id = harness.model.get_relation(PEER).id
         _is_primary.side_effect = RetryError(last_attempt=1)
-        tc.assertEqual(
-            harness.charm.backup._can_unit_perform_backup(),
-            (False, "Unit cannot perform backups as the database seems to be offline"),
+        assert harness.charm.backup._can_unit_perform_backup() == (
+            False,
+            "Unit cannot perform backups as the database seems to be offline",
         )
 
         # Test when the unit is in a blocked state.
         _is_primary.side_effect = None
         harness.charm.unit.status = BlockedStatus("fake blocked state")
-        tc.assertEqual(
-            harness.charm.backup._can_unit_perform_backup(),
-            (False, "Unit is in a blocking state"),
+        assert harness.charm.backup._can_unit_perform_backup() == (
+            False,
+            "Unit is in a blocking state",
         )
 
         # Test when running the check in the primary, there are replicas and TLS is enabled.
@@ -171,9 +152,9 @@ def test_can_unit_perform_backup(harness):
                 harness.charm.unit.name,
                 {"tls": "True"},
             )
-        tc.assertEqual(
-            harness.charm.backup._can_unit_perform_backup(),
-            (False, "Unit cannot perform backups as it is the cluster primary"),
+        assert harness.charm.backup._can_unit_perform_backup() == (
+            False,
+            "Unit cannot perform backups as it is the cluster primary",
         )
 
         # Test when running the check in a replica and TLS is disabled.
@@ -184,24 +165,24 @@ def test_can_unit_perform_backup(harness):
                 harness.charm.unit.name,
                 {"tls": ""},
             )
-        tc.assertEqual(
-            harness.charm.backup._can_unit_perform_backup(),
-            (False, "Unit cannot perform backups as TLS is not enabled"),
+        assert harness.charm.backup._can_unit_perform_backup() == (
+            False,
+            "Unit cannot perform backups as TLS is not enabled",
         )
 
         # Test when Patroni or PostgreSQL hasn't started yet.
         _is_primary.return_value = True
         _member_started.return_value = False
-        tc.assertEqual(
-            harness.charm.backup._can_unit_perform_backup(),
-            (False, "Unit cannot perform backups as it's not in running state"),
+        assert harness.charm.backup._can_unit_perform_backup() == (
+            False,
+            "Unit cannot perform backups as it's not in running state",
         )
 
         # Test when the stanza was not initialised yet.
         _member_started.return_value = True
-        tc.assertEqual(
-            harness.charm.backup._can_unit_perform_backup(),
-            (False, "Stanza was not initialised"),
+        assert harness.charm.backup._can_unit_perform_backup() == (
+            False,
+            "Stanza was not initialised",
         )
 
         # Test when S3 parameters are not ok.
@@ -212,17 +193,11 @@ def test_can_unit_perform_backup(harness):
                 {"stanza": harness.charm.backup.stanza_name},
             )
         _are_backup_settings_ok.return_value = (False, "fake error message")
-        tc.assertEqual(
-            harness.charm.backup._can_unit_perform_backup(),
-            (False, "fake error message"),
-        )
+        assert harness.charm.backup._can_unit_perform_backup() == (False, "fake error message")
 
         # Test when everything is ok to run a backup.
         _are_backup_settings_ok.return_value = (True, None)
-        tc.assertEqual(
-            harness.charm.backup._can_unit_perform_backup(),
-            (True, None),
-        )
+        assert harness.charm.backup._can_unit_perform_backup() == (True, None)
 
 
 def test_can_use_s3_repository(harness):
@@ -247,9 +222,9 @@ def test_can_use_s3_repository(harness):
 
         # Test when nothing is returned from the pgBackRest info command.
         _execute_command.return_value = (None, None)
-        tc.assertEqual(
-            harness.charm.backup.can_use_s3_repository(),
-            (False, FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE),
+        assert harness.charm.backup.can_use_s3_repository() == (
+            False,
+            FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE,
         )
 
         # Test when the unit is a replica.
@@ -258,16 +233,12 @@ def test_can_use_s3_repository(harness):
             None,
         )
         _execute_command.return_value = pgbackrest_info_same_cluster_backup_output
-        tc.assertEqual(
-            harness.charm.backup.can_use_s3_repository(),
-            (True, None),
-        )
+        assert harness.charm.backup.can_use_s3_repository() == (True, None)
 
         # Assert that the stanza name is still in the unit relation data.
-        tc.assertEqual(
-            harness.get_relation_data(peer_rel_id, harness.charm.app),
-            {"stanza": harness.charm.backup.stanza_name},
-        )
+        assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {
+            "stanza": harness.charm.backup.stanza_name
+        }
 
         # Test when the unit is the leader and the workload is running,
         # but an exception happens when retrieving the cluster system id.
@@ -278,11 +249,16 @@ def test_can_use_s3_repository(harness):
         ]
         with harness.hooks_disabled():
             harness.set_leader()
-        with tc.assertRaises(Exception):
-            tc.assertEqual(
-                harness.charm.backup.can_use_s3_repository(),
-                (False, ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE),
+        try:
+            assert harness.charm.backup.can_use_s3_repository() == (
+                False,
+                ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE,
             )
+            assert False
+        except AssertionError as e:
+            raise e
+        except Exception:
+            pass
         _update_config.assert_not_called()
         _member_started.assert_not_called()
         _reload_patroni_configuration.assert_not_called()
@@ -306,16 +282,16 @@ def test_can_use_s3_repository(harness):
                 harness.charm.app.name,
                 {"stanza": harness.charm.backup.stanza_name},
             )
-        tc.assertEqual(
-            harness.charm.backup.can_use_s3_repository(),
-            (False, ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE),
+        assert harness.charm.backup.can_use_s3_repository() == (
+            False,
+            ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE,
         )
         _update_config.assert_called_once()
         _member_started.assert_called_once()
         _reload_patroni_configuration.assert_called_once()
 
         # Assert that the stanza name is not present in the unit relation data anymore.
-        tc.assertEqual(harness.get_relation_data(peer_rel_id, harness.charm.app), {})
+        assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {}
 
         # Test when the cluster system id can be retrieved, but it's different from the stanza system id.
         _update_config.reset_mock()
@@ -339,16 +315,16 @@ def test_can_use_s3_repository(harness):
                 harness.charm.app.name,
                 {"stanza": harness.charm.backup.stanza_name},
             )
-        tc.assertEqual(
-            harness.charm.backup.can_use_s3_repository(),
-            (False, ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE),
+        assert harness.charm.backup.can_use_s3_repository() == (
+            False,
+            ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE,
         )
         _update_config.assert_called_once()
         _member_started.assert_called_once()
         _reload_patroni_configuration.assert_called_once()
 
         # Assert that the stanza name is not present in the unit relation data anymore.
-        tc.assertEqual(harness.get_relation_data(peer_rel_id, harness.charm.app), {})
+        assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {}
 
         # Test when the workload is not running.
         _update_config.reset_mock()
@@ -365,16 +341,16 @@ def test_can_use_s3_repository(harness):
             pgbackrest_info_same_cluster_backup_output,
             other_instance_system_identifier_output,
         ]
-        tc.assertEqual(
-            harness.charm.backup.can_use_s3_repository(),
-            (False, ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE),
+        assert harness.charm.backup.can_use_s3_repository() == (
+            False,
+            ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE,
         )
         _update_config.assert_called_once()
         _member_started.assert_called_once()
         _reload_patroni_configuration.assert_not_called()
 
         # Assert that the stanza name is not present in the unit relation data anymore.
-        tc.assertEqual(harness.get_relation_data(peer_rel_id, harness.charm.app), {})
+        assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {}
 
         # Test when there is no backup from another cluster in the S3 repository.
         with harness.hooks_disabled():
@@ -387,36 +363,30 @@ def test_can_use_s3_repository(harness):
             pgbackrest_info_same_cluster_backup_output,
             same_instance_system_identifier_output,
         ]
-        tc.assertEqual(
-            harness.charm.backup.can_use_s3_repository(),
-            (True, None),
-        )
+        assert harness.charm.backup.can_use_s3_repository() == (True, None)
 
         # Assert that the stanza name is still in the unit relation data.
-        tc.assertEqual(
-            harness.get_relation_data(peer_rel_id, harness.charm.app),
-            {"stanza": harness.charm.backup.stanza_name},
-        )
+        assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {
+            "stanza": harness.charm.backup.stanza_name
+        }
 
 
 def test_construct_endpoint(harness):
     # Test with an AWS endpoint without region.
     s3_parameters = {"endpoint": "https://s3.amazonaws.com", "region": ""}
-    tc.assertEqual(
-        harness.charm.backup._construct_endpoint(s3_parameters), "https://s3.amazonaws.com"
-    )
+    assert harness.charm.backup._construct_endpoint(s3_parameters) == "https://s3.amazonaws.com"
 
     # Test with an AWS endpoint with region.
     s3_parameters["region"] = "us-east-1"
-    tc.assertEqual(
-        harness.charm.backup._construct_endpoint(s3_parameters),
-        "https://s3.us-east-1.amazonaws.com",
+    assert (
+        harness.charm.backup._construct_endpoint(s3_parameters)
+        == "https://s3.us-east-1.amazonaws.com"
     )
 
     # Test with another cloud endpoint.
     s3_parameters["endpoint"] = "https://storage.googleapis.com"
-    tc.assertEqual(
-        harness.charm.backup._construct_endpoint(s3_parameters), "https://storage.googleapis.com"
+    assert (
+        harness.charm.backup._construct_endpoint(s3_parameters) == "https://storage.googleapis.com"
     )
 
 
@@ -449,8 +419,11 @@ def test_create_bucket_if_not_exists(harness, tls_ca_chain_filename):
             [],
         )
         _resource.side_effect = ValueError
-        with tc.assertRaises(ValueError):
+        try:
             harness.charm.backup._create_bucket_if_not_exists()
+            assert False
+        except ValueError:
+            pass
 
         # Test when the bucket already exists.
         _resource.reset_mock()
@@ -485,8 +458,11 @@ def test_create_bucket_if_not_exists(harness, tls_ca_chain_filename):
             error_response={"Error": {"Code": 1, "message": "fake error"}},
             operation_name="fake operation name",
         )
-        with tc.assertRaises(ClientError):
+        try:
             harness.charm.backup._create_bucket_if_not_exists()
+            assert False
+        except ClientError:
+            pass
         head_bucket.assert_called_once()
         create.assert_called_once()
         wait_until_exists.assert_not_called()
@@ -497,8 +473,11 @@ def test_empty_data_files(harness):
         # Test when the removal of the data files fails.
         command = "rm -r /var/lib/postgresql/data/pgdata".split()
         _exec.side_effect = ExecError(command=command, exit_code=1, stdout="", stderr="fake error")
-        with tc.assertRaises(ExecError):
+        try:
             harness.charm.backup._empty_data_files()
+            assert False
+        except ExecError:
+            pass
         _exec.assert_called_once_with(command)
 
         # Test when data files are successfully removed.
@@ -521,19 +500,15 @@ def test_change_connectivity_to_database(harness):
 
         # Test when connectivity should be turned on.
         harness.charm.backup._change_connectivity_to_database(True)
-        tc.assertEqual(
-            harness.get_relation_data(peer_rel_id, harness.charm.unit),
-            {"connectivity": "on"},
-        )
+        assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {"connectivity": "on"}
         _update_config.assert_called_once()
 
         # Test when connectivity should be turned off.
         _update_config.reset_mock()
         harness.charm.backup._change_connectivity_to_database(False)
-        tc.assertEqual(
-            harness.get_relation_data(peer_rel_id, harness.charm.unit),
-            {"connectivity": "off"},
-        )
+        assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {
+            "connectivity": "off"
+        }
         _update_config.assert_called_once()
 
 
@@ -556,24 +531,22 @@ def test_execute_command(harness):
             ),
         )
         _exec.return_value.wait_output.return_value = ("fake stdout", "")
-        tc.assertEqual(harness.charm.backup._execute_command(command), (None, None))
+        assert harness.charm.backup._execute_command(command) == (None, None)
         _exec.assert_called_once_with(command, user="postgres", group="postgres", timeout=None)
 
         # Test when the command runs successfully.
         _exec.reset_mock()
         _exec.side_effect = None
-        tc.assertEqual(
-            harness.charm.backup._execute_command(command, timeout=5), ("fake stdout", "")
-        )
+        assert harness.charm.backup._execute_command(command, timeout=5) == ("fake stdout", "")
         _exec.assert_called_once_with(command, user="postgres", group="postgres", timeout=5)
 
 
 def test_format_backup_list(harness):
     # Test when there are no backups.
-    tc.assertEqual(
-        harness.charm.backup._format_backup_list([]),
-        """backup-id             | backup-type  | backup-status
-----------------------------------------------------""",
+    assert (
+        harness.charm.backup._format_backup_list([])
+        == """backup-id             | backup-type  | backup-status
+----------------------------------------------------"""
     )
 
     # Test when there are backups.
@@ -581,12 +554,12 @@ def test_format_backup_list(harness):
         ("2023-01-01T09:00:00Z", "full", "failed: fake error"),
         ("2023-01-01T10:00:00Z", "full", "finished"),
     ]
-    tc.assertEqual(
-        harness.charm.backup._format_backup_list(backup_list),
-        """backup-id             | backup-type  | backup-status
+    assert (
+        harness.charm.backup._format_backup_list(backup_list)
+        == """backup-id             | backup-type  | backup-status
 ----------------------------------------------------
 2023-01-01T09:00:00Z  | full         | failed: fake error
-2023-01-01T10:00:00Z  | full         | finished""",
+2023-01-01T10:00:00Z  | full         | finished"""
     )
 
 
@@ -594,10 +567,10 @@ def test_generate_backup_list_output(harness):
     with patch("charm.PostgreSQLBackups._execute_command") as _execute_command:
         # Test when no backups are returned.
         _execute_command.return_value = ('[{"backup":[]}]', None)
-        tc.assertEqual(
-            harness.charm.backup._generate_backup_list_output(),
-            """backup-id             | backup-type  | backup-status
-----------------------------------------------------""",
+        assert (
+            harness.charm.backup._generate_backup_list_output()
+            == """backup-id             | backup-type  | backup-status
+----------------------------------------------------"""
         )
 
         # Test when backups are returned.
@@ -605,12 +578,12 @@ def test_generate_backup_list_output(harness):
             '[{"backup":[{"label":"20230101-090000F","error":"fake error"},{"label":"20230101-100000F","error":null}]}]',
             None,
         )
-        tc.assertEqual(
-            harness.charm.backup._generate_backup_list_output(),
-            """backup-id             | backup-type  | backup-status
+        assert (
+            harness.charm.backup._generate_backup_list_output()
+            == """backup-id             | backup-type  | backup-status
 ----------------------------------------------------
 2023-01-01T09:00:00Z  | full         | failed: fake error
-2023-01-01T10:00:00Z  | full         | finished""",
+2023-01-01T10:00:00Z  | full         | finished"""
         )
 
 
@@ -618,28 +591,22 @@ def test_list_backups(harness):
     with patch("charm.PostgreSQLBackups._execute_command") as _execute_command:
         # Test when no backups are available.
         _execute_command.return_value = ("[]", None)
-        tc.assertEqual(
-            harness.charm.backup._list_backups(show_failed=True), OrderedDict[str, str]()
-        )
+        assert harness.charm.backup._list_backups(show_failed=True) == OrderedDict[str, str]()
 
         # Test when some backups are available.
         _execute_command.return_value = (
             '[{"backup":[{"label":"20230101-090000F","error":"fake error"},{"label":"20230101-100000F","error":null}],"name":"test-stanza"}]',
             None,
         )
-        tc.assertEqual(
-            harness.charm.backup._list_backups(show_failed=True),
-            OrderedDict[str, str]([
-                ("2023-01-01T09:00:00Z", "test-stanza"),
-                ("2023-01-01T10:00:00Z", "test-stanza"),
-            ]),
-        )
+        assert harness.charm.backup._list_backups(show_failed=True) == OrderedDict[str, str]([
+            ("2023-01-01T09:00:00Z", "test-stanza"),
+            ("2023-01-01T10:00:00Z", "test-stanza"),
+        ])
 
         # Test when some backups are available, but it's not desired to list failed backups.
-        tc.assertEqual(
-            harness.charm.backup._list_backups(show_failed=False),
-            OrderedDict[str, str]([("2023-01-01T10:00:00Z", "test-stanza")]),
-        )
+        assert harness.charm.backup._list_backups(show_failed=False) == OrderedDict[str, str]([
+            ("2023-01-01T10:00:00Z", "test-stanza")
+        ])
 
 
 def test_initialise_stanza(harness):
@@ -685,13 +652,11 @@ def test_initialise_stanza(harness):
             harness.charm.unit.status = BlockedStatus(blocked_state)
             harness.charm.backup._initialise_stanza()
             _execute_command.assert_called_once_with(stanza_creation_command)
-            tc.assertIsInstance(harness.charm.unit.status, BlockedStatus)
-            tc.assertEqual(
-                harness.charm.unit.status.message, FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE
-            )
+            assert isinstance(harness.charm.unit.status, BlockedStatus)
+            assert harness.charm.unit.status.message == FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE
 
             # Assert there is no stanza name in the application relation databag.
-            tc.assertEqual(harness.get_relation_data(peer_rel_id, harness.charm.app), {})
+            assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {}
 
         # Test when the archiving is working correctly (pgBackRest check command succeeds)
         # and the unit is not the leader.
@@ -701,15 +666,12 @@ def test_initialise_stanza(harness):
         _reload_patroni_configuration.reset_mock()
         _execute_command.side_effect = None
         harness.charm.backup._initialise_stanza()
-        tc.assertEqual(harness.get_relation_data(peer_rel_id, harness.charm.app), {})
-        tc.assertEqual(
-            harness.get_relation_data(peer_rel_id, harness.charm.unit),
-            {
-                "stanza": f"{harness.charm.model.name}.patroni-postgresql-k8s",
-                "init-pgbackrest": "True",
-            },
-        )
-        tc.assertIsInstance(harness.charm.unit.status, MaintenanceStatus)
+        assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {}
+        assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {
+            "stanza": f"{harness.charm.model.name}.patroni-postgresql-k8s",
+            "init-pgbackrest": "True",
+        }
+        assert isinstance(harness.charm.unit.status, MaintenanceStatus)
 
         # Test when the unit is the leader.
         with harness.hooks_disabled():
@@ -718,18 +680,12 @@ def test_initialise_stanza(harness):
                 peer_rel_id, harness.charm.unit.name, {"stanza": "", "init-pgbackrest": ""}
             )
         harness.charm.backup._initialise_stanza()
-        tc.assertEqual(
-            harness.get_relation_data(peer_rel_id, harness.charm.app),
-            {
-                "stanza": f"{harness.charm.model.name}.patroni-postgresql-k8s",
-                "init-pgbackrest": "True",
-            },
-        )
-        tc.assertEqual(
-            harness.get_relation_data(peer_rel_id, harness.charm.unit),
-            {},
-        )
-        tc.assertIsInstance(harness.charm.unit.status, MaintenanceStatus)
+        assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {
+            "stanza": f"{harness.charm.model.name}.patroni-postgresql-k8s",
+            "init-pgbackrest": "True",
+        }
+        assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {}
+        assert isinstance(harness.charm.unit.status, MaintenanceStatus)
 
 
 def test_check_stanza(harness):
@@ -776,15 +732,13 @@ def test_check_stanza(harness):
         )
         _member_started.return_value = True
         harness.charm.backup.check_stanza()
-        tc.assertEqual(_update_config.call_count, 2)
-        tc.assertEqual(_member_started.call_count, 5)
-        tc.assertEqual(_reload_patroni_configuration.call_count, 5)
-        tc.assertEqual(harness.get_relation_data(peer_rel_id, harness.charm.app), {})
-        tc.assertEqual(harness.get_relation_data(peer_rel_id, harness.charm.unit), {})
-        tc.assertIsInstance(harness.charm.unit.status, BlockedStatus)
-        tc.assertEqual(
-            harness.charm.unit.status.message, FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE
-        )
+        assert _update_config.call_count == 2
+        assert _member_started.call_count == 5
+        assert _reload_patroni_configuration.call_count == 5
+        assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {}
+        assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {}
+        assert isinstance(harness.charm.unit.status, BlockedStatus)
+        assert harness.charm.unit.status.message == FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE
 
         # Test when the archiving is working correctly (pgBackRest check command succeeds)
         # and the unit is not the leader.
@@ -808,15 +762,14 @@ def test_check_stanza(harness):
         _update_config.assert_called_once()
         _member_started.assert_called_once()
         _reload_patroni_configuration.assert_called_once()
-        tc.assertEqual(
-            harness.get_relation_data(peer_rel_id, harness.charm.app),
-            {"stanza": "test-stanza", "init-pgbackrest": "True"},
-        )
-        tc.assertEqual(
-            harness.get_relation_data(peer_rel_id, harness.charm.unit),
-            {"stanza": "test-stanza"},
-        )
-        tc.assertIsInstance(harness.charm.unit.status, ActiveStatus)
+        assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {
+            "stanza": "test-stanza",
+            "init-pgbackrest": "True",
+        }
+        assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {
+            "stanza": "test-stanza"
+        }
+        assert isinstance(harness.charm.unit.status, ActiveStatus)
 
         # Test when the unit is the leader.
         harness.charm.unit.status = BlockedStatus("fake blocked state")
@@ -839,15 +792,13 @@ def test_check_stanza(harness):
         _update_config.assert_called_once()
         _member_started.assert_called_once()
         _reload_patroni_configuration.assert_called_once()
-        tc.assertEqual(
-            harness.get_relation_data(peer_rel_id, harness.charm.app),
-            {"stanza": "test-stanza"},
-        )
-        tc.assertEqual(
-            harness.get_relation_data(peer_rel_id, harness.charm.unit),
-            {"stanza": "test-stanza"},
-        )
-        tc.assertIsInstance(harness.charm.unit.status, ActiveStatus)
+        assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {
+            "stanza": "test-stanza"
+        }
+        assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {
+            "stanza": "test-stanza"
+        }
+        assert isinstance(harness.charm.unit.status, ActiveStatus)
 
 
 def test_coordinate_stanza_fields(harness):
@@ -859,9 +810,9 @@ def test_coordinate_stanza_fields(harness):
 
     # Test when the stanza name is neither in the application relation databag nor in the unit relation databag.
     harness.charm.backup.coordinate_stanza_fields()
-    tc.assertEqual(harness.get_relation_data(peer_rel_id, harness.charm.app), {})
-    tc.assertEqual(harness.get_relation_data(peer_rel_id, harness.charm.unit), {})
-    tc.assertEqual(harness.get_relation_data(peer_rel_id, new_unit), {})
+    assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {}
+    assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {}
+    assert harness.get_relation_data(peer_rel_id, new_unit) == {}
 
     # Test when the stanza name is in the unit relation databag but the unit is not the leader.
     stanza_name = f"{harness.charm.model.name}.patroni-{harness.charm.app.name}"
@@ -870,61 +821,52 @@ def test_coordinate_stanza_fields(harness):
             peer_rel_id, new_unit_name, {"stanza": stanza_name, "init-pgbackrest": "True"}
         )
     harness.charm.backup.coordinate_stanza_fields()
-    tc.assertEqual(harness.get_relation_data(peer_rel_id, harness.charm.app), {})
-    tc.assertEqual(harness.get_relation_data(peer_rel_id, harness.charm.unit), {})
-    tc.assertEqual(
-        harness.get_relation_data(peer_rel_id, new_unit),
-        {"stanza": stanza_name, "init-pgbackrest": "True"},
-    )
+    assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {}
+    assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {}
+    assert harness.get_relation_data(peer_rel_id, new_unit) == {
+        "stanza": stanza_name,
+        "init-pgbackrest": "True",
+    }
 
     # Test when the unit is the leader.
     with harness.hooks_disabled():
         harness.set_leader()
     harness.charm.backup.coordinate_stanza_fields()
-    tc.assertEqual(
-        harness.get_relation_data(peer_rel_id, harness.charm.app),
-        {"stanza": stanza_name, "init-pgbackrest": "True"},
-    )
-    tc.assertEqual(harness.get_relation_data(peer_rel_id, harness.charm.unit), {})
-    tc.assertEqual(
-        harness.get_relation_data(peer_rel_id, new_unit),
-        {"stanza": stanza_name, "init-pgbackrest": "True"},
-    )
+    assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {
+        "stanza": stanza_name,
+        "init-pgbackrest": "True",
+    }
+    assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {}
+    assert harness.get_relation_data(peer_rel_id, new_unit) == {
+        "stanza": stanza_name,
+        "init-pgbackrest": "True",
+    }
 
     # Test when the stanza was already checked in the primary non-leader unit.
     with harness.hooks_disabled():
         harness.update_relation_data(peer_rel_id, new_unit_name, {"init-pgbackrest": ""})
     harness.charm.backup.coordinate_stanza_fields()
-    tc.assertEqual(
-        harness.get_relation_data(peer_rel_id, harness.charm.app),
-        {"stanza": stanza_name},
-    )
-    tc.assertEqual(harness.get_relation_data(peer_rel_id, harness.charm.unit), {})
-    tc.assertEqual(harness.get_relation_data(peer_rel_id, new_unit), {"stanza": stanza_name})
+    assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {"stanza": stanza_name}
+    assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {}
+    assert harness.get_relation_data(peer_rel_id, new_unit) == {"stanza": stanza_name}
 
     # Test when the "init-pgbackrest" flag was removed from the application relation databag
     # and this is the unit that has the stanza name in the unit relation databag.
     with harness.hooks_disabled():
         harness.update_relation_data(peer_rel_id, harness.charm.unit.name, {"stanza": stanza_name})
     harness.charm.backup.coordinate_stanza_fields()
-    tc.assertEqual(
-        harness.get_relation_data(peer_rel_id, harness.charm.app),
-        {"stanza": stanza_name},
-    )
-    tc.assertEqual(harness.get_relation_data(peer_rel_id, harness.charm.unit), {})
-    tc.assertEqual(harness.get_relation_data(peer_rel_id, new_unit), {"stanza": stanza_name})
+    assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {"stanza": stanza_name}
+    assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {}
+    assert harness.get_relation_data(peer_rel_id, new_unit) == {"stanza": stanza_name}
 
     # Test when the unit is not the leader.
     with harness.hooks_disabled():
         harness.set_leader(False)
         harness.update_relation_data(peer_rel_id, harness.charm.unit.name, {"stanza": stanza_name})
     harness.charm.backup.coordinate_stanza_fields()
-    tc.assertEqual(
-        harness.get_relation_data(peer_rel_id, harness.charm.app),
-        {"stanza": stanza_name},
-    )
-    tc.assertEqual(harness.get_relation_data(peer_rel_id, harness.charm.unit), {})
-    tc.assertEqual(harness.get_relation_data(peer_rel_id, new_unit), {"stanza": stanza_name})
+    assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {"stanza": stanza_name}
+    assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {}
+    assert harness.get_relation_data(peer_rel_id, new_unit) == {"stanza": stanza_name}
 
 
 def test_is_primary_pgbackrest_service_running(harness):
@@ -935,13 +877,13 @@ def test_is_primary_pgbackrest_service_running(harness):
     ):
         # Test when the charm fails to get the current primary.
         _get_primary.side_effect = RetryError(last_attempt=1)
-        tc.assertEqual(harness.charm.backup._is_primary_pgbackrest_service_running, False)
+        assert harness.charm.backup._is_primary_pgbackrest_service_running is False
         _execute_command.assert_not_called()
 
         # Test when the primary was not elected yet.
         _get_primary.side_effect = None
         _get_primary.return_value = None
-        tc.assertEqual(harness.charm.backup._is_primary_pgbackrest_service_running, False)
+        assert harness.charm.backup._is_primary_pgbackrest_service_running is False
         _execute_command.assert_not_called()
 
         # Test when the pgBackRest fails to contact the primary server.
@@ -949,13 +891,13 @@ def test_is_primary_pgbackrest_service_running(harness):
         _execute_command.side_effect = ExecError(
             command="fake command".split(), exit_code=1, stdout="", stderr="fake error"
         )
-        tc.assertEqual(harness.charm.backup._is_primary_pgbackrest_service_running, False)
+        assert harness.charm.backup._is_primary_pgbackrest_service_running is False
         _execute_command.assert_called_once()
 
         # Test when the pgBackRest succeeds on contacting the primary server.
         _execute_command.reset_mock()
         _execute_command.side_effect = None
-        tc.assertEqual(harness.charm.backup._is_primary_pgbackrest_service_running, True)
+        assert harness.charm.backup._is_primary_pgbackrest_service_running is True
         _execute_command.assert_called_once()
 
 
@@ -1036,7 +978,7 @@ def test_on_s3_credential_changed(harness):
         _render_pgbackrest_conf_file.assert_called_once()
         _is_primary.assert_called_once()
         _create_bucket_if_not_exists.assert_not_called()
-        tc.assertIsInstance(harness.charm.unit.status, ActiveStatus)
+        assert isinstance(harness.charm.unit.status, ActiveStatus)
         _can_use_s3_repository.assert_not_called()
         _initialise_stanza.assert_not_called()
 
@@ -1058,9 +1000,9 @@ def test_on_s3_credential_changed(harness):
             )
             _render_pgbackrest_conf_file.assert_called_once()
             _create_bucket_if_not_exists.assert_called_once()
-            tc.assertIsInstance(harness.charm.unit.status, BlockedStatus)
-            tc.assertEqual(
-                harness.charm.unit.status.message, FAILED_TO_ACCESS_CREATE_BUCKET_ERROR_MESSAGE
+            assert isinstance(harness.charm.unit.status, BlockedStatus)
+            assert (
+                harness.charm.unit.status.message == FAILED_TO_ACCESS_CREATE_BUCKET_ERROR_MESSAGE
             )
             _can_use_s3_repository.assert_not_called()
             _initialise_stanza.assert_not_called()
@@ -1072,8 +1014,8 @@ def test_on_s3_credential_changed(harness):
         harness.charm.backup.s3_client.on.credentials_changed.emit(
             relation=harness.model.get_relation(S3_PARAMETERS_RELATION, s3_rel_id)
         )
-        tc.assertIsInstance(harness.charm.unit.status, BlockedStatus)
-        tc.assertEqual(harness.charm.unit.status.message, "fake validation message")
+        assert isinstance(harness.charm.unit.status, BlockedStatus)
+        assert harness.charm.unit.status.message == "fake validation message"
         _create_bucket_if_not_exists.assert_called_once()
         _can_use_s3_repository.assert_called_once()
         _initialise_stanza.assert_not_called()
@@ -1093,12 +1035,12 @@ def test_on_s3_credential_gone(harness):
     # Test that unrelated blocks will remain
     harness.charm.unit.status = BlockedStatus("test block")
     harness.charm.backup._on_s3_credential_gone(None)
-    tc.assertIsInstance(harness.charm.unit.status, BlockedStatus)
+    assert isinstance(harness.charm.unit.status, BlockedStatus)
 
     # Test that s3 related blocks will be cleared
     harness.charm.unit.status = BlockedStatus(ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE)
     harness.charm.backup._on_s3_credential_gone(None)
-    tc.assertIsInstance(harness.charm.unit.status, ActiveStatus)
+    assert isinstance(harness.charm.unit.status, ActiveStatus)
 
     # Test removal of relation data when the unit is not the leader.
     with harness.hooks_disabled():
@@ -1113,11 +1055,11 @@ def test_on_s3_credential_gone(harness):
             {"stanza": "test-stanza", "init-pgbackrest": "True"},
         )
     harness.charm.backup._on_s3_credential_gone(None)
-    tc.assertEqual(
-        harness.get_relation_data(peer_rel_id, harness.charm.app),
-        {"stanza": "test-stanza", "init-pgbackrest": "True"},
-    )
-    tc.assertEqual(harness.get_relation_data(peer_rel_id, harness.charm.unit), {})
+    assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {
+        "stanza": "test-stanza",
+        "init-pgbackrest": "True",
+    }
+    assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {}
 
     # Test removal of relation data when the unit is the leader.
     with harness.hooks_disabled():
@@ -1128,8 +1070,8 @@ def test_on_s3_credential_gone(harness):
             {"stanza": "test-stanza", "init-pgbackrest": "True"},
         )
     harness.charm.backup._on_s3_credential_gone(None)
-    tc.assertEqual(harness.get_relation_data(peer_rel_id, harness.charm.app), {})
-    tc.assertEqual(harness.get_relation_data(peer_rel_id, harness.charm.unit), {})
+    assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {}
+    assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {}
 
 
 def test_on_create_backup_action(harness):
@@ -1285,7 +1227,7 @@ Juju Version: test-juju-version
                 mock_s3_parameters,
             ),
         ])
-        tc.assertEqual(_change_connectivity_to_database.call_count, 2)
+        assert _change_connectivity_to_database.call_count == 2
         mock_event.fail.assert_not_called()
         mock_event.set_results.assert_called_once_with({"backup-status": "backup created"})
 
@@ -1365,7 +1307,7 @@ def test_on_restore_action(harness):
         _start.assert_not_called()
         mock_event.fail.assert_not_called()
         mock_event.set_results.assert_not_called()
-        tc.assertNotIsInstance(harness.charm.unit.status, MaintenanceStatus)
+        assert not isinstance(harness.charm.unit.status, MaintenanceStatus)
 
         # Test when the user provides an invalid backup id.
         mock_event.params = {"backup-id": "2023-01-01T10:00:00Z"}
@@ -1384,7 +1326,7 @@ def test_on_restore_action(harness):
         _update_config.assert_not_called()
         _start.assert_not_called()
         mock_event.set_results.assert_not_called()
-        tc.assertNotIsInstance(harness.charm.unit.status, MaintenanceStatus)
+        assert not isinstance(harness.charm.unit.status, MaintenanceStatus)
 
         # Test when the charm fails to stop the workload.
         mock_event.reset_mock()
@@ -1420,7 +1362,7 @@ def test_on_restore_action(harness):
         _stop.side_effect = None
         _delete.side_effect = [None, _FakeApiError]
         harness.charm.backup._on_restore_action(mock_event)
-        tc.assertEqual(_delete.call_count, 2)
+        assert _delete.call_count == 2
         mock_event.fail.assert_called_once()
         _restart_database.assert_called_once()
         _empty_data_files.assert_not_called()
@@ -1450,16 +1392,13 @@ def test_on_restore_action(harness):
         _restart_database.reset_mock()
         _empty_data_files.side_effect = None
         _fetch_backup_from_id.return_value = "20230101-090000F"
-        tc.assertEqual(harness.get_relation_data(peer_rel_id, harness.charm.app), {})
+        assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {}
         harness.charm.backup._on_restore_action(mock_event)
         _restart_database.assert_not_called()
-        tc.assertEqual(
-            harness.get_relation_data(peer_rel_id, harness.charm.app),
-            {
-                "restoring-backup": "20230101-090000F",
-                "restore-stanza": f"{harness.charm.model.name}.{harness.charm.cluster_name}",
-            },
-        )
+        assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {
+            "restoring-backup": "20230101-090000F",
+            "restore-stanza": f"{harness.charm.model.name}.{harness.charm.cluster_name}",
+        }
         _create_pgdata.assert_called_once()
         _update_config.assert_called_once()
         _start.assert_called_once_with("postgresql")
@@ -1475,19 +1414,19 @@ def test_pre_restore_checks(harness):
         # Test when S3 parameters are not ok.
         mock_event = MagicMock()
         _are_backup_settings_ok.return_value = (False, "fake error message")
-        tc.assertEqual(harness.charm.backup._pre_restore_checks(mock_event), False)
+        assert harness.charm.backup._pre_restore_checks(mock_event) is False
         mock_event.fail.assert_called_once()
 
         # Test when no backup id is provided.
         mock_event.reset_mock()
         _are_backup_settings_ok.return_value = (True, None)
-        tc.assertEqual(harness.charm.backup._pre_restore_checks(mock_event), False)
+        assert harness.charm.backup._pre_restore_checks(mock_event) is False
         mock_event.fail.assert_called_once()
 
         # Test when the workload container is not accessible yet.
         mock_event.reset_mock()
         mock_event.params = {"backup-id": "2023-01-01T09:00:00Z"}
-        tc.assertEqual(harness.charm.backup._pre_restore_checks(mock_event), False)
+        assert harness.charm.backup._pre_restore_checks(mock_event) is False
         mock_event.fail.assert_called_once()
 
         # Test when the unit is in a blocked state that is not recoverable by changing
@@ -1495,7 +1434,7 @@ def test_pre_restore_checks(harness):
         mock_event.reset_mock()
         harness.set_can_connect("postgresql", True)
         harness.charm.unit.status = BlockedStatus("fake blocked state")
-        tc.assertEqual(harness.charm.backup._pre_restore_checks(mock_event), False)
+        assert harness.charm.backup._pre_restore_checks(mock_event) is False
         mock_event.fail.assert_called_once()
 
         # Test when the unit is in a blocked state that is recoverable by changing S3 parameters,
@@ -1503,20 +1442,20 @@ def test_pre_restore_checks(harness):
         mock_event.reset_mock()
         harness.charm.unit.status = BlockedStatus(ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE)
         _planned_units.return_value = 2
-        tc.assertEqual(harness.charm.backup._pre_restore_checks(mock_event), False)
+        assert harness.charm.backup._pre_restore_checks(mock_event) is False
         mock_event.fail.assert_called_once()
 
         # Test when the cluster has only one unit, but it's not the leader yet.
         mock_event.reset_mock()
         _planned_units.return_value = 1
-        tc.assertEqual(harness.charm.backup._pre_restore_checks(mock_event), False)
+        assert harness.charm.backup._pre_restore_checks(mock_event) is False
         mock_event.fail.assert_called_once()
 
         # Test when everything is ok to run a restore.
         mock_event.reset_mock()
         with harness.hooks_disabled():
             harness.set_leader()
-        tc.assertEqual(harness.charm.backup._pre_restore_checks(mock_event), True)
+        assert harness.charm.backup._pre_restore_checks(mock_event) is True
         mock_event.fail.assert_not_called()
 
 
@@ -1590,7 +1529,7 @@ def test_render_pgbackrest_conf_file(harness, tls_ca_chain_filename):
             harness.charm.backup._render_pgbackrest_conf_file()
 
         # Check the template is opened read-only in the call to open.
-        tc.assertEqual(mock.call_args_list[0][0], ("templates/pgbackrest.conf.j2", "r"))
+        assert mock.call_args_list[0][0] == ("templates/pgbackrest.conf.j2", "r")
 
         # Ensure the correct rendered template is sent to _render_file method.
         calls = [call("/etc/pgbackrest.conf", expected_content, user="postgres", group="postgres")]
@@ -1619,7 +1558,7 @@ def test_restart_database(harness):
         harness.charm.backup._restart_database()
 
         # Assert that the backup id is not in the application relation databag anymore.
-        tc.assertEqual(harness.get_relation_data(peer_rel_id, harness.charm.app), {})
+        assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {}
 
         _update_config.assert_called_once()
         _start.assert_called_once_with("postgresql")
@@ -1633,9 +1572,9 @@ def test_retrieve_s3_parameters(
     ) as _get_s3_connection_info:
         # Test when there are missing S3 parameters.
         _get_s3_connection_info.return_value = {}
-        tc.assertEqual(
-            harness.charm.backup._retrieve_s3_parameters(),
-            ({}, ["bucket", "access-key", "secret-key"]),
+        assert harness.charm.backup._retrieve_s3_parameters() == (
+            {},
+            ["bucket", "access-key", "secret-key"],
         )
 
         # Test when only the required parameters are provided.
@@ -1644,21 +1583,18 @@ def test_retrieve_s3_parameters(
             "access-key": "test-access-key",
             "secret-key": "test-secret-key",
         }
-        tc.assertEqual(
-            harness.charm.backup._retrieve_s3_parameters(),
-            (
-                {
-                    "access-key": "test-access-key",
-                    "bucket": "test-bucket",
-                    "delete-older-than-days": "9999999",
-                    "endpoint": "https://s3.amazonaws.com",
-                    "path": "/",
-                    "region": None,
-                    "s3-uri-style": "host",
-                    "secret-key": "test-secret-key",
-                },
-                [],
-            ),
+        assert harness.charm.backup._retrieve_s3_parameters() == (
+            {
+                "access-key": "test-access-key",
+                "bucket": "test-bucket",
+                "delete-older-than-days": "9999999",
+                "endpoint": "https://s3.amazonaws.com",
+                "path": "/",
+                "region": None,
+                "s3-uri-style": "host",
+                "secret-key": "test-secret-key",
+            },
+            [],
         )
 
         # Test when all parameters are provided.
@@ -1672,21 +1608,18 @@ def test_retrieve_s3_parameters(
             "s3-uri-style": " path ",
             "delete-older-than-days": "30",
         }
-        tc.assertEqual(
-            harness.charm.backup._retrieve_s3_parameters(),
-            (
-                {
-                    "access-key": "test-access-key",
-                    "bucket": "test-bucket",
-                    "endpoint": "https://storage.googleapis.com",
-                    "path": "/test-path",
-                    "region": "us-east-1",
-                    "s3-uri-style": "path",
-                    "secret-key": "test-secret-key",
-                    "delete-older-than-days": "30",
-                },
-                [],
-            ),
+        assert harness.charm.backup._retrieve_s3_parameters() == (
+            {
+                "access-key": "test-access-key",
+                "bucket": "test-bucket",
+                "endpoint": "https://storage.googleapis.com",
+                "path": "/test-path",
+                "region": "us-east-1",
+                "s3-uri-style": "path",
+                "secret-key": "test-secret-key",
+                "delete-older-than-days": "30",
+            },
+            [],
         )
 
 
@@ -1714,30 +1647,21 @@ def test_start_stop_pgbackrest_service(harness):
     ):
         # Test when S3 parameters are not ok (no operation, but returns success).
         _are_backup_settings_ok.return_value = (False, "fake error message")
-        tc.assertEqual(
-            harness.charm.backup.start_stop_pgbackrest_service(),
-            True,
-        )
+        assert harness.charm.backup.start_stop_pgbackrest_service() is True
         _stop.assert_not_called()
         _restart.assert_not_called()
 
         # Test when it was not possible to render the pgBackRest configuration file.
         _are_backup_settings_ok.return_value = (True, None)
         _render_pgbackrest_conf_file.return_value = False
-        tc.assertEqual(
-            harness.charm.backup.start_stop_pgbackrest_service(),
-            False,
-        )
+        assert harness.charm.backup.start_stop_pgbackrest_service() is False
         _stop.assert_not_called()
         _restart.assert_not_called()
 
         # Test when TLS is not enabled (should stop the service).
         _render_pgbackrest_conf_file.return_value = True
         _is_tls_enabled.return_value = False
-        tc.assertEqual(
-            harness.charm.backup.start_stop_pgbackrest_service(),
-            True,
-        )
+        assert harness.charm.backup.start_stop_pgbackrest_service() is True
         _stop.assert_called_once()
         _restart.assert_not_called()
 
@@ -1745,10 +1669,7 @@ def test_start_stop_pgbackrest_service(harness):
         _stop.reset_mock()
         _is_tls_enabled.return_value = True
         _peer_members_endpoints.return_value = []
-        tc.assertEqual(
-            harness.charm.backup.start_stop_pgbackrest_service(),
-            True,
-        )
+        assert harness.charm.backup.start_stop_pgbackrest_service() is True
         _stop.assert_called_once()
         _restart.assert_not_called()
 
@@ -1757,19 +1678,13 @@ def test_start_stop_pgbackrest_service(harness):
         _peer_members_endpoints.return_value = ["fake-member-endpoint"]
         _is_primary.return_value = False
         _is_primary_pgbackrest_service_running.return_value = False
-        tc.assertEqual(
-            harness.charm.backup.start_stop_pgbackrest_service(),
-            False,
-        )
+        assert harness.charm.backup.start_stop_pgbackrest_service() is False
         _stop.assert_not_called()
         _restart.assert_not_called()
 
         # Test when the service has already started in the primary.
         _is_primary_pgbackrest_service_running.return_value = True
-        tc.assertEqual(
-            harness.charm.backup.start_stop_pgbackrest_service(),
-            True,
-        )
+        assert harness.charm.backup.start_stop_pgbackrest_service() is True
         _stop.assert_not_called()
         _restart.assert_called_once()
 
@@ -1777,10 +1692,7 @@ def test_start_stop_pgbackrest_service(harness):
         _restart.reset_mock()
         _is_primary.return_value = True
         _is_primary_pgbackrest_service_running.return_value = False
-        tc.assertEqual(
-            harness.charm.backup.start_stop_pgbackrest_service(),
-            True,
-        )
+        assert harness.charm.backup.start_stop_pgbackrest_service() is True
         _stop.assert_not_called()
         _restart.assert_called_once()
 
@@ -1815,10 +1727,7 @@ def test_upload_content_to_s3(harness, tls_ca_chain_filename):
         _resource.side_effect = ValueError
         _construct_endpoint.return_value = "https://s3.us-east-1.amazonaws.com"
         _named_temporary_file.return_value.__enter__.return_value.name = "/tmp/test-file"
-        tc.assertEqual(
-            harness.charm.backup._upload_content_to_s3(content, s3_path, s3_parameters),
-            False,
-        )
+        assert harness.charm.backup._upload_content_to_s3(content, s3_path, s3_parameters) is False
         _resource.assert_called_once_with(
             "s3",
             endpoint_url="https://s3.us-east-1.amazonaws.com",
@@ -1830,10 +1739,7 @@ def test_upload_content_to_s3(harness, tls_ca_chain_filename):
         _resource.reset_mock()
         _resource.side_effect = None
         upload_file.side_effect = S3UploadFailedError
-        tc.assertEqual(
-            harness.charm.backup._upload_content_to_s3(content, s3_path, s3_parameters),
-            False,
-        )
+        assert harness.charm.backup._upload_content_to_s3(content, s3_path, s3_parameters) is False
         _resource.assert_called_once_with(
             "s3",
             endpoint_url="https://s3.us-east-1.amazonaws.com",
@@ -1847,10 +1753,7 @@ def test_upload_content_to_s3(harness, tls_ca_chain_filename):
         _named_temporary_file.reset_mock()
         upload_file.reset_mock()
         upload_file.side_effect = None
-        tc.assertEqual(
-            harness.charm.backup._upload_content_to_s3(content, s3_path, s3_parameters),
-            True,
-        )
+        assert harness.charm.backup._upload_content_to_s3(content, s3_path, s3_parameters) is True
         _resource.assert_called_once_with(
             "s3",
             endpoint_url="https://s3.us-east-1.amazonaws.com",

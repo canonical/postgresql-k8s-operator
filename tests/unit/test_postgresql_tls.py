@@ -2,7 +2,6 @@
 # See LICENSE file for licensing details.
 import base64
 import socket
-from unittest import TestCase
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -15,9 +14,6 @@ from tests.helpers import patch_network_get
 
 RELATION_NAME = "certificates"
 SCOPE = "unit"
-
-# used for assert functions
-tc = TestCase()
 
 
 @pytest.fixture(autouse=True)
@@ -124,8 +120,8 @@ def test_request_certificate(harness):
             ],
         )
         _generate_csr.assert_has_calls([generate_csr_call])
-        tc.assertIsNotNone(harness.charm.get_secret(SCOPE, "key"))
-        tc.assertIsNotNone(harness.charm.get_secret(SCOPE, "csr"))
+        assert harness.charm.get_secret(SCOPE, "key") is not None
+        assert harness.charm.get_secret(SCOPE, "csr") is not None
         _request_certificate_creation.assert_not_called()
 
         # Test without providing a private key.
@@ -134,8 +130,8 @@ def test_request_certificate(harness):
             relate_to_tls_certificates_operator(harness)
         harness.charm.tls._request_certificate(None)
         _generate_csr.assert_has_calls([generate_csr_call])
-        tc.assertIsNotNone(harness.charm.get_secret(SCOPE, "key"))
-        tc.assertIsNotNone(harness.charm.get_secret(SCOPE, "csr"))
+        assert harness.charm.get_secret(SCOPE, "key") is not None
+        assert harness.charm.get_secret(SCOPE, "csr") is not None
         _request_certificate_creation.assert_called_once()
 
         # Test providing a private key.
@@ -157,8 +153,8 @@ def test_request_certificate(harness):
             ],
         )
         _generate_csr.assert_has_calls([custom_key_generate_csr_call])
-        tc.assertIsNotNone(harness.charm.get_secret(SCOPE, "key"))
-        tc.assertIsNotNone(harness.charm.get_secret(SCOPE, "csr"))
+        assert harness.charm.get_secret(SCOPE, "key") is not None
+        assert harness.charm.get_secret(SCOPE, "csr") is not None
         _request_certificate_creation.assert_called_once()
 
 
@@ -166,14 +162,14 @@ def test_parse_tls_file(harness):
     # Test with a plain text key.
     key = get_content_from_file(filename="tests/unit/key.pem")
     parsed_key = harness.charm.tls._parse_tls_file(key)
-    tc.assertEqual(parsed_key, key.encode("utf-8"))
+    assert parsed_key == key.encode("utf-8")
 
     # Test with a base64 encoded key.
     key = get_content_from_file(filename="tests/unit/key.pem")
     parsed_key = harness.charm.tls._parse_tls_file(
         base64.b64encode(key.encode("utf-8")).decode("utf-8")
     )
-    tc.assertEqual(parsed_key, key.encode("utf-8"))
+    assert parsed_key == key.encode("utf-8")
 
 
 def test_on_tls_relation_joined(harness):
@@ -191,7 +187,7 @@ def test_on_tls_relation_broken(harness):
         rel_id = relate_to_tls_certificates_operator(harness)
         harness.remove_relation(rel_id)
         _update_config.assert_called_once()
-        tc.assertTrue(no_secrets(harness))
+        assert no_secrets(harness)
 
 
 def test_on_certificate_available(harness):
@@ -203,17 +199,17 @@ def test_on_certificate_available(harness):
     ):
         # Test with no provided or invalid CSR.
         emit_certificate_available_event(harness)
-        tc.assertTrue(no_secrets(harness))
+        assert no_secrets(harness)
         _push_tls_files_to_workload.assert_not_called()
 
         # Test providing CSR.
         harness.charm.set_secret(SCOPE, "csr", "test-csr\n")
         emit_certificate_available_event(harness)
-        tc.assertEqual(harness.charm.get_secret(SCOPE, "ca"), "test-ca")
-        tc.assertEqual(harness.charm.get_secret(SCOPE, "cert"), "test-cert")
-        tc.assertEqual(
-            harness.charm.get_secret(SCOPE, "chain"),
-            "test-chain-ca-certificate\ntest-chain-certificate",
+        assert harness.charm.get_secret(SCOPE, "ca") == "test-ca"
+        assert harness.charm.get_secret(SCOPE, "cert") == "test-cert"
+        assert (
+            harness.charm.get_secret(SCOPE, "chain")
+            == "test-chain-ca-certificate\ntest-chain-certificate"
         )
         _push_tls_files_to_workload.assert_called_once()
         _defer.assert_not_called()
@@ -232,7 +228,7 @@ def test_on_certificate_expiring(harness):
     ):
         # Test with no provided or invalid certificate.
         emit_certificate_expiring_event(harness)
-        tc.assertTrue(no_secrets(harness))
+        assert no_secrets(harness)
 
         # Test providing a certificate.
         harness.charm.set_secret(
@@ -241,41 +237,38 @@ def test_on_certificate_expiring(harness):
         harness.charm.set_secret(SCOPE, "cert", "test-cert\n")
         harness.charm.set_secret(SCOPE, "csr", "test-csr")
         emit_certificate_expiring_event(harness)
-        tc.assertTrue(no_secrets(harness, include_certificate=False))
+        assert no_secrets(harness, include_certificate=False)
         _request_certificate_renewal.assert_called_once()
 
 
 @patch_network_get(private_address="1.1.1.1")
 def test_get_sans(harness):
     sans = harness.charm.tls._get_sans()
-    tc.assertEqual(
-        sans,
-        {
-            "sans_ip": ["1.1.1.1"],
-            "sans_dns": [
-                "postgresql-k8s-0",
-                "postgresql-k8s-0.postgresql-k8s-endpoints",
-                socket.getfqdn(),
-                "1.1.1.1",
-                "postgresql-k8s-primary.None.svc.cluster.local",
-                "postgresql-k8s-replicas.None.svc.cluster.local",
-            ],
-        },
-    )
+    assert sans == {
+        "sans_ip": ["1.1.1.1"],
+        "sans_dns": [
+            "postgresql-k8s-0",
+            "postgresql-k8s-0.postgresql-k8s-endpoints",
+            socket.getfqdn(),
+            "1.1.1.1",
+            "postgresql-k8s-primary.None.svc.cluster.local",
+            "postgresql-k8s-replicas.None.svc.cluster.local",
+        ],
+    }
 
 
 def test_get_tls_files(harness):
     # Test with no TLS files available.
     key, ca, certificate = harness.charm.tls.get_tls_files()
-    tc.assertIsNone(key)
-    tc.assertIsNone(ca)
-    tc.assertIsNone(certificate)
+    assert key is None
+    assert ca is None
+    assert certificate is None
 
     # Test with TLS files available.
     harness.charm.set_secret(SCOPE, "key", "test-key")
     harness.charm.set_secret(SCOPE, "ca", "test-ca")
     harness.charm.set_secret(SCOPE, "cert", "test-cert")
     key, ca, certificate = harness.charm.tls.get_tls_files()
-    tc.assertEqual(key, "test-key")
-    tc.assertEqual(ca, "test-ca")
-    tc.assertEqual(certificate, "test-cert")
+    assert key == "test-key"
+    assert ca == "test-ca"
+    assert certificate == "test-cert"
