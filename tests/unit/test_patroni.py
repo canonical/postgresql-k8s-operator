@@ -2,7 +2,6 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-from unittest import TestCase
 from unittest.mock import MagicMock, PropertyMock, mock_open, patch
 
 import pytest
@@ -15,9 +14,6 @@ from charm import PostgresqlOperatorCharm
 from constants import REWIND_USER
 from patroni import Patroni, SwitchoverFailedError
 from tests.helpers import STORAGE_PATH
-
-# used for assert functions
-tc = TestCase()
 
 
 @pytest.fixture(autouse=True)
@@ -61,14 +57,18 @@ def test_get_primary(harness, patroni):
 
         # Test returning pod name.
         primary = patroni.get_primary()
-        tc.assertEqual(primary, "postgresql-k8s-1")
-        _get.assert_called_once_with("http://postgresql-k8s-0:8008/cluster", verify=True)
+        assert primary == "postgresql-k8s-1"
+        _get.assert_called_once_with(
+            "http://postgresql-k8s-0:8008/cluster", verify=True, timeout=5
+        )
 
         # Test returning unit name.
         _get.reset_mock()
         primary = patroni.get_primary(unit_name_pattern=True)
-        tc.assertEqual(primary, "postgresql-k8s/1")
-        _get.assert_called_once_with("http://postgresql-k8s-0:8008/cluster", verify=True)
+        assert primary == "postgresql-k8s/1"
+        _get.assert_called_once_with(
+            "http://postgresql-k8s-0:8008/cluster", verify=True, timeout=5
+        )
 
 
 def test_is_creating_backup(harness, patroni):
@@ -81,13 +81,13 @@ def test_is_creating_backup(harness, patroni):
                 {"name": "postgresql-k8s-1", "tags": {"is_creating_backup": True}},
             ]
         }
-        tc.assertTrue(patroni.is_creating_backup)
+        assert patroni.is_creating_backup
 
         # Test when no member is creating a backup.
         response.json.return_value = {
             "members": [{"name": "postgresql-k8s-0"}, {"name": "postgresql-k8s-1"}]
         }
-        tc.assertFalse(patroni.is_creating_backup)
+        assert not patroni.is_creating_backup
 
 
 def test_is_replication_healthy(harness, patroni):
@@ -98,7 +98,7 @@ def test_is_replication_healthy(harness, patroni):
     ):
         # Test when replication is healthy.
         _get.return_value.status_code = 200
-        tc.assertTrue(patroni.is_replication_healthy)
+        assert patroni.is_replication_healthy
 
         # Test when replication is not healthy.
         _get.side_effect = [
@@ -106,7 +106,7 @@ def test_is_replication_healthy(harness, patroni):
             MagicMock(status_code=200),
             MagicMock(status_code=503),
         ]
-        tc.assertFalse(patroni.is_replication_healthy)
+        assert not patroni.is_replication_healthy
 
 
 def test_member_streaming(harness, patroni):
@@ -116,18 +116,18 @@ def test_member_streaming(harness, patroni):
     ):
         # Test when the member is streaming from primary.
         _get.return_value.json.return_value = {"replication_state": "streaming"}
-        tc.assertTrue(patroni.member_streaming)
+        assert patroni.member_streaming
 
         # Test when the member is not streaming from primary.
         _get.return_value.json.return_value = {"replication_state": "running"}
-        tc.assertFalse(patroni.member_streaming)
+        assert not patroni.member_streaming
 
         _get.return_value.json.return_value = {}
-        tc.assertFalse(patroni.member_streaming)
+        assert not patroni.member_streaming
 
         # Test when an error happens.
         _get.side_effect = RetryError
-        tc.assertFalse(patroni.member_streaming)
+        assert not patroni.member_streaming
 
 
 def test_render_file(harness, patroni):
@@ -151,7 +151,7 @@ def test_render_file(harness, patroni):
             patroni._render_file(filename, "rendered-content", 0o640)
 
         # Check the rendered file is opened with "w+" mode.
-        tc.assertEqual(mock.call_args_list[0][0], (filename, "w+"))
+        assert mock.call_args_list[0][0] == (filename, "w+")
         # Ensure that the correct user is lookup up.
         _pwnam.assert_called_with("postgres")
         # Ensure the file is chmod'd correctly.
@@ -195,7 +195,7 @@ def test_render_patroni_yml_file(harness, patroni):
             patroni.render_patroni_yml_file(enable_tls=False)
 
         # Check the template is opened read-only in the call to open.
-        tc.assertEqual(mock.call_args_list[0][0], ("templates/patroni.yml.j2", "r"))
+        assert mock.call_args_list[0][0] == ("templates/patroni.yml.j2", "r")
         # Ensure the correct rendered template is sent to _render_file method.
         _render_file.assert_called_once_with(
             f"{STORAGE_PATH}/patroni.yml",
@@ -218,7 +218,7 @@ def test_render_patroni_yml_file(harness, patroni):
             minority_count=patroni._members_count // 2,
             version="14",
         )
-        tc.assertNotEqual(expected_content_with_tls, expected_content)
+        assert expected_content_with_tls != expected_content
 
         # Patch the `open` method with our mock.
         with patch("builtins.open", mock, create=True):
@@ -234,10 +234,10 @@ def test_render_patroni_yml_file(harness, patroni):
 
         # Also, ensure the right parameters are in the expected content
         # (as it was already validated with the above render file call).
-        tc.assertIn("ssl: on", expected_content_with_tls)
-        tc.assertIn("ssl_ca_file: /var/lib/postgresql/data/ca.pem", expected_content_with_tls)
-        tc.assertIn("ssl_cert_file: /var/lib/postgresql/data/cert.pem", expected_content_with_tls)
-        tc.assertIn("ssl_key_file: /var/lib/postgresql/data/key.pem", expected_content_with_tls)
+        assert "ssl: on" in expected_content_with_tls
+        assert "ssl_ca_file: /var/lib/postgresql/data/ca.pem" in expected_content_with_tls
+        assert "ssl_cert_file: /var/lib/postgresql/data/cert.pem" in expected_content_with_tls
+        assert "ssl_key_file: /var/lib/postgresql/data/key.pem" in expected_content_with_tls
 
 
 def test_primary_endpoint_ready(harness, patroni):
@@ -248,18 +248,18 @@ def test_primary_endpoint_ready(harness, patroni):
     ):
         # Test with an issue when trying to connect to the Patroni API.
         _get.side_effect = RetryError
-        tc.assertFalse(patroni.primary_endpoint_ready)
+        assert not patroni.primary_endpoint_ready
 
         # Mock the request return values.
         _get.side_effect = None
         _get.return_value.json.return_value = {"state": "stopped"}
 
         # Test with the primary endpoint not ready yet.
-        tc.assertFalse(patroni.primary_endpoint_ready)
+        assert not patroni.primary_endpoint_ready
 
         # Test with the primary endpoint ready.
         _get.return_value.json.return_value = {"state": "running"}
-        tc.assertTrue(patroni.primary_endpoint_ready)
+        assert patroni.primary_endpoint_ready
 
 
 def test_switchover(harness, patroni):
@@ -292,8 +292,11 @@ def test_switchover(harness, patroni):
         # Test failed switchovers.
         _post.reset_mock()
         _get_primary.side_effect = ["postgresql-k8s-0", "postgresql-k8s-1"]
-        with tc.assertRaises(SwitchoverFailedError):
+        try:
             patroni.switchover("postgresql-k8s/2")
+            assert False
+        except SwitchoverFailedError:
+            pass
         _post.assert_called_once_with(
             "http://postgresql-k8s-0:8008/switchover",
             json={"leader": "postgresql-k8s-0", "candidate": "postgresql-k8s-2"},
@@ -303,8 +306,11 @@ def test_switchover(harness, patroni):
         _post.reset_mock()
         _get_primary.side_effect = ["postgresql-k8s-0", "postgresql-k8s-2"]
         response.status_code = 400
-        with tc.assertRaises(SwitchoverFailedError):
+        try:
             patroni.switchover("postgresql-k8s/2")
+            assert False
+        except SwitchoverFailedError:
+            pass
         _post.assert_called_once_with(
             "http://postgresql-k8s-0:8008/switchover",
             json={"leader": "postgresql-k8s-0", "candidate": "postgresql-k8s-2"},

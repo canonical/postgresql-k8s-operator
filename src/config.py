@@ -84,6 +84,7 @@ class CharmConfig(BaseConfigModel):
     plugin_postgis_topology_enable: bool
     plugin_postgis_raster_enable: bool
     plugin_vector_enable: bool
+    plugin_timescaledb_enable: bool
     request_date_style: Optional[str]
     request_standard_conforming_strings: Optional[bool]
     request_time_zone: Optional[str]
@@ -97,6 +98,7 @@ class CharmConfig(BaseConfigModel):
     vacuum_autovacuum_vacuum_cost_delay: Optional[float]
     vacuum_autovacuum_vacuum_scale_factor: Optional[float]
     vacuum_vacuum_freeze_table_age: Optional[int]
+    experimental_max_connections: Optional[int]
 
     @classmethod
     def keys(cls) -> list[str]:

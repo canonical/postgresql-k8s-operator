@@ -22,7 +22,7 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v13.1.1
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v13.3.5
 
   unit-test:
     name: Unit test charm
@@ -37,10 +37,14 @@ jobs:
           pipx install poetry
       - name: Run tests
         run: tox run -e unit
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v4
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
   build:
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v13.1.1
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v13.3.5
     with:
       cache: true
 

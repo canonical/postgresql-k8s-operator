@@ -2,6 +2,7 @@
 [![CharmHub Badge](https://charmhub.io/postgresql-k8s/badge.svg)](https://charmhub.io/postgresql-k8s)
 [![Release](https://github.com/canonical/postgresql-k8s-operator/actions/workflows/release.yaml/badge.svg)](https://github.com/canonical/postgresql-k8s-operator/actions/workflows/release.yaml)
 [![Tests](https://github.com/canonical/postgresql-k8s-operator/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/canonical/postgresql-k8s-operator/actions/workflows/ci.yaml?query=branch%3Amain)
+[![codecov](https://codecov.io/gh/canonical/postgresql-k8s-operator/graph/badge.svg?token=KmBJqV1AM2)](https://codecov.io/gh/canonical/postgresql-k8s-operator)
 
 ## Description
 

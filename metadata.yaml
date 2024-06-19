@@ -28,7 +28,7 @@ resources:
   postgresql-image:
     type: oci-image
     description: OCI image for PostgreSQL
-    upstream-source: ghcr.io/canonical/charmed-postgresql@sha256:31cf150b4523481202c1ff9b7b5d7f0b36729edad89d61242d8f1eb56b2912c0
+    upstream-source: ghcr.io/canonical/charmed-postgresql@sha256:76ef26c7d11a524bcac206d5cb042ebc3c8c8ead73fa0cd69d21921552db03b6
 
 peers:
   database-peers:
@@ -39,8 +39,8 @@ peers:
     interface: upgrade
 
 provides:
-  async-primary:
-    interface: async_replication
+  replication-offer:
+    interface: postgresql_async
     limit: 1
     optional: true
   database:
@@ -55,8 +55,8 @@ provides:
     interface: grafana_dashboard
 
 requires:
-  async-replica:
-    interface: async_replication
+  replication:
+    interface: postgresql_async
     limit: 1
     optional: true
   certificates:

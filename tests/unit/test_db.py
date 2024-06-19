@@ -1,7 +1,6 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-from unittest import TestCase
 from unittest.mock import Mock, PropertyMock, patch
 
 import pytest
@@ -21,9 +20,6 @@ from constants import DATABASE_PORT, PEER
 DATABASE = "test_database"
 RELATION_NAME = "db"
 POSTGRESQL_VERSION = "14"
-
-# used for assert functions
-tc = TestCase()
 
 
 @pytest.fixture(autouse=True)
@@ -116,7 +112,7 @@ def test_on_relation_changed(harness):
                 {"cluster_initialised": "True"},
             )
         request_database(harness)
-        tc.assertEqual(_defer.call_count, 2)
+        assert _defer.call_count == 2
         _set_up_relation.assert_not_called()
 
         # Request a database to a non leader unit.
@@ -140,7 +136,7 @@ def test_get_extensions(harness):
         # Test when there are no extensions in the relation databags.
         rel_id = harness.model.get_relation(RELATION_NAME).id
         relation = harness.model.get_relation(RELATION_NAME, rel_id)
-        tc.assertEqual(harness.charm.legacy_db_relation._get_extensions(relation), ([], set()))
+        assert harness.charm.legacy_db_relation._get_extensions(relation) == ([], set())
 
         # Test when there are extensions in the application relation databag.
         extensions = ["", "citext:public", "debversion"]
@@ -150,9 +146,9 @@ def test_get_extensions(harness):
                 "application",
                 {"extensions": ",".join(extensions)},
             )
-        tc.assertEqual(
-            harness.charm.legacy_db_relation._get_extensions(relation),
-            ([extensions[1], extensions[2]], {extensions[1].split(":")[0], extensions[2]}),
+        assert harness.charm.legacy_db_relation._get_extensions(relation) == (
+            [extensions[1], extensions[2]],
+            {extensions[1].split(":")[0], extensions[2]},
         )
 
         # Test when there are extensions in the unit relation databag.
@@ -167,9 +163,9 @@ def test_get_extensions(harness):
                 "application/0",
                 {"extensions": ",".join(extensions)},
             )
-        tc.assertEqual(
-            harness.charm.legacy_db_relation._get_extensions(relation),
-            ([extensions[1], extensions[2]], {extensions[1].split(":")[0], extensions[2]}),
+        assert harness.charm.legacy_db_relation._get_extensions(relation) == (
+            [extensions[1], extensions[2]],
+            {extensions[1].split(":")[0], extensions[2]},
         )
 
         # Test when one of the plugins/extensions is enabled.
@@ -183,9 +179,9 @@ def test_get_extensions(harness):
         harness = Harness(PostgresqlOperatorCharm, config=config)
         harness.cleanup()
         harness.begin()
-        tc.assertEqual(
-            harness.charm.legacy_db_relation._get_extensions(relation),
-            ([extensions[1], extensions[2]], {extensions[2]}),
+        assert harness.charm.legacy_db_relation._get_extensions(relation) == (
+            [extensions[1], extensions[2]],
+            {extensions[2]},
         )
 
 
@@ -228,7 +224,7 @@ def test_set_up_relation(harness):
         # Assert no operation is done when at least one of the requested extensions
         # is disabled.
         relation = harness.model.get_relation(RELATION_NAME, rel_id)
-        tc.assertFalse(harness.charm.legacy_db_relation.set_up_relation(relation))
+        assert not harness.charm.legacy_db_relation.set_up_relation(relation)
         postgresql_mock.create_user.assert_not_called()
         postgresql_mock.create_database.assert_not_called()
         postgresql_mock.get_postgresql_version.assert_not_called()
@@ -242,13 +238,13 @@ def test_set_up_relation(harness):
                 "application",
                 {"database": DATABASE},
             )
-        tc.assertTrue(harness.charm.legacy_db_relation.set_up_relation(relation))
+        assert harness.charm.legacy_db_relation.set_up_relation(relation)
         user = f"relation_id_{rel_id}"
         postgresql_mock.create_user.assert_called_once_with(user, "test-password", False)
         postgresql_mock.create_database.assert_called_once_with(
             DATABASE, user, plugins=[], client_relations=[relation]
         )
-        tc.assertEqual(postgresql_mock.get_postgresql_version.call_count, 2)
+        assert postgresql_mock.get_postgresql_version.call_count == 2
         _update_unit_status.assert_called_once()
         expected_data = {
             "allowed-units": "application/0",
@@ -266,9 +262,9 @@ def test_set_up_relation(harness):
             "user": f"relation_id_{rel_id}",
             "version": POSTGRESQL_VERSION,
         }
-        tc.assertEqual(harness.get_relation_data(rel_id, harness.charm.app.name), expected_data)
-        tc.assertEqual(harness.get_relation_data(rel_id, harness.charm.unit.name), expected_data)
-        tc.assertNotIsInstance(harness.model.unit.status, BlockedStatus)
+        assert harness.get_relation_data(rel_id, harness.charm.app.name) == expected_data
+        assert harness.get_relation_data(rel_id, harness.charm.unit.name) == expected_data
+        assert not isinstance(harness.model.unit.status, BlockedStatus)
 
         # Assert that the correct calls were made when the database name is
         # provided only in the unit databag.
@@ -288,16 +284,16 @@ def test_set_up_relation(harness):
                 {"database": DATABASE},
             )
             clear_relation_data(harness)
-        tc.assertTrue(harness.charm.legacy_db_relation.set_up_relation(relation))
+        assert harness.charm.legacy_db_relation.set_up_relation(relation)
         postgresql_mock.create_user.assert_called_once_with(user, "test-password", False)
         postgresql_mock.create_database.assert_called_once_with(
             DATABASE, user, plugins=[], client_relations=[relation]
         )
-        tc.assertEqual(postgresql_mock.get_postgresql_version.call_count, 2)
+        assert postgresql_mock.get_postgresql_version.call_count == 2
         _update_unit_status.assert_called_once()
-        tc.assertEqual(harness.get_relation_data(rel_id, harness.charm.app.name), expected_data)
-        tc.assertEqual(harness.get_relation_data(rel_id, harness.charm.unit.name), expected_data)
-        tc.assertNotIsInstance(harness.model.unit.status, BlockedStatus)
+        assert harness.get_relation_data(rel_id, harness.charm.app.name) == expected_data
+        assert harness.get_relation_data(rel_id, harness.charm.unit.name) == expected_data
+        assert not isinstance(harness.model.unit.status, BlockedStatus)
 
         # Assert that the correct calls were made when the database name is not provided.
         postgresql_mock.create_user.reset_mock()
@@ -311,15 +307,15 @@ def test_set_up_relation(harness):
                 {"database": ""},
             )
             clear_relation_data(harness)
-        tc.assertFalse(harness.charm.legacy_db_relation.set_up_relation(relation))
+        assert not harness.charm.legacy_db_relation.set_up_relation(relation)
         postgresql_mock.create_user.assert_not_called()
         postgresql_mock.create_database.assert_not_called()
         postgresql_mock.get_postgresql_version.assert_not_called()
         _update_unit_status.assert_not_called()
         # No data is set in the databags by the database.
-        tc.assertEqual(harness.get_relation_data(rel_id, harness.charm.app.name), {})
-        tc.assertEqual(harness.get_relation_data(rel_id, harness.charm.unit.name), {})
-        tc.assertNotIsInstance(harness.model.unit.status, BlockedStatus)
+        assert harness.get_relation_data(rel_id, harness.charm.app.name) == {}
+        assert harness.get_relation_data(rel_id, harness.charm.unit.name) == {}
+        assert not isinstance(harness.model.unit.status, BlockedStatus)
 
         # BlockedStatus due to a PostgreSQLCreateUserError.
         with harness.hooks_disabled():
@@ -328,30 +324,30 @@ def test_set_up_relation(harness):
                 "application",
                 {"database": DATABASE},
             )
-        tc.assertFalse(harness.charm.legacy_db_relation.set_up_relation(relation))
+        assert not harness.charm.legacy_db_relation.set_up_relation(relation)
         postgresql_mock.create_database.assert_not_called()
         postgresql_mock.get_postgresql_version.assert_not_called()
         _update_unit_status.assert_not_called()
-        tc.assertIsInstance(harness.model.unit.status, BlockedStatus)
+        assert isinstance(harness.model.unit.status, BlockedStatus)
         # No data is set in the databags by the database.
-        tc.assertEqual(harness.get_relation_data(rel_id, harness.charm.app.name), {})
-        tc.assertEqual(harness.get_relation_data(rel_id, harness.charm.unit.name), {})
+        assert harness.get_relation_data(rel_id, harness.charm.app.name) == {}
+        assert harness.get_relation_data(rel_id, harness.charm.unit.name) == {}
 
         # BlockedStatus due to a PostgreSQLCreateDatabaseError.
         harness.charm.unit.status = ActiveStatus()
-        tc.assertFalse(harness.charm.legacy_db_relation.set_up_relation(relation))
+        assert not harness.charm.legacy_db_relation.set_up_relation(relation)
         postgresql_mock.get_postgresql_version.assert_not_called()
         _update_unit_status.assert_not_called()
-        tc.assertIsInstance(harness.model.unit.status, BlockedStatus)
+        assert isinstance(harness.model.unit.status, BlockedStatus)
         # No data is set in the databags by the database.
-        tc.assertEqual(harness.get_relation_data(rel_id, harness.charm.app.name), {})
-        tc.assertEqual(harness.get_relation_data(rel_id, harness.charm.unit.name), {})
+        assert harness.get_relation_data(rel_id, harness.charm.app.name) == {}
+        assert harness.get_relation_data(rel_id, harness.charm.unit.name) == {}
 
         # BlockedStatus due to a PostgreSQLGetPostgreSQLVersionError.
         harness.charm.unit.status = ActiveStatus()
-        tc.assertFalse(harness.charm.legacy_db_relation.set_up_relation(relation))
+        assert not harness.charm.legacy_db_relation.set_up_relation(relation)
         _update_unit_status.assert_not_called()
-        tc.assertIsInstance(harness.model.unit.status, BlockedStatus)
+        assert isinstance(harness.model.unit.status, BlockedStatus)
 
 
 def test_update_unit_status(harness):
@@ -369,40 +365,40 @@ def test_update_unit_status(harness):
         _has_blocked_status.return_value = False
         harness.charm.legacy_db_relation._update_unit_status(relation)
         _check_for_blocking_relations.assert_not_called()
-        tc.assertNotIsInstance(harness.charm.unit.status, ActiveStatus)
+        assert not isinstance(harness.charm.unit.status, ActiveStatus)
 
         # Test when the charm is blocked but not due to extensions request.
         _has_blocked_status.return_value = True
         harness.charm.unit.status = BlockedStatus("fake message")
         harness.charm.legacy_db_relation._update_unit_status(relation)
         _check_for_blocking_relations.assert_not_called()
-        tc.assertNotIsInstance(harness.charm.unit.status, ActiveStatus)
+        assert not isinstance(harness.charm.unit.status, ActiveStatus)
 
         # Test when there are relations causing the blocked status.
         harness.charm.unit.status = BlockedStatus("extensions requested through relation")
         _check_for_blocking_relations.return_value = True
         harness.charm.legacy_db_relation._update_unit_status(relation)
         _check_for_blocking_relations.assert_called_once_with(relation.id)
-        tc.assertNotIsInstance(harness.charm.unit.status, ActiveStatus)
+        assert not isinstance(harness.charm.unit.status, ActiveStatus)
 
         # Test when there are no relations causing the blocked status anymore.
         _check_for_blocking_relations.reset_mock()
         _check_for_blocking_relations.return_value = False
         harness.charm.legacy_db_relation._update_unit_status(relation)
         _check_for_blocking_relations.assert_called_once_with(relation.id)
-        tc.assertIsInstance(harness.charm.unit.status, ActiveStatus)
+        assert isinstance(harness.charm.unit.status, ActiveStatus)
 
 
 def test_on_relation_departed(harness):
     with patch("charm.Patroni.member_started", new_callable=PropertyMock(return_value=True)):
         # Test when this unit is departing the relation (due to a scale down event).
         peer_rel_id = harness.model.get_relation(PEER).id
-        tc.assertNotIn("departing", harness.get_relation_data(peer_rel_id, harness.charm.unit))
+        assert "departing" not in harness.get_relation_data(peer_rel_id, harness.charm.unit)
         event = Mock()
         event.relation.data = {harness.charm.app: {}, harness.charm.unit: {}}
         event.departing_unit = harness.charm.unit
         harness.charm.legacy_db_relation._on_relation_departed(event)
-        tc.assertIn("departing", harness.get_relation_data(peer_rel_id, harness.charm.unit))
+        assert "departing" in harness.get_relation_data(peer_rel_id, harness.charm.unit)
 
         # Test when this unit is departing the relation (due to the relation being broken between the apps).
         with harness.hooks_disabled():
@@ -411,7 +407,7 @@ def test_on_relation_departed(harness):
         event.departing_unit = Unit(f"{harness.charm.app}/1", None, harness.charm.app._backend, {})
         harness.charm.legacy_db_relation._on_relation_departed(event)
         relation_data = harness.get_relation_data(peer_rel_id, harness.charm.unit)
-        tc.assertNotIn("departing", relation_data)
+        assert "departing" not in relation_data
 
 
 def test_on_relation_broken(harness):
@@ -469,7 +465,7 @@ def test_on_relation_broken_extensions_unblock(harness):
 
         # Break the relation that blocked the charm.
         harness.remove_relation(rel_id)
-        tc.assertTrue(isinstance(harness.model.unit.status, ActiveStatus))
+        assert isinstance(harness.model.unit.status, ActiveStatus)
 
 
 def test_on_relation_broken_extensions_keep_block(harness):
@@ -509,4 +505,4 @@ def test_on_relation_broken_extensions_keep_block(harness):
         event.relation.id = first_rel_id
         # Break one of the relations that block the charm.
         harness.charm.legacy_db_relation._on_relation_broken(event)
-        tc.assertTrue(isinstance(harness.model.unit.status, BlockedStatus))
+        assert isinstance(harness.model.unit.status, BlockedStatus)

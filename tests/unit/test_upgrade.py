@@ -1,6 +1,5 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-from unittest import TestCase
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
 import pytest
@@ -15,9 +14,6 @@ from ops.testing import Harness
 from charm import PostgresqlOperatorCharm
 from patroni import SwitchoverFailedError
 from tests.unit.helpers import _FakeApiError
-
-# used for assert functions
-tc = TestCase()
 
 
 @pytest.fixture(autouse=True)
@@ -42,7 +38,7 @@ def harness():
 
 def test_is_no_sync_member(harness):
     # Test when there is no list of sync-standbys in the relation data.
-    tc.assertFalse(harness.charm.upgrade.is_no_sync_member)
+    assert not harness.charm.upgrade.is_no_sync_member
     upgrade_relation_id = harness.model.get_relation("upgrade").id
 
     # Test when the current unit is not part of the list of sync-standbys
@@ -53,7 +49,7 @@ def test_is_no_sync_member(harness):
             harness.charm.app.name,
             {"sync-standbys": '["postgresql-k8s/1", "postgresql-k8s/2"]'},
         )
-    tc.assertTrue(harness.charm.upgrade.is_no_sync_member)
+    assert harness.charm.upgrade.is_no_sync_member
 
     # Test when the current unit is part of the list of sync-standbys from the relation data.
     with harness.hooks_disabled():
@@ -64,7 +60,7 @@ def test_is_no_sync_member(harness):
                 "sync-standbys": f'["{harness.charm.unit.name}", "postgresql-k8s/1", "postgresql-k8s/2"]'
             },
         )
-    tc.assertFalse(harness.charm.upgrade.is_no_sync_member)
+    assert not harness.charm.upgrade.is_no_sync_member
 
 
 def test_log_rollback(harness):
@@ -197,15 +193,21 @@ def test_pre_upgrade_check(harness):
         _switchover.side_effect = [None, SwitchoverFailedError]
 
         # Test when not all members are ready.
-        with tc.assertRaises(ClusterNotReadyError):
+        try:
             harness.charm.upgrade.pre_upgrade_check()
+            assert False
+        except ClusterNotReadyError:
+            pass
         _switchover.assert_not_called()
         _set_list_of_sync_standbys.assert_not_called()
         _set_rolling_update_partition.assert_not_called()
 
         # Test when a backup is being created.
-        with tc.assertRaises(ClusterNotReadyError):
+        try:
             harness.charm.upgrade.pre_upgrade_check()
+            assert False
+        except ClusterNotReadyError:
+            pass
         _switchover.assert_not_called()
         _set_list_of_sync_standbys.assert_not_called()
         _set_rolling_update_partition.assert_not_called()
@@ -224,8 +226,11 @@ def test_pre_upgrade_check(harness):
         _set_rolling_update_partition.reset_mock()
         _get_primary.return_value = f"{harness.charm.app.name}/1"
         _get_sync_standby_names.return_value = []
-        with tc.assertRaises(ClusterNotReadyError):
+        try:
             harness.charm.upgrade.pre_upgrade_check()
+            assert False
+        except ClusterNotReadyError:
+            pass
         _switchover.assert_not_called()
         _set_list_of_sync_standbys.assert_not_called()
         _set_rolling_update_partition.assert_not_called()
@@ -243,8 +248,11 @@ def test_pre_upgrade_check(harness):
         # Test when the switchover fails.
         _switchover.reset_mock()
         _set_rolling_update_partition.reset_mock()
-        with tc.assertRaises(ClusterNotReadyError):
+        try:
             harness.charm.upgrade.pre_upgrade_check()
+            assert False
+        except ClusterNotReadyError:
+            pass
         _switchover.assert_called_once_with(unit_zero_name)
         _set_list_of_sync_standbys.assert_not_called()
         _set_rolling_update_partition.assert_not_called()
@@ -253,8 +261,11 @@ def test_pre_upgrade_check(harness):
         _switchover.reset_mock()
         _set_rolling_update_partition.reset_mock()
         _get_sync_standby_names.return_value = f'["{harness.charm.app.name}/2"]'
-        with tc.assertRaises(ClusterNotReadyError):
+        try:
             harness.charm.upgrade.pre_upgrade_check()
+            assert False
+        except ClusterNotReadyError:
+            pass
         _switchover.assert_not_called()
         _set_list_of_sync_standbys.assert_called_once()
         _set_rolling_update_partition.assert_not_called()
@@ -273,9 +284,8 @@ def test_set_list_of_sync_standbys(harness):
 
         # Test when the there are less than 3 units in the cluster.
         harness.charm.upgrade._set_list_of_sync_standbys()
-        tc.assertNotIn(
-            "sync-standbys",
-            harness.get_relation_data(upgrade_relation_id, harness.charm.app),
+        assert "sync-standbys" not in harness.get_relation_data(
+            upgrade_relation_id, harness.charm.app
         )
 
         # Test when the there are 3 units in the cluster.
@@ -286,9 +296,9 @@ def test_set_list_of_sync_standbys(harness):
                 upgrade_relation_id, "postgresql-k8s/2", {"state": "idle"}
             )
         harness.charm.upgrade._set_list_of_sync_standbys()
-        tc.assertEqual(
-            harness.get_relation_data(upgrade_relation_id, harness.charm.app)["sync-standbys"],
-            '["postgresql-k8s/0"]',
+        assert (
+            harness.get_relation_data(upgrade_relation_id, harness.charm.app)["sync-standbys"]
+            == '["postgresql-k8s/0"]'
         )
 
         # Test when the unit zero is already a sync-standby.
@@ -299,16 +309,16 @@ def test_set_list_of_sync_standbys(harness):
                 upgrade_relation_id, "postgresql-k8s/3", {"state": "idle"}
             )
         harness.charm.upgrade._set_list_of_sync_standbys()
-        tc.assertEqual(
-            harness.get_relation_data(upgrade_relation_id, harness.charm.app)["sync-standbys"],
-            '["postgresql-k8s/0", "postgresql-k8s/1"]',
+        assert (
+            harness.get_relation_data(upgrade_relation_id, harness.charm.app)["sync-standbys"]
+            == '["postgresql-k8s/0", "postgresql-k8s/1"]'
         )
 
         # Test when the unit zero is not a sync-standby yet.
         harness.charm.upgrade._set_list_of_sync_standbys()
-        tc.assertEqual(
-            harness.get_relation_data(upgrade_relation_id, harness.charm.app)["sync-standbys"],
-            '["postgresql-k8s/1", "postgresql-k8s/0"]',
+        assert (
+            harness.get_relation_data(upgrade_relation_id, harness.charm.app)["sync-standbys"]
+            == '["postgresql-k8s/1", "postgresql-k8s/0"]'
         )
 
 
@@ -326,13 +336,17 @@ def test_set_rolling_update_partition(harness):
         # Test an operation that failed due to lack of Juju's trust flag.
         _client.return_value.patch.reset_mock()
         _client.return_value.patch.side_effect = _FakeApiError(403)
-        with tc.assertRaises(KubernetesClientError) as exception:
+        try:
             harness.charm.upgrade._set_rolling_update_partition(2)
-        tc.assertEqual(exception.exception.cause, "`juju trust` needed")
+            assert False
+        except KubernetesClientError as exception:
+            assert exception.cause == "`juju trust` needed"
 
         # Test an operation that failed due to some other reason.
         _client.return_value.patch.reset_mock()
         _client.return_value.patch.side_effect = _FakeApiError
-        with tc.assertRaises(KubernetesClientError) as exception:
+        try:
             harness.charm.upgrade._set_rolling_update_partition(2)
-        tc.assertEqual(exception.exception.cause, "broken")
+            assert False
+        except KubernetesClientError as exception:
+            assert exception.cause == "broken"
