@@ -1583,31 +1583,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.model.config, available_memory, limit_memory
         )
 
-        logger.info("Updating Patroni config file")
-        # Update and reload configuration based on TLS files availability.
-        self._patroni.render_patroni_yml_file(
-            connectivity=self.unit_peer_data.get("connectivity", "on") == "on",
-            is_creating_backup=is_creating_backup,
-            enable_tls=self.is_tls_enabled,
-            is_no_sync_member=self.upgrade.is_no_sync_member,
-            backup_id=self.app_peer_data.get("restoring-backup"),
-            stanza=self.app_peer_data.get("stanza"),
-            restore_stanza=self.app_peer_data.get("restore-stanza"),
-            parameters=postgresql_parameters,
+        updated, result = self._update_patroni_configuration(
+            is_creating_backup, postgresql_parameters
         )
-
-        if not self._is_workload_running:
-            # If Patroni/PostgreSQL has not started yet and TLS relations was initialised,
-            # then mark TLS as enabled. This commonly happens when the charm is deployed
-            # in a bundle together with the TLS certificates operator. This flag is used to
-            # know when to call the Patroni API using HTTP or HTTPS.
-            self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
-            logger.debug("Early exit update_config: Workload not started yet")
-            return True
-
-        if not self._patroni.member_started:
-            logger.debug("Early exit update_config: Patroni not started yet")
-            return False
+        if not updated:
+            return result
 
         # Use config value if set, calculate otherwise
         if self.config.experimental_max_connections:
@@ -1637,6 +1617,39 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 container.restart(self._metrics_service)
 
         return True
+
+    def _update_patroni_configuration(
+        self, is_creating_backup: bool, postgresql_parameters: Dict
+    ) -> Tuple[bool, bool]:
+        logger.info("Updating Patroni config file")
+        # Update and reload configuration based on TLS files availability.
+        if not self._patroni.render_patroni_yml_file(
+            connectivity=self.unit_peer_data.get("connectivity", "on") == "on",
+            is_creating_backup=is_creating_backup,
+            enable_tls=self.is_tls_enabled,
+            is_no_sync_member=self.upgrade.is_no_sync_member,
+            backup_id=self.app_peer_data.get("restoring-backup"),
+            stanza=self.app_peer_data.get("stanza"),
+            restore_stanza=self.app_peer_data.get("restore-stanza"),
+            parameters=postgresql_parameters,
+        ):
+            logger.debug("Early exit update_config: Container not accessible yet")
+            return False, False
+
+        if not self._is_workload_running:
+            # If Patroni/PostgreSQL has not started yet and TLS relations was initialised,
+            # then mark TLS as enabled. This commonly happens when the charm is deployed
+            # in a bundle together with the TLS certificates operator. This flag is used to
+            # know when to call the Patroni API using HTTP or HTTPS.
+            self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
+            logger.debug("Early exit update_config: Workload not started yet")
+            return False, True
+
+        if not self._patroni.member_started:
+            logger.debug("Early exit update_config: Patroni not started yet")
+            return False, False
+
+        return True, True
 
     def _validate_config_options(self) -> None:
         """Validates specific config options that need access to the database or to the TLS status."""
