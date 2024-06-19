@@ -57,5 +57,6 @@ jobs:
       channel: 14/edge/test-dpw
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
       create-github-release: false
+      charmcraft-snap-channel: 2.x/candidate
     secrets:
       charmhub-token: ${{ secrets.CHARMHUB_TOKEN }}
