@@ -485,11 +485,14 @@ async def get_sync_standby(model: Model, application_name: str) -> str:
 async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
     """Test a connection to a PostgreSQL server."""
     try:
+        app = unit_name.split("/")[0]
+        password_task = get_password(ops_test, database_app_name=app)
+        address_task = get_unit_address(ops_test, unit_name)
+
         for attempt in Retrying(stop=stop_after_delay(30), wait=wait_fixed(3), reraise=True):
             with attempt:
-                app = unit_name.split("/")[0]
-                password = await get_password(ops_test, database_app_name=app)
-                address = await get_unit_address(ops_test, unit_name)
+                password = await asyncio.wait_for(password_task, 10)
+                address = await asyncio.wait_for(address_task, 10)
 
                 with db_connect(
                     host=address, password=password
@@ -498,7 +501,7 @@ async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
                     success = cursor.fetchone()[0] == 1
                 connection.close()
                 return success
-    except (psycopg2.Error, RetryError, HTTPStatusError):
+    except (psycopg2.Error, RetryError, HTTPStatusError, asyncio.TimeoutError):
         # Error raised when the connection is not possible.
         return False
 
