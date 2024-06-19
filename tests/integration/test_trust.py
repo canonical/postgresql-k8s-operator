@@ -17,7 +17,7 @@ from .helpers import (
 logger = logging.getLogger(__name__)
 
 APP_NAME = "untrusted-postgresql-k8s"
-MAX_RETRIES = 20
+MAX_RETRIES = 21
 UNTRUST_ERROR_MESSAGE = f"Insufficient permissions, try: `juju trust {APP_NAME} --scope=cluster`"
 
 
