@@ -486,11 +486,11 @@ async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
     """Test a connection to a PostgreSQL server."""
     try:
         app = unit_name.split("/")[0]
-        password_task = get_password(ops_test, database_app_name=app)
-        address_task = get_unit_address(ops_test, unit_name)
 
         for attempt in Retrying(stop=stop_after_delay(30), wait=wait_fixed(3), reraise=True):
             with attempt:
+                password_task = get_password(ops_test, database_app_name=app)
+                address_task = get_unit_address(ops_test, unit_name)
                 password = await asyncio.wait_for(password_task, 10)
                 address = await asyncio.wait_for(address_task, 10)
 
