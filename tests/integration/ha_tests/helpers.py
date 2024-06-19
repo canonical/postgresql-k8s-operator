@@ -92,7 +92,9 @@ async def are_all_db_processes_down(ops_test: OpsTest, process: str) -> bool:
 
 
 def get_patroni_cluster(unit_ip: str) -> Dict[str, str]:
-    resp = requests.get(f"http://{unit_ip}:8008/cluster")
+    for attempt in Retrying(stop=stop_after_delay(30), wait=wait_fixed(3)):
+        with attempt:
+            resp = requests.get(f"http://{unit_ip}:8008/cluster")
     return resp.json()
 
 
