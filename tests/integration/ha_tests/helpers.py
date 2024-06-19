@@ -13,6 +13,7 @@ from typing import Dict, Optional, Set, Tuple
 import kubernetes as kubernetes
 import psycopg2
 import requests
+from httpx import HTTPStatusError
 from juju.model import Model
 from kubernetes import config
 from kubernetes.client.api import core_v1_api
@@ -481,15 +482,15 @@ async def get_sync_standby(model: Model, application_name: str) -> str:
             return member["name"]
 
 
-@retry(stop=stop_after_attempt(8), wait=wait_fixed(15), reraise=True)
 async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
     """Test a connection to a PostgreSQL server."""
-    app = unit_name.split("/")[0]
-    password = await get_password(ops_test, database_app_name=app, unit_name=unit_name)
-    address = await get_unit_address(ops_test, unit_name)
     try:
-        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+        for attempt in Retrying(stop=stop_after_delay(30), wait=wait_fixed(3), reraise=True):
             with attempt:
+                app = unit_name.split("/")[0]
+                password = await get_password(ops_test, database_app_name=app)
+                address = await get_unit_address(ops_test, unit_name)
+
                 with db_connect(
                     host=address, password=password
                 ) as connection, connection.cursor() as cursor:
@@ -497,7 +498,7 @@ async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
                     success = cursor.fetchone()[0] == 1
                 connection.close()
                 return success
-    except (psycopg2.Error, RetryError):
+    except (psycopg2.Error, RetryError, HTTPStatusError):
         # Error raised when the connection is not possible.
         return False
 
