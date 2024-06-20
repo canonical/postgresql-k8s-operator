@@ -13,7 +13,6 @@ from typing import Dict, Optional, Set, Tuple
 import kubernetes as kubernetes
 import psycopg2
 import requests
-from httpx import HTTPStatusError
 from juju.model import Model
 from kubernetes import config
 from kubernetes.client.api import core_v1_api
@@ -488,13 +487,12 @@ async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
     """Test a connection to a PostgreSQL server."""
     try:
         app = unit_name.split("/")[0]
-
-        for attempt in Retrying(stop=stop_after_delay(30), wait=wait_fixed(3), reraise=True):
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
             with attempt:
-                password_task = get_password(ops_test, database_app_name=app)
-                address_task = get_unit_address(ops_test, unit_name)
-                password = await asyncio.wait_for(password_task, 10)
-                address = await asyncio.wait_for(address_task, 10)
+                password = await asyncio.wait_for(
+                    get_password(ops_test, database_app_name=app), 15
+                )
+                address = await asyncio.wait_for(get_unit_address(ops_test, unit_name), 15)
 
                 with db_connect(
                     host=address, password=password
@@ -502,8 +500,11 @@ async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
                     cursor.execute("SELECT 1;")
                     success = cursor.fetchone()[0] == 1
                 connection.close()
-                return success
-    except (psycopg2.Error, RetryError, HTTPStatusError, asyncio.TimeoutError):
+
+                if not success:
+                    raise Exception
+                return True
+    except RetryError:
         # Error raised when the connection is not possible.
         return False
 
