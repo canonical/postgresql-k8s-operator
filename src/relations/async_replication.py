@@ -488,17 +488,6 @@ class PostgreSQLAsyncReplication(Object):
                 self.charm._peers.data[self.charm.app].update({"promoted-cluster-counter": ""})
             self.charm.update_config()
 
-    def _on_async_relation_created(self, _) -> None:
-        """Publish this unit address in the relation data."""
-        self._relation.data[self.charm.unit].update({"unit-address": self._get_unit_ip()})
-
-        # Set the counter for new units.
-        highest_promoted_cluster_counter = self._get_highest_promoted_cluster_counter_value()
-        if highest_promoted_cluster_counter != "0":
-            self.charm._peers.data[self.charm.unit].update({
-                "unit-promoted-cluster-counter": highest_promoted_cluster_counter
-            })
-
     def _on_async_relation_changed(self, event: RelationChangedEvent) -> None:
         """Update the Patroni configuration if one of the clusters was already promoted."""
         if self.charm.unit.is_leader():
@@ -550,6 +539,17 @@ class PostgreSQLAsyncReplication(Object):
         self.container.start(self.charm._postgresql_service)
 
         self._handle_database_start(event)
+
+    def _on_async_relation_created(self, _) -> None:
+        """Publish this unit address in the relation data."""
+        self._relation.data[self.charm.unit].update({"unit-address": self._get_unit_ip()})
+
+        # Set the counter for new units.
+        highest_promoted_cluster_counter = self._get_highest_promoted_cluster_counter_value()
+        if highest_promoted_cluster_counter != "0":
+            self.charm._peers.data[self.charm.unit].update({
+                "unit-promoted-cluster-counter": highest_promoted_cluster_counter
+            })
 
     def _on_async_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Set a flag to avoid setting a wrong status message on relation broken event handler."""
