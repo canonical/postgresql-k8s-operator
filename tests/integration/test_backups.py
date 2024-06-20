@@ -117,7 +117,7 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
             ops_test, 2, database_app_name=database_app_name, wait_for_idle=False
         )
 
-        await ops_test.model.relate(database_app_name, TLS_CERTIFICATES_APP_NAME)
+        await ops_test.model.relate(database_app_name, tls_certificates_app_name)
         async with ops_test.fast_forward(fast_interval="60s"):
             await ops_test.model.wait_for_idle(
                 apps=[database_app_name], status="active", timeout=1000
