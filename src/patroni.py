@@ -406,7 +406,7 @@ class Patroni:
         restore_stanza: Optional[str] = None,
         backup_id: Optional[str] = None,
         parameters: Optional[dict[str, str]] = None,
-    ) -> bool:
+    ) -> None:
         """Render the Patroni configuration file.
 
         Args:
@@ -420,9 +420,6 @@ class Patroni:
             backup_id: id of the backup that is being restored.
             parameters: PostgreSQL parameters to be added to the postgresql.conf file.
         """
-        rock_postgresql_version = self.rock_postgresql_version
-        if rock_postgresql_version is None:
-            return False
         # Open the template patroni.yml file.
         with open("templates/patroni.yml.j2", "r") as file:
             template = Template(file.read())
@@ -446,13 +443,12 @@ class Patroni:
             stanza=stanza,
             restore_stanza=restore_stanza,
             minority_count=self._members_count // 2,
-            version=rock_postgresql_version.split(".")[0],
+            version=self.rock_postgresql_version.split(".")[0],
             pg_parameters=parameters,
             primary_cluster_endpoint=self._charm.async_replication.get_primary_cluster_endpoint(),
             extra_replication_endpoints=self._charm.async_replication.get_standby_endpoints(),
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
-        return True
 
     @retry(stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30))
     def reload_patroni_configuration(self) -> None:
