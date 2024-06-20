@@ -310,25 +310,25 @@ class Patroni:
                 with attempt:
                     r = requests.get(f"{self._patroni_url}/health", verify=self._verify)
         except RetryError:
-            logger.warning(f"Patroni health check failed! Was TLS enabled? {self._tls_enabled}")
-            # give it a quick try the other way around
+            logger.debug(f"Patroni health check failed! Was TLS enabled? {self._tls_enabled}")
+            # Try reaching the endpoint with TLS inverted
             try:
                 self._tls_enabled = not self._tls_enabled
                 for attempt in Retrying(stop=stop_after_delay(30), wait=wait_fixed(3)):
                     with attempt:
                         r = requests.get(f"{self._patroni_url}/health", verify=self._verify)
             except RetryError:
-                logger.warning(
+                logger.debug(
                     f"Patroni health check failed still, even with TLS inverted: {self._tls_enabled}"
                 )
                 self._tls_enabled = not self._tls_enabled
                 return False
 
         if r.json()["state"] in RUNNING_STATES:
-            logger.info("Patroni health check succeeded")
+            logger.debug("Patroni health check succeeded.")
             return True
         else:
-            logger.warning(f'Patroni online, but unit in bad state: {r.json()["state"]}')
+            logger.debug(f'Patroni online, but unit in bad state: {r.json()["state"]}')
             return False
 
     @property
