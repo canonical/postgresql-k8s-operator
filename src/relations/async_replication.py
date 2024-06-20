@@ -526,6 +526,11 @@ class PostgreSQLAsyncReplication(Object):
         if self._wait_for_standby_leader(event):
             return
 
+        if not self.container.can_connect():
+            logger.debug("Early exit on_async_relation_changed: container hasn't started yet.")
+            event.defer()
+            return
+
         # Update the asynchronous replication configuration and start the database.
         self.charm.update_config()
         self.container.start(self.charm._postgresql_service)
