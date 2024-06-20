@@ -66,12 +66,12 @@ class PostgreSQLAsyncReplication(Object):
         super().__init__(charm, "postgresql")
         self.charm = charm
         self.framework.observe(
-            self.charm.on[REPLICATION_OFFER_RELATION].relation_joined,
-            self._on_async_relation_joined,
+            self.charm.on[REPLICATION_OFFER_RELATION].relation_created,
+            self._on_async_relation_created,
         )
         self.framework.observe(
-            self.charm.on[REPLICATION_CONSUMER_RELATION].relation_joined,
-            self._on_async_relation_joined,
+            self.charm.on[REPLICATION_CONSUMER_RELATION].relation_created,
+            self._on_async_relation_created,
         )
         self.framework.observe(
             self.charm.on[REPLICATION_OFFER_RELATION].relation_changed,
@@ -488,6 +488,17 @@ class PostgreSQLAsyncReplication(Object):
                 self.charm._peers.data[self.charm.app].update({"promoted-cluster-counter": ""})
             self.charm.update_config()
 
+    def _on_async_relation_created(self, _) -> None:
+        """Publish this unit address in the relation data."""
+        self._relation.data[self.charm.unit].update({"unit-address": self._get_unit_ip()})
+
+        # Set the counter for new units.
+        highest_promoted_cluster_counter = self._get_highest_promoted_cluster_counter_value()
+        if highest_promoted_cluster_counter != "0":
+            self.charm._peers.data[self.charm.unit].update({
+                "unit-promoted-cluster-counter": highest_promoted_cluster_counter
+            })
+
     def _on_async_relation_changed(self, event: RelationChangedEvent) -> None:
         """Update the Patroni configuration if one of the clusters was already promoted."""
         if self.charm.unit.is_leader():
@@ -545,17 +556,6 @@ class PostgreSQLAsyncReplication(Object):
         # This is needed because of https://bugs.launchpad.net/juju/+bug/1979811.
         if event.departing_unit == self.charm.unit:
             self.charm._peers.data[self.charm.unit].update({"departing": "True"})
-
-    def _on_async_relation_joined(self, _) -> None:
-        """Publish this unit address in the relation data."""
-        self._relation.data[self.charm.unit].update({"unit-address": self._get_unit_ip()})
-
-        # Set the counter for new units.
-        highest_promoted_cluster_counter = self._get_highest_promoted_cluster_counter_value()
-        if highest_promoted_cluster_counter != "0":
-            self.charm._peers.data[self.charm.unit].update({
-                "unit-promoted-cluster-counter": highest_promoted_cluster_counter
-            })
 
     def _on_create_replication(self, event: ActionEvent) -> None:
         """Set up asynchronous replication between two clusters."""
