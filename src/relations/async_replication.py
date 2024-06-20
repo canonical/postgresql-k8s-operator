@@ -526,7 +526,10 @@ class PostgreSQLAsyncReplication(Object):
         if self._wait_for_standby_leader(event):
             return
 
-        if not self.container.can_connect():
+        if (
+            not self.container.can_connect()
+            or len(self.container.pebble.get_services(names=[self.charm._postgresql_service])) == 0
+        ):
             logger.debug("Early exit on_async_relation_changed: container hasn't started yet.")
             event.defer()
             return
