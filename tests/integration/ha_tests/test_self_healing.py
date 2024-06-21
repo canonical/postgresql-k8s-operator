@@ -95,18 +95,20 @@ async def test_interruption_db_process(
     await send_signal_to_process(ops_test, primary_name, process, signal)
 
     # Wait some time to elect a new primary.
-    sleep(MEDIAN_ELECTION_TIME * 2)
+    sleep(MEDIAN_ELECTION_TIME * 6)
 
     async with ops_test.fast_forward():
         await are_writes_increasing(ops_test, primary_name)
 
+        # Verify that a new primary gets elected (ie old primary is secondary).
+        for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
+            with attempt:
+                new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
+                assert new_primary_name != primary_name
+
         # Verify that the database service got restarted and is ready in the old primary.
         logger.info(f"waiting for the database service to restart on {primary_name}")
         assert await is_postgresql_ready(ops_test, primary_name)
-
-    # Verify that a new primary gets elected (ie old primary is secondary).
-    new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
-    assert new_primary_name != primary_name
 
     await is_cluster_updated(ops_test, primary_name)
 
