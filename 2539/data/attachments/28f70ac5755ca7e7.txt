@@ -1,0 +1,66 @@
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:80 Destroying second model
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.8    unsupported  01:49:22Z
+
+App                  Version  Status   Scale  Charm                Channel        Rev  Address         Exposed  Message
+postgresql-k8s       14.11    waiting      3  postgresql-k8s                        0  10.152.183.94   no       installing agent
+postgresql-test-app           active       1  postgresql-test-app  latest/stable  144  10.152.183.233  no       received database credentials of the first database
+
+Unit                    Workload  Agent      Address     Ports  Message
+postgresql-k8s/0*       error     idle       10.1.87.76         hook failed: "database-peers-relation-changed"
+postgresql-k8s/1        active    executing  10.1.87.78         
+postgresql-k8s/2        active    executing  10.1.87.77         
+postgresql-test-app/0*  active    idle       10.1.87.83         received database credentials of the first database
+
+Offer              Application     Charm           Rev  Connected  Endpoint           Interface         Role
+replication        postgresql-k8s  postgresql-k8s  0    0/0        replication        postgresql_async  requirer
+replication-offer  postgresql-k8s  postgresql-k8s  0    0/0        replication-offer  postgresql_async  provider
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+unit-postgresql-k8s-0: 01:49:20 ERROR unit.postgresql-k8s/0.juju-log database-peers:2: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/ops/model.py", line 3139, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-postgresql-k8s-0/status-set', '--application=True', 'blocked', 'Standalone read-only cluster')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/./src/charm.py", line 1806, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/ops/main.py", line 548, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/ops/main.py", line 527, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/ops/main.py", line 516, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/./src/charm.py", line 521, in _on_peer_relation_changed
+    self.async_replication.handle_read_only_mode()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/relations/async_replication.py", line 419, in handle_read_only_mode
+    self._set_app_status()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/relations/async_replication.py", line 673, in _set_app_status
+    self.charm.app.status = BlockedStatus(READ_ONLY_MODE_BLOCKING_MESSAGE)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/ops/model.py", line 414, in status
+    self._backend.status_set(value.name, value.message, is_app=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/ops/model.py", line 3341, in status_set
+    self._run('status-set', f'--application={is_app}', status, message)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/ops/model.py", line 3141, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR this unit is not the leader
+
+unit-postgresql-k8s-0: 01:49:20 ERROR juju.worker.uniter.operation hook "database-peers-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
