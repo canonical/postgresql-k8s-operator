@@ -672,10 +672,12 @@ async def run_command_on_unit(ops_test: OpsTest, unit_name: str, command: str) -
     return_code, stdout, stderr = await ops_test.juju(*complete_command.split())
     if return_code != 0:
         raise Exception(
-            "Expected command %s to succeed instead it failed: %s. Code: %s",
-            command,
-            stderr,
-            return_code,
+            "Expected command %s to succeed instead it failed: %s. Code: %s"
+            % (
+                command,
+                stderr,
+                return_code,
+            )
         )
     return stdout
 

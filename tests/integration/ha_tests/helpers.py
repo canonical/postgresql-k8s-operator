@@ -91,7 +91,9 @@ async def are_all_db_processes_down(ops_test: OpsTest, process: str) -> bool:
 
 
 def get_patroni_cluster(unit_ip: str) -> Dict[str, str]:
-    resp = requests.get(f"http://{unit_ip}:8008/cluster")
+    for attempt in Retrying(stop=stop_after_delay(30), wait=wait_fixed(3)):
+        with attempt:
+            resp = requests.get(f"http://{unit_ip}:8008/cluster")
     return resp.json()
 
 
@@ -481,23 +483,28 @@ async def get_sync_standby(model: Model, application_name: str) -> str:
             return member["name"]
 
 
-@retry(stop=stop_after_attempt(8), wait=wait_fixed(15), reraise=True)
 async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
     """Test a connection to a PostgreSQL server."""
-    app = unit_name.split("/")[0]
-    password = await get_password(ops_test, database_app_name=app, unit_name=unit_name)
-    address = await get_unit_address(ops_test, unit_name)
     try:
+        app = unit_name.split("/")[0]
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
             with attempt:
+                password = await asyncio.wait_for(
+                    get_password(ops_test, database_app_name=app), 15
+                )
+                address = await asyncio.wait_for(get_unit_address(ops_test, unit_name), 15)
+
                 with db_connect(
                     host=address, password=password
                 ) as connection, connection.cursor() as cursor:
                     cursor.execute("SELECT 1;")
                     success = cursor.fetchone()[0] == 1
                 connection.close()
-                return success
-    except (psycopg2.Error, RetryError):
+
+                if not success:
+                    raise Exception
+                return True
+    except RetryError:
         # Error raised when the connection is not possible.
         return False
 
