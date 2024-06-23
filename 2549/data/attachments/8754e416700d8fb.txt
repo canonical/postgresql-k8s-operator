@@ -1,0 +1,17 @@
+[32mINFO    [0m juju.model:model.py:2097 Deploying local:jammy/postgresql-k8s-2
+[32mINFO    [0m juju.model:model.py:2097 Deploying local:jammy/postgresql-k8s-3
+[33mWARNING [0m juju.model:model.py:1563 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:model.py:1563 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m integration.test_backups:test_backups.py:382 waiting for the database charm to become blocked due to existing backups from another cluster in the repository
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.test_backups:test_backups.py:392 waiting for the database charm to become blocked due to existing backups from another cluster in the repository
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.test_backups:test_backups.py:408 listing the available backups
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.test_backups:test_backups.py:426 restoring the backup
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.test_backups:test_backups.py:449 checking that the backup was correctly restored
