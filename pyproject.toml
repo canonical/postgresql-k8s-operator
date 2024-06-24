@@ -15,12 +15,12 @@ repository = "https://github.com/canonical/postgresql-k8s-operator"
 python = "^3.10"
 ops = "^2.14.0"
 cryptography = "^42.0.8"
-boto3 = "^1.34.130"
+boto3 = "^1.34.131"
 pgconnstr = "^1.0.1"
 requests = "^2.32.3"
 tenacity = "^8.4.1"
 cosl = "^0.0.12"
-pydantic = "^1.10.16"
+pydantic = "^1.10.17"
 poetry-core = "^1.9.0"
 jsonschema = "^4.22.0"
 jinja2 = "^3.1.4"
@@ -43,7 +43,7 @@ cosl = "*"
 optional = true
 
 [tool.poetry.group.format.dependencies]
-ruff = "^0.4.9"
+ruff = "^0.4.10"
 
 [tool.poetry.group.lint]
 optional = true
@@ -56,7 +56,7 @@ optional = true
 
 [tool.poetry.group.unit.dependencies]
 coverage = {extras = ["toml"], version = "^7.5.3"}
-pydantic = "^1.10.16"
+pydantic = "^1.10.17"
 pytest = "^8.2.2"
 pytest-mock = "^3.14.0"
 pytest-asyncio = "*"
@@ -68,15 +68,15 @@ optional = true
 [tool.poetry.group.integration.dependencies]
 lightkube = "^0.15.3"
 pytest = "^8.2.2"
-pytest-github-secrets = {git = "https://github.com/canonical/data-platform-workflows", tag = "v16.0.0", subdirectory = "python/pytest_plugins/github_secrets"}
+pytest-github-secrets = {git = "https://github.com/canonical/data-platform-workflows", tag = "v16.0.1", subdirectory = "python/pytest_plugins/github_secrets"}
 pytest-operator = "^0.35.0"
-pytest-operator-cache = {git = "https://github.com/canonical/data-platform-workflows", tag = "v16.0.0", subdirectory = "python/pytest_plugins/pytest_operator_cache"}
-pytest-operator-groups = {git = "https://github.com/canonical/data-platform-workflows", tag = "v16.0.0", subdirectory = "python/pytest_plugins/pytest_operator_groups"}
-allure-pytest-collection-report = {git = "https://github.com/canonical/data-platform-workflows", tag = "v16.0.0", subdirectory = "python/pytest_plugins/allure_pytest_collection_report"}
+pytest-operator-cache = {git = "https://github.com/canonical/data-platform-workflows", tag = "v16.0.1", subdirectory = "python/pytest_plugins/pytest_operator_cache"}
+pytest-operator-groups = {git = "https://github.com/canonical/data-platform-workflows", tag = "v16.0.1", subdirectory = "python/pytest_plugins/pytest_operator_groups"}
+allure-pytest-collection-report = {git = "https://github.com/canonical/data-platform-workflows", tag = "v16.0.1", subdirectory = "python/pytest_plugins/allure_pytest_collection_report"}
 # renovate caret doesn't work: https://github.com/renovatebot/renovate/issues/26940
 juju = "<=3.5.0.0"
 psycopg2-binary = "^2.9.9"
-boto3 = "^1.34.130"
+boto3 = "^1.34.131"
 tenacity = "^8.4.1"
 allure-pytest = "^2.13.5"
 

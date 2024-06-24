@@ -138,7 +138,7 @@ class PostgreSQLProvider(Object):
         # Set a flag to avoid deleting database users when this unit
         # is removed and receives relation broken events from related applications.
         # This is needed because of https://bugs.launchpad.net/juju/+bug/1979811.
-        if event.departing_unit == self.charm.unit:
+        if event.departing_unit == self.charm.unit and self.charm._peers:
             self.charm._peers.data[self.charm.unit].update({"departing": "True"})
 
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
