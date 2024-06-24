@@ -35,11 +35,14 @@ FAILED_TO_ACCESS_CREATE_BUCKET_ERROR_MESSAGE = (
     "failed to access/create the bucket, check your S3 settings"
 )
 FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE = "failed to initialize stanza, check your S3 settings"
+CANNOT_RESTORE_PITR = "cannot restore PITR, juju debug-log for details"
+MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET = "Move restored cluster to another S3 bucket"
 
 S3_BLOCK_MESSAGES = [
     ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE,
     FAILED_TO_ACCESS_CREATE_BUCKET_ERROR_MESSAGE,
     FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE,
+    MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET,
 ]
 
 
@@ -353,11 +356,7 @@ class PostgreSQLBackups(Object):
 
         # Enable stanza initialisation if the backup settings were fixed after being invalid
         # or pointing to a repository where there are backups from another cluster.
-        if self.charm.is_blocked and self.charm.unit.status.message not in [
-            ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE,
-            FAILED_TO_ACCESS_CREATE_BUCKET_ERROR_MESSAGE,
-            FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE,
-        ]:
+        if self.charm.is_blocked and self.charm.unit.status.message not in S3_BLOCK_MESSAGES:
             logger.warning("couldn't initialize stanza due to a blocked status")
             return
 
@@ -479,6 +478,18 @@ class PostgreSQLBackups(Object):
             event.defer()
             return
 
+        # Prevents config change in bad state, so DB peer relations change event will not cause patroni related errors.
+        if self.charm.unit.status.message == CANNOT_RESTORE_PITR:
+            logger.info("Cannot change S3 configuration in bad PITR restore status")
+            event.defer()
+            return
+
+        # Prevents S3 change in the middle of restoring backup and patroni / pgbackrest errors caused by that.
+        if "restoring-backup" in self.charm.app_peer_data:
+            logger.info("Cannot change S3 configuration during restore")
+            event.defer()
+            return
+
         if not self._render_pgbackrest_conf_file():
             logger.debug("Cannot set pgBackRest configurations, missing configurations.")
             return
@@ -491,6 +502,8 @@ class PostgreSQLBackups(Object):
         # Verify the s3 relation only on the primary.
         if not self.charm.is_primary:
             return
+
+        self.charm.app_peer_data.pop("require-change-bucket-after-restore", None)
 
         try:
             self._create_bucket_if_not_exists()
@@ -635,7 +648,11 @@ Stderr:
 
     def _on_s3_credential_gone(self, _) -> None:
         if self.charm.unit.is_leader():
-            self.charm.app_peer_data.update({"stanza": "", "init-pgbackrest": ""})
+            self.charm.app_peer_data.update({
+                "stanza": "",
+                "init-pgbackrest": "",
+                "require-change-bucket-after-restore": "",
+            })
         self.charm.unit_peer_data.update({"stanza": "", "init-pgbackrest": ""})
         if self.charm.is_blocked and self.charm.unit.status.message in S3_BLOCK_MESSAGES:
             self.charm.unit.status = ActiveStatus()
@@ -661,13 +678,35 @@ Stderr:
             return
 
         backup_id = event.params.get("backup-id")
-        logger.info(f"A restore with backup-id {backup_id} has been requested on unit")
+        restore_to_time = event.params.get("restore-to-time")
+        logger.info(
+            f"A restore"
+            f"{' with backup-id ' + backup_id if backup_id else ''}"
+            f"{' to time point ' + restore_to_time if restore_to_time else ''}"
+            f" has been requested on the unit"
+        )
 
-        # Validate the provided backup id.
-        logger.info("Validating provided backup-id")
+        # Validate the provided backup id and restore to time.
+        logger.info("Validating provided backup-id and restore-to-time")
         backups = self._list_backups(show_failed=False)
-        if backup_id not in backups.keys():
+        if backup_id and backup_id not in backups.keys():
             error_message = f"Invalid backup-id: {backup_id}"
+            logger.error(f"Restore failed: {error_message}")
+            event.fail(error_message)
+            return
+        if not backup_id and restore_to_time and not backups:
+            error_message = "Cannot restore PITR without any backups created"
+            logger.error(f"Restore failed: {error_message}")
+            event.fail(error_message)
+            return
+
+        # Quick check for timestamp format
+        if (
+            restore_to_time
+            and restore_to_time != "latest"
+            and not re.match("^[0-9-]+ [0-9:.+]+$", restore_to_time)
+        ):
+            error_message = "Bad restore-to-time format"
             logger.error(f"Restore failed: {error_message}")
             event.fail(error_message)
             return
@@ -723,8 +762,12 @@ Stderr:
         # Mark the cluster as in a restoring backup state and update the Patroni configuration.
         logger.info("Configuring Patroni to restore the backup")
         self.charm.app_peer_data.update({
-            "restoring-backup": self._fetch_backup_from_id(backup_id),
-            "restore-stanza": backups[backup_id],
+            "restoring-backup": self._fetch_backup_from_id(backup_id) if backup_id else "",
+            "restore-stanza": backups[backup_id]
+            if backup_id
+            else self.charm.app_peer_data.get("stanza", self.stanza_name),
+            "restore-to-time": restore_to_time or "",
+            "require-change-bucket-after-restore": "True",
         })
         self.charm.update_config()
 
@@ -777,8 +820,10 @@ Stderr:
             event.fail(validation_message)
             return False
 
-        if not event.params.get("backup-id"):
-            error_message = "Missing backup-id to restore"
+        if not event.params.get("backup-id") and not event.params.get("restore-to-time"):
+            error_message = (
+                "Missing backup-id or/and restore-to-time parameter to be able to do restore"
+            )
             logger.error(f"Restore failed: {error_message}")
             event.fail(error_message)
             return False
@@ -790,10 +835,11 @@ Stderr:
             return False
 
         logger.info("Checking if cluster is in blocked state")
-        if (
-            self.charm.is_blocked
-            and self.charm.unit.status.message != ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE
-        ):
+        if self.charm.is_blocked and self.charm.unit.status.message not in [
+            ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE,
+            CANNOT_RESTORE_PITR,
+            MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET,
+        ]:
             error_message = "Cluster or unit is in a blocking state"
             logger.error(f"Restore failed: {error_message}")
             event.fail(error_message)
@@ -879,7 +925,7 @@ Stderr:
 
     def _restart_database(self) -> None:
         """Removes the restoring backup flag and restart the database."""
-        self.charm.app_peer_data.update({"restoring-backup": ""})
+        self.charm.app_peer_data.update({"restoring-backup": "", "restore-to-time": ""})
         self.charm.update_config()
         self.container.start(self.charm._postgresql_service)
 

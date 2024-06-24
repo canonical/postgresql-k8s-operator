@@ -4,6 +4,7 @@
 
 """Helper class used to manage interactions with Patroni API and configuration files."""
 
+import glob
 import logging
 import os
 import pwd
@@ -24,7 +25,7 @@ from tenacity import (
     wait_fixed,
 )
 
-from constants import REWIND_USER, TLS_CA_FILE
+from constants import POSTGRESQL_LOGS_GLOB, REWIND_USER, TLS_CA_FILE
 
 RUNNING_STATES = ["running", "streaming"]
 
@@ -404,7 +405,10 @@ class Patroni:
         is_no_sync_member: bool = False,
         stanza: str = None,
         restore_stanza: Optional[str] = None,
+        disable_pgbackrest_archiving: bool = False,
         backup_id: Optional[str] = None,
+        pitr_target: Optional[str] = None,
+        restore_to_latest: bool = False,
         parameters: Optional[dict[str, str]] = None,
     ) -> None:
         """Render the Patroni configuration file.
@@ -417,7 +421,10 @@ class Patroni:
                 (when it's a replica).
             stanza: name of the stanza created by pgBackRest.
             restore_stanza: name of the stanza used when restoring a backup.
+            disable_pgbackrest_archiving: whether to force disable pgBackRest WAL archiving.
             backup_id: id of the backup that is being restored.
+            pitr_target: point-in-time-recovery target for the backup.
+            restore_to_latest: restore all the WAL transaction logs from the stanza.
             parameters: PostgreSQL parameters to be added to the postgresql.conf file.
         """
         # Open the template patroni.yml file.
@@ -437,9 +444,12 @@ class Patroni:
             replication_password=self._replication_password,
             rewind_user=REWIND_USER,
             rewind_password=self._rewind_password,
-            enable_pgbackrest=stanza is not None,
-            restoring_backup=backup_id is not None,
+            enable_pgbackrest_archiving=stanza is not None
+            and disable_pgbackrest_archiving is False,
+            restoring_backup=backup_id is not None or pitr_target is not None,
             backup_id=backup_id,
+            pitr_target=pitr_target if not restore_to_latest else None,
+            restore_to_latest=restore_to_latest,
             stanza=stanza,
             restore_stanza=restore_stanza,
             minority_count=self._members_count // 2,
@@ -454,6 +464,26 @@ class Patroni:
     def reload_patroni_configuration(self) -> None:
         """Reloads the configuration after it was updated in the file."""
         requests.post(f"{self._patroni_url}/reload", verify=self._verify)
+
+    def last_postgresql_logs(self) -> str:
+        """Get last log file content of Postgresql service.
+
+        If there is no available log files, empty line will be returned.
+
+        Returns:
+            Content of last log file of Postgresql service.
+        """
+        log_files = glob.glob(POSTGRESQL_LOGS_GLOB)
+        if len(log_files) == 0:
+            return ""
+        log_files.sort(reverse=True)
+        try:
+            with open(log_files[0], "r") as last_log_file:
+                return last_log_file.read()
+        except OSError as e:
+            error_message = "Failed to read last postgresql log file"
+            logger.exception(error_message, exc_info=e)
+            return ""
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def restart_postgresql(self) -> None:

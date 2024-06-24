@@ -55,7 +55,7 @@ from ops.pebble import ChangeError, Layer, PathError, ProtocolError, ServiceStat
 from requests import ConnectionError
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
-from backups import PostgreSQLBackups
+from backups import MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET, PostgreSQLBackups
 from config import CharmConfig
 from constants import (
     APP_SCOPE,
@@ -474,6 +474,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.error("Invalid configuration: %s", str(e))
             return
 
+        # If PITR restore failed, then wait it for resolve.
+        if (
+            "restoring-backup" in self.app_peer_data or "restore-to-time" in self.app_peer_data
+        ) and isinstance(self.unit.status, BlockedStatus):
+            event.defer()
+            return
+
         # Validate the status of the member before setting an ActiveStatus.
         if not self._patroni.member_started:
             logger.debug("Deferring on_peer_relation_changed: Waiting for member to start")
@@ -844,6 +851,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._set_active_status()
 
     def _set_active_status(self):
+        if "require-change-bucket-after-restore" in self.app_peer_data:
+            self.unit.status = BlockedStatus(MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET)
+            return
         try:
             if self._patroni.get_primary(unit_name_pattern=True) == self.unit.name:
                 self.unit.status = ActiveStatus("Primary")
@@ -1229,7 +1239,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 return
 
             # Remove the restoring backup flag and the restore stanza name.
-            self.app_peer_data.update({"restoring-backup": "", "restore-stanza": ""})
+            self.app_peer_data.update({
+                "restoring-backup": "",
+                "restore-stanza": "",
+                "restore-to-time": "",
+            })
             self.update_config()
             logger.info("Restore succeeded")
 
@@ -1591,8 +1605,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             enable_tls=self.is_tls_enabled,
             is_no_sync_member=self.upgrade.is_no_sync_member,
             backup_id=self.app_peer_data.get("restoring-backup"),
+            pitr_target=self.app_peer_data.get("restore-to-time"),
+            restore_to_latest=self.app_peer_data.get("restore-to-time", None) == "latest",
             stanza=self.app_peer_data.get("stanza"),
             restore_stanza=self.app_peer_data.get("restore-stanza"),
+            disable_pgbackrest_archiving=bool(
+                self.app_peer_data.get("require-change-bucket-after-restore", None)
+            ),
             parameters=postgresql_parameters,
         )
 
