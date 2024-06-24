@@ -1,0 +1,21 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.8    unsupported  01:32:34Z
+
+App                   Version  Status   Scale  Charm                Channel  Rev  Address         Exposed  Message
+postgresql-k8s                 error        3  postgresql-k8s                  0  10.152.183.235  no       create Pod postgresql-k8s-1 in StatefulSet postgresql-k8s failed error: failed to create PVC postgresql-k8s-pgdata-85...
+postgresql-test-app            waiting    0/1  postgresql-test-app  edge     154                  no       installing agent
+postgresql-test-app2           waiting    0/1  postgresql-test-app  edge     154                  no       installing agent
+
+Unit                    Workload     Agent       Address       Ports  Message
+postgresql-k8s/0        maintenance  executing   10.1.132.139         (install) installing charm software
+postgresql-k8s/1        maintenance  executing   10.1.132.140         (install) installing charm software
+postgresql-k8s/2*       maintenance  executing   10.1.132.141         (install) installing charm software
+postgresql-test-app2/0  waiting      allocating                       installing agent
+postgresql-test-app/0   waiting      allocating                       installing agent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
