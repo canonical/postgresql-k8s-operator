@@ -1,6 +1,5 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-from unittest import TestCase
 from unittest.mock import call, patch
 
 import psycopg2
@@ -11,9 +10,6 @@ from psycopg2.sql import SQL, Composed, Identifier
 
 from charm import PostgresqlOperatorCharm
 from constants import PEER
-
-# used for assert functions
-tc = TestCase()
 
 
 @pytest.fixture(autouse=True)
@@ -151,92 +147,89 @@ def test_create_database(harness):
         # Test a failed database creation.
         _enable_disable_extensions.reset_mock()
         execute.side_effect = psycopg2.Error
-        with tc.assertRaises(PostgreSQLCreateDatabaseError):
+        try:
             harness.charm.postgresql.create_database(database, user, plugins, client_relations)
+            assert False
+        except PostgreSQLCreateDatabaseError:
+            pass
         _enable_disable_extensions.assert_not_called()
 
 
 def test_generate_database_privileges_statements(harness):
     # Test with only one established relation.
-    tc.assertEqual(
-        harness.charm.postgresql._generate_database_privileges_statements(
-            1, ["test_schema_1", "test_schema_2"], "test_user"
-        ),
-        [
-            Composed([
-                SQL(
-                    "DO $$\nDECLARE r RECORD;\nBEGIN\n  FOR r IN (SELECT statement FROM (SELECT 1 AS index,'ALTER TABLE '|| schemaname || '.\"' || tablename ||'\" OWNER TO "
-                ),
-                Identifier("test_user"),
-                SQL(
-                    ";' AS statement\nFROM pg_tables WHERE NOT schemaname IN ('pg_catalog', 'information_schema')\nUNION SELECT 2 AS index,'ALTER SEQUENCE '|| sequence_schema || '.\"' || sequence_name ||'\" OWNER TO "
-                ),
-                Identifier("test_user"),
-                SQL(
-                    ";' AS statement\nFROM information_schema.sequences WHERE NOT sequence_schema IN ('pg_catalog', 'information_schema')\nUNION SELECT 3 AS index,'ALTER FUNCTION '|| nsp.nspname || '.\"' || p.proname ||'\"('||pg_get_function_identity_arguments(p.oid)||') OWNER TO "
-                ),
-                Identifier("test_user"),
-                SQL(
-                    ";' AS statement\nFROM pg_proc p JOIN pg_namespace nsp ON p.pronamespace = nsp.oid WHERE NOT nsp.nspname IN ('pg_catalog', 'information_schema')\nUNION SELECT 4 AS index,'ALTER VIEW '|| schemaname || '.\"' || viewname ||'\" OWNER TO "
-                ),
-                Identifier("test_user"),
-                SQL(
-                    ";' AS statement\nFROM pg_catalog.pg_views WHERE NOT schemaname IN ('pg_catalog', 'information_schema')) AS statements ORDER BY index) LOOP\n      EXECUTE format(r.statement);\n  END LOOP;\nEND; $$;"
-                ),
-            ]),
-            "UPDATE pg_catalog.pg_largeobject_metadata\nSET lomowner = (SELECT oid FROM pg_roles WHERE rolname = 'test_user')\nWHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = 'operator');",
-        ],
-    )
+    assert harness.charm.postgresql._generate_database_privileges_statements(
+        1, ["test_schema_1", "test_schema_2"], "test_user"
+    ) == [
+        Composed([
+            SQL(
+                "DO $$\nDECLARE r RECORD;\nBEGIN\n  FOR r IN (SELECT statement FROM (SELECT 1 AS index,'ALTER TABLE '|| schemaname || '.\"' || tablename ||'\" OWNER TO "
+            ),
+            Identifier("test_user"),
+            SQL(
+                ";' AS statement\nFROM pg_tables WHERE NOT schemaname IN ('pg_catalog', 'information_schema')\nUNION SELECT 2 AS index,'ALTER SEQUENCE '|| sequence_schema || '.\"' || sequence_name ||'\" OWNER TO "
+            ),
+            Identifier("test_user"),
+            SQL(
+                ";' AS statement\nFROM information_schema.sequences WHERE NOT sequence_schema IN ('pg_catalog', 'information_schema')\nUNION SELECT 3 AS index,'ALTER FUNCTION '|| nsp.nspname || '.\"' || p.proname ||'\"('||pg_get_function_identity_arguments(p.oid)||') OWNER TO "
+            ),
+            Identifier("test_user"),
+            SQL(
+                ";' AS statement\nFROM pg_proc p JOIN pg_namespace nsp ON p.pronamespace = nsp.oid WHERE NOT nsp.nspname IN ('pg_catalog', 'information_schema')\nUNION SELECT 4 AS index,'ALTER VIEW '|| schemaname || '.\"' || viewname ||'\" OWNER TO "
+            ),
+            Identifier("test_user"),
+            SQL(
+                ";' AS statement\nFROM pg_catalog.pg_views WHERE NOT schemaname IN ('pg_catalog', 'information_schema')) AS statements ORDER BY index) LOOP\n      EXECUTE format(r.statement);\n  END LOOP;\nEND; $$;"
+            ),
+        ]),
+        "UPDATE pg_catalog.pg_largeobject_metadata\nSET lomowner = (SELECT oid FROM pg_roles WHERE rolname = 'test_user')\nWHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = 'operator');",
+    ]
     # Test with multiple established relations.
-    tc.assertEqual(
-        harness.charm.postgresql._generate_database_privileges_statements(
-            2, ["test_schema_1", "test_schema_2"], "test_user"
-        ),
-        [
-            Composed([
-                SQL("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA "),
-                Identifier("test_schema_1"),
-                SQL(" TO "),
-                Identifier("test_user"),
-                SQL(";"),
-            ]),
-            Composed([
-                SQL("GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA "),
-                Identifier("test_schema_1"),
-                SQL(" TO "),
-                Identifier("test_user"),
-                SQL(";"),
-            ]),
-            Composed([
-                SQL("GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA "),
-                Identifier("test_schema_1"),
-                SQL(" TO "),
-                Identifier("test_user"),
-                SQL(";"),
-            ]),
-            Composed([
-                SQL("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA "),
-                Identifier("test_schema_2"),
-                SQL(" TO "),
-                Identifier("test_user"),
-                SQL(";"),
-            ]),
-            Composed([
-                SQL("GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA "),
-                Identifier("test_schema_2"),
-                SQL(" TO "),
-                Identifier("test_user"),
-                SQL(";"),
-            ]),
-            Composed([
-                SQL("GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA "),
-                Identifier("test_schema_2"),
-                SQL(" TO "),
-                Identifier("test_user"),
-                SQL(";"),
-            ]),
-        ],
-    )
+    assert harness.charm.postgresql._generate_database_privileges_statements(
+        2, ["test_schema_1", "test_schema_2"], "test_user"
+    ) == [
+        Composed([
+            SQL("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA "),
+            Identifier("test_schema_1"),
+            SQL(" TO "),
+            Identifier("test_user"),
+            SQL(";"),
+        ]),
+        Composed([
+            SQL("GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA "),
+            Identifier("test_schema_1"),
+            SQL(" TO "),
+            Identifier("test_user"),
+            SQL(";"),
+        ]),
+        Composed([
+            SQL("GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA "),
+            Identifier("test_schema_1"),
+            SQL(" TO "),
+            Identifier("test_user"),
+            SQL(";"),
+        ]),
+        Composed([
+            SQL("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA "),
+            Identifier("test_schema_2"),
+            SQL(" TO "),
+            Identifier("test_user"),
+            SQL(";"),
+        ]),
+        Composed([
+            SQL("GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA "),
+            Identifier("test_schema_2"),
+            SQL(" TO "),
+            Identifier("test_user"),
+            SQL(";"),
+        ]),
+        Composed([
+            SQL("GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA "),
+            Identifier("test_schema_2"),
+            SQL(" TO "),
+            Identifier("test_user"),
+            SQL(";"),
+        ]),
+    ]
 
 
 def test_build_postgresql_parameters(harness):
@@ -255,51 +248,53 @@ def test_build_postgresql_parameters(harness):
         "response_test_config_option_8": "partial",
         "vacuum_test_config_option_9": 10.5,
     }
-    tc.assertEqual(
-        harness.charm.postgresql.build_postgresql_parameters(config_options, 1000000000),
-        {
-            "test_config_option_1": True,
-            "test_config_option_2": False,
-            "test_config_option_3": "on",
-            "test_config_option_4": 1024,
-            "test_config_option_5": "scheduled",
-            "test_config_option_7": "off",
-            "DateStyle": "ISO, DMY",
-            "TimeZone": "UTC",
-            "test_config_option_8": "partial",
-            "test_config_option_9": 10.5,
-            "shared_buffers": "250MB",
-            "effective_cache_size": "750MB",
-        },
-    )
+    assert harness.charm.postgresql.build_postgresql_parameters(config_options, 1000000000) == {
+        "test_config_option_1": True,
+        "test_config_option_2": False,
+        "test_config_option_3": "on",
+        "test_config_option_4": 1024,
+        "test_config_option_5": "scheduled",
+        "test_config_option_7": "off",
+        "DateStyle": "ISO, DMY",
+        "TimeZone": "UTC",
+        "test_config_option_8": "partial",
+        "test_config_option_9": 10.5,
+        "shared_buffers": f"{250 * 128}",
+        "effective_cache_size": f"{750 * 128}",
+    }
 
     # Test with a limited imposed to the available memory.
     parameters = harness.charm.postgresql.build_postgresql_parameters(
         config_options, 1000000000, 600000000
     )
-    tc.assertEqual(parameters["shared_buffers"], "150MB")
-    tc.assertEqual(parameters["effective_cache_size"], "450MB")
+    assert parameters["shared_buffers"] == f"{150 * 128}"
+    assert parameters["effective_cache_size"] == f"{450 * 128}"
 
     # Test when the requested shared buffers are greater than 40% of the available memory.
     config_options["memory_shared_buffers"] = 50001
-    with tc.assertRaises(Exception):
+    try:
         harness.charm.postgresql.build_postgresql_parameters(config_options, 1000000000)
+        assert False
+    except AssertionError as e:
+        raise e
+    except Exception:
+        pass
 
     # Test when the requested shared buffers are lower than 40% of the available memory
     # (also check that it's used when calculating the effective cache size value).
     config_options["memory_shared_buffers"] = 50000
     parameters = harness.charm.postgresql.build_postgresql_parameters(config_options, 1000000000)
-    tc.assertEqual(parameters["shared_buffers"], 50000)
-    tc.assertEqual(parameters["effective_cache_size"], "600MB")
+    assert parameters["shared_buffers"] == 50000
+    assert parameters["effective_cache_size"] == f"{600 * 128}"
 
     # Test when the profile is set to "testing".
     config_options["profile"] = "testing"
     parameters = harness.charm.postgresql.build_postgresql_parameters(config_options, 1000000000)
-    tc.assertEqual(parameters["shared_buffers"], 50000)
-    tc.assertNotIn("effective_cache_size", parameters)
+    assert parameters["shared_buffers"] == 50000
+    assert "effective_cache_size" not in parameters
 
     # Test when there is no shared_buffers value set in the config option.
     del config_options["memory_shared_buffers"]
     parameters = harness.charm.postgresql.build_postgresql_parameters(config_options, 1000000000)
-    tc.assertEqual(parameters["shared_buffers"], "128MB")
-    tc.assertNotIn("effective_cache_size", parameters)
+    assert "shared_buffers" not in parameters
+    assert "effective_cache_size" not in parameters
