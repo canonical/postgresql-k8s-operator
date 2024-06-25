@@ -107,6 +107,9 @@ class PostgreSQLAsyncReplication(Object):
         self.framework.observe(
             self.charm.on.promote_to_primary_action, self._on_promote_to_primary
         )
+        self.framework.observe(
+            self.charm.on.reenable_oversee_users_action, self._on_reenable_oversee_users
+        )
 
         self.framework.observe(self.charm.on.secret_changed, self._on_secret_changed)
 
@@ -197,6 +200,7 @@ class PostgreSQLAsyncReplication(Object):
             ).wait_output()
             logger.warning("Please review the backup file %s and handle its removal", filename)
         self._remove_previous_cluster_information()
+        self.charm.app_peer_data["suppress-oversee-users"] = "true"
         return True
 
     def _get_highest_promoted_cluster_counter_value(self) -> str:
@@ -584,6 +588,18 @@ class PostgreSQLAsyncReplication(Object):
 
         # Set the status.
         self.charm.unit.status = MaintenanceStatus("Promoting cluster...")
+
+    def _on_reenable_oversee_users(self, event: ActionEvent) -> None:
+        """Re-enable oversee users after cluster was promoted."""
+        if not self.charm.unit.is_leader():
+            event.fail("Unit is not leader")
+            return
+
+        if "suppress-oversee-users" not in self.charm.app_peer_data:
+            event.fail("Oversee users is not suppressed")
+            return
+
+        del self.charm.app_peer_data["suppress-oversee-users"]
 
     def _on_secret_changed(self, event: SecretChangedEvent) -> None:
         """Update the internal secret when the relation secret changes."""
