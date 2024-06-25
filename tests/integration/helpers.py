@@ -460,7 +460,10 @@ async def get_password(
     wait=wait_exponential(multiplier=1, min=2, max=30),
 )
 async def get_primary(
-    ops_test: OpsTest, database_app_name: str = DATABASE_APP_NAME, down_unit: str = None
+    ops_test: OpsTest,
+    database_app_name: str = DATABASE_APP_NAME,
+    down_unit: str = None,
+    model=None,
 ) -> str:
     """Get the primary unit.
 
@@ -468,11 +471,14 @@ async def get_primary(
         ops_test: ops_test instance.
         database_app_name: name of the application.
         down_unit: stopped unit to ignore when calling the action.
+        model: The model to use.
 
     Returns:
         the current primary unit.
     """
-    for unit in ops_test.model.applications[database_app_name].units:
+    if not model:
+        model = ops_test.model
+    for unit in model.applications[database_app_name].units:
         if unit.name != down_unit:
             action = await unit.run_action("get-primary")
             action = await action.wait()
@@ -482,17 +488,20 @@ async def get_primary(
             return primary
 
 
-async def get_unit_address(ops_test: OpsTest, unit_name: str) -> str:
+async def get_unit_address(ops_test: OpsTest, unit_name: str, model=None) -> str:
     """Get unit IP address.
 
     Args:
         ops_test: The ops test framework instance
         unit_name: The name of the unit
+        model: The model to use
 
     Returns:
         IP address of the unit
     """
-    status = await ops_test.model.get_status()
+    if not model:
+        model = ops_test.model
+    status = await model.get_status()
     return status["applications"][unit_name.split("/")[0]].units[unit_name]["address"]
 
 

@@ -3,7 +3,7 @@
 # See LICENSE file for licensing details.
 import contextlib
 import logging
-from asyncio import gather
+from asyncio import gather, sleep
 from typing import Optional
 
 import psycopg2
@@ -41,6 +41,8 @@ CLUSTER_SIZE = 3
 FAST_INTERVAL = "10s"
 IDLE_PERIOD = 5
 TIMEOUT = 2000
+
+DATA_INTEGRATOR_APP_NAME = "data-integrator"
 
 
 @contextlib.asynccontextmanager
@@ -106,13 +108,20 @@ async def test_deploy_async_replication_setup(
     """Build and deploy two PostgreSQL cluster in two separate models to test async replication."""
     await build_and_deploy(ops_test, CLUSTER_SIZE, wait_for_idle=False)
     await build_and_deploy(ops_test, CLUSTER_SIZE, wait_for_idle=False, model=second_model)
+    await ops_test.model.deploy(
+        DATA_INTEGRATOR_APP_NAME,
+        num_units=1,
+        channel="latest/edge",
+        config={"database-name": "testdb"},
+    )
+    await ops_test.model.relate(DATABASE_APP_NAME, DATA_INTEGRATOR_APP_NAME)
     await ops_test.model.deploy(APPLICATION_NAME, num_units=1)
     await second_model.deploy(APPLICATION_NAME, num_units=1)
 
     async with ops_test.fast_forward(), fast_forward(second_model):
         await gather(
             first_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME, APPLICATION_NAME],
+                apps=[DATABASE_APP_NAME, APPLICATION_NAME, DATA_INTEGRATOR_APP_NAME],
                 status="active",
                 timeout=TIMEOUT,
             ),
@@ -205,6 +214,19 @@ async def test_async_replication(
 @pytest.mark.group(1)
 @markers.juju3
 @pytest.mark.abort_on_fail
+async def test_get_data_integrator_credentials(
+    ops_test: OpsTest,
+):
+    unit = ops_test.model.applications[DATA_INTEGRATOR_APP_NAME].units[0]
+    action = await unit.run_action(action_name="get-credentials")
+    result = await action.wait()
+    global data_integrator_credentials
+    data_integrator_credentials = result.results
+
+
+@pytest.mark.group(1)
+@markers.juju3
+@pytest.mark.abort_on_fail
 async def test_switchover(
     ops_test: OpsTest,
     first_model: Model,
@@ -255,6 +277,48 @@ async def test_switchover(
 
     logger.info("checking whether writes are increasing")
     await are_writes_increasing(ops_test, extra_model=second_model)
+
+
+@pytest.mark.group(1)
+@markers.juju3
+@pytest.mark.abort_on_fail
+async def test_data_integrator_creds_keep_on_working(
+    ops_test: OpsTest,
+    second_model: Model,
+) -> None:
+    user = data_integrator_credentials["postgresql"]["username"]
+    password = data_integrator_credentials["postgresql"]["password"]
+    database = data_integrator_credentials["postgresql"]["database"]
+
+    primary = await get_primary(ops_test, model=second_model)
+    address = await get_unit_address(ops_test, primary, second_model)
+
+    connstr = f"dbname='{database}' user='{user}' host='{address}' port='5432' password='{password}' connect_timeout=1"
+    try:
+        with psycopg2.connect(connstr) as connection:
+            pass
+    finally:
+        connection.close()
+
+    logger.info("Re-enable oversee users")
+    leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME, model=second_model)
+    action = await leader_unit.run_action(action_name="reenable-oversee-users")
+    await action.wait()
+
+    async with fast_forward(second_model, FAST_INTERVAL):
+        await sleep(20)
+    await second_model.wait_for_idle(
+        apps=[DATABASE_APP_NAME],
+        status="active",
+        timeout=TIMEOUT,
+    )
+    try:
+        with psycopg2.connect(connstr) as connection:
+            assert False
+    except psycopg2.OperationalError:
+        logger.info("Data integrator creds purged")
+    finally:
+        connection.close()
 
 
 @pytest.mark.group(1)
