@@ -71,6 +71,10 @@ requires:
     interface: loki_push_api
     limit: 1
     optional: true
+  tracing:
+    interface: tracing
+    limit: 1
+    optional: true
 
 storage:
   pgdata:
