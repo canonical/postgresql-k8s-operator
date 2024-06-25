@@ -10,6 +10,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
+from .. import markers
 from ..helpers import (
     CHARM_SERIES,
     DATABASE_APP_NAME,
