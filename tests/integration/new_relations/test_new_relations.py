@@ -14,6 +14,7 @@ import yaml
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 
+from .. import markers
 from ..helpers import (
     CHARM_SERIES,
     check_database_users_existence,
@@ -586,6 +587,7 @@ async def test_invalid_extra_user_roles(ops_test: OpsTest):
 
 
 @pytest.mark.group(1)
+@markers.amd64_only  # discourse-k8s charm not available for arm64
 async def test_discourse(ops_test: OpsTest):
     # Deploy Discourse and Redis.
     await gather(
@@ -662,6 +664,7 @@ async def test_discourse(ops_test: OpsTest):
 
 
 @pytest.mark.group(1)
+@markers.amd64_only  # indico charm not available for arm64
 async def test_indico_datatabase(ops_test: OpsTest) -> None:
     """Tests deploying and relating to the Indico charm."""
     async with ops_test.fast_forward(fast_interval="30s"):

@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 import contextlib
 import logging
+import subprocess
 from asyncio import gather
 from typing import Optional
 
@@ -14,15 +15,8 @@ from lightkube.resources.core_v1 import Pod
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from tests.integration import markers
-from tests.integration.ha_tests.helpers import (
-    are_writes_increasing,
-    check_writes,
-    get_standby_leader,
-    get_sync_standby,
-    start_continuous_writes,
-)
-from tests.integration.helpers import (
+from .. import architecture, markers
+from ..helpers import (
     APPLICATION_NAME,
     DATABASE_APP_NAME,
     build_and_deploy,
@@ -32,6 +26,13 @@ from tests.integration.helpers import (
     get_unit_address,
     scale_application,
     wait_for_relation_removed_between,
+)
+from .helpers import (
+    are_writes_increasing,
+    check_writes,
+    get_standby_leader,
+    get_sync_standby,
+    start_continuous_writes,
 )
 
 logger = logging.getLogger(__name__)
@@ -72,6 +73,10 @@ async def second_model(ops_test: OpsTest, first_model, request) -> Model:
     second_model_name = f"{first_model.info.name}-other"
     if second_model_name not in await ops_test._controller.list_models():
         await ops_test._controller.add_model(second_model_name)
+        subprocess.run(["juju", "switch", second_model_name], check=True)
+        subprocess.run(
+            ["juju", "set-model-constraints", f"arch={architecture.architecture}"], check=True
+        )
     second_model = Model()
     await second_model.connect(model_name=second_model_name)
     yield second_model
