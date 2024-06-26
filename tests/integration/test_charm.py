@@ -37,6 +37,7 @@ UNIT_IDS = [0, 1, 2]
 
 
 @pytest.mark.group(1)
+@pytest.mark.runner(["self-hosted", "linux", "X64", "large", "jammy"])
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_build_and_deploy(ops_test: OpsTest):
