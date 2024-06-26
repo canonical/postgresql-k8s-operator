@@ -572,7 +572,7 @@ def isolate_instance_from_cluster(ops_test: OpsTest, unit_name: str) -> None:
         env = os.environ
         env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
         subprocess.check_output(
-            " ".join(["kubectl", "apply", "-f", temp_file.name]), shell=True, env=env
+            " ".join(["microk8s", "kubectl", "apply", "-f", temp_file.name]), shell=True, env=env
         )
 
 
@@ -668,7 +668,7 @@ def remove_instance_isolation(ops_test: OpsTest) -> None:
     env = os.environ
     env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
     subprocess.check_output(
-        f"kubectl -n {ops_test.model.info.name} delete --ignore-not-found=true networkchaos network-loss-primary",
+        f"microk8s kubectl -n {ops_test.model.info.name} delete --ignore-not-found=true networkchaos network-loss-primary",
         shell=True,
         env=env,
     )
