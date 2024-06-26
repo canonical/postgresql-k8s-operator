@@ -56,6 +56,26 @@ class PostgreSQLUpgrade(DataUpgrade):
         )
         self.framework.observe(self.charm.on.upgrade_charm, self._on_upgrade_charm_check_legacy)
 
+    def _handle_label_change(self) -> None:
+        """Handle the label change from `master` to `primary`."""
+        unit_number = int(self.charm.unit.name.split("/")[1])
+        if unit_number == 0 and self.charm.unit.is_leader():
+            # Completed rollback should remove the restriction on the unit zero to become
+            # the primary.
+            self.peer_relation.data[self.charm.app].update({"sync-standbys": ""})
+        if unit_number == 1:
+            # If the unit is the last to be upgraded before unit zero,
+            # trigger a switchover, so one of the upgraded units becomes
+            # the primary.
+            try:
+                self.charm._patroni.switchover()
+            except SwitchoverFailedError as e:
+                logger.warning(f"Switchover failed: {e}")
+        if len(self.charm._peers.units) == 0 or unit_number == 1:
+            # If the unit is the last to be upgraded before unit zero
+            # or the only unit in the cluster, update the label.
+            self.charm._create_services()
+
     @property
     def is_no_sync_member(self) -> bool:
         """Whether this member shouldn't be a synchronous standby (when it's a replica)."""
@@ -111,6 +131,7 @@ class PostgreSQLUpgrade(DataUpgrade):
                         in self.charm._patroni.cluster_members
                         and self.charm._patroni.is_replication_healthy
                     ):
+                        self._handle_label_change()
                         logger.debug("Upgraded unit is healthy. Set upgrade state to `completed`")
                         self.set_unit_completed()
                     else:
@@ -122,6 +143,10 @@ class PostgreSQLUpgrade(DataUpgrade):
         except RetryError:
             logger.error("Upgraded unit is not part of the cluster or not healthy")
             self.set_unit_failed()
+            if self.charm.unit.is_leader():
+                # Failed upgrade should force the recovery to set the unit zero as the primary
+                # after the last unit performs the rollback.
+                self._set_list_of_sync_standbys()
             self.charm.unit.status = BlockedStatus(
                 "upgrade failed. Check logs for rollback instruction"
             )
@@ -132,6 +157,16 @@ class PostgreSQLUpgrade(DataUpgrade):
             return
 
         self.charm.update_config()
+
+        if self.charm.unit.is_leader():
+            # Failed upgrade should force the recovery to set the unit zero as the primary
+            # after the last unit performs the rollback.
+            if self.cluster_state == "failed":
+                self._set_list_of_sync_standbys()
+            # Completed rollback should remove the restriction on the unit zero to become
+            # the primary.
+            if not self.upgrade_stack:
+                self.peer_relation.data[self.charm.app].update({"sync-standbys": ""})
 
     def _on_upgrade_charm_check_legacy(self, event: UpgradeCharmEvent) -> None:
         if not self.peer_relation:
