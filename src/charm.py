@@ -985,7 +985,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         )
 
         services = {
-            "primary": "master",
+            "primary": "primary",
             "replicas": "replica",
         }
         for service_name_suffix, role_selector in services.items():
@@ -1447,6 +1447,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     "group": WORKLOAD_OS_GROUP,
                     "environment": {
                         "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: {self.cluster_name}}}",
+                        "PATRONI_KUBERNETES_LEADER_LABEL_VALUE": "primary",
                         "PATRONI_KUBERNETES_NAMESPACE": self._namespace,
                         "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
                         "PATRONI_NAME": pod_name,
