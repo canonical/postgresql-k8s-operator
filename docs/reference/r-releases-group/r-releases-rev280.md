@@ -76,6 +76,7 @@ Canonical Data issues are now public on both [Jira](https://warthogs.atlassian.n
 * It is recommended to use this operator together with modern [Charmed PgBouncer K8s operator](https://charmhub.io/pgbouncer-k8s?channel=1/stable)
 * Please check [the external components requirements](https://charmhub.io/postgresql-k8s/docs/r-requirements)
 * Please check [previously posted restrictions](https://charmhub.io/postgresql-k8s/docs/r-releases)  
+* Ensure [the charm requirements](/t/11744) met
 
 ## Contact us
 

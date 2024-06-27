@@ -50,6 +50,7 @@ Canonica Data issues are now public on both [Jira](https://warthogs.atlassian.ne
 * Use this operator together with a modern operator "[pgBouncer K8s](https://charmhub.io/pgbouncer-k8s)"
 * Please check [the external components requirements](/t/11744)
 * Please check additionally [the previously posted restrictions](/t/11872)
+* Ensure [the charm requirements](/t/11744) met
 
 ## Contact us
 

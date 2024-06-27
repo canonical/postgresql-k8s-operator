@@ -66,7 +66,8 @@ Canonical Data issues are now public on both [Jira](https://warthogs.atlassian.n
 
 * `juju refresh` from the old-stable revision 73 to the current-revision 158 is **NOT** supported!!!<br/>The [upgrade](/t/12092) functionality is new and supported for revision 158+ only!
 * Please check [the external components requirements](/t/11744)
-* Please check additionally [the previously posted restrictions](/t/11873).
+* Please check additionally [the previously posted restrictions](/t/11873)
+* Ensure [the charm requirements](/t/11744) met
 
 ## Contact us
 
