@@ -322,12 +322,12 @@ async def test_network_cut(
     await test_build_and_deploy(ops_test)
     # Locate primary unit.
     app = await app_name(ops_test)
-    primary_name = await get_primary(ops_test, app)
 
     # Start an application that continuously writes data to the database.
     await start_continuous_writes(ops_test, app)
 
     # Verify that connection is possible.
+    primary_name = await get_primary(ops_test, app)
     logger.info("checking whether the connectivity to the database is working")
     assert await is_connection_possible(
         ops_test, primary_name
