@@ -8,6 +8,7 @@ import requests
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
+from . import architecture, markers
 from .helpers import (
     DATABASE_APP_NAME,
     build_and_deploy,
@@ -30,13 +31,19 @@ logger = logging.getLogger(__name__)
 
 MATTERMOST_APP_NAME = "mattermost"
 if juju_major_version < 3:
-    TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
-    TLS_CHANNEL = "legacy/stable"
-    TLS_CONFIG = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
+    tls_certificates_app_name = "tls-certificates-operator"
+    if architecture.architecture == "arm64":
+        tls_channel = "legacy/edge"
+    else:
+        tls_channel = "legacy/stable"
+    tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
 else:
-    TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
-    TLS_CHANNEL = "latest/stable"
-    TLS_CONFIG = {"ca-common-name": "Test CA"}
+    tls_certificates_app_name = "self-signed-certificates"
+    if architecture.architecture == "arm64":
+        tls_channel = "latest/edge"
+    else:
+        tls_channel = "latest/stable"
+    tls_config = {"ca-common-name": "Test CA"}
 APPLICATION_UNITS = 2
 DATABASE_UNITS = 3
 
@@ -69,6 +76,7 @@ async def check_tls_rewind(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.group(1)
+@markers.amd64_only  # mattermost-k8s charm not available for arm64
 async def test_mattermost_db(ops_test: OpsTest) -> None:
     """Deploy Mattermost to test the 'db' relation.
 
@@ -80,10 +88,10 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
         # Deploy TLS Certificates operator.
         await ops_test.model.deploy(
-            TLS_CERTIFICATES_APP_NAME, config=TLS_CONFIG, channel=TLS_CHANNEL
+            tls_certificates_app_name, config=tls_config, channel=tls_channel
         )
         # Relate it to the PostgreSQL to enable TLS.
-        await ops_test.model.relate(DATABASE_APP_NAME, TLS_CERTIFICATES_APP_NAME)
+        await ops_test.model.relate(DATABASE_APP_NAME, tls_certificates_app_name)
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
         # Wait for all units enabling TLS.
@@ -170,7 +178,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
 
         # Remove the relation.
         await ops_test.model.applications[DATABASE_APP_NAME].remove_relation(
-            f"{DATABASE_APP_NAME}:certificates", f"{TLS_CERTIFICATES_APP_NAME}:certificates"
+            f"{DATABASE_APP_NAME}:certificates", f"{tls_certificates_app_name}:certificates"
         )
         await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=1000)
 
