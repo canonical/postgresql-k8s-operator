@@ -53,16 +53,16 @@ jobs:
       fail-fast: false
       matrix:
         juju:
-          - agent: 2.9.49  # renovate: latest juju 2
+          - agent: 2.9.49  # renovate: juju-agent-pin-minor
             libjuju: ==2.9.49.0  # renovate: latest libjuju 2
             allure_on_amd64: false
-          - agent: 3.1.8  # renovate: latest juju 3
+          - agent: 3.1.8  # renovate: juju-agent-pin-minor
             allure_on_amd64: true
         architecture:
           - amd64
         include:
           - juju:
-              agent: 3.1.8  # renovate: latest juju 3
+              agent: 3.1.8  # renovate: juju-agent-pin-minor
               allure_on_amd64: true
             architecture: arm64
     name: Integration test charm | ${{ matrix.juju.agent }} | ${{ matrix.architecture }}
@@ -75,7 +75,7 @@ jobs:
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
       architecture: ${{ matrix.architecture }}
       cloud: microk8s
-      microk8s-snap-channel: 1.29-strict/stable
+      microk8s-snap-channel: 1.29-strict/stable  # renovate: latest microk8s
       juju-agent-version: ${{ matrix.juju.agent }}
       libjuju-version-constraint: ${{ matrix.juju.libjuju }}
       _beta_allure_report: ${{ matrix.juju.allure_on_amd64 && matrix.architecture == 'amd64' }}
