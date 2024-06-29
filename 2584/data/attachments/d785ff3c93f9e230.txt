@@ -1,0 +1,176 @@
+[32mINFO    [0m juju.model:model.py:2097 Deploying ch:amd64/focal/indico-213
+[32mINFO    [0m juju.model:model.py:2097 Deploying ch:amd64/focal/redis-k8s-7
+[32mINFO    [0m juju.model:model.py:2097 Deploying ch:amd64/focal/redis-k8s-7
+[33mWARNING [0m juju.model:model.py:1563 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:model.py:1563 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  indico/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  indico/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  indico/0 [idle] waiting: Waiting for database availability
+[32mINFO    [0m integration.new_relations.test_new_relations:test_new_relations.py:692 Verifying that the charm doesn't block when the extensions are enabled
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  database/0 [executing] active: Primary
+  database/1 [idle] active: 
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  database/0 [idle] active: Primary
+[33mWARNING [0m juju.model:model.py:1563 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  database/0 [executing] active: Primary
+  database/1 [idle] active: 
+  database/2 [idle] active: 
+  indico/0 [executing] waiting: Waiting for database availability
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  database/0 [executing] active: Primary
+  database/1 [executing] active: 
+  database/2 [executing] active: 
+  indico/0 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  indico/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.8    unsupported  02:00:36Z
+
+App                      Version               Status   Scale  Charm                Channel        Rev  Address         Exposed  Message
+another-application                            active       1  postgresql-test-app  edge           166  10.152.183.19   no       received database credentials of the first database
+another-data-integrator                        waiting      1  data-integrator      latest/stable   27  10.152.183.29   no       installing agent
+another-database         14.11                 active       3  postgresql-k8s                        1  10.152.183.80   no       
+data-integrator                                waiting      1  data-integrator      latest/stable   27  10.152.183.142  no       installing agent
+database                 14.11                 active       3  postgresql-k8s                        0  10.152.183.187  no       
+indico                   3.3.1                 active       1  indico               stable         213  10.152.183.218  no       
+other-discourse-k8s      3.2.0                 active       1  discourse-k8s        latest/stable  124  10.152.183.18   no       
+postgresql-test-app                            active       2  postgresql-test-app  edge           166  10.152.183.60   no       received database credentials of the first database
+redis-broker             ubuntu/redis@691f315  active       1  redis-k8s            stable           7                  no       
+redis-cache              ubuntu/redis@691f315  active       1  redis-k8s            stable           7                  no       
+redis-k8s                7.2.5                 active       1  redis-k8s            latest/edge     32  10.152.183.28   no       
+
+Unit                        Workload  Agent  Address       Ports     Message
+another-application/0*      active    idle   10.1.233.150            received database credentials of the first database
+another-data-integrator/0*  blocked   idle   10.1.233.154            Please relate the data-integrator with the desired product
+another-database/0*         active    idle   10.1.233.147            Primary
+another-database/1          active    idle   10.1.233.149            
+another-database/2          active    idle   10.1.233.148            
+data-integrator/0*          blocked   idle   10.1.233.153            Please relate the data-integrator with the desired product
+database/0*                 active    idle   10.1.233.143            Primary
+database/1                  active    idle   10.1.233.152            
+database/2                  active    idle   10.1.233.151            
+indico/0*                   active    idle   10.1.233.162            
+other-discourse-k8s/0*      active    idle   10.1.233.158            
+postgresql-test-app/0       active    idle   10.1.233.136            received database credentials of the first database
+postgresql-test-app/1*      active    idle   10.1.233.137            received database credentials of the first database
+redis-broker/0*             active    idle   10.1.233.163  6379/TCP  
+redis-cache/0*              active    idle   10.1.233.165  6379/TCP  
+redis-k8s/0*                active    idle   10.1.233.157            
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+unit-database-0: 01:33:28 ERROR unit.database/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/ops/model.py", line 3180, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-database-0/secret-get', '--label', 'database-peers.database.app', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-0/charm/./src/charm.py", line 1837, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/ops/main.py", line 548, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/ops/main.py", line 527, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/ops/main.py", line 516, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 544, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-database-0/charm/./src/charm.py", line 827, in _on_postgresql_pebble_ready
+    self.unit.set_workload_version(self._patroni.rock_postgresql_version)
+  File "/var/lib/juju/agents/unit-database-0/charm/./src/charm.py", line 1334, in _patroni
+    self.get_secret(APP_SCOPE, USER_PASSWORD_KEY),
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 544, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-database-0/charm/./src/charm.py", line 303, in get_secret
+    return self.peer_relation_data(scope).get_secret(peers.id, secret_key)
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 519, in wrapper
+    return f(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1876, in get_secret
+    and field not in self.current_secret_fields
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1836, in current_secret_fields
+    if content := self._get_group_secret_contents(relation, group):
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2070, in _get_group_secret_contents
+    result = super()._get_group_secret_contents(relation, group, secret_fields)
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1000, in _get_group_secret_contents
+    if (secret := self._get_relation_secret(relation.id, group)) and (
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 506, in wrapper
+    return f(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2059, in _get_relation_secret
+    return self.secrets.get(label, secret_uri, legacy_labels=self._previous_labels())
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 706, in get
+    if secret.meta:
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 605, in meta
+    self._secret_meta = self._model.get_secret(label=label)
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/ops/model.py", line 291, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/ops/model.py", line 3545, in secret_get
+    result = self._run('secret-get', *args, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/ops/model.py", line 3182, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR permission denied
+
+unit-database-0: 01:33:29 ERROR juju.worker.uniter.operation hook "postgresql-pebble-ready" (via hook dispatching script: dispatch) failed: exit status 1
+unit-database-0: 01:33:29 ERROR juju.worker.uniter pebble poll failed for container "postgresql": failed to send pebble-ready event: hook failed
+unit-database-0: 01:51:14 ERROR unit.database/0.juju-log database:21: Invalid extra user roles: test
+unit-database-0: 01:51:14 ERROR unit.database/0.juju-log database:21: invalid role(s) for extra user roles
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-0/charm/src/relations/postgresql_provider.py", line 92, in _on_database_requested
+    self.charm.postgresql.create_user(user, password, extra_user_roles=extra_user_roles)
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 544, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 221, in create_user
+    raise PostgreSQLCreateUserError(INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE)
+charms.postgresql_k8s.v0.postgresql.PostgreSQLCreateUserError: invalid role(s) for extra user roles
+unit-database-0: 01:51:16 ERROR unit.database/0.juju-log database:20: Invalid extra user roles: test
+unit-database-0: 01:51:16 ERROR unit.database/0.juju-log database:20: invalid role(s) for extra user roles
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-0/charm/src/relations/postgresql_provider.py", line 92, in _on_database_requested
+    self.charm.postgresql.create_user(user, password, extra_user_roles=extra_user_roles)
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 544, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 221, in create_user
+    raise PostgreSQLCreateUserError(INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE)
+charms.postgresql_k8s.v0.postgresql.PostgreSQLCreateUserError: invalid role(s) for extra user roles
+application-redis-cache: 01:58:29 ERROR unit.redis-cache/0.juju-log redis:30: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "./src/charm.py", line 159, in <module>
+    main(RedisCharm)
+  File "/var/lib/juju/agents/unit-redis-cache-0/charm/venv/ops/main.py", line 402, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-redis-cache-0/charm/venv/ops/main.py", line 140, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-redis-cache-0/charm/venv/ops/framework.py", line 278, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-redis-cache-0/charm/venv/ops/framework.py", line 722, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-redis-cache-0/charm/venv/ops/framework.py", line 767, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-redis-cache-0/charm/lib/charms/redis_k8s/v0/redis.py", line 91, in _on_relation_changed
+    event.relation.data[self.model.unit]['hostname'] = str(self._bind_address(event))
+  File "/var/lib/juju/agents/unit-redis-cache-0/charm/lib/charms/redis_k8s/v0/redis.py", line 103, in _bind_address
+    return self.app.name
+AttributeError: 'RedisProvides' object has no attribute 'app'
+application-redis-cache: 01:58:29 ERROR juju.worker.caasoperator.uniter.redis-cache/0.operation hook "redis-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...

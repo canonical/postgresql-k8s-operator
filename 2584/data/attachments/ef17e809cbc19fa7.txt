@@ -1,0 +1,23 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:734 Connecting to existing model microk8s-localhost:test on unspecified cloud
+[32mINFO    [0m juju.model:model.py:2097 Deploying ch:amd64/jammy/postgresql-k8s-281
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [executing] unknown: 
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [executing] active: Primary
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:70 waiting for postgresql
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:76 creating db
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:81 get pvc for postgresql-k8s/0
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.0.140:16443/api/v1/namespaces/test/persistentvolumeclaims "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:86 get pv for postgresql-k8s/0
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.0.140:16443/api/v1/persistentvolumes "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:91 get storage id
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:97 scale to 0 with force
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:101 werifing is storage exists
