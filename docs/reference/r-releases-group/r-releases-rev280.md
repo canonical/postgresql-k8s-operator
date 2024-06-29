@@ -1,7 +1,7 @@
 >Reference > Release Notes > [All revisions](/t/11872) > Revision 280/281
-# Revision 280/281 (`14/candidate` only)
+# Revision 280/281
 
-<sub>TODO: DD, MM, YYYY</sub>
+<sub>June 28, 2024</sub>
 
 Dear community,
 
