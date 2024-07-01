@@ -75,7 +75,7 @@ jobs:
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
       architecture: ${{ matrix.architecture }}
       cloud: microk8s
-      microk8s-snap-channel: 1.29-strict/stable  # renovate: latest microk8s
+      microk8s-snap-channel: 1.30-strict/stable  # renovate: latest microk8s
       juju-agent-version: ${{ matrix.juju.agent }}
       libjuju-version-constraint: ${{ matrix.juju.libjuju }}
       _beta_allure_report: ${{ matrix.juju.allure_on_amd64 && matrix.architecture == 'amd64' }}
