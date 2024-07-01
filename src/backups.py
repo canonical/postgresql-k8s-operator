@@ -270,7 +270,7 @@ class PostgreSQLBackups(Object):
         backups = [
             "Storage bucket name: {:s}".format(s3_parameters["bucket"]),
             "Backups base path: {:s}/backup/\n".format(s3_parameters["path"]),
-            "{:<21s} | {:<12s} | {:<10s} | {:<21s} | {:<22s} | {:<22s} | {:<22s} | {:s}".format(
+            "{:<20s} | {:<12s} | {:<8s} | {:<20s} | {:<23s} | {:<20s} | {:<20s} | {:s}".format(
                 "backup-id",
                 "type",
                 "status",
@@ -293,7 +293,7 @@ class PostgreSQLBackups(Object):
             path,
         ) in backup_list:
             backups.append(
-                "{:<21s} | {:<12s} | {:<10s} | {:<21s} | {:<22s} | {:<22s} | {:<22s} | {:s}".format(
+                "{:<20s} | {:<12s} | {:<8s} | {:<20s} | {:<23s} | {:<20s} | {:<20s} | {:s}".format(
                     backup_id,
                     backup_type,
                     backup_status,
@@ -560,6 +560,17 @@ class PostgreSQLBackups(Object):
         backup_type = event.params.get("type", "full")
         if backup_type not in BACKUP_TYPE_OVERRIDES:
             error_message = f"Invalid backup type: {backup_type}. Possible values: {', '.join(BACKUP_TYPE_OVERRIDES.keys())}."
+            logger.error(f"Backup failed: {error_message}")
+            event.fail(error_message)
+            return
+
+        if (
+            backup_type in ["differential", "incremental"]
+            and len(self._list_backups(show_failed=False)) == 0
+        ):
+            error_message = (
+                f"Invalid backup type: {backup_type}. No previous full backup to reference."
+            )
             logger.error(f"Backup failed: {error_message}")
             event.fail(error_message)
             return
