@@ -15,7 +15,7 @@ repository = "https://github.com/canonical/postgresql-k8s-operator"
 python = "^3.10"
 ops = "^2.14.1"
 cryptography = "^42.0.8"
-boto3 = "^1.34.135"
+boto3 = "^1.34.137"
 pgconnstr = "^1.0.1"
 requests = "^2.32.3"
 tenacity = "^8.4.2"
@@ -79,7 +79,7 @@ allure-pytest-collection-report = {git = "https://github.com/canonical/data-plat
 # renovate caret doesn't work: https://github.com/renovatebot/renovate/issues/26940
 juju = "<=3.5.0.0"
 psycopg2-binary = "^2.9.9"
-boto3 = "^1.34.135"
+boto3 = "^1.34.137"
 tenacity = "^8.4.2"
 allure-pytest = "^2.13.5"
 
