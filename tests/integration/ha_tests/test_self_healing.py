@@ -313,21 +313,20 @@ async def test_forceful_restart_without_data_and_transaction_logs(
     await is_cluster_updated(ops_test, primary_name)
 
 
-@pytest.mark.group(2)
+@pytest.mark.group(1)
 @markers.amd64_only
 async def test_network_cut(
     ops_test: OpsTest, continuous_writes, primary_start_timeout, chaos_mesh
 ) -> None:
     """Completely cut and restore network."""
-    await test_build_and_deploy(ops_test)
     # Locate primary unit.
     app = await app_name(ops_test)
+    primary_name = await get_primary(ops_test, app)
 
     # Start an application that continuously writes data to the database.
     await start_continuous_writes(ops_test, app)
 
     # Verify that connection is possible.
-    primary_name = await get_primary(ops_test, app)
     logger.info("checking whether the connectivity to the database is working")
     assert await is_connection_possible(
         ops_test, primary_name
@@ -379,10 +378,9 @@ async def test_network_cut(
     await is_cluster_updated(ops_test, primary_name)
 
 
-@pytest.mark.group(3)
+@pytest.mark.group(1)
 async def test_scaling_to_zero(ops_test: OpsTest, continuous_writes) -> None:
     """Scale the database to zero units and scale up again."""
-    await test_build_and_deploy(ops_test)
     # Locate primary unit.
     app = await app_name(ops_test)
 
