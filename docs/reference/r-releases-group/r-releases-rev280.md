@@ -1,7 +1,7 @@
 >Reference > Release Notes > [All revisions](/t/11872) > Revision 280/281
-# Revision 280/281 (`14/candidate` only)
+# Revision 280/281
 
-<sub>TODO: DD, MM, YYYY</sub>
+<sub>June 28, 2024</sub>
 
 Dear community,
 
@@ -76,6 +76,7 @@ Canonical Data issues are now public on both [Jira](https://warthogs.atlassian.n
 * It is recommended to use this operator together with modern [Charmed PgBouncer K8s operator](https://charmhub.io/pgbouncer-k8s?channel=1/stable)
 * Please check [the external components requirements](https://charmhub.io/postgresql-k8s/docs/r-requirements)
 * Please check [previously posted restrictions](https://charmhub.io/postgresql-k8s/docs/r-releases)  
+* Ensure [the charm requirements](/t/11744) met
 
 ## Contact us
 
