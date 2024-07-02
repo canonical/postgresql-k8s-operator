@@ -109,6 +109,12 @@ class PostgreSQLProvider(Object):
                 f"{self.charm.primary_endpoint}:{DATABASE_PORT}",
             )
 
+            # Set connection string URI.
+            self.database_provides.set_uris(
+                event.relation.id,
+                f"postgresql://{user}:{password}@{self.charm.primary_endpoint}:{DATABASE_PORT}/{database}",
+            )
+
             # Update the read-only endpoint.
             self.update_read_only_endpoint(event)
 
