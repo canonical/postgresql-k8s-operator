@@ -112,6 +112,40 @@ def test_on_async_relation_broken(harness, is_leader, relation_name):
 
 
 @pytest.mark.parametrize("relation_name", RELATION_NAMES)
+def test_on_async_relation_created(harness, relation_name):
+    with (
+        patch(
+            "relations.async_replication.PostgreSQLAsyncReplication._get_highest_promoted_cluster_counter_value",
+            side_effect=["0", "1"],
+        ) as _get_highest_promoted_cluster_counter_value,
+        patch(
+            "relations.async_replication.PostgreSQLAsyncReplication._get_unit_ip",
+            return_value="1.1.1.1",
+        ) as _get_unit_ip,
+    ):
+        # Test in a standby cluster.
+        with harness.hooks_disabled():
+            peer_rel_id = harness.add_relation(PEER, harness.charm.app.name)
+        rel_id = harness.add_relation(relation_name, harness.charm.app.name)
+        assert harness.get_relation_data(rel_id, harness.charm.unit.name) == {
+            "unit-address": "1.1.1.1"
+        }
+        assert harness.get_relation_data(peer_rel_id, harness.charm.unit.name) == {}
+
+        # Test in a primary cluster.
+        with harness.hooks_disabled():
+            harness.update_relation_data(rel_id, harness.charm.unit.name, {"unit-address": ""})
+            harness.remove_relation(rel_id)
+        rel_id = harness.add_relation(relation_name, harness.charm.app.name)
+        assert harness.get_relation_data(rel_id, harness.charm.unit.name) == {
+            "unit-address": "1.1.1.1"
+        }
+        assert harness.get_relation_data(peer_rel_id, harness.charm.unit.name) == {
+            "unit-promoted-cluster-counter": "1"
+        }
+
+
+@pytest.mark.parametrize("relation_name", RELATION_NAMES)
 def test_on_async_relation_departed(harness, relation_name):
     # Test the departing unit.
     with harness.hooks_disabled():
