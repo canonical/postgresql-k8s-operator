@@ -109,3 +109,22 @@ def test_on_async_relation_broken(harness, is_leader, relation_name):
         assert harness.get_relation_data(peer_rel_id, harness.charm.unit.name) == {}
         assert _set_app_status.call_count == (1 if is_leader else 0)
         _update_config.assert_not_called()
+
+
+@pytest.mark.parametrize("relation_name", RELATION_NAMES)
+def test_on_async_relation_departed(harness, relation_name):
+    # Test the departing unit.
+    with harness.hooks_disabled():
+        peer_rel_id = harness.add_relation(PEER, harness.charm.app.name)
+        rel_id = harness.add_relation(relation_name, harness.charm.app.name)
+        harness.add_relation_unit(rel_id, harness.charm.unit.name)
+    harness.remove_relation_unit(rel_id, harness.charm.unit.name)
+    assert harness.get_relation_data(peer_rel_id, harness.charm.unit.name) == {"departing": "True"}
+
+    # Test the non-departing unit.
+    other_unit = f"{harness.charm.app.name}/1"
+    with harness.hooks_disabled():
+        harness.update_relation_data(peer_rel_id, harness.charm.unit.name, {"departing": ""})
+        harness.add_relation_unit(rel_id, other_unit)
+    harness.remove_relation_unit(rel_id, other_unit)
+    assert harness.get_relation_data(peer_rel_id, harness.charm.unit.name) == {}
