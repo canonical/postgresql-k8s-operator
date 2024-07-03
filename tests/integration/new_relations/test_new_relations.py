@@ -115,8 +115,11 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest, databas
             assert password is None
 
     # Get the connection string to connect to the database using the read/write endpoint.
-    connection_string = await build_connection_string(
-        ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME
+    connection_string = get_application_relation_data(
+        ops_test,
+        APPLICATION_APP_NAME,
+        FIRST_DATABASE_RELATION_NAME,
+        "uris",
     )
 
     # Connect to the database using the read/write endpoint.
