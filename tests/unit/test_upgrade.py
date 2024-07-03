@@ -28,6 +28,7 @@ def harness():
         peer_relation_id = harness.add_relation("database-peers", "postgresql-k8s")
         for rel_id in (upgrade_relation_id, peer_relation_id):
             harness.add_relation_unit(rel_id, "postgresql-k8s/1")
+        harness.add_relation("restart", harness.charm.app.name)
         with harness.hooks_disabled():
             harness.update_relation_data(
                 upgrade_relation_id, "postgresql-k8s/1", {"state": "idle"}
@@ -82,12 +83,8 @@ def test_log_rollback(harness):
 
 def test_on_postgresql_pebble_ready(harness):
     with (
-        patch(
-            "charms.data_platform_libs.v0.upgrade.DataUpgrade.set_unit_failed"
-        ) as _set_unit_failed,
-        patch(
-            "charms.data_platform_libs.v0.upgrade.DataUpgrade.set_unit_completed"
-        ) as _set_unit_completed,
+        patch("charm.PostgreSQLUpgrade.set_unit_failed") as _set_unit_failed,
+        patch("charm.PostgreSQLUpgrade.set_unit_completed") as _set_unit_completed,
         patch(
             "charm.Patroni.is_replication_healthy", new_callable=PropertyMock
         ) as _is_replication_healthy,
