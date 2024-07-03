@@ -115,17 +115,9 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest, databas
             assert password is None
 
     # Get the connection string to connect to the database using the read/write endpoint.
-    connection_string = await get_application_relation_data(
-        ops_test,
-        APPLICATION_APP_NAME,
-        FIRST_DATABASE_RELATION_NAME,
-        "uris",
-    )
-    old_conn_str = await build_connection_string(
+    connection_string = await build_connection_string(
         ops_test, APPLICATION_APP_NAME, FIRST_DATABASE_RELATION_NAME
     )
-    print(f"old conn string = {old_conn_str}")
-    print(f"connection_string = {connection_string}")
 
     # Connect to the database using the read/write endpoint.
     with psycopg2.connect(connection_string) as connection, connection.cursor() as cursor:
