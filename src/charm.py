@@ -1068,9 +1068,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         return isinstance(self.unit.status, BlockedStatus)
 
     @property
-    def _has_waiting_status(self) -> bool:
-        """Returns whether the unit is in a waiting state."""
-        return isinstance(self.unit.status, WaitingStatus)
+    def _has_non_restore_waiting_status(self) -> bool:
+        """Returns whether the unit is in a waiting state and there is no restore process ongoing."""
+        return isinstance(self.unit.status, WaitingStatus) and "restoring-backup" not in self.app_peer_data and "restore-to-time" not in self.app_peer_data
 
     def _on_get_password(self, event: ActionEvent) -> None:
         """Returns the password for a user as an action response.
@@ -1251,7 +1251,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("on_update_status early exit: Cannot connect to container")
             return
 
-        if self._has_blocked_status or self._has_waiting_status:
+        if self._has_blocked_status or self._has_non_restore_waiting_status:
             logger.debug("on_update_status early exit: Unit is in Blocked/Waiting status")
             return
 
@@ -1262,16 +1262,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
 
         if "restoring-backup" in self.app_peer_data or "restore-to-time" in self.app_peer_data:
-            if "restore-to-time" in self.app_peer_data and all(self.is_pitr_failed(container)):
-                logger.error(
-                    "Restore failed: database service failed to reach point-in-time-recovery target. "
-                    "You can launch another restore with different parameters"
-                )
-                self.log_pitr_last_transaction_time()
-                self.unit.status = BlockedStatus(CANNOT_RESTORE_PITR)
-                return
-
             if services[0].current != ServiceStatus.ACTIVE:
+                if "restore-to-time" in self.app_peer_data and all(self.is_pitr_failed(container)):
+                    logger.error(
+                        "Restore failed: database service failed to reach point-in-time-recovery target. "
+                        "You can launch another restore with different parameters"
+                    )
+                    self.log_pitr_last_transaction_time()
+                    self.unit.status = BlockedStatus(CANNOT_RESTORE_PITR)
+                    return
+
                 logger.error("Restore failed: database service failed to start")
                 self.unit.status = BlockedStatus("Failed to restore backup")
                 return
@@ -1950,14 +1950,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 - Is patroni service failed to bootstrap cluster.
                 - Is it new fail, that wasn't observed previously.
         """
-        logger.warning("BEFORE LOGS")
-        log_exec = container.pebble.exec(["echo", "logs"])
-        log_exec.wait_output()
-        logger.warning(f"LOGS: {log_exec.stdout}")
-
-        patroni_logs = ""
+        log_exec = container.pebble.exec(["pebble", "logs", "postgresql"], combine_stderr=True)
+        patroni_logs = log_exec.wait_output()[0]
         patroni_exceptions = re.findall(
-            r"^(0-9-:TZ.+) \[postgresql] patroni\.exceptions\.PatroniFatalException: Failed to bootstrap cluster$",
+            r"^([0-9-:TZ.]+) \[postgresql] patroni\.exceptions\.PatroniFatalException: Failed to bootstrap cluster$",
             patroni_logs,
             re.MULTILINE,
         )

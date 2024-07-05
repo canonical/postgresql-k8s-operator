@@ -243,10 +243,12 @@ class PostgreSQLBackups(Object):
         try:
             self.container.exec("rm -r /var/lib/postgresql/data/pgdata".split()).wait_output()
         except ExecError as e:
-            logger.exception(
-                "Failed to empty data directory in prep for backup restore", exc_info=e
-            )
-            raise
+            # If previous PITR restore was unsuccessful, there is no such directory.
+            if "No such file or directory" not in e.stderr:
+                logger.exception(
+                    "Failed to empty data directory in prep for backup restore", exc_info=e
+                )
+                raise
 
     def _change_connectivity_to_database(self, connectivity: bool) -> None:
         """Enable or disable the connectivity to the database."""
@@ -812,11 +814,13 @@ Stderr:
                 namespace=self.charm._namespace,
             )
         except ApiError as e:
-            error_message = f"Failed to remove previous cluster information with error: {str(e)}"
-            logger.error(f"Restore failed: {error_message}")
-            event.fail(error_message)
-            self._restart_database()
-            return
+            # If previous PITR restore was unsuccessful, there are no such endpoints.
+            if "restore-to-time" not in self.charm.app_peer_data:
+                error_message = f"Failed to remove previous cluster information with error: {str(e)}"
+                logger.error(f"Restore failed: {error_message}")
+                event.fail(error_message)
+                self._restart_database()
+                return
 
         logger.info("Removing the contents of the data directory")
         try:
