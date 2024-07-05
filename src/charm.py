@@ -8,6 +8,7 @@ import itertools
 import json
 import logging
 import os
+import re
 import sys
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Tuple, get_args
@@ -57,7 +58,7 @@ from ops.pebble import ChangeError, Layer, PathError, ProtocolError, ServiceStat
 from requests import ConnectionError
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
-from backups import MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET, PostgreSQLBackups
+from backups import CANNOT_RESTORE_PITR, MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET, PostgreSQLBackups
 from config import CharmConfig
 from constants import (
     APP_SCOPE,
@@ -99,6 +100,8 @@ from utils import any_cpu_to_cores, any_memory_to_bytes, new_password
 logger = logging.getLogger(__name__)
 
 EXTENSIONS_DEPENDENCY_MESSAGE = "Unsatisfied plugin dependencies. Please check the logs"
+
+ORIGINAL_PATRONI_ON_FAILURE_CONDITION = "restart"
 
 # http{x,core} clutter the logs with debug messages
 logging.getLogger("httpcore").setLevel(logging.ERROR)
@@ -1258,7 +1261,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("on_update_status early exit: Service has not been added nor started yet")
             return
 
-        if "restoring-backup" in self.app_peer_data:
+        if "restoring-backup" in self.app_peer_data or "restore-to-time" in self.app_peer_data:
+            if "restore-to-time" in self.app_peer_data and all(self.is_pitr_failed(container)):
+                logger.error(
+                    "Restore failed: database service failed to reach point-in-time-recovery target. "
+                    "You can launch another restore with different parameters"
+                )
+                self.log_pitr_last_transaction_time()
+                self.unit.status = BlockedStatus(CANNOT_RESTORE_PITR)
+                return
+
             if services[0].current != ServiceStatus.ACTIVE:
                 logger.error("Restore failed: database service failed to start")
                 self.unit.status = BlockedStatus("Failed to restore backup")
@@ -1275,6 +1287,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 "restore-to-time": "",
             })
             self.update_config()
+            self.restore_patroni_on_failure_condition()
             logger.info("Restore succeeded")
 
             can_use_s3_repository, validation_message = self.backup.can_use_s3_repository()
@@ -1457,6 +1470,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     "summary": "entrypoint of the postgresql + patroni image",
                     "command": f"patroni {self._storage_path}/patroni.yml",
                     "startup": "enabled",
+                    "on-failure": self.unit_peer_data.get(
+                            "patroni-on-failure-condition-override", None
+                    )
+                    or ORIGINAL_PATRONI_ON_FAILURE_CONDITION,
                     "user": WORKLOAD_OS_USER,
                     "group": WORKLOAD_OS_GROUP,
                     "environment": {
@@ -1741,7 +1758,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             )
             self.on[self.restart_manager.name].acquire_lock.emit()
 
-    def _update_pebble_layers(self) -> None:
+    def _update_pebble_layers(self, replan: bool = True) -> None:
         """Update the pebble layers to keep the health check URL up-to-date."""
         container = self.unit.get_container("postgresql")
 
@@ -1756,8 +1773,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             # Changes were made, add the new layer.
             container.add_layer(self._postgresql_service, new_layer, combine=True)
             logging.info("Added updated layer 'postgresql' to Pebble plan")
-            container.replan()
-            logging.info("Restarted postgresql service")
+            if replan:
+                container.replan()
+                logging.info("Restarted postgresql service")
         if current_layer.checks != new_layer.checks:
             # Changes were made, add the new layer.
             container.add_layer(self._postgresql_service, new_layer, combine=True)
@@ -1850,6 +1868,117 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             for relation in self.model.relations.get(relation_name, []):
                 relations.append(relation)
         return relations
+
+    def override_patroni_on_failure_condition(
+        self, new_condition: str, repeat_cause: str | None
+    ) -> bool:
+        """Temporary override Patroni pebble service on-failure condition.
+
+        Executes only on current unit.
+
+        Args:
+            new_condition: new Patroni pebble service on-failure condition.
+            repeat_cause: whether this field is equal to the last success override operation repeat cause, Patroni
+                on-failure condition will be overridden (keeping the original restart condition reference untouched) and
+                success code will be returned. But if this field is distinct from previous repeat cause or None,
+                repeated operation will cause failure code will be returned.
+        """
+        if "patroni-on-failure-condition-override" in self.unit_peer_data:
+            current_condition = self.unit_peer_data["patroni-on-failure-condition-override"]
+            if repeat_cause is None:
+                logger.error(
+                    f"failure trying to override patroni on-failure condition to {new_condition}"
+                    f"as it already overridden from {ORIGINAL_PATRONI_ON_FAILURE_CONDITION} to {current_condition}"
+                )
+                return False
+            previous_repeat_cause = self.unit_peer_data.get(
+                "overridden-patroni-on-failure-condition-repeat-cause", None
+            )
+            if previous_repeat_cause != repeat_cause:
+                logger.error(
+                    f"failure trying to override patroni on-failure condition to {new_condition}"
+                    f"as it already overridden from {ORIGINAL_PATRONI_ON_FAILURE_CONDITION} to {current_condition}"
+                    f"and repeat cause is not equal: {previous_repeat_cause} != {repeat_cause}"
+                )
+                return False
+            self.unit_peer_data["patroni-on-failure-condition-override"] = new_condition
+            self._update_pebble_layers(False)
+            logger.debug(
+                f"Patroni on-failure condition re-overridden to {new_condition} within repeat cause {repeat_cause}"
+                f"(original on-failure condition reference is untouched and is {ORIGINAL_PATRONI_ON_FAILURE_CONDITION})"
+            )
+            return True
+
+        self.unit_peer_data["patroni-on-failure-condition-override"] = new_condition
+        if repeat_cause:
+            self.unit_peer_data["overridden-patroni-on-failure-condition-repeat-cause"] = (
+                repeat_cause
+            )
+        self._update_pebble_layers(False)
+        logger.debug(
+            f"Patroni on-failure condition overridden from {ORIGINAL_PATRONI_ON_FAILURE_CONDITION} to {new_condition}"
+            f"{' with repeat cause ' + repeat_cause if repeat_cause is not None else ''}"
+        )
+        return True
+
+    def restore_patroni_on_failure_condition(self) -> None:
+        """Restore Patroni pebble service original on-failure condition.
+
+        Will do nothing if not overridden. Executes only on current unit.
+        """
+        if "patroni-on-failure-condition-override" in self.unit_peer_data:
+            self.unit_peer_data.update({
+                "patroni-on-failure-condition-override": "",
+                "overridden-patroni-on-failure-condition-repeat-cause": "",
+            })
+            self._update_pebble_layers(False)
+            logger.debug(
+                f"restored Patroni on-failure condition to {ORIGINAL_PATRONI_ON_FAILURE_CONDITION}"
+            )
+        else:
+            logger.warning("not restoring patroni on-failure condition as it's not overridden")
+
+    def is_pitr_failed(self, container: Container) -> Tuple[bool, bool]:
+        """Check if Patroni service failed to bootstrap cluster during point-in-time-recovery.
+
+        Typically, this means that database service failed to reach point-in-time-recovery target or has been
+        supplied with bad PITR parameter. Also, remembers last state and can provide info is it new event, or
+        it belongs to previous action. Executes only on current unit.
+
+        Returns:
+            Tuple[bool, bool]:
+                - Is patroni service failed to bootstrap cluster.
+                - Is it new fail, that wasn't observed previously.
+        """
+        logger.warning("BEFORE LOGS")
+        log_exec = container.pebble.exec(["echo", "logs"])
+        log_exec.wait_output()
+        logger.warning(f"LOGS: {log_exec.stdout}")
+
+        patroni_logs = ""
+        patroni_exceptions = re.findall(
+            r"^(0-9-:TZ.+) \[postgresql] patroni\.exceptions\.PatroniFatalException: Failed to bootstrap cluster$",
+            patroni_logs,
+            re.MULTILINE,
+        )
+        if len(patroni_exceptions) > 0:
+            old_pitr_fail_id = self.unit_peer_data.get("last_pitr_fail_id", None)
+            self.unit_peer_data["last_pitr_fail_id"] = patroni_exceptions[-1]
+            return True, patroni_exceptions[-1] != old_pitr_fail_id
+        return False, False
+
+    def log_pitr_last_transaction_time(self) -> None:
+        """Log to user last completed transaction time acquired from postgresql logs."""
+        postgresql_logs = self._patroni.last_postgresql_logs()
+        log_time = re.findall(
+            r"last completed transaction was at log time (.*)$",
+            postgresql_logs,
+            re.MULTILINE,
+        )
+        if len(log_time) > 0:
+            logger.info(f"Last completed transaction was at {log_time[-1]}")
+        else:
+            logger.error("Can't tell last completed transaction time")
 
 
 if __name__ == "__main__":

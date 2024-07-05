@@ -774,6 +774,17 @@ Stderr:
 
         self.charm.unit.status = MaintenanceStatus("restoring backup")
 
+        # Temporarily disabling patroni (postgresql) pebble service auto-restart on failures. This is required
+        # as point-in-time-recovery can fail on restore, therefore during cluster bootstrapping process. In this
+        # case, we need be able to check patroni service status and logs. Disabling auto-restart feature is essential
+        # to prevent wrong status indicated and logs reading race condition (as logs cleared / moved with service
+        # restarts).
+        if not self.charm.override_patroni_on_failure_condition("ignore", "restore-backup"):
+            error_message = "Failed to override Patroni on-failure condition"
+            logger.error(f"Restore failed: {error_message}")
+            event.fail(error_message)
+            return
+
         # Stop the database service before performing the restore.
         logger.info("Stopping database service")
         try:
