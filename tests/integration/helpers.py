@@ -101,6 +101,7 @@ async def build_and_deploy(
             status=status,
             raise_on_blocked=True,
             timeout=1000,
+            check_freq=3,
             wait_for_exact_units=num_units,
         )
 
