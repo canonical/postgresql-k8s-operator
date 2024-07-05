@@ -66,12 +66,12 @@ class PostgreSQLAsyncReplication(Object):
         super().__init__(charm, "postgresql")
         self.charm = charm
         self.framework.observe(
-            self.charm.on[REPLICATION_OFFER_RELATION].relation_joined,
-            self._on_async_relation_joined,
+            self.charm.on[REPLICATION_OFFER_RELATION].relation_created,
+            self._on_async_relation_created,
         )
         self.framework.observe(
-            self.charm.on[REPLICATION_CONSUMER_RELATION].relation_joined,
-            self._on_async_relation_joined,
+            self.charm.on[REPLICATION_CONSUMER_RELATION].relation_created,
+            self._on_async_relation_created,
         )
         self.framework.observe(
             self.charm.on[REPLICATION_OFFER_RELATION].relation_changed,
@@ -468,7 +468,7 @@ class PostgreSQLAsyncReplication(Object):
         return self.charm.app == self._get_primary_cluster()
 
     def _on_async_relation_broken(self, _) -> None:
-        if "departing" in self.charm._peers.data[self.charm.unit]:
+        if self.charm._peers is None or "departing" in self.charm._peers.data[self.charm.unit]:
             logger.debug("Early exit on_async_relation_broken: Skipping departing unit.")
             return
 
@@ -526,19 +526,21 @@ class PostgreSQLAsyncReplication(Object):
         if self._wait_for_standby_leader(event):
             return
 
+        if (
+            not self.container.can_connect()
+            or len(self.container.pebble.get_services(names=[self.charm._postgresql_service])) == 0
+        ):
+            logger.debug("Early exit on_async_relation_changed: container hasn't started yet.")
+            event.defer()
+            return
+
         # Update the asynchronous replication configuration and start the database.
         self.charm.update_config()
         self.container.start(self.charm._postgresql_service)
 
         self._handle_database_start(event)
 
-    def _on_async_relation_departed(self, event: RelationDepartedEvent) -> None:
-        """Set a flag to avoid setting a wrong status message on relation broken event handler."""
-        # This is needed because of https://bugs.launchpad.net/juju/+bug/1979811.
-        if event.departing_unit == self.charm.unit:
-            self.charm._peers.data[self.charm.unit].update({"departing": "True"})
-
-    def _on_async_relation_joined(self, _) -> None:
+    def _on_async_relation_created(self, _) -> None:
         """Publish this unit address in the relation data."""
         self._relation.data[self.charm.unit].update({"unit-address": self._get_unit_ip()})
 
@@ -548,6 +550,12 @@ class PostgreSQLAsyncReplication(Object):
             self.charm._peers.data[self.charm.unit].update({
                 "unit-promoted-cluster-counter": highest_promoted_cluster_counter
             })
+
+    def _on_async_relation_departed(self, event: RelationDepartedEvent) -> None:
+        """Set a flag to avoid setting a wrong status message on relation broken event handler."""
+        # This is needed because of https://bugs.launchpad.net/juju/+bug/1979811.
+        if event.departing_unit == self.charm.unit:
+            self.charm._peers.data[self.charm.unit].update({"departing": "True"})
 
     def _on_create_replication(self, event: ActionEvent) -> None:
         """Set up asynchronous replication between two clusters."""

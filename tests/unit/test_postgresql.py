@@ -4,7 +4,10 @@ from unittest.mock import call, patch
 
 import psycopg2
 import pytest
-from charms.postgresql_k8s.v0.postgresql import PostgreSQLCreateDatabaseError
+from charms.postgresql_k8s.v0.postgresql import (
+    PostgreSQLCreateDatabaseError,
+    PostgreSQLGetLastArchivedWALError,
+)
 from ops.testing import Harness
 from psycopg2.sql import SQL, Composed, Identifier
 
@@ -230,6 +233,29 @@ def test_generate_database_privileges_statements(harness):
             SQL(";"),
         ]),
     ]
+
+
+def test_get_last_archived_wal(harness):
+    with patch(
+        "charms.postgresql_k8s.v0.postgresql.PostgreSQL._connect_to_database"
+    ) as _connect_to_database:
+        # Test a successful call.
+        execute = _connect_to_database.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value.execute
+        _connect_to_database.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value.fetchone.return_value = (
+            "000000010000000100000001",
+        )
+        assert harness.charm.postgresql.get_last_archived_wal() == "000000010000000100000001"
+        execute.assert_called_once_with("SELECT last_archived_wal FROM pg_stat_archiver;")
+
+        # Test a failed call.
+        execute.reset_mock()
+        execute.side_effect = psycopg2.Error
+        try:
+            harness.charm.postgresql.get_last_archived_wal()
+            assert False
+        except PostgreSQLGetLastArchivedWALError:
+            pass
+        execute.assert_called_once_with("SELECT last_archived_wal FROM pg_stat_archiver;")
 
 
 def test_build_postgresql_parameters(harness):

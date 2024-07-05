@@ -1,6 +1,11 @@
 # How to deploy on MicroK8s
 
-[MicroK8s](https://microk8s.io/docs) is a lightweight Kubernetes engine created by Canonical. 
+This guide goes shows you how to deploy Charmed PostgreSQL on [MicroK8s](https://microk8s.io/docs), Canonical's lightweight Kubernetes engine.
+
+## Prerequisites
+* Charmed PostgreSQL K8s Revision 73+
+* Canonical MicroK8s 1.27+
+* Fulfill the general [system requirements](/t/11744)
 
 ## Summary
 * [MicroK8s on Multipass](#heading--multipass)

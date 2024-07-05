@@ -15,8 +15,8 @@ This Charmed PostgreSQL K8s tutorial has the following parts:
 | Step | Details |
 | ------- | ---------- |
 | 1. [**Set up the environment**](/t/9297) | Set up a cloud environment for your deployment using [Multipass](https://multipass.run/) with [MicroK8s](https://microk8s.io/) and [Juju](https://juju.is/).
-| 2. [**Deploy PostgreSQL**](/t/9298) |    Learn to deploy Charmed PostgreSQL K8s using a single command and access the database directly.
-| 3. [**Access PostgreSQL**](/t/13702) |   Learn how to access a PostgreSQL instance directly
+| 2. [**Deploy PostgreSQL**](/t/9298) |    Learn to deploy Charmed PostgreSQL K8s with Juju.
+| 3. [**Access PostgreSQL**](/t/13702) |   Access a PostgreSQL instance directly
 | 4. [**Scale the amount of replicas**](/t/9299) | Learn how to enable high availability with a [Patroni](https://patroni.readthedocs.io/en/latest/)-based cluster.
 | 5. [**Manage passwords**](/t/9300) | Learn how to request and change passwords.
 | 6. [**Integrate PostgreSQL with other applications**](/t/9301) | Learn how to integrate with other applications using the Data Integrator charm, access the database from a client application, and manage users.

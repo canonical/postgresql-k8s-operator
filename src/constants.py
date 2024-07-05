@@ -41,6 +41,9 @@ UNIT_SCOPE = "unit"
 SECRET_KEY_OVERRIDES = {"ca": "cauth"}
 BACKUP_TYPE_OVERRIDES = {"full": "full", "differential": "diff", "incremental": "incr"}
 
+TRACING_RELATION_NAME = "tracing"
+TRACING_PROTOCOL = "otlp_http"
+
 DATABASE = "database"
 LEGACY_DB = "db"
 LEGACY_DB_ADMIN = "db-admin"

@@ -37,4 +37,10 @@ The charm is based on the [charmed-postgresql snap](https://snapcraft.io/charmed
 
 The charm is based on the [ROCK OCI](https://github.com/canonical/charmed-postgresql-rock) named [`charmed-postgresql`](https://github.com/canonical/charmed-postgresql-rock/pkgs/container/charmed-postgresql).
 
-[Contact us](https://chat.charmhub.io/charmhub/channels/data-platform) if you are interested in new architecture!
+[Contact us](/t/11852) if you are interested in new architecture!
+
+## Networking
+
+At the moment IPv4 is supported only (see more [info](https://warthogs.atlassian.net/browse/DPE-4695)).
+
+[Contact us](/t/11852) if you are interested in IPv6!
