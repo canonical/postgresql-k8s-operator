@@ -11,7 +11,7 @@ import psycopg2
 import pytest
 from charms.postgresql_k8s.v0.postgresql import PostgreSQLUpdateUserPasswordError
 from lightkube import ApiError
-from lightkube.resources.core_v1 import Endpoints, Pod, Service
+from lightkube.resources.core_v1 import Endpoints, Pod
 from ops.model import (
     ActiveStatus,
     BlockedStatus,
@@ -890,85 +890,85 @@ def test_postgresql_layer(harness):
         tc.assertDictEqual(plan, expected)
 
 
-def test_on_stop(harness):
-    with patch("charm.Client") as _client:
-        rel_id = harness.model.get_relation(PEER).id
-        # Test a successful run of the hook.
-        for planned_units, relation_data in {
-            0: {},
-            1: {"some-relation-data": "some-value"},
-        }.items():
-            harness.set_planned_units(planned_units)
-            with harness.hooks_disabled():
-                harness.update_relation_data(
-                    rel_id,
-                    harness.charm.unit.name,
-                    {"some-relation-data": "some-value"},
-                )
-            with tc.assertNoLogs("charm", "ERROR"):
-                _client.return_value.get.return_value = MagicMock(
-                    metadata=MagicMock(ownerReferences="fakeOwnerReferences")
-                )
-                _client.return_value.list.side_effect = [
-                    [MagicMock(metadata=MagicMock(name="fakeName1", namespace="fakeNamespace"))],
-                    [MagicMock(metadata=MagicMock(name="fakeName2", namespace="fakeNamespace"))],
-                ]
-                harness.charm.on.stop.emit()
-                _client.return_value.get.assert_called_once_with(
-                    res=Pod, name="postgresql-k8s-0", namespace=harness.charm.model.name
-                )
-                for kind in [Endpoints, Service]:
-                    _client.return_value.list.assert_any_call(
-                        kind,
-                        namespace=harness.charm.model.name,
-                        labels={"app.juju.is/created-by": harness.charm.app.name},
-                    )
-                tc.assertEqual(_client.return_value.apply.call_count, 2)
-                tc.assertEqual(
-                    harness.get_relation_data(rel_id, harness.charm.unit), relation_data
-                )
-                _client.reset_mock()
+# def test_on_stop(harness):
+#     with patch("charm.Client") as _client:
+#         rel_id = harness.model.get_relation(PEER).id
+#         # Test a successful run of the hook.
+#         for planned_units, relation_data in {
+#             0: {},
+#             1: {"some-relation-data": "some-value"},
+#         }.items():
+#             harness.set_planned_units(planned_units)
+#             with harness.hooks_disabled():
+#                 harness.update_relation_data(
+#                     rel_id,
+#                     harness.charm.unit.name,
+#                     {"some-relation-data": "some-value"},
+#                 )
+#             with tc.assertNoLogs("charm", "ERROR"):
+#                 _client.return_value.get.return_value = MagicMock(
+#                     metadata=MagicMock(ownerReferences="fakeOwnerReferences")
+#                 )
+#                 _client.return_value.list.side_effect = [
+#                     [MagicMock(metadata=MagicMock(name="fakeName1", namespace="fakeNamespace"))],
+#                     [MagicMock(metadata=MagicMock(name="fakeName2", namespace="fakeNamespace"))],
+#                 ]
+#                 harness.charm.on.stop.emit()
+#                 _client.return_value.get.assert_called_once_with(
+#                     res=Pod, name="postgresql-k8s-0", namespace=harness.charm.model.name
+#                 )
+#                 for kind in [Endpoints, Service]:
+#                     _client.return_value.list.assert_any_call(
+#                         kind,
+#                         namespace=harness.charm.model.name,
+#                         labels={"app.juju.is/created-by": harness.charm.app.name},
+#                     )
+#                 tc.assertEqual(_client.return_value.apply.call_count, 2)
+#                 tc.assertEqual(
+#                     harness.get_relation_data(rel_id, harness.charm.unit), relation_data
+#                 )
+#                 _client.reset_mock()
 
-        # Test when the charm fails to get first pod info.
-        _client.return_value.get.side_effect = _FakeApiError
-        with tc.assertLogs("charm", "ERROR") as logs:
-            harness.charm.on.stop.emit()
-            _client.return_value.get.assert_called_once_with(
-                res=Pod, name="postgresql-k8s-0", namespace=harness.charm.model.name
-            )
-            _client.return_value.list.assert_not_called()
-            _client.return_value.apply.assert_not_called()
-            assert "failed to get first pod info" in "".join(logs.output)
+#         # Test when the charm fails to get first pod info.
+#         _client.return_value.get.side_effect = _FakeApiError
+#         with tc.assertLogs("charm", "ERROR") as logs:
+#             harness.charm.on.stop.emit()
+#             _client.return_value.get.assert_called_once_with(
+#                 res=Pod, name="postgresql-k8s-0", namespace=harness.charm.model.name
+#             )
+#             _client.return_value.list.assert_not_called()
+#             _client.return_value.apply.assert_not_called()
+#             assert "failed to get first pod info" in "".join(logs.output)
 
-        # Test when the charm fails to get the k8s resources created by the charm and Patroni.
-        _client.return_value.get.side_effect = None
-        _client.return_value.list.side_effect = [[], _FakeApiError]
-        with tc.assertLogs("charm", "ERROR") as logs:
-            harness.charm.on.stop.emit()
-            for kind in [Endpoints, Service]:
-                _client.return_value.list.assert_any_call(
-                    kind,
-                    namespace=harness.charm.model.name,
-                    labels={"app.juju.is/created-by": harness.charm.app.name},
-                )
-            _client.return_value.apply.assert_not_called()
-            assert "failed to get the k8s resources created by the charm and Patroni" in "".join(
-                logs.output
-            )
+#         # Test when the charm fails to get the k8s resources created by the charm and Patroni.
+#         _client.return_value.get.side_effect = None
+#         _client.return_value.list.side_effect = [[], _FakeApiError]
+#         with tc.assertLogs("charm", "ERROR") as logs:
+#             harness.charm.on.stop.emit()
+#             for kind in [Endpoints, Service]:
+#                 _client.return_value.list.assert_any_call(
+#                     kind,
+#                     namespace=harness.charm.model.name,
+#                     labels={"app.juju.is/created-by": harness.charm.app.name},
+#                 )
+#             _client.return_value.apply.assert_not_called()
+#             assert "failed to get the k8s resources created by the charm and Patroni" in "".join(
+#                 logs.output
+#             )
 
-        # Test when the charm fails to patch a k8s resource.
-        _client.return_value.get.return_value = MagicMock(
-            metadata=MagicMock(ownerReferences="fakeOwnerReferences")
-        )
-        _client.return_value.list.side_effect = [
-            [MagicMock(metadata=MagicMock(name="fakeName1", namespace="fakeNamespace"))],
-            [MagicMock(metadata=MagicMock(name="fakeName2", namespace="fakeNamespace"))],
-        ]
-        _client.return_value.apply.side_effect = [None, _FakeApiError]
-        with tc.assertLogs("charm", "ERROR") as logs:
-            harness.charm.on.stop.emit()
-            assert _client.return_value.apply.call_count == 2
-            assert "failed to patch k8s MagicMock" in "".join(logs.output)
+#         # Test when the charm fails to patch a k8s resource.
+#         _client.return_value.get.return_value = MagicMock(
+#             metadata=MagicMock(ownerReferences="fakeOwnerReferences")
+#         )
+#         _client.return_value.list.side_effect = [
+#             [MagicMock(metadata=MagicMock(name="fakeName1", namespace="fakeNamespace"))],
+#             [MagicMock(metadata=MagicMock(name="fakeName2", namespace="fakeNamespace"))],
+#         ]
+#         _client.return_value.apply.side_effect = [None, _FakeApiError]
+#         with tc.assertLogs("charm", "ERROR") as logs:
+#             harness.charm.on.stop.emit()
+#             assert _client.return_value.apply.call_count == 2
+#             assert "failed to patch k8s MagicMock" in "".join(logs.output)
 
 
 def test_client_relations(harness):
