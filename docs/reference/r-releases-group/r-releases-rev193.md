@@ -44,6 +44,7 @@ Canonical Data issues are now public on both [Jira](https://warthogs.atlassian.n
 * It is recommended to use this operator together with modern [Charmed PgBouncer operator](https://charmhub.io/pgbouncer-k8s?channel=1/stable)
 * Please check [the external components requirements](/t/11744)
 * Please check [the previously posted restrictions](/t/11872)
+* Ensure [the charm requirements](/t/11744) met
 
 ## Contact us
 
