@@ -55,7 +55,7 @@ from ops.model import (
 )
 from ops.pebble import ChangeError, Layer, PathError, ProtocolError, ServiceStatus
 from requests import ConnectionError
-from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
+from tenacity import RetryError, Retrying, retry, stop_after_attempt, stop_after_delay, wait_fixed
 
 from backups import PostgreSQLBackups
 from config import CharmConfig
@@ -1160,6 +1160,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         except RetryError as e:
             logger.error(f"failed to get primary with error {e}")
 
+    @retry(stop=stop_after_delay(15), wait=wait_fixed(3), reraise=True)
     def _on_stop(self, _):
         # Remove data from the drive when scaling down to zero to prevent
         # the cluster from getting stuck when scaling back up.
@@ -1168,35 +1169,22 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         # Patch the services to remove them when the StatefulSet is deleted
         # (i.e. application is removed).
-        try:
-            client = Client(field_manager=self.model.app.name)
-
-            pod0 = client.get(
-                res=Pod,
-                name=f"{self.app.name}-0",
-                namespace=self.model.name,
-            )
-        except ApiError:
-            # Only log the exception.
-            logger.exception("failed to get first pod info")
-            return
-
-        try:
-            # Get the k8s resources created by the charm and Patroni.
-            resources_to_patch = []
-            for kind in [Endpoints, Service]:
-                resources_to_patch.extend(
-                    client.list(
-                        kind,
-                        namespace=self._namespace,
-                        labels={"app.juju.is/created-by": f"{self._name}"},
-                    )
+        client = Client(field_manager=self.model.app.name)
+        pod0 = client.get(
+            res=Pod,
+            name=f"{self.app.name}-0",
+            namespace=self.model.name,
+        )
+        # Get the k8s resources created by the charm and Patroni.
+        resources_to_patch = []
+        for kind in [Endpoints, Service]:
+            resources_to_patch.extend(
+                client.list(
+                    kind,
+                    namespace=self._namespace,
+                    labels={"app.juju.is/created-by": f"{self._name}"},
                 )
-        except ApiError:
-            # Only log the exception.
-            logger.exception("failed to get the k8s resources created by the charm and Patroni")
-            return
-
+            )
         for resource in resources_to_patch:
             # Ignore resources created by Juju or the charm
             # (which are already patched).
@@ -1212,20 +1200,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             ) or resource.metadata.ownerReferences == pod0.metadata.ownerReferences:
                 continue
             # Patch the resource.
-            try:
-                resource.metadata.ownerReferences = pod0.metadata.ownerReferences
-                resource.metadata.managedFields = None
-                client.apply(
-                    obj=resource,
-                    name=resource.metadata.name,
-                    namespace=resource.metadata.namespace,
-                    force=True,
-                )
-            except ApiError:
-                # Only log the exception.
-                logger.exception(
-                    f"failed to patch k8s {type(resource).__name__} {resource.metadata.name}"
-                )
+            resource.metadata.ownerReferences = pod0.metadata.ownerReferences
+            resource.metadata.managedFields = None
+            client.apply(
+                obj=resource,
+                name=resource.metadata.name,
+                namespace=resource.metadata.namespace,
+                force=True,
+            )
 
     def _on_update_status(self, _) -> None:
         """Update the unit status message."""

@@ -37,7 +37,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 30
+LIBPATCH = 31
 
 INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE = "invalid role(s) for extra user roles"
 
@@ -129,7 +129,7 @@ class PostgreSQL:
              psycopg2 connection object.
         """
         host = database_host if database_host is not None else self.primary_host
-        for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3), reraise=True):
+        for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(3), reraise=True):
             with attempt:
                 connection = psycopg2.connect(
                     f"dbname='{database if database else self.database}' user='{self.user}' host='{host}'"
