@@ -816,7 +816,9 @@ Stderr:
         except ApiError as e:
             # If previous PITR restore was unsuccessful, there are no such endpoints.
             if "restore-to-time" not in self.charm.app_peer_data:
-                error_message = f"Failed to remove previous cluster information with error: {str(e)}"
+                error_message = (
+                    f"Failed to remove previous cluster information with error: {str(e)}"
+                )
                 logger.error(f"Restore failed: {error_message}")
                 event.fail(error_message)
                 self._restart_database()

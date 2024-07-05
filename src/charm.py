@@ -54,7 +54,7 @@ from ops.model import (
     UnknownStatus,
     WaitingStatus,
 )
-from ops.pebble import ChangeError, Layer, PathError, ProtocolError, ServiceStatus
+from ops.pebble import ChangeError, Layer, PathError, ProtocolError, ServiceInfo, ServiceStatus
 from requests import ConnectionError
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
@@ -1070,7 +1070,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @property
     def _has_non_restore_waiting_status(self) -> bool:
         """Returns whether the unit is in a waiting state and there is no restore process ongoing."""
-        return isinstance(self.unit.status, WaitingStatus) and "restoring-backup" not in self.app_peer_data and "restore-to-time" not in self.app_peer_data
+        return (
+            isinstance(self.unit.status, WaitingStatus)
+            and "restoring-backup" not in self.app_peer_data
+            and "restore-to-time" not in self.app_peer_data
+        )
 
     def _on_get_password(self, event: ActionEvent) -> None:
         """Returns the password for a user as an action response.
@@ -1261,6 +1265,20 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("on_update_status early exit: Service has not been added nor started yet")
             return
 
+        if self._update_status_restore_checks(container, services):
+            return
+
+        if self._handle_processes_failures():
+            return
+
+        # Update the sync-standby endpoint in the async replication data.
+        self.async_replication.update_async_replication_data()
+
+        self._set_active_status()
+
+    def _update_status_restore_checks(
+        self, container: Container, services: list[ServiceInfo]
+    ) -> bool:
         if "restoring-backup" in self.app_peer_data or "restore-to-time" in self.app_peer_data:
             if services[0].current != ServiceStatus.ACTIVE:
                 if "restore-to-time" in self.app_peer_data and all(self.is_pitr_failed(container)):
@@ -1270,15 +1288,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     )
                     self.log_pitr_last_transaction_time()
                     self.unit.status = BlockedStatus(CANNOT_RESTORE_PITR)
-                    return
+                    return True
 
                 logger.error("Restore failed: database service failed to start")
                 self.unit.status = BlockedStatus("Failed to restore backup")
-                return
+                return True
 
             if not self._patroni.member_started:
                 logger.debug("on_update_status early exit: Patroni has not started yet")
-                return
+                return True
 
             # Remove the restoring backup flag and the restore stanza name.
             self.app_peer_data.update({
@@ -1293,15 +1311,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             can_use_s3_repository, validation_message = self.backup.can_use_s3_repository()
             if not can_use_s3_repository:
                 self.unit.status = BlockedStatus(validation_message)
-                return
+                return True
 
-        if self._handle_processes_failures():
-            return
-
-        # Update the sync-standby endpoint in the async replication data.
-        self.async_replication.update_async_replication_data()
-
-        self._set_active_status()
+        return False
 
     def _handle_processes_failures(self) -> bool:
         """Handle Patroni and PostgreSQL OS processes failures.
@@ -1471,7 +1483,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     "command": f"patroni {self._storage_path}/patroni.yml",
                     "startup": "enabled",
                     "on-failure": self.unit_peer_data.get(
-                            "patroni-on-failure-condition-override", None
+                        "patroni-on-failure-condition-override", None
                     )
                     or ORIGINAL_PATRONI_ON_FAILURE_CONDITION,
                     "user": WORKLOAD_OS_USER,
