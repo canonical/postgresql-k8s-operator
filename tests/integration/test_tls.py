@@ -166,11 +166,6 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
             with attempt:
                 await check_tls_rewind(ops_test)
 
-        # Await for postgresql to be stable if not already
-        await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME], status="active", idle_period=15
-        )
-
         # Deploy and check Mattermost user and database existence.
         relation_id = await deploy_and_relate_application_with_postgresql(
             ops_test, "mattermost-k8s", MATTERMOST_APP_NAME, APPLICATION_UNITS, status="waiting"
