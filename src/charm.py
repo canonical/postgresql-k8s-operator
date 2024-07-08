@@ -1023,6 +1023,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 name=service.metadata.name,
                 namespace=service.metadata.namespace,
                 field_manager=self.model.app.name,
+                force=True,
             )
 
     def _cleanup_old_cluster_resources(self) -> None:
@@ -1224,6 +1225,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     obj=res,
                     name=res.metadata.name,
                     namespace=res.metadata.namespace,
+                    force=True,
                 )
             except ApiError:
                 # Only log the exception.
@@ -1497,6 +1499,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             container = self.unit.get_container("postgresql")
 
         key, ca, cert = self.tls.get_tls_files()
+        if all(file is None for file in (key, ca, cert)):
+            return True
 
         if key is not None:
             container.push(
