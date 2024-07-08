@@ -1022,7 +1022,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 obj=service,
                 name=service.metadata.name,
                 namespace=service.metadata.namespace,
-                force=True,
                 field_manager=self.model.app.name,
             )
 
@@ -1160,21 +1159,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         except RetryError as e:
             logger.error(f"failed to get primary with error {e}")
 
-    def _fetch_resource_by_name(self, client, name, namespace):
-        resource = None
-        try:
-            resource = client.get(Endpoints, name=name, namespace=namespace)
-        except ApiError as e:
-            if e.status_code != 404:
-                raise
-        if not resource:
-            try:
-                resource = client.get(Service, name=name, namespace=namespace)
-            except ApiError as e:
-                if e.status_code != 404:
-                    raise
-        return resource
-
     def _on_stop(self, _):
         # Remove data from the drive when scaling down to zero to prevent
         # the cluster from getting stuck when scaling back up.
@@ -1229,8 +1213,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             # Patch the resource.
             try:
                 # re-fetch the service from the client to avoid 409 error conflicts
-                res = self._fetch_resource_by_name(
-                    client, resource.metadata.name, resource.metadata.namespace
+                res = client.get(
+                    type(resource),
+                    name=resource.metadata.name,
+                    namespace=resource.metadata.namespace,
                 )
                 res.metadata.ownerReferences = pod0.metadata.ownerReferences
                 res.metadata.managedFields = None
@@ -1238,7 +1224,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     obj=res,
                     name=res.metadata.name,
                     namespace=res.metadata.namespace,
-                    force=True,
                 )
             except ApiError:
                 # Only log the exception.
