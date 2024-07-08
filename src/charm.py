@@ -1499,8 +1499,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             container = self.unit.get_container("postgresql")
 
         key, ca, cert = self.tls.get_tls_files()
-        if all(file is None for file in (key, ca, cert)):
-            return True
 
         if key is not None:
             container.push(
