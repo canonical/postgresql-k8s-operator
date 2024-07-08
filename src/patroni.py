@@ -4,7 +4,6 @@
 
 """Helper class used to manage interactions with Patroni API and configuration files."""
 
-import glob
 import logging
 import os
 import pwd
@@ -25,7 +24,7 @@ from tenacity import (
     wait_fixed,
 )
 
-from constants import POSTGRESQL_LOGS_GLOB, REWIND_USER, TLS_CA_FILE
+from constants import POSTGRESQL_LOGS_PATH, POSTGRESQL_LOGS_PATTERN, REWIND_USER, TLS_CA_FILE
 
 RUNNING_STATES = ["running", "streaming"]
 
@@ -466,19 +465,23 @@ class Patroni:
         requests.post(f"{self._patroni_url}/reload", verify=self._verify)
 
     def last_postgresql_logs(self) -> str:
-        """Get last log file content of Postgresql service.
+        """Get last log file content of Postgresql service in the container.
 
         If there is no available log files, empty line will be returned.
 
         Returns:
             Content of last log file of Postgresql service.
         """
-        log_files = glob.glob(POSTGRESQL_LOGS_GLOB)
+        container = self._charm.unit.get_container("postgresql")
+        if not container.can_connect():
+            logger.debug("Cannot get last PostgreSQL log from Rock. Container inaccessible")
+            return ""
+        log_files = container.list_files(POSTGRESQL_LOGS_PATH, pattern=POSTGRESQL_LOGS_PATTERN)
         if len(log_files) == 0:
             return ""
-        log_files.sort(reverse=True)
+        log_files.sort(key=lambda f: f.path, reverse=True)
         try:
-            with open(log_files[0], "r") as last_log_file:
+            with container.pull(log_files[0].path) as last_log_file:
                 return last_log_file.read()
         except OSError as e:
             error_message = "Failed to read last postgresql log file"
