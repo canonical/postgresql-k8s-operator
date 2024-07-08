@@ -378,9 +378,12 @@ async def test_network_cut(
     await is_cluster_updated(ops_test, primary_name)
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(2)
 async def test_scaling_to_zero(ops_test: OpsTest, continuous_writes) -> None:
     """Scale the database to zero units and scale up again."""
+    # Deploy applications
+    test_build_and_deploy(ops_test)
+
     # Locate primary unit.
     app = await app_name(ops_test)
 

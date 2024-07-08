@@ -1213,12 +1213,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 continue
             # Patch the resource.
             try:
-                resource.metadata.ownerReferences = pod0.metadata.ownerReferences
-                resource.metadata.managedFields = None
+                # re-fetch the service from the client to avoid 409 error conflicts
+                res = client.get(
+                    Service, name=resource.metadata.name, namespace=resource.metadata.namespace
+                )
+                res.metadata.ownerReferences = pod0.metadata.ownerReferences
+                res.metadata.managedFields = None
                 client.apply(
-                    obj=resource,
-                    name=resource.metadata.name,
-                    namespace=resource.metadata.namespace,
+                    obj=res,
+                    name=res.metadata.name,
+                    namespace=res.metadata.namespace,
                     force=True,
                 )
             except ApiError:
