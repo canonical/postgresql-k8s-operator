@@ -264,7 +264,7 @@ class Patroni:
             Return whether the primary endpoint is redirecting connections to the primary pod.
         """
         try:
-            for attempt in Retrying(stop=stop_after_delay(90), wait=wait_fixed(3)):
+            for attempt in Retrying(stop=stop_after_delay(5), wait=wait_fixed(1)):
                 with attempt:
                     r = requests.get(
                         f"{'https' if self._tls_enabled else 'http'}://{self._primary_endpoint}:8008/health",
@@ -306,7 +306,7 @@ class Patroni:
             allow server time to start up.
         """
         try:
-            for attempt in Retrying(stop=stop_after_delay(90), wait=wait_fixed(3)):
+            for attempt in Retrying(stop=stop_after_delay(5), wait=wait_fixed(1)):
                 with attempt:
                     r = requests.get(f"{self._patroni_url}/health", verify=self._verify)
         except RetryError:
