@@ -914,7 +914,7 @@ def test_on_stop(harness):
                     [MagicMock(metadata=MagicMock(name="fakeName2", namespace="fakeNamespace"))],
                 ]
                 harness.charm.on.stop.emit()
-                _client.return_value.get.assert_any_call(
+                _client.return_value.get.assert_called_once_with(
                     res=Pod, name="postgresql-k8s-0", namespace=harness.charm.model.name
                 )
                 for kind in [Endpoints, Service]:
