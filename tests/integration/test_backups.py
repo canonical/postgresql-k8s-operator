@@ -157,7 +157,7 @@ async def test_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -
 
         old_primary = await get_primary(ops_test, database_app_name)
         logger.info(f"performing a switchover from {old_primary} to {new_unit_name}")
-        switchover(ops_test, old_primary, new_unit_name)
+        await switchover(ops_test, old_primary, new_unit_name)
 
         logger.info("checking that the primary unit has changed")
         primary = await get_primary(ops_test, database_app_name)
