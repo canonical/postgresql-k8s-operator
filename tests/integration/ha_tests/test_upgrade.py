@@ -222,6 +222,10 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
             apps=[DATABASE_APP_NAME], idle_period=30, timeout=TIMEOUT
         )
 
+    # Check whether writes are increasing.
+    logger.info("checking whether writes are increasing")
+    await are_writes_increasing(ops_test)
+
     logger.info("Resume upgrade")
     action = await leader_unit.run_action("resume-upgrade")
     await action.wait()

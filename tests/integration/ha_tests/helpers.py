@@ -430,12 +430,16 @@ async def get_instances_roles(ops_test: OpsTest):
     client = Client()
     app = await app_name(ops_test)
     for unit in ops_test.model.applications[app].units:
-        pod = client.get(
-            res=Pod,
-            name=unit.name.replace("/", "-"),
-            namespace=ops_test.model.info.name,
-        )
-        labels[unit.name] = pod.metadata.labels["role"]
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(5)):
+            with attempt:
+                pod = client.get(
+                    res=Pod,
+                    name=unit.name.replace("/", "-"),
+                    namespace=ops_test.model.info.name,
+                )
+                if "role" not in pod.metadata.labels:
+                    raise ValueError(f"role label not available for {unit.name}")
+                labels[unit.name] = pod.metadata.labels["role"]
     return labels
 
 

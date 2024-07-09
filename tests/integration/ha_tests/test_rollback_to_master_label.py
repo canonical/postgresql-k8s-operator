@@ -3,6 +3,7 @@
 
 import asyncio
 import logging
+import operator
 import shutil
 from pathlib import Path
 
@@ -21,6 +22,7 @@ from ..helpers import (
 from .helpers import (
     are_writes_increasing,
     check_writes,
+    get_instances_roles,
     inject_dependency_fault,
     start_continuous_writes,
 )
@@ -54,6 +56,10 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
             apps=[DATABASE_APP_NAME, APPLICATION_NAME], status="active"
         )
     assert len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3
+    instances_roles = await get_instances_roles(ops_test)
+    assert operator.countOf(instances_roles.values(), "master") == 1
+    assert operator.countOf(instances_roles.values(), "primary") == 0
+    assert operator.countOf(instances_roles.values(), "replica") == 2
 
 
 @pytest.mark.group(1)
@@ -107,6 +113,10 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
             lambda: unit.workload_status == "blocked",
             timeout=TIMEOUT,
         )
+    instances_roles = await get_instances_roles(ops_test)
+    assert operator.countOf(instances_roles.values(), "master") == 1
+    assert operator.countOf(instances_roles.values(), "primary") == 0
+    assert operator.countOf(instances_roles.values(), "replica") == 2
 
     logger.info("Ensure continuous_writes while in failure state on remaining units")
     await are_writes_increasing(ops_test)
@@ -126,6 +136,15 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
             apps=[DATABASE_APP_NAME], idle_period=30, timeout=TIMEOUT
         )
 
+    # Check whether writes are increasing.
+    logger.info("checking whether writes are increasing")
+    await are_writes_increasing(ops_test)
+
+    instances_roles = await get_instances_roles(ops_test)
+    assert operator.countOf(instances_roles.values(), "master") == 1
+    assert operator.countOf(instances_roles.values(), "primary") == 0
+    assert operator.countOf(instances_roles.values(), "replica") == 2
+
     logger.info("Resume upgrade")
     action = await leader_unit.run_action("resume-upgrade")
     await action.wait()
@@ -135,6 +154,11 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
         await ops_test.model.wait_for_idle(
             apps=[DATABASE_APP_NAME], status="active", timeout=TIMEOUT
         )
+
+    instances_roles = await get_instances_roles(ops_test)
+    assert operator.countOf(instances_roles.values(), "master") == 0
+    assert operator.countOf(instances_roles.values(), "primary") == 1
+    assert operator.countOf(instances_roles.values(), "replica") == 2
 
     logger.info("Ensure continuous_writes after rollback procedure")
     await are_writes_increasing(ops_test)
