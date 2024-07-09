@@ -155,7 +155,7 @@ async def test_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -
             ], f"replication isn't working correctly: table 'backup_table_2' exists in {new_unit_name}"
         connection.close()
 
-        old_primary = await get_primary(ops_test, new_unit_name)
+        old_primary = await get_primary(ops_test, database_app_name)
         logger.info(f"performing a switchover from {old_primary} to {new_unit_name}")
         switchover(ops_test, old_primary, new_unit_name)
 
