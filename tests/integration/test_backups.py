@@ -135,7 +135,7 @@ async def test_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -
         logger.info("ensuring that the replication is working correctly")
         new_unit_name = f"{database_app_name}/1"
         address = await get_unit_address(ops_test, new_unit_name)
-        password = await get_password(ops_test, new_unit_name)
+        password = await get_password(ops_test, database_app_name=database_app_name)
         with db_connect(
             host=address, password=password
         ) as connection, connection.cursor() as cursor:
