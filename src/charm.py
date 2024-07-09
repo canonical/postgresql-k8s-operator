@@ -1022,8 +1022,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 obj=service,
                 name=service.metadata.name,
                 namespace=service.metadata.namespace,
-                field_manager=self.model.app.name,
                 force=True,
+                field_manager=self.model.app.name,
             )
 
     def _cleanup_old_cluster_resources(self) -> None:
@@ -1213,18 +1213,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 continue
             # Patch the resource.
             try:
-                # re-fetch the service from the client to avoid 409 error conflicts
-                res = client.get(
-                    type(resource),
+                resource.metadata.ownerReferences = pod0.metadata.ownerReferences
+                resource.metadata.managedFields = None
+                client.apply(
+                    obj=resource,
                     name=resource.metadata.name,
                     namespace=resource.metadata.namespace,
-                )
-                res.metadata.ownerReferences = pod0.metadata.ownerReferences
-                res.metadata.managedFields = None
-                client.apply(
-                    obj=res,
-                    name=res.metadata.name,
-                    namespace=res.metadata.namespace,
                     force=True,
                 )
             except ApiError:
