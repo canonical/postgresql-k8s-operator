@@ -3,6 +3,7 @@
 
 import asyncio
 import logging
+import operator
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -19,6 +20,7 @@ from ..helpers import (
 from .helpers import (
     are_writes_increasing,
     check_writes,
+    get_instances_roles,
     start_continuous_writes,
 )
 
@@ -51,6 +53,10 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
             apps=[DATABASE_APP_NAME, APPLICATION_NAME], status="active"
         )
     assert len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3
+    instances_roles = await get_instances_roles(ops_test)
+    assert operator.countOf(instances_roles.values(), "master") == 1
+    assert operator.countOf(instances_roles.values(), "primary") == 0
+    assert operator.countOf(instances_roles.values(), "replica") == 2
 
 
 @pytest.mark.group(1)
@@ -84,13 +90,6 @@ async def test_upgrade(ops_test, continuous_writes) -> None:
     logger.info("Refresh the charm")
     await application.refresh(path=local_charm)
 
-    logger.info("Run pre-upgrade-check action")
-    action = await leader_unit.run_action("pre-upgrade-check")
-    await action.wait()
-
-    logger.info("Refresh the charm")
-    await application.refresh(path=local_charm)
-
     logger.info("Get first upgrading unit")
     # Highest ordinal unit always the first to upgrade.
     unit = get_unit_by_index(DATABASE_APP_NAME, application.units, 2)
@@ -103,6 +102,15 @@ async def test_upgrade(ops_test, continuous_writes) -> None:
             apps=[DATABASE_APP_NAME], idle_period=30, timeout=TIMEOUT
         )
 
+    # Check whether writes are increasing.
+    logger.info("checking whether writes are increasing")
+    await are_writes_increasing(ops_test)
+
+    instances_roles = await get_instances_roles(ops_test)
+    assert operator.countOf(instances_roles.values(), "master") == 1
+    assert operator.countOf(instances_roles.values(), "primary") == 0
+    assert operator.countOf(instances_roles.values(), "replica") == 2
+
     logger.info("Resume upgrade")
     action = await leader_unit.run_action("resume-upgrade")
     await action.wait()
@@ -112,6 +120,11 @@ async def test_upgrade(ops_test, continuous_writes) -> None:
         await ops_test.model.wait_for_idle(
             apps=[DATABASE_APP_NAME], status="active", timeout=TIMEOUT
         )
+
+    instances_roles = await get_instances_roles(ops_test)
+    assert operator.countOf(instances_roles.values(), "master") == 0
+    assert operator.countOf(instances_roles.values(), "primary") == 1
+    assert operator.countOf(instances_roles.values(), "replica") == 2
 
     logger.info("Ensure continuous_writes after upgrade")
     await are_writes_increasing(ops_test)

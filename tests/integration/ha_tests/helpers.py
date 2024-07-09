@@ -424,6 +424,21 @@ async def get_patroni_setting(ops_test: OpsTest, setting: str) -> Optional[int]:
             return int(primary_start_timeout) if primary_start_timeout is not None else None
 
 
+async def get_instances_roles(ops_test: OpsTest):
+    """Return the roles of the instances in the cluster."""
+    labels = {}
+    client = Client()
+    app = await app_name(ops_test)
+    for unit in ops_test.model.applications[app].units:
+        pod = client.get(
+            res=Pod,
+            name=unit.name.replace("/", "-"),
+            namespace=ops_test.model.info.name,
+        )
+        labels[unit.name] = pod.metadata.labels["role"]
+    return labels
+
+
 async def get_postgresql_parameter(ops_test: OpsTest, parameter_name: str) -> Optional[int]:
     """Get the value of a PostgreSQL parameter from Patroni API.
 

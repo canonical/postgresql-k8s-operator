@@ -121,6 +121,10 @@ async def test_upgrade_from_edge(ops_test: OpsTest, continuous_writes) -> None:
             apps=[DATABASE_APP_NAME], idle_period=30, timeout=TIMEOUT
         )
 
+    # Check whether writes are increasing.
+    logger.info("checking whether writes are increasing")
+    await are_writes_increasing(ops_test)
+
     logger.info("Resume upgrade")
     leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
     action = await leader_unit.run_action("resume-upgrade")
