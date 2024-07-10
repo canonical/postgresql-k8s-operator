@@ -126,7 +126,9 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
     await action.wait()
 
     logger.info("Re-refresh the charm")
-    await application.refresh(path=local_charm)
+    await ops_test.juju(
+        "refresh", DATABASE_APP_NAME, "--switch", "postgresql-k8s", "--channel", "14/stable"
+    )
 
     async with ops_test.fast_forward("60s"):
         await ops_test.model.block_until(
@@ -156,8 +158,8 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
         )
 
     instances_roles = await get_instances_roles(ops_test)
-    assert operator.countOf(instances_roles.values(), "master") == 0
-    assert operator.countOf(instances_roles.values(), "primary") == 1
+    assert operator.countOf(instances_roles.values(), "master") == 1
+    assert operator.countOf(instances_roles.values(), "primary") == 0
     assert operator.countOf(instances_roles.values(), "replica") == 2
 
     logger.info("Ensure continuous_writes after rollback procedure")
