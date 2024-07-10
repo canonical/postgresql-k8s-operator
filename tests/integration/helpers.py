@@ -99,11 +99,12 @@ async def build_and_deploy(
     )
     # We should wait for allocation to finish, even if not waiting for idle
     await model.block_until(
-        lambda: all(
-            unit.agent_status != "allocating"
+        lambda: len(model.applications[database_app_name].units) == num_units
+        and all(
+            unit.agent_status != "allocating" and unit.workload_status != "maintenance"
             for unit in model.applications[database_app_name].units
         ),
-        timeout=1000,
+        timeout=120,
     )
 
     if wait_for_idle:
