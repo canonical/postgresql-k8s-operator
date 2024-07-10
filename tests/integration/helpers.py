@@ -13,6 +13,7 @@ import botocore
 import psycopg2
 import requests
 import yaml
+from juju.errors import JujuAppError
 from juju.model import Model
 from juju.unit import Unit
 from lightkube.core.client import Client
@@ -63,6 +64,11 @@ async def app_name(
     return None
 
 
+@retry(
+    retry=retry_if_exception(JujuAppError),
+    stop=stop_after_attempt(3),
+    wait=wait_fixed(10),
+)
 async def build_and_deploy(
     ops_test: OpsTest,
     num_units: int,
@@ -98,15 +104,19 @@ async def build_and_deploy(
         ),
     )
     if wait_for_idle:
-        # Wait until the PostgreSQL charm is successfully deployed.
-        await model.wait_for_idle(
-            apps=[database_app_name],
-            status=status,
-            raise_on_blocked=True,
-            timeout=1000,
-            check_freq=3,
-            wait_for_exact_units=num_units,
-        )
+        try:
+            # Wait until the PostgreSQL charm is successfully deployed.
+            await model.wait_for_idle(
+                apps=[database_app_name],
+                status=status,
+                raise_on_blocked=True,
+                timeout=1000,
+                wait_for_exact_units=num_units,
+            )
+        except JujuAppError as e:
+            logger.warning("JujuAppError raised (possibly transient): %s", e)
+            await ops_test.model.remove_application(database_app_name, block_until_done=True)
+            raise e
 
 
 async def check_database_users_existence(
@@ -298,7 +308,6 @@ async def deploy_and_relate_application_with_postgresql(
         status=status,
         raise_on_blocked=False,
         timeout=1000,
-        check_freq=3,
     )
 
     # Relate application to PostgreSQL.
@@ -310,7 +319,6 @@ async def deploy_and_relate_application_with_postgresql(
         status="active",
         raise_on_blocked=False,  # Application that needs a relation is blocked initially.
         timeout=1000,
-        check_freq=3,
     )
 
     return relation.id
