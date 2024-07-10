@@ -103,8 +103,8 @@ async def build_and_deploy(
             apps=[database_app_name],
             status=status,
             raise_on_blocked=True,
+            raise_on_error=False,
             timeout=1000,
-            check_freq=3,
             wait_for_exact_units=num_units,
         )
 
@@ -298,7 +298,6 @@ async def deploy_and_relate_application_with_postgresql(
         status=status,
         raise_on_blocked=False,
         timeout=1000,
-        check_freq=3,
     )
 
     # Relate application to PostgreSQL.
@@ -309,8 +308,8 @@ async def deploy_and_relate_application_with_postgresql(
         apps=[application_name],
         status="active",
         raise_on_blocked=False,  # Application that needs a relation is blocked initially.
+        raise_on_error=False,
         timeout=1000,
-        check_freq=3,
     )
 
     return relation.id
@@ -829,7 +828,9 @@ async def backup_operations(
 
     await ops_test.model.relate(database_app_name, tls_certificates_app_name)
     async with ops_test.fast_forward(fast_interval="60s"):
-        await ops_test.model.wait_for_idle(apps=[database_app_name], status="active", timeout=1000)
+        await ops_test.model.wait_for_idle(
+            apps=[database_app_name], status="active", timeout=1000, raise_on_error=False
+        )
     await ops_test.model.relate(database_app_name, s3_integrator_app_name)
 
     # Configure and set access and secret keys.
