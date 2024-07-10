@@ -103,6 +103,15 @@ async def build_and_deploy(
             config={"profile": "testing"},
         ),
     )
+    # We should wait for allocation to finish, even if not waiting for idle
+    await model.block_until(
+        lambda: all(
+            unit.agent_status != "allocating"
+            for unit in model.applications[database_app_name].units
+        ),
+        timeout=1000,
+    )
+
     if wait_for_idle:
         try:
             # Wait until the PostgreSQL charm is successfully deployed.
@@ -319,6 +328,7 @@ async def deploy_and_relate_application_with_postgresql(
         status="active",
         raise_on_blocked=False,  # Application that needs a relation is blocked initially.
         timeout=1000,
+        raise_on_error=False,  # Avoids transient errors on deployed application
     )
 
     return relation.id
