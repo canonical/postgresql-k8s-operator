@@ -904,6 +904,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self.unit.status = BlockedStatus("failed to create k8s services")
                 return False
 
+        async_replication_primary_cluster = self.async_replication.get_primary_cluster()
+        if (
+            async_replication_primary_cluster is not None
+            and async_replication_primary_cluster != self.app
+        ):
+            logger.debug(
+                "Early exit _initialize_cluster: not the primary cluster in async replication"
+            )
+            return True
+
         if not self._patroni.primary_endpoint_ready:
             logger.debug(
                 "Deferring on_postgresql_pebble_ready: Waiting for primary endpoint to be ready"
