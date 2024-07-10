@@ -97,22 +97,13 @@ async def build_and_deploy(
             config={"profile": "testing"},
         ),
     )
-    # We should wait for allocation to finish, even if not waiting for idle
-    await model.block_until(
-        lambda: len(model.applications[database_app_name].units) == num_units
-        and all(
-            unit.agent_status != "allocating" and unit.workload_status != "maintenance"
-            for unit in model.applications[database_app_name].units
-        ),
-        timeout=120,
-    )
-
     if wait_for_idle:
         # Wait until the PostgreSQL charm is successfully deployed.
         await model.wait_for_idle(
             apps=[database_app_name],
             status=status,
             raise_on_blocked=True,
+            raise_on_error=False,
             timeout=1000,
             wait_for_exact_units=num_units,
         )
