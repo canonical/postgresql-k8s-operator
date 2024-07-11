@@ -614,7 +614,7 @@ def modify_pebble_restart_delay(
     )
 
     add_to_pebble_layer_commands = (
-        f"/charm/bin/pebble add --combine {service_name} /tmp/pebble_plan_{now}.yml"
+        f"/usr/bin/pebble add --combine {service_name} /tmp/pebble_plan_{now}.yml"
     )
     response = kubernetes.stream.stream(
         client.connect_get_namespaced_pod_exec,
@@ -635,7 +635,7 @@ def modify_pebble_restart_delay(
 
     for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
         with attempt:
-            replan_pebble_layer_commands = "/charm/bin/pebble replan"
+            replan_pebble_layer_commands = "/usr/bin/pebble replan"
             response = kubernetes.stream.stream(
                 client.connect_get_namespaced_pod_exec,
                 pod_name,
