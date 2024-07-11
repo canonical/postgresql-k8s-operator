@@ -86,7 +86,7 @@ async def are_all_db_processes_down(ops_test: OpsTest, process: str, signal: str
 
                     # If something was returned, there is a running process.
                     if len(raw_pid) > 0:
-                        logger.info("Unit %s not yet down" % unit.name)
+                        logger.info("Unit %s not yet down: %s" % (unit.name, raw_pid))
                         # Try to rekill the unit
                         await send_signal_to_process(ops_test, unit.name, process, signal)
                         raise ProcessRunningError
