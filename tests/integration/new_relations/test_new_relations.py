@@ -91,7 +91,7 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest, databas
             f"{APPLICATION_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}", DATABASE_APP_NAME
         )
         await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME], status="active", raise_on_blocked=True
+            apps=[DATABASE_APP_NAME], status="active", raise_on_blocked=True, timeout=1000
         )
 
         # Check that on juju 3 we have secrets and no username and password in the rel databag
