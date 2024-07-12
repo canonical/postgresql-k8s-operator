@@ -82,7 +82,7 @@ async def are_all_db_processes_down(ops_test: OpsTest, process: str, signal: str
                 for unit in ops_test.model.applications[app].units:
                     pod_name = unit.name.replace("/", "-")
                     call = subprocess.run(
-                        f"kubectl -n {ops_test.model.info.name} exec {pod_name} -c postgresql -- {' '.join(pgrep_cmd)}",
+                        f"microk8s kubectl -n {ops_test.model.info.name} exec {pod_name} -c postgresql -- {' '.join(pgrep_cmd)}",
                         shell=True,
                     )
 
