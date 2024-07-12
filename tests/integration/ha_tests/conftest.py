@@ -98,6 +98,7 @@ async def restart_policy(ops_test: OpsTest) -> None:
             ops_test,
             unit.name,
             "tests/integration/ha_tests/manifests/extend_pebble_restart_delay.yml",
+            True,
         )
 
         async with ops_test.fast_forward():
