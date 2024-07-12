@@ -86,7 +86,7 @@ async def are_all_db_processes_down(ops_test: OpsTest, process: str, signal: str
 
                     # If something was returned, there is a running process.
                     if len(raw_pid) > 0:
-                        logger.info("Unit %s not yet down: %s" % (unit.name, raw_pid))
+                        logger.info("Unit %s not yet down" % unit.name)
                         # Try to rekill the unit
                         await send_signal_to_process(ops_test, unit.name, process, signal)
                         raise ProcessRunningError
@@ -614,7 +614,7 @@ def modify_pebble_restart_delay(
     )
 
     add_to_pebble_layer_commands = (
-        f"/usr/bin/pebble add --combine {service_name} /tmp/pebble_plan_{now}.yml"
+        f"/charm/bin/pebble add --combine {service_name} /tmp/pebble_plan_{now}.yml"
     )
     response = kubernetes.stream.stream(
         client.connect_get_namespaced_pod_exec,
@@ -635,7 +635,7 @@ def modify_pebble_restart_delay(
 
     for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
         with attempt:
-            replan_pebble_layer_commands = "/usr/bin/pebble replan"
+            replan_pebble_layer_commands = "/charm/bin/pebble replan"
             response = kubernetes.stream.stream(
                 client.connect_get_namespaced_pod_exec,
                 pod_name,
