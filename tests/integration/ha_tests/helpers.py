@@ -80,12 +80,14 @@ async def are_all_db_processes_down(ops_test: OpsTest, process: str, signal: str
         for attempt in Retrying(stop=stop_after_delay(400), wait=wait_fixed(3)):
             with attempt:
                 for unit in ops_test.model.applications[app].units:
-                    _, raw_pid, _ = await ops_test.juju(
-                        "ssh", "--container", "postgresql", unit.name, *pgrep_cmd
+                    pod_name = unit.name.replace("/", "-")
+                    call = subprocess.run(
+                        f"kubectl -n {ops_test.model.info.name} exec {pod_name} -c postgresql -- {' '.join(pgrep_cmd)}",
+                        shell=True,
                     )
 
                     # If something was returned, there is a running process.
-                    if len(raw_pid) > 0:
+                    if call.returncode != 1:
                         logger.info("Unit %s not yet down" % unit.name)
                         # Try to rekill the unit
                         await send_signal_to_process(ops_test, unit.name, process, signal)
