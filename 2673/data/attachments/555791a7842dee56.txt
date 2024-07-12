@@ -1,0 +1,117 @@
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  untrusted-postgresql-k8s/0 [executing] maintenance: installing charm software
+  untrusted-postgresql-k8s/1 [executing] maintenance: installing charm software
+  untrusted-postgresql-k8s/2 [executing] blocked: Insufficient permissions, try: `juju trust untrusted-postgresql-k8s --scope=cluster`
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] unknown: 
+  untrusted-postgresql-k8s/1 [idle] unknown: 
+  untrusted-postgresql-k8s/2 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] unknown: 
+  untrusted-postgresql-k8s/1 [idle] unknown: 
+  untrusted-postgresql-k8s/2 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] unknown: 
+  untrusted-postgresql-k8s/1 [idle] unknown: 
+  untrusted-postgresql-k8s/2 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] unknown: 
+  untrusted-postgresql-k8s/1 [idle] unknown: 
+  untrusted-postgresql-k8s/2 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] unknown: 
+  untrusted-postgresql-k8s/1 [idle] unknown: 
+  untrusted-postgresql-k8s/2 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] unknown: 
+  untrusted-postgresql-k8s/1 [idle] unknown: 
+  untrusted-postgresql-k8s/2 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] unknown: 
+  untrusted-postgresql-k8s/1 [idle] unknown: 
+  untrusted-postgresql-k8s/2 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] unknown: 
+  untrusted-postgresql-k8s/1 [idle] unknown: 
+  untrusted-postgresql-k8s/2 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] unknown: 
+  untrusted-postgresql-k8s/1 [idle] unknown: 
+  untrusted-postgresql-k8s/2 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] unknown: 
+  untrusted-postgresql-k8s/1 [idle] unknown: 
+  untrusted-postgresql-k8s/2 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] unknown: 
+  untrusted-postgresql-k8s/1 [idle] unknown: 
+  untrusted-postgresql-k8s/2 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] unknown: 
+  untrusted-postgresql-k8s/1 [idle] unknown: 
+  untrusted-postgresql-k8s/2 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] unknown: 
+  untrusted-postgresql-k8s/1 [idle] unknown: 
+  untrusted-postgresql-k8s/2 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] unknown: 
+  untrusted-postgresql-k8s/1 [idle] unknown: 
+  untrusted-postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+  untrusted-postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+  untrusted-postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  untrusted-postgresql-k8s/0 [executing] waiting: awaiting for cluster to start
+  untrusted-postgresql-k8s/1 [executing] waiting: awaiting for cluster to start
+  untrusted-postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] active: 
+  untrusted-postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+  untrusted-postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] active: 
+  untrusted-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+  untrusted-postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] active: 
+  untrusted-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+  untrusted-postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] active: 
+  untrusted-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+  untrusted-postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] active: 
+  untrusted-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+  untrusted-postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] active: 
+  untrusted-postgresql-k8s/1 [idle] active: 
+  untrusted-postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.4.3    unsupported  01:47:53Z
+
+App                       Version  Status  Scale  Charm           Channel  Rev  Address         Exposed  Message
+untrusted-postgresql-k8s  14.11    active      3  postgresql-k8s             0  10.152.183.199  no       
+
+Unit                         Workload  Agent  Address     Ports  Message
+untrusted-postgresql-k8s/0   active    idle   10.1.85.75         
+untrusted-postgresql-k8s/1   active    idle   10.1.85.77         
+untrusted-postgresql-k8s/2*  active    idle   10.1.85.76         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+unit-untrusted-postgresql-k8s-2: 01:36:34 ERROR unit.untrusted-postgresql-k8s/2.juju-log 
+            Access to k8s cluster resources is not authorized. This happens when RBAC is enabled and the deployed application was not trusted by the juju admin.
+            To fix this issue, run `juju trust untrusted-postgresql-k8s --scope=cluster` (or remove & re-deploy untrusted-postgresql-k8s with `--trust`)
+            
+unit-untrusted-postgresql-k8s-2: 01:36:34 ERROR unit.untrusted-postgresql-k8s/2.juju-log 
+            Access to k8s cluster resources is not authorized. This happens when RBAC is enabled and the deployed application was not trusted by the juju admin.
+            To fix this issue, run `juju trust untrusted-postgresql-k8s --scope=cluster` (or remove & re-deploy untrusted-postgresql-k8s with `--trust`)
+            
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
