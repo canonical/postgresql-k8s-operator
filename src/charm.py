@@ -99,6 +99,7 @@ from utils import any_cpu_to_cores, any_memory_to_bytes, new_password
 logger = logging.getLogger(__name__)
 
 EXTENSIONS_DEPENDENCY_MESSAGE = "Unsatisfied plugin dependencies. Please check the logs"
+EXTENSION_OBJECT_MESSAGE = "Cannot disable plugins: Existing objects depend on it. See logs"
 
 # http{x,core} clutter the logs with debug messages
 logging.getLogger("httpcore").setLevel(logging.ERROR)
@@ -602,7 +603,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 )
                 return
 
-    def enable_disable_extensions(self, database: str = None) -> None:
+    def enable_disable_extensions(self, database: str = None) -> None:  # noqa: C901
         """Enable/disable PostgreSQL extensions set through config options.
 
         Args:
@@ -637,6 +638,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.unit.status = WaitingStatus("Updating extensions")
         try:
             self.postgresql.enable_disable_extensions(extensions, database)
+        except psycopg2.errors.DependentObjectsStillExist as e:
+            logger.error(
+                "Failed to disable plugin: %s Was the plugin enabled manually? If so, update charm config with `juju config postgresql-k8s plugin_<plugin name>_enable=True` ",
+                str(e),
+            )
+            self.unit.status = BlockedStatus(EXTENSION_OBJECT_MESSAGE)
+            return
         except PostgreSQLEnableDisableExtensionError as e:
             logger.exception("failed to change plugins: %s", str(e))
         if not isinstance(original_status, UnknownStatus):

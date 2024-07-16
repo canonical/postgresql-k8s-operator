@@ -330,6 +330,8 @@ class PostgreSQL:
                         )
         except psycopg2.errors.UniqueViolation:
             pass
+        except psycopg2.errors.DependentObjectsStillExist:
+            raise
         except psycopg2.Error:
             raise PostgreSQLEnableDisableExtensionError()
         finally:
