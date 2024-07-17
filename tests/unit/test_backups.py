@@ -210,6 +210,9 @@ def test_can_use_s3_repository(harness):
             new_callable=PropertyMock(return_value="14.10"),
         ) as _rock_postgresql_version,
         patch("charm.PostgreSQLBackups._execute_command") as _execute_command,
+        patch(
+            "charms.postgresql_k8s.v0.postgresql.PostgreSQL.get_last_archived_wal"
+        ) as _get_last_archived_wal,
     ):
         peer_rel_id = harness.model.get_relation(PEER).id
         # Define the stanza name inside the unit relation data.
@@ -1348,6 +1351,12 @@ def test_on_restore_action(harness):
         patch("charm.PostgreSQLBackups._list_backups") as _list_backups,
         patch("charm.PostgreSQLBackups._fetch_backup_from_id") as _fetch_backup_from_id,
         patch("charm.PostgreSQLBackups._pre_restore_checks") as _pre_restore_checks,
+        patch(
+            "charm.PostgresqlOperatorCharm.override_patroni_on_failure_condition"
+        ) as _override_patroni_on_failure_condition,
+        patch(
+            "charm.PostgresqlOperatorCharm.restore_patroni_on_failure_condition"
+        ) as _restore_patroni_on_failure_condition,
     ):
         peer_rel_id = harness.model.get_relation(PEER).id
         # Test when pre restore checks fail.
@@ -1456,6 +1465,7 @@ def test_on_restore_action(harness):
         assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {
             "restoring-backup": "20230101-090000F",
             "restore-stanza": f"{harness.charm.model.name}.{harness.charm.cluster_name}",
+            "require-change-bucket-after-restore": "True",
         }
         _create_pgdata.assert_called_once()
         _update_config.assert_called_once()
