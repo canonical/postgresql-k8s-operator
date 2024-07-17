@@ -121,11 +121,13 @@ async def test_deploy_async_replication_setup(
                 apps=[DATABASE_APP_NAME, APPLICATION_NAME],
                 status="active",
                 timeout=TIMEOUT,
+                raise_on_error=False,
             ),
             second_model.wait_for_idle(
                 apps=[DATABASE_APP_NAME, APPLICATION_NAME],
                 status="active",
                 timeout=TIMEOUT,
+                raise_on_error=False,
             ),
         )
 

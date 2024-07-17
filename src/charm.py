@@ -1218,7 +1218,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             # Ignore resources created by Juju or the charm
             # (which are already patched).
             if (
-                type(resource) == Service
+                type(resource) is Service
                 and resource.metadata.name
                 in [
                     self._name,
