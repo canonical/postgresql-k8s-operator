@@ -647,6 +647,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
         except PostgreSQLEnableDisableExtensionError as e:
             logger.exception("failed to change plugins: %s", str(e))
+        if original_status.message == EXTENSION_OBJECT_MESSAGE:
+            self._set_active_status()
+            return
         if not isinstance(original_status, UnknownStatus):
             self.unit.status = original_status
 
@@ -1235,7 +1238,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     f"failed to patch k8s {type(resource).__name__} {resource.metadata.name}"
                 )
 
-    def _on_update_status(self, _) -> None:
+    def _on_update_status(self, _) -> None:  # noqa: C901
         """Update the unit status message."""
         if not self.upgrade.idle:
             logger.debug("Early exit on_update_status: upgrade in progress")
@@ -1247,6 +1250,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
 
         if self._has_blocked_status or self._has_waiting_status:
+            # If charm was failing to disable plugin, try again (user may have removed the objects)
+            if self.unit.status.message == EXTENSION_OBJECT_MESSAGE:
+                self.enable_disable_extensions()
             logger.debug("on_update_status early exit: Unit is in Blocked/Waiting status")
             return
 
