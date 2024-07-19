@@ -1,0 +1,49 @@
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:330 checking whether the connectivity to the database is working
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:336 confirming that the primary is not isolated from the cluster
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:340 Cutting network for postgresql-k8s/2
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:344 checking whether the connectivity to the database is not working
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:349 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.1.159:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.1.159:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.1.159:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.1.159:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.1.159:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.1.159:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:352 checking whether a new primary was elected
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:361 confirming that the former primary is isolated from the cluster
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:365 Restoring network for postgresql-k8s/2
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:369 waiting for the database service to restart on postgresql-k8s/2
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:373 checking whether the connectivity to the database is working
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.1.159:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.1.159:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.1.159:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.1.159:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.1.159:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.1.159:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.1.159:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.1.159:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.1.159:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.1.159:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.1.159:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.4.4    unsupported  03:10:28Z
+
+App                  Version  Status   Scale  Charm                Channel      Rev  Address         Exposed  Message
+postgresql-k8s       14.12    waiting      3  postgresql-k8s                      0  10.152.183.235  no       installing agent
+postgresql-test-app           active       1  postgresql-test-app  latest/edge  176  10.152.183.133  no       received database credentials of the first database
+
+Unit                    Workload  Agent  Address       Ports  Message
+postgresql-k8s/0*       active    idle   10.1.108.205         Primary
+postgresql-k8s/1        active    idle   10.1.108.206         
+postgresql-k8s/2        waiting   idle   10.1.108.204         awaiting for cluster to start
+postgresql-test-app/0*  active    idle   10.1.108.203         received database credentials of the first database
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+unit-postgresql-k8s-2: 03:09:31 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [40c720] "unit-postgresql-k8s-2" cannot open api: cannot resolve "controller-service.controller-microk8s-localhost.svc.cluster.local": lookup controller-service.controller-microk8s-localhost.svc.cluster.local: i/o timeout
+unit-postgresql-k8s-2: 03:09:39 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [40c720] "unit-postgresql-k8s-2" cannot open api: cannot resolve "controller-service.controller-microk8s-localhost.svc.cluster.local": lookup controller-service.controller-microk8s-localhost.svc.cluster.local: i/o timeout
+unit-postgresql-k8s-2: 03:09:47 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [40c720] "unit-postgresql-k8s-2" cannot open api: cannot resolve "controller-service.controller-microk8s-localhost.svc.cluster.local": lookup controller-service.controller-microk8s-localhost.svc.cluster.local: i/o timeout
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...

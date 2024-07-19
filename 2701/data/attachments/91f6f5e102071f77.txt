@@ -1,0 +1,178 @@
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/jammy/self-signed-certificates-155
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [allocating] waiting: installing agent
+  postgresql-k8s/1 [allocating] waiting: installing agent
+  postgresql-k8s/2 [allocating] waiting: installing agent
+  self-signed-certificates/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [executing] maintenance: installing charm software
+  postgresql-k8s/1 [executing] maintenance: installing charm software
+  postgresql-k8s/2 [executing] maintenance: installing charm software
+  self-signed-certificates/0 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [executing] unknown: 
+  postgresql-k8s/1 [executing] unknown: 
+  postgresql-k8s/2 [executing] waiting: awaiting for cluster to start
+  self-signed-certificates/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [executing] unknown: 
+  postgresql-k8s/1 [executing] unknown: 
+  postgresql-k8s/2 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] unknown: 
+  postgresql-k8s/1 [idle] unknown: 
+  postgresql-k8s/2 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] unknown: 
+  postgresql-k8s/1 [idle] unknown: 
+  postgresql-k8s/2 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] unknown: 
+  postgresql-k8s/1 [idle] unknown: 
+  postgresql-k8s/2 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] unknown: 
+  postgresql-k8s/1 [idle] unknown: 
+  postgresql-k8s/2 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] unknown: 
+  postgresql-k8s/1 [idle] unknown: 
+  postgresql-k8s/2 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] unknown: 
+  postgresql-k8s/1 [idle] unknown: 
+  postgresql-k8s/2 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] unknown: 
+  postgresql-k8s/1 [idle] unknown: 
+  postgresql-k8s/2 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] unknown: 
+  postgresql-k8s/1 [idle] unknown: 
+  postgresql-k8s/2 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] unknown: 
+  postgresql-k8s/1 [idle] unknown: 
+  postgresql-k8s/2 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] unknown: 
+  postgresql-k8s/1 [idle] unknown: 
+  postgresql-k8s/2 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] unknown: 
+  postgresql-k8s/1 [idle] unknown: 
+  postgresql-k8s/2 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] unknown: 
+  postgresql-k8s/1 [idle] unknown: 
+  postgresql-k8s/2 [idle] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/2 [executing] active: Primary
+  self-signed-certificates/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/2 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/2 [idle] maintenance: reconfiguring cluster
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [executing] active: 
+  postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/2 [idle] maintenance: reconfiguring cluster
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m integration.test_tls:test_tls.py:156 stopping database on postgresql-k8s/2
+[32mINFO    [0m integration.test_tls:test_tls.py:163 starting database on postgresql-k8s/2
+[32mINFO    [0m integration.test_tls:test_tls.py:62 checking if pg_rewind used TLS on postgresql-k8s/0
+[32mINFO    [0m integration.test_tls:test_tls.py:62 checking if pg_rewind used TLS on postgresql-k8s/1
+[32mINFO    [0m integration.test_tls:test_tls.py:62 checking if pg_rewind used TLS on postgresql-k8s/2
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] maintenance: reinitialising replica
+  postgresql-k8s/1 [idle] maintenance: reinitialising replica
+  postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/focal/mattermost-k8s-27
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mattermost/0 [allocating] waiting: installing agent
+  mattermost/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mattermost/0 [idle] waiting: Waiting for database relation
+  mattermost/1 [idle] waiting: Waiting for database relation
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mattermost/0 [idle] waiting: Waiting for database relation
+  mattermost/1 [idle] waiting: Waiting for database relation
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mattermost/0 [executing] active: 
+  mattermost/1 [executing] waiting: Waiting for database relation
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  mattermost/0 [executing] active: 
+  mattermost/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: Awaiting restart operation
+  postgresql-k8s/1 [idle] waiting: Awaiting restart operation
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.4.4    unsupported  02:50:34Z
+
+App                       Version                         Status  Scale  Charm                     Channel        Rev  Address         Exposed  Message
+mattermost                .../mattermost:v8.1.3-20.04...  active      2  mattermost-k8s            latest/stable   27  10.152.183.65   no       
+postgresql-k8s            14.12                           active      3  postgresql-k8s                             0  10.152.183.86   no       
+self-signed-certificates                                  active      1  self-signed-certificates  latest/stable  155  10.152.183.147  no       
+
+Unit                         Workload  Agent  Address      Ports     Message
+mattermost/0*                active    idle   10.1.28.145  8065/TCP  
+mattermost/1                 active    idle   10.1.28.144  8065/TCP  
+postgresql-k8s/0             active    idle   10.1.28.140            
+postgresql-k8s/1             active    idle   10.1.28.141            
+postgresql-k8s/2*            active    idle   10.1.28.142            Primary
+self-signed-certificates/0*  active    idle   10.1.28.139            
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
