@@ -603,7 +603,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 )
                 return
 
-    def enable_disable_extensions(self, database: str = None) -> None:  # noqa: C901
+    def enable_disable_extensions(self, database: str = None) -> None:
         """Enable/disable PostgreSQL extensions set through config options.
 
         Args:
@@ -634,6 +634,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if self.is_blocked and self.unit.status.message == EXTENSIONS_DEPENDENCY_MESSAGE:
             self._set_active_status()
             original_status = self.unit.status
+
+        self._handle_enable_disable_extensions(original_status, extensions, database)
+
+    def _handle_enable_disable_extensions(self, original_status, extensions, database) -> None:
+        """Try enablind/disabling Postgresql extensions and handle exceptions appropriately."""
         if not isinstance(original_status, UnknownStatus):
             self.unit.status = WaitingStatus("Updating extensions")
         try:
@@ -1238,7 +1243,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     f"failed to patch k8s {type(resource).__name__} {resource.metadata.name}"
                 )
 
-    def _on_update_status(self, _) -> None:  # noqa: C901
+    def _on_update_status(self, _) -> None:
         """Update the unit status message."""
         if not self.upgrade.idle:
             logger.debug("Early exit on_update_status: upgrade in progress")
@@ -1262,25 +1267,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("on_update_status early exit: Service has not been added nor started yet")
             return
 
-        if "restoring-backup" in self.app_peer_data:
-            if services[0].current != ServiceStatus.ACTIVE:
-                logger.error("Restore failed: database service failed to start")
-                self.unit.status = BlockedStatus("Failed to restore backup")
-                return
-
-            if not self._patroni.member_started:
-                logger.debug("on_update_status early exit: Patroni has not started yet")
-                return
-
-            # Remove the restoring backup flag and the restore stanza name.
-            self.app_peer_data.update({"restoring-backup": "", "restore-stanza": ""})
-            self.update_config()
-            logger.info("Restore succeeded")
-
-            can_use_s3_repository, validation_message = self.backup.can_use_s3_repository()
-            if not can_use_s3_repository:
-                self.unit.status = BlockedStatus(validation_message)
-                return
+        if "restoring-backup" in self.app_peer_data and not self._was_restore_successful(
+            services[0]
+        ):
+            return
 
         if self._handle_processes_failures():
             return
@@ -1289,6 +1279,29 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.async_replication.update_async_replication_data()
 
         self._set_active_status()
+
+    def _was_restore_successful(self, service) -> bool:
+        """Checks if restore operation succeeded and S3 is properly configured."""
+        if service.current != ServiceStatus.ACTIVE:
+            logger.error("Restore failed: database service failed to start")
+            self.unit.status = BlockedStatus("Failed to restore backup")
+            return False
+
+        if not self._patroni.member_started:
+            logger.debug("on_update_status early exit: Patroni has not started yet")
+            return False
+
+        # Remove the restoring backup flag and the restore stanza name.
+        self.app_peer_data.update({"restoring-backup": "", "restore-stanza": ""})
+        self.update_config()
+        logger.info("Restore succeeded")
+
+        can_use_s3_repository, validation_message = self.backup.can_use_s3_repository()
+        if not can_use_s3_repository:
+            self.unit.status = BlockedStatus(validation_message)
+            return False
+
+        return True
 
     def _handle_processes_failures(self) -> bool:
         """Handle Patroni and PostgreSQL OS processes failures.
