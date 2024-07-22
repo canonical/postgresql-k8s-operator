@@ -15,6 +15,7 @@ from .. import markers
 from ..architecture import architecture
 from ..helpers import (
     APPLICATION_NAME,
+    CHARM_SERIES,
     DATABASE_APP_NAME,
     get_leader_unit,
     get_primary,
@@ -44,6 +45,7 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
             num_units=3,
             channel="14/stable",
             revision=(280 if architecture == "arm64" else 281),
+            series=CHARM_SERIES,
             trust=True,
         ),
         ops_test.model.deploy(
