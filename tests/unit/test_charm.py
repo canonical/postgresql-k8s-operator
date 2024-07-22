@@ -615,6 +615,14 @@ def test_enable_disable_extensions(harness):
             None,
         )
 
+        # Block if extension-dependent object error is raised
+        _enable_disable_extensions.side_effect = [psycopg2.errors.DependentObjectsStillExist, None]
+        harness.charm.enable_disable_extensions()
+        assert isinstance(harness.charm.unit.status, BlockedStatus)
+        # Should resolve afterwards
+        harness.charm.enable_disable_extensions()
+        assert isinstance(harness.charm.unit.status, ActiveStatus)
+
 
 def test_on_peer_relation_departed(harness):
     with (

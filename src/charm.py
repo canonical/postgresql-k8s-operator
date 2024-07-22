@@ -99,6 +99,7 @@ from utils import any_cpu_to_cores, any_memory_to_bytes, new_password
 logger = logging.getLogger(__name__)
 
 EXTENSIONS_DEPENDENCY_MESSAGE = "Unsatisfied plugin dependencies. Please check the logs"
+EXTENSION_OBJECT_MESSAGE = "Cannot disable plugins: Existing objects depend on it. See logs"
 
 # http{x,core} clutter the logs with debug messages
 logging.getLogger("httpcore").setLevel(logging.ERROR)
@@ -633,12 +634,27 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if self.is_blocked and self.unit.status.message == EXTENSIONS_DEPENDENCY_MESSAGE:
             self._set_active_status()
             original_status = self.unit.status
+
+        self._handle_enable_disable_extensions(original_status, extensions, database)
+
+    def _handle_enable_disable_extensions(self, original_status, extensions, database) -> None:
+        """Try enablind/disabling Postgresql extensions and handle exceptions appropriately."""
         if not isinstance(original_status, UnknownStatus):
             self.unit.status = WaitingStatus("Updating extensions")
         try:
             self.postgresql.enable_disable_extensions(extensions, database)
+        except psycopg2.errors.DependentObjectsStillExist as e:
+            logger.error(
+                "Failed to disable plugin: %s\nWas the plugin enabled manually? If so, update charm config with `juju config postgresql-k8s plugin_<plugin_name>_enable=True`",
+                str(e),
+            )
+            self.unit.status = BlockedStatus(EXTENSION_OBJECT_MESSAGE)
+            return
         except PostgreSQLEnableDisableExtensionError as e:
             logger.exception("failed to change plugins: %s", str(e))
+        if original_status.message == EXTENSION_OBJECT_MESSAGE:
+            self._set_active_status()
+            return
         if not isinstance(original_status, UnknownStatus):
             self.unit.status = original_status
 
@@ -1252,6 +1268,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
 
         if self._has_blocked_status or self._has_waiting_status:
+            # If charm was failing to disable plugin, try again (user may have removed the objects)
+            if self.unit.status.message == EXTENSION_OBJECT_MESSAGE:
+                self.enable_disable_extensions()
             logger.debug("on_update_status early exit: Unit is in Blocked/Waiting status")
             return
 
@@ -1261,25 +1280,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("on_update_status early exit: Service has not been added nor started yet")
             return
 
-        if "restoring-backup" in self.app_peer_data:
-            if services[0].current != ServiceStatus.ACTIVE:
-                logger.error("Restore failed: database service failed to start")
-                self.unit.status = BlockedStatus("Failed to restore backup")
-                return
-
-            if not self._patroni.member_started:
-                logger.debug("on_update_status early exit: Patroni has not started yet")
-                return
-
-            # Remove the restoring backup flag and the restore stanza name.
-            self.app_peer_data.update({"restoring-backup": "", "restore-stanza": ""})
-            self.update_config()
-            logger.info("Restore succeeded")
-
-            can_use_s3_repository, validation_message = self.backup.can_use_s3_repository()
-            if not can_use_s3_repository:
-                self.unit.status = BlockedStatus(validation_message)
-                return
+        if "restoring-backup" in self.app_peer_data and not self._was_restore_successful(
+            services[0]
+        ):
+            return
 
         if self._handle_processes_failures():
             return
@@ -1288,6 +1292,29 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.async_replication.update_async_replication_data()
 
         self._set_active_status()
+
+    def _was_restore_successful(self, service) -> bool:
+        """Checks if restore operation succeeded and S3 is properly configured."""
+        if service.current != ServiceStatus.ACTIVE:
+            logger.error("Restore failed: database service failed to start")
+            self.unit.status = BlockedStatus("Failed to restore backup")
+            return False
+
+        if not self._patroni.member_started:
+            logger.debug("on_update_status early exit: Patroni has not started yet")
+            return False
+
+        # Remove the restoring backup flag and the restore stanza name.
+        self.app_peer_data.update({"restoring-backup": "", "restore-stanza": ""})
+        self.update_config()
+        logger.info("Restore succeeded")
+
+        can_use_s3_repository, validation_message = self.backup.can_use_s3_repository()
+        if not can_use_s3_repository:
+            self.unit.status = BlockedStatus(validation_message)
+            return False
+
+        return True
 
     def _handle_processes_failures(self) -> bool:
         """Handle Patroni and PostgreSQL OS processes failures.
