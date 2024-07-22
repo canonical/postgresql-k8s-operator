@@ -822,6 +822,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             container.make_dir(
                 path, permissions=0o770, user=WORKLOAD_OS_USER, group=WORKLOAD_OS_GROUP
             )
+        # Also, fix the permissions from the parent directory.
+        container.exec([
+            "chown",
+            f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
+            self._storage_path,
+        ]).wait()
 
     def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
         """Event handler for PostgreSQL container on PebbleReadyEvent."""
