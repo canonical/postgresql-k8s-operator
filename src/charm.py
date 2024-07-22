@@ -1280,6 +1280,17 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("on_update_status early exit: Service has not been added nor started yet")
             return
 
+        if (
+            "restoring-backup" not in self.app_peer_data
+            and services[0].current != ServiceStatus.ACTIVE
+        ):
+            logger.warning(
+                "on_update_status early exit: pebble service inactive, restarting container"
+            )
+            self.unit.status = MaintenanceStatus("Database service inactive, restarting")
+            container.restart(self._postgresql_service)
+            return
+
         if "restoring-backup" in self.app_peer_data and not self._was_restore_successful(
             services[0]
         ):

@@ -298,17 +298,9 @@ async def test_forceful_restart_without_data_and_transaction_logs(
                 new_files
             ), f"WAL segments weren't correctly rotated on {unit_name}"
 
-        # Start the systemd service in the old primary.
-        logger.info(f"starting database on {primary_name}")
-        for attempt in Retrying(stop=stop_after_delay(30), wait=wait_fixed(3), reraise=True):
-            with attempt:
-                await run_command_on_unit(
-                    ops_test, primary_name, "/charm/bin/pebble start postgresql"
-                )
-
-                # Verify that the database service got restarted and is ready in the old primary.
-                logger.info(f"waiting for the database service to restart on {primary_name}")
-                assert await is_postgresql_ready(ops_test, primary_name)
+        # Database pebble service in old primary should have recovered.
+        logger.info(f"Checking the database service on {primary_name}")
+        assert await is_postgresql_ready(ops_test, primary_name)
 
     await is_cluster_updated(ops_test, primary_name)
 
