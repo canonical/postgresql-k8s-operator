@@ -1733,4 +1733,31 @@ def test_set_active_status(harness):
                     )
             else:
                 _get_primary.side_effect = values[0]
-                _get_primary.return_value
+                _get_primary.return_value = None
+                harness.charm._set_active_status()
+                tc.assertIsInstance(harness.charm.unit.status, MaintenanceStatus)
+
+
+def test_create_pgdata(harness):
+    container = MagicMock()
+    container.exists.return_value = False
+    harness.charm._create_pgdata(container)
+    container.make_dir.assert_called_once_with(
+        "/var/lib/postgresql/data/pgdata", permissions=504, user="postgres", group="postgres"
+    )
+    container.exec.assert_called_once_with([
+        "chown",
+        "postgres:postgres",
+        "/var/lib/postgresql/data",
+    ])
+
+    container.make_dir.reset_mock()
+    container.exec.reset_mock()
+    container.exists.return_value = True
+    harness.charm._create_pgdata(container)
+    container.make_dir.assert_not_called()
+    container.exec.assert_called_once_with([
+        "chown",
+        "postgres:postgres",
+        "/var/lib/postgresql/data",
+    ])
