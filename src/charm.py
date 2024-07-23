@@ -173,7 +173,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
         self.framework.observe(self.on.pgdata_storage_detaching, self._on_pgdata_storage_detaching)
         self.framework.observe(self.on.stop, self._on_stop)
-        self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(self.on.get_password_action, self._on_get_password)
         self.framework.observe(self.on.set_password_action, self._on_set_password)
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
@@ -186,6 +185,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             relation_name="upgrade",
             substrate="k8s",
         )
+        self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.postgresql_client_relation = PostgreSQLProvider(self)
         self.legacy_db_relation = DbProvides(self, admin=False)
         self.legacy_db_admin_relation = DbProvides(self, admin=True)
@@ -779,12 +779,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
 
         # Create resources and add labels needed for replication.
-        try:
-            self._create_services()
-        except ApiError:
-            logger.exception("failed to create k8s services")
-            self.unit.status = BlockedStatus("failed to create k8s services")
-            return
+        if self.upgrade.idle:
+            try:
+                self._create_services()
+            except ApiError:
+                logger.exception("failed to create k8s services")
+                self.unit.status = BlockedStatus("failed to create k8s services")
+                return
 
         # Remove departing units when the leader changes.
         self._remove_from_endpoints(self._get_endpoints_to_remove())
@@ -911,12 +912,23 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return False
 
         # Create resources and add labels needed for replication
-        try:
-            self._create_services()
-        except ApiError:
-            logger.exception("failed to create k8s services")
-            self.unit.status = BlockedStatus("failed to create k8s services")
-            return False
+        if self.upgrade.idle:
+            try:
+                self._create_services()
+            except ApiError:
+                logger.exception("failed to create k8s services")
+                self.unit.status = BlockedStatus("failed to create k8s services")
+                return False
+
+        async_replication_primary_cluster = self.async_replication.get_primary_cluster()
+        if (
+            async_replication_primary_cluster is not None
+            and async_replication_primary_cluster != self.app
+        ):
+            logger.debug(
+                "Early exit _initialize_cluster: not the primary cluster in async replication"
+            )
+            return True
 
         if not self._patroni.primary_endpoint_ready:
             logger.debug(
@@ -953,12 +965,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def _on_upgrade_charm(self, _) -> None:
         # Recreate k8s resources and add labels required for replication
         # when the pod loses them (like when it's deleted).
-        try:
-            self._create_services()
-        except ApiError:
-            logger.exception("failed to create k8s services")
-            self.unit.status = BlockedStatus("failed to create k8s services")
-            return
+        if self.upgrade.idle:
+            try:
+                self._create_services()
+            except ApiError:
+                logger.exception("failed to create k8s services")
+                self.unit.status = BlockedStatus("failed to create k8s services")
+                return
 
         try:
             self._patch_pod_labels(self.unit.name)
@@ -1001,7 +1014,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         )
 
         services = {
-            "primary": "master",
+            "primary": "primary",
             "replicas": "replica",
         }
         for service_name_suffix, role_selector in services.items():
@@ -1474,6 +1487,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     "group": WORKLOAD_OS_GROUP,
                     "environment": {
                         "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: {self.cluster_name}}}",
+                        "PATRONI_KUBERNETES_LEADER_LABEL_VALUE": "primary",
                         "PATRONI_KUBERNETES_NAMESPACE": self._namespace,
                         "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
                         "PATRONI_NAME": pod_name,
