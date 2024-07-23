@@ -241,24 +241,25 @@ async def test_forceful_restart_without_data_and_transaction_logs(
         "scp", "tests/integration/ha_tests/clean-data-dir.sh", f"{primary_name}:/tmp"
     )
 
-    # Stop the systemd service on the primary unit.
-    logger.info(f"stopping database from {primary_name}")
-    await run_command_on_unit(ops_test, primary_name, "/charm/bin/pebble stop postgresql")
+    # Halts the execution of `update-status` hook so the pebble service doesn't get restarted
+    async with ops_test.fast_forward("24h"):
+        # Stop the systemd service on the primary unit.
+        logger.info(f"stopping database from {primary_name}")
+        await run_command_on_unit(ops_test, primary_name, "/charm/bin/pebble stop postgresql")
 
-    # Data removal runs within a script, so it allows `*` expansion.
-    logger.info(f"removing data from {primary_name}")
-    return_code, _, _ = await ops_test.juju(
-        "ssh",
-        primary_name,
-        "bash",
-        "/tmp/clean-data-dir.sh",
-    )
-    assert return_code == 0, "Failed to remove data directory"
+        # Data removal runs within a script, so it allows `*` expansion.
+        logger.info(f"removing data from {primary_name}")
+        return_code, _, _ = await ops_test.juju(
+            "ssh",
+            primary_name,
+            "bash",
+            "/tmp/clean-data-dir.sh",
+        )
+        assert return_code == 0, "Failed to remove data directory"
 
-    # Wait some time to elect a new primary.
-    sleep(MEDIAN_ELECTION_TIME * 2)
+        # Wait some time to elect a new primary.
+        sleep(MEDIAN_ELECTION_TIME * 2)
 
-    async with ops_test.fast_forward():
         logger.info("checking whether writes are increasing")
         await are_writes_increasing(ops_test, primary_name)
 
@@ -298,7 +299,8 @@ async def test_forceful_restart_without_data_and_transaction_logs(
                 new_files
             ), f"WAL segments weren't correctly rotated on {unit_name}"
 
-        # Database pebble service in old primary should have recovered.
+    # Database pebble service in old primary should recover after update-status run.
+    async with ops_test.fast_forward("10s"):
         logger.info(f"Checking the database service on {primary_name}")
         assert await is_postgresql_ready(ops_test, primary_name)
 

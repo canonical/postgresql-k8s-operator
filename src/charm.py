@@ -1282,14 +1282,17 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         if (
             "restoring-backup" not in self.app_peer_data
+            and "stopped" not in self.unit_peer_data
             and services[0].current != ServiceStatus.ACTIVE
         ):
             logger.warning(
                 "%s pebble service inactive, restarting service" % self._postgresql_service
             )
-            self.unit.status = MaintenanceStatus("Database service inactive, restarting")
             container.restart(self._postgresql_service)
-            return
+            # If service doesn't recover fast, exit and wait for next hook run to re-check
+            if not self._patroni.member_started:
+                self.unit.status = MaintenanceStatus("Database service inactive, restarting")
+                return
 
         if "restoring-backup" in self.app_peer_data and not self._was_restore_successful(
             services[0]
