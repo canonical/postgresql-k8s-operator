@@ -1285,7 +1285,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             and services[0].current != ServiceStatus.ACTIVE
         ):
             logger.warning(
-                "on_update_status early exit: pebble service inactive, restarting container"
+                "%s pebble service inactive, restarting service" % self._postgresql_service
             )
             self.unit.status = MaintenanceStatus("Database service inactive, restarting")
             container.restart(self._postgresql_service)
