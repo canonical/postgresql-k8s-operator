@@ -37,6 +37,7 @@ METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
 APPLICATION_NAME = "postgresql-test-app"
 STORAGE_PATH = METADATA["storage"]["pgdata"]["location"]
+MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET = "Move restored cluster to another S3 bucket"
 
 charm = None
 
@@ -920,6 +921,8 @@ async def backup_operations(
     async with ops_test.fast_forward(fast_interval="60s"):
         await scale_application(ops_test, database_app_name, 1)
 
+    remaining_unit = ops_test.model.units.get(f"{database_app_name}/0")
+
     # Run the "restore backup" action for differential backup.
     for attempt in Retrying(
         stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
@@ -928,16 +931,18 @@ async def backup_operations(
             logger.info("restoring the backup")
             last_diff_backup = backups.split("\n")[-1]
             backup_id = last_diff_backup.split()[0]
-            action = await ops_test.model.units.get(f"{database_app_name}/0").run_action(
-                "restore", **{"backup-id": backup_id}
-            )
+            action = await remaining_unit.run_action("restore", **{"backup-id": backup_id})
             await action.wait()
             restore_status = action.results.get("restore-status")
             assert restore_status, "restore hasn't succeeded"
 
     # Wait for the restore to complete.
     async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(status="active", timeout=1000)
+        await ops_test.model.block_until(
+            lambda: remaining_unit.workload_status_message
+            == MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET,
+            timeout=1000,
+        )
 
     # Check that the backup was correctly restored by having only the first created table.
     logger.info("checking that the backup was correctly restored")
@@ -975,16 +980,18 @@ async def backup_operations(
             logger.info("restoring the backup")
             last_full_backup = backups.split("\n")[-2]
             backup_id = last_full_backup.split()[0]
-            action = await ops_test.model.units.get(f"{database_app_name}/0").run_action(
-                "restore", **{"backup-id": backup_id}
-            )
+            action = await remaining_unit.run_action("restore", **{"backup-id": backup_id})
             await action.wait()
             restore_status = action.results.get("restore-status")
             assert restore_status, "restore hasn't succeeded"
 
     # Wait for the restore to complete.
     async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(status="active", timeout=1000)
+        await ops_test.model.block_until(
+            lambda: remaining_unit.workload_status_message
+            == MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET,
+            timeout=1000,
+        )
 
     # Check that the backup was correctly restored by having only the first created table.
     logger.info("checking that the backup was correctly restored")

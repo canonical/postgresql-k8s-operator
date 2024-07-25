@@ -557,7 +557,10 @@ class PostgreSQLBackups(Object):
             return
 
         # Prevents S3 change in the middle of restoring backup and patroni / pgbackrest errors caused by that.
-        if "restoring-backup" in self.charm.app_peer_data or "restore-to-time" in self.charm.app_peer_data:
+        if (
+            "restoring-backup" in self.charm.app_peer_data
+            or "restore-to-time" in self.charm.app_peer_data
+        ):
             logger.info("Cannot change S3 configuration during restore")
             event.defer()
             return
