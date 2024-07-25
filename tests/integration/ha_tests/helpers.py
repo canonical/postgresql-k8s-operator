@@ -123,6 +123,7 @@ async def change_patroni_setting(
             requests.patch(
                 f"{schema}://{unit_ip}:8008/config",
                 json={setting: value},
+                verify=not tls,
             )
 
 
@@ -431,7 +432,7 @@ async def get_patroni_setting(ops_test: OpsTest, setting: str, tls: bool = False
             app = await app_name(ops_test)
             primary_name = await get_primary(ops_test, app)
             unit_ip = await get_unit_address(ops_test, primary_name)
-            configuration_info = requests.get(f"{schema}://{unit_ip}:8008/config")
+            configuration_info = requests.get(f"{schema}://{unit_ip}:8008/config", verify=not tls)
             primary_start_timeout = configuration_info.json().get(setting)
             return int(primary_start_timeout) if primary_start_timeout is not None else None
 
