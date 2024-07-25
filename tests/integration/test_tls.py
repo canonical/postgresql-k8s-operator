@@ -126,7 +126,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
             apps=[DATABASE_APP_NAME], status="active", idle_period=30
         )
         # Pause Patroni so it doesn't wipe the custom changes
-        await change_patroni_setting(ops_test, "pause", True, use_random_unit=True, tls=True)
+        await change_patroni_setting(ops_test, "pause", True, tls=True)
 
     async with ops_test.fast_forward("24h"):
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(2), reraise=True):
