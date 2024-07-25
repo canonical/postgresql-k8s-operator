@@ -171,7 +171,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(2), reraise=True):
             with attempt:
                 await check_tls_rewind(ops_test)
-        await change_patroni_setting(ops_test, "pause", False, use_random_unit=True, tls=True)
+        await change_patroni_setting(ops_test, "pause", False, tls=True)
 
     async with ops_test.fast_forward():
         # Await for postgresql to be stable if not already
