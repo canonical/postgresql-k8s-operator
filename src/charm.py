@@ -1297,9 +1297,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("on_update_status early exit: Service has not been added nor started yet")
             return
 
-        if ("restoring-backup" in self.app_peer_data or "restore-to-time" in self.app_peer_data) and not self._was_restore_successful(
-            container, services[0]
-        ):
+        if (
+            "restoring-backup" in self.app_peer_data or "restore-to-time" in self.app_peer_data
+        ) and not self._was_restore_successful(container, services[0]):
             return
 
         if self._handle_processes_failures():
