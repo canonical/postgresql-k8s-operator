@@ -20,6 +20,7 @@ from .helpers import (
     get_password,
     get_primary,
     get_unit_address,
+    scale_application,
 )
 from .juju_ import juju_major_version
 
@@ -249,8 +250,8 @@ async def test_pitr_backup(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) 
         )
 
         # Check that the backup was correctly restored.
-        primary = await get_primary(ops_test, remaining_unit.name)
-        address = get_unit_address(ops_test, primary)
+        primary = await get_primary(ops_test, database_app_name)
+        address = await get_unit_address(ops_test, primary)
         logger.info("checking that the backup was correctly restored")
         with db_connect(
             host=address, password=password

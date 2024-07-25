@@ -141,24 +141,28 @@ async def test_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -
         logger.info("ensuring that the replication is working correctly")
         address = await get_unit_address(ops_test, new_unit_name)
         password = await get_password(ops_test, database_app_name=database_app_name)
-        with db_connect(
-            host=address, password=password
-        ) as connection, connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT EXISTS (SELECT FROM information_schema.tables"
-                " WHERE table_schema = 'public' AND table_name = 'backup_table_1');"
-            )
-            assert cursor.fetchone()[
-                0
-            ], f"replication isn't working correctly: table 'backup_table_1' doesn't exist in {new_unit_name}"
-            cursor.execute(
-                "SELECT EXISTS (SELECT FROM information_schema.tables"
-                " WHERE table_schema = 'public' AND table_name = 'backup_table_2');"
-            )
-            assert not cursor.fetchone()[
-                0
-            ], f"replication isn't working correctly: table 'backup_table_2' exists in {new_unit_name}"
-        connection.close()
+        for attempt in Retrying(
+            stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
+        ):
+            with attempt:
+                with db_connect(
+                    host=address, password=password
+                ) as connection, connection.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT EXISTS (SELECT FROM information_schema.tables"
+                        " WHERE table_schema = 'public' AND table_name = 'backup_table_1');"
+                    )
+                    assert cursor.fetchone()[
+                        0
+                    ], f"replication isn't working correctly: table 'backup_table_1' doesn't exist in {new_unit_name}"
+                    cursor.execute(
+                        "SELECT EXISTS (SELECT FROM information_schema.tables"
+                        " WHERE table_schema = 'public' AND table_name = 'backup_table_2');"
+                    )
+                    assert not cursor.fetchone()[
+                        0
+                    ], f"replication isn't working correctly: table 'backup_table_2' exists in {new_unit_name}"
+                connection.close()
 
         old_primary = await get_primary(ops_test, database_app_name)
         logger.info(f"performing a switchover from {old_primary} to {new_unit_name}")
