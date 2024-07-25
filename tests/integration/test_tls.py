@@ -9,6 +9,9 @@ from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from . import architecture, markers
+from .ha_tests.helpers import (
+    change_patroni_setting,
+)
 from .helpers import (
     DATABASE_APP_NAME,
     build_and_deploy,
@@ -122,7 +125,10 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         await ops_test.model.wait_for_idle(
             apps=[DATABASE_APP_NAME], status="active", idle_period=30
         )
+        # Pause Patroni so it doesn't wipe the custom changes
+        await change_patroni_setting(ops_test, "pause", True, use_random_unit=True, tls=True)
 
+    async with ops_test.fast_forward("24h"):
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(2), reraise=True):
             with attempt:
                 # Promote the replica to primary.
@@ -165,7 +171,9 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(2), reraise=True):
             with attempt:
                 await check_tls_rewind(ops_test)
+        await change_patroni_setting(ops_test, "pause", False, use_random_unit=True, tls=True)
 
+    async with ops_test.fast_forward():
         # Await for postgresql to be stable if not already
         await ops_test.model.wait_for_idle(
             apps=[DATABASE_APP_NAME], status="active", idle_period=15
