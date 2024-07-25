@@ -146,7 +146,7 @@ async def test_pitr_backup(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) 
     with db_connect(host=address, password=password) as connection:
         connection.autocommit = True
         connection.cursor().execute(
-            "CREATE TABLE IF NOT EXISTS backup_table_1 (test_collumn INT );"
+            "CREATE TABLE IF NOT EXISTS backup_table_1 (test_column INT );"
         )
     connection.close()
 
@@ -191,6 +191,10 @@ async def test_pitr_backup(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) 
         connection.cursor().execute("SELECT pg_switch_wal();")
     connection.close()
 
+    async with ops_test.fast_forward(fast_interval="60s"):
+        await scale_application(ops_test, database_app_name, 1)
+    remaining_unit = ops_test.model.units.get(f"{database_app_name}/0")
+
     most_recent_backup = backups.split("\n")[-1]
     backup_id = most_recent_backup.split()[0]
     # Wrong timestamp pointing to one year ahead
@@ -222,8 +226,6 @@ async def test_pitr_backup(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) 
     logger.info(
         "database charm become in blocked state, as supposed to be with unreachable PITR parameter"
     )
-
-    remaining_unit = ops_test.model.units.get(f"{database_app_name}/0")
 
     # Run the "restore backup" action.
     for attempt in Retrying(
