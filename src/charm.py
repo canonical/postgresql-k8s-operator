@@ -902,6 +902,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _set_active_status(self):
         if "require-change-bucket-after-restore" in self.app_peer_data:
+            if self.unit.is_leader():
+                self.app_peer_data.update({
+                    "restoring-backup": "",
+                    "restore-stanza": "",
+                    "restore-to-time": "",
+                })
             self.unit.status = BlockedStatus(MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET)
             return
         try:
