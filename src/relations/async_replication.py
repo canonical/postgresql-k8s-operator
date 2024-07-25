@@ -140,7 +140,7 @@ class PostgreSQLAsyncReplication(Object):
 
         # Check if this cluster is already the primary cluster. If so, fail the action telling that it's already
         # the primary cluster.
-        primary_cluster = self._get_primary_cluster()
+        primary_cluster = self.get_primary_cluster()
         if self.charm.app == primary_cluster:
             event.fail("This cluster is already the primary cluster.")
             return False
@@ -217,7 +217,7 @@ class PostgreSQLAsyncReplication(Object):
                     promoted_cluster_counter = relation_promoted_cluster_counter
         return promoted_cluster_counter
 
-    def _get_primary_cluster(self) -> Optional[Application]:
+    def get_primary_cluster(self) -> Optional[Application]:
         """Return the primary cluster."""
         primary_cluster = None
         promoted_cluster_counter = "0"
@@ -240,7 +240,7 @@ class PostgreSQLAsyncReplication(Object):
 
     def get_primary_cluster_endpoint(self) -> Optional[str]:
         """Return the primary cluster endpoint."""
-        primary_cluster = self._get_primary_cluster()
+        primary_cluster = self.get_primary_cluster()
         if primary_cluster is None or self.charm.app == primary_cluster:
             return None
         relation = self._relation
@@ -252,7 +252,7 @@ class PostgreSQLAsyncReplication(Object):
     def get_all_primary_cluster_endpoints(self) -> List[str]:
         """Return all the primary cluster endpoints."""
         relation = self._relation
-        primary_cluster = self._get_primary_cluster()
+        primary_cluster = self.get_primary_cluster()
         # List the primary endpoints only for the standby cluster.
         if relation is None or primary_cluster is None or self.charm.app == primary_cluster:
             return []
@@ -294,7 +294,7 @@ class PostgreSQLAsyncReplication(Object):
     def get_standby_endpoints(self) -> List[str]:
         """Return the standby endpoints."""
         relation = self._relation
-        primary_cluster = self._get_primary_cluster()
+        primary_cluster = self.get_primary_cluster()
         # List the standby endpoints only for the primary cluster.
         if relation is None or primary_cluster is None or self.charm.app != primary_cluster:
             return []
@@ -456,7 +456,7 @@ class PostgreSQLAsyncReplication(Object):
 
     def _is_following_promoted_cluster(self) -> bool:
         """Return True if this unit is following the promoted cluster."""
-        if self._get_primary_cluster() is None:
+        if self.get_primary_cluster() is None:
             return False
         return (
             self.charm._peers.data[self.charm.unit].get("unit-promoted-cluster-counter")
@@ -465,7 +465,7 @@ class PostgreSQLAsyncReplication(Object):
 
     def is_primary_cluster(self) -> bool:
         """Return the primary cluster name."""
-        return self.charm.app == self._get_primary_cluster()
+        return self.charm.app == self.get_primary_cluster()
 
     def _on_async_relation_broken(self, _) -> None:
         if self.charm._peers is None or "departing" in self.charm._peers.data[self.charm.unit]:
@@ -493,7 +493,7 @@ class PostgreSQLAsyncReplication(Object):
         if self.charm.unit.is_leader():
             self._set_app_status()
 
-        primary_cluster = self._get_primary_cluster()
+        primary_cluster = self.get_primary_cluster()
         logger.debug("Primary cluster: %s", primary_cluster)
         if primary_cluster is None:
             logger.debug("Early exit on_async_relation_changed: No primary cluster found.")
@@ -559,7 +559,7 @@ class PostgreSQLAsyncReplication(Object):
 
     def _on_create_replication(self, event: ActionEvent) -> None:
         """Set up asynchronous replication between two clusters."""
-        if self._get_primary_cluster() is not None:
+        if self.get_primary_cluster() is not None:
             event.fail("There is already a replication set up.")
             return
 
@@ -580,7 +580,7 @@ class PostgreSQLAsyncReplication(Object):
         """Promote this cluster to the primary cluster."""
         if (
             self.charm.app.status.message != READ_ONLY_MODE_BLOCKING_MESSAGE
-            and self._get_primary_cluster() is None
+            and self.get_primary_cluster() is None
         ):
             event.fail(
                 "No primary cluster found. Run `create-replication` action in the cluster where the offer was created."
@@ -683,7 +683,7 @@ class PostgreSQLAsyncReplication(Object):
         if self._relation is None:
             self.charm.app.status = ActiveStatus()
             return
-        primary_cluster = self._get_primary_cluster()
+        primary_cluster = self.get_primary_cluster()
         if primary_cluster is None:
             self.charm.app.status = ActiveStatus()
         else:

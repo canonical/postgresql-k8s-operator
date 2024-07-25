@@ -22,7 +22,7 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v16.3.0
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v17.0.0
 
   unit-test:
     name: Unit test charm
@@ -44,7 +44,7 @@ jobs:
 
   build:
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v16.3.0
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v17.0.0
     with:
       cache: true
 
@@ -56,21 +56,21 @@ jobs:
           - agent: 2.9.49  # renovate: juju-agent-pin-minor
             libjuju: ==2.9.49.0  # renovate: latest libjuju 2
             allure_on_amd64: false
-          - agent: 3.4.3  # renovate: juju-agent-pin-minor
+          - agent: 3.4.4  # renovate: juju-agent-pin-minor
             allure_on_amd64: true
         architecture:
           - amd64
         include:
           - juju:
-              agent: 3.4.3  # renovate: juju-agent-pin-minor
+              agent: 3.4.4  # renovate: juju-agent-pin-minor
               allure_on_amd64: true
             architecture: arm64
-    name: Integration test charm | ${{ matrix.juju.agent }} | ${{ matrix.architecture }}
+    name: Integration | ${{ matrix.juju.agent }} | ${{ matrix.architecture }}
     needs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v16.3.0
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v17.0.0
     with:
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
       architecture: ${{ matrix.architecture }}

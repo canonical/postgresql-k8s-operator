@@ -66,6 +66,7 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
     1. [Migrate a cluster](how-to/h-backups/h-migrate-cluster.md)
   1. [Monitoring (COS)](how-to/h-monitor)
     1. [Enable monitoring](how-to/h-monitor/h-enable-monitoring.md)
+    1. [Enable tracing](how-to/h-monitor/h-enable-tracing.md)
     1. [Enable Alert Rules](how-to/h-monitor/h-enable-alert-rules.md)
   1. [Upgrade](how-to/h-upgrade)
     1. [Overview](how-to/h-upgrade/h-upgrade-intro.md)

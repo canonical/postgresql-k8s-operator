@@ -27,7 +27,6 @@ import psycopg2
 from ops.model import Relation
 from psycopg2 import sql
 from psycopg2.sql import Composed
-from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 # The unique Charmhub library identifier, never change it
 LIBID = "24ee217a54e840a598ff21a079c3e678"
@@ -37,7 +36,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 31
+LIBPATCH = 33
 
 INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE = "invalid role(s) for extra user roles"
 
@@ -129,12 +128,10 @@ class PostgreSQL:
              psycopg2 connection object.
         """
         host = database_host if database_host is not None else self.primary_host
-        for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(3), reraise=True):
-            with attempt:
-                connection = psycopg2.connect(
-                    f"dbname='{database if database else self.database}' user='{self.user}' host='{host}'"
-                    f"password='{self.password}' connect_timeout=1"
-                )
+        connection = psycopg2.connect(
+            f"dbname='{database if database else self.database}' user='{self.user}' host='{host}'"
+            f"password='{self.password}' connect_timeout=1"
+        )
         connection.autocommit = True
         return connection
 
@@ -330,6 +327,8 @@ class PostgreSQL:
                         )
         except psycopg2.errors.UniqueViolation:
             pass
+        except psycopg2.errors.DependentObjectsStillExist:
+            raise
         except psycopg2.Error:
             raise PostgreSQLEnableDisableExtensionError()
         finally:

@@ -100,6 +100,7 @@ from utils import any_cpu_to_cores, any_memory_to_bytes, new_password
 logger = logging.getLogger(__name__)
 
 EXTENSIONS_DEPENDENCY_MESSAGE = "Unsatisfied plugin dependencies. Please check the logs"
+EXTENSION_OBJECT_MESSAGE = "Cannot disable plugins: Existing objects depend on it. See logs"
 
 ORIGINAL_PATRONI_ON_FAILURE_CONDITION = "restart"
 
@@ -175,7 +176,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
         self.framework.observe(self.on.pgdata_storage_detaching, self._on_pgdata_storage_detaching)
         self.framework.observe(self.on.stop, self._on_stop)
-        self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.framework.observe(self.on.get_password_action, self._on_get_password)
         self.framework.observe(self.on.set_password_action, self._on_set_password)
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
@@ -188,6 +188,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             relation_name="upgrade",
             substrate="k8s",
         )
+        self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.postgresql_client_relation = PostgreSQLProvider(self)
         self.legacy_db_relation = DbProvides(self, admin=False)
         self.legacy_db_admin_relation = DbProvides(self, admin=True)
@@ -643,12 +644,27 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if self.is_blocked and self.unit.status.message == EXTENSIONS_DEPENDENCY_MESSAGE:
             self._set_active_status()
             original_status = self.unit.status
+
+        self._handle_enable_disable_extensions(original_status, extensions, database)
+
+    def _handle_enable_disable_extensions(self, original_status, extensions, database) -> None:
+        """Try enablind/disabling Postgresql extensions and handle exceptions appropriately."""
         if not isinstance(original_status, UnknownStatus):
             self.unit.status = WaitingStatus("Updating extensions")
         try:
             self.postgresql.enable_disable_extensions(extensions, database)
+        except psycopg2.errors.DependentObjectsStillExist as e:
+            logger.error(
+                "Failed to disable plugin: %s\nWas the plugin enabled manually? If so, update charm config with `juju config postgresql-k8s plugin_<plugin_name>_enable=True`",
+                str(e),
+            )
+            self.unit.status = BlockedStatus(EXTENSION_OBJECT_MESSAGE)
+            return
         except PostgreSQLEnableDisableExtensionError as e:
             logger.exception("failed to change plugins: %s", str(e))
+        if original_status.message == EXTENSION_OBJECT_MESSAGE:
+            self._set_active_status()
+            return
         if not isinstance(original_status, UnknownStatus):
             self.unit.status = original_status
 
@@ -773,12 +789,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
 
         # Create resources and add labels needed for replication.
-        try:
-            self._create_services()
-        except ApiError:
-            logger.exception("failed to create k8s services")
-            self.unit.status = BlockedStatus("failed to create k8s services")
-            return
+        if self.upgrade.idle:
+            try:
+                self._create_services()
+            except ApiError:
+                logger.exception("failed to create k8s services")
+                self.unit.status = BlockedStatus("failed to create k8s services")
+                return
 
         # Remove departing units when the leader changes.
         self._remove_from_endpoints(self._get_endpoints_to_remove())
@@ -908,12 +925,23 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return False
 
         # Create resources and add labels needed for replication
-        try:
-            self._create_services()
-        except ApiError:
-            logger.exception("failed to create k8s services")
-            self.unit.status = BlockedStatus("failed to create k8s services")
-            return False
+        if self.upgrade.idle:
+            try:
+                self._create_services()
+            except ApiError:
+                logger.exception("failed to create k8s services")
+                self.unit.status = BlockedStatus("failed to create k8s services")
+                return False
+
+        async_replication_primary_cluster = self.async_replication.get_primary_cluster()
+        if (
+            async_replication_primary_cluster is not None
+            and async_replication_primary_cluster != self.app
+        ):
+            logger.debug(
+                "Early exit _initialize_cluster: not the primary cluster in async replication"
+            )
+            return True
 
         if not self._patroni.primary_endpoint_ready:
             logger.debug(
@@ -950,12 +978,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def _on_upgrade_charm(self, _) -> None:
         # Recreate k8s resources and add labels required for replication
         # when the pod loses them (like when it's deleted).
-        try:
-            self._create_services()
-        except ApiError:
-            logger.exception("failed to create k8s services")
-            self.unit.status = BlockedStatus("failed to create k8s services")
-            return
+        if self.upgrade.idle:
+            try:
+                self._create_services()
+            except ApiError:
+                logger.exception("failed to create k8s services")
+                self.unit.status = BlockedStatus("failed to create k8s services")
+                return
 
         try:
             self._patch_pod_labels(self.unit.name)
@@ -998,7 +1027,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         )
 
         services = {
-            "primary": "master",
+            "primary": "primary",
             "replicas": "replica",
         }
         for service_name_suffix, role_selector in services.items():
@@ -1256,6 +1285,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
 
         if self._has_blocked_status or self._has_non_restore_waiting_status:
+            # If charm was failing to disable plugin, try again (user may have removed the objects)
+            if self.unit.status.message == EXTENSION_OBJECT_MESSAGE:
+                self.enable_disable_extensions()
             logger.debug("on_update_status early exit: Unit is in Blocked/Waiting status")
             return
 
@@ -1265,7 +1297,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("on_update_status early exit: Service has not been added nor started yet")
             return
 
-        if self._update_status_restore_checks(container, services):
+        if ("restoring-backup" in self.app_peer_data or "restore-to-time" in self.app_peer_data) and not self._was_restore_successful(
+            container, services[0]
+        ):
             return
 
         if self._handle_processes_failures():
@@ -1276,44 +1310,42 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         self._set_active_status()
 
-    def _update_status_restore_checks(
-        self, container: Container, services: list[ServiceInfo]
-    ) -> bool:
-        if "restoring-backup" in self.app_peer_data or "restore-to-time" in self.app_peer_data:
-            if services[0].current != ServiceStatus.ACTIVE:
-                if "restore-to-time" in self.app_peer_data and all(self.is_pitr_failed(container)):
-                    logger.error(
-                        "Restore failed: database service failed to reach point-in-time-recovery target. "
-                        "You can launch another restore with different parameters"
-                    )
-                    self.log_pitr_last_transaction_time()
-                    self.unit.status = BlockedStatus(CANNOT_RESTORE_PITR)
-                    return True
+    def _was_restore_successful(self, container: Container, service: ServiceInfo) -> bool:
+        """Checks if restore operation succeeded and S3 is properly configured."""
+        if service.current != ServiceStatus.ACTIVE:
+            if "restore-to-time" in self.app_peer_data and all(self.is_pitr_failed(container)):
+                logger.error(
+                    "Restore failed: database service failed to reach point-in-time-recovery target. "
+                    "You can launch another restore with different parameters"
+                )
+                self.log_pitr_last_transaction_time()
+                self.unit.status = BlockedStatus(CANNOT_RESTORE_PITR)
+                return False
 
-                logger.error("Restore failed: database service failed to start")
-                self.unit.status = BlockedStatus("Failed to restore backup")
-                return True
+            logger.error("Restore failed: database service failed to start")
+            self.unit.status = BlockedStatus("Failed to restore backup")
+            return False
 
-            if not self._patroni.member_started:
-                logger.debug("on_update_status early exit: Patroni has not started yet")
-                return True
+        if not self._patroni.member_started:
+            logger.debug("on_update_status early exit: Patroni has not started yet")
+            return False
 
-            # Remove the restoring backup flag and the restore stanza name.
-            self.app_peer_data.update({
-                "restoring-backup": "",
-                "restore-stanza": "",
-                "restore-to-time": "",
-            })
-            self.update_config()
-            self.restore_patroni_on_failure_condition()
-            logger.info("Restore succeeded")
+        # Remove the restoring backup flag and the restore stanza name.
+        self.app_peer_data.update({
+            "restoring-backup": "",
+            "restore-stanza": "",
+            "restore-to-time": "",
+        })
+        self.update_config()
+        self.restore_patroni_on_failure_condition()
+        logger.info("Restore succeeded")
 
-            can_use_s3_repository, validation_message = self.backup.can_use_s3_repository()
-            if not can_use_s3_repository:
-                self.unit.status = BlockedStatus(validation_message)
-                return True
+        can_use_s3_repository, validation_message = self.backup.can_use_s3_repository()
+        if not can_use_s3_repository:
+            self.unit.status = BlockedStatus(validation_message)
+            return False
 
-        return False
+        return True
 
     def _handle_processes_failures(self) -> bool:
         """Handle Patroni and PostgreSQL OS processes failures.
@@ -1490,6 +1522,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     "group": WORKLOAD_OS_GROUP,
                     "environment": {
                         "PATRONI_KUBERNETES_LABELS": f"{{application: patroni, cluster-name: {self.cluster_name}}}",
+                        "PATRONI_KUBERNETES_LEADER_LABEL_VALUE": "primary",
                         "PATRONI_KUBERNETES_NAMESPACE": self._namespace,
                         "PATRONI_KUBERNETES_USE_ENDPOINTS": "true",
                         "PATRONI_NAME": pod_name,

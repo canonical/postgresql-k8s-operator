@@ -7,8 +7,10 @@ import string
 import subprocess
 import tarfile
 import tempfile
+import zipfile
 from datetime import datetime
-from typing import Dict, Optional, Set, Tuple
+from pathlib import Path
+from typing import Dict, Optional, Set, Tuple, Union
 
 import kubernetes as kubernetes
 import psycopg2
@@ -44,6 +46,7 @@ from ..helpers import (
     get_unit_address,
     run_command_on_unit,
 )
+from ..new_relations.helpers import get_application_relation_data
 
 PORT = 5432
 
@@ -421,6 +424,25 @@ async def get_patroni_setting(ops_test: OpsTest, setting: str) -> Optional[int]:
             return int(primary_start_timeout) if primary_start_timeout is not None else None
 
 
+async def get_instances_roles(ops_test: OpsTest):
+    """Return the roles of the instances in the cluster."""
+    labels = {}
+    client = Client()
+    app = await app_name(ops_test)
+    for unit in ops_test.model.applications[app].units:
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(5)):
+            with attempt:
+                pod = client.get(
+                    res=Pod,
+                    name=unit.name.replace("/", "-"),
+                    namespace=ops_test.model.info.name,
+                )
+                if "role" not in pod.metadata.labels:
+                    raise ValueError(f"role label not available for {unit.name}")
+                labels[unit.name] = pod.metadata.labels["role"]
+    return labels
+
+
 async def get_postgresql_parameter(ops_test: OpsTest, parameter_name: str) -> Optional[int]:
     """Get the value of a PostgreSQL parameter from Patroni API.
 
@@ -481,6 +503,23 @@ async def get_sync_standby(model: Model, application_name: str) -> str:
     for member in cluster["members"]:
         if member["role"] == "sync_standby":
             return member["name"]
+
+
+async def inject_dependency_fault(
+    ops_test: OpsTest, application_name: str, charm_file: Union[str, Path]
+) -> None:
+    """Inject a dependency fault into the PostgreSQL charm."""
+    # Query running dependency to overwrite with incompatible version.
+    dependencies = await get_application_relation_data(
+        ops_test, application_name, "upgrade", "dependencies"
+    )
+    loaded_dependency_dict = json.loads(dependencies)
+    loaded_dependency_dict["charm"]["upgrade_supported"] = "^15"
+    loaded_dependency_dict["charm"]["version"] = "15.0"
+
+    # Overwrite dependency.json with incompatible version.
+    with zipfile.ZipFile(charm_file, mode="a") as charm_zip:
+        charm_zip.writestr("src/dependency.json", json.dumps(loaded_dependency_dict))
 
 
 async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
