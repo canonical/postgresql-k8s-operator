@@ -883,6 +883,7 @@ def test_postgresql_layer(harness):
                     "summary": "entrypoint of the postgresql + patroni image",
                     "command": "patroni /var/lib/postgresql/data/patroni.yml",
                     "startup": "enabled",
+                    "on-failure": "restart",
                     "user": "postgres",
                     "group": "postgres",
                     "environment": {
@@ -1630,6 +1631,9 @@ def test_update_config(harness):
             backup_id=None,
             stanza=None,
             restore_stanza=None,
+            pitr_target=None,
+            restore_to_latest=False,
+            disable_pgbackrest_archiving=False,
             parameters={"test": "test"},
         )
         _handle_postgresql_restart_need.assert_called_once()
@@ -1651,6 +1655,9 @@ def test_update_config(harness):
             backup_id=None,
             stanza=None,
             restore_stanza=None,
+            pitr_target=None,
+            restore_to_latest=False,
+            disable_pgbackrest_archiving=False,
             parameters={"test": "test"},
         )
         _handle_postgresql_restart_need.assert_called_once()

@@ -21,6 +21,8 @@ WORKLOAD_OS_GROUP = "postgres"
 WORKLOAD_OS_USER = "postgres"
 METRICS_PORT = "9187"
 POSTGRESQL_DATA_PATH = "/var/lib/postgresql/data/pgdata"
+POSTGRESQL_LOGS_PATH = "/var/log/postgresql"
+POSTGRESQL_LOGS_PATTERN = "postgresql*.log"
 POSTGRES_LOG_FILES = [
     "/var/log/pgbackrest/*",
     "/var/log/postgresql/patroni.log",
