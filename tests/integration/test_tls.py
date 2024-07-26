@@ -165,6 +165,12 @@ async def test_tls(ops_test: OpsTest) -> None:
                 await check_tls_rewind(ops_test)
         await change_patroni_setting(ops_test, "pause", False, tls=True)
 
+    async with ops_test.fast_forward():
+        # Await for postgresql to be stable if not already
+        await ops_test.model.wait_for_idle(
+            apps=[DATABASE_APP_NAME], status="active", idle_period=15
+        )
+
 
 @pytest.mark.group(1)
 @markers.amd64_only  # mattermost-k8s charm not available for arm64
@@ -177,11 +183,6 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         ops_test: The ops test framework
     """
     async with ops_test.fast_forward():
-        # Await for postgresql to be stable if not already
-        await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME], status="active", idle_period=15
-        )
-
         # Deploy and check Mattermost user and database existence.
         relation_id = await deploy_and_relate_application_with_postgresql(
             ops_test, "mattermost-k8s", MATTERMOST_APP_NAME, APPLICATION_UNITS, status="waiting"
