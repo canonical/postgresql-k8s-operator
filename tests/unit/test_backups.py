@@ -540,6 +540,18 @@ def test_execute_command(harness):
         assert harness.charm.backup._execute_command(command, timeout=5) == ("fake stdout", "")
         _exec.assert_called_once_with(command, user="postgres", group="postgres", timeout=5)
 
+        # Test when streaming is enabled
+        _exec.reset_mock()
+        _exec.side_effect = None
+        _exec.return_value = MagicMock()
+        _exec.return_value.stdout = ["fake stdout 1\n", "fake stdout 2\n"]
+        _exec.return_value.stderr = ["fake stderr 1\n", "fake stderr 2\n"]
+        assert harness.charm.backup._execute_command(command, timeout=5, stream=True) == (
+            "fake stdout 1\nfake stdout 2\n",
+            "fake stderr 1\nfake stderr 2\n",
+        )
+        _exec.assert_called_once_with(command, user="postgres", group="postgres", timeout=5)
+
 
 def test_format_backup_list(harness):
     with patch(

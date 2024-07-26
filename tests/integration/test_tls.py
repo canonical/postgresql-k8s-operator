@@ -159,9 +159,7 @@ async def test_tls(ops_test: OpsTest) -> None:
         # Check that the primary changed.
         assert await primary_changed(ops_test, primary), "primary not changed"
 
-        # Restart the initial primary and check the logs to ensure TLS is being used by pg_rewind.
-        logger.info(f"starting database on {primary}")
-        await run_command_on_unit(ops_test, primary, "/charm/bin/pebble start postgresql")
+        # Check the logs to ensure TLS is being used by pg_rewind.
         for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(2), reraise=True):
             with attempt:
                 await check_tls_rewind(ops_test)

@@ -455,6 +455,7 @@ def test_on_update_status(harness):
         patch("charm.Patroni.member_started") as _member_started,
         patch("charm.Patroni.get_primary") as _get_primary,
         patch("ops.model.Container.pebble") as _pebble,
+        patch("ops.model.Container.restart", new_callable=PropertyMock),
         patch("upgrade.PostgreSQLUpgrade.idle", return_value="idle"),
     ):
         # Test before the PostgreSQL service is available.
@@ -464,12 +465,18 @@ def test_on_update_status(harness):
         _get_primary.assert_not_called()
 
         # Test when a failure need to be handled.
-        _pebble.get_services.return_value = ["service data"]
+        _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.ACTIVE)]
         _handle_processes_failures.return_value = True
         harness.charm.on.update_status.emit()
         _get_primary.assert_not_called()
 
+        # Test when a failure need to be handled.
+        _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.INACTIVE)]
+        harness.charm.on.update_status.emit()
+        _get_primary.assert_not_called()
+
         # Check primary message not being set (current unit is not the primary).
+        _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.ACTIVE)]
         _handle_processes_failures.return_value = False
         _get_primary.side_effect = [
             "postgresql-k8s/1",
@@ -514,7 +521,7 @@ def test_on_update_status_with_error_on_get_primary(harness):
         patch("upgrade.PostgreSQLUpgrade.idle", return_value=True),
     ):
         # Mock the access to the list of Pebble services.
-        _pebble.get_services.return_value = ["service data"]
+        _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.ACTIVE)]
 
         _get_primary.side_effect = [RetryError("fake error")]
 
@@ -1762,4 +1769,31 @@ def test_set_active_status(harness):
                     )
             else:
                 _get_primary.side_effect = values[0]
-                _get_primary.return_value
+                _get_primary.return_value = None
+                harness.charm._set_active_status()
+                tc.assertIsInstance(harness.charm.unit.status, MaintenanceStatus)
+
+
+def test_create_pgdata(harness):
+    container = MagicMock()
+    container.exists.return_value = False
+    harness.charm._create_pgdata(container)
+    container.make_dir.assert_called_once_with(
+        "/var/lib/postgresql/data/pgdata", permissions=504, user="postgres", group="postgres"
+    )
+    container.exec.assert_called_once_with([
+        "chown",
+        "postgres:postgres",
+        "/var/lib/postgresql/data",
+    ])
+
+    container.make_dir.reset_mock()
+    container.exec.reset_mock()
+    container.exists.return_value = True
+    harness.charm._create_pgdata(container)
+    container.make_dir.assert_not_called()
+    container.exec.assert_called_once_with([
+        "chown",
+        "postgres:postgres",
+        "/var/lib/postgresql/data",
+    ])
