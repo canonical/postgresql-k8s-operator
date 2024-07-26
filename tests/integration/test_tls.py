@@ -58,7 +58,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await build_and_deploy(ops_test, DATABASE_UNITS, wait_for_idle=False)
 
 
-@pytest.mark.group(1)
 async def check_tls_rewind(ops_test: OpsTest) -> None:
     """Checks if TLS was used by rewind."""
     for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
@@ -79,15 +78,7 @@ async def check_tls_rewind(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.group(1)
-@markers.amd64_only  # mattermost-k8s charm not available for arm64
-async def test_mattermost_db(ops_test: OpsTest) -> None:
-    """Deploy Mattermost to test the 'db' relation.
-
-    Mattermost needs TLS enabled on PostgreSQL to correctly connect to it.
-
-    Args:
-        ops_test: The ops test framework
-    """
+async def test_tls(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
         # Deploy TLS Certificates operator.
         await ops_test.model.deploy(
@@ -175,6 +166,17 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
                 await check_tls_rewind(ops_test)
         await change_patroni_setting(ops_test, "pause", False, tls=True)
 
+
+@pytest.mark.group(1)
+@markers.amd64_only  # mattermost-k8s charm not available for arm64
+async def test_mattermost_db(ops_test: OpsTest) -> None:
+    """Deploy Mattermost to test the 'db' relation.
+
+    Mattermost needs TLS enabled on PostgreSQL to correctly connect to it.
+
+    Args:
+        ops_test: The ops test framework
+    """
     async with ops_test.fast_forward():
         # Await for postgresql to be stable if not already
         await ops_test.model.wait_for_idle(
