@@ -157,7 +157,6 @@ async def test_freeze_db_process(
 
 
 @pytest.mark.group(1)
-@pytest.mark.unstable
 @pytest.mark.parametrize("process", DB_PROCESSES)
 @pytest.mark.parametrize("signal", ["SIGTERM", "SIGKILL"])
 async def test_full_cluster_restart(
@@ -189,7 +188,7 @@ async def test_full_cluster_restart(
     # of all replicas being down at the same time.
     try:
         assert await are_all_db_processes_down(
-            ops_test, process
+            ops_test, process, signal
         ), "Not all units down at the same time."
     finally:
         for unit in ops_test.model.applications[app].units:
