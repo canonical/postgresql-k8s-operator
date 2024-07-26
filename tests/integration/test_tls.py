@@ -78,6 +78,7 @@ async def check_tls_rewind(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.group(1)
+@pytest.mark.abort_on_fail
 async def test_tls(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
         # Deploy TLS Certificates operator.
