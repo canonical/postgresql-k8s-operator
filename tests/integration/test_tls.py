@@ -6,7 +6,7 @@ import logging
 import pytest as pytest
 import requests
 from pytest_operator.plugin import OpsTest
-from tenacity import Retrying, stop_after_delay, wait_fixed
+from tenacity import Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
 from . import architecture, markers
 from .ha_tests.helpers import (
@@ -159,8 +159,10 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         connection.close()
 
         # Stop the initial primary.
-        logger.info(f"stopping database on {primary}")
-        await run_command_on_unit(ops_test, primary, "/charm/bin/pebble stop postgresql")
+        for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(5), reraise=True):
+            with attempt:
+                logger.info(f"stopping database on {primary}")
+                await run_command_on_unit(ops_test, primary, "/charm/bin/pebble stop postgresql")
 
         # Check that the primary changed.
         assert await primary_changed(ops_test, primary), "primary not changed"
