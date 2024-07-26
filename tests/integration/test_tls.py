@@ -194,11 +194,15 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
 
         await check_database_users_existence(ops_test, mattermost_users, [])
 
+
+@pytest.mark.group(1)
+async def test_remove_tls(ops_test: OpsTest) -> None:
+    async with ops_test.fast_forward():
         # Remove the relation.
         await ops_test.model.applications[DATABASE_APP_NAME].remove_relation(
             f"{DATABASE_APP_NAME}:certificates", f"{tls_certificates_app_name}:certificates"
         )
-        await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=1000)
+        await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=1500)
 
         # Wait for all units disabling TLS.
         for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
