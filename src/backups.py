@@ -251,16 +251,32 @@ class PostgreSQLBackups(Object):
         self.charm.update_config(is_creating_backup=True)
 
     def _execute_command(
-        self, command: List[str], timeout: float = None
+        self, command: List[str], timeout: float = None, stream: bool = False
     ) -> Tuple[Optional[str], Optional[str]]:
         """Execute a command in the workload container."""
         try:
-            return self.container.exec(
+            logger.debug("Running command %s", " ".join(command))
+            process = self.container.exec(
                 command,
                 user=WORKLOAD_OS_USER,
                 group=WORKLOAD_OS_GROUP,
                 timeout=timeout,
-            ).wait_output()
+            )
+            if not stream:
+                return process.wait_output()
+
+            stdout = stderr = ""
+            # Read from stdout's IO stream directly, unbuffered
+            for line in process.stdout:
+                logger.debug("Captured stdout: \n%s", repr(line))
+                stdout += line
+            # Fetch from stderr afterwards (not in real time)
+            for line in process.stderr:
+                logger.debug("Captured stderr: \n%s", repr(line))
+                stderr += line
+            process.wait()
+            return stdout, stderr
+
         except ChangeError:
             return None, None
 
@@ -629,7 +645,7 @@ Juju Version: {str(juju_version)}
                 # Force the backup to run in the primary if it's not possible to run it
                 # on the replicas (that happens when TLS is not enabled).
                 command.append("--no-backup-standby")
-            stdout, stderr = self._execute_command(command)
+            stdout, stderr = self._execute_command(command, stream=True)
             backup_id = list(self._list_backups(show_failed=True).keys())[-1]
         except ExecError as e:
             logger.exception(e)
