@@ -294,7 +294,7 @@ async def test_restore_on_new_cluster(ops_test: OpsTest, github_secrets) -> None
             database_app_name,
             0,
             S3_INTEGRATOR_APP_NAME,
-            ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE,
+            MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET,
         )
 
     # Check that the backup was correctly restored by having only the first created table.
