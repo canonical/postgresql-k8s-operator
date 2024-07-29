@@ -54,7 +54,15 @@ from ops.model import (
     UnknownStatus,
     WaitingStatus,
 )
-from ops.pebble import ChangeError, Layer, PathError, ProtocolError, ServiceInfo, ServiceStatus
+from ops.pebble import (
+    ChangeError,
+    ExecError,
+    Layer,
+    PathError,
+    ProtocolError,
+    ServiceInfo,
+    ServiceStatus,
+)
 from requests import ConnectionError
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
@@ -2021,13 +2029,22 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 - Is patroni service failed to bootstrap cluster.
                 - Is it new fail, that wasn't observed previously.
         """
-        log_exec = container.pebble.exec(["pebble", "logs", "postgresql"], combine_stderr=True)
-        patroni_logs = log_exec.wait_output()[0]
-        patroni_exceptions = re.findall(
-            r"^([0-9-:TZ.]+) \[postgresql] patroni\.exceptions\.PatroniFatalException: Failed to bootstrap cluster$",
-            patroni_logs,
-            re.MULTILINE,
-        )
+        try:
+            log_exec = container.pebble.exec(["pebble", "logs", "postgresql"], combine_stderr=True)
+            patroni_logs = log_exec.wait_output()[0]
+            patroni_exceptions = re.findall(
+                r"^([0-9-:TZ.]+) \[postgresql] patroni\.exceptions\.PatroniFatalException: Failed to bootstrap cluster$",
+                patroni_logs,
+                re.MULTILINE,
+            )
+        except ExecError:  # For Juju 2.
+            log_exec = container.pebble.exec(["cat", "/var/log/postgresql/patroni.log"])
+            patroni_logs = log_exec.wait_output()[0]
+            patroni_exceptions = re.findall(
+                r"^([0-9- :]+) UTC \[[0-9]+\]: INFO: removing initialize key after failed attempt to bootstrap the cluster",
+                patroni_logs,
+                re.MULTILINE,
+            )
         if len(patroni_exceptions) > 0:
             old_pitr_fail_id = self.unit_peer_data.get("last_pitr_fail_id", None)
             self.unit_peer_data["last_pitr_fail_id"] = patroni_exceptions[-1]
