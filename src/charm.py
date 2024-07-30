@@ -1356,8 +1356,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self.unit.status = BlockedStatus(CANNOT_RESTORE_PITR)
                 return False
 
-            logger.error("Restore failed: database service failed to start")
-            self.unit.status = BlockedStatus("Failed to restore backup")
+            if self.unit.status.message != CANNOT_RESTORE_PITR:
+                logger.error("Restore failed: database service failed to start")
+                self.unit.status = BlockedStatus("Failed to restore backup")
             return False
 
         if not self._patroni.member_started:
