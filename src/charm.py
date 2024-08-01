@@ -1661,6 +1661,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         try:
             logger.debug("Restarting PostgreSQL")
+            if self.unit.is_leader():
+                self.update_config()
             self._patroni.restart_postgresql()
         except RetryError:
             error_message = "failed to restart PostgreSQL"
