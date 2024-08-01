@@ -25,7 +25,7 @@ from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQLEnableDisableExtensionError,
     PostgreSQLUpdateUserPasswordError,
 )
-from charms.postgresql_k8s.v0.postgresql_tls import TLS_RELATION, PostgreSQLTLS
+from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
 from charms.tempo_k8s.v1.charm_tracing import trace_charm
@@ -1464,7 +1464,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @property
     def is_tls_enabled(self) -> bool:
         """Return whether TLS is enabled."""
-        if not self.model.get_relation(PEER) or not self.model.get_relation(TLS_RELATION):
+        if not self.model.get_relation(PEER):
             return False
         return all(self.tls.get_tls_files())
 
@@ -1661,8 +1661,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         try:
             logger.debug("Restarting PostgreSQL")
-            if self.unit.is_leader():
-                self.update_config()
             self._patroni.restart_postgresql()
         except RetryError:
             error_message = "failed to restart PostgreSQL"

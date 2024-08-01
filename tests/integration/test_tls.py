@@ -6,11 +6,12 @@ import logging
 import pytest as pytest
 import requests
 from pytest_operator.plugin import OpsTest
-from tenacity import Retrying, stop_after_attempt, stop_after_delay, wait_fixed
+from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from . import architecture, markers
 from .ha_tests.helpers import (
     change_patroni_setting,
+    send_signal_to_process,
 )
 from .helpers import (
     DATABASE_APP_NAME,
@@ -151,10 +152,14 @@ async def test_tls(ops_test: OpsTest) -> None:
         connection.close()
 
         # Stop the initial primary.
-        for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(5), reraise=True):
-            with attempt:
-                logger.info(f"stopping database on {primary}")
-                await run_command_on_unit(ops_test, primary, "/charm/bin/pebble stop postgresql")
+        logger.info(f"stopping database on {primary}")
+        try:
+            await run_command_on_unit(ops_test, primary, "/charm/bin/pebble stop postgresql")
+        except Exception as e:
+            # pebble stop on juju 2 errors out and leaves dangling PG processes
+            if juju_major_version > 2:
+                raise e
+            await send_signal_to_process(ops_test, primary, "SIGTERM", "postgres")
 
         # Check that the primary changed.
         assert await primary_changed(ops_test, primary), "primary not changed"
