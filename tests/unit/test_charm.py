@@ -824,6 +824,7 @@ def test_on_upgrade_charm(harness):
         _patch_pod_labels.assert_called_once()
         assert not isinstance(harness.charm.unit.status, BlockedStatus)
 
+
 def test_create_services(harness):
     with patch("charm.Client") as _client:
         # Test the successful creation of the resources.
@@ -1465,7 +1466,9 @@ def test_on_peer_relation_changed(harness):
         with harness.hooks_disabled():
             harness.update_relation_data(rel_id, harness.charm.unit.name, {"start-tls-server": ""})
         harness.charm.on.database_peers_relation_changed.emit(relation)
-        assert harness.get_relation_data(rel_id, harness.charm.unit) == {"start-tls-server": "True"}
+        assert harness.get_relation_data(rel_id, harness.charm.unit) == {
+            "start-tls-server": "True"
+        }
         _defer.assert_called_once()
         assert isinstance(harness.charm.unit.status, MaintenanceStatus)
         _set_active_status.assert_not_called()
@@ -1669,8 +1672,8 @@ def test_update_config(harness):
         )
         _handle_postgresql_restart_need.assert_called_once()
         assert "tls" not in harness.get_relation_data(
-                rel_id, harness.charm.unit.name
-            )  # The "tls" flag is set in handle_postgresql_restart_need.
+            rel_id, harness.charm.unit.name
+        )  # The "tls" flag is set in handle_postgresql_restart_need.
 
         # Test with workload not running yet.
         harness.update_relation_data(
