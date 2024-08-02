@@ -100,22 +100,30 @@ def get_patroni_cluster(unit_ip: str) -> Dict[str, str]:
     return resp.json()
 
 
-async def change_patroni_setting(ops_test: OpsTest, setting: str, value: int) -> None:
+async def change_patroni_setting(
+    ops_test: OpsTest, setting: str, value: Union[int, str], tls: bool = False
+) -> None:
     """Change the value of one of the Patroni settings.
 
     Args:
         ops_test: ops_test instance.
         setting: the name of the setting.
         value: the value to assign to the setting.
+        tls: if Patroni is serving using tls.
     """
+    if tls:
+        schema = "https"
+    else:
+        schema = "http"
     for attempt in Retrying(stop=stop_after_delay(30 * 2), wait=wait_fixed(3)):
         with attempt:
             app = await app_name(ops_test)
             primary_name = await get_primary(ops_test, app)
             unit_ip = await get_unit_address(ops_test, primary_name)
             requests.patch(
-                f"http://{unit_ip}:8008/config",
+                f"{schema}://{unit_ip}:8008/config",
                 json={setting: value},
+                verify=not tls,
             )
 
 
@@ -404,22 +412,27 @@ async def fetch_cluster_members(ops_test: OpsTest):
     return member_ips
 
 
-async def get_patroni_setting(ops_test: OpsTest, setting: str) -> Optional[int]:
+async def get_patroni_setting(ops_test: OpsTest, setting: str, tls: bool = False) -> Optional[int]:
     """Get the value of one of the integer Patroni settings.
 
     Args:
         ops_test: ops_test instance.
         setting: the name of the setting.
+        tls: if Patroni is serving using tls.
 
     Returns:
         the value of the configuration or None if it's using the default value.
     """
+    if tls:
+        schema = "https"
+    else:
+        schema = "http"
     for attempt in Retrying(stop=stop_after_delay(30 * 2), wait=wait_fixed(3)):
         with attempt:
             app = await app_name(ops_test)
             primary_name = await get_primary(ops_test, app)
             unit_ip = await get_unit_address(ops_test, primary_name)
-            configuration_info = requests.get(f"http://{unit_ip}:8008/config")
+            configuration_info = requests.get(f"{schema}://{unit_ip}:8008/config", verify=not tls)
             primary_start_timeout = configuration_info.json().get(setting)
             return int(primary_start_timeout) if primary_start_timeout is not None else None
 

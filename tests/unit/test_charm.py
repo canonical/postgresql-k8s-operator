@@ -207,7 +207,7 @@ def test_on_postgresql_pebble_ready(harness):
         # Check that the initial plan is empty.
         harness.set_can_connect(POSTGRESQL_CONTAINER, True)
         plan = harness.get_container_pebble_plan(POSTGRESQL_CONTAINER)
-        tc.assertEqual(plan.to_dict(), {})
+        assert plan.to_dict() == {}
 
         # Get the current and the expected layer from the pebble plan and the _postgresql_layer
         # method, respectively.
@@ -217,13 +217,13 @@ def test_on_postgresql_pebble_ready(harness):
         # Check for a Waiting status when the primary k8s endpoint is not ready yet.
         harness.container_pebble_ready(POSTGRESQL_CONTAINER)
         _create_pgdata.assert_called_once()
-        tc.assertTrue(isinstance(harness.model.unit.status, WaitingStatus))
+        assert isinstance(harness.model.unit.status, WaitingStatus)
         _set_active_status.assert_not_called()
 
         # Check for a Blocked status when a failure happens.
         _idle.return_value = True
         harness.container_pebble_ready(POSTGRESQL_CONTAINER)
-        tc.assertTrue(isinstance(harness.model.unit.status, BlockedStatus))
+        assert isinstance(harness.model.unit.status, BlockedStatus)
         _set_active_status.assert_not_called()
 
         # No error when upgrading the cluster.
@@ -240,10 +240,10 @@ def test_on_postgresql_pebble_ready(harness):
         expected.pop("summary", "")
         expected.pop("description", "")
         # Check the plan is as expected.
-        tc.assertEqual(plan.to_dict(), expected)
+        assert plan.to_dict() == expected
         _set_active_status.assert_called_once()
         container = harness.model.unit.get_container(POSTGRESQL_CONTAINER)
-        tc.assertEqual(container.get_service("postgresql").is_running(), True)
+        assert container.get_service("postgresql").is_running()
         _push_tls_files_to_workload.assert_called_once()
 
 
@@ -263,7 +263,7 @@ def test_on_postgresql_pebble_ready_no_connection(harness):
         # Event was deferred and status is still maintenance
         mock_event.defer.assert_called_once()
         mock_event.set_results.assert_not_called()
-        tc.assertIsInstance(harness.model.unit.status, MaintenanceStatus)
+        assert isinstance(harness.model.unit.status, MaintenanceStatus)
 
 
 def test_on_config_changed(harness):
@@ -409,13 +409,13 @@ def test_on_set_password(harness):
 
         # Test without providing the username option.
         harness.charm._on_set_password(mock_event)
-        tc.assertEqual(_set_secret.call_args_list[0][0][1], "operator-password")
+        assert _set_secret.call_args_list[0][0][1] == "operator-password"
 
         # Also test providing the username option.
         _set_secret.reset_mock()
         mock_event.params["username"] = "replication"
         harness.charm._on_set_password(mock_event)
-        tc.assertEqual(_set_secret.call_args_list[0][0][1], "replication-password")
+        assert _set_secret.call_args_list[0][0][1] == "replication-password"
 
         # And test providing both the username and password options.
         _set_secret.reset_mock()
@@ -449,15 +449,24 @@ def test_fail_to_get_primary(harness):
 @patch_network_get(private_address="1.1.1.1")
 def test_on_update_status(harness):
     with (
+        patch("charm.logger") as _logger,
         patch(
             "charm.PostgresqlOperatorCharm._handle_processes_failures"
         ) as _handle_processes_failures,
         patch("charm.Patroni.member_started") as _member_started,
         patch("charm.Patroni.get_primary") as _get_primary,
         patch("ops.model.Container.pebble") as _pebble,
-        patch("ops.model.Container.restart", new_callable=PropertyMock),
+        patch("ops.model.Container.restart") as _restart,
         patch("upgrade.PostgreSQLUpgrade.idle", return_value="idle"),
     ):
+        # Early exit on can connect.
+        harness.set_can_connect(POSTGRESQL_CONTAINER, False)
+        harness.charm.on.update_status.emit()
+        _get_primary.assert_not_called()
+        _logger.debug.assert_called_once_with(
+            "on_update_status early exit: Cannot connect to container"
+        )
+
         # Test before the PostgreSQL service is available.
         _pebble.get_services.return_value = []
         harness.set_can_connect(POSTGRESQL_CONTAINER, True)
@@ -474,6 +483,19 @@ def test_on_update_status(harness):
         _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.INACTIVE)]
         harness.charm.on.update_status.emit()
         _get_primary.assert_not_called()
+        _restart.assert_called_once_with("postgresql")
+        _restart.reset_mock()
+
+        # Test restart failed
+        _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.INACTIVE)]
+        _restart.side_effect = ChangeError(err=None, change=None)
+        harness.charm.on.update_status.emit()
+        _get_primary.assert_not_called()
+        _restart.assert_called_once_with("postgresql")
+        _logger.exception.assert_called_once_with("Failed to restart patroni")
+        _restart.reset_mock()
+        _logger.exception.reset_mock()
+        _restart.side_effect = None
 
         # Check primary message not being set (current unit is not the primary).
         _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.ACTIVE)]
@@ -484,17 +506,11 @@ def test_on_update_status(harness):
         ]
         harness.charm.on.update_status.emit()
         _get_primary.assert_called_once()
-        tc.assertNotEqual(
-            harness.model.unit.status,
-            ActiveStatus("Primary"),
-        )
+        assert harness.model.unit.status != ActiveStatus("Primary")
 
         # Test again and check primary message being set (current unit is the primary).
         harness.charm.on.update_status.emit()
-        tc.assertEqual(
-            harness.model.unit.status,
-            ActiveStatus("Primary"),
-        )
+        assert harness.model.unit.status == ActiveStatus("Primary")
 
 
 def test_on_update_status_no_connection(harness):
@@ -707,7 +723,7 @@ def test_on_update_status_after_restore_operation(harness):
         _update_config.assert_not_called()
         _handle_processes_failures.assert_not_called()
         _set_active_status.assert_not_called()
-        tc.assertIsInstance(harness.charm.unit.status, BlockedStatus)
+        assert isinstance(harness.charm.unit.status, BlockedStatus)
 
         # Test when the restore operation hasn't finished yet.
         harness.charm.unit.status = ActiveStatus()
@@ -733,10 +749,10 @@ def test_on_update_status_after_restore_operation(harness):
         _update_config.assert_called_once()
         _handle_processes_failures.assert_called_once()
         _set_active_status.assert_called_once()
-        tc.assertIsInstance(harness.charm.unit.status, ActiveStatus)
+        assert isinstance(harness.charm.unit.status, ActiveStatus)
 
         # Assert that the backup id is not in the application relation databag anymore.
-        tc.assertEqual(harness.get_relation_data(rel_id, harness.charm.app), {})
+        assert harness.get_relation_data(rel_id, harness.charm.app) == {}
 
         # Test when it's not possible to use the configured S3 repository.
         _update_config.reset_mock()
@@ -753,11 +769,11 @@ def test_on_update_status_after_restore_operation(harness):
         _update_config.assert_called_once()
         _handle_processes_failures.assert_not_called()
         _set_active_status.assert_not_called()
-        tc.assertIsInstance(harness.charm.unit.status, BlockedStatus)
-        tc.assertEqual(harness.charm.unit.status.message, "fake validation message")
+        assert isinstance(harness.charm.unit.status, BlockedStatus)
+        assert harness.charm.unit.status.message == "fake validation message"
 
         # Assert that the backup id is not in the application relation databag anymore.
-        tc.assertEqual(harness.get_relation_data(rel_id, harness.charm.app), {})
+        assert harness.get_relation_data(rel_id, harness.charm.app) == {}
 
 
 def test_on_upgrade_charm(harness):
@@ -781,7 +797,7 @@ def test_on_upgrade_charm(harness):
         harness.charm.on.upgrade_charm.emit()
         _create_services.assert_not_called()
         _patch_pod_labels.assert_called_once()
-        tc.assertTrue(isinstance(harness.charm.unit.status, ActiveStatus))
+        assert isinstance(harness.charm.unit.status, ActiveStatus)
 
         # Test with a problem happening when trying to create the k8s resources.
         _patch_pod_labels.reset_mock()
@@ -789,7 +805,7 @@ def test_on_upgrade_charm(harness):
         harness.charm.on.upgrade_charm.emit()
         _create_services.assert_called_once()
         _patch_pod_labels.assert_not_called()
-        tc.assertTrue(isinstance(harness.charm.unit.status, BlockedStatus))
+        assert isinstance(harness.charm.unit.status, BlockedStatus)
 
         # Test a successful k8s resources creation, but unsuccessful pod patch operation.
         _create_services.reset_mock()
@@ -797,7 +813,7 @@ def test_on_upgrade_charm(harness):
         harness.charm.on.upgrade_charm.emit()
         _create_services.assert_called_once()
         _patch_pod_labels.assert_called_once()
-        tc.assertTrue(isinstance(harness.charm.unit.status, BlockedStatus))
+        assert isinstance(harness.charm.unit.status, BlockedStatus)
 
         # Test a successful k8s resources creation and the operation to patch the pod.
         _create_services.reset_mock()
@@ -806,7 +822,7 @@ def test_on_upgrade_charm(harness):
         harness.charm.on.upgrade_charm.emit()
         _create_services.assert_called_once()
         _patch_pod_labels.assert_called_once()
-        tc.assertFalse(isinstance(harness.charm.unit.status, BlockedStatus))
+        assert not isinstance(harness.charm.unit.status, BlockedStatus)
 
 
 def test_create_services(harness):
@@ -932,7 +948,7 @@ def test_postgresql_layer(harness):
                 }
             },
         }
-        tc.assertDictEqual(plan, expected)
+        assert plan == expected
 
 
 def test_on_stop(harness):
@@ -968,10 +984,8 @@ def test_on_stop(harness):
                         namespace=harness.charm.model.name,
                         labels={"app.juju.is/created-by": harness.charm.app.name},
                     )
-                tc.assertEqual(_client.return_value.apply.call_count, 2)
-                tc.assertEqual(
-                    harness.get_relation_data(rel_id, harness.charm.unit), relation_data
-                )
+                assert _client.return_value.apply.call_count == 2
+                assert harness.get_relation_data(rel_id, harness.charm.unit) == relation_data
                 _client.reset_mock()
 
         # Test when the charm fails to get first pod info.
@@ -1018,7 +1032,7 @@ def test_on_stop(harness):
 
 def test_client_relations(harness):
     # Test when the charm has no relations.
-    tc.assertEqual(harness.charm.client_relations, [])
+    assert harness.charm.client_relations == []
 
     # Test when the charm has some relations.
     harness.add_relation("database", "application")
@@ -1027,9 +1041,7 @@ def test_client_relations(harness):
     database_relation = harness.model.get_relation("database")
     db_relation = harness.model.get_relation("db")
     db_admin_relation = harness.model.get_relation("db-admin")
-    tc.assertEqual(
-        harness.charm.client_relations, [database_relation, db_relation, db_admin_relation]
-    )
+    assert harness.charm.client_relations == [database_relation, db_relation, db_admin_relation]
 
 
 def test_validate_config_options(harness):
@@ -1185,8 +1197,9 @@ def test_set_secret_in_databag(harness, only_without_juju_secrets):
         harness.charm.set_secret("unit", "password", None)
         assert "password" not in harness.get_relation_data(rel_id, harness.charm.unit.name)
 
-        with tc.assertRaises(RuntimeError):
+        with pytest.raises(RuntimeError):
             harness.charm.set_secret("test", "password", "test")
+            assert False
 
 
 @pytest.mark.parametrize("scope,is_leader", [("app", True), ("unit", True), ("unit", False)])
@@ -1453,12 +1466,11 @@ def test_on_peer_relation_changed(harness):
         with harness.hooks_disabled():
             harness.update_relation_data(rel_id, harness.charm.unit.name, {"start-tls-server": ""})
         harness.charm.on.database_peers_relation_changed.emit(relation)
-        tc.assertEqual(
-            harness.get_relation_data(rel_id, harness.charm.unit),
-            {"start-tls-server": "True"},
-        )
+        assert harness.get_relation_data(rel_id, harness.charm.unit) == {
+            "start-tls-server": "True"
+        }
         _defer.assert_called_once()
-        tc.assertIsInstance(harness.charm.unit.status, MaintenanceStatus)
+        assert isinstance(harness.charm.unit.status, MaintenanceStatus)
         _set_active_status.assert_not_called()
 
         # Test the status being changed when it was possible to start the
@@ -1466,10 +1478,7 @@ def test_on_peer_relation_changed(harness):
         _defer.reset_mock()
         _start_stop_pgbackrest_service.return_value = True
         harness.charm.on.database_peers_relation_changed.emit(relation)
-        tc.assertEqual(
-            harness.get_relation_data(rel_id, harness.charm.unit),
-            {},
-        )
+        assert harness.get_relation_data(rel_id, harness.charm.unit) == {}
         _defer.assert_not_called()
         _set_active_status.assert_called_once()
 
@@ -1477,7 +1486,7 @@ def test_on_peer_relation_changed(harness):
         _set_active_status.reset_mock()
         harness.charm.unit.status = BlockedStatus()
         harness.charm.on.database_peers_relation_changed.emit(relation)
-        tc.assertIsInstance(harness.charm.unit.status, BlockedStatus)
+        assert isinstance(harness.charm.unit.status, BlockedStatus)
         _set_active_status.assert_not_called()
 
 
@@ -1510,7 +1519,7 @@ def test_handle_processes_failures(harness):
             _is_database_running.return_value = values[2]
             _is_primary.return_value = values[3]
             _member_streaming.return_value = values[4]
-            tc.assertFalse(harness.charm._handle_processes_failures())
+            assert not harness.charm._handle_processes_failures()
             _restart.assert_not_called()
             _reinitialize_postgresql.assert_not_called()
 
@@ -1545,8 +1554,8 @@ def test_handle_processes_failures(harness):
             _member_streaming.return_value = values[3]
             harness.charm.unit.status = ActiveStatus()
             result = harness.charm._handle_processes_failures()
-            tc.assertTrue(result) if values[0] is None else tc.assertFalse(result)
-            tc.assertIsInstance(harness.charm.unit.status, ActiveStatus)
+            assert result == (values[0] is None)
+            assert isinstance(harness.charm.unit.status, ActiveStatus)
             _restart.assert_called_once_with("postgresql")
             _reinitialize_postgresql.assert_not_called()
 
@@ -1568,8 +1577,8 @@ def test_handle_processes_failures(harness):
             _is_database_running.return_value = values[2]
             harness.charm.unit.status = ActiveStatus()
             result = harness.charm._handle_processes_failures()
-            tc.assertTrue(result) if values[0] is None else tc.assertFalse(result)
-            tc.assertIsInstance(
+            assert result == (values[0] is None)
+            assert isinstance(
                 harness.charm.unit.status, MaintenanceStatus if values[0] is None else ActiveStatus
             )
             _restart.assert_not_called()
@@ -1614,8 +1623,9 @@ def test_update_config(harness):
         # Test when the two config options for profile limit memory are set at the same time.
         _render_patroni_yml_file.reset_mock()
         harness.update_config({"profile-limit-memory": 1000})
-        with tc.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             harness.charm.update_config()
+            assert False
 
         # Test without TLS files available.
         harness.update_config(unset={"profile-limit-memory", "profile_limit_memory"})
@@ -1637,7 +1647,7 @@ def test_update_config(harness):
             parameters={"test": "test"},
         )
         _handle_postgresql_restart_need.assert_called_once()
-        tc.assertNotIn("tls", harness.get_relation_data(rel_id, harness.charm.unit.name))
+        assert "tls" not in harness.get_relation_data(rel_id, harness.charm.unit.name)
 
         # Test with TLS files available.
         _handle_postgresql_restart_need.reset_mock()
@@ -1661,12 +1671,9 @@ def test_update_config(harness):
             parameters={"test": "test"},
         )
         _handle_postgresql_restart_need.assert_called_once()
-        tc.assertNotIn(
-            "tls",
-            harness.get_relation_data(
-                rel_id, harness.charm.unit.name
-            ),  # The "tls" flag is set in handle_postgresql_restart_need.
-        )
+        assert "tls" not in harness.get_relation_data(
+            rel_id, harness.charm.unit.name
+        )  # The "tls" flag is set in handle_postgresql_restart_need.
 
         # Test with workload not running yet.
         harness.update_relation_data(
@@ -1675,9 +1682,7 @@ def test_update_config(harness):
         _handle_postgresql_restart_need.reset_mock()
         harness.charm.update_config()
         _handle_postgresql_restart_need.assert_not_called()
-        tc.assertEqual(
-            harness.get_relation_data(rel_id, harness.charm.unit.name)["tls"], "enabled"
-        )
+        harness.get_relation_data(rel_id, harness.charm.unit.name)["tls"] == "enabled"
 
         # Test with member not started yet.
         harness.update_relation_data(
@@ -1685,7 +1690,7 @@ def test_update_config(harness):
         )  # Mock some data in the relation to test that it doesn't change.
         harness.charm.update_config()
         _handle_postgresql_restart_need.assert_not_called()
-        tc.assertNotIn("tls", harness.get_relation_data(rel_id, harness.charm.unit.name))
+        assert "tls" not in harness.get_relation_data(rel_id, harness.charm.unit.name)
 
 
 def test_handle_postgresql_restart_need(harness):
@@ -1757,12 +1762,12 @@ def test_set_active_status(harness):
                     _is_standby_leader.side_effect = values[1]
                     _is_standby_leader.return_value = None
                     harness.charm._set_active_status()
-                    tc.assertIsInstance(harness.charm.unit.status, MaintenanceStatus)
+                    assert isinstance(harness.charm.unit.status, MaintenanceStatus)
                 else:
                     _is_standby_leader.side_effect = None
                     _is_standby_leader.return_value = values[1]
                     harness.charm._set_active_status()
-                    tc.assertIsInstance(
+                    assert isinstance(
                         harness.charm.unit.status,
                         ActiveStatus
                         if values[0] == harness.charm.unit.name or values[1] or values[2]
@@ -1778,7 +1783,7 @@ def test_set_active_status(harness):
                 _get_primary.side_effect = values[0]
                 _get_primary.return_value = None
                 harness.charm._set_active_status()
-                tc.assertIsInstance(harness.charm.unit.status, MaintenanceStatus)
+                assert isinstance(harness.charm.unit.status, MaintenanceStatus)
 
 
 def test_create_pgdata(harness):
