@@ -21,8 +21,9 @@ create-replication:
 get-primary:
   description: Get the unit with is the primary/leader in the replication.
 get-password:
-  description: Get the system user's password, which is used by charm.
-    It is for internal charm users and SHOULD NOT be used by applications.
+  description: Get a charm system user's password.
+    Useful for manual troubleshooting and for backing up cluster credentials.
+    It cannot be used for application integration relations.
   params:
     username:
       type: string
