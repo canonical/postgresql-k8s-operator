@@ -13,7 +13,9 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Tuple, get_args
 
+from ops import ErrorStatus, InstallEvent
 import psycopg2
+import yaml
 from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerUnitData
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
@@ -177,6 +179,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.cluster_name = f"patroni-{self._name}"
 
         self.framework.observe(self.on.config_changed, self._on_config_changed)
+        self.framework.observe(self.on.install, self._on_install)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
         self.framework.observe(self.on.secret_changed, self._on_peer_relation_changed)
@@ -372,6 +375,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Returns the endpoint of the replicas instances' service."""
         return self._build_service_name("replicas")
 
+    @property
+    def architecture(self) -> Optional[str]:
+        """Returns the charm's architecture."""
+        container = self.unit.get_container("postgresql")
+        if not container.can_connect():
+            logger.debug("Cannot get architecture from Rock. Container inaccessible")
+            return
+        snap_meta = container.pull("/meta.charmed-postgresql/snap.yaml")
+        return yaml.safe_load(snap_meta)["architectures"][0]
+
     def _build_service_name(self, service: str) -> str:
         """Build a full k8s service name based on the service name."""
         return f"{self._name}-{service}.{self._namespace}.svc.cluster.local"
@@ -406,6 +419,18 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Return None if the unit is not a peer neither the current unit.
         else:
             return None
+
+    def _on_install(self, event: InstallEvent) -> None:
+        """Handle the install event (fired on startup)."""
+        hw_arch = os.uname().machine
+        charm_arch = self.architecture
+        if charm_arch == "amd64" and hw_arch == "x86_64":
+            logger.info("Install hook succeeded: AMD64")
+            return
+        if charm_arch == "arm64" and hw_arch == "aarch64":
+            logger.info("Install hook succeeded: ARM64")
+            return
+        self.unit.status = ErrorStatus(f"Cannot install charm: Arch {hw_arch} not compatible with {charm_arch} charm")
 
     def _on_peer_relation_departed(self, event: RelationDepartedEvent) -> None:
         """The leader removes the departing units from the list of cluster members."""
