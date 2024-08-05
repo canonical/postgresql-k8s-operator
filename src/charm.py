@@ -1293,15 +1293,20 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     f"failed to patch k8s {type(resource).__name__} {resource.metadata.name}"
                 )
 
-    def _on_update_status(self, _) -> None:
-        """Update the unit status message."""
+    def _on_update_status_early_exit_checks(self, container) -> bool:
         if not self.upgrade.idle:
             logger.debug("Early exit on_update_status: upgrade in progress")
-            return
+            return False
 
-        container = self.unit.get_container("postgresql")
         if not container.can_connect():
             logger.debug("on_update_status early exit: Cannot connect to container")
+            return False
+        return True
+
+    def _on_update_status(self, _) -> None:
+        """Update the unit status message."""
+        container = self.unit.get_container("postgresql")
+        if not self._on_update_status_early_exit_checks(container):
             return
 
         if self._has_blocked_status or self._has_non_restore_waiting_status:
@@ -1325,7 +1330,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.warning(
                 "%s pebble service inactive, restarting service" % self._postgresql_service
             )
-            container.restart(self._postgresql_service)
+            try:
+                container.restart(self._postgresql_service)
+            except ChangeError:
+                logger.exception("Failed to restart patroni")
             # If service doesn't recover fast, exit and wait for next hook run to re-check
             if not self._patroni.member_started:
                 self.unit.status = MaintenanceStatus("Database service inactive, restarting")
