@@ -146,17 +146,18 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def __init__(self, *args):
         super().__init__(*args)
 
-        hw_arch = os.uname().machine
-        container = self.unit.get_container("postgresql")
-        snap_meta = container.pull("/meta.charmed-postgresql/snap.yaml")
-        charm_arch = yaml.safe_load(snap_meta)["architectures"][0]
-        if (charm_arch == "amd64" and hw_arch != "x86_64") or (
-            charm_arch == "arm64" and hw_arch != "aarch64"
-        ):
-            self.unit.status = ErrorStatus(
-                f"Cannot install: {charm_arch} charm not compatible with {hw_arch} machine"
-            )
-            sys.exit(0)
+        manifest_path = f"{os.environ.get('CHARM_DIR')}/manifest.yaml"
+        if os.path.exists(manifest_path):
+            with open(manifest_path, "r") as manifest:
+                charm_arch = yaml.safe_load(manifest)["bases"][0]["architectures"][0]
+            hw_arch = os.uname().machine
+            if (charm_arch == "amd64" and hw_arch != "x86_64") or (
+                charm_arch == "arm64" and hw_arch != "aarch64"
+            ):
+                self.unit.status = ErrorStatus(
+                    f"Cannot install: {charm_arch} charm not compatible with {hw_arch} machine"
+                )
+                sys.exit(0)
 
         # Support for disabling the operator.
         disable_file = Path(f"{os.environ.get('CHARM_DIR')}/disable")
