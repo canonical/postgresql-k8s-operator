@@ -13,7 +13,6 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Tuple, get_args
 
-import psycopg2
 import yaml
 from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerUnitData
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
@@ -586,6 +585,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _on_config_changed(self, event) -> None:
         """Handle configuration changes, like enabling plugins."""
+        import psycopg2
+
         if not self.is_cluster_initialised:
             logger.debug("Defer on_config_changed: cluster not initialised yet")
             event.defer()
@@ -672,6 +673,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _handle_enable_disable_extensions(self, original_status, extensions, database) -> None:
         """Try enablind/disabling Postgresql extensions and handle exceptions appropriately."""
+        import psycopg2
+
         if not isinstance(original_status, UnknownStatus):
             self.unit.status = WaitingStatus("Updating extensions")
         try:
