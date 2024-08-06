@@ -13,7 +13,35 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Tuple, get_args
 
-import yaml
+try:
+    import psycopg2
+except ModuleNotFoundError:
+    import yaml
+    from ops.charm import CharmBase
+    from ops.main import main
+    from ops.model import BlockedStatus
+
+    class PostgresqlOperatorCharm(CharmBase):
+        """Fake charm to signal wrong architecture."""
+
+        def __init__(self, *args):
+            super().__init__(*args)
+
+            manifest_path = f"{os.environ.get('CHARM_DIR')}/manifest.yaml"
+            if os.path.exists(manifest_path):
+                with open(manifest_path, "r") as manifest:
+                    charm_arch = yaml.safe_load(manifest)["bases"][0]["architectures"][0]
+                hw_arch = os.uname().machine
+                if (charm_arch == "amd64" and hw_arch != "x86_64") or (
+                    charm_arch == "arm64" and hw_arch != "aarch64"
+                ):
+                    self.unit.status = BlockedStatus(
+                        f"Cannot install: {charm_arch} charm not compatible with {hw_arch} machine"
+                    )
+                    sys.exit(0)
+
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+
 from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerUnitData
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
@@ -34,7 +62,6 @@ from lightkube import ApiError, Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Endpoints, Node, Pod, Service
-from ops import ErrorStatus
 from ops.charm import (
     ActionEvent,
     HookEvent,
@@ -144,19 +171,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def __init__(self, *args):
         super().__init__(*args)
-
-        manifest_path = f"{os.environ.get('CHARM_DIR')}/manifest.yaml"
-        if os.path.exists(manifest_path):
-            with open(manifest_path, "r") as manifest:
-                charm_arch = yaml.safe_load(manifest)["bases"][0]["architectures"][0]
-            hw_arch = os.uname().machine
-            if (charm_arch == "amd64" and hw_arch != "x86_64") or (
-                charm_arch == "arm64" and hw_arch != "aarch64"
-            ):
-                self.unit.status = ErrorStatus(
-                    f"Cannot install: {charm_arch} charm not compatible with {hw_arch} machine"
-                )
-                sys.exit(0)
 
         # Support for disabling the operator.
         disable_file = Path(f"{os.environ.get('CHARM_DIR')}/disable")
@@ -585,8 +599,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _on_config_changed(self, event) -> None:
         """Handle configuration changes, like enabling plugins."""
-        import psycopg2
-
         if not self.is_cluster_initialised:
             logger.debug("Defer on_config_changed: cluster not initialised yet")
             event.defer()
@@ -673,8 +685,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _handle_enable_disable_extensions(self, original_status, extensions, database) -> None:
         """Try enablind/disabling Postgresql extensions and handle exceptions appropriately."""
-        import psycopg2
-
         if not isinstance(original_status, UnknownStatus):
             self.unit.status = WaitingStatus("Updating extensions")
         try:
