@@ -13,7 +13,6 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Tuple, get_args
 
-from ops import ErrorStatus, InstallEvent
 import psycopg2
 import yaml
 from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerUnitData
@@ -36,6 +35,7 @@ from lightkube import ApiError, Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Endpoints, Node, Pod, Service
+from ops import ErrorStatus, InstallEvent
 from ops.charm import (
     ActionEvent,
     HookEvent,
@@ -430,7 +430,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if charm_arch == "arm64" and hw_arch == "aarch64":
             logger.info("Install hook succeeded: ARM64")
             return
-        self.unit.status = ErrorStatus(f"Cannot install charm: Arch {hw_arch} not compatible with {charm_arch} charm")
+        self.unit.status = ErrorStatus(
+            f"Cannot install: {charm_arch} charm not compatible with {hw_arch} machine"
+        )
 
     def _on_peer_relation_departed(self, event: RelationDepartedEvent) -> None:
         """The leader removes the departing units from the list of cluster members."""
