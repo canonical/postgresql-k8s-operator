@@ -14,33 +14,12 @@ from pathlib import Path
 from typing import Dict, List, Literal, Optional, Tuple, get_args
 
 try:
+    # First platform-specific import, will fail on wrong architecture
     import psycopg2
 except ModuleNotFoundError:
-    import yaml
-    from ops.charm import CharmBase
-    from ops.main import main
-    from ops.model import BlockedStatus
+    from fake_charm import block_on_wrong_architecture
 
-    class PostgresqlOperatorCharm(CharmBase):
-        """Fake charm to signal wrong architecture."""
-
-        def __init__(self, *args):
-            super().__init__(*args)
-
-            manifest_path = f"{os.environ.get('CHARM_DIR')}/manifest.yaml"
-            if os.path.exists(manifest_path):
-                with open(manifest_path, "r") as manifest:
-                    charm_arch = yaml.safe_load(manifest)["bases"][0]["architectures"][0]
-                hw_arch = os.uname().machine
-                if (charm_arch == "amd64" and hw_arch != "x86_64") or (
-                    charm_arch == "arm64" and hw_arch != "aarch64"
-                ):
-                    self.unit.status = BlockedStatus(
-                        f"Cannot install: {charm_arch} charm not compatible with {hw_arch} machine"
-                    )
-                    sys.exit(0)
-
-    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+    block_on_wrong_architecture()
 
 from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerUnitData
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
