@@ -13,13 +13,21 @@ import sys
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Tuple, get_args
 
+# First platform-specific import, will fail on wrong architecture
 try:
-    # First platform-specific import, will fail on wrong architecture
     import psycopg2
 except ModuleNotFoundError:
-    from fake_charm import block_on_wrong_architecture
+    from ops.main import main
 
-    block_on_wrong_architecture()
+    from arch_utils import WrongArchitectureWarningCharm, is_wrong_architecture
+
+    # If the charm was deployed inside a host with different architecture
+    # (possibly due to user specifying an incompatible revision)
+    # then deploy an empty blocked charm with a warning.
+    if is_wrong_architecture() and __name__ == "__main__":
+        main(WrongArchitectureWarningCharm, use_juju_for_storage=True)
+        sys.exit(0)
+    raise
 
 from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerUnitData
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
