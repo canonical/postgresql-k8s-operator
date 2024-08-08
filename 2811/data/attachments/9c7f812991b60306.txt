@@ -1,0 +1,74 @@
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [executing] maintenance: installing charm software
+  untrusted-postgresql-k8s/1 [executing] maintenance: installing charm software
+  untrusted-postgresql-k8s/2 [executing] blocked: Insufficient permissions, try: `juju trust untrusted-postgresql-k8s --scope=cluster`
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [executing] unknown: 
+  untrusted-postgresql-k8s/1 [executing] unknown: 
+  untrusted-postgresql-k8s/2 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [executing] waiting: awaiting for cluster to start
+  untrusted-postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+  untrusted-postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [executing] waiting: awaiting for cluster to start
+  untrusted-postgresql-k8s/1 [executing] waiting: awaiting for cluster to start
+  untrusted-postgresql-k8s/2 [executing] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] waiting: awaiting for member to start
+  untrusted-postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+  untrusted-postgresql-k8s/2 [idle] maintenance: reconfiguring cluster
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] waiting: awaiting for member to start
+  untrusted-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+  untrusted-postgresql-k8s/2 [executing] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] active: 
+  untrusted-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+  untrusted-postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] active: 
+  untrusted-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+  untrusted-postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] active: 
+  untrusted-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+  untrusted-postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] active: 
+  untrusted-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+  untrusted-postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] active: 
+  untrusted-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+  untrusted-postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] active: 
+  untrusted-postgresql-k8s/1 [idle] active: 
+  untrusted-postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.4.5    unsupported  01:46:52Z
+
+App                       Version  Status  Scale  Charm           Channel  Rev  Address        Exposed  Message
+untrusted-postgresql-k8s  14.12    active      3  postgresql-k8s             0  10.152.183.97  no       
+
+Unit                         Workload  Agent  Address       Ports  Message
+untrusted-postgresql-k8s/0   active    idle   10.1.120.204         
+untrusted-postgresql-k8s/1   active    idle   10.1.120.205         
+untrusted-postgresql-k8s/2*  active    idle   10.1.120.203         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+model-d61c3849-29f2-4193-89f5-ad2cc6459833: 01:39:32 ERROR juju.kubernetes.klog /build/snapcraft-juju-8ec22e4f9d05626919bd46e16b741f52/parts/jujud/build/worker/caasrbacmapper/mapper.go:79: Failed to watch *v1.ServiceAccount: unknown (get serviceaccounts) - error from a previous attempt: read tcp 10.1.120.198:57470->10.152.183.1:443: read: connection reset by peer
+unit-untrusted-postgresql-k8s-2: 01:41:05 ERROR unit.untrusted-postgresql-k8s/2.juju-log 
+            Access to k8s cluster resources is not authorized. This happens when RBAC is enabled and the deployed application was not trusted by the juju admin.
+            To fix this issue, run `juju trust untrusted-postgresql-k8s --scope=cluster` (or remove & re-deploy untrusted-postgresql-k8s with `--trust`)
+            
+unit-untrusted-postgresql-k8s-2: 01:41:05 ERROR unit.untrusted-postgresql-k8s/2.juju-log 
+            Access to k8s cluster resources is not authorized. This happens when RBAC is enabled and the deployed application was not trusted by the juju admin.
+            To fix this issue, run `juju trust untrusted-postgresql-k8s --scope=cluster` (or remove & re-deploy untrusted-postgresql-k8s with `--trust`)
+            
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...
