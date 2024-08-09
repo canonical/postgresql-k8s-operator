@@ -26,7 +26,6 @@ except ModuleNotFoundError:
     # then deploy an empty blocked charm with a warning.
     if is_wrong_architecture() and __name__ == "__main__":
         main(WrongArchitectureWarningCharm, use_juju_for_storage=True)
-        sys.exit(0)
     raise
 
 from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerUnitData
