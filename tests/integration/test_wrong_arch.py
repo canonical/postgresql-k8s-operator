@@ -13,14 +13,9 @@ import yaml
 from pytest_operator.plugin import OpsTest
 
 from . import markers
-from .helpers import (
-    CHARM_SERIES,
-    METADATA,
-)
+from .helpers import CHARM_SERIES, DATABASE_APP_NAME, METADATA
 
 logger = logging.getLogger(__name__)
-
-APP_NAME = METADATA["name"]
 
 
 async def fetch_charm(
@@ -50,19 +45,15 @@ async def test_wrong_arch_amd(ops_test: OpsTest) -> None:
     await ops_test.model.deploy(
         charm,
         resources=resources,
-        application_name=APP_NAME,
+        application_name=DATABASE_APP_NAME,
         trust=True,
         num_units=1,
         series=CHARM_SERIES,
         config={"profile": "testing"},
     )
     time.sleep(10)
-    await ops_test.model.block_until(
-        lambda: all(
-            unit.workload_status == "blocked"
-            for unit in ops_test.model.applications[APP_NAME].units
-        ),
-        timeout=60,
+    await ops_test.model.wait_for_idle(
+        apps=[DATABASE_APP_NAME], raise_on_error=False, status="blocked"
     )
 
 
@@ -78,17 +69,13 @@ async def test_wrong_arch_arm(ops_test: OpsTest) -> None:
     await ops_test.model.deploy(
         charm,
         resources=resources,
-        application_name=APP_NAME,
+        application_name=DATABASE_APP_NAME,
         trust=True,
         num_units=1,
         series=CHARM_SERIES,
         config={"profile": "testing"},
     )
     time.sleep(10)
-    await ops_test.model.block_until(
-        lambda: all(
-            unit.workload_status == "blocked"
-            for unit in ops_test.model.applications[APP_NAME].units
-        ),
-        timeout=60,
+    await ops_test.model.wait_for_idle(
+        apps=[DATABASE_APP_NAME], raise_on_error=False, status="blocked"
     )
