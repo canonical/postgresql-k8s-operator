@@ -5,7 +5,6 @@
 import logging
 import os
 import pathlib
-import time
 import typing
 
 import pytest
@@ -23,6 +22,7 @@ async def fetch_charm(
     architecture: str,
     bases_index: int,
 ) -> pathlib.Path:
+    """Fetches packed charm from CI runner without checking for architecture."""
     charm_path = pathlib.Path(charm_path)
     charmcraft_yaml = yaml.safe_load((charm_path / "charmcraft.yaml").read_text())
     assert charmcraft_yaml["type"] == "charm"
@@ -35,9 +35,8 @@ async def fetch_charm(
 
 @pytest.mark.group(1)
 @markers.amd64_only
-async def test_wrong_arch_amd(ops_test: OpsTest) -> None:
+async def test_arm_charm_on_amd_host(ops_test: OpsTest) -> None:
     """Tries deploying an arm64 charm on amd64 host."""
-    # building arm64 charm
     charm = await fetch_charm(".", "arm64", 1)
     resources = {
         "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
@@ -51,7 +50,7 @@ async def test_wrong_arch_amd(ops_test: OpsTest) -> None:
         series=CHARM_SERIES,
         config={"profile": "testing"},
     )
-    time.sleep(10)
+
     await ops_test.model.wait_for_idle(
         apps=[DATABASE_APP_NAME], raise_on_error=False, status="blocked"
     )
@@ -59,9 +58,8 @@ async def test_wrong_arch_amd(ops_test: OpsTest) -> None:
 
 @pytest.mark.group(1)
 @markers.arm64_only
-async def test_wrong_arch_arm(ops_test: OpsTest) -> None:
+async def test_amd_charm_on_arm_host(ops_test: OpsTest) -> None:
     """Tries deploying an amd64 charm on arm64 host."""
-    # building arm64 charm
     charm = await fetch_charm(".", "amd64", 0)
     resources = {
         "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
@@ -75,7 +73,7 @@ async def test_wrong_arch_arm(ops_test: OpsTest) -> None:
         series=CHARM_SERIES,
         config={"profile": "testing"},
     )
-    time.sleep(10)
+
     await ops_test.model.wait_for_idle(
         apps=[DATABASE_APP_NAME], raise_on_error=False, status="blocked"
     )
