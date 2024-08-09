@@ -3,9 +3,13 @@
 # See LICENSE file for licensing details.
 
 import logging
+import os
+import pathlib
 import time
+import typing
 
 import pytest
+import yaml
 from pytest_operator.plugin import OpsTest
 
 from . import markers
@@ -19,12 +23,28 @@ logger = logging.getLogger(__name__)
 APP_NAME = METADATA["name"]
 
 
+async def fetch_charm(
+    self,
+    charm_path: typing.Union[str, os.PathLike],
+    architecture: str,
+    bases_index: int,
+) -> pathlib.Path:
+    charm_path = pathlib.Path(charm_path)
+    charmcraft_yaml = yaml.safe_load((charm_path / "charmcraft.yaml").read_text())
+    assert charmcraft_yaml["type"] == "charm"
+    base = charmcraft_yaml["bases"][bases_index]
+    build_on = base.get("build-on", [base])[0]
+    version = build_on["channel"]
+    packed_charms = list(charm_path.glob(f"*{version}-{architecture}.charm"))
+    return packed_charms[0].resolve(strict=True)
+
+
 @pytest.mark.group(1)
 @markers.amd64_only
 async def test_wrong_arch_amd(ops_test: OpsTest) -> None:
     """Tries deploying an arm64 charm on amd64 host."""
     # building arm64 charm
-    charm = await ops_test.build_charm(".", 1)
+    charm = await ops_test.fetch_charm(".", "arm64", 1)
     resources = {
         "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
     }
@@ -52,7 +72,7 @@ async def test_wrong_arch_amd(ops_test: OpsTest) -> None:
 async def test_wrong_arch_arm(ops_test: OpsTest) -> None:
     """Tries deploying an amd64 charm on arm64 host."""
     # building arm64 charm
-    charm = await ops_test.build_charm(".", 0)
+    charm = await ops_test.fetch_charm(".", "amd64", 0)
     resources = {
         "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
     }
