@@ -44,7 +44,7 @@ async def fetch_charm(
 async def test_wrong_arch_amd(ops_test: OpsTest) -> None:
     """Tries deploying an arm64 charm on amd64 host."""
     # building arm64 charm
-    charm = await ops_test.fetch_charm(".", "arm64", 1)
+    charm = await fetch_charm(".", "arm64", 1)
     resources = {
         "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
     }
@@ -72,7 +72,7 @@ async def test_wrong_arch_amd(ops_test: OpsTest) -> None:
 async def test_wrong_arch_arm(ops_test: OpsTest) -> None:
     """Tries deploying an amd64 charm on arm64 host."""
     # building arm64 charm
-    charm = await ops_test.fetch_charm(".", "amd64", 0)
+    charm = await fetch_charm(".", "amd64", 0)
     resources = {
         "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
     }
