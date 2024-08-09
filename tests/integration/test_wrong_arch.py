@@ -24,7 +24,6 @@ APP_NAME = METADATA["name"]
 
 
 async def fetch_charm(
-    self,
     charm_path: typing.Union[str, os.PathLike],
     architecture: str,
     bases_index: int,
