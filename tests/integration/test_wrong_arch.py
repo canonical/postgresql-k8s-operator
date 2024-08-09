@@ -6,9 +6,9 @@ import logging
 import time
 
 import pytest
-from markers import amd64_only, arm64_only
 from pytest_operator.plugin import OpsTest
 
+from . import markers
 from .helpers import (
     CHARM_SERIES,
     METADATA,
@@ -20,7 +20,7 @@ APP_NAME = METADATA["name"]
 
 
 @pytest.mark.group(1)
-@amd64_only
+@markers.amd64_only
 async def test_wrong_arch_amd(ops_test: OpsTest) -> None:
     """Tries deploying an arm64 charm on amd64 host."""
     # building arm64 charm
@@ -48,7 +48,7 @@ async def test_wrong_arch_amd(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.group(1)
-@arm64_only
+@markers.arm64_only
 async def test_wrong_arch_arm(ops_test: OpsTest) -> None:
     """Tries deploying an amd64 charm on arm64 host."""
     # building arm64 charm
