@@ -5,78 +5,91 @@
 
 Dear community,
 
-We'd like to announce that Canonical's newest Charmed PostgreSQL K8s operator has been published in the '14/stable' [channel](https://charmhub.io/postgresql-k8s?channel=14/stable) :tada:
+Canonical's newest Charmed PostgreSQL K8s operator has been published in the '14/stable' [channel](https://charmhub.io/postgresql-k8s?channel=14/stable) :tada:
 
-|   |AMD64|ARM64|
-|---:|:---:|:---:|
-| Revision: | 281 | 280 |
+Due to the newly added support for `arm64` architecture, the PostgreSQL charm now releases two revisions simultaneously: 
+* Revision 281 is built for `amd64`
+* Revision 280 is built for for `arm64`
+
+To make sure you deploy for the right architecture, we recommend setting an [architecture constraint](https://juju.is/docs/juju/constraint#heading--arch) for your entire juju model.
+
+Otherwise, it can be done at deploy time with the `--constraints` flag:
+```shell
+juju deploy postgresql-k8s --constraints arch=<arch> --trust
+```
+where `<arch>` can be `amd64` or `arm64`.
 
 [note]
 If you are jumping over several stable revisions, make sure to check [previous release notes](/t/11872) before upgrading to this revision.
-[/note]  
+[/note]
 
-## Features you can start using today
+## Highlights
 
-* [PostgreSQL upgrade 14.10 → 14.11](https://www.postgresql.org/docs/release/14.11/) [[PR#432](https://github.com/canonical/postgresql-operator/pull/432)]
-  * [check official PostgreSQL release notes!](https://www.postgresql.org/docs/release/14.11/)
-* [New ARM support](https://charmhub.io/postgresql-k8s/docs/r-requirements) [[PR#408](https://github.com/canonical/postgresql-k8s-operator/pull/408)]
-* [Cross-region asynchronous replication](https://charmhub.io/postgresql-k8s/docs/h-async-setup) [[PR#447](https://github.com/canonical/postgresql-k8s-operator/pull/447)][[DPE-2897](https://warthogs.atlassian.net/browse/DPE-2897)]
-* [Add Differential+Incremental backup support](/t/9596) [[PR#487](https://github.com/canonical/postgresql-k8s-operator/pull/487)][[PR#476](https://github.com/canonical/postgresql-k8s-operator/pull/476)][[DPE-4464](https://warthogs.atlassian.net/browse/DPE-4464)]
-* [Add retention time for full backups](https://charmhub.io/s3-integrator/configuration?channel=latest/edge#experimental-delete-older-than-days) [[PR#477](https://github.com/canonical/postgresql-k8s-operator/pull/477)][[DPE-4401](https://warthogs.atlassian.net/browse/DPE-4401)]
-* [Added TimescaleDB plugin/extension](https://charmhub.io/postgresql-k8s/configuration?channel=14/candidate#plugin_timescaledb_enable) [[PR#488](https://github.com/canonical/postgresql-k8s-operator/pull/488)]
-* [Performance testing with sysbench](https://charmhub.io/sysbench) [[DPE-2852](https://warthogs.atlassian.net/browse/DPE-2852)]
-* Internal disable operator mode [[DPE-2470](https://warthogs.atlassian.net/browse/DPE-2470)]
-* Users are informed about missing `--trust` flag [[PR#440](https://github.com/canonical/postgresql-k8s-operator/pull/440)][[DPE-3885](https://warthogs.atlassian.net/browse/DPE-3885)]
-* Add [experimental_max_connections](https://charmhub.io/postgresql-k8s/configuration?channel=14/candidate#experimental_max_connections) config in [[PR#500](https://github.com/canonical/postgresql-k8s-operator/pull/500)][[DPE-4571]()]
-* All the functionality from [previous revisions](https://charmhub.io/postgresql-k8s/docs/r-releases)
+* Upgraded PostgreSQL from v.14.10 → v.14.11 ([PR #432](https://github.com/canonical/postgresql-operator/pull/432))
+  * Check the official [PostgreSQL release notes](https://www.postgresql.org/docs/release/14.11/)
+* Added support for ARM64 architecture ([PR #408](https://github.com/canonical/postgresql-k8s-operator/pull/408))
+* Added support for cross-regional asynchronous replication ([PR #447](https://github.com/canonical/postgresql-k8s-operator/pull/447)) ([DPE-2897](https://warthogs.atlassian.net/browse/DPE-2897))
+  * This feature focuses on disaster recovery by distributing data across different servers. Check our [new how-to guides](https://charmhub.io/postgresql-k8s/docs/h-async-setup) for a walkthrough of the cross-model setup, promotion, switchover, and other details.
+* Added support for tracing with Tempo K8s ([PR #497](https://github.com/canonical/postgresql-k8s-operator/pull/497))
+  * Check the new guide: [How to enable tracing](https://charmhub.io/postgresql-k8s/docs/h-enable-tracing)
+* Released new [Charmed Sysbench operator](https://charmhub.io/sysbench) for easy performance testing
 
-## Bugfixes
+### Enhancements
+* Added timescaledb plugin/extension ([PR #488](https://github.com/canonical/postgresql-k8s-operator/pull/488))
+   * See the [Configuration tab]((https://charmhub.io/postgresql-k8s/configuration#plugin_timescaledb_enable)) for all parameters.
+* Added incremental and differential backup support ([PR #487](https://github.com/canonical/postgresql-k8s-operator/pull/487))([PR #476](https://github.com/canonical/postgresql-k8s-operator/pull/476))([DPE-4464](https://warthogs.atlassian.net/browse/DPE-4464))
+  * Check the guide: [How to create and list backups](https://charmhub.io/postgresql-k8s/docs/h-create-backup)
+* Added support for disabling the operator ([DPE-2470](https://warthogs.atlassian.net/browse/DPE-2470))
+* Added configuration option for backup retention time  ([PR #477](https://github.com/canonical/postgresql-k8s-operator/pull/477))([DPE-4401](https://warthogs.atlassian.net/browse/DPE-4401))
+  * See the[ Configuration tab](https://charmhub.io/s3-integrator/configuration?channel=latest/edge#experimental-delete-older-than-days) for all parameters
+* Added message to inform users about missing `--trust` flag ([PR #440](https://github.com/canonical/postgresql-k8s-operator/pull/440))([DPE-3885](https://warthogs.atlassian.net/browse/DPE-3885))
+* Added `experimental_max_connections` config option ([PR #500](https://github.com/canonical/postgresql-k8s-operator/pull/500))
+* Introduced a block on legacy roles request (modern interface only) ([PR#391](https://github.com/canonical/postgresql-k8s-operator/pull/391))([DPE-3099](https://warthogs.atlassian.net/browse/DPE-3099))
 
-* Fixed large objects ownership in [PR#390](https://github.com/canonical/postgresql-k8s-operator/pull/390),  [[DPE-3551](https://warthogs.atlassian.net/browse/DPE-3551)]
-* Fixed shared buffers validation in [PR#396](https://github.com/canonical/postgresql-k8s-operator/pull/396), [[DPE-3594](https://warthogs.atlassian.net/browse/DPE-3594)]
-* Fixed handling S3 relation in primary non-leader unit in [PR#375](https://github.com/canonical/postgresql-k8s-operator/pull/375), [[DPE-3349](https://warthogs.atlassian.net/browse/DPE-3349)]
-* Stabilized SST and network cut tests in [PR#385](https://github.com/canonical/postgresql-k8s-operator/pull/385), [[DPE-3473](https://warthogs.atlassian.net/browse/DPE-3473)]
-* Fixed pod reconciliation: rerender config/service on pod recreation in [PR#461](https://github.com/canonical/postgresql-k8s-operator/pull/461), [[DPE-2671](https://warthogs.atlassian.net/browse/DPE-2671)]
-* Updated `data-platform-libs`: `data_interfaces` to 34 and upgrade to 16 in [PR#454](https://github.com/canonical/postgresql-k8s-operator/pull/454)
-* Updated Python dependencies [PR#443](https://github.com/canonical/postgresql-k8s-operator/pull/443)
-* Unified juju2 and juju3 test suites [PR#462](https://github.com/canonical/postgresql-k8s-operator/pull/462)
-* Converted all tests from unittest to pytest + reenabled secrets everywhere in [PR#452](https://github.com/canonical/postgresql-k8s-operator/pull/452), [[DPE-4068](https://warthogs.atlassian.net/browse/DPE-4068)]
-* Added `check_tls_replication` for checking replicas encrypted connection in [PR#444](https://github.com/canonical/postgresql-k8s-operator/pull/444)
-* Fixed Primary status message after cluster bootstrap in [PR#435](https://github.com/canonical/postgresql-k8s-operator/pull/435)
-* Improved error message on temporary impossible upgrade in [PR#432](https://github.com/canonical/postgresql-k8s-operator/pull/432), [[DPE-3803](https://warthogs.atlassian.net/browse/DPE-3803)]
-* Check user existence after relation broken for `db` and `db-admin` interfaces in [PR#425](https://github.com/canonical/postgresql-k8s-operator/pull/425)
-* Switched to ruff formatter in [PR#424](https://github.com/canonical/postgresql-k8s-operator/pull/424)
-* Updated charm libs and switch away from psycopg2-binary [PR#406](https://github.com/canonical/postgresql-k8s-operator/pull/406)
-* Fixed support CPU in millis in [PR#410](https://github.com/canonical/postgresql-k8s-operator/pull/410), [[DPE-3695](https://warthogs.atlassian.net/browse/DPE-3695)]
-* Block on legacy roles request (suported by modern interface only) in [PR#391](https://github.com/canonical/postgresql-k8s-operator/pull/391), [[DPE-3099](https://warthogs.atlassian.net/browse/DPE-3099)]
-* Avoid SQL queries passwords exposing in postgresql logs in [PR#506](https://github.com/canonical/postgresql-k8s-operator/pull/506), [[DPE-4369](https://warthogs.atlassian.net/browse/DPE-4369)]
-* Async replication UX improvements in [PR#491](https://github.com/canonical/postgresql-k8s-operator/pull/491), [[DPE-4256](https://warthogs.atlassian.net/browse/DPE-4256)]
-* Address main instability sources on backups integration tests in [PR#496](https://github.com/canonical/postgresql-k8s-operator/pull/496), [[DPE-4427](https://warthogs.atlassian.net/browse/DPE-4427)]
-* Always check peer data for legacy secrets in [PR#466](https://github.com/canonical/postgresql-k8s-operator/pull/466)
-* Use TLS CA chain for backups in [PR#493](https://github.com/canonical/postgresql-k8s-operator/pull/493), [[DPE-4413](https://warthogs.atlassian.net/browse/DPE-4413)]
-* Fix scale up with S3 and TLS relations in [PR#489](https://github.com/canonical/postgresql-k8s-operator/pull/489), [[DPE-4456](https://warthogs.atlassian.net/browse/DPE-4456)]
-* Reset active status when removing extensions dependency block [PR#481](https://github.com/canonical/postgresql-k8s-operator/pull/481), [[DPE-4336](https://warthogs.atlassian.net/browse/DPE-4336)]
-* Fix secret label in [PR#472](https://github.com/canonical/postgresql-k8s-operator/pull/472), [[DPE-4296](https://warthogs.atlassian.net/browse/DPE-4296)]
+### Bugfixes
 
-Canonical Data issues are now public on both [Jira](https://warthogs.atlassian.net/jira/software/c/projects/DPE/issues/) and [GitHub](https://github.com/canonical/postgresql-k8s-operator/issues) platforms.  
-[GitHub Releases](https://github.com/canonical/postgresql-k8s-operator/releases) provide a detailed list of bugfixes, PRs, and commits for each revision.  
+* Fixed large objects ownership ([PR #390](https://github.com/canonical/postgresql-k8s-operator/pull/390))([DPE-3551](https://warthogs.atlassian.net/browse/DPE-3551))
+* Fixed shared buffers validation ([PR #396](https://github.com/canonical/postgresql-k8s-operator/pull/396))([DPE-3594](https://warthogs.atlassian.net/browse/DPE-3594))
+* Fixed handling S3 relation in primary non-leader unit ([PR #375](https://github.com/canonical/postgresql-k8s-operator/pull/375))([DPE-3349](https://warthogs.atlassian.net/browse/DPE-3349))
+* Stabilized SST and network cut tests ([PR #385](https://github.com/canonical/postgresql-k8s-operator/pull/385))([DPE-3473](https://warthogs.atlassian.net/browse/DPE-3473))
+* Fixed pod reconciliation: rerender config/service on pod recreation ([PR#461](https://github.com/canonical/postgresql-k8s-operator/pull/461))([DPE-2671](https://warthogs.atlassian.net/browse/DPE-2671))
+* Addressed main instability sources on backups integration tests ([PR#496](https://github.com/canonical/postgresql-k8s-operator/pull/496))([DPE-4427](https://warthogs.atlassian.net/browse/DPE-4427))
+* Fixed scale up with S3 and TLS relations in ([PR#489](https://github.com/canonical/postgresql-k8s-operator/pull/489))([DPE-4456](https://warthogs.atlassian.net/browse/DPE-4456))
 
-## Inside the charms
+Canonical Data issues are now public on both [Jira](https://warthogs.atlassian.net/jira/software/c/projects/DPE/issues/) and [GitHub](https://github.com/canonical/postgresql-k8s-operator/issues).
 
-* Charmed PostgreSQL ships the **PostgreSQL**  - `14.11-0ubuntu0.22.04.1`
-* PostgreSQL cluster manager **Patroni** - `3.1.2`
-* Backup tools **pgBackRest** - `2.48`
-* The Prometheus **postgres_exporter** - `0.12.1-0ubuntu0.22.04.1~ppa1`
-* This charm uses [ROCK OCI](https://github.com/orgs/canonical/packages?tab=packages&q=charmed) based on SNAP revision `113`
-* This charm ships the latest base `Ubuntu LTS 22.04.4`  
+For a full list of all changes in this revision, see the [GitHub Release](https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev281). 
 
-## Technical notes
+## Technical details
+This section contains some technical details about the charm's contents and dependencies.  Make sure to also check the [system requirements](/t/11744).
 
-* Upgrade to this revision (`juju refresh`) is possible from the revision 193+
-* It is recommended to use this operator together with modern [Charmed PgBouncer K8s operator](https://charmhub.io/pgbouncer-k8s?channel=1/stable)
-* Please check [the external components requirements](https://charmhub.io/postgresql-k8s/docs/r-requirements)
-* Please check [previously posted restrictions](https://charmhub.io/postgresql-k8s/docs/r-releases)  
-* Ensure [the charm requirements](/t/11744) met
+### Packaging
+This charm is based on the [`charmed-postgresql` snap](https://snapcraft.io/charmed-postgresql) (pinned revision 113). It packages:
+* postgresql `v.14.11`
+	* [`14.11-0ubuntu0.22.04.1`](https://launchpad.net/ubuntu/+source/postgresql-14/14.11-0ubuntu0.22.04.1) 
+* pgbouncer `v.1.21`
+	* [`1.21.0-0ubuntu0.22.04.1~ppa1`](https://launchpad.net/~data-platform/+archive/ubuntu/pgbouncer)
+* patroni `v.3.1.2 `
+	* [`3.1.2-0ubuntu0.22.04.1~ppa2`](https://launchpad.net/~data-platform/+archive/ubuntu/patroni)
+* pgBackRest `v.2.48`
+	* [`2.48-0ubuntu0.22.04.1~ppa1`](https://launchpad.net/~data-platform/+archive/ubuntu/pgbackrest)
+* prometheus-postgres-exporter `v.0.12.1`
+
+### Libraries and interfaces
+This charm revision imports the following libraries: 
+
+* **grafana_agent `v0`** for integration with Grafana 
+    * Implements  `cos_agent` interface
+* **rolling_ops `v0`** for rolling operations across units 
+    * Implements `rolling_op` interface
+* **tempo_k8s `v1`, `v2`** for integration with Tempo charm
+    * Implements `tracing` interface
+* **tls_certificates_interface `v2`** for integration with TLS charms
+    * Implements `tls-certificates` interface
+
+See the [`/lib/charms` directory on GitHub](https://github.com/canonical/postgresql-k8s-operator/tree/main/lib/charms) for more details about all supported libraries.
+
+See the [`metadata.yaml` file on GitHub](https://github.com/canonical/postgresql-k8s-operator/blob/main/metadata.yaml#L20-L77) for a full list of supported interfaces
 
 ## Contact us
 
