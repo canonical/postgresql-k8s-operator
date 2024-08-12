@@ -2,9 +2,10 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-from unittest.mock import MagicMock, PropertyMock, mock_open, patch
+from unittest.mock import MagicMock, Mock, PropertyMock, mock_open, patch
 
 import pytest
+import requests
 import tenacity
 from jinja2 import Template
 from ops.testing import Harness
@@ -42,6 +43,30 @@ def patroni(harness):
             False,
         )
         yield patroni
+
+
+# This method will be used by the mock to replace requests.get
+def mocked_requests_get(*args, **kwargs):
+    class MockResponse:
+        def __init__(self, json_data):
+            self.json_data = json_data
+
+        def json(self):
+            return self.json_data
+
+    data = {
+        "http://server1/cluster": {
+            "members": [
+                {"name": "postgresql-k8s-0", "host": "1.1.1.1", "role": "leader", "lag": "1"}
+            ]
+        },
+        "http://server1/health": {"state": "running"},
+        "http://server4/cluster": {"members": []},
+    }
+    if args[0] in data:
+        return MockResponse(data[args[0]])
+
+    raise requests.exceptions.Timeout()
 
 
 def test_get_primary(harness, patroni):
@@ -316,3 +341,64 @@ def test_switchover(harness, patroni):
             json={"leader": "postgresql-k8s-0", "candidate": "postgresql-k8s-2"},
             verify=True,
         )
+
+
+def test_member_replication_lag(harness, patroni):
+    with (
+        patch("requests.get", side_effect=mocked_requests_get) as _get,
+        patch("charm.Patroni._patroni_url", new_callable=PropertyMock) as _patroni_url,
+    ):
+        # Test when the cluster member has a value for the lag field.
+        _patroni_url.return_value = "http://server1"
+        lag = patroni.member_replication_lag
+        assert lag == "1"
+
+        # Test when the cluster member doesn't have a value for the lag field.
+        harness.charm.unit.name = "postgresql-k8s/1"
+        lag = patroni.member_replication_lag
+        assert lag == "unknown"
+
+        # Test when the API call fails.
+        _patroni_url.return_value = "http://server2"
+        with patch.object(tenacity.Retrying, "iter", Mock(side_effect=tenacity.RetryError(None))):
+            lag = patroni.member_replication_lag
+            assert lag == "unknown"
+
+
+def test_member_started_true(patroni):
+    with (
+        patch("patroni.requests.get") as _get,
+        patch("patroni.stop_after_delay", return_value=tenacity.stop_after_delay(0)),
+        patch("patroni.wait_fixed", return_value=tenacity.wait_fixed(0)),
+    ):
+        _get.return_value.json.return_value = {"state": "running"}
+
+        assert patroni.member_started
+
+        _get.assert_called_once_with("http://postgresql-k8s-0:8008/health", verify=True)
+
+
+def test_member_started_false(patroni):
+    with (
+        patch("patroni.requests.get") as _get,
+        patch("patroni.stop_after_delay", return_value=tenacity.stop_after_delay(0)),
+        patch("patroni.wait_fixed", return_value=tenacity.wait_fixed(0)),
+    ):
+        _get.return_value.json.return_value = {"state": "stopped"}
+
+        assert not patroni.member_started
+
+        _get.assert_called_once_with("http://postgresql-k8s-0:8008/health", verify=True)
+
+
+def test_member_started_error(patroni):
+    with (
+        patch("patroni.requests.get") as _get,
+        patch("patroni.stop_after_delay", return_value=tenacity.stop_after_delay(0)),
+        patch("patroni.wait_fixed", return_value=tenacity.wait_fixed(0)),
+    ):
+        _get.side_effect = Exception
+
+        assert not patroni.member_started
+
+        _get.assert_called_once_with("http://postgresql-k8s-0:8008/health", verify=True)
