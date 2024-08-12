@@ -42,6 +42,9 @@ def patroni(harness):
             "rewind-password",
             False,
         )
+        root = harness.get_filesystem_root("postgresql")
+        (root / "var" / "log" / "postgresql").mkdir(parents=True, exist_ok=True)
+
         yield patroni
 
 
@@ -402,3 +405,31 @@ def test_member_started_error(patroni):
         assert not patroni.member_started
 
         _get.assert_called_once_with("http://postgresql-k8s-0:8008/health", verify=True)
+
+
+def test_last_postgresql_logs(harness, patroni):
+    # Empty if container can't connect
+    harness.set_can_connect("postgresql", False)
+    assert patroni.last_postgresql_logs() == ""
+
+    # Test when there are no files to read.
+    harness.set_can_connect("postgresql", True)
+    assert patroni.last_postgresql_logs() == ""
+
+    # Test when there are multiple files in the logs directory.
+    root = harness.get_filesystem_root("postgresql")
+    with (root / "var" / "log" / "postgresql" / "postgresql.1.log").open("w") as fd:
+        fd.write("fake-logs1")
+    with (root / "var" / "log" / "postgresql" / "postgresql.2.log").open("w") as fd:
+        fd.write("fake-logs2")
+    with (root / "var" / "log" / "postgresql" / "postgresql.3.log").open("w") as fd:
+        fd.write("fake-logs3")
+
+    assert patroni.last_postgresql_logs() == "fake-logs3"
+
+    # Test when the charm fails to read the logs.
+    (root / "var" / "log" / "postgresql" / "postgresql.1.log").unlink()
+    (root / "var" / "log" / "postgresql" / "postgresql.2.log").unlink()
+    (root / "var" / "log" / "postgresql" / "postgresql.3.log").unlink()
+    (root / "var" / "log" / "postgresql").rmdir()
+    assert patroni.last_postgresql_logs() == ""
