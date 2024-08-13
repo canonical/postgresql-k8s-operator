@@ -12,6 +12,7 @@ from typing import Any, Dict, List, Optional
 import requests
 import yaml
 from jinja2 import Template
+from ops.pebble import Error
 from tenacity import (
     AttemptManager,
     RetryError,
@@ -476,16 +477,16 @@ class Patroni:
         if not container.can_connect():
             logger.debug("Cannot get last PostgreSQL log from Rock. Container inaccessible")
             return ""
-        log_files = container.list_files(POSTGRESQL_LOGS_PATH, pattern=POSTGRESQL_LOGS_PATTERN)
-        if len(log_files) == 0:
-            return ""
-        log_files.sort(key=lambda f: f.path, reverse=True)
         try:
+            log_files = container.list_files(POSTGRESQL_LOGS_PATH, pattern=POSTGRESQL_LOGS_PATTERN)
+            if len(log_files) == 0:
+                return ""
+            log_files.sort(key=lambda f: f.path, reverse=True)
             with container.pull(log_files[0].path) as last_log_file:
                 return last_log_file.read()
-        except OSError as e:
+        except Error:
             error_message = "Failed to read last postgresql log file"
-            logger.exception(error_message, exc_info=e)
+            logger.exception(error_message)
             return ""
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
