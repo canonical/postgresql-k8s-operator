@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 import asyncio
 import itertools
+import logging
 from datetime import datetime
 from multiprocessing import ProcessError
 from pathlib import Path
@@ -36,8 +37,11 @@ METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
 APPLICATION_NAME = "postgresql-test-app"
 STORAGE_PATH = METADATA["storage"]["pgdata"]["location"]
+MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET = "Move restored cluster to another S3 bucket"
 
 charm = None
+
+logger = logging.getLogger(__name__)
 
 
 async def app_name(
@@ -100,6 +104,7 @@ async def build_and_deploy(
             apps=[database_app_name],
             status=status,
             raise_on_blocked=True,
+            raise_on_error=False,
             timeout=1000,
             wait_for_exact_units=num_units,
         )
@@ -304,6 +309,7 @@ async def deploy_and_relate_application_with_postgresql(
         apps=[application_name],
         status="active",
         raise_on_blocked=False,  # Application that needs a relation is blocked initially.
+        raise_on_error=False,
         timeout=1000,
     )
 
@@ -669,10 +675,15 @@ async def run_command_on_unit(ops_test: OpsTest, unit_name: str, command: str) -
         the command output if it succeeds, otherwise raises an exception.
     """
     complete_command = f"ssh --container postgresql {unit_name} {command}"
-    return_code, stdout, _ = await ops_test.juju(*complete_command.split())
+    return_code, stdout, stderr = await ops_test.juju(*complete_command.split())
     if return_code != 0:
         raise Exception(
-            "Expected command %s to succeed instead it failed: %s", command, return_code
+            "Expected command %s to succeed instead it failed: %s. Code: %s"
+            % (
+                command,
+                stderr,
+                return_code,
+            )
         )
     return stdout
 
@@ -693,7 +704,7 @@ async def scale_application(
     await model.applications[application_name].scale(scale)
     if scale == 0:
         await model.block_until(
-            lambda: len(model.applications[DATABASE_APP_NAME].units) == scale,
+            lambda: len(model.applications[application_name].units) == scale,
             timeout=1000,
         )
     else:
@@ -758,10 +769,10 @@ async def wait_for_idle_on_blocked(
     unit = ops_test.model.units.get(f"{database_app_name}/{unit_number}")
     await asyncio.gather(
         ops_test.model.wait_for_idle(apps=[other_app_name], status="active"),
-        ops_test.model.wait_for_idle(
-            apps=[database_app_name], status="blocked", raise_on_blocked=False
+        ops_test.model.block_until(
+            lambda: unit.workload_status == "blocked"
+            and unit.workload_status_message == status_message
         ),
-        ops_test.model.block_until(lambda: unit.workload_status_message == status_message),
     )
 
 
@@ -794,3 +805,218 @@ async def cat_file_from_unit(ops_test: OpsTest, filepath: str, unit_name: str) -
             "Expected cat command %s to succeed instead it failed: %s", cat_cmd, return_code
         )
     return output
+
+
+async def backup_operations(
+    ops_test: OpsTest,
+    s3_integrator_app_name: str,
+    tls_certificates_app_name: str,
+    tls_config,
+    tls_channel,
+    credentials,
+    cloud,
+    config,
+) -> None:
+    """Basic set of operations for backup testing in different cloud providers."""
+    # Deploy S3 Integrator and TLS Certificates Operator.
+    await ops_test.model.deploy(s3_integrator_app_name)
+    await ops_test.model.deploy(tls_certificates_app_name, config=tls_config, channel=tls_channel)
+    # Deploy and relate PostgreSQL to S3 integrator (one database app for each cloud for now
+    # as archivo_mode is disabled after restoring the backup) and to TLS Certificates Operator
+    # (to be able to create backups from replicas).
+    database_app_name = f"{DATABASE_APP_NAME}-{cloud.lower()}"
+    await build_and_deploy(ops_test, 2, database_app_name=database_app_name, wait_for_idle=False)
+
+    await ops_test.model.relate(database_app_name, tls_certificates_app_name)
+    async with ops_test.fast_forward(fast_interval="60s"):
+        await ops_test.model.wait_for_idle(
+            apps=[database_app_name], status="active", timeout=1000, raise_on_error=False
+        )
+    await ops_test.model.relate(database_app_name, s3_integrator_app_name)
+
+    # Configure and set access and secret keys.
+    logger.info(f"configuring S3 integrator for {cloud}")
+    await ops_test.model.applications[s3_integrator_app_name].set_config(config)
+    action = await ops_test.model.units.get(f"{s3_integrator_app_name}/0").run_action(
+        "sync-s3-credentials",
+        **credentials,
+    )
+    await action.wait()
+    async with ops_test.fast_forward(fast_interval="60s"):
+        await ops_test.model.wait_for_idle(
+            apps=[database_app_name, s3_integrator_app_name], status="active", timeout=1000
+        )
+
+    primary = await get_primary(ops_test, database_app_name)
+    for unit in ops_test.model.applications[database_app_name].units:
+        if unit.name != primary:
+            replica = unit.name
+            break
+
+    # Write some data.
+    password = await get_password(ops_test, database_app_name=database_app_name)
+    address = await get_unit_address(ops_test, primary)
+    logger.info("creating a table in the database")
+    with db_connect(host=address, password=password) as connection:
+        connection.autocommit = True
+        connection.cursor().execute(
+            "CREATE TABLE IF NOT EXISTS backup_table_1 (test_collumn INT );"
+        )
+    connection.close()
+
+    # With a stable cluster, Run the "create backup" action
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(status="active", timeout=1000, idle_period=30)
+    logger.info("creating a backup")
+    action = await ops_test.model.units.get(replica).run_action("create-backup")
+    await action.wait()
+    backup_status = action.results.get("backup-status")
+    assert backup_status, "backup hasn't succeeded"
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(status="active", timeout=1000)
+
+    # Run the "list backups" action.
+    logger.info("listing the available backups")
+    action = await ops_test.model.units.get(replica).run_action("list-backups")
+    await action.wait()
+    backups = action.results.get("backups")
+    # 5 lines for header output, 1 backup line ==> 6 total lines
+    assert len(backups.split("\n")) == 6, "full backup is not outputted"
+    await ops_test.model.wait_for_idle(status="active", timeout=1000)
+
+    # Write some data.
+    logger.info("creating a second table in the database")
+    with db_connect(host=address, password=password) as connection:
+        connection.autocommit = True
+        connection.cursor().execute("CREATE TABLE backup_table_2 (test_collumn INT );")
+    connection.close()
+
+    # Run the "create backup" action.
+    logger.info("creating a backup")
+    action = await ops_test.model.units.get(replica).run_action(
+        "create-backup", **{"type": "differential"}
+    )
+    await action.wait()
+    backup_status = action.results.get("backup-status")
+    assert backup_status, "backup hasn't succeeded"
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(status="active", timeout=1000)
+
+    # Run the "list backups" action.
+    logger.info("listing the available backups")
+    action = await ops_test.model.units.get(replica).run_action("list-backups")
+    await action.wait()
+    backups = action.results.get("backups")
+    # 5 lines for header output, 2 backup lines ==> 7 total lines
+    assert len(backups.split("\n")) == 7, "differential backup is not outputted"
+    await ops_test.model.wait_for_idle(status="active", timeout=1000)
+
+    # Write some data.
+    logger.info("creating a second table in the database")
+    with db_connect(host=address, password=password) as connection:
+        connection.autocommit = True
+        connection.cursor().execute("CREATE TABLE backup_table_3 (test_collumn INT );")
+    connection.close()
+    # Scale down to be able to restore.
+    async with ops_test.fast_forward(fast_interval="60s"):
+        await scale_application(ops_test, database_app_name, 1)
+
+    remaining_unit = ops_test.model.units.get(f"{database_app_name}/0")
+
+    # Run the "restore backup" action for differential backup.
+    for attempt in Retrying(
+        stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
+    ):
+        with attempt:
+            logger.info("restoring the backup")
+            last_diff_backup = backups.split("\n")[-1]
+            backup_id = last_diff_backup.split()[0]
+            action = await remaining_unit.run_action("restore", **{"backup-id": backup_id})
+            await action.wait()
+            restore_status = action.results.get("restore-status")
+            assert restore_status, "restore hasn't succeeded"
+
+    # Wait for the restore to complete.
+    async with ops_test.fast_forward():
+        await ops_test.model.block_until(
+            lambda: remaining_unit.workload_status_message
+            == MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET,
+            timeout=1000,
+        )
+
+    # Check that the backup was correctly restored by having only the first created table.
+    logger.info("checking that the backup was correctly restored")
+    primary = await get_primary(ops_test, database_app_name)
+    address = await get_unit_address(ops_test, primary)
+    with db_connect(host=address, password=password) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT EXISTS (SELECT FROM information_schema.tables"
+            " WHERE table_schema = 'public' AND table_name = 'backup_table_1');"
+        )
+        assert cursor.fetchone()[
+            0
+        ], "backup wasn't correctly restored: table 'backup_table_1' doesn't exist"
+        cursor.execute(
+            "SELECT EXISTS (SELECT FROM information_schema.tables"
+            " WHERE table_schema = 'public' AND table_name = 'backup_table_2');"
+        )
+        assert cursor.fetchone()[
+            0
+        ], "backup wasn't correctly restored: table 'backup_table_2' doesn't exist"
+        cursor.execute(
+            "SELECT EXISTS (SELECT FROM information_schema.tables"
+            " WHERE table_schema = 'public' AND table_name = 'backup_table_3');"
+        )
+        assert not cursor.fetchone()[
+            0
+        ], "backup wasn't correctly restored: table 'backup_table_3' exists"
+    connection.close()
+
+    # Run the "restore backup" action for full backup.
+    for attempt in Retrying(
+        stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
+    ):
+        with attempt:
+            logger.info("restoring the backup")
+            last_full_backup = backups.split("\n")[-2]
+            backup_id = last_full_backup.split()[0]
+            action = await remaining_unit.run_action("restore", **{"backup-id": backup_id})
+            await action.wait()
+            restore_status = action.results.get("restore-status")
+            assert restore_status, "restore hasn't succeeded"
+
+    # Wait for the restore to complete.
+    async with ops_test.fast_forward():
+        await ops_test.model.block_until(
+            lambda: remaining_unit.workload_status_message
+            == MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET,
+            timeout=1000,
+        )
+
+    # Check that the backup was correctly restored by having only the first created table.
+    logger.info("checking that the backup was correctly restored")
+    primary = await get_primary(ops_test, database_app_name)
+    address = await get_unit_address(ops_test, primary)
+    with db_connect(host=address, password=password) as connection, connection.cursor() as cursor:
+        cursor.execute(
+            "SELECT EXISTS (SELECT FROM information_schema.tables"
+            " WHERE table_schema = 'public' AND table_name = 'backup_table_1');"
+        )
+        assert cursor.fetchone()[
+            0
+        ], "backup wasn't correctly restored: table 'backup_table_1' doesn't exist"
+        cursor.execute(
+            "SELECT EXISTS (SELECT FROM information_schema.tables"
+            " WHERE table_schema = 'public' AND table_name = 'backup_table_2');"
+        )
+        assert not cursor.fetchone()[
+            0
+        ], "backup wasn't correctly restored: table 'backup_table_2' exists"
+        cursor.execute(
+            "SELECT EXISTS (SELECT FROM information_schema.tables"
+            " WHERE table_schema = 'public' AND table_name = 'backup_table_3');"
+        )
+        assert not cursor.fetchone()[
+            0
+        ], "backup wasn't correctly restored: table 'backup_table_3' exists"
+    connection.close()

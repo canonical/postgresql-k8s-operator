@@ -12,8 +12,11 @@ from lightkube.resources.core_v1 import Pod
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_exponential
 
+from . import architecture
 from .helpers import (
     DATABASE_APP_NAME,
+    MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET,
+    backup_operations,
     build_and_deploy,
     cat_file_from_unit,
     construct_endpoint,
@@ -21,7 +24,6 @@ from .helpers import (
     get_password,
     get_primary,
     get_unit_address,
-    scale_application,
     switchover,
     wait_for_idle_on_blocked,
 )
@@ -34,13 +36,19 @@ FAILED_TO_ACCESS_CREATE_BUCKET_ERROR_MESSAGE = (
 FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE = "failed to initialize stanza, check your S3 settings"
 S3_INTEGRATOR_APP_NAME = "s3-integrator"
 if juju_major_version < 3:
-    TLS_CERTIFICATES_APP_NAME = "tls-certificates-operator"
-    TLS_CHANNEL = "legacy/stable"
-    TLS_CONFIG = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
+    tls_certificates_app_name = "tls-certificates-operator"
+    if architecture.architecture == "arm64":
+        tls_channel = "legacy/edge"
+    else:
+        tls_channel = "legacy/stable"
+    tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
 else:
-    TLS_CERTIFICATES_APP_NAME = "self-signed-certificates"
-    TLS_CHANNEL = "latest/stable"
-    TLS_CONFIG = {"ca-common-name": "Test CA"}
+    tls_certificates_app_name = "self-signed-certificates"
+    if architecture.architecture == "arm64":
+        tls_channel = "latest/edge"
+    else:
+        tls_channel = "latest/stable"
+    tls_config = {"ca-common-name": "Test CA"}
 
 logger = logging.getLogger(__name__)
 
@@ -95,225 +103,48 @@ async def cloud_configs(ops_test: OpsTest, github_secrets) -> None:
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> None:
-    """Build and deploy two units of PostgreSQL and then test the backup and restore actions."""
-    # Deploy S3 Integrator and TLS Certificates Operator.
-    await ops_test.model.deploy(S3_INTEGRATOR_APP_NAME)
-    await ops_test.model.deploy(TLS_CERTIFICATES_APP_NAME, config=TLS_CONFIG, channel=TLS_CHANNEL)
+async def test_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> None:
+    """Build and deploy two units of PostgreSQL in AWS and then test the backup and restore actions."""
+    config = cloud_configs[0][AWS]
+    credentials = cloud_configs[1][AWS]
 
-    for cloud, config in cloud_configs[0].items():
-        # Deploy and relate PostgreSQL to S3 integrator (one database app for each cloud for now
-        # as archivo_mode is disabled after restoring the backup) and to TLS Certificates Operator
-        # (to be able to create backups from replicas).
-        database_app_name = f"{DATABASE_APP_NAME}-{cloud.lower()}"
-        await build_and_deploy(
-            ops_test, 2, database_app_name=database_app_name, wait_for_idle=False
+    await backup_operations(
+        ops_test,
+        S3_INTEGRATOR_APP_NAME,
+        tls_certificates_app_name,
+        tls_config,
+        tls_channel,
+        credentials,
+        AWS,
+        config,
+    )
+    database_app_name = f"{DATABASE_APP_NAME}-aws"
+
+    async with ops_test.fast_forward():
+        logger.info("removing the TLS relation")
+        await ops_test.model.applications[database_app_name].remove_relation(
+            f"{database_app_name}:certificates",
+            f"{tls_certificates_app_name}:certificates",
         )
-        await ops_test.model.relate(database_app_name, S3_INTEGRATOR_APP_NAME)
-        await ops_test.model.relate(database_app_name, TLS_CERTIFICATES_APP_NAME)
 
-        # Configure and set access and secret keys.
-        logger.info(f"configuring S3 integrator for {cloud}")
-        await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config(config)
-        action = await ops_test.model.units.get(f"{S3_INTEGRATOR_APP_NAME}/0").run_action(
-            "sync-s3-credentials",
-            **cloud_configs[1][cloud],
+        new_unit_name = f"{database_app_name}/1"
+
+        # Scale up to be able to test primary and leader being different.
+        await ops_test.model.applications[database_app_name].scale(2)
+        await ops_test.model.block_until(
+            lambda: len(ops_test.model.applications[database_app_name].units) == 2
+            and ops_test.model.units.get(new_unit_name).workload_status_message
+            == MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET,
+            timeout=1000,
         )
-        await action.wait()
-        async with ops_test.fast_forward(fast_interval="60s"):
-            await ops_test.model.wait_for_idle(
-                apps=[database_app_name, S3_INTEGRATOR_APP_NAME], status="active", timeout=1000
-            )
 
-        primary = await get_primary(ops_test, database_app_name)
-        for unit in ops_test.model.applications[database_app_name].units:
-            if unit.name != primary:
-                replica = unit.name
-                break
-
-        # Write some data.
+        logger.info("ensuring that the replication is working correctly")
+        address = await get_unit_address(ops_test, new_unit_name)
         password = await get_password(ops_test, database_app_name=database_app_name)
-        address = await get_unit_address(ops_test, primary)
-        logger.info("creating a table in the database")
-        with db_connect(host=address, password=password) as connection:
-            connection.autocommit = True
-            connection.cursor().execute(
-                "CREATE TABLE IF NOT EXISTS backup_table_1 (test_collumn INT );"
-            )
-        connection.close()
-
-        # Run the "create backup" action.
-        logger.info("creating a backup")
-        action = await ops_test.model.units.get(replica).run_action("create-backup")
-        await action.wait()
-        backup_status = action.results.get("backup-status")
-        assert backup_status, "backup hasn't succeeded"
-        async with ops_test.fast_forward():
-            await ops_test.model.wait_for_idle(status="active", timeout=1000)
-
-        # Run the "list backups" action.
-        logger.info("listing the available backups")
-        action = await ops_test.model.units.get(replica).run_action("list-backups")
-        await action.wait()
-        backups = action.results.get("backups")
-        # 2 lines for header output, 1 backup line ==> 3 total lines
-        assert len(backups.split("\n")) == 3, "full backup is not outputted"
-        await ops_test.model.wait_for_idle(status="active", timeout=1000)
-
-        # Write some data.
-        logger.info("creating a second table in the database")
-        with db_connect(host=address, password=password) as connection:
-            connection.autocommit = True
-            connection.cursor().execute("CREATE TABLE backup_table_2 (test_collumn INT );")
-        connection.close()
-
-        # Run the "create backup" action.
-        logger.info("creating a backup")
-        action = await ops_test.model.units.get(replica).run_action(
-            "create-backup", **{"type": "diff"}
-        )
-        await action.wait()
-        backup_status = action.results.get("backup-status")
-        assert backup_status, "backup hasn't succeeded"
-        async with ops_test.fast_forward():
-            await ops_test.model.wait_for_idle(status="active", timeout=1000)
-
-        # Run the "list backups" action.
-        logger.info("listing the available backups")
-        action = await ops_test.model.units.get(replica).run_action("list-backups")
-        await action.wait()
-        backups = action.results.get("backups")
-        # 2 lines for header output, 2 backup lines ==> 4 total lines
-        assert len(backups.split("\n")) == 4, "differential backup is not outputted"
-        await ops_test.model.wait_for_idle(status="active", timeout=1000)
-
-        # Write some data.
-        logger.info("creating a second table in the database")
-        with db_connect(host=address, password=password) as connection:
-            connection.autocommit = True
-            connection.cursor().execute("CREATE TABLE backup_table_3 (test_collumn INT );")
-        connection.close()
-        # Scale down to be able to restore.
-        async with ops_test.fast_forward(fast_interval="60s"):
-            await scale_application(ops_test, database_app_name, 1)
-
-        # Run the "restore backup" action for differential backup.
         for attempt in Retrying(
             stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
         ):
             with attempt:
-                logger.info("restoring the backup")
-                last_diff_backup = backups.split("\n")[-1]
-                backup_id = last_diff_backup.split()[0]
-                action = await ops_test.model.units.get(f"{database_app_name}/0").run_action(
-                    "restore", **{"backup-id": backup_id}
-                )
-                await action.wait()
-                restore_status = action.results.get("restore-status")
-                assert restore_status, "restore hasn't succeeded"
-
-        # Wait for the restore to complete.
-        async with ops_test.fast_forward():
-            await ops_test.model.wait_for_idle(status="active", timeout=1000)
-
-        # Check that the backup was correctly restored by having only the first created table.
-        logger.info("checking that the backup was correctly restored")
-        primary = await get_primary(ops_test, database_app_name)
-        address = await get_unit_address(ops_test, primary)
-        with db_connect(
-            host=address, password=password
-        ) as connection, connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT EXISTS (SELECT FROM information_schema.tables"
-                " WHERE table_schema = 'public' AND table_name = 'backup_table_1');"
-            )
-            assert cursor.fetchone()[
-                0
-            ], "backup wasn't correctly restored: table 'backup_table_1' doesn't exist"
-            cursor.execute(
-                "SELECT EXISTS (SELECT FROM information_schema.tables"
-                " WHERE table_schema = 'public' AND table_name = 'backup_table_2');"
-            )
-            assert cursor.fetchone()[
-                0
-            ], "backup wasn't correctly restored: table 'backup_table_2' doesn't exist"
-            cursor.execute(
-                "SELECT EXISTS (SELECT FROM information_schema.tables"
-                " WHERE table_schema = 'public' AND table_name = 'backup_table_3');"
-            )
-            assert not cursor.fetchone()[
-                0
-            ], "backup wasn't correctly restored: table 'backup_table_3' exists"
-        connection.close()
-
-        # Run the "restore backup" action for full backup.
-        for attempt in Retrying(
-            stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
-        ):
-            with attempt:
-                logger.info("restoring the backup")
-                last_full_backup = backups.split("\n")[-2]
-                backup_id = last_full_backup.split()[0]
-                action = await ops_test.model.units.get(f"{database_app_name}/0").run_action(
-                    "restore", **{"backup-id": backup_id}
-                )
-                await action.wait()
-                restore_status = action.results.get("restore-status")
-                assert restore_status, "restore hasn't succeeded"
-
-        # Wait for the restore to complete.
-        async with ops_test.fast_forward():
-            await ops_test.model.wait_for_idle(status="active", timeout=1000)
-
-        # Check that the backup was correctly restored by having only the first created table.
-        logger.info("checking that the backup was correctly restored")
-        primary = await get_primary(ops_test, database_app_name)
-        address = await get_unit_address(ops_test, primary)
-        with db_connect(
-            host=address, password=password
-        ) as connection, connection.cursor() as cursor:
-            cursor.execute(
-                "SELECT EXISTS (SELECT FROM information_schema.tables"
-                " WHERE table_schema = 'public' AND table_name = 'backup_table_1');"
-            )
-            assert cursor.fetchone()[
-                0
-            ], "backup wasn't correctly restored: table 'backup_table_1' doesn't exist"
-            cursor.execute(
-                "SELECT EXISTS (SELECT FROM information_schema.tables"
-                " WHERE table_schema = 'public' AND table_name = 'backup_table_2');"
-            )
-            assert not cursor.fetchone()[
-                0
-            ], "backup wasn't correctly restored: table 'backup_table_2' exists"
-            cursor.execute(
-                "SELECT EXISTS (SELECT FROM information_schema.tables"
-                " WHERE table_schema = 'public' AND table_name = 'backup_table_3');"
-            )
-            assert not cursor.fetchone()[
-                0
-            ], "backup wasn't correctly restored: table 'backup_table_3' exists"
-        connection.close()
-
-        # Run the following steps only in one cloud (it's enough for those checks).
-        if cloud == list(cloud_configs[0].keys())[0]:
-            async with ops_test.fast_forward():
-                logger.info("removing the TLS relation")
-                await ops_test.model.applications[database_app_name].remove_relation(
-                    f"{database_app_name}:certificates",
-                    f"{TLS_CERTIFICATES_APP_NAME}:certificates",
-                )
-                await ops_test.model.wait_for_idle(
-                    apps=[database_app_name], status="active", timeout=1000
-                )
-
-                # Scale up to be able to test primary and leader being different.
-                async with ops_test.fast_forward(fast_interval="60s"):
-                    await scale_application(ops_test, database_app_name, 2)
-
-                logger.info("ensuring that the replication is working correctly")
-                new_unit_name = f"{database_app_name}/1"
-                address = await get_unit_address(ops_test, new_unit_name)
                 with db_connect(
                     host=address, password=password
                 ) as connection, connection.cursor() as cursor:
@@ -333,34 +164,64 @@ async def test_backup_and_restore(ops_test: OpsTest, cloud_configs: Tuple[Dict, 
                     ], f"replication isn't working correctly: table 'backup_table_2' exists in {new_unit_name}"
                 connection.close()
 
-                logger.info(f"performing a switchover from {primary} to {new_unit_name}")
-                await switchover(ops_test, primary, new_unit_name)
+        old_primary = await get_primary(ops_test, database_app_name)
+        logger.info(f"performing a switchover from {old_primary} to {new_unit_name}")
+        await switchover(ops_test, old_primary, new_unit_name)
 
-                logger.info("checking that the primary unit has changed")
-                primary = await get_primary(ops_test, database_app_name)
-                for attempt in Retrying(
-                    stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=30)
-                ):
-                    with attempt:
-                        assert primary == new_unit_name
+        logger.info("checking that the primary unit has changed")
+        primary = await get_primary(ops_test, database_app_name)
+        for attempt in Retrying(
+            stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=30)
+        ):
+            with attempt:
+                assert primary == new_unit_name
 
-                # Ensure stanza is working correctly.
-                logger.info(
-                    "listing the available backups to ensure that the stanza is working correctly"
-                )
-                action = await ops_test.model.units.get(new_unit_name).run_action("list-backups")
-                await action.wait()
-                backups = action.results.get("backups")
-                assert backups, "backups not outputted"
-                await ops_test.model.wait_for_idle(status="active", timeout=1000)
+        # Ensure stanza is working correctly.
+        logger.info("listing the available backups to ensure that the stanza is working correctly")
+        action = await ops_test.model.units.get(new_unit_name).run_action("list-backups")
+        await action.wait()
+        backups = action.results.get("backups")
+        assert backups, "backups not outputted"
 
-        # Remove the database app.
-        await ops_test.model.remove_application(database_app_name, block_until_done=True)
+        # Remove S3 relation to ensure "move to another cluster" blocked status is gone
+        await ops_test.model.applications[database_app_name].remove_relation(
+            f"{database_app_name}:s3-parameters", f"{S3_INTEGRATOR_APP_NAME}:s3-credentials"
+        )
+
+        await ops_test.model.wait_for_idle(status="active", timeout=1000)
+
+    # Remove the database app.
+    await ops_test.model.remove_application(database_app_name, block_until_done=True)
     # Remove the TLS operator.
-    await ops_test.model.remove_application(TLS_CERTIFICATES_APP_NAME, block_until_done=True)
+    await ops_test.model.remove_application(tls_certificates_app_name, block_until_done=True)
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(2)
+@pytest.mark.abort_on_fail
+async def test_backup_gcp(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> None:
+    """Build and deploy two units of PostgreSQL in GCP and then test the backup and restore actions."""
+    config = cloud_configs[0][GCP]
+    credentials = cloud_configs[1][GCP]
+
+    await backup_operations(
+        ops_test,
+        S3_INTEGRATOR_APP_NAME,
+        tls_certificates_app_name,
+        tls_config,
+        tls_channel,
+        credentials,
+        GCP,
+        config,
+    )
+    database_app_name = f"{DATABASE_APP_NAME}-gcp"
+
+    # Remove the database app.
+    await ops_test.model.remove_application(database_app_name, block_until_done=True)
+    # Remove the TLS operator.
+    await ops_test.model.remove_application(tls_certificates_app_name, block_until_done=True)
+
+
+@pytest.mark.group(2)
 async def test_restore_on_new_cluster(ops_test: OpsTest, github_secrets) -> None:
     """Test that is possible to restore a backup to another PostgreSQL cluster."""
     previous_database_app_name = f"{DATABASE_APP_NAME}-gcp"
@@ -433,7 +294,7 @@ async def test_restore_on_new_cluster(ops_test: OpsTest, github_secrets) -> None
             database_app_name,
             0,
             S3_INTEGRATOR_APP_NAME,
-            ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE,
+            MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET,
         )
 
     # Check that the backup was correctly restored by having only the first created table.
@@ -451,7 +312,7 @@ async def test_restore_on_new_cluster(ops_test: OpsTest, github_secrets) -> None
     connection.close()
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(2)
 async def test_invalid_config_and_recovery_after_fixing_it(
     ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]
 ) -> None:
@@ -487,10 +348,10 @@ async def test_invalid_config_and_recovery_after_fixing_it(
     logger.info(
         "configuring S3 integrator for a valid cloud, but with the path of another cluster repository"
     )
-    await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config(cloud_configs[0][AWS])
+    await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config(cloud_configs[0][GCP])
     action = await ops_test.model.units.get(f"{S3_INTEGRATOR_APP_NAME}/0").run_action(
         "sync-s3-credentials",
-        **cloud_configs[1][AWS],
+        **cloud_configs[1][GCP],
     )
     await action.wait()
     await wait_for_idle_on_blocked(
@@ -503,7 +364,7 @@ async def test_invalid_config_and_recovery_after_fixing_it(
 
     # Provide valid backup configurations, with another path in the S3 bucket.
     logger.info("configuring S3 integrator for a valid cloud")
-    config = cloud_configs[0][AWS].copy()
+    config = cloud_configs[0][GCP].copy()
     config["path"] = f"/postgresql-k8s/{uuid.uuid1()}"
     await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config(config)
     logger.info("waiting for the database charm to become active")
@@ -512,7 +373,7 @@ async def test_invalid_config_and_recovery_after_fixing_it(
     )
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(2)
 async def test_delete_pod(ops_test: OpsTest, github_secrets) -> None:
     logger.info("Getting original backup config")
     database_app_name = f"new-{DATABASE_APP_NAME}"

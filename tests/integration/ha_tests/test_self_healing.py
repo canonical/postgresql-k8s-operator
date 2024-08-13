@@ -75,14 +75,14 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
     if wait_for_apps:
         async with ops_test.fast_forward():
-            await ops_test.model.wait_for_idle(status="active", timeout=1000)
+            await ops_test.model.wait_for_idle(status="active", timeout=1000, raise_on_error=False)
 
 
 @pytest.mark.group(1)
-@markers.juju2
 @pytest.mark.parametrize("process", DB_PROCESSES)
-async def test_kill_db_process(
-    ops_test: OpsTest, process: str, continuous_writes, primary_start_timeout
+@pytest.mark.parametrize("signal", ["SIGTERM", pytest.param("SIGKILL", marks=markers.juju2)])
+async def test_interruption_db_process(
+    ops_test: OpsTest, process: str, signal: str, continuous_writes, primary_start_timeout
 ) -> None:
     # Locate primary unit.
     app = await app_name(ops_test)
@@ -91,22 +91,24 @@ async def test_kill_db_process(
     # Start an application that continuously writes data to the database.
     await start_continuous_writes(ops_test, app)
 
-    # Kill the database process.
-    await send_signal_to_process(ops_test, primary_name, process, "SIGKILL")
+    # Interrupt the database process.
+    await send_signal_to_process(ops_test, primary_name, process, signal)
 
     # Wait some time to elect a new primary.
-    sleep(MEDIAN_ELECTION_TIME * 2)
+    sleep(MEDIAN_ELECTION_TIME * 6)
 
     async with ops_test.fast_forward():
         await are_writes_increasing(ops_test, primary_name)
 
+        # Verify that a new primary gets elected (ie old primary is secondary).
+        for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
+            with attempt:
+                new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
+                assert new_primary_name != primary_name
+
         # Verify that the database service got restarted and is ready in the old primary.
         logger.info(f"waiting for the database service to restart on {primary_name}")
         assert await is_postgresql_ready(ops_test, primary_name)
-
-    # Verify that a new primary gets elected (ie old primary is secondary).
-    new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
-    assert new_primary_name != primary_name
 
     await is_cluster_updated(ops_test, primary_name)
 
@@ -150,38 +152,6 @@ async def test_freeze_db_process(
         # Verify that the database service got restarted and is ready in the old primary.
         logger.info(f"waiting for the database service to restart on {primary_name}")
         assert await is_postgresql_ready(ops_test, primary_name)
-
-    await is_cluster_updated(ops_test, primary_name)
-
-
-@pytest.mark.group(1)
-@pytest.mark.parametrize("process", DB_PROCESSES)
-async def test_restart_db_process(
-    ops_test: OpsTest, process: str, continuous_writes, primary_start_timeout
-) -> None:
-    # Locate primary unit.
-    app = await app_name(ops_test)
-    primary_name = await get_primary(ops_test, app)
-
-    # Start an application that continuously writes data to the database.
-    await start_continuous_writes(ops_test, app)
-
-    # Restart the database process.
-    await send_signal_to_process(ops_test, primary_name, process, "SIGTERM")
-
-    # Wait some time to elect a new primary.
-    sleep(MEDIAN_ELECTION_TIME * 2)
-
-    async with ops_test.fast_forward():
-        await are_writes_increasing(ops_test, primary_name)
-
-        # Verify that the database service got restarted and is ready in the old primary.
-        logger.info(f"waiting for the database service to restart on {primary_name}")
-        assert await is_postgresql_ready(ops_test, primary_name)
-
-    # Verify that a new primary gets elected (ie old primary is secondary).
-    new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
-    assert new_primary_name != primary_name
 
     await is_cluster_updated(ops_test, primary_name)
 
@@ -271,24 +241,25 @@ async def test_forceful_restart_without_data_and_transaction_logs(
         "scp", "tests/integration/ha_tests/clean-data-dir.sh", f"{primary_name}:/tmp"
     )
 
-    # Stop the systemd service on the primary unit.
-    logger.info(f"stopping database from {primary_name}")
-    await run_command_on_unit(ops_test, primary_name, "/charm/bin/pebble stop postgresql")
+    # Halts the execution of `update-status` hook so the pebble service doesn't get restarted
+    async with ops_test.fast_forward("24h"):
+        # Stop the systemd service on the primary unit.
+        logger.info(f"stopping database from {primary_name}")
+        await run_command_on_unit(ops_test, primary_name, "/charm/bin/pebble stop postgresql")
 
-    # Data removal runs within a script, so it allows `*` expansion.
-    logger.info(f"removing data from {primary_name}")
-    return_code, _, _ = await ops_test.juju(
-        "ssh",
-        primary_name,
-        "bash",
-        "/tmp/clean-data-dir.sh",
-    )
-    assert return_code == 0, "Failed to remove data directory"
+        # Data removal runs within a script, so it allows `*` expansion.
+        logger.info(f"removing data from {primary_name}")
+        return_code, _, _ = await ops_test.juju(
+            "ssh",
+            primary_name,
+            "bash",
+            "/tmp/clean-data-dir.sh",
+        )
+        assert return_code == 0, "Failed to remove data directory"
 
-    # Wait some time to elect a new primary.
-    sleep(MEDIAN_ELECTION_TIME * 2)
+        # Wait some time to elect a new primary.
+        sleep(MEDIAN_ELECTION_TIME * 2)
 
-    async with ops_test.fast_forward():
         logger.info("checking whether writes are increasing")
         await are_writes_increasing(ops_test, primary_name)
 
@@ -328,18 +299,16 @@ async def test_forceful_restart_without_data_and_transaction_logs(
                 new_files
             ), f"WAL segments weren't correctly rotated on {unit_name}"
 
-        # Start the systemd service in the old primary.
-        logger.info(f"starting database on {primary_name}")
-        await run_command_on_unit(ops_test, primary_name, "/charm/bin/pebble start postgresql")
-
-        # Verify that the database service got restarted and is ready in the old primary.
-        logger.info(f"waiting for the database service to restart on {primary_name}")
+    # Database pebble service in old primary should recover after update-status run.
+    async with ops_test.fast_forward("10s"):
+        logger.info(f"Checking the database service on {primary_name}")
         assert await is_postgresql_ready(ops_test, primary_name)
 
     await is_cluster_updated(ops_test, primary_name)
 
 
 @pytest.mark.group(1)
+@markers.amd64_only
 async def test_network_cut(
     ops_test: OpsTest, continuous_writes, primary_start_timeout, chaos_mesh
 ) -> None:
@@ -403,9 +372,12 @@ async def test_network_cut(
     await is_cluster_updated(ops_test, primary_name)
 
 
-@pytest.mark.group(1)
+@pytest.mark.group(2)
 async def test_scaling_to_zero(ops_test: OpsTest, continuous_writes) -> None:
     """Scale the database to zero units and scale up again."""
+    # Deploy applications
+    await test_build_and_deploy(ops_test)
+
     # Locate primary unit.
     app = await app_name(ops_test)
 

@@ -21,6 +21,8 @@ WORKLOAD_OS_GROUP = "postgres"
 WORKLOAD_OS_USER = "postgres"
 METRICS_PORT = "9187"
 POSTGRESQL_DATA_PATH = "/var/lib/postgresql/data/pgdata"
+POSTGRESQL_LOGS_PATH = "/var/log/postgresql"
+POSTGRESQL_LOGS_PATTERN = "postgresql*.log"
 POSTGRES_LOG_FILES = [
     "/var/log/pgbackrest/*",
     "/var/log/postgresql/patroni.log",
@@ -38,3 +40,16 @@ APP_SCOPE = "app"
 UNIT_SCOPE = "unit"
 
 SECRET_KEY_OVERRIDES = {"ca": "cauth"}
+BACKUP_TYPE_OVERRIDES = {"full": "full", "differential": "diff", "incremental": "incr"}
+
+TRACING_RELATION_NAME = "tracing"
+TRACING_PROTOCOL = "otlp_http"
+
+DATABASE = "database"
+LEGACY_DB = "db"
+LEGACY_DB_ADMIN = "db-admin"
+ALL_LEGACY_RELATIONS = [LEGACY_DB, LEGACY_DB_ADMIN]
+
+ENDPOINT_SIMULTANEOUSLY_BLOCKING_MESSAGE = (
+    "Please choose one endpoint to use. No need to relate all of them simultaneously!"
+)

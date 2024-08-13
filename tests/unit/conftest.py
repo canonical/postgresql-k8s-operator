@@ -3,6 +3,7 @@
 from unittest.mock import PropertyMock
 
 import pytest
+from charms.tempo_k8s.v1.charm_tracing import charm_tracing_disabled
 
 
 # This causes every test defined in this file to run 2 times, each with
@@ -28,3 +29,9 @@ def only_without_juju_secrets(juju_has_secrets):
     """
     if juju_has_secrets:
         pytest.skip("Skipping legacy secrets tests")
+
+
+@pytest.fixture(autouse=True)
+def disable_charm_tracing():
+    with charm_tracing_disabled():
+        yield

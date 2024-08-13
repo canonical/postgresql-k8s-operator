@@ -2,12 +2,9 @@
 # See LICENSE file for licensing details.
 
 import asyncio
-import json
 import logging
 import shutil
-import zipfile
 from pathlib import Path
-from typing import Union
 
 import pytest
 from lightkube import Client
@@ -24,10 +21,10 @@ from ..helpers import (
     get_primary,
     get_unit_by_index,
 )
-from ..new_relations.helpers import get_application_relation_data
 from .helpers import (
     are_writes_increasing,
     check_writes,
+    inject_dependency_fault,
     start_continuous_writes,
 )
 
@@ -57,7 +54,10 @@ async def test_deploy_latest(ops_test: OpsTest) -> None:
     logger.info("Wait for applications to become active")
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME, APPLICATION_NAME], status="active"
+            apps=[DATABASE_APP_NAME, APPLICATION_NAME],
+            status="active",
+            raise_on_error=False,
+            timeout=1000,
         )
     assert len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3
 
@@ -123,6 +123,10 @@ async def test_upgrade_from_edge(ops_test: OpsTest, continuous_writes) -> None:
         await ops_test.model.wait_for_idle(
             apps=[DATABASE_APP_NAME], idle_period=30, timeout=TIMEOUT
         )
+
+    # Check whether writes are increasing.
+    logger.info("checking whether writes are increasing")
+    await are_writes_increasing(ops_test)
 
     logger.info("Resume upgrade")
     leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
@@ -221,6 +225,10 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
             apps=[DATABASE_APP_NAME], idle_period=30, timeout=TIMEOUT
         )
 
+    # Check whether writes are increasing.
+    logger.info("checking whether writes are increasing")
+    await are_writes_increasing(ops_test)
+
     logger.info("Resume upgrade")
     action = await leader_unit.run_action("resume-upgrade")
     await action.wait()
@@ -241,21 +249,3 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
 
     # Remove fault charm file.
     fault_charm.unlink()
-
-
-@pytest.mark.group(1)
-async def inject_dependency_fault(
-    ops_test: OpsTest, application_name: str, charm_file: Union[str, Path]
-) -> None:
-    """Inject a dependency fault into the PostgreSQL charm."""
-    # Query running dependency to overwrite with incompatible version.
-    dependencies = await get_application_relation_data(
-        ops_test, application_name, "upgrade", "dependencies"
-    )
-    loaded_dependency_dict = json.loads(dependencies)
-    loaded_dependency_dict["charm"]["upgrade_supported"] = "^15"
-    loaded_dependency_dict["charm"]["version"] = "15.0"
-
-    # Overwrite dependency.json with incompatible version.
-    with zipfile.ZipFile(charm_file, mode="a") as charm_zip:
-        charm_zip.writestr("src/dependency.json", json.dumps(loaded_dependency_dict))

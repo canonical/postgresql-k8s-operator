@@ -12,18 +12,20 @@ from typing import Any, Dict, List, Optional
 import requests
 import yaml
 from jinja2 import Template
+from ops.pebble import Error
 from tenacity import (
     AttemptManager,
     RetryError,
     Retrying,
     retry,
+    retry_if_result,
     stop_after_attempt,
     stop_after_delay,
     wait_exponential,
     wait_fixed,
 )
 
-from constants import REWIND_USER, TLS_CA_FILE
+from constants import POSTGRESQL_LOGS_PATH, POSTGRESQL_LOGS_PATTERN, REWIND_USER, TLS_CA_FILE
 
 RUNNING_STATES = ["running", "streaming"]
 
@@ -87,20 +89,6 @@ class Patroni:
         """Patroni REST API URL."""
         return f"{'https' if self._tls_enabled else 'http'}://{self._endpoint}:8008"
 
-    # def configure_standby_cluster(self, host: str) -> None:
-    #     """Configure this cluster as a standby cluster."""
-    #     requests.patch(
-    #         f"{self._patroni_url}/config",
-    #         verify=self._verify,
-    #         json={
-    #             "standby_cluster": {
-    #                 "create_replica_methods": ["basebackup"],
-    #                 "host": host,
-    #                 "port": 5432,
-    #             }
-    #         },
-    #     )
-
     @property
     def rock_postgresql_version(self) -> Optional[str]:
         """Version of Postgresql installed in the Rock image."""
@@ -111,12 +99,18 @@ class Patroni:
         snap_meta = container.pull("/meta.charmed-postgresql/snap.yaml")
         return yaml.safe_load(snap_meta)["version"]
 
-    def _get_alternative_patroni_url(self, attempt: AttemptManager) -> str:
+    def _get_alternative_patroni_url(
+        self, attempt: AttemptManager, alternative_endpoints: List[str] = None
+    ) -> str:
         """Get an alternative REST API URL from another member each time.
 
         When the Patroni process is not running in the current unit it's needed
         to use a URL from another cluster member REST API to do some operations.
         """
+        if alternative_endpoints is not None:
+            return self._patroni_url.replace(
+                self._endpoint, alternative_endpoints[attempt.retry_state.attempt_number - 1]
+            )
         if attempt.retry_state.attempt_number > 1:
             url = self._patroni_url.replace(
                 self._endpoint, list(self._endpoints)[attempt.retry_state.attempt_number - 2]
@@ -125,11 +119,12 @@ class Patroni:
             url = self._patroni_url
         return url
 
-    def get_primary(self, unit_name_pattern=False) -> str:
+    def get_primary(self, unit_name_pattern=False, alternative_endpoints: List[str] = None) -> str:
         """Get primary instance.
 
         Args:
             unit_name_pattern: whether or not to convert pod name to unit name
+            alternative_endpoints: list of alternative endpoints to check for the primary.
 
         Returns:
             primary pod or unit name.
@@ -138,8 +133,8 @@ class Patroni:
         # Request info from cluster endpoint (which returns all members of the cluster).
         for attempt in Retrying(stop=stop_after_attempt(len(self._endpoints) + 1)):
             with attempt:
-                url = self._get_alternative_patroni_url(attempt)
-                r = requests.get(f"{url}/cluster", verify=self._verify)
+                url = self._get_alternative_patroni_url(attempt, alternative_endpoints)
+                r = requests.get(f"{url}/cluster", verify=self._verify, timeout=5)
                 for member in r.json()["members"]:
                     if member["role"] == "leader":
                         primary = member["name"]
@@ -270,7 +265,7 @@ class Patroni:
             Return whether the primary endpoint is redirecting connections to the primary pod.
         """
         try:
-            for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(3)):
+            for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(1)):
                 with attempt:
                     r = requests.get(
                         f"{'https' if self._tls_enabled else 'http'}://{self._primary_endpoint}:8008/health",
@@ -287,7 +282,7 @@ class Patroni:
     def member_replication_lag(self) -> str:
         """Member replication lag."""
         try:
-            for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+            for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(1)):
                 with attempt:
                     cluster_status = requests.get(
                         f"{self._patroni_url}/cluster",
@@ -312,7 +307,7 @@ class Patroni:
             allow server time to start up.
         """
         try:
-            for attempt in Retrying(stop=stop_after_delay(90), wait=wait_fixed(3)):
+            for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(1)):
                 with attempt:
                     r = requests.get(f"{self._patroni_url}/health", verify=self._verify)
         except RetryError:
@@ -329,7 +324,7 @@ class Patroni:
             allow server time to start up.
         """
         try:
-            for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+            for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(1)):
                 with attempt:
                     r = requests.get(f"{self._patroni_url}/health", verify=self._verify)
         except RetryError:
@@ -410,7 +405,10 @@ class Patroni:
         is_no_sync_member: bool = False,
         stanza: str = None,
         restore_stanza: Optional[str] = None,
+        disable_pgbackrest_archiving: bool = False,
         backup_id: Optional[str] = None,
+        pitr_target: Optional[str] = None,
+        restore_to_latest: bool = False,
         parameters: Optional[dict[str, str]] = None,
     ) -> None:
         """Render the Patroni configuration file.
@@ -423,7 +421,10 @@ class Patroni:
                 (when it's a replica).
             stanza: name of the stanza created by pgBackRest.
             restore_stanza: name of the stanza used when restoring a backup.
+            disable_pgbackrest_archiving: whether to force disable pgBackRest WAL archiving.
             backup_id: id of the backup that is being restored.
+            pitr_target: point-in-time-recovery target for the backup.
+            restore_to_latest: restore all the WAL transaction logs from the stanza.
             parameters: PostgreSQL parameters to be added to the postgresql.conf file.
         """
         # Open the template patroni.yml file.
@@ -443,9 +444,12 @@ class Patroni:
             replication_password=self._replication_password,
             rewind_user=REWIND_USER,
             rewind_password=self._rewind_password,
-            enable_pgbackrest=stanza is not None,
-            restoring_backup=backup_id is not None,
+            enable_pgbackrest_archiving=stanza is not None
+            and disable_pgbackrest_archiving is False,
+            restoring_backup=backup_id is not None or pitr_target is not None,
             backup_id=backup_id,
+            pitr_target=pitr_target if not restore_to_latest else None,
+            restore_to_latest=restore_to_latest,
             stanza=stanza,
             restore_stanza=restore_stanza,
             minority_count=self._members_count // 2,
@@ -460,6 +464,30 @@ class Patroni:
     def reload_patroni_configuration(self) -> None:
         """Reloads the configuration after it was updated in the file."""
         requests.post(f"{self._patroni_url}/reload", verify=self._verify)
+
+    def last_postgresql_logs(self) -> str:
+        """Get last log file content of Postgresql service in the container.
+
+        If there is no available log files, empty line will be returned.
+
+        Returns:
+            Content of last log file of Postgresql service.
+        """
+        container = self._charm.unit.get_container("postgresql")
+        if not container.can_connect():
+            logger.debug("Cannot get last PostgreSQL log from Rock. Container inaccessible")
+            return ""
+        try:
+            log_files = container.list_files(POSTGRESQL_LOGS_PATH, pattern=POSTGRESQL_LOGS_PATTERN)
+            if len(log_files) == 0:
+                return ""
+            log_files.sort(key=lambda f: f.path, reverse=True)
+            with container.pull(log_files[0].path) as last_log_file:
+                return last_log_file.read()
+        except Error:
+            error_message = "Failed to read last postgresql log file"
+            logger.exception(error_message)
+            return ""
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def restart_postgresql(self) -> None:
@@ -490,3 +518,13 @@ class Patroni:
                 new_primary = self.get_primary()
                 if (candidate is not None and new_primary != candidate) or new_primary == primary:
                     raise SwitchoverFailedError("primary was not switched correctly")
+
+    @retry(
+        retry=retry_if_result(lambda x: not x),
+        stop=stop_after_attempt(10),
+        wait=wait_exponential(multiplier=1, min=2, max=30),
+    )
+    def primary_changed(self, old_primary: str) -> bool:
+        """Checks whether the primary unit has changed."""
+        primary = self.get_primary()
+        return primary != old_primary

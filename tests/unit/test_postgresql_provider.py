@@ -1,7 +1,6 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-from unittest import TestCase
 from unittest.mock import Mock, PropertyMock, patch
 
 import pytest
@@ -23,9 +22,6 @@ DATABASE = "test_database"
 EXTRA_USER_ROLES = "CREATEDB,CREATEROLE"
 RELATION_NAME = "database"
 POSTGRESQL_VERSION = "14"
-
-# used for assert functions
-tc = TestCase()
 
 
 @pytest.fixture(autouse=True)
@@ -124,51 +120,45 @@ def test_on_database_requested(harness):
         postgresql_mock.get_postgresql_version.assert_called_once()
 
         # Assert that the relation data was updated correctly.
-        tc.assertEqual(
-            harness.get_relation_data(rel_id, harness.charm.app.name),
-            {
-                "data": f'{{"database": "{DATABASE}", "extra-user-roles": "{EXTRA_USER_ROLES}"}}',
-                "endpoints": "postgresql-k8s-primary.None.svc.cluster.local:5432",
-                "username": user,
-                "password": "test-password",
-                "read-only-endpoints": "postgresql-k8s-replicas.None.svc.cluster.local:5432",
-                "version": POSTGRESQL_VERSION,
-                "database": f"{DATABASE}",
-            },
-        )
+        assert harness.get_relation_data(rel_id, harness.charm.app.name) == {
+            "data": f'{{"database": "{DATABASE}", "extra-user-roles": "{EXTRA_USER_ROLES}"}}',
+            "endpoints": "postgresql-k8s-primary.None.svc.cluster.local:5432",
+            "username": user,
+            "password": "test-password",
+            "read-only-endpoints": "postgresql-k8s-replicas.None.svc.cluster.local:5432",
+            "uris": f"postgresql://{user}:test-password@postgresql-k8s-primary.None.svc.cluster.local:5432/{DATABASE}",
+            "version": POSTGRESQL_VERSION,
+            "database": f"{DATABASE}",
+        }
 
         # Assert no BlockedStatus was set.
-        tc.assertFalse(isinstance(harness.model.unit.status, BlockedStatus))
+        assert not isinstance(harness.model.unit.status, BlockedStatus)
 
         # BlockedStatus due to a PostgreSQLCreateUserError.
         request_database(harness)
-        tc.assertTrue(isinstance(harness.model.unit.status, BlockedStatus))
+        assert isinstance(harness.model.unit.status, BlockedStatus)
         # No data is set in the databag by the database.
-        tc.assertEqual(
-            harness.get_relation_data(rel_id, harness.charm.app.name),
-            {
-                "data": f'{{"database": "{DATABASE}", "extra-user-roles": "{EXTRA_USER_ROLES}"}}',
-                "endpoints": "postgresql-k8s-primary.None.svc.cluster.local:5432",
-                "read-only-endpoints": "postgresql-k8s-replicas.None.svc.cluster.local:5432",
-            },
-        )
+        assert harness.get_relation_data(rel_id, harness.charm.app.name) == {
+            "data": f'{{"database": "{DATABASE}", "extra-user-roles": "{EXTRA_USER_ROLES}"}}',
+            "endpoints": "postgresql-k8s-primary.None.svc.cluster.local:5432",
+            "uris": f"postgresql://{user}:test-password@postgresql-k8s-primary.None.svc.cluster.local:5432/{DATABASE}",
+            "read-only-endpoints": "postgresql-k8s-replicas.None.svc.cluster.local:5432",
+        }
 
         # BlockedStatus due to a PostgreSQLCreateDatabaseError.
         request_database(harness)
-        tc.assertTrue(isinstance(harness.model.unit.status, BlockedStatus))
+        assert isinstance(harness.model.unit.status, BlockedStatus)
         # No data is set in the databag by the database.
-        tc.assertEqual(
-            harness.get_relation_data(rel_id, harness.charm.app.name),
-            {
-                "data": f'{{"database": "{DATABASE}", "extra-user-roles": "{EXTRA_USER_ROLES}"}}',
-                "endpoints": "postgresql-k8s-primary.None.svc.cluster.local:5432",
-                "read-only-endpoints": "postgresql-k8s-replicas.None.svc.cluster.local:5432",
-            },
-        )
+        assert harness.get_relation_data(rel_id, harness.charm.app.name) == {
+            "data": f'{{"database": "{DATABASE}", "extra-user-roles": "{EXTRA_USER_ROLES}"}}',
+            "endpoints": "postgresql-k8s-primary.None.svc.cluster.local:5432",
+            "read-only-endpoints": "postgresql-k8s-replicas.None.svc.cluster.local:5432",
+            "uris": f"postgresql://{user}:test-password@postgresql-k8s-primary.None.svc.cluster.local:5432/{DATABASE}",
+        }
 
         # BlockedStatus due to a PostgreSQLGetPostgreSQLVersionError.
         request_database(harness)
-        tc.assertTrue(isinstance(harness.model.unit.status, BlockedStatus))
+        assert isinstance(harness.model.unit.status, BlockedStatus)
 
 
 @patch_network_get(private_address="1.1.1.1")
@@ -176,12 +166,12 @@ def test_on_relation_departed(harness):
     with patch("charm.Patroni.member_started", new_callable=PropertyMock(return_value=True)):
         peer_rel_id = harness.model.get_relation(PEER).id
         # Test when this unit is departing the relation (due to a scale down event).
-        tc.assertNotIn("departing", harness.get_relation_data(peer_rel_id, harness.charm.unit))
+        assert "departing" not in harness.get_relation_data(peer_rel_id, harness.charm.unit)
         event = Mock()
         event.relation.data = {harness.charm.app: {}, harness.charm.unit: {}}
         event.departing_unit = harness.charm.unit
         harness.charm.postgresql_client_relation._on_relation_departed(event)
-        tc.assertIn("departing", harness.get_relation_data(peer_rel_id, harness.charm.unit))
+        assert "departing" in harness.get_relation_data(peer_rel_id, harness.charm.unit)
 
         # Test when this unit is departing the relation (due to the relation being broken between the apps).
         with harness.hooks_disabled():
@@ -190,7 +180,7 @@ def test_on_relation_departed(harness):
         event.departing_unit = Unit(f"{harness.charm.app}/1", None, harness.charm.app._backend, {})
         harness.charm.postgresql_client_relation._on_relation_departed(event)
         relation_data = harness.get_relation_data(peer_rel_id, harness.charm.unit)
-        tc.assertNotIn("departing", relation_data)
+        assert "departing" not in relation_data
 
 
 @patch_network_get(private_address="1.1.1.1")
