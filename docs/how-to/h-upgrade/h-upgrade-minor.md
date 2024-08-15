@@ -110,9 +110,9 @@ Example with channel selection and juju 3.x:
 ```shell
 juju refresh postgresql-k8s --channel 14/edge --trust
 ```
-Example with specific revision selection:
+Example with specific revision selection (do NOT miss OCI resource!):
 ```shell
-juju refresh postgresql-k8s --revision=189
+juju refresh postgresql-k8s --revision=189 --resource postgresql-image=...
 ```
 
 ### Important Notes
