@@ -31,8 +31,8 @@ pytest = "*"
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v19.0.0"
-resolved_reference = "37129f44b9dacb57c67ed2ebbbc9fbfa3d218de5"
+reference = "v19.1.0"
+resolved_reference = "03315014260b326f1ab8064305cd1e39acad0f75"
 subdirectory = "python/pytest_plugins/allure_pytest_collection_report"
 
 [[package]]
@@ -162,17 +162,17 @@ typecheck = ["mypy"]
 
 [[package]]
 name = "boto3"
-version = "1.34.158"
+version = "1.34.161"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "boto3-1.34.158-py3-none-any.whl", hash = "sha256:c29e9b7e1034e8734ccaffb9f2b3f3df2268022fd8a93d836604019f8759ce27"},
-    {file = "boto3-1.34.158.tar.gz", hash = "sha256:5b7b2ce0ec1e498933f600d29f3e1c641f8c44dd7e468c26795359d23d81fa39"},
+    {file = "boto3-1.34.161-py3-none-any.whl", hash = "sha256:4ef285334a0edc3047e27a04caf00f7742e32c0f03a361101e768014ac5709dd"},
+    {file = "boto3-1.34.161.tar.gz", hash = "sha256:a872d8fdb3203c1eb0b12fa9e9d879e6f7fd02983a485f02189e6d5914ccd834"},
 ]
 
 [package.dependencies]
-botocore = ">=1.34.158,<1.35.0"
+botocore = ">=1.34.161,<1.35.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.10.0,<0.11.0"
 
@@ -181,13 +181,13 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.34.158"
+version = "1.34.161"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "botocore-1.34.158-py3-none-any.whl", hash = "sha256:0e6fceba1e39bfa8feeba70ba3ac2af958b3387df4bd3b5f2db3f64c1754c756"},
-    {file = "botocore-1.34.158.tar.gz", hash = "sha256:5934082e25ad726673afbf466092fb1223dafa250e6e756c819430ba6b1b3da5"},
+    {file = "botocore-1.34.161-py3-none-any.whl", hash = "sha256:6c606d2da6f62fde06880aff1190566af208875c29938b6b68741e607817975a"},
+    {file = "botocore-1.34.161.tar.gz", hash = "sha256:16381bfb786142099abf170ce734b95a402a3a7f8e4016358712ac333c5568b2"},
 ]
 
 [package.dependencies]
@@ -428,13 +428,13 @@ files = [
 
 [[package]]
 name = "cosl"
-version = "0.0.19"
+version = "0.0.20"
 description = "Utils for COS Lite charms"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "cosl-0.0.19-py3-none-any.whl", hash = "sha256:60e2ddfa732a8e0a5243811e6479957fd1f551ed8eda6d76fea2d8084f72c386"},
-    {file = "cosl-0.0.19.tar.gz", hash = "sha256:686ae4daab0215c2ed81013527a2d4b17b3ea3278f2cf07ca2396145f06aa737"},
+    {file = "cosl-0.0.20-py3-none-any.whl", hash = "sha256:3175d8a03dec7d34d4d40723c6d5499aa74c2da57790d9419cb434930267500a"},
+    {file = "cosl-0.0.20.tar.gz", hash = "sha256:48b1de3476d24ce0eece4fb3f26a296e0c302d3f13aa53c967cdb5f61f75be12"},
 ]
 
 [package.dependencies]
@@ -1733,8 +1733,8 @@ develop = false
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v19.0.0"
-resolved_reference = "37129f44b9dacb57c67ed2ebbbc9fbfa3d218de5"
+reference = "v19.1.0"
+resolved_reference = "03315014260b326f1ab8064305cd1e39acad0f75"
 subdirectory = "python/pytest_plugins/github_secrets"
 
 [[package]]
@@ -1788,8 +1788,8 @@ pyyaml = "*"
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v19.0.0"
-resolved_reference = "37129f44b9dacb57c67ed2ebbbc9fbfa3d218de5"
+reference = "v19.1.0"
+resolved_reference = "03315014260b326f1ab8064305cd1e39acad0f75"
 subdirectory = "python/pytest_plugins/pytest_operator_cache"
 
 [[package]]
@@ -1807,8 +1807,8 @@ pytest = "*"
 [package.source]
 type = "git"
 url = "https://github.com/canonical/data-platform-workflows"
-reference = "v19.0.0"
-resolved_reference = "37129f44b9dacb57c67ed2ebbbc9fbfa3d218de5"
+reference = "v19.1.0"
+resolved_reference = "03315014260b326f1ab8064305cd1e39acad0f75"
 subdirectory = "python/pytest_plugins/pytest_operator_groups"
 
 [[package]]
@@ -2463,4 +2463,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "d6ba35d858f4b7e57c9bdf5935ea7b9bf121602a111bdf9eea35597013ba0543"
+content-hash = "f3957d576dea5c9c585c66639969395a49c6981c65b06e8424d1a5cef4dca33c"

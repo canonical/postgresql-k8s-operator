@@ -22,7 +22,7 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v19.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v19.1.0
 
   unit-test:
     name: Unit test charm
@@ -44,7 +44,7 @@ jobs:
 
   build:
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v19.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v19.1.0
     with:
       cache: true
 
@@ -70,12 +70,12 @@ jobs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v19.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v19.1.0
     with:
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
       architecture: ${{ matrix.architecture }}
       cloud: microk8s
-      microk8s-snap-channel: 1.30-strict/stable  # renovate: latest microk8s
+      microk8s-snap-channel: 1.31-strict/stable  # renovate: latest microk8s
       juju-agent-version: ${{ matrix.juju.agent }}
       libjuju-version-constraint: ${{ matrix.juju.libjuju }}
       _beta_allure_report: ${{ matrix.juju.allure_on_amd64 && matrix.architecture == 'amd64' }}
