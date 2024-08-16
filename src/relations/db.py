@@ -98,7 +98,8 @@ class DbProvides(Object):
 
         if (
             not self.set_up_relation(event.relation)
-            and self.charm.unit.status.message == f"Failed to initialize {self.relation_name} relation"
+            and self.charm.unit.status.message
+            == f"Failed to initialize {self.relation_name} relation"
         ):
             event.defer()
             return
