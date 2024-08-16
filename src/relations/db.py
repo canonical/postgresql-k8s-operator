@@ -96,7 +96,12 @@ class DbProvides(Object):
 
         logger.warning(f"DEPRECATION WARNING - `{self.relation_name}` is a legacy interface")
 
-        self.set_up_relation(event.relation)
+        if (
+            not self.set_up_relation(event.relation)
+            and self.charm.unit.status.message == f"Failed to initialize {self.relation_name} relation"
+        ):
+            event.defer()
+            return
 
     def _check_exist_current_relation(self) -> bool:
         for r in self.charm.client_relations:
