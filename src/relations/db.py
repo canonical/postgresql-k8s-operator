@@ -96,7 +96,13 @@ class DbProvides(Object):
 
         logger.warning(f"DEPRECATION WARNING - `{self.relation_name}` is a legacy interface")
 
-        self.set_up_relation(event.relation)
+        if (
+            not self.set_up_relation(event.relation)
+            and self.charm.unit.status.message
+            == f"Failed to initialize {self.relation_name} relation"
+        ):
+            event.defer()
+            return
 
     def _check_exist_current_relation(self) -> bool:
         for r in self.charm.client_relations:
@@ -152,12 +158,9 @@ class DbProvides(Object):
             self.charm.unit.status = BlockedStatus(ROLES_BLOCKING_MESSAGE)
             return False
 
-        database = relation.data.get(relation.app, {}).get("database")
-        if not database:
+        if not (database := relation.data.get(relation.app, {}).get("database")):
             for unit in relation.units:
-                unit_database = relation.data.get(unit, {}).get("database")
-                if unit_database:
-                    database = unit_database
+                if database := relation.data.get(unit, {}).get("database"):
                     break
 
         if not database:
@@ -207,31 +210,40 @@ class DbProvides(Object):
                 )
             )
 
+            postgresql_version = None
+            try:
+                postgresql_version = self.charm.postgresql.get_postgresql_version()
+            except PostgreSQLGetPostgreSQLVersionError:
+                logger.exception(
+                    "Failed to retrieve the PostgreSQL version to initialise/update %s relation"
+                    % self.relation_name
+                )
+
             # Set the data in both application and unit data bag.
             # It's needed to run this logic on every relation changed event
             # setting the data again in the databag, otherwise the application charm that
             # is connecting to this database will receive a "database gone" event from the
             # old PostgreSQL library (ops-lib-pgsql) and the connection between the
             # application and this charm will not work.
-            for databag in [application_relation_databag, unit_relation_databag]:
-                updates = {
-                    "allowed-subnets": self._get_allowed_subnets(relation),
-                    "allowed-units": self._get_allowed_units(relation),
-                    "host": self.charm.endpoint,
-                    "master": primary,
-                    "port": DATABASE_PORT,
-                    "standbys": standbys,
-                    "version": self.charm.postgresql.get_postgresql_version(),
-                    "user": user,
-                    "password": password,
-                    "database": database,
-                    "extensions": ",".join(required_extensions),
-                }
-                databag.update(updates)
+            updates = {
+                "allowed-subnets": self._get_allowed_subnets(relation),
+                "allowed-units": self._get_allowed_units(relation),
+                "host": self.charm.endpoint,
+                "master": primary,
+                "port": DATABASE_PORT,
+                "standbys": standbys,
+                "user": user,
+                "password": password,
+                "database": database,
+                "extensions": ",".join(required_extensions),
+            }
+            if postgresql_version:
+                updates["version"] = postgresql_version
+            application_relation_databag.update(updates)
+            unit_relation_databag.update(updates)
         except (
             PostgreSQLCreateDatabaseError,
             PostgreSQLCreateUserError,
-            PostgreSQLGetPostgreSQLVersionError,
         ):
             self.charm.unit.status = BlockedStatus(
                 f"Failed to initialize {self.relation_name} relation"
