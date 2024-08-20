@@ -131,14 +131,12 @@ juju model-config logging-config='<root>=INFO;unit=DEBUG'
 
 The following command deploys PostgreSQL K8s:
 
-> **Important**: AKS supported for charm revision 247+ currently in the channel `14/candidate` only.
-
 ```shell
-juju deploy postgresql-k8s --trust -n 3 --channel 14/candidate
+juju deploy postgresql-k8s --trust -n 3 --channel 14/stable
 ```
 Sample output:
 ```shell
-Deployed "postgresql-k8s" from charm-hub charm "postgresql-k8s", revision 247 in channel 14/candidate on ubuntu@22.04/stable
+Deployed "postgresql-k8s" from charm-hub charm "postgresql-k8s", revision 247 in channel 14/stable on ubuntu@22.04/stable
 ```
 
 Check the status:
@@ -151,7 +149,7 @@ Model    Controller  Cloud/Region  Version  SLA          Timestamp
 welcome  aks         aks/eastus    3.4.2    unsupported  17:53:35+02:00
 
 App             Version  Status  Scale  Charm           Channel       Rev  Address       Exposed  Message
-postgresql-k8s  14.11    active      3  postgresql-k8s  14/candidate  247  10.0.237.223  no       Primary
+postgresql-k8s  14.11    active      3  postgresql-k8s  14/stable     247  10.0.237.223  no       Primary
 
 Unit               Workload  Agent  Address      Ports  Message
 postgresql-k8s/0*  active    idle   10.244.0.19         Primary

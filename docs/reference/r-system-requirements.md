@@ -7,16 +7,17 @@ The following are the minimum software and hardware requirements to run Charmed 
 
 ### Juju
 
-The charm supports both [Juju 2.9 LTS](https://github.com/juju/juju/releases) and [Juju 3.1](https://github.com/juju/juju/releases).
+The charm supports both [Juju 2.9 LTS](https://github.com/juju/juju/releases) and [Juju 3.x](https://github.com/juju/juju/releases) with the following conditions:
 
-The minimum supported Juju versions are:
-
-* 2.9.32+ (no tests made for older versions).
-* 3.1.7+ (Juju secrets refactored/stabilized in Juju 3.1.7)
-
-[note type="caution"]
-**Note**: Juju 3.1 is supported from the charm revision 116+
-[/note]
+| Juju Releases | Juju Supported | Min charm revision |Comment |
+|:--------|:-----|:-----|:-----|
+| 2.9 LTS | 2.9.32+ | 73+ | no tests made for older versions |
+| 3.1 | 3.1.7+ | 193+ | Juju secrets refactored/stabilized in Juju 3.1.7 |
+|  3.2 | 3.2.0+ | 280+ | no known issues |
+|  3.3 | 3.3.0+ | 280+ | no known issues |
+|  3.4 | 3.4.3+ | 280+  | know Juju issues with previous versions |
+|  3.5 | 3.5.1+ | 280+  | [known](https://bugs.launchpad.net/juju/+bug/2066517) Juju issue in 3.5.0 |
+|  3.6 LTS | 3.6.0-beta1 | 280+ |  LAB TESTS ONLY! No known issues. |
 
 ### Kubernetes
 
