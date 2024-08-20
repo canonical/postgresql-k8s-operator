@@ -31,7 +31,7 @@ except ModuleNotFoundError:
 from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerUnitData
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
-from charms.loki_k8s.v0.loki_push_api import LogProxyConsumer
+from charms.loki_k8s.v1.loki_push_api import LogForwarder, LogProxyConsumer
 from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
 from charms.postgresql_k8s.v0.postgresql import (
     REQUIRED_PLUGINS,
@@ -226,11 +226,17 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             refresh_event=[self.on.start],
             jobs=self._generate_metrics_jobs(self.is_tls_enabled),
         )
-        self.loki_push = LogProxyConsumer(
-            self,
-            log_files=POSTGRES_LOG_FILES,
-            relation_name="logging",
-            container_name="postgresql",
+        self.loki_push = (
+            LogForwarder(
+                self,
+                relation_name="logging",
+            )
+            if self._pebble_log_forwarding_supported
+            else LogProxyConsumer(
+                self,
+                logs_scheme={"postgresql": {"log-files": POSTGRES_LOG_FILES}},
+                relation_name="logging",
+            )
         )
 
         postgresql_db_port = ServicePort(5432, name="database")
@@ -245,6 +251,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Otlp http endpoint for charm instrumentation."""
         if self.tracing.is_ready():
             return self.tracing.get_endpoint(TRACING_PROTOCOL)
+
+    @property
+    def _pebble_log_forwarding_supported(self) -> bool:
+        # https://github.com/canonical/operator/issues/1230
+        from ops.jujuversion import JujuVersion
+
+        juju_version = JujuVersion.from_environ()
+        return juju_version > JujuVersion(version=str("3.3"))
 
     def _generate_metrics_jobs(self, enable_tls: bool) -> Dict:
         """Generate spec for Prometheus scraping."""
