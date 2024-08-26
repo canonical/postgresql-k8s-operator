@@ -48,9 +48,9 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 2 | t-deploy | [2. Deploy PostgreSQL](/t/9298) |
 | 2 | t-access | [3. Access PostgreSQL](/t/13702) |
 | 2 | t-scale | [4. Scale replicas](/t/9299) |
-| 2 | t-passwords | [5. Manage passwords](/t/9300) |
+| 2 | t-manage-passwords | [5. Manage passwords](/t/9300) |
 | 2 | t-integrate | [6. Integrate with other applications](/t/9301) |
-| 2 | t-enable-tls | [7. Enable TLS](/t/9302) |
+| 2 | t-enable-tls | [7. Enable TLS encryption](/t/9302) |
 | 2 | t-clean-up | [8. Clean up environment](/t/9303) |
 | 1 | how-to | [How-to guides]() |
 | 2 | h-set-up | [Set up]() |
@@ -59,9 +59,9 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 3 | h-deploy-eks | [Deploy on EKS](/t/12106) |
 | 3 | h-deploy-aks | [Deploy on AKS](/t/14307) |
 | 3 | h-deploy-terraform | [Deploy via Terraform](/t/14924) |
-| 3 | h-scale | [Scale units](/t/9592) |
+| 3 | h-scale | [Scale replicas](/t/9592) |
 | 3 | h-enable-tls | [Enable TLS](/t/9593) |
-| 3 | h-manage-client | [Manage client applications](/t/9594) |
+| 3 | h-manage-applications | [Manage client applications](/t/9594) |
 | 2 | h-backups | [Back up and restore]() |
 | 3 | h-configure-s3-aws | [Configure S3 AWS](/t/9595) |
 | 3 | h-configure-s3-radosgw | [Configure S3 RadosGW](/t/10316) |
@@ -81,8 +81,8 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 3 | h-rollback-minor | [Perform a minor rollback](/t/12096) |
 | 2 | h-integrate-your-charm | [Integrate with your charm]() |
 | 3 | h-integrate-db-with-your-charm | [Integrate a database with your charm](/t/11853) |
-| 3 | h-integrate-migrate-pgdump | [Migrate data via pg_dump](/t/12162) |
-| 3 | h-integrate-migrate-backup-restore | [Migrate data via backup/restore](/t/12161) |
+| 3 | h-migrate-pgdump | [Migrate data via pg_dump](/t/12162) |
+| 3 | h-migrate-backup-restore | [Migrate data via backup/restore](/t/12161) |
 | 2 | h-async | [Cross-regional async replication]() |
 | 3 | h-async-set-up | [Set up clusters](/t/13895) |
 | 3 | h-async-integrate | [Integrate with a client app](/t/13896) |
@@ -90,13 +90,13 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 2 | h-enable-plugins-extensions | [Enable plugins/extensions](/t/10907) |
 | 1 | reference | [Reference]() |
 | 2 | r-overview | [Overview](/t/13977) |
-| 2 | r-releases-group | [Release Notes]() |
-| 3 | r-releases | [All releases](/t/11872) |
-| 3 | r-releases-rev280 | [Revision 280/281](/t/14068) |
-| 3 | r-releases-rev193 | [Revision 193](/t/13208) |
-| 3 | r-releases-rev177 | [Revision 177](/t/12668) |
-| 3 | r-releases-rev158 | [Revision 158](/t/11874) |
-| 3 | r-releases-rev73 | [Revision 73](/t/11873) |
+| 2 | r-releases | [Release Notes]() |
+| 3 | r-all-releases | [All releases](/t/11872) |
+| 3 | r-revision-280-281 | [Revision 280/281](/t/14068) |
+| 3 | r-revision-193 | [Revision 193](/t/13208) |
+| 3 | r-revision-177 | [Revision 177](/t/12668) |
+| 3 | r-revision-158 | [Revision 158](/t/11874) |
+| 3 | r-revision-73 | [Revision 73](/t/11873) |
 | 2 | r-system-requirements | [System requirements](/t/11744) |
 | 2 | r-software-testing | [Software testing](/t/11774) |
 | 2 | r-performance | [Performance and resources](/t/11975) |
@@ -117,11 +117,4 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 3 | e-flowchart-backups | [Backups](/t/10248) |
 | 1 | search | [Search](https://canonical.com/data/docs/postgresql/k8s) |
 
-[/details]
-
-# Redirects
-
-[details=Mapping table]
-| Path | Location |
-| ---- | -------- |
 [/details]
