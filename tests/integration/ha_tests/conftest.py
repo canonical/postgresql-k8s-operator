@@ -6,7 +6,7 @@ import pytest as pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from ..helpers import app_name
+from ..helpers import app_name, get_password
 from .helpers import (
     APPLICATION_NAME,
     change_patroni_setting,
@@ -62,10 +62,13 @@ async def primary_start_timeout(ops_test: OpsTest) -> None:
     """Temporary change the primary start timeout configuration."""
     # Change the parameter that makes the primary reelection faster.
     initial_primary_start_timeout = await get_patroni_setting(ops_test, "primary_start_timeout")
-    await change_patroni_setting(ops_test, "primary_start_timeout", 0)
+    patroni_password = await get_password(ops_test, "patroni")
+    await change_patroni_setting(ops_test, "primary_start_timeout", 0, patroni_password)
     yield
     # Rollback to the initial configuration.
-    await change_patroni_setting(ops_test, "primary_start_timeout", initial_primary_start_timeout)
+    await change_patroni_setting(
+        ops_test, "primary_start_timeout", initial_primary_start_timeout, patroni_password
+    )
 
 
 @pytest.fixture()
@@ -78,6 +81,7 @@ async def wal_settings(ops_test: OpsTest) -> None:
     yield
     # Rollback to the initial settings.
     app = await app_name(ops_test)
+    patroni_password = await get_password(ops_test, "patroni")
     for unit in ops_test.model.applications[app].units:
         await change_wal_settings(
             ops_test,
@@ -85,6 +89,7 @@ async def wal_settings(ops_test: OpsTest) -> None:
             initial_max_wal_size,
             initial_min_wal_size,
             initial_wal_keep_segments,
+            patroni_password,
         )
 
 

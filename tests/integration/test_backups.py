@@ -141,6 +141,9 @@ async def test_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -
         logger.info("ensuring that the replication is working correctly")
         address = await get_unit_address(ops_test, new_unit_name)
         password = await get_password(ops_test, database_app_name=database_app_name)
+        patroni_password = await get_password(
+            ops_test, "patroni", database_app_name=database_app_name
+        )
         for attempt in Retrying(
             stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
         ):
@@ -166,7 +169,7 @@ async def test_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -
 
         old_primary = await get_primary(ops_test, database_app_name)
         logger.info(f"performing a switchover from {old_primary} to {new_unit_name}")
-        await switchover(ops_test, old_primary, new_unit_name)
+        await switchover(ops_test, old_primary, patroni_password, new_unit_name)
 
         logger.info("checking that the primary unit has changed")
         primary = await get_primary(ops_test, database_app_name)

@@ -88,7 +88,10 @@ def test_get_primary(harness, patroni):
         primary = patroni.get_primary()
         assert primary == "postgresql-k8s-1"
         _get.assert_called_once_with(
-            "http://postgresql-k8s-0:8008/cluster", verify=True, timeout=5, auth=patroni._patroni_auth
+            "http://postgresql-k8s-0:8008/cluster",
+            verify=True,
+            timeout=5,
+            auth=patroni._patroni_auth,
         )
 
         # Test returning unit name.
@@ -96,7 +99,10 @@ def test_get_primary(harness, patroni):
         primary = patroni.get_primary(unit_name_pattern=True)
         assert primary == "postgresql-k8s/1"
         _get.assert_called_once_with(
-            "http://postgresql-k8s-0:8008/cluster", verify=True, timeout=5, auth=patroni._patroni_auth
+            "http://postgresql-k8s-0:8008/cluster",
+            verify=True,
+            timeout=5,
+            auth=patroni._patroni_auth,
         )
 
 
@@ -385,7 +391,9 @@ def test_member_started_true(patroni):
 
         assert patroni.member_started
 
-        _get.assert_called_once_with("http://postgresql-k8s-0:8008/health", verify=True, auth=patroni._patroni_auth)
+        _get.assert_called_once_with(
+            "http://postgresql-k8s-0:8008/health", verify=True, auth=patroni._patroni_auth
+        )
 
 
 def test_member_started_false(patroni):
@@ -398,7 +406,9 @@ def test_member_started_false(patroni):
 
         assert not patroni.member_started
 
-        _get.assert_called_once_with("http://postgresql-k8s-0:8008/health", verify=True, auth=patroni._patroni_auth)
+        _get.assert_called_once_with(
+            "http://postgresql-k8s-0:8008/health", verify=True, auth=patroni._patroni_auth
+        )
 
 
 def test_member_started_error(patroni):
@@ -411,7 +421,9 @@ def test_member_started_error(patroni):
 
         assert not patroni.member_started
 
-        _get.assert_called_once_with("http://postgresql-k8s-0:8008/health", verify=True, auth=patroni._patroni_auth)
+        _get.assert_called_once_with(
+            "http://postgresql-k8s-0:8008/health", verify=True, auth=patroni._patroni_auth
+        )
 
 
 def test_last_postgresql_logs(harness, patroni):
