@@ -21,7 +21,7 @@ from pydantic import BaseModel
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 from typing_extensions import override
 
-from constants import APP_SCOPE, MONITORING_PASSWORD_KEY, MONITORING_USER
+from constants import APP_SCOPE, MONITORING_PASSWORD_KEY, MONITORING_USER, PATRONI_PASSWORD_KEY
 from patroni import SwitchoverFailedError
 from utils import new_password
 
@@ -271,8 +271,9 @@ class PostgreSQLUpgrade(DataUpgrade):
 
     def _set_up_new_credentials_for_legacy(self) -> None:
         """Create missing password and user."""
-        if self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY) is None:
-            self.charm.set_secret(APP_SCOPE, MONITORING_PASSWORD_KEY, new_password())
+        for key in (MONITORING_PASSWORD_KEY, PATRONI_PASSWORD_KEY):
+            if self.charm.get_secret(APP_SCOPE, key) is None:
+                self.charm.set_secret(APP_SCOPE, key, new_password())
         users = self.charm.postgresql.list_users()
         if MONITORING_USER not in users:
             self.charm.postgresql.create_user(
