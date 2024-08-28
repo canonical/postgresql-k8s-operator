@@ -5,6 +5,7 @@
 
 import json
 import logging
+from signal import SIGHUP
 
 from charms.data_platform_libs.v0.upgrade import (
     ClusterNotReadyError,
@@ -143,12 +144,17 @@ class PostgreSQLUpgrade(DataUpgrade):
                 "upgrade failed. Check logs for rollback instruction"
             )
 
-    def _on_upgrade_changed(self, _) -> None:
+    def _on_upgrade_changed(self, event) -> None:
         """Update the Patroni nosync tag in the unit if needed."""
         if not self.peer_relation or not self.charm._patroni.member_started:
             return
 
         self.charm.update_config()
+        container = self.charm.unit.get_container("postgresql")
+        if not container.can_connect():
+            event.defer()
+            return
+        container.send_signal(SIGHUP, "postgresql")
 
     def _on_upgrade_charm_check_legacy(self, event: UpgradeCharmEvent) -> None:
         if not self.peer_relation:
