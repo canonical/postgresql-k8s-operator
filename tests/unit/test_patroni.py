@@ -41,6 +41,7 @@ def patroni(harness):
             "replication-password",
             "rewind-password",
             False,
+            "patroni-password",
         )
         root = harness.get_filesystem_root("postgresql")
         (root / "var" / "log" / "postgresql").mkdir(parents=True, exist_ok=True)
@@ -211,6 +212,7 @@ def test_render_patroni_yml_file(harness, patroni):
             rewind_password=patroni._rewind_password,
             minority_count=patroni._members_count // 2,
             version="14",
+            patroni_password=patroni._patroni_password,
         )
 
         # Setup a mock for the `open` method, set returned data to postgresql.conf template.
@@ -245,6 +247,7 @@ def test_render_patroni_yml_file(harness, patroni):
             rewind_password=patroni._rewind_password,
             minority_count=patroni._members_count // 2,
             version="14",
+            patroni_password=patroni._patroni_password,
         )
         assert expected_content_with_tls != expected_content
 

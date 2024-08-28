@@ -28,7 +28,7 @@ get-password:
     username:
       type: string
       description: The username, the default value 'operator'.
-        Possible values - backup, operator, replication, rewind.
+        Possible values - backup, operator, replication, rewind, patroni.
 list-backups:
   description: Lists backups in s3 storage in AWS.
 pre-upgrade-check:

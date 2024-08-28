@@ -67,6 +67,7 @@ class Patroni:
         replication_password: str,
         rewind_password: str,
         tls_enabled: bool,
+        patroni_password: str,
     ):
         self._charm = charm
         self._endpoint = endpoint
@@ -79,10 +80,15 @@ class Patroni:
         self._replication_password = replication_password
         self._rewind_password = rewind_password
         self._tls_enabled = tls_enabled
+        self._patroni_password = patroni_password
         # Variable mapping to requests library verify parameter.
         # The CA bundle file is used to validate the server certificate when
         # TLS is enabled, otherwise True is set because it's the default value.
         self._verify = f"{self._storage_path}/{TLS_CA_FILE}" if tls_enabled else True
+
+    @property
+    def _patroni_auth(self) -> requests.auth.HTTPBasicAuth:
+        return requests.auth.HTTPBasicAuth("patroni", self._patroni_password)
 
     @property
     def _patroni_url(self) -> str:
@@ -457,6 +463,7 @@ class Patroni:
             pg_parameters=parameters,
             primary_cluster_endpoint=self._charm.async_replication.get_primary_cluster_endpoint(),
             extra_replication_endpoints=self._charm.async_replication.get_standby_endpoints(),
+            patroni_password=self._patroni_password,
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 
