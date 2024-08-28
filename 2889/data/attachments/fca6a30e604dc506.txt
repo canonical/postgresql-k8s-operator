@@ -1,0 +1,227 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:766 Connecting to existing model microk8s-localhost:test on unspecified cloud
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/jammy/s3-integrator-31
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/jammy/self-signed-certificates-155
+[32mINFO    [0m juju.model:model.py:2098 Deploying local:jammy/postgresql-k8s-0
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [allocating] waiting: installing agent
+  postgresql-k8s-aws/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [executing] maintenance: installing charm software
+  postgresql-k8s-aws/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [executing] unknown: 
+  postgresql-k8s-aws/1 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [executing] unknown: 
+  postgresql-k8s-aws/1 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] unknown: 
+  postgresql-k8s-aws/1 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] unknown: 
+  postgresql-k8s-aws/1 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s-aws/1 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [executing] waiting: awaiting for cluster to start
+  postgresql-k8s-aws/1 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s-aws/1 [idle] maintenance: reconfiguring cluster
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s-aws/1 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [executing] active: Primary
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m integration.helpers:helpers.py:838 configuring S3 integrator for AWS
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [executing] active: Primary
+  s3-integrator/0 [executing] blocked: Missing parameters: ['access-key', 'secret-key']
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [executing] active: 
+  postgresql-k8s-aws/1 [executing] maintenance: initialising stanza
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [executing] active: 
+  postgresql-k8s-aws/1 [executing] maintenance: initialising stanza
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [executing] active: 
+  postgresql-k8s-aws/1 [executing] maintenance: initialising stanza
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [executing] maintenance: initialising stanza
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/1 [idle] active: Primary
+[32mINFO    [0m integration.helpers:helpers.py:859 creating a table in the database
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [idle] active: Primary
+[32mINFO    [0m integration.helpers:helpers.py:870 creating a backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [executing] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/1 [idle] active: Primary
+[32mINFO    [0m integration.helpers:helpers.py:879 listing the available backups
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [idle] active: Primary
+[32mINFO    [0m integration.helpers:helpers.py:888 creating a second table in the database
+[32mINFO    [0m integration.helpers:helpers.py:895 creating a backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [idle] active: Primary
+[32mINFO    [0m integration.helpers:helpers.py:906 listing the available backups
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [idle] active: Primary
+[32mINFO    [0m integration.helpers:helpers.py:915 creating a second table in the database
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws (waiting for exactly 1 units, current : 2)
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws (waiting for exactly 1 units, current : 2)
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: Primary
+[32mINFO    [0m integration.helpers:helpers.py:931 restoring the backup
+[32mINFO    [0m integration.helpers:helpers.py:948 checking that the backup was correctly restored
+[32mINFO    [0m integration.helpers:helpers.py:980 restoring the backup
+[32mINFO    [0m integration.helpers:helpers.py:997 checking that the backup was correctly restored
+[32mINFO    [0m integration.test_backups:test_backups.py:124 removing the TLS relation
+[32mINFO    [0m integration.test_backups:test_backups.py:141 ensuring that the replication is working correctly
+[32mINFO    [0m integration.test_backups:test_backups.py:168 performing a switchover from postgresql-k8s-aws/0 to postgresql-k8s-aws/1
+[32mINFO    [0m integration.test_backups:test_backups.py:171 checking that the primary unit has changed
+[32mINFO    [0m integration.test_backups:test_backups.py:180 listing the available backups to ensure that the stanza is working correctly
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [idle] blocked: Move restored cluster to another S3 bucket
+  postgresql-k8s-aws/1 [executing] maintenance: initialising stanza
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [executing] active: 
+  postgresql-k8s-aws/1 [executing] maintenance: checking stanza
+[32mINFO    [0m integration.test_backups:test_backups.py:88 deleting the previously created backups
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.4.5    unsupported  01:52:21Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Address         Exposed  Message
+postgresql-k8s-aws        14.13    waiting      2  postgresql-k8s                             0  10.152.183.144  no       installing agent
+s3-integrator                      active       1  s3-integrator             latest/stable   31  10.152.183.48   no       
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  155  10.152.183.83   no       
+
+Unit                         Workload  Agent  Address       Ports  Message
+postgresql-k8s-aws/0*        active    idle   10.1.207.140         
+postgresql-k8s-aws/1         error     idle   10.1.207.142         hook failed: "database-peers-relation-changed"
+s3-integrator/0*             active    idle   10.1.207.136         
+self-signed-certificates/0*  active    idle   10.1.207.137         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-postgresql-k8s-aws-0: 01:46:55 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:46:55 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:47:12 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:47:12 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:47:22 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:47:22 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:47:30 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:47:30 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:47:41 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:47:41 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:47:52 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:47:52 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:48:13 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:48:13 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:48:46 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:48:46 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:48:57 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:48:57 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:49:06 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:49:06 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:49:16 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:49:16 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:49:28 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:49:28 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-1: 01:52:18 ERROR unit.postgresql-k8s-aws/1.juju-log database-peers:1: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-1/charm/src/backups.py", line 493, in check_stanza
+    self._execute_command(["pgbackrest", f"--stanza={self.stanza_name}", "check"])
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-1/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 735, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-1/charm/src/backups.py", line 291, in _execute_command
+    return process.wait_output()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-1/charm/venv/ops/pebble.py", line 1771, in wait_output
+    raise ExecError[AnyStr](self._command, exit_code, out_value, err_value)
+ops.pebble.ExecError: non-zero exit code 68 executing ['pgbackrest', '--stanza=test.patroni-postgresql-k8s-aws', 'check'], stdout='', stderr="WARN: option 'backup-standby' is enabled but standby is not properly configured\nERROR: [068]: archive_command '/bin/true' must contain pgbackrest\n"
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-1/charm/src/backups.py", line 489, in check_stanza
+    for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3)):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-1/charm/venv/tenacity/__init__.py", line 443, in __iter__
+    do = self.iter(retry_state=retry_state)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-1/charm/venv/tenacity/__init__.py", line 376, in iter
+    result = action(retry_state)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-1/charm/venv/tenacity/__init__.py", line 419, in exc_check
+    raise retry_exc from fut.exception()
+tenacity.RetryError: RetryError[<Future at 0x7fc00a35e530 state=finished raised ExecError>]
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-1/charm/./src/charm.py", line 2099, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-1/charm/venv/ops/main.py", line 551, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-1/charm/venv/ops/main.py", line 530, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-1/charm/venv/ops/main.py", line 519, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-1/charm/venv/ops/main.py", line 147, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-1/charm/venv/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-1/charm/venv/ops/framework.py", line 860, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-1/charm/venv/ops/framework.py", line 950, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-1/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 735, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-1/charm/./src/charm.py", line 584, in _on_peer_relation_changed
+    self.backup.check_stanza()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-1/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 735, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-1/charm/src/backups.py", line 498, in check_stanza
+    self.charm.app_peer_data.update({"stanza": ""})
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-1/charm/venv/ops/model.py", line 1816, in update
+    super().update(other, **kwargs)
+  File "/usr/lib/python3.10/_collections_abc.py", line 999, in update
+    self[key] = other[key]
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-1/charm/venv/ops/model.py", line 1792, in __setitem__
+    self._validate_write(key, value)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-1/charm/venv/ops/model.py", line 1779, in _validate_write
+    raise RelationDataAccessError(
+ops.model.RelationDataAccessError: postgresql-k8s-aws/1 is not leader and cannot write application data.
+unit-postgresql-k8s-aws-1: 01:52:18 ERROR juju.worker.uniter.operation hook "database-peers-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
