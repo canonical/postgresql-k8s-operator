@@ -101,6 +101,7 @@ async def test_tls(ops_test: OpsTest) -> None:
         # hostname (that is a k8s hostname).
         primary = await get_primary(ops_test)
         primary_address = await get_unit_address(ops_test, primary)
+        patroni_password = await get_password(ops_test, "patroni")
         cluster_info = requests.get(f"https://{primary_address}:8008/cluster", verify=False)
         for member in cluster_info.json()["members"]:
             if member["role"] == "replica":
@@ -118,7 +119,7 @@ async def test_tls(ops_test: OpsTest) -> None:
             apps=[DATABASE_APP_NAME], status="active", idle_period=30
         )
         # Pause Patroni so it doesn't wipe the custom changes
-        await change_patroni_setting(ops_test, "pause", True, tls=True)
+        await change_patroni_setting(ops_test, "pause", True, patroni_password, tls=True)
 
     async with ops_test.fast_forward("24h"):
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(2), reraise=True):
@@ -143,6 +144,7 @@ async def test_tls(ops_test: OpsTest) -> None:
         # in the instances' timelines).
         host = await get_unit_address(ops_test, primary)
         password = await get_password(ops_test)
+        patroni_password = await get_password(ops_test, "patroni")
         with db_connect(host, password) as connection:
             connection.autocommit = True
             with connection.cursor() as cursor:
@@ -167,7 +169,7 @@ async def test_tls(ops_test: OpsTest) -> None:
         for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(2), reraise=True):
             with attempt:
                 await check_tls_rewind(ops_test)
-        await change_patroni_setting(ops_test, "pause", False, tls=True)
+        await change_patroni_setting(ops_test, "pause", False, patroni_password, tls=True)
 
     async with ops_test.fast_forward():
         # Await for postgresql to be stable if not already

@@ -80,11 +80,12 @@ def test_on_leader_elected(harness):
             [MagicMock(metadata=MagicMock(name="fakeName2", namespace="fakeNamespace"))],
         ]
         harness.set_leader()
-        assert _set_secret.call_count == 4
+        assert _set_secret.call_count == 5
         _set_secret.assert_any_call("app", "operator-password", "sekr1t")
         _set_secret.assert_any_call("app", "replication-password", "sekr1t")
         _set_secret.assert_any_call("app", "rewind-password", "sekr1t")
         _set_secret.assert_any_call("app", "monitoring-password", "sekr1t")
+        _set_secret.assert_any_call("app", "patroni-password", "sekr1t")
         _client.return_value.get.assert_called_once_with(
             Endpoints, name=f"patroni-{harness.charm.app.name}", namespace=harness.charm.model.name
         )
