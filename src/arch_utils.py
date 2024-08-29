@@ -12,9 +12,6 @@ from ops.model import BlockedStatus
 
 logger = logging.getLogger(__name__)
 
-logging.getLogger("httpcore").setLevel(logging.ERROR)
-logging.getLogger("httpx").setLevel(logging.ERROR)
-
 
 class WrongArchitectureWarningCharm(CharmBase):
     """A fake charm class that only signals a wrong architecture deploy."""
