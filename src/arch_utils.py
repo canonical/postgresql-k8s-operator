@@ -3,11 +3,17 @@
 
 """Utilities for catching and raising architecture errors."""
 
+import logging
 import os
 import sys
 
 from ops.charm import CharmBase
 from ops.model import BlockedStatus
+
+logger = logging.getLogger(__name__)
+
+logging.getLogger("httpcore").setLevel(logging.ERROR)
+logging.getLogger("httpx").setLevel(logging.ERROR)
 
 
 class WrongArchitectureWarningCharm(CharmBase):
@@ -25,6 +31,7 @@ def is_wrong_architecture() -> bool:
     """Checks if charm was deployed on wrong architecture."""
     juju_charm_file = f"{os.environ.get('CHARM_DIR')}/.juju-charm"
     if not os.path.exists(juju_charm_file):
+        logger.error("Cannot check architecture: .juju-charm file not found")
         return False
 
     with open(juju_charm_file, "r") as file:
@@ -33,6 +40,8 @@ def is_wrong_architecture() -> bool:
     if ("amd64" in ch_platform and hw_arch == "x86_64") or (
         "arm64" in ch_platform and hw_arch == "aarch64"
     ):
+        logger.info("Architecture matches: %s charm for %s machine", ch_platform, hw_arch)
         return False
 
+    logger.error("Architecture does not match: %s charm for %s machine", ch_platform, hw_arch)
     return True
