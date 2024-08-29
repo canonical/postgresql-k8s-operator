@@ -67,6 +67,7 @@ class Patroni:
         replication_password: str,
         rewind_password: str,
         tls_enabled: bool,
+        patroni_password: str,
     ):
         self._charm = charm
         self._endpoint = endpoint
@@ -79,10 +80,15 @@ class Patroni:
         self._replication_password = replication_password
         self._rewind_password = rewind_password
         self._tls_enabled = tls_enabled
+        self._patroni_password = patroni_password
         # Variable mapping to requests library verify parameter.
         # The CA bundle file is used to validate the server certificate when
         # TLS is enabled, otherwise True is set because it's the default value.
         self._verify = f"{self._storage_path}/{TLS_CA_FILE}" if tls_enabled else True
+
+    @property
+    def _patroni_auth(self) -> requests.auth.HTTPBasicAuth:
+        return requests.auth.HTTPBasicAuth("patroni", self._patroni_password)
 
     @property
     def _patroni_url(self) -> str:
@@ -134,7 +140,9 @@ class Patroni:
         for attempt in Retrying(stop=stop_after_attempt(len(self._endpoints) + 1)):
             with attempt:
                 url = self._get_alternative_patroni_url(attempt, alternative_endpoints)
-                r = requests.get(f"{url}/cluster", verify=self._verify, timeout=5)
+                r = requests.get(
+                    f"{url}/cluster", verify=self._verify, timeout=5, auth=self._patroni_auth
+                )
                 for member in r.json()["members"]:
                     if member["role"] == "leader":
                         primary = member["name"]
@@ -161,7 +169,7 @@ class Patroni:
         for attempt in Retrying(stop=stop_after_attempt(len(self._endpoints) + 1)):
             with attempt:
                 url = self._get_alternative_patroni_url(attempt)
-                r = requests.get(f"{url}/cluster", verify=self._verify)
+                r = requests.get(f"{url}/cluster", verify=self._verify, auth=self._patroni_auth)
                 for member in r.json()["members"]:
                     if member["role"] == "standby_leader":
                         if check_whether_is_running and member["state"] not in RUNNING_STATES:
@@ -181,7 +189,7 @@ class Patroni:
         for attempt in Retrying(stop=stop_after_attempt(len(self._endpoints) + 1)):
             with attempt:
                 url = self._get_alternative_patroni_url(attempt)
-                r = requests.get(f"{url}/cluster", verify=self._verify)
+                r = requests.get(f"{url}/cluster", verify=self._verify, auth=self._patroni_auth)
                 for member in r.json()["members"]:
                     if member["role"] == "sync_standby":
                         sync_standbys.append("/".join(member["name"].rsplit("-", 1)))
@@ -192,7 +200,9 @@ class Patroni:
     def cluster_members(self) -> set:
         """Get the current cluster members."""
         # Request info from cluster endpoint (which returns all members of the cluster).
-        r = requests.get(f"{self._patroni_url}/cluster", verify=self._verify)
+        r = requests.get(
+            f"{self._patroni_url}/cluster", verify=self._verify, auth=self._patroni_auth
+        )
         return {member["name"] for member in r.json()["members"]}
 
     def are_all_members_ready(self) -> bool:
@@ -207,7 +217,11 @@ class Patroni:
         try:
             for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(3)):
                 with attempt:
-                    r = requests.get(f"{self._patroni_url}/cluster", verify=self._verify)
+                    r = requests.get(
+                        f"{self._patroni_url}/cluster",
+                        verify=self._verify,
+                        auth=self._patroni_auth,
+                    )
         except RetryError:
             return False
 
@@ -222,7 +236,11 @@ class Patroni:
         try:
             for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(3)):
                 with attempt:
-                    r = requests.get(f"{self._patroni_url}/cluster", verify=self._verify)
+                    r = requests.get(
+                        f"{self._patroni_url}/cluster",
+                        verify=self._verify,
+                        auth=self._patroni_auth,
+                    )
         except RetryError:
             return False
 
@@ -247,7 +265,9 @@ class Patroni:
                             "leader" if member_endpoint == primary_endpoint else "replica?lag=16kB"
                         )
                         url = self._patroni_url.replace(self._endpoint, member_endpoint)
-                        member_status = requests.get(f"{url}/{endpoint}", verify=self._verify)
+                        member_status = requests.get(
+                            f"{url}/{endpoint}", verify=self._verify, auth=self._patroni_auth
+                        )
                         if member_status.status_code != 200:
                             raise Exception
         except RetryError:
@@ -270,6 +290,7 @@ class Patroni:
                     r = requests.get(
                         f"{'https' if self._tls_enabled else 'http'}://{self._primary_endpoint}:8008/health",
                         verify=self._verify,
+                        auth=self._patroni_auth,
                     )
                     if r.json()["state"] not in RUNNING_STATES:
                         raise EndpointNotReadyError
@@ -288,6 +309,7 @@ class Patroni:
                         f"{self._patroni_url}/cluster",
                         verify=self._verify,
                         timeout=5,
+                        auth=self._patroni_auth,
                     )
         except RetryError:
             return "unknown"
@@ -309,7 +331,9 @@ class Patroni:
         try:
             for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(1)):
                 with attempt:
-                    r = requests.get(f"{self._patroni_url}/health", verify=self._verify)
+                    r = requests.get(
+                        f"{self._patroni_url}/health", verify=self._verify, auth=self._patroni_auth
+                    )
         except RetryError:
             return False
 
@@ -326,7 +350,9 @@ class Patroni:
         try:
             for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(1)):
                 with attempt:
-                    r = requests.get(f"{self._patroni_url}/health", verify=self._verify)
+                    r = requests.get(
+                        f"{self._patroni_url}/health", verify=self._verify, auth=self._patroni_auth
+                    )
         except RetryError:
             return False
 
@@ -355,15 +381,21 @@ class Patroni:
             f"{self._patroni_url}/config",
             verify=self._verify,
             json={"postgresql": {"parameters": parameters}},
+            auth=self._patroni_auth,
         )
 
     def promote_standby_cluster(self) -> None:
         """Promote a standby cluster to be a regular cluster."""
-        config_response = requests.get(f"{self._patroni_url}/config", verify=self._verify)
+        config_response = requests.get(
+            f"{self._patroni_url}/config", verify=self._verify, auth=self._patroni_auth
+        )
         if "standby_cluster" not in config_response.json():
             raise StandbyClusterAlreadyPromotedError("standby cluster is already promoted")
         requests.patch(
-            f"{self._patroni_url}/config", verify=self._verify, json={"standby_cluster": None}
+            f"{self._patroni_url}/config",
+            verify=self._verify,
+            json={"standby_cluster": None},
+            auth=self._patroni_auth,
         )
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
             with attempt:
@@ -373,7 +405,9 @@ class Patroni:
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def reinitialize_postgresql(self) -> None:
         """Reinitialize PostgreSQL."""
-        requests.post(f"{self._patroni_url}/reinitialize", verify=self._verify)
+        requests.post(
+            f"{self._patroni_url}/reinitialize", verify=self._verify, auth=self._patroni_auth
+        )
 
     def _render_file(self, path: str, content: str, mode: int) -> None:
         """Write a content rendered from a template to a file.
@@ -457,13 +491,14 @@ class Patroni:
             pg_parameters=parameters,
             primary_cluster_endpoint=self._charm.async_replication.get_primary_cluster_endpoint(),
             extra_replication_endpoints=self._charm.async_replication.get_standby_endpoints(),
+            patroni_password=self._patroni_password,
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 
     @retry(stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30))
     def reload_patroni_configuration(self) -> None:
         """Reloads the configuration after it was updated in the file."""
-        requests.post(f"{self._patroni_url}/reload", verify=self._verify)
+        requests.post(f"{self._patroni_url}/reload", verify=self._verify, auth=self._patroni_auth)
 
     def last_postgresql_logs(self) -> str:
         """Get last log file content of Postgresql service in the container.
@@ -492,7 +527,7 @@ class Patroni:
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def restart_postgresql(self) -> None:
         """Restart PostgreSQL."""
-        requests.post(f"{self._patroni_url}/restart", verify=self._verify)
+        requests.post(f"{self._patroni_url}/restart", verify=self._verify, auth=self._patroni_auth)
 
     def switchover(self, candidate: str = None) -> None:
         """Trigger a switchover."""
@@ -507,6 +542,7 @@ class Patroni:
                     f"{self._patroni_url}/switchover",
                     json={"leader": primary, "candidate": candidate},
                     verify=self._verify,
+                    auth=self._patroni_auth,
                 )
 
         # Check whether the switchover was unsuccessful.

@@ -88,6 +88,7 @@ from constants import (
     METRICS_PORT,
     MONITORING_PASSWORD_KEY,
     MONITORING_USER,
+    PATRONI_PASSWORD_KEY,
     PEER,
     POSTGRES_LOG_FILES,
     REPLICATION_PASSWORD_KEY,
@@ -131,6 +132,7 @@ logging.getLogger("httpcore").setLevel(logging.ERROR)
 logging.getLogger("httpx").setLevel(logging.ERROR)
 
 Scopes = Literal[APP_SCOPE, UNIT_SCOPE]
+PASSWORD_USERS = [*SYSTEM_USERS, "patroni"]
 
 
 @trace_charm(
@@ -810,6 +812,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             REPLICATION_PASSWORD_KEY,
             REWIND_PASSWORD_KEY,
             MONITORING_PASSWORD_KEY,
+            PATRONI_PASSWORD_KEY,
         }:
             if self.get_secret(APP_SCOPE, password) is None:
                 self.set_secret(APP_SCOPE, password, new_password())
@@ -1159,10 +1162,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         If no user is provided, the password of the operator user is returned.
         """
         username = event.params.get("username", USER)
-        if username not in SYSTEM_USERS:
+        if username not in PASSWORD_USERS:
             event.fail(
                 f"The action can be run only for users used by the charm or Patroni:"
-                f" {', '.join(SYSTEM_USERS)} not {username}"
+                f" {', '.join(PASSWORD_USERS)} not {username}"
             )
             return
         event.set_results({"password": self.get_secret(APP_SCOPE, f"{username}-password")})
@@ -1477,6 +1480,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.get_secret(APP_SCOPE, REPLICATION_PASSWORD_KEY),
             self.get_secret(APP_SCOPE, REWIND_PASSWORD_KEY),
             bool(self.unit_peer_data.get("tls")),
+            self.get_secret(APP_SCOPE, PATRONI_PASSWORD_KEY),
         )
 
     @property

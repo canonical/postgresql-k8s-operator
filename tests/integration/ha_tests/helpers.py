@@ -101,7 +101,7 @@ def get_patroni_cluster(unit_ip: str) -> Dict[str, str]:
 
 
 async def change_patroni_setting(
-    ops_test: OpsTest, setting: str, value: Union[int, str], tls: bool = False
+    ops_test: OpsTest, setting: str, value: Union[int, str], password: str, tls: bool = False
 ) -> None:
     """Change the value of one of the Patroni settings.
 
@@ -109,6 +109,7 @@ async def change_patroni_setting(
         ops_test: ops_test instance.
         setting: the name of the setting.
         value: the value to assign to the setting.
+        password: Patroni password.
         tls: if Patroni is serving using tls.
     """
     if tls:
@@ -124,11 +125,17 @@ async def change_patroni_setting(
                 f"{schema}://{unit_ip}:8008/config",
                 json={setting: value},
                 verify=not tls,
+                auth=requests.auth.HTTPBasicAuth("patroni", password),
             )
 
 
 async def change_wal_settings(
-    ops_test: OpsTest, unit_name: str, max_wal_size: int, min_wal_size, wal_keep_segments
+    ops_test: OpsTest,
+    unit_name: str,
+    max_wal_size: int,
+    min_wal_size,
+    wal_keep_segments,
+    password: str,
 ) -> None:
     """Change WAL settings in the unit.
 
@@ -138,6 +145,7 @@ async def change_wal_settings(
         max_wal_size: maximum amount of WAL to keep (MB).
         min_wal_size: minimum amount of WAL to keep (MB).
         wal_keep_segments: number of WAL segments to keep.
+        password: Patroni password.
     """
     for attempt in Retrying(stop=stop_after_delay(30 * 2), wait=wait_fixed(3)):
         with attempt:
@@ -153,6 +161,7 @@ async def change_wal_settings(
                         }
                     }
                 },
+                auth=requests.auth.HTTPBasicAuth("patroni", password),
             )
 
 
