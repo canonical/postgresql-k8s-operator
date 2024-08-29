@@ -26,9 +26,9 @@ class WrongArchitectureWarningCharm(CharmBase):
 
 def is_wrong_architecture() -> bool:
     """Checks if charm was deployed on wrong architecture."""
-    juju_charm_file = f"/var/lib/juju/agents/unit-{os.environ.get('HOSTNAME')}/charm/.juju-charm"
+    juju_charm_file = f"/var/lib/juju/agents/unit-{os.environ.get('HOSTNAME')}/charm/manifest.yaml"
     if not os.path.exists(juju_charm_file):
-        logger.error("Cannot check architecture: .juju-charm file not found")
+        logger.error("Cannot check architecture: manifest file not found in %s", juju_charm_file)
         return False
 
     with open(juju_charm_file, "r") as file:
