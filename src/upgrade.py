@@ -5,6 +5,7 @@
 
 import json
 import logging
+from signal import SIGHUP
 
 from charms.data_platform_libs.v0.upgrade import (
     ClusterNotReadyError,
@@ -21,7 +22,7 @@ from pydantic import BaseModel
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 from typing_extensions import override
 
-from constants import APP_SCOPE, MONITORING_PASSWORD_KEY, MONITORING_USER
+from constants import APP_SCOPE, MONITORING_PASSWORD_KEY, MONITORING_USER, PATRONI_PASSWORD_KEY
 from patroni import SwitchoverFailedError
 from utils import new_password
 
@@ -143,12 +144,17 @@ class PostgreSQLUpgrade(DataUpgrade):
                 "upgrade failed. Check logs for rollback instruction"
             )
 
-    def _on_upgrade_changed(self, _) -> None:
+    def _on_upgrade_changed(self, event) -> None:
         """Update the Patroni nosync tag in the unit if needed."""
         if not self.peer_relation or not self.charm._patroni.member_started:
             return
 
         self.charm.update_config()
+        container = self.charm.unit.get_container("postgresql")
+        if not container.can_connect():
+            event.defer()
+            return
+        container.send_signal(SIGHUP, "postgresql")
 
     def _on_upgrade_charm_check_legacy(self, event: UpgradeCharmEvent) -> None:
         if not self.peer_relation:
@@ -271,8 +277,9 @@ class PostgreSQLUpgrade(DataUpgrade):
 
     def _set_up_new_credentials_for_legacy(self) -> None:
         """Create missing password and user."""
-        if self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY) is None:
-            self.charm.set_secret(APP_SCOPE, MONITORING_PASSWORD_KEY, new_password())
+        for key in (MONITORING_PASSWORD_KEY, PATRONI_PASSWORD_KEY):
+            if self.charm.get_secret(APP_SCOPE, key) is None:
+                self.charm.set_secret(APP_SCOPE, key, new_password())
         users = self.charm.postgresql.list_users()
         if MONITORING_USER not in users:
             self.charm.postgresql.create_user(

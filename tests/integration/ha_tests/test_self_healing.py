@@ -170,10 +170,11 @@ async def test_full_cluster_restart(
     """
     # Locate primary unit.
     app = await app_name(ops_test)
+    patroni_password = await get_password(ops_test, "patroni")
 
     # Change the loop wait setting to make Patroni wait more time before restarting PostgreSQL.
     initial_loop_wait = await get_patroni_setting(ops_test, "loop_wait")
-    await change_patroni_setting(ops_test, "loop_wait", 300)
+    await change_patroni_setting(ops_test, "loop_wait", 300, patroni_password)
 
     # Start an application that continuously writes data to the database.
     await start_continuous_writes(ops_test, app)
@@ -199,7 +200,7 @@ async def test_full_cluster_restart(
                 "tests/integration/ha_tests/manifests/restore_pebble_restart_delay.yml",
                 ensure_replan=True,
             )
-        await change_patroni_setting(ops_test, "loop_wait", initial_loop_wait)
+        await change_patroni_setting(ops_test, "loop_wait", initial_loop_wait, patroni_password)
 
     # Verify all units are up and running.
     for unit in ops_test.model.applications[app].units:
@@ -232,6 +233,7 @@ async def test_forceful_restart_without_data_and_transaction_logs(
     # Locate primary unit.
     app = await app_name(ops_test)
     primary_name = await get_primary(ops_test, app)
+    patroni_password = await get_password(ops_test, "patroni")
 
     # Start an application that continuously writes data to the database.
     await start_continuous_writes(ops_test, app)
@@ -275,7 +277,7 @@ async def test_forceful_restart_without_data_and_transaction_logs(
             if unit.name == primary_name:
                 continue
             logger.info(f"enabling WAL rotation on {primary_name}")
-            await change_wal_settings(ops_test, unit.name, 32, 32, 1)
+            await change_wal_settings(ops_test, unit.name, 32, 32, 1, patroni_password)
 
         # Rotate the WAL segments.
         logger.info(f"rotating WAL segments on {new_primary_name}")

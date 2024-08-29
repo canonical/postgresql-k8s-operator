@@ -96,13 +96,14 @@ async def test_password_rotation(ops_test: OpsTest):
     assert backup_password != new_backup_password
     assert new_rewind_password == await get_password(ops_test, "rewind")
     assert rewind_password != new_rewind_password
+    patroni_password = await get_password(ops_test, "patroni")
 
     # Restart Patroni on any non-leader unit and check that
     # Patroni and PostgreSQL continue to work.
     restart_time = time.time()
     for unit in ops_test.model.applications[APP_NAME].units:
         if not await unit.is_leader_from_status():
-            await restart_patroni(ops_test, unit.name)
+            await restart_patroni(ops_test, unit.name, patroni_password)
             assert await check_patroni(ops_test, unit.name, restart_time)
 
 

@@ -635,15 +635,18 @@ async def primary_changed(ops_test: OpsTest, old_primary: str) -> bool:
     return primary != old_primary and primary != "None"
 
 
-async def restart_patroni(ops_test: OpsTest, unit_name: str) -> None:
+async def restart_patroni(ops_test: OpsTest, unit_name: str, password: str) -> None:
     """Restart Patroni on a specific unit.
 
     Args:
         ops_test: The ops test framework instance
         unit_name: The name of the unit
+        password: patroni password
     """
     unit_ip = await get_unit_address(ops_test, unit_name)
-    requests.post(f"http://{unit_ip}:8008/restart")
+    requests.post(
+        f"http://{unit_ip}:8008/restart", auth=requests.auth.HTTPBasicAuth("patroni", password)
+    )
 
 
 def resource_exists(client: Client, resource: GenericNamespacedResource) -> bool:
@@ -729,12 +732,15 @@ async def set_password(
     return result.results
 
 
-async def switchover(ops_test: OpsTest, current_primary: str, candidate: str = None) -> None:
+async def switchover(
+    ops_test: OpsTest, current_primary: str, password: str, candidate: str = None
+) -> None:
     """Trigger a switchover.
 
     Args:
         ops_test: The ops test framework instance.
         current_primary: The current primary unit.
+        password: Patroni password.
         candidate: The unit that should be elected the new primary.
     """
     primary_ip = await get_unit_address(ops_test, current_primary)
@@ -744,6 +750,7 @@ async def switchover(ops_test: OpsTest, current_primary: str, candidate: str = N
             "leader": current_primary.replace("/", "-"),
             "candidate": candidate.replace("/", "-") if candidate else None,
         },
+        auth=requests.auth.HTTPBasicAuth("patroni", password),
     )
     assert response.status_code == 200
     app_name = current_primary.split("/")[0]
