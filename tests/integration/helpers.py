@@ -744,15 +744,17 @@ async def switchover(
         candidate: The unit that should be elected the new primary.
     """
     primary_ip = await get_unit_address(ops_test, current_primary)
-    response = requests.post(
-        f"http://{primary_ip}:8008/switchover",
-        json={
-            "leader": current_primary.replace("/", "-"),
-            "candidate": candidate.replace("/", "-") if candidate else None,
-        },
-        auth=requests.auth.HTTPBasicAuth("patroni", password),
-    )
-    assert response.status_code == 200
+    for attempt in Retrying(stop=stop_after_attempt(4), wait=wait_fixed(5), reraise=True):
+        with attempt:
+            response = requests.post(
+                f"http://{primary_ip}:8008/switchover",
+                json={
+                    "leader": current_primary.replace("/", "-"),
+                    "candidate": candidate.replace("/", "-") if candidate else None,
+                },
+                auth=requests.auth.HTTPBasicAuth("patroni", password),
+            )
+            assert response.status_code == 200, f"Switchover status code is {response.status_code}"
     app_name = current_primary.split("/")[0]
     minority_count = len(ops_test.model.applications[app_name].units) // 2
     for attempt in Retrying(stop=stop_after_attempt(30), wait=wait_fixed(2), reraise=True):
