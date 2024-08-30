@@ -86,9 +86,11 @@ log:
 restapi:
   connect_address: '{{ endpoint }}:8008'
   listen: 0.0.0.0:8008
+  {%- if patroni_password %}
   authentication:
     username: patroni
     password: {{ patroni_password }}
+  {%- endif %}
   {%- if enable_tls %}
   cafile: {{ storage_path }}/ca.pem
   certfile: {{ storage_path }}/cert.pem
