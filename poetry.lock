@@ -1232,13 +1232,13 @@ files = [
 
 [[package]]
 name = "ops"
-version = "2.16.0"
+version = "2.15.0"
 description = "The Python library behind great charms"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "ops-2.16.0-py3-none-any.whl", hash = "sha256:82d982d08035f059a28129139547b62c9326d4a25e5421bb3fd8d9145585b09d"},
-    {file = "ops-2.16.0.tar.gz", hash = "sha256:c4405185744c82589fca4752a76cd7eabd667cf2d3f07d2700b82777186b8de9"},
+    {file = "ops-2.15.0-py3-none-any.whl", hash = "sha256:8e47ab8a814301776b0ff42b32544ebdece7f1639168d2c86dc7a25930d2e493"},
+    {file = "ops-2.15.0.tar.gz", hash = "sha256:f3bad7417e98e8f390523fad097702eed16e99b38a25e9fe856aad226474b057"},
 ]
 
 [package.dependencies]
@@ -1246,7 +1246,7 @@ PyYAML = "==6.*"
 websocket-client = "==1.*"
 
 [package.extras]
-docs = ["canonical-sphinx-extensions", "furo", "linkify-it-py", "myst-parser", "pyspelling", "sphinx (>=8.0.0,<8.1.0)", "sphinx-autobuild", "sphinx-copybutton", "sphinx-design", "sphinx-notfound-page", "sphinx-tabs", "sphinxcontrib-jquery", "sphinxext-opengraph"]
+docs = ["canonical-sphinx-extensions", "furo", "linkify-it-py", "myst-parser", "pyspelling", "sphinx (==6.2.1)", "sphinx-autobuild", "sphinx-copybutton", "sphinx-design", "sphinx-notfound-page", "sphinx-tabs", "sphinxcontrib-jquery", "sphinxext-opengraph"]
 
 [[package]]
 name = "packaging"
@@ -2486,4 +2486,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "697f722c6c3920655cd9f7e0f0be2822de97681acae87f912cfc1a4cf1acc005"
+content-hash = "9cf90c54394bcf3dea77dc0a964d7270dcef25ce9c64a03ffb11bdfd1db103c8"
