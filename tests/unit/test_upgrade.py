@@ -1,6 +1,5 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-from signal import SIGHUP
 from unittest.mock import MagicMock, PropertyMock, call, patch
 
 import pytest
