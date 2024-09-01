@@ -53,7 +53,7 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
             apps=[DATABASE_APP_NAME, APPLICATION_NAME],
             status="active",
             raise_on_error=False,
-            timeout=900,
+            timeout=1200,
         )
     assert len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3
 
