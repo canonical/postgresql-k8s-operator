@@ -807,9 +807,34 @@ def test_check_stanza(harness):
         assert isinstance(harness.charm.unit.status, BlockedStatus)
         assert harness.charm.unit.status.message == FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE
 
+        # Test when the archiving is not working correctly (pgBackRest check command fails) on leader.
+        with harness.hooks_disabled():
+            harness.set_leader(True)
+            harness.update_relation_data(
+                peer_rel_id,
+                harness.charm.app.name,
+                {"stanza": "test-stanza", "init-pgbackrest": "True"},
+            )
+            harness.update_relation_data(
+                peer_rel_id,
+                harness.charm.unit.name,
+                {"stanza": "test-stanza", "init-pgbackrest": "True"},
+            )
+        _execute_command.side_effect = ExecError(
+            command=stanza_check_command, exit_code=1, stdout="", stderr="fake error"
+        )
+        _member_started.return_value = True
+        harness.charm.backup.check_stanza()
+        assert _update_config.call_count == 4
+        assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {}
+        assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {}
+        assert isinstance(harness.charm.unit.status, BlockedStatus)
+        assert harness.charm.unit.status.message == FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE
+
         # Test when the archiving is working correctly (pgBackRest check command succeeds)
         # and the unit is not the leader.
         with harness.hooks_disabled():
+            harness.set_leader(False)
             harness.update_relation_data(
                 peer_rel_id,
                 harness.charm.app.name,
