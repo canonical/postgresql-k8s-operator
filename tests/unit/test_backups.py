@@ -799,7 +799,10 @@ def test_check_stanza(harness):
         assert _update_config.call_count == 2
         assert _member_started.call_count == 5
         assert _reload_patroni_configuration.call_count == 5
-        assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {}
+        assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {
+            "stanza": "test-stanza",
+            "init-pgbackrest": "True",
+        }
         assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {}
         assert isinstance(harness.charm.unit.status, BlockedStatus)
         assert harness.charm.unit.status.message == FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE
