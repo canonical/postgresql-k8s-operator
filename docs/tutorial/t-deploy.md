@@ -5,11 +5,11 @@
 In this section, you will deploy a postgresql-k8s application to your juju model and track its status.
 
 ## Summary
-- [Deploy PostgreSQL](#heading--deploy)
-- [Track status](#heading--track-status)
+- [Deploy PostgreSQL](#deploy-postgresql)
+- [Track application status](#track-application-status)
 ---
 
-<a href="#heading--deploy"><h2 id="heading--deploy"> Deploy PostgreSQL</h2></a>
+## Deploy PostgreSQL
 
 To deploy Charmed PostgreSQL K8s, run
 ```shell
@@ -22,7 +22,7 @@ juju deploy postgresql-k8s --trust
 
 Juju will now fetch Charmed PostgreSQL K8s from [Charmhub](https://charmhub.io/postgresql-k8s?channel=14/stable)  and deploy it to the local MicroK8s. This process can take several minutes depending on how provisioned (RAM, CPU, etc) your machine is. 
 
-<a href="#heading--track-status"><h2 id="heading--track-status"> Track status </h2></a>
+## Track application status
 
 You can track the deployment by running:
 ```shell

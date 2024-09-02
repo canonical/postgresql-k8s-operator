@@ -11,5 +11,5 @@ from ..new_relations.test_new_relations import (
 APP_NAME = METADATA["name"]
 DB_RELATION = "db"
 DATABASE_RELATION = "database"
-FIRST_DATABASE_RELATION = "first-database"
+FIRST_DATABASE_RELATION = "database"
 APP_NAMES = [APP_NAME, APPLICATION_APP_NAME]

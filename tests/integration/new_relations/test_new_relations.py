@@ -36,7 +36,7 @@ DISCOURSE_APP_NAME = "discourse-k8s"
 REDIS_APP_NAME = "redis-k8s"
 APP_NAMES = [APPLICATION_APP_NAME, DATABASE_APP_NAME, ANOTHER_DATABASE_APP_NAME]
 DATABASE_APP_METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
-FIRST_DATABASE_RELATION_NAME = "first-database"
+FIRST_DATABASE_RELATION_NAME = "database"
 SECOND_DATABASE_RELATION_NAME = "second-database"
 MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME = "multiple-database-clusters"
 ALIASED_MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME = "aliased-multiple-database-clusters"
@@ -216,8 +216,8 @@ async def test_two_applications_doesnt_share_the_same_relation_data(ops_test: Op
 
     # Check that the user cannot access other databases.
     for application, other_application_database in [
-        (APPLICATION_APP_NAME, "another_application_first_database"),
-        (another_application_app_name, f"{APPLICATION_APP_NAME.replace('-', '_')}_first_database"),
+        (APPLICATION_APP_NAME, "another_application_database"),
+        (another_application_app_name, f"{APPLICATION_APP_NAME.replace('-', '_')}_database"),
     ]:
         connection_string = await build_connection_string(
             ops_test, application, FIRST_DATABASE_RELATION_NAME, database="postgres"
@@ -462,8 +462,8 @@ async def test_admin_role(ops_test: OpsTest):
     # Check that the user can access all the databases.
     for database in [
         "postgres",
-        f"{APPLICATION_APP_NAME.replace('-', '_')}_first_database",
-        "another_application_first_database",
+        f"{APPLICATION_APP_NAME.replace('-', '_')}_database",
+        "another_application_database",
     ]:
         logger.info(f"connecting to the following database: {database}")
         connection_string = await build_connection_string(
@@ -552,7 +552,7 @@ async def test_invalid_extra_user_roles(ops_test: OpsTest):
         for app in data_integrator_apps_names:
             await ops_test.model.add_relation(f"{app}:postgresql", f"{DATABASE_APP_NAME}:database")
         await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME])
-        ops_test.model.block_until(
+        await ops_test.model.block_until(
             lambda: any(
                 unit.workload_status_message == INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE
                 for unit in ops_test.model.applications[DATABASE_APP_NAME].units
@@ -566,7 +566,7 @@ async def test_invalid_extra_user_roles(ops_test: OpsTest):
             f"{DATABASE_APP_NAME}:database", f"{DATA_INTEGRATOR_APP_NAME}:postgresql"
         )
         await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME])
-        ops_test.model.block_until(
+        await ops_test.model.block_until(
             lambda: any(
                 unit.workload_status_message == INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE
                 for unit in ops_test.model.applications[DATABASE_APP_NAME].units

@@ -15,6 +15,8 @@ from charm import PostgresqlOperatorCharm
 from patroni import SwitchoverFailedError
 from tests.unit.helpers import _FakeApiError
 
+POSTGRESQL_CONTAINER = "postgresql"
+
 
 @pytest.fixture(autouse=True)
 def harness():
@@ -157,6 +159,7 @@ def test_on_upgrade_changed(harness):
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
     ):
+        harness.set_can_connect(POSTGRESQL_CONTAINER, True)
         _member_started.return_value = False
         relation = harness.model.get_relation("upgrade")
         harness.charm.on.upgrade_relation_changed.emit(relation)

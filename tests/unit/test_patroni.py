@@ -2,9 +2,10 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-from unittest.mock import MagicMock, PropertyMock, mock_open, patch
+from unittest.mock import MagicMock, Mock, PropertyMock, mock_open, patch
 
 import pytest
+import requests
 import tenacity
 from jinja2 import Template
 from ops.testing import Harness
@@ -40,8 +41,36 @@ def patroni(harness):
             "replication-password",
             "rewind-password",
             False,
+            "patroni-password",
         )
+        root = harness.get_filesystem_root("postgresql")
+        (root / "var" / "log" / "postgresql").mkdir(parents=True, exist_ok=True)
+
         yield patroni
+
+
+# This method will be used by the mock to replace requests.get
+def mocked_requests_get(*args, **kwargs):
+    class MockResponse:
+        def __init__(self, json_data):
+            self.json_data = json_data
+
+        def json(self):
+            return self.json_data
+
+    data = {
+        "http://server1/cluster": {
+            "members": [
+                {"name": "postgresql-k8s-0", "host": "1.1.1.1", "role": "leader", "lag": "1"}
+            ]
+        },
+        "http://server1/health": {"state": "running"},
+        "http://server4/cluster": {"members": []},
+    }
+    if args[0] in data:
+        return MockResponse(data[args[0]])
+
+    raise requests.exceptions.Timeout()
 
 
 def test_get_primary(harness, patroni):
@@ -59,7 +88,10 @@ def test_get_primary(harness, patroni):
         primary = patroni.get_primary()
         assert primary == "postgresql-k8s-1"
         _get.assert_called_once_with(
-            "http://postgresql-k8s-0:8008/cluster", verify=True, timeout=5
+            "http://postgresql-k8s-0:8008/cluster",
+            verify=True,
+            timeout=5,
+            auth=patroni._patroni_auth,
         )
 
         # Test returning unit name.
@@ -67,7 +99,10 @@ def test_get_primary(harness, patroni):
         primary = patroni.get_primary(unit_name_pattern=True)
         assert primary == "postgresql-k8s/1"
         _get.assert_called_once_with(
-            "http://postgresql-k8s-0:8008/cluster", verify=True, timeout=5
+            "http://postgresql-k8s-0:8008/cluster",
+            verify=True,
+            timeout=5,
+            auth=patroni._patroni_auth,
         )
 
 
@@ -183,6 +218,7 @@ def test_render_patroni_yml_file(harness, patroni):
             rewind_password=patroni._rewind_password,
             minority_count=patroni._members_count // 2,
             version="14",
+            patroni_password=patroni._patroni_password,
         )
 
         # Setup a mock for the `open` method, set returned data to postgresql.conf template.
@@ -217,6 +253,7 @@ def test_render_patroni_yml_file(harness, patroni):
             rewind_password=patroni._rewind_password,
             minority_count=patroni._members_count // 2,
             version="14",
+            patroni_password=patroni._patroni_password,
         )
         assert expected_content_with_tls != expected_content
 
@@ -277,6 +314,7 @@ def test_switchover(harness, patroni):
             "http://postgresql-k8s-0:8008/switchover",
             json={"leader": "postgresql-k8s-0", "candidate": None},
             verify=True,
+            auth=patroni._patroni_auth,
         )
 
         # Test a successful switchover with a candidate name.
@@ -287,6 +325,7 @@ def test_switchover(harness, patroni):
             "http://postgresql-k8s-0:8008/switchover",
             json={"leader": "postgresql-k8s-0", "candidate": "postgresql-k8s-2"},
             verify=True,
+            auth=patroni._patroni_auth,
         )
 
         # Test failed switchovers.
@@ -301,6 +340,7 @@ def test_switchover(harness, patroni):
             "http://postgresql-k8s-0:8008/switchover",
             json={"leader": "postgresql-k8s-0", "candidate": "postgresql-k8s-2"},
             verify=True,
+            auth=patroni._patroni_auth,
         )
 
         _post.reset_mock()
@@ -315,4 +355,100 @@ def test_switchover(harness, patroni):
             "http://postgresql-k8s-0:8008/switchover",
             json={"leader": "postgresql-k8s-0", "candidate": "postgresql-k8s-2"},
             verify=True,
+            auth=patroni._patroni_auth,
         )
+
+
+def test_member_replication_lag(harness, patroni):
+    with (
+        patch("requests.get", side_effect=mocked_requests_get) as _get,
+        patch("charm.Patroni._patroni_url", new_callable=PropertyMock) as _patroni_url,
+    ):
+        # Test when the cluster member has a value for the lag field.
+        _patroni_url.return_value = "http://server1"
+        lag = patroni.member_replication_lag
+        assert lag == "1"
+
+        # Test when the cluster member doesn't have a value for the lag field.
+        harness.charm.unit.name = "postgresql-k8s/1"
+        lag = patroni.member_replication_lag
+        assert lag == "unknown"
+
+        # Test when the API call fails.
+        _patroni_url.return_value = "http://server2"
+        with patch.object(tenacity.Retrying, "iter", Mock(side_effect=tenacity.RetryError(None))):
+            lag = patroni.member_replication_lag
+            assert lag == "unknown"
+
+
+def test_member_started_true(patroni):
+    with (
+        patch("patroni.requests.get") as _get,
+        patch("patroni.stop_after_delay", return_value=tenacity.stop_after_delay(0)),
+        patch("patroni.wait_fixed", return_value=tenacity.wait_fixed(0)),
+    ):
+        _get.return_value.json.return_value = {"state": "running"}
+
+        assert patroni.member_started
+
+        _get.assert_called_once_with(
+            "http://postgresql-k8s-0:8008/health", verify=True, auth=patroni._patroni_auth
+        )
+
+
+def test_member_started_false(patroni):
+    with (
+        patch("patroni.requests.get") as _get,
+        patch("patroni.stop_after_delay", return_value=tenacity.stop_after_delay(0)),
+        patch("patroni.wait_fixed", return_value=tenacity.wait_fixed(0)),
+    ):
+        _get.return_value.json.return_value = {"state": "stopped"}
+
+        assert not patroni.member_started
+
+        _get.assert_called_once_with(
+            "http://postgresql-k8s-0:8008/health", verify=True, auth=patroni._patroni_auth
+        )
+
+
+def test_member_started_error(patroni):
+    with (
+        patch("patroni.requests.get") as _get,
+        patch("patroni.stop_after_delay", return_value=tenacity.stop_after_delay(0)),
+        patch("patroni.wait_fixed", return_value=tenacity.wait_fixed(0)),
+    ):
+        _get.side_effect = Exception
+
+        assert not patroni.member_started
+
+        _get.assert_called_once_with(
+            "http://postgresql-k8s-0:8008/health", verify=True, auth=patroni._patroni_auth
+        )
+
+
+def test_last_postgresql_logs(harness, patroni):
+    # Empty if container can't connect
+    harness.set_can_connect("postgresql", False)
+    assert patroni.last_postgresql_logs() == ""
+
+    # Test when there are no files to read.
+    harness.set_can_connect("postgresql", True)
+    assert patroni.last_postgresql_logs() == ""
+
+    # Test when there are multiple files in the logs directory.
+    root = harness.get_filesystem_root("postgresql")
+    with (root / "var" / "log" / "postgresql" / "postgresql.1.log").open("w") as fd:
+        fd.write("fake-logs1")
+    with (root / "var" / "log" / "postgresql" / "postgresql.2.log").open("w") as fd:
+        fd.write("fake-logs2")
+    with (root / "var" / "log" / "postgresql" / "postgresql.3.log").open("w") as fd:
+        fd.write("fake-logs3")
+
+    assert patroni.last_postgresql_logs() == "fake-logs3"
+
+    # Test when the charm fails to read the logs.
+    (root / "var" / "log" / "postgresql" / "postgresql.1.log").unlink()
+    (root / "var" / "log" / "postgresql" / "postgresql.2.log").unlink()
+    (root / "var" / "log" / "postgresql" / "postgresql.3.log").unlink()
+    (root / "var" / "log" / "postgresql").rmdir()
+    assert patroni.last_postgresql_logs() == ""

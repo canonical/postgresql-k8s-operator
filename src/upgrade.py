@@ -21,7 +21,7 @@ from pydantic import BaseModel
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 from typing_extensions import override
 
-from constants import APP_SCOPE, MONITORING_PASSWORD_KEY, MONITORING_USER
+from constants import APP_SCOPE, MONITORING_PASSWORD_KEY, MONITORING_USER, PATRONI_PASSWORD_KEY
 from patroni import SwitchoverFailedError
 from utils import new_password
 
@@ -55,6 +55,22 @@ class PostgreSQLUpgrade(DataUpgrade):
             getattr(self.charm.on, "postgresql_pebble_ready"), self._on_postgresql_pebble_ready
         )
         self.framework.observe(self.charm.on.upgrade_charm, self._on_upgrade_charm_check_legacy)
+
+    def _handle_label_change(self) -> None:
+        """Handle the label change from `master` to `primary`."""
+        unit_number = int(self.charm.unit.name.split("/")[1])
+        if unit_number == 1:
+            # If the unit is the last to be upgraded before unit zero,
+            # trigger a switchover, so one of the upgraded units becomes
+            # the primary.
+            try:
+                self.charm._patroni.switchover()
+            except SwitchoverFailedError as e:
+                logger.warning(f"Switchover failed: {e}")
+        if len(self.charm._peers.units) == 0 or unit_number == 1:
+            # If the unit is the last to be upgraded before unit zero
+            # or the only unit in the cluster, update the label.
+            self.charm._create_services()
 
     @property
     def is_no_sync_member(self) -> bool:
@@ -111,6 +127,7 @@ class PostgreSQLUpgrade(DataUpgrade):
                         in self.charm._patroni.cluster_members
                         and self.charm._patroni.is_replication_healthy
                     ):
+                        self._handle_label_change()
                         logger.debug("Upgraded unit is healthy. Set upgrade state to `completed`")
                         self.set_unit_completed()
                     else:
@@ -126,7 +143,7 @@ class PostgreSQLUpgrade(DataUpgrade):
                 "upgrade failed. Check logs for rollback instruction"
             )
 
-    def _on_upgrade_changed(self, _) -> None:
+    def _on_upgrade_changed(self, event) -> None:
         """Update the Patroni nosync tag in the unit if needed."""
         if not self.peer_relation or not self.charm._patroni.member_started:
             return
@@ -254,8 +271,9 @@ class PostgreSQLUpgrade(DataUpgrade):
 
     def _set_up_new_credentials_for_legacy(self) -> None:
         """Create missing password and user."""
-        if self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY) is None:
-            self.charm.set_secret(APP_SCOPE, MONITORING_PASSWORD_KEY, new_password())
+        for key in (MONITORING_PASSWORD_KEY, PATRONI_PASSWORD_KEY):
+            if self.charm.get_secret(APP_SCOPE, key) is None:
+                self.charm.set_secret(APP_SCOPE, key, new_password())
         users = self.charm.postgresql.list_users()
         if MONITORING_USER not in users:
             self.charm.postgresql.create_user(

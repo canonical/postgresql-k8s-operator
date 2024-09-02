@@ -169,10 +169,11 @@ async def test_full_cluster_restart(
     """
     # Locate primary unit.
     app = await app_name(ops_test)
+    patroni_password = await get_password(ops_test, "patroni")
 
     # Change the loop wait setting to make Patroni wait more time before restarting PostgreSQL.
     initial_loop_wait = await get_patroni_setting(ops_test, "loop_wait")
-    await change_patroni_setting(ops_test, "loop_wait", 300)
+    await change_patroni_setting(ops_test, "loop_wait", 300, patroni_password)
 
     # Start an application that continuously writes data to the database.
     await start_continuous_writes(ops_test, app)
@@ -198,7 +199,7 @@ async def test_full_cluster_restart(
                 "tests/integration/ha_tests/manifests/restore_pebble_restart_delay.yml",
                 ensure_replan=True,
             )
-        await change_patroni_setting(ops_test, "loop_wait", initial_loop_wait)
+        await change_patroni_setting(ops_test, "loop_wait", initial_loop_wait, patroni_password)
 
     # Verify all units are up and running.
     for unit in ops_test.model.applications[app].units:
@@ -231,6 +232,7 @@ async def test_forceful_restart_without_data_and_transaction_logs(
     # Locate primary unit.
     app = await app_name(ops_test)
     primary_name = await get_primary(ops_test, app)
+    patroni_password = await get_password(ops_test, "patroni")
 
     # Start an application that continuously writes data to the database.
     await start_continuous_writes(ops_test, app)
@@ -240,24 +242,25 @@ async def test_forceful_restart_without_data_and_transaction_logs(
         "scp", "tests/integration/ha_tests/clean-data-dir.sh", f"{primary_name}:/tmp"
     )
 
-    # Stop the systemd service on the primary unit.
-    logger.info(f"stopping database from {primary_name}")
-    await run_command_on_unit(ops_test, primary_name, "/charm/bin/pebble stop postgresql")
+    # Halts the execution of `update-status` hook so the pebble service doesn't get restarted
+    async with ops_test.fast_forward("24h"):
+        # Stop the systemd service on the primary unit.
+        logger.info(f"stopping database from {primary_name}")
+        await run_command_on_unit(ops_test, primary_name, "/charm/bin/pebble stop postgresql")
 
-    # Data removal runs within a script, so it allows `*` expansion.
-    logger.info(f"removing data from {primary_name}")
-    return_code, _, _ = await ops_test.juju(
-        "ssh",
-        primary_name,
-        "bash",
-        "/tmp/clean-data-dir.sh",
-    )
-    assert return_code == 0, "Failed to remove data directory"
+        # Data removal runs within a script, so it allows `*` expansion.
+        logger.info(f"removing data from {primary_name}")
+        return_code, _, _ = await ops_test.juju(
+            "ssh",
+            primary_name,
+            "bash",
+            "/tmp/clean-data-dir.sh",
+        )
+        assert return_code == 0, "Failed to remove data directory"
 
-    # Wait some time to elect a new primary.
-    sleep(MEDIAN_ELECTION_TIME * 2)
+        # Wait some time to elect a new primary.
+        sleep(MEDIAN_ELECTION_TIME * 2)
 
-    async with ops_test.fast_forward():
         logger.info("checking whether writes are increasing")
         await are_writes_increasing(ops_test, primary_name)
 
@@ -273,7 +276,7 @@ async def test_forceful_restart_without_data_and_transaction_logs(
             if unit.name == primary_name:
                 continue
             logger.info(f"enabling WAL rotation on {primary_name}")
-            await change_wal_settings(ops_test, unit.name, 32, 32, 1)
+            await change_wal_settings(ops_test, unit.name, 32, 32, 1, patroni_password)
 
         # Rotate the WAL segments.
         logger.info(f"rotating WAL segments on {new_primary_name}")
@@ -297,17 +300,10 @@ async def test_forceful_restart_without_data_and_transaction_logs(
                 new_files
             ), f"WAL segments weren't correctly rotated on {unit_name}"
 
-        # Start the systemd service in the old primary.
-        logger.info(f"starting database on {primary_name}")
-        for attempt in Retrying(stop=stop_after_delay(30), wait=wait_fixed(3), reraise=True):
-            with attempt:
-                await run_command_on_unit(
-                    ops_test, primary_name, "/charm/bin/pebble start postgresql"
-                )
-
-                # Verify that the database service got restarted and is ready in the old primary.
-                logger.info(f"waiting for the database service to restart on {primary_name}")
-                assert await is_postgresql_ready(ops_test, primary_name)
+    # Database pebble service in old primary should recover after update-status run.
+    async with ops_test.fast_forward("10s"):
+        logger.info(f"Checking the database service on {primary_name}")
+        assert await is_postgresql_ready(ops_test, primary_name)
 
     await is_cluster_updated(ops_test, primary_name)
 

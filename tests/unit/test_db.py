@@ -191,6 +191,7 @@ def test_set_up_relation(harness):
         patch("relations.db.DbProvides._update_unit_status") as _update_unit_status,
         patch("relations.db.new_password", return_value="test-password") as _new_password,
         patch("relations.db.DbProvides._get_extensions") as _get_extensions,
+        patch("relations.db.logger") as _logger,
     ):
         rel_id = harness.model.get_relation(RELATION_NAME).id
         # Define some mocks' side effects.
@@ -210,16 +211,7 @@ def test_set_up_relation(harness):
         postgresql_mock.create_database = PropertyMock(
             side_effect=[None, None, PostgreSQLCreateDatabaseError, None]
         )
-        postgresql_mock.get_postgresql_version = PropertyMock(
-            side_effect=[
-                POSTGRESQL_VERSION,
-                POSTGRESQL_VERSION,
-                POSTGRESQL_VERSION,
-                POSTGRESQL_VERSION,
-                POSTGRESQL_VERSION,
-                PostgreSQLGetPostgreSQLVersionError,
-            ]
-        )
+        postgresql_mock.get_postgresql_version = PropertyMock(return_value=POSTGRESQL_VERSION)
 
         # Assert no operation is done when at least one of the requested extensions
         # is disabled.
@@ -244,7 +236,7 @@ def test_set_up_relation(harness):
         postgresql_mock.create_database.assert_called_once_with(
             DATABASE, user, plugins=[], client_relations=[relation]
         )
-        assert postgresql_mock.get_postgresql_version.call_count == 2
+        assert postgresql_mock.get_postgresql_version.call_count == 1
         _update_unit_status.assert_called_once()
         expected_data = {
             "allowed-units": "application/0",
@@ -289,7 +281,7 @@ def test_set_up_relation(harness):
         postgresql_mock.create_database.assert_called_once_with(
             DATABASE, user, plugins=[], client_relations=[relation]
         )
-        assert postgresql_mock.get_postgresql_version.call_count == 2
+        assert postgresql_mock.get_postgresql_version.call_count == 1
         _update_unit_status.assert_called_once()
         assert harness.get_relation_data(rel_id, harness.charm.app.name) == expected_data
         assert harness.get_relation_data(rel_id, harness.charm.unit.name) == expected_data
@@ -343,11 +335,13 @@ def test_set_up_relation(harness):
         assert harness.get_relation_data(rel_id, harness.charm.app.name) == {}
         assert harness.get_relation_data(rel_id, harness.charm.unit.name) == {}
 
-        # BlockedStatus due to a PostgreSQLGetPostgreSQLVersionError.
+        # version is not updated due to a PostgreSQLGetPostgreSQLVersionError.
+        postgresql_mock.get_postgresql_version.side_effect = PostgreSQLGetPostgreSQLVersionError
         harness.charm.unit.status = ActiveStatus()
-        assert not harness.charm.legacy_db_relation.set_up_relation(relation)
-        _update_unit_status.assert_not_called()
-        assert isinstance(harness.model.unit.status, BlockedStatus)
+        assert harness.charm.legacy_db_relation.set_up_relation(relation)
+        _logger.exception.assert_called_once_with(
+            "Failed to retrieve the PostgreSQL version to initialise/update db relation"
+        )
 
 
 def test_update_unit_status(harness):

@@ -9,7 +9,7 @@ bootstrap:
       bin_dir: /usr/lib/postgresql/{{ version }}/bin
       parameters:
         synchronous_standby_names: "*"
-        {%- if enable_pgbackrest %}
+        {%- if enable_pgbackrest_archiving %}
         archive_command: 'pgbackrest --stanza={{ stanza }} archive-push %p'
         {% else %}
         archive_command: /bin/true
@@ -49,7 +49,13 @@ bootstrap:
   {%- if restoring_backup %}
   method: pgbackrest
   pgbackrest:
-    command: pgbackrest --stanza={{ restore_stanza }} --pg1-path={{ storage_path }}/pgdata --set={{ backup_id }} --type=immediate --target-action=promote restore
+    command: >
+      pgbackrest --stanza={{ restore_stanza }} --pg1-path={{ storage_path }}/pgdata
+      {%- if backup_id %} --set={{ backup_id }} {%- endif %}
+      {%- if restore_to_latest %} --type=default {%- else %}
+      --target-action=promote {%- if pitr_target %} --target="{{ pitr_target }}" --type=time {%- else %} --type=immediate {%- endif %}
+      {%- endif %}
+      restore
     no_params: True
     keep_existing_recovery_conf: True
   {% elif primary_cluster_endpoint %}
@@ -80,6 +86,11 @@ log:
 restapi:
   connect_address: '{{ endpoint }}:8008'
   listen: 0.0.0.0:8008
+  {%- if patroni_password %}
+  authentication:
+    username: patroni
+    password: {{ patroni_password }}
+  {%- endif %}
   {%- if enable_tls %}
   cafile: {{ storage_path }}/ca.pem
   certfile: {{ storage_path }}/cert.pem
@@ -98,7 +109,7 @@ postgresql:
   bin_dir: /usr/lib/postgresql/{{ version }}/bin
   listen: 0.0.0.0:5432
   parameters:
-    {%- if enable_pgbackrest %}
+    {%- if enable_pgbackrest_archiving %}
     archive_command: 'pgbackrest --stanza={{ stanza }} archive-push %p'
     {% else %}
     archive_command: /bin/true

@@ -78,9 +78,6 @@ class PostgreSQLProvider(Object):
             event.defer()
             return
 
-        if not self.charm.unit.is_leader():
-            return
-
         # Retrieve the database name and extra user roles using the charm library.
         database = event.database
         extra_user_roles = event.extra_user_roles
@@ -107,6 +104,12 @@ class PostgreSQLProvider(Object):
             self.database_provides.set_endpoints(
                 event.relation.id,
                 f"{self.charm.primary_endpoint}:{DATABASE_PORT}",
+            )
+
+            # Set connection string URI.
+            self.database_provides.set_uris(
+                event.relation.id,
+                f"postgresql://{user}:{password}@{self.charm.primary_endpoint}:{DATABASE_PORT}/{database}",
             )
 
             # Update the read-only endpoint.
@@ -246,7 +249,7 @@ class PostgreSQLProvider(Object):
             for data in relation.data.values():
                 extra_user_roles = data.get("extra-user-roles")
                 if extra_user_roles is None:
-                    break
+                    continue
                 extra_user_roles = extra_user_roles.lower().split(",")
                 for extra_user_role in extra_user_roles:
                     if (

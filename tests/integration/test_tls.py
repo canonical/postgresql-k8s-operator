@@ -9,6 +9,9 @@ from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from . import architecture, markers
+from .ha_tests.helpers import (
+    change_patroni_setting,
+)
 from .helpers import (
     DATABASE_APP_NAME,
     build_and_deploy,
@@ -55,7 +58,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
     await build_and_deploy(ops_test, DATABASE_UNITS, wait_for_idle=False)
 
 
-@pytest.mark.group(1)
 async def check_tls_rewind(ops_test: OpsTest) -> None:
     """Checks if TLS was used by rewind."""
     for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
@@ -76,15 +78,8 @@ async def check_tls_rewind(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.group(1)
-@markers.amd64_only  # mattermost-k8s charm not available for arm64
-async def test_mattermost_db(ops_test: OpsTest) -> None:
-    """Deploy Mattermost to test the 'db' relation.
-
-    Mattermost needs TLS enabled on PostgreSQL to correctly connect to it.
-
-    Args:
-        ops_test: The ops test framework
-    """
+@pytest.mark.abort_on_fail
+async def test_tls(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
         # Deploy TLS Certificates operator.
         await ops_test.model.deploy(
@@ -92,7 +87,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         )
         # Relate it to the PostgreSQL to enable TLS.
         await ops_test.model.relate(DATABASE_APP_NAME, tls_certificates_app_name)
-        await ops_test.model.wait_for_idle(status="active", timeout=1000)
+        await ops_test.model.wait_for_idle(status="active", timeout=1000, raise_on_error=False)
 
         # Wait for all units enabling TLS.
         for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
@@ -106,6 +101,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         # hostname (that is a k8s hostname).
         primary = await get_primary(ops_test)
         primary_address = await get_unit_address(ops_test, primary)
+        patroni_password = await get_password(ops_test, "patroni")
         cluster_info = requests.get(f"https://{primary_address}:8008/cluster", verify=False)
         for member in cluster_info.json()["members"]:
             if member["role"] == "replica":
@@ -122,7 +118,10 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         await ops_test.model.wait_for_idle(
             apps=[DATABASE_APP_NAME], status="active", idle_period=30
         )
+        # Pause Patroni so it doesn't wipe the custom changes
+        await change_patroni_setting(ops_test, "pause", True, patroni_password, tls=True)
 
+    async with ops_test.fast_forward("24h"):
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(2), reraise=True):
             with attempt:
                 # Promote the replica to primary.
@@ -145,6 +144,7 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         # in the instances' timelines).
         host = await get_unit_address(ops_test, primary)
         password = await get_password(ops_test)
+        patroni_password = await get_password(ops_test, "patroni")
         with db_connect(host, password) as connection:
             connection.autocommit = True
             with connection.cursor() as cursor:
@@ -154,23 +154,41 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
 
         # Stop the initial primary.
         logger.info(f"stopping database on {primary}")
-        await run_command_on_unit(ops_test, primary, "/charm/bin/pebble stop postgresql")
+        try:
+            await run_command_on_unit(ops_test, primary, "/charm/bin/pebble stop postgresql")
+        except Exception as e:
+            # pebble stop on juju 2 errors out and leaves dangling PG processes
+            if juju_major_version > 2:
+                raise e
+            await run_command_on_unit(ops_test, primary, "pkill --signal SIGTERM -x postgres")
 
         # Check that the primary changed.
         assert await primary_changed(ops_test, primary), "primary not changed"
 
-        # Restart the initial primary and check the logs to ensure TLS is being used by pg_rewind.
-        logger.info(f"starting database on {primary}")
-        await run_command_on_unit(ops_test, primary, "/charm/bin/pebble start postgresql")
+        # Check the logs to ensure TLS is being used by pg_rewind.
         for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(2), reraise=True):
             with attempt:
                 await check_tls_rewind(ops_test)
+        await change_patroni_setting(ops_test, "pause", False, patroni_password, tls=True)
 
+    async with ops_test.fast_forward():
         # Await for postgresql to be stable if not already
         await ops_test.model.wait_for_idle(
             apps=[DATABASE_APP_NAME], status="active", idle_period=15
         )
 
+
+@pytest.mark.group(1)
+@markers.amd64_only  # mattermost-k8s charm not available for arm64
+async def test_mattermost_db(ops_test: OpsTest) -> None:
+    """Deploy Mattermost to test the 'db' relation.
+
+    Mattermost needs TLS enabled on PostgreSQL to correctly connect to it.
+
+    Args:
+        ops_test: The ops test framework
+    """
+    async with ops_test.fast_forward():
         # Deploy and check Mattermost user and database existence.
         relation_id = await deploy_and_relate_application_with_postgresql(
             ops_test, "mattermost-k8s", MATTERMOST_APP_NAME, APPLICATION_UNITS, status="waiting"
@@ -181,6 +199,10 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
 
         await check_database_users_existence(ops_test, mattermost_users, [])
 
+
+@pytest.mark.group(1)
+async def test_remove_tls(ops_test: OpsTest) -> None:
+    async with ops_test.fast_forward():
         # Remove the relation.
         await ops_test.model.applications[DATABASE_APP_NAME].remove_relation(
             f"{DATABASE_APP_NAME}:certificates", f"{tls_certificates_app_name}:certificates"

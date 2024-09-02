@@ -21,13 +21,14 @@ create-replication:
 get-primary:
   description: Get the unit with is the primary/leader in the replication.
 get-password:
-  description: Change the system user's password, which is used by charm.
-    It is for internal charm users and SHOULD NOT be used by applications.
+  description: Get a charm system user's password.
+    Useful for manual troubleshooting and for backing up cluster credentials.
+    It cannot be used for application integration relations.
   params:
     username:
       type: string
       description: The username, the default value 'operator'.
-        Possible values - backup, operator, replication, rewind.
+        Possible values - backup, operator, replication, rewind, patroni.
 list-backups:
   description: Lists backups in s3 storage in AWS.
 pre-upgrade-check:
@@ -45,6 +46,9 @@ restore:
     backup-id:
       type: string
       description: A backup-id to identify the backup to restore (format = %Y-%m-%dT%H:%M:%SZ)
+    restore-to-time:
+      type: string
+      description: Point-in-time-recovery target in PSQL format.
 resume-upgrade:
   description: Resume a rolling upgrade after asserting successful upgrade of a new revision.
 set-password:

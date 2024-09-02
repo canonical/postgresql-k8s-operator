@@ -8,8 +8,10 @@ import string
 import subprocess
 import tarfile
 import tempfile
+import zipfile
 from datetime import datetime
-from typing import Dict, Optional, Set, Tuple
+from pathlib import Path
+from typing import Dict, Optional, Set, Tuple, Union
 
 import kubernetes as kubernetes
 import psycopg2
@@ -45,6 +47,7 @@ from ..helpers import (
     get_unit_address,
     run_command_on_unit,
 )
+from ..new_relations.helpers import get_application_relation_data
 
 PORT = 5432
 
@@ -105,27 +108,42 @@ def get_patroni_cluster(unit_ip: str) -> Dict[str, str]:
     return resp.json()
 
 
-async def change_patroni_setting(ops_test: OpsTest, setting: str, value: int) -> None:
+async def change_patroni_setting(
+    ops_test: OpsTest, setting: str, value: Union[int, str], password: str, tls: bool = False
+) -> None:
     """Change the value of one of the Patroni settings.
 
     Args:
         ops_test: ops_test instance.
         setting: the name of the setting.
         value: the value to assign to the setting.
+        password: Patroni password.
+        tls: if Patroni is serving using tls.
     """
+    if tls:
+        schema = "https"
+    else:
+        schema = "http"
     for attempt in Retrying(stop=stop_after_delay(30 * 2), wait=wait_fixed(3)):
         with attempt:
             app = await app_name(ops_test)
             primary_name = await get_primary(ops_test, app)
             unit_ip = await get_unit_address(ops_test, primary_name)
             requests.patch(
-                f"http://{unit_ip}:8008/config",
+                f"{schema}://{unit_ip}:8008/config",
                 json={setting: value},
+                verify=not tls,
+                auth=requests.auth.HTTPBasicAuth("patroni", password),
             )
 
 
 async def change_wal_settings(
-    ops_test: OpsTest, unit_name: str, max_wal_size: int, min_wal_size, wal_keep_segments
+    ops_test: OpsTest,
+    unit_name: str,
+    max_wal_size: int,
+    min_wal_size,
+    wal_keep_segments,
+    password: str,
 ) -> None:
     """Change WAL settings in the unit.
 
@@ -135,6 +153,7 @@ async def change_wal_settings(
         max_wal_size: maximum amount of WAL to keep (MB).
         min_wal_size: minimum amount of WAL to keep (MB).
         wal_keep_segments: number of WAL segments to keep.
+        password: Patroni password.
     """
     for attempt in Retrying(stop=stop_after_delay(30 * 2), wait=wait_fixed(3)):
         with attempt:
@@ -150,6 +169,7 @@ async def change_wal_settings(
                         }
                     }
                 },
+                auth=requests.auth.HTTPBasicAuth("patroni", password),
             )
 
 
@@ -320,7 +340,7 @@ async def count_writes(
             ip = service.status.podIP
 
             connection_string = (
-                f"dbname='{APPLICATION_NAME.replace('-', '_')}_first_database' user='operator'"
+                f"dbname='{APPLICATION_NAME.replace('-', '_')}_database' user='operator'"
                 f" host='{ip}' password='{password}' connect_timeout=10"
             )
 
@@ -409,24 +429,48 @@ async def fetch_cluster_members(ops_test: OpsTest):
     return member_ips
 
 
-async def get_patroni_setting(ops_test: OpsTest, setting: str) -> Optional[int]:
+async def get_patroni_setting(ops_test: OpsTest, setting: str, tls: bool = False) -> Optional[int]:
     """Get the value of one of the integer Patroni settings.
 
     Args:
         ops_test: ops_test instance.
         setting: the name of the setting.
+        tls: if Patroni is serving using tls.
 
     Returns:
         the value of the configuration or None if it's using the default value.
     """
+    if tls:
+        schema = "https"
+    else:
+        schema = "http"
     for attempt in Retrying(stop=stop_after_delay(30 * 2), wait=wait_fixed(3)):
         with attempt:
             app = await app_name(ops_test)
             primary_name = await get_primary(ops_test, app)
             unit_ip = await get_unit_address(ops_test, primary_name)
-            configuration_info = requests.get(f"http://{unit_ip}:8008/config")
+            configuration_info = requests.get(f"{schema}://{unit_ip}:8008/config", verify=not tls)
             primary_start_timeout = configuration_info.json().get(setting)
             return int(primary_start_timeout) if primary_start_timeout is not None else None
+
+
+async def get_instances_roles(ops_test: OpsTest):
+    """Return the roles of the instances in the cluster."""
+    labels = {}
+    client = Client()
+    app = await app_name(ops_test)
+    for unit in ops_test.model.applications[app].units:
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(5)):
+            with attempt:
+                pod = client.get(
+                    res=Pod,
+                    name=unit.name.replace("/", "-"),
+                    namespace=ops_test.model.info.name,
+                )
+                if "role" not in pod.metadata.labels:
+                    raise ValueError(f"role label not available for {unit.name}")
+                labels[unit.name] = pod.metadata.labels["role"]
+    return labels
 
 
 async def get_postgresql_parameter(ops_test: OpsTest, parameter_name: str) -> Optional[int]:
@@ -489,6 +533,23 @@ async def get_sync_standby(model: Model, application_name: str) -> str:
     for member in cluster["members"]:
         if member["role"] == "sync_standby":
             return member["name"]
+
+
+async def inject_dependency_fault(
+    ops_test: OpsTest, application_name: str, charm_file: Union[str, Path]
+) -> None:
+    """Inject a dependency fault into the PostgreSQL charm."""
+    # Query running dependency to overwrite with incompatible version.
+    dependencies = await get_application_relation_data(
+        ops_test, application_name, "upgrade", "dependencies"
+    )
+    loaded_dependency_dict = json.loads(dependencies)
+    loaded_dependency_dict["charm"]["upgrade_supported"] = "^15"
+    loaded_dependency_dict["charm"]["version"] = "15.0"
+
+    # Overwrite dependency.json with incompatible version.
+    with zipfile.ZipFile(charm_file, mode="a") as charm_zip:
+        charm_zip.writestr("src/dependency.json", json.dumps(loaded_dependency_dict))
 
 
 async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
@@ -692,7 +753,7 @@ async def is_secondary_up_to_date(ops_test: OpsTest, unit_name: str, expected_wr
     status = await ops_test.model.get_status()
     host = status["applications"][app]["units"][unit_name]["address"]
     connection_string = (
-        f"dbname='{APPLICATION_NAME.replace('-', '_')}_first_database' user='operator'"
+        f"dbname='{APPLICATION_NAME.replace('-', '_')}_database' user='operator'"
         f" host='{host}' password='{password}' connect_timeout=10"
     )
 
@@ -812,10 +873,10 @@ async def start_continuous_writes(ops_test: OpsTest, app: str, model: Model = No
         for relation in model.applications[app].relations
         if not relation.is_peer
         and f"{relation.requires.application_name}:{relation.requires.name}"
-        == f"{APPLICATION_NAME}:first-database"
+        == f"{APPLICATION_NAME}:database"
     ]
     if not relations:
-        await model.relate(app, f"{APPLICATION_NAME}:first-database")
+        await model.relate(app, f"{APPLICATION_NAME}:database")
         await model.wait_for_idle(status="active", timeout=1000)
     else:
         action = (
