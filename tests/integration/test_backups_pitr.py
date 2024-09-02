@@ -8,15 +8,12 @@ from typing import Dict, Tuple
 import boto3
 import pytest as pytest
 from pytest_operator.plugin import OpsTest
-from tenacity import (
-    Retrying,
-    stop_after_attempt,
-    wait_exponential,
-)
+from tenacity import Retrying, stop_after_attempt, wait_exponential
 
 from . import architecture
 from .helpers import (
     DATABASE_APP_NAME,
+    MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET,
     build_and_deploy,
     construct_endpoint,
     db_connect,
@@ -27,6 +24,7 @@ from .helpers import (
 )
 from .juju_ import juju_major_version
 
+CANNOT_RESTORE_PITR = "cannot restore PITR, juju debug-log for details"
 S3_INTEGRATOR_APP_NAME = "s3-integrator"
 if juju_major_version < 3:
     tls_certificates_app_name = "tls-certificates-operator"
@@ -47,8 +45,6 @@ logger = logging.getLogger(__name__)
 
 AWS = "AWS"
 GCP = "GCP"
-MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET = "Move restored cluster to another S3 bucket"
-CANNOT_RESTORE_PITR = "cannot restore PITR, juju debug-log for details"
 
 
 @pytest.fixture(scope="module")
