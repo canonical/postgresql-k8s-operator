@@ -9,7 +9,7 @@ from pytest_operator.plugin import OpsTest
 
 from .helpers import (
     DATABASE_APP_NAME,
-    METADATA,
+    build_and_deploy,
     db_connect,
     get_leader_unit,
     get_password,
@@ -25,18 +25,11 @@ INSUFFICIENT_SIZE_WARNING = "<10% free space on pgdata volume."
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest, database_charm):
+async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest):
     """Build and deploy the charm and saturate its pgdata volume."""
     # Build and deploy the PostgreSQL charm.
-    await ops_test.model.deploy(
-        database_charm,
-        resources={
-            "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
-        },
-        application_name=DATABASE_APP_NAME,
-        num_units=1,
-        trust=True,
-    )
+    async with ops_test.fast_forward():
+        await build_and_deploy(ops_test, 1)
 
     # Saturate storage with some data
     primary = await get_primary(ops_test)
