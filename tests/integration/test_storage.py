@@ -20,7 +20,7 @@ from .helpers import (
 logger = logging.getLogger(__name__)
 
 MAX_RETRIES = 20
-INSUFFICIENT_SIZE_WARNING = "<10%% free space on pgdata volume."
+INSUFFICIENT_SIZE_WARNING = "<10% free space on pgdata volume."
 
 
 @pytest.mark.group(1)
