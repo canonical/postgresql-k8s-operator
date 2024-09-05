@@ -39,7 +39,7 @@ async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest):
         connection.autocommit = True
         with connection.cursor() as cursor:
             cursor.execute("CREATE TABLE big_table (testcol INT);")
-            cursor.execute("INSERT INTO big_table SELECT generate_series(1,1000000000);")
+            cursor.execute("INSERT INTO big_table SELECT generate_series(1,600000000);")
     connection.close()
 
     # wait for charm to get blocked
