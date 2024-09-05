@@ -1,0 +1,145 @@
+[32mINFO    [0m juju.model:model.py:2098 Deploying local:jammy/postgresql-k8s-3
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  test-storage-postgresql-k8s/0 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  test-storage-postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  test-storage-postgresql-k8s/0 [executing] active: Primary
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.4.5    unsupported  02:10:57Z
+
+App                          Version  Status  Scale  Charm           Channel  Rev  Address         Exposed  Message
+postgresql-k8s               14.12    active      3  postgresql-k8s             2  10.152.183.225  no       
+test-storage-postgresql-k8s  14.12    active      1  postgresql-k8s             3  10.152.183.80   no       
+
+Unit                            Workload  Agent  Address     Ports  Message
+postgresql-k8s/0                active    idle   10.1.99.92         
+postgresql-k8s/1                active    idle   10.1.99.93         
+postgresql-k8s/2*               active    idle   10.1.99.94         Primary
+test-storage-postgresql-k8s/0*  active    idle   10.1.99.96         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-postgresql-k8s-0: 01:39:14 ERROR unit.postgresql-k8s/0.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-postgresql-k8s-1: 01:53:11 ERROR unit.postgresql-k8s/1.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-postgresql-k8s-1: 01:53:11 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 01:53:11 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 01:53:39 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 01:53:39 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 01:55:14 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 01:55:14 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 01:57:39 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 01:57:39 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 01:58:19 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 01:58:19 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 02:04:23 ERROR unit.postgresql-k8s/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/ops/model.py", line 3213, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-postgresql-k8s-1/relation-get', '-r', '5', '-', 'postgresql-k8s/1', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/./src/charm.py", line 2096, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/ops/main.py", line 553, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/ops/main.py", line 529, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/ops/main.py", line 518, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name, self._juju_context)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/ops/main.py", line 139, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/ops/framework.py", line 347, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/ops/framework.py", line 853, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/ops/framework.py", line 943, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 735, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/./src/charm.py", line 1333, in _on_update_status
+    if not self._on_update_status_early_exit_checks(container):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 735, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/./src/charm.py", line 1321, in _on_update_status_early_exit_checks
+    if not self.upgrade.idle:
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/upgrade.py", line 663, in idle
+    return set(self.unit_states) == {"idle"}
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/upgrade.py", line 634, in unit_states
+    return [self.peer_relation.data[unit].get("state", "") for unit in self.app_units]
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/upgrade.py", line 634, in <listcomp>
+    return [self.peer_relation.data[unit].get("state", "") for unit in self.app_units]
+  File "/usr/lib/python3.10/_collections_abc.py", line 824, in get
+    return self[key]
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/ops/model.py", line 1829, in __getitem__
+    return super().__getitem__(key)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/ops/model.py", line 851, in __getitem__
+    return self._data[key]
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/ops/model.py", line 835, in _data
+    data = self._lazy_data = self._load()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/ops/model.py", line 1717, in _load
+    return self._backend.relation_get(self.relation.id, self._entity.name, self._is_app)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/ops/model.py", line 3292, in relation_get
+    raw_data_content = self._run(*args, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/ops/model.py", line 3215, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR permission denied
+
+controller-0: 02:04:24 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql-k8s": cannot reconcile dead units in dying application: getting units for application postgresql-k8s: unable to fetch units for postgresql-k8s: cannot get status: unit not found
+controller-0: 02:04:24 ERROR juju.worker.storageprovisioner stopping application storage worker for postgresql-k8s: deprovisioning filesystems: getting filesystem information for filesystem 4: permission denied
+unit-test-storage-postgresql-k8s-0: 02:10:10 ERROR unit.test-storage-postgresql-k8s/0.juju-log failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 307, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 735, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 131, in _connect_to_database
+    connection = psycopg2.connect(
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "test-storage-postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.38), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/./src/charm.py", line 686, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 735, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 333, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError()
+charms.postgresql_k8s.v0.postgresql.PostgreSQLEnableDisableExtensionError
+unit-test-storage-postgresql-k8s-0: 02:10:24 ERROR unit.test-storage-postgresql-k8s/0.juju-log failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 307, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 735, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 131, in _connect_to_database
+    connection = psycopg2.connect(
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "test-storage-postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.38), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/./src/charm.py", line 686, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/lib/charms/tempo_k8s/v1/charm_tracing.py", line 735, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 333, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError()
+charms.postgresql_k8s.v0.postgresql.PostgreSQLEnableDisableExtensionError
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
