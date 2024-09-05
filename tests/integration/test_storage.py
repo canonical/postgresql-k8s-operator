@@ -36,7 +36,6 @@ async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest, database_c
         application_name=DATABASE_APP_NAME,
         num_units=1,
         trust=True,
-        storage={"pgdata": "rootfs,1G"},
     )
 
     # Saturate storage with some data
@@ -47,7 +46,7 @@ async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest, database_c
         connection.autocommit = True
         with connection.cursor() as cursor:
             cursor.execute("CREATE TABLE big_table (testcol INT);")
-            cursor.execute("INSERT INTO big_table SELECT generate_series(1,100000000);")
+            cursor.execute("INSERT INTO big_table SELECT generate_series(1,10000000000);")
     connection.close()
 
     # wait for charm to get blocked
