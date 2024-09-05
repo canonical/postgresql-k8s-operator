@@ -125,7 +125,7 @@ logger = logging.getLogger(__name__)
 
 EXTENSIONS_DEPENDENCY_MESSAGE = "Unsatisfied plugin dependencies. Please check the logs"
 EXTENSION_OBJECT_MESSAGE = "Cannot disable plugins: Existing objects depend on it. See logs"
-INSUFFICIENT_SIZE_WARNING = "<10%% free space on pgdata volume."
+INSUFFICIENT_SIZE_WARNING = "<10% free space on pgdata volume."
 
 ORIGINAL_PATRONI_ON_FAILURE_CONDITION = "restart"
 

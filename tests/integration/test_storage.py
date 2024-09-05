@@ -19,7 +19,6 @@ from .helpers import (
 
 logger = logging.getLogger(__name__)
 
-APP_NAME = "untrusted-postgresql-k8s"
 MAX_RETRIES = 20
 INSUFFICIENT_SIZE_WARNING = "<10%% free space on pgdata volume."
 
@@ -32,8 +31,7 @@ async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest):
     async with ops_test.fast_forward():
         await build_and_deploy(ops_test, 1)
 
-    # Write some data to the initial primary (this causes a divergence
-    # in the instances' timelines).
+    # Saturate storage with some data
     primary = await get_primary(ops_test)
     host = await get_unit_address(ops_test, primary)
     password = await get_password(ops_test)
@@ -44,6 +42,7 @@ async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest):
             cursor.execute("INSERT INTO big_table SELECT generate_series(1,600000000);")
     connection.close()
 
+    # wait for charm to get blocked
     async with ops_test.fast_forward():
         await ops_test.model.block_until(
             lambda: any(
@@ -53,6 +52,16 @@ async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest):
             timeout=500,
         )
 
-    leader_unit = await get_leader_unit(ops_test, APP_NAME)
+    leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
     assert leader_unit.workload_status == "blocked"
     assert leader_unit.workload_status_message == INSUFFICIENT_SIZE_WARNING
+
+    # Delete big table to release storage space
+    with db_connect(host, password) as connection:
+        connection.autocommit = True
+        with connection.cursor() as cursor:
+            cursor.execute("DROP TABLE big_table;")
+    connection.close()
+
+    # wait for charm to resolve
+    await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=1000)
