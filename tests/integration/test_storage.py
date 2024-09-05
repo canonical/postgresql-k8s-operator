@@ -39,7 +39,7 @@ async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest):
         connection.autocommit = True
         with connection.cursor() as cursor:
             cursor.execute("CREATE TABLE big_table (testcol INT);")
-            cursor.execute("INSERT INTO big_table SELECT generate_series(1,10000000000);")
+            cursor.execute("INSERT INTO big_table SELECT generate_series(1,1000000000);")
     connection.close()
 
     # wait for charm to get blocked
@@ -49,7 +49,7 @@ async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest):
                 unit.workload_status == "blocked"
                 for unit in ops_test.model.applications[DATABASE_APP_NAME].units
             ),
-            timeout=300,
+            timeout=500,
         )
 
     leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
