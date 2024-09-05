@@ -9,7 +9,7 @@ from pytest_operator.plugin import OpsTest
 
 from .helpers import (
     DATABASE_APP_NAME,
-    build_and_deploy,
+    METADATA,
     db_connect,
     get_leader_unit,
     get_password,
@@ -25,11 +25,19 @@ INSUFFICIENT_SIZE_WARNING = "<10% free space on pgdata volume."
 
 @pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest):
+async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest, database_charm):
     """Build and deploy the charm and saturate its pgdata volume."""
     # Build and deploy the PostgreSQL charm.
-    async with ops_test.fast_forward():
-        await build_and_deploy(ops_test, 1)
+    await ops_test.model.deploy(
+        database_charm,
+        resources={
+            "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
+        },
+        application_name=DATABASE_APP_NAME,
+        num_units=1,
+        trust=True,
+        storage={"pgdata": "1G"},
+    )
 
     # Saturate storage with some data
     primary = await get_primary(ops_test)
@@ -39,7 +47,7 @@ async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest):
         connection.autocommit = True
         with connection.cursor() as cursor:
             cursor.execute("CREATE TABLE big_table (testcol INT);")
-            cursor.execute("INSERT INTO big_table SELECT generate_series(1,600000000);")
+            cursor.execute("INSERT INTO big_table SELECT generate_series(1,100000000);")
     connection.close()
 
     # wait for charm to get blocked
@@ -49,7 +57,7 @@ async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest):
                 unit.workload_status == "blocked"
                 for unit in ops_test.model.applications[DATABASE_APP_NAME].units
             ),
-            timeout=500,
+            timeout=300,
         )
 
     leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
