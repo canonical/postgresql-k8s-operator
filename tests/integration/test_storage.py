@@ -36,7 +36,7 @@ async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest, database_c
         application_name=DATABASE_APP_NAME,
         num_units=1,
         trust=True,
-        storage={"pgdata": "1G"},
+        storage={"pgdata": {"size": 2048}},
     )
 
     # Saturate storage with some data
