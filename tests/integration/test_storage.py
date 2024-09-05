@@ -42,13 +42,11 @@ async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest):
         await ops_test.model.block_until(
             lambda: any(
                 unit.workload_status == "blocked"
+                and unit.workload_status_message == INSUFFICIENT_SIZE_WARNING
                 for unit in ops_test.model.applications[DATABASE_APP_NAME].units
             ),
             timeout=500,
         )
-
-    assert primary.workload_status == "blocked"
-    assert primary.workload_status_message == INSUFFICIENT_SIZE_WARNING
 
     # Delete big file to release storage space
     await run_command_on_unit(ops_test, primary, f"rm {STORAGE_PATH}/pgdata/tmp")
