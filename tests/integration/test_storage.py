@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 
 import logging
-import os
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -12,7 +11,8 @@ from .helpers import (
     DATABASE_APP_NAME,
     STORAGE_PATH,
     build_and_deploy,
-    get_leader_unit,
+    get_primary,
+    run_command_on_unit,
 )
 
 logger = logging.getLogger(__name__)
@@ -30,11 +30,12 @@ async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest):
         await build_and_deploy(ops_test, 1)
 
     # Saturate pgdata storage with random data
-    statvfs = os.statvfs(f"{STORAGE_PATH}/pgdata")
-    free_space = statvfs.f_bsize * statvfs.f_bfree
-    random_file_path = os.path.join(f"{STORAGE_PATH}/pgdata", "randomfile")
-    with open(random_file_path, "wb") as f:
-        f.write(os.urandom(free_space * 0.92))
+    primary = await get_primary(ops_test, DATABASE_APP_NAME)
+    await run_command_on_unit(
+        ops_test,
+        primary,
+        f"FREE_SPACE=$(df --output=avail {STORAGE_PATH}/pgdata | tail -1) && dd if=/dev/urandom of={STORAGE_PATH}/pgdata/tmp bs=1M count=$(( (FREE_SPACE * 91 / 100) / 1024 ))",
+    )
 
     # wait for charm to get blocked
     async with ops_test.fast_forward():
@@ -46,12 +47,11 @@ async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest):
             timeout=500,
         )
 
-    leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
-    assert leader_unit.workload_status == "blocked"
-    assert leader_unit.workload_status_message == INSUFFICIENT_SIZE_WARNING
+    assert primary.workload_status == "blocked"
+    assert primary.workload_status_message == INSUFFICIENT_SIZE_WARNING
 
     # Delete big file to release storage space
-    os.remove(random_file_path)
+    await run_command_on_unit(ops_test, primary, f"rm {STORAGE_PATH}/pgdata/tmp")
 
     # wait for charm to resolve
     await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=1000)
