@@ -1337,7 +1337,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.error("pgdata folder not found in %s", self.pgdata_path)
             return
 
-        logger.debug("pgdata free disk space: %s out of %s", free_size, total_size)
+        logger.debug(
+            "pgdata free disk space: %s out of %s, ratio of %s",
+            free_size,
+            total_size,
+            free_size / total_size,
+        )
         if free_size / total_size < 0.1:
             self.unit.status = BlockedStatus(INSUFFICIENT_SIZE_WARNING)
         elif self.unit.status.message == INSUFFICIENT_SIZE_WARNING:
