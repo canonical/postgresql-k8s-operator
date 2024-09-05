@@ -3,18 +3,16 @@
 # See LICENSE file for licensing details.
 
 import logging
+import os
 
 import pytest
 from pytest_operator.plugin import OpsTest
 
 from .helpers import (
     DATABASE_APP_NAME,
+    STORAGE_PATH,
     build_and_deploy,
-    db_connect,
     get_leader_unit,
-    get_password,
-    get_primary,
-    get_unit_address,
 )
 
 logger = logging.getLogger(__name__)
@@ -31,16 +29,12 @@ async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest):
     async with ops_test.fast_forward():
         await build_and_deploy(ops_test, 1)
 
-    # Saturate storage with some data
-    primary = await get_primary(ops_test)
-    host = await get_unit_address(ops_test, primary)
-    password = await get_password(ops_test)
-    with db_connect(host, password) as connection:
-        connection.autocommit = True
-        with connection.cursor() as cursor:
-            cursor.execute("CREATE TABLE big_table (testcol INT);")
-            cursor.execute("INSERT INTO big_table SELECT generate_series(1,600000000);")
-    connection.close()
+    # Saturate pgdata storage with random data
+    statvfs = os.statvfs(f"{STORAGE_PATH}/pgdata")
+    free_space = statvfs.f_bsize * statvfs.f_bfree
+    random_file_path = os.path.join(f"{STORAGE_PATH}/pgdata", "randomfile")
+    with open(random_file_path, "wb") as f:
+        f.write(os.urandom(free_space * 0.92))
 
     # wait for charm to get blocked
     async with ops_test.fast_forward():
@@ -56,12 +50,8 @@ async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest):
     assert leader_unit.workload_status == "blocked"
     assert leader_unit.workload_status_message == INSUFFICIENT_SIZE_WARNING
 
-    # Delete big table to release storage space
-    with db_connect(host, password) as connection:
-        connection.autocommit = True
-        with connection.cursor() as cursor:
-            cursor.execute("DROP TABLE big_table;")
-    connection.close()
+    # Delete big file to release storage space
+    os.remove(random_file_path)
 
     # wait for charm to resolve
     await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=1000)
