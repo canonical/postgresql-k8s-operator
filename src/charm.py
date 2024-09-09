@@ -98,6 +98,7 @@ from constants import (
     SECRET_DELETED_LABEL,
     SECRET_INTERNAL_LABEL,
     SECRET_KEY_OVERRIDES,
+    SPI_MODULE,
     SYSTEM_USERS,
     TLS_CA_FILE,
     TLS_CERT_FILE,
@@ -654,7 +655,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if self._patroni.get_primary() is None:
             logger.debug("Early exit enable_disable_extensions: standby cluster")
             return
-        spi_module = ["refint", "autoinc", "insert_username", "moddatetime"]
         original_status = self.unit.status
         extensions = {}
         # collect extensions
@@ -664,7 +664,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             # Enable or disable the plugin/extension.
             extension = "_".join(plugin.split("_")[1:-1])
             if extension == "spi":
-                for ext in spi_module:
+                for ext in SPI_MODULE:
                     extensions[ext] = enable
                 continue
             extension = PLUGIN_OVERRIDES.get(extension, extension)

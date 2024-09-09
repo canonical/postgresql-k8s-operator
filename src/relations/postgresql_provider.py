@@ -20,7 +20,7 @@ from ops.charm import CharmBase, RelationBrokenEvent, RelationChangedEvent, Rela
 from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, Relation
 
-from constants import DATABASE_PORT, ENDPOINT_SIMULTANEOUSLY_BLOCKING_MESSAGE, PLUGIN_OVERRIDES
+from constants import DATABASE_PORT, ENDPOINT_SIMULTANEOUSLY_BLOCKING_MESSAGE, PLUGIN_OVERRIDES, SPI_MODULE
 from utils import new_password
 
 logger = logging.getLogger(__name__)
@@ -93,6 +93,10 @@ class PostgreSQLProvider(Object):
                 if self.charm.config[plugin]
             ]
             plugins = [PLUGIN_OVERRIDES.get(plugin, plugin) for plugin in plugins]
+            if "spi" in plugins:
+                plugins.remove("spi")
+                for ext in SPI_MODULE:
+                    plugins.append(ext)
 
             self.charm.postgresql.create_database(
                 database, user, plugins=plugins, client_relations=self.charm.client_relations
