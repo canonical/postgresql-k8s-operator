@@ -90,6 +90,7 @@ from constants import (
     MONITORING_USER,
     PATRONI_PASSWORD_KEY,
     PEER,
+    PLUGIN_OVERRIDES,
     POSTGRES_LOG_FILES,
     REPLICATION_PASSWORD_KEY,
     REPLICATION_USER,
@@ -654,7 +655,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("Early exit enable_disable_extensions: standby cluster")
             return
         spi_module = ["refint", "autoinc", "insert_username", "moddatetime"]
-        plugins_exception = {"uuid_ossp": '"uuid-ossp"'}
         original_status = self.unit.status
         extensions = {}
         # collect extensions
@@ -667,7 +667,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 for ext in spi_module:
                     extensions[ext] = enable
                 continue
-            extension = plugins_exception.get(extension, extension)
+            extension = PLUGIN_OVERRIDES.get(extension, extension)
             if self._check_extension_dependencies(extension, enable):
                 self.unit.status = BlockedStatus(EXTENSIONS_DEPENDENCY_MESSAGE)
                 return

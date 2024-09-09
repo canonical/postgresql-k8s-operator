@@ -36,7 +36,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 34
+LIBPATCH = 35
 
 INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE = "invalid role(s) for extra user roles"
 
@@ -113,6 +113,15 @@ class PostgreSQL:
         self.password = password
         self.database = database
         self.system_users = system_users
+
+    def _configure_pgaudit(self, database: str, enable: bool) -> None:
+        with self._connect_to_database() as connection, connection.cursor() as cursor:
+            if enable:
+                cursor.execute(
+                    f"ALTER DATABASE {database} SET pgaudit.log to 'ROLE,DDL,MISC,MISC_SET';"
+                )
+            else:
+                cursor.execute(f"ALTER DATABASE {database} RESET pgaudit.log;")
 
     def _connect_to_database(
         self, database: str = None, database_host: str = None
@@ -325,6 +334,7 @@ class PostgreSQL:
                             if enable
                             else f"DROP EXTENSION IF EXISTS {extension};"
                         )
+            self._configure_pgaudit(database, ordered_extensions["pgaudit"])
         except psycopg2.errors.UniqueViolation:
             pass
         except psycopg2.errors.DependentObjectsStillExist:
