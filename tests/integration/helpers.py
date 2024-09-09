@@ -32,7 +32,7 @@ from tenacity import (
     wait_fixed,
 )
 
-CHARM_SERIES = "jammy"
+CHARM_BASE = "ubuntu@22.04"
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
 APPLICATION_NAME = "postgresql-test-app"
@@ -94,7 +94,7 @@ async def build_and_deploy(
             application_name=database_app_name,
             trust=True,
             num_units=num_units,
-            series=CHARM_SERIES,
+            base=CHARM_BASE,
             config={"profile": "testing"},
         ),
     )
@@ -293,6 +293,7 @@ async def deploy_and_relate_application_with_postgresql(
         channel=channel,
         application_name=application_name,
         num_units=number_of_units,
+        base=CHARM_BASE,
     )
     await ops_test.model.wait_for_idle(
         apps=[application_name],
@@ -828,8 +829,10 @@ async def backup_operations(
 ) -> None:
     """Basic set of operations for backup testing in different cloud providers."""
     # Deploy S3 Integrator and TLS Certificates Operator.
-    await ops_test.model.deploy(s3_integrator_app_name)
-    await ops_test.model.deploy(tls_certificates_app_name, config=tls_config, channel=tls_channel)
+    await ops_test.model.deploy(s3_integrator_app_name, base=CHARM_BASE)
+    await ops_test.model.deploy(
+        tls_certificates_app_name, config=tls_config, channel=tls_channel, base=CHARM_BASE
+    )
     # Deploy and relate PostgreSQL to S3 integrator (one database app for each cloud for now
     # as archivo_mode is disabled after restoring the backup) and to TLS Certificates Operator
     # (to be able to create backups from replicas).

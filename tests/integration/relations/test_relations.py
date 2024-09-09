@@ -7,7 +7,7 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..helpers import CHARM_SERIES
+from ..helpers import CHARM_BASE
 from ..new_relations.test_new_relations import (
     APPLICATION_APP_NAME,
     DATABASE_APP_METADATA,
@@ -34,7 +34,7 @@ async def test_deploy_charms(ops_test: OpsTest, database_charm):
                 APPLICATION_APP_NAME,
                 application_name=APPLICATION_APP_NAME,
                 num_units=1,
-                series=CHARM_SERIES,
+                base=CHARM_BASE,
                 channel="edge",
             ),
             ops_test.model.deploy(
@@ -46,7 +46,7 @@ async def test_deploy_charms(ops_test: OpsTest, database_charm):
                 },
                 application_name=APP_NAME,
                 num_units=1,
-                series=CHARM_SERIES,
+                base=CHARM_BASE,
                 config={
                     "profile": "testing",
                     "plugin_unaccent_enable": "True",

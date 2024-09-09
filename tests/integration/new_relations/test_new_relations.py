@@ -16,7 +16,7 @@ from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from .. import markers
 from ..helpers import (
-    CHARM_SERIES,
+    CHARM_BASE,
     check_database_users_existence,
     scale_application,
 )
@@ -56,7 +56,7 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest, databas
                 APPLICATION_APP_NAME,
                 application_name=APPLICATION_APP_NAME,
                 num_units=2,
-                series=CHARM_SERIES,
+                base=CHARM_BASE,
                 channel="edge",
             ),
             ops_test.model.deploy(
@@ -68,7 +68,7 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest, databas
                 },
                 application_name=DATABASE_APP_NAME,
                 num_units=3,
-                series=CHARM_SERIES,
+                base=CHARM_BASE,
                 trust=True,
                 config={"profile": "testing"},
             ),
@@ -81,7 +81,7 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest, databas
                 },
                 application_name=ANOTHER_DATABASE_APP_NAME,
                 num_units=3,
-                series=CHARM_SERIES,
+                base=CHARM_BASE,
                 trust=True,
                 config={"profile": "testing"},
             ),
@@ -192,7 +192,7 @@ async def test_two_applications_doesnt_share_the_same_relation_data(ops_test: Op
     await ops_test.model.deploy(
         APPLICATION_APP_NAME,
         application_name=another_application_app_name,
-        series=CHARM_SERIES,
+        base=CHARM_BASE,
         channel="edge",
     )
     await ops_test.model.wait_for_idle(apps=all_app_names, status="active")
@@ -449,7 +449,7 @@ async def test_admin_role(ops_test: OpsTest):
     all_app_names = [DATA_INTEGRATOR_APP_NAME]
     all_app_names.extend(APP_NAMES)
     async with ops_test.fast_forward():
-        await ops_test.model.deploy(DATA_INTEGRATOR_APP_NAME)
+        await ops_test.model.deploy(DATA_INTEGRATOR_APP_NAME, base=CHARM_BASE)
         await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR_APP_NAME], status="blocked")
         await ops_test.model.applications[DATA_INTEGRATOR_APP_NAME].set_config({
             "database-name": DATA_INTEGRATOR_APP_NAME.replace("-", "_"),
@@ -538,7 +538,9 @@ async def test_invalid_extra_user_roles(ops_test: OpsTest):
         another_data_integrator_app_name = f"another-{DATA_INTEGRATOR_APP_NAME}"
         data_integrator_apps_names = [DATA_INTEGRATOR_APP_NAME, another_data_integrator_app_name]
         await ops_test.model.deploy(
-            DATA_INTEGRATOR_APP_NAME, application_name=another_data_integrator_app_name
+            DATA_INTEGRATOR_APP_NAME,
+            application_name=another_data_integrator_app_name,
+            base=CHARM_BASE,
         )
         await ops_test.model.wait_for_idle(
             apps=[another_data_integrator_app_name], status="blocked"
@@ -593,7 +595,7 @@ async def test_discourse(ops_test: OpsTest):
     await gather(
         ops_test.model.deploy(DISCOURSE_APP_NAME, application_name=DISCOURSE_APP_NAME),
         ops_test.model.deploy(
-            REDIS_APP_NAME, application_name=REDIS_APP_NAME, channel="latest/edge"
+            REDIS_APP_NAME, application_name=REDIS_APP_NAME, channel="latest/edge", base=CHARM_BASE
         ),
     )
 
@@ -670,12 +672,17 @@ async def test_indico_datatabase(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward(fast_interval="30s"):
         await ops_test.model.deploy(
             "indico",
-            channel="stable",
+            channel="latest/edge",
             application_name="indico",
             num_units=1,
+            base=CHARM_BASE,
         )
-        await ops_test.model.deploy("redis-k8s", channel="stable", application_name="redis-broker")
-        await ops_test.model.deploy("redis-k8s", channel="stable", application_name="redis-cache")
+        await ops_test.model.deploy(
+            "redis-k8s", channel="stable", application_name="redis-broker", base=CHARM_BASE
+        )
+        await ops_test.model.deploy(
+            "redis-k8s", channel="stable", application_name="redis-cache", base=CHARM_BASE
+        )
         await asyncio.gather(
             ops_test.model.relate("redis-broker", "indico:redis-broker"),
             ops_test.model.relate("redis-cache", "indico:redis-cache"),

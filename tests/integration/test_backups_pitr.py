@@ -12,6 +12,7 @@ from tenacity import Retrying, stop_after_attempt, wait_exponential
 
 from . import architecture
 from .helpers import (
+    CHARM_BASE,
     DATABASE_APP_NAME,
     MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET,
     build_and_deploy,
@@ -104,8 +105,10 @@ async def pitr_backup_operations(
 ) -> None:
     """Utility function containing PITR backup operations for both cloud tests."""
     # Deploy S3 Integrator and TLS Certificates Operator.
-    await ops_test.model.deploy(s3_integrator_app_name)
-    await ops_test.model.deploy(tls_certificates_app_name, config=tls_config, channel=tls_channel)
+    await ops_test.model.deploy(s3_integrator_app_name, base=CHARM_BASE)
+    await ops_test.model.deploy(
+        tls_certificates_app_name, config=tls_config, channel=tls_channel, base=CHARM_BASE
+    )
     # Deploy and relate PostgreSQL to S3 integrator (one database app for each cloud for now
     # as archivo_mode is disabled after restoring the backup) and to TLS Certificates Operator
     # (to be able to create backups from replicas).
