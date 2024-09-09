@@ -282,9 +282,11 @@ async def pitr_backup_operations(
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
     # Remove the database app.
-    await ops_test.model.remove_application(database_app_name, block_until_done=True)
+    await ops_test.model.remove_application(database_app_name, block_until_done=True, timeout=1000)
     # Remove the TLS operator.
-    await ops_test.model.remove_application(tls_certificates_app_name, block_until_done=True)
+    await ops_test.model.remove_application(
+        tls_certificates_app_name, block_until_done=True, timeout=1000
+    )
 
 
 @pytest.mark.group(1)

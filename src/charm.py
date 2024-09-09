@@ -346,6 +346,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return self.remove_secret(scope, key)
 
         peers = self.model.get_relation(PEER)
+        if not peers:
+            return None
+
         secret_key = self._translate_field_to_secret_key(key)
         # Old translation in databag is to be deleted
         self.peer_relation_data(scope).delete_relation_data(peers.id, [key])
@@ -357,6 +360,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             raise RuntimeError("Unknown secret scope.")
 
         peers = self.model.get_relation(PEER)
+        if not peers:
+            return None
+
         secret_key = self._translate_field_to_secret_key(key)
         if scope == APP_SCOPE:
             self.peer_relation_app.delete_relation_data(peers.id, [secret_key])
@@ -2074,9 +2080,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 re.MULTILINE,
             )
         if len(patroni_exceptions) > 0:
+            logger.debug("Failures to bootstrap cluster detected on Patroni service logs")
             old_pitr_fail_id = self.unit_peer_data.get("last_pitr_fail_id", None)
             self.unit_peer_data["last_pitr_fail_id"] = patroni_exceptions[-1]
+
+            logger.debug("Patroni exception detected: %s", patroni_exceptions[-1])
+            logger.debug("last pitr failure stored: %s", old_pitr_fail_id)
+            logger.debug("Are they different? %s", str(patroni_exceptions[-1] != old_pitr_fail_id))
             return True, patroni_exceptions[-1] != old_pitr_fail_id
+        else:
+            logger.debug("No failures on Patroni service logs")
         return False, False
 
     def log_pitr_last_transaction_time(self) -> None:

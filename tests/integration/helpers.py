@@ -744,7 +744,7 @@ async def switchover(
         candidate: The unit that should be elected the new primary.
     """
     primary_ip = await get_unit_address(ops_test, current_primary)
-    for attempt in Retrying(stop=stop_after_attempt(4), wait=wait_fixed(5), reraise=True):
+    for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(5), reraise=True):
         with attempt:
             response = requests.post(
                 f"http://{primary_ip}:8008/switchover",
