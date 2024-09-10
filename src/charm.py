@@ -10,7 +10,6 @@ import logging
 import os
 import re
 import sys
-import time
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Tuple, get_args
 
@@ -2092,18 +2091,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             )
         except ExecError:  # For Juju 2.
             logger.debug("Pebble logs command failed. Trying patroni logs directly")
-
-        counter = 0
-        while len(patroni_exceptions) == 0 and counter < 10:
-            time.sleep(3)
-            log_exec = container.pebble.exec(["cat", "/var/log/postgresql/patroni.log"])
+            log_exec = container.pebble.exec(["cat", "/var/log/postgresql/patroni.log*"])
             patroni_logs = log_exec.wait_output()[0]
             patroni_exceptions = re.findall(
                 r"^([0-9- :]+) UTC \[[0-9]+\]: INFO: removing initialize key after failed attempt to bootstrap the cluster",
                 patroni_logs,
                 re.MULTILINE,
             )
-            counter += 1
 
         if len(patroni_exceptions) > 0:
             logger.debug("Failures to bootstrap cluster detected on Patroni service logs")
