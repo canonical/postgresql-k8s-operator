@@ -2091,13 +2091,32 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             )
         except ExecError:  # For Juju 2.
             logger.debug("Pebble logs command failed. Trying patroni logs directly")
-            log_exec = container.pebble.exec(["cat", "/var/log/postgresql/patroni.log*"])
+            log_exec = container.pebble.exec(["cat", "/var/log/postgresql/patroni.log"])
             patroni_logs = log_exec.wait_output()[0]
             patroni_exceptions = re.findall(
                 r"^([0-9- :]+) UTC \[[0-9]+\]: INFO: removing initialize key after failed attempt to bootstrap the cluster",
                 patroni_logs,
                 re.MULTILINE,
             )
+            # look for older logs
+            if len(patroni_exceptions) == 0:
+                logger.debug("Looking for older logs...")
+                log_exec = container.pebble.exec([
+                    "find",
+                    "/var/log/postgresql/",
+                    "-name",
+                    "'patroni.log.*'",
+                    "-exec",
+                    "cat",
+                    "{}",
+                    "+",
+                ])
+                patroni_logs = log_exec.wait_output()[0]
+                patroni_exceptions = re.findall(
+                    r"^([0-9- :]+) UTC \[[0-9]+\]: INFO: removing initialize key after failed attempt to bootstrap the cluster",
+                    patroni_logs,
+                    re.MULTILINE,
+                )
 
         if len(patroni_exceptions) > 0:
             logger.debug("Failures to bootstrap cluster detected on Patroni service logs")
