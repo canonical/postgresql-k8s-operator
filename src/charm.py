@@ -10,6 +10,7 @@ import logging
 import os
 import re
 import sys
+import time
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Tuple, get_args
 
@@ -78,7 +79,13 @@ from ops.pebble import (
     ServiceStatus,
 )
 from requests import ConnectionError
-from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
+from tenacity import (
+    RetryError,
+    Retrying,
+    stop_after_attempt,
+    stop_after_delay,
+    wait_fixed,
+)
 
 from backups import CANNOT_RESTORE_PITR, MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET, PostgreSQLBackups
 from config import CharmConfig
@@ -1332,19 +1339,28 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if not container.can_connect():
             logger.debug("on_update_status early exit: Cannot connect to container")
             return False
+
+        if self._has_blocked_status or self._has_non_restore_waiting_status:
+            # If charm was failing to disable plugin, try again and continue (user may have removed the objects)
+            if self.unit.status.message == EXTENSION_OBJECT_MESSAGE:
+                self.enable_disable_extensions()
+                return True
+
+            if (
+                self.unit.status.message == MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET
+                and "require-change-bucket-after-restore" not in self.app_peer_data
+            ):
+                logger.debug("Will try to resolve blocked status due to move restored cluster")
+                return True
+
+            logger.debug("on_update_status early exit: Unit is in Blocked/Waiting status")
+            return False
         return True
 
     def _on_update_status(self, _) -> None:
         """Update the unit status message."""
         container = self.unit.get_container("postgresql")
         if not self._on_update_status_early_exit_checks(container):
-            return
-
-        if self._has_blocked_status or self._has_non_restore_waiting_status:
-            # If charm was failing to disable plugin, try again (user may have removed the objects)
-            if self.unit.status.message == EXTENSION_OBJECT_MESSAGE:
-                self.enable_disable_extensions()
-            logger.debug("on_update_status early exit: Unit is in Blocked/Waiting status")
             return
 
         services = container.pebble.get_services(names=[self._postgresql_service])
@@ -2063,8 +2079,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 - Is patroni service failed to bootstrap cluster.
                 - Is it new fail, that wasn't observed previously.
         """
+        patroni_exceptions = []
         try:
-            log_exec = container.pebble.exec(["pebble", "logs", "postgresql"], combine_stderr=True)
+            log_exec = container.pebble.exec(
+                ["/charm/bin/pebble", "logs", "postgresql"], combine_stderr=True
+            )
             patroni_logs = log_exec.wait_output()[0]
             patroni_exceptions = re.findall(
                 r"^([0-9-:TZ.]+) \[postgresql] patroni\.exceptions\.PatroniFatalException: Failed to bootstrap cluster$",
@@ -2072,6 +2091,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 re.MULTILINE,
             )
         except ExecError:  # For Juju 2.
+            logger.debug("Pebble logs command failed. Trying patroni logs directly")
+
+        counter = 0
+        while len(patroni_exceptions) == 0 and counter < 10:
+            time.sleep(3)
             log_exec = container.pebble.exec(["cat", "/var/log/postgresql/patroni.log"])
             patroni_logs = log_exec.wait_output()[0]
             patroni_exceptions = re.findall(
@@ -2079,13 +2103,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 patroni_logs,
                 re.MULTILINE,
             )
+            counter += 1
+
         if len(patroni_exceptions) > 0:
             logger.debug("Failures to bootstrap cluster detected on Patroni service logs")
             old_pitr_fail_id = self.unit_peer_data.get("last_pitr_fail_id", None)
             self.unit_peer_data["last_pitr_fail_id"] = patroni_exceptions[-1]
             return True, patroni_exceptions[-1] != old_pitr_fail_id
-        else:
-            logger.debug("No failures detected on Patroni service logs")
+
+        logger.debug("No failures detected on Patroni service logs")
         return False, False
 
     def log_pitr_last_transaction_time(self) -> None:
