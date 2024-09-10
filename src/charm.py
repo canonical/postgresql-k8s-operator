@@ -941,6 +941,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._set_active_status()
 
     def _set_active_status(self):
+        # The charm should not override this status outside of the function checking disk space.
+        if self.unit.status.message == INSUFFICIENT_SIZE_WARNING:
+            return
         if "require-change-bucket-after-restore" in self.app_peer_data:
             if self.unit.is_leader():
                 self.app_peer_data.update({
@@ -1346,6 +1349,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if free_size / total_size < 0.1:
             self.unit.status = BlockedStatus(INSUFFICIENT_SIZE_WARNING)
         elif self.unit.status.message == INSUFFICIENT_SIZE_WARNING:
+            self.unit.status = ActiveStatus()
             self._set_active_status()
 
     def _on_update_status(self, _) -> None:
