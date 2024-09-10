@@ -6,15 +6,19 @@ import logging
 import psycopg2 as psycopg2
 import pytest as pytest
 from pytest_operator.plugin import OpsTest
+from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from .helpers import (
+    APPLICATION_NAME,
     DATABASE_APP_NAME,
     build_and_deploy,
     db_connect,
     get_password,
     get_primary,
     get_unit_address,
+    run_command_on_unit,
 )
+from .new_relations.helpers import build_connection_string
 
 logger = logging.getLogger(__name__)
 
@@ -86,6 +90,7 @@ VECTOR_EXTENSION_STATEMENT = (
     "CREATE TABLE vector_test (id bigserial PRIMARY KEY, embedding vector(3));"
 )
 TIMESCALEDB_EXTENSION_STATEMENT = "CREATE TABLE test_timescaledb (time TIMESTAMPTZ NOT NULL); SELECT create_hypertable('test_timescaledb', 'time');"
+RELATION_ENDPOINT = "database"
 
 
 @pytest.mark.group(1)
@@ -258,7 +263,70 @@ async def test_plugin_objects(ops_test: OpsTest) -> None:
 @pytest.mark.group(1)
 async def test_audit_plugin(ops_test: OpsTest) -> None:
     """Test the audit plugin."""
+    await ops_test.model.deploy(APPLICATION_NAME)
+    await ops_test.model.relate(f"{APPLICATION_NAME}:{RELATION_ENDPOINT}", DATABASE_APP_NAME)
+    async with ops_test.fast_forward():
+        await ops_test.model.wait_for_idle(
+            apps=[APPLICATION_NAME, DATABASE_APP_NAME], status="active"
+        )
+
+    # Check that the audit plugin is disabled.
+    connection_string = await build_connection_string(
+        ops_test, APPLICATION_NAME, RELATION_ENDPOINT
+    )
+    connection = None
+    try:
+        connection = psycopg2.connect(connection_string)
+        with connection.cursor() as cursor:
+            cursor.execute("CREATE TABLE test1(value TEXT);")
+            cursor.execute("GRANT SELECT ON test1 TO PUBLIC;")
+            cursor.execute("SET TIME ZONE 'Europe/Rome';")
+    except Exception:
+        if connection is not None:
+            connection.close()
+    try:
+        primary = await get_primary(ops_test)
+        logs = await run_command_on_unit(
+            ops_test,
+            primary,
+            "grep AUDIT /var/log/postgresql/postgresql-*.log",
+        )
+    except Exception:
+        pass
+    else:
+        logger.info(f"Logs: {logs}")
+        assert False, "Audit logs were found when the plugin is disabled."
+
+    # Enable the audit plugin.
     await ops_test.model.applications[DATABASE_APP_NAME].set_config({
         "plugin_audit_enable": "True"
     })
     await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active")
+
+    # Check that the audit plugin is enabled.
+    try:
+        connection = psycopg2.connect(connection_string)
+        with connection.cursor() as cursor:
+            cursor.execute("CREATE TABLE test2(value TEXT);")
+            cursor.execute("GRANT SELECT ON test2 TO PUBLIC;")
+            cursor.execute("SET TIME ZONE 'Europe/Rome';")
+    except Exception:
+        if connection is not None:
+            connection.close()
+    for attempt in Retrying(stop=stop_after_delay(90), wait=wait_fixed(10), reraise=True):
+        with attempt:
+            try:
+                primary = await get_primary(ops_test)
+                logs = await run_command_on_unit(
+                    ops_test,
+                    primary,
+                    "grep AUDIT /var/log/postgresql/postgresql-*.log",
+                )
+                assert "MISC,BEGIN,,,BEGIN" in logs
+                assert (
+                    "DDL,CREATE TABLE,TABLE,public.test2,CREATE TABLE test2(value TEXT);" in logs
+                )
+                assert "ROLE,GRANT,TABLE,,GRANT SELECT ON test2 TO PUBLIC;" in logs
+                assert "MISC,SET,,,SET TIME ZONE 'Europe/Rome';" in logs
+            except Exception:
+                assert False, "Audit logs were not found when the plugin is enabled."

@@ -2091,6 +2091,20 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         else:
             logger.error("Can't tell last completed transaction time")
 
+    def get_plugins(self) -> List[str]:
+        """Return a list of installed plugins."""
+        plugins = [
+            "_".join(plugin.split("_")[1:-1])
+            for plugin in self.config.plugin_keys()
+            if self.config[plugin]
+        ]
+        plugins = [PLUGIN_OVERRIDES.get(plugin, plugin) for plugin in plugins]
+        if "spi" in plugins:
+            plugins.remove("spi")
+            for ext in SPI_MODULE:
+                plugins.append(ext)
+        return plugins
+
 
 if __name__ == "__main__":
     main(PostgresqlOperatorCharm, use_juju_for_storage=True)
