@@ -10,7 +10,6 @@ from ops.testing import Harness
 
 from charm import PostgresqlOperatorCharm
 from constants import PEER
-from tests.helpers import patch_network_get
 
 RELATION_NAME = "certificates"
 SCOPE = "unit"
@@ -88,7 +87,6 @@ def test_on_set_tls_private_key(harness):
         _request_certificate.assert_called_once_with("test-key")
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_request_certificate(harness):
     with (
         patch(
@@ -109,12 +107,12 @@ def test_request_certificate(harness):
         generate_csr_call = call(
             private_key=b"fake private key",
             subject="postgresql-k8s-0.postgresql-k8s-endpoints",
-            sans_ip=["1.1.1.1"],
+            sans_ip=["192.0.2.0"],
             sans_dns=[
                 "postgresql-k8s-0",
                 "postgresql-k8s-0.postgresql-k8s-endpoints",
                 socket.getfqdn(),
-                "1.1.1.1",
+                "192.0.2.0",
                 f"postgresql-k8s-primary.{harness.charm.model.name}.svc.cluster.local",
                 f"postgresql-k8s-replicas.{harness.charm.model.name}.svc.cluster.local",
             ],
@@ -142,12 +140,12 @@ def test_request_certificate(harness):
         custom_key_generate_csr_call = call(
             private_key=key.encode("utf-8"),
             subject="postgresql-k8s-0.postgresql-k8s-endpoints",
-            sans_ip=["1.1.1.1"],
+            sans_ip=["192.0.2.0"],
             sans_dns=[
                 "postgresql-k8s-0",
                 "postgresql-k8s-0.postgresql-k8s-endpoints",
                 socket.getfqdn(),
-                "1.1.1.1",
+                "192.0.2.0",
                 f"postgresql-k8s-primary.{harness.charm.model.name}.svc.cluster.local",
                 f"postgresql-k8s-replicas.{harness.charm.model.name}.svc.cluster.local",
             ],
@@ -180,7 +178,6 @@ def test_on_tls_relation_joined(harness):
         _request_certificate.assert_called_once_with(None)
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_on_tls_relation_broken(harness):
     with patch("charm.PostgresqlOperatorCharm.update_config") as _update_config:
         _update_config.reset_mock()
@@ -219,7 +216,6 @@ def test_on_certificate_available(harness):
         _defer.assert_called_once()
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_on_certificate_expiring(harness):
     with (
         patch(
@@ -241,16 +237,15 @@ def test_on_certificate_expiring(harness):
         _request_certificate_renewal.assert_called_once()
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_get_sans(harness):
     sans = harness.charm.tls._get_sans()
     assert sans == {
-        "sans_ip": ["1.1.1.1"],
+        "sans_ip": ["192.0.2.0"],
         "sans_dns": [
             "postgresql-k8s-0",
             "postgresql-k8s-0.postgresql-k8s-endpoints",
             socket.getfqdn(),
-            "1.1.1.1",
+            "192.0.2.0",
             "postgresql-k8s-primary.None.svc.cluster.local",
             "postgresql-k8s-replicas.None.svc.cluster.local",
         ],
