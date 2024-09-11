@@ -849,6 +849,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     Endpoints, name=self.cluster_name, namespace=self._namespace, obj=patch
                 )
                 self.app_peer_data.pop("cluster_initialised", None)
+                logger.info("Fixed missing leader annotation")
         except ApiError as e:
             if e.status.code == 403:
                 self.on_deployed_without_trust()
