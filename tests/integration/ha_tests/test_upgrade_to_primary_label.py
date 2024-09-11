@@ -10,6 +10,7 @@ from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from .. import markers
+from ..architecture import architecture
 from ..helpers import (
     APPLICATION_NAME,
     DATABASE_APP_NAME,
@@ -39,6 +40,7 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
             DATABASE_APP_NAME,
             num_units=3,
             channel="14/stable",
+            revision=(280 if architecture == "arm64" else 281),
             trust=True,
         ),
         ops_test.model.deploy(
