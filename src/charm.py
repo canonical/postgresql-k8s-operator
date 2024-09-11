@@ -79,13 +79,7 @@ from ops.pebble import (
     ServiceStatus,
 )
 from requests import ConnectionError
-from tenacity import (
-    RetryError,
-    Retrying,
-    stop_after_attempt,
-    stop_after_delay,
-    wait_fixed,
-)
+from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
 from backups import CANNOT_RESTORE_PITR, MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET, PostgreSQLBackups
 from config import CharmConfig
@@ -2105,11 +2099,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 - Is patroni service failed to bootstrap cluster.
                 - Is it new fail, that wasn't observed previously.
         """
-        patroni_exceptions = []
         try:
-            log_exec = container.pebble.exec(
-                ["/charm/bin/pebble", "logs", "postgresql"], combine_stderr=True
-            )
+            log_exec = container.pebble.exec(["pebble", "logs", "postgresql"], combine_stderr=True)
             patroni_logs = log_exec.wait_output()[0]
             patroni_exceptions = re.findall(
                 r"^([0-9-:TZ.]+) \[postgresql] patroni\.exceptions\.PatroniFatalException: Failed to bootstrap cluster$",
@@ -2117,7 +2108,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 re.MULTILINE,
             )
         except ExecError:  # For Juju 2.
-            logger.debug("Pebble logs command failed. Trying patroni logs directly")
             log_exec = container.pebble.exec(["cat", "/var/log/postgresql/patroni.log"])
             patroni_logs = log_exec.wait_output()[0]
             patroni_exceptions = re.findall(
@@ -2125,9 +2115,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 patroni_logs,
                 re.MULTILINE,
             )
-            # look for older logs
+            # If no match, look at older logs
             if len(patroni_exceptions) == 0:
-                logger.debug("Looking for older logs...")
                 log_exec = container.pebble.exec([
                     "find",
                     "/var/log/postgresql/",
