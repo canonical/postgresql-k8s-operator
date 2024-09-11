@@ -1338,6 +1338,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("on_update_status early exit: Cannot connect to container")
             return False
 
+        self._check_pgdata_storage_size()
+
         if self._has_blocked_status or self._has_non_restore_waiting_status:
             # If charm was failing to disable plugin, try again and continue (user may have removed the objects)
             if self.unit.status.message == EXTENSION_OBJECT_MESSAGE:
@@ -1380,8 +1382,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         container = self.unit.get_container("postgresql")
         if not self._on_update_status_early_exit_checks(container):
             return
-
-        self._check_pgdata_storage_size()
 
         services = container.pebble.get_services(names=[self._postgresql_service])
         if len(services) == 0:
