@@ -138,7 +138,7 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
         "--channel",
         "14/stable",
         "--revision",
-        f"{(280 if architecture == 'arm64' else 281)}",
+        "281",
     )
 
     async with ops_test.fast_forward("60s"):
