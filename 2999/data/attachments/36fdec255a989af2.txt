@@ -1,0 +1,52 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:766 Connecting to existing model microk8s-localhost:test on unspecified cloud
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/jammy/postgresql-test-app-242
+[32mINFO    [0m juju.model:model.py:2098 Deploying local:jammy/postgresql-k8s-0
+[32mINFO    [0m juju.model:model.py:2098 Deploying local:jammy/postgresql-k8s-1
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  database/0 [allocating] waiting: installing agent
+  database/1 [allocating] waiting: installing agent
+  database/2 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  database/0 [allocating] waiting: agent initialising
+  database/1 [allocating] waiting: agent initialising
+  database/2 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  database/0 [executing] maintenance: installing charm software
+  database/1 [executing] maintenance: installing charm software
+  database/2 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  database/0 [executing] waiting: awaiting for cluster to start
+  database/1 [executing] unknown: 
+  database/2 [executing] unknown: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  database/0 [executing] waiting: awaiting for primary endpoint to be ready
+  database/1 [executing] unknown: 
+  database/2 [executing] unknown: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  database/0 [idle] active: Primary
+  database/1 [idle] unknown: 
+  database/2 [idle] unknown: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  database/0 [idle] active: Primary
+  database/1 [idle] waiting: awaiting for cluster to start
+  database/2 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  database/0 [idle] maintenance: reconfiguring cluster
+  database/1 [idle] waiting: awaiting for cluster to start
+  database/2 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  database/0 [idle] active: Primary
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  database/0 [idle] active: Primary
+  database/1 [idle] active: 
+  database/2 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  database/0 [idle] active: Primary
+  database/1 [idle] active: 
+  database/2 [idle] active: 
+[32mINFO    [0m integration.new_relations.test_new_relations:test_new_relations.py:99 checking for secrets
+[32mINFO    [0m httpx:_client.py:1786 HTTP Request: GET https://10.1.0.29:16443/api/v1/namespaces/test/services/database-primary "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1786 HTTP Request: GET https://10.1.0.29:16443/api/v1/namespaces/test/services/database-replicas "HTTP/1.1 200 OK"
