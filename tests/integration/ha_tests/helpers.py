@@ -1,5 +1,6 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
+import ast
 import asyncio
 import json
 import os
@@ -542,6 +543,32 @@ async def inject_dependency_fault(
     # Overwrite dependency.json with incompatible version.
     with zipfile.ZipFile(charm_file, mode="a") as charm_zip:
         charm_zip.writestr("src/dependency.json", json.dumps(loaded_dependency_dict))
+
+
+async def inject_stop_hook_fault(ops_test: OpsTest, unit_name: str) -> None:
+    """Inject a stop hook fault into the PostgreSQL charm."""
+    # Load the src/charm.py contents from the unit.
+    charm_code = await run_command_on_unit(
+        ops_test,
+        unit_name,
+        f'cat agents/unit-{unit_name.replace("/", "-")}/charm/src/charm.py',
+        "charm",
+    )
+
+    # Inject the faulty stop hook.
+    parsed_charm_code = ast.parse(charm_code)
+    for node in parsed_charm_code.body:
+        if not isinstance(node, ast.ClassDef):
+            continue
+        for sub_node in node.body:
+            if isinstance(sub_node, ast.FunctionDef) and sub_node.name == "_on_stop":
+                sub_node.body = [ast.Raise()]
+                print(f"sub_node.name: {sub_node.name}")
+                print(f"sub_node.body: {ast.dump(sub_node, indent=4)}")
+                break
+
+    # Overwrite src/charm.py in the unit.
+    # TODO.
 
 
 async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:

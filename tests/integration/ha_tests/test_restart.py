@@ -21,6 +21,7 @@ from ..helpers import (
 from .helpers import (
     are_writes_increasing,
     check_writes,
+    inject_stop_hook_fault,
     start_continuous_writes,
 )
 
@@ -56,6 +57,20 @@ async def test_restart(ops_test: OpsTest, continuous_writes) -> None:
     logger.info("checking whether writes are increasing")
     await are_writes_increasing(ops_test)
 
+    logger.info(
+        "patch the stop hook of one non-primary unit to simulate a crash and prevent firing the update-charm hook"
+    )
+    primary = await get_primary(ops_test)
+    status = await ops_test.model.get_status()
+    for unit in status.applications[DATABASE_APP_NAME].units:
+        if unit != primary:
+            non_primary = unit
+            break
+    await inject_stop_hook_fault(ops_test, non_primary)
+
+    # Disable the automatic retry of hooks to avoid the stop hook being retried.
+    await ops_test.model.set_config({"automatically-retry-hooks": "false"})
+
     logger.info("restarting all the units by deleting their pods")
     client = dynamic.DynamicClient(api_client.ApiClient(configuration=config.load_kube_config()))
     api = client.resources.get(api_version="v1", kind="Pod")
@@ -71,11 +86,14 @@ async def test_restart(ops_test: OpsTest, continuous_writes) -> None:
 
     # Check that all replication slots are present in the primary
     # (by checking the list of cluster members).
+    logger.info(
+        "checking that all the replication slots are present in the primary by checking the list of cluster members"
+    )
     primary = await get_primary(ops_test)
     address = await get_unit_address(ops_test, primary)
     assert get_cluster_members(address) == get_application_units(ops_test, DATABASE_APP_NAME)
 
-    logger.info("Ensure continuous_writes after the crashed unit")
+    logger.info("ensure continuous_writes after the crashed unit")
     await are_writes_increasing(ops_test)
 
     # Verify that no writes to the database were missed after stopping the writes
