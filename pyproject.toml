@@ -8,11 +8,11 @@ package-mode = false
 python = "^3.10"
 ops = "^2.16.1"
 cryptography = "^43.0.1"
-boto3 = "^1.35.15"
+boto3 = "^1.35.18"
 pgconnstr = "^1.0.1"
 requests = "^2.32.3"
 tenacity = "^9.0.0"
-cosl = "^0.0.31"
+cosl = "^0.0.32"
 pydantic = "^1.10.18"
 poetry-core = "^1.9.0"
 jsonschema = "^4.23.0"
@@ -53,7 +53,7 @@ optional = true
 [tool.poetry.group.unit.dependencies]
 coverage = {extras = ["toml"], version = "^7.6.1"}
 pydantic = "^1.10.18"
-pytest = "^8.3.2"
+pytest = "^8.3.3"
 pytest-mock = "^3.14.0"
 pytest-asyncio = "*"
 parameterized = "^0.9.0"
@@ -63,7 +63,7 @@ optional = true
 
 [tool.poetry.group.integration.dependencies]
 lightkube = "^0.15.4"
-pytest = "^8.3.2"
+pytest = "^8.3.3"
 pytest-github-secrets = {git = "https://github.com/canonical/data-platform-workflows", tag = "v21.0.1", subdirectory = "python/pytest_plugins/github_secrets"}
 pytest-operator = "^0.36.0"
 pytest-operator-cache = {git = "https://github.com/canonical/data-platform-workflows", tag = "v21.0.1", subdirectory = "python/pytest_plugins/pytest_operator_cache"}
@@ -72,7 +72,7 @@ allure-pytest-collection-report = {git = "https://github.com/canonical/data-plat
 # renovate caret doesn't work: https://github.com/renovatebot/renovate/issues/26940
 juju = "<=3.5.2.0"
 psycopg2-binary = "^2.9.9"
-boto3 = "^1.35.15"
+boto3 = "^1.35.18"
 tenacity = "^9.0.0"
 allure-pytest = "^2.13.5"
 
