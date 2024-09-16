@@ -1437,19 +1437,21 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _was_restore_successful(self, container: Container, service: ServiceInfo) -> bool:
         """Checks if restore operation succeeded and S3 is properly configured."""
-        if service.current != ServiceStatus.ACTIVE:
-            if "restore-to-time" in self.app_peer_data and all(self.is_pitr_failed(container)):
-                logger.error(
-                    "Restore failed: database service failed to reach point-in-time-recovery target. "
-                    "You can launch another restore with different parameters"
-                )
-                self.log_pitr_last_transaction_time()
-                self.unit.status = BlockedStatus(CANNOT_RESTORE_PITR)
-                return False
+        if "restore-to-time" in self.app_peer_data and all(self.is_pitr_failed(container)):
+            logger.error(
+                "Restore failed: database service failed to reach point-in-time-recovery target. "
+                "You can launch another restore with different parameters"
+            )
+            self.log_pitr_last_transaction_time()
+            self.unit.status = BlockedStatus(CANNOT_RESTORE_PITR)
+            return False
 
-            if self.unit.status.message != CANNOT_RESTORE_PITR:
-                logger.error("Restore failed: database service failed to start")
-                self.unit.status = BlockedStatus("Failed to restore backup")
+        if (
+            service.current != ServiceStatus.ACTIVE
+            and self.unit.status.message != CANNOT_RESTORE_PITR
+        ):
+            logger.error("Restore failed: database service failed to start")
+            self.unit.status = BlockedStatus("Failed to restore backup")
             return False
 
         if not self._patroni.member_started:
