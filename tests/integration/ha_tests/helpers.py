@@ -1,6 +1,5 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
-import ast
 import asyncio
 import json
 import os
@@ -545,57 +544,6 @@ async def inject_dependency_fault(
         charm_zip.writestr("src/dependency.json", json.dumps(loaded_dependency_dict))
 
 
-async def inject_stop_hook_fault(ops_test: OpsTest, unit_name: str) -> None:
-    """Inject a stop hook fault into the PostgreSQL charm."""
-    # Load the src/charm.py contents from the unit.
-    path = f'/var/lib/juju/agents/unit-{unit_name.replace("/", "-")}/charm/src/charm.py'
-    charm_code = await run_command_on_unit(
-        ops_test,
-        unit_name,
-        f"cat {path}",
-        "charm",
-    )
-
-    # Inject the faulty stop hook.
-    parsed_charm_code = ast.parse(charm_code)
-    for node in parsed_charm_code.body:
-        if not isinstance(node, ast.ClassDef):
-            continue
-        for sub_node in node.body:
-            if isinstance(sub_node, ast.FunctionDef) and sub_node.name == "_on_stop":
-                sub_node.body = [ast.Raise()]
-                print(f"sub_node.name: {sub_node.name}")
-                print(f"sub_node.body: {ast.dump(sub_node, indent=4)}")
-                break
-
-    # Overwrite src/charm.py in the unit.
-    kubernetes.config.load_kube_config()
-    client = kubernetes.client.api.core_v1_api.CoreV1Api()
-
-    pod_name = unit_name.replace("/", "-")
-    container_name = "charm"
-
-    with tempfile.NamedTemporaryFile() as temp_file:
-        temp_file.write(str.encode(ast.unparse(parsed_charm_code)))
-        temp_file.flush()
-
-        copy_file_into_pod(
-            client,
-            ops_test.model.info.name,
-            pod_name,
-            container_name,
-            path,
-            temp_file.name,
-        )
-
-    await run_command_on_unit(
-        ops_test,
-        unit_name,
-        f"chown root:root {path} && chmod 755 {path}",
-        "charm",
-    )
-
-
 async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
     """Test a connection to a PostgreSQL server."""
     try:
@@ -821,6 +769,16 @@ async def is_secondary_up_to_date(ops_test: OpsTest, unit_name: str, expected_wr
         connection.close()
 
     return True
+
+
+async def remove_charm_code(ops_test: OpsTest, unit_name: str) -> None:
+    """Remove src/charm.py from the PostgreSQL unit."""
+    await run_command_on_unit(
+        ops_test,
+        unit_name,
+        f'rm /var/lib/juju/agents/unit-{unit_name.replace("/", "-")}/charm/src/charm.py',
+        "charm",
+    )
 
 
 async def send_signal_to_process(

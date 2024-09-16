@@ -21,7 +21,7 @@ from ..helpers import (
 from .helpers import (
     are_writes_increasing,
     check_writes,
-    inject_stop_hook_fault,
+    remove_charm_code,
     start_continuous_writes,
 )
 
@@ -59,7 +59,7 @@ async def test_restart(ops_test: OpsTest, continuous_writes) -> None:
     await are_writes_increasing(ops_test)
 
     logger.info(
-        "patch the stop hook of one non-primary unit to simulate a crash and prevent firing the update-charm hook"
+        "removing charm code from one non-primary unit to simulate a crash and prevent firing the update-charm hook"
     )
     primary = await get_primary(ops_test)
     status = await ops_test.model.get_status()
@@ -67,8 +67,8 @@ async def test_restart(ops_test: OpsTest, continuous_writes) -> None:
         if unit != primary:
             non_primary = unit
             break
-    await inject_stop_hook_fault(ops_test, non_primary)
-    logger.info(f"{non_primary} patched")
+    await remove_charm_code(ops_test, non_primary)
+    logger.info(f"removed charm code from {non_primary}")
 
     logger.info("restarting all the units by deleting their pods")
     client = dynamic.DynamicClient(api_client.ApiClient(configuration=config.load_kube_config()))
