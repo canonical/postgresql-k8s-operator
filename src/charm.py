@@ -2107,18 +2107,20 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 - Is patroni service failed to bootstrap cluster.
                 - Is it new fail, that wasn't observed previously.
         """
-        try:
-            log_exec = container.pebble.exec(["pebble", "logs", "postgresql"], combine_stderr=True)
-            patroni_logs = log_exec.wait_output()[0]
-            patroni_exceptions = re.findall(
-                r"^([0-9-:TZ.]+) \[postgresql] patroni\.exceptions\.PatroniFatalException: Failed to bootstrap cluster$",
-                patroni_logs,
-                re.MULTILINE,
-            )
-        except ExecError:  # For Juju 2.
-            patroni_exceptions = []
-            count = 0
-            while len(patroni_exceptions) == 0 and count < 10:
+        patroni_exceptions = []
+        count = 0
+        while len(patroni_exceptions) == 0 and count < 10:
+            try:
+                log_exec = container.pebble.exec(
+                    ["pebble", "logs", "postgresql"], combine_stderr=True
+                )
+                patroni_logs = log_exec.wait_output()[0]
+                patroni_exceptions = re.findall(
+                    r"^([0-9-:TZ.]+) \[postgresql] patroni\.exceptions\.PatroniFatalException: Failed to bootstrap cluster$",
+                    patroni_logs,
+                    re.MULTILINE,
+                )
+            except ExecError:  # For Juju 2.
                 log_exec = container.pebble.exec(["cat", "/var/log/postgresql/patroni.log"])
                 patroni_logs = log_exec.wait_output()[0]
                 patroni_exceptions = re.findall(
@@ -2145,8 +2147,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     patroni_logs,
                     re.MULTILINE,
                 )
-                count += 1
-                time.sleep(3)
+            count += 1
+            time.sleep(3)
 
         if len(patroni_exceptions) > 0:
             logger.debug("Failures to bootstrap cluster detected on Patroni service logs")
