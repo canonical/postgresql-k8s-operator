@@ -1,0 +1,60 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:766 Connecting to existing model microk8s-localhost:test on unspecified cloud
+[32mINFO    [0m juju.model:model.py:2098 Deploying local:jammy/postgresql-k8s-0
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [executing] active: Primary
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/jammy/data-integrator-41
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  data-integrator/0 [allocating] waiting: installing agent
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  data-integrator/0 [idle] blocked: Please relate the data-integrator with the desired product
+[32mINFO    [0m httpx:_client.py:1786 HTTP Request: GET https://10.1.0.180:16443/api/v1/namespaces/test/services/postgresql-k8s-primary "HTTP/1.1 200 OK"
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  data-integrator/0 [idle] active: 
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  data-integrator/0 [idle] blocked: Please relate the data-integrator with the desired product
+[32mINFO    [0m httpx:_client.py:1786 HTTP Request: GET https://10.1.0.180:16443/api/v1/namespaces/test/services/postgresql-k8s-primary "HTTP/1.1 200 OK"
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  data-integrator/0 [idle] active: 
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  data-integrator/0 [idle] blocked: Please relate the data-integrator with the desired product
+[32mINFO    [0m integration.new_relations.test_relations_coherence:test_relations_coherence.py:126 connecting to the following database: data_integrator
+[32mINFO    [0m httpx:_client.py:1786 HTTP Request: GET https://10.1.0.180:16443/api/v1/namespaces/test/services/postgresql-k8s-primary "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.new_relations.test_relations_coherence:test_relations_coherence.py:126 connecting to the following database: postgres
+[32mINFO    [0m httpx:_client.py:1786 HTTP Request: GET https://10.1.0.180:16443/api/v1/namespaces/test/services/postgresql-k8s-primary "HTTP/1.1 200 OK"
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.4.5    unsupported  01:37:44Z
+
+App              Version  Status  Scale  Charm            Channel        Rev  Address         Exposed  Message
+data-integrator           active      1  data-integrator  latest/stable   41  10.152.183.100  no       
+postgresql-k8s   14.13    active      1  postgresql-k8s                    0  10.152.183.122  no       
+
+Unit                Workload  Agent  Address      Ports  Message
+data-integrator/0*  active    idle   10.1.238.74         
+postgresql-k8s/0*   active    idle   10.1.238.73         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
