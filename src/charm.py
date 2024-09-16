@@ -556,20 +556,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.error("Invalid configuration: %s", str(e))
             return
 
-        # If PITR restore failed, then wait it for resolve.
-        if (
-            "restoring-backup" in self.app_peer_data or "restore-to-time" in self.app_peer_data
-        ) and isinstance(self.unit.status, BlockedStatus):
+        # Should not override a blocked status
+        if isinstance(self.unit.status, BlockedStatus):
             event.defer()
             return
-
-        services = container.pebble.get_services(names=[self._postgresql_service])
-        if len(services) > 0 and services[0].current != ServiceStatus.ACTIVE:
-            logger.warning("Restarting pebble service container.")
-            try:
-                container.restart(self._postgresql_service)
-            except ChangeError:
-                logger.exception("Failed to restart patroni service!")
 
         # Validate the status of the member before setting an ActiveStatus.
         if not self._patroni.member_started:
