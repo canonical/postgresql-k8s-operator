@@ -1783,7 +1783,7 @@ def test_create_pgdata(harness):
 def test_get_plugins(harness):
     with patch("charm.PostgresqlOperatorCharm._on_config_changed"):
         # Test when the charm has no plugins enabled.
-        assert harness.charm.get_plugins() == []
+        assert harness.charm.get_plugins() == ["pgaudit"]
 
         # Test when the charm has some plugins enabled.
         harness.update_config({
