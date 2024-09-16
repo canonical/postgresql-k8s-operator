@@ -2,7 +2,6 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 import logging
-from asyncio import gather
 
 import pytest as pytest
 from kubernetes import config, dynamic
@@ -12,6 +11,7 @@ from pytest_operator.plugin import OpsTest
 from ..helpers import (
     APPLICATION_NAME,
     DATABASE_APP_NAME,
+    app_name,
     build_and_deploy,
     get_application_units,
     get_cluster_members,
@@ -36,7 +36,8 @@ CLUSTER_SIZE = 3
 async def test_deploy(ops_test: OpsTest) -> None:
     """Build and deploy a PostgreSQL cluster and a test application."""
     await build_and_deploy(ops_test, CLUSTER_SIZE, wait_for_idle=False)
-    await ops_test.model.deploy(APPLICATION_NAME, num_units=1)
+    if not await app_name(ops_test, APPLICATION_NAME):
+        await ops_test.model.deploy(APPLICATION_NAME, num_units=1)
 
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(
@@ -69,9 +70,6 @@ async def test_restart(ops_test: OpsTest, continuous_writes) -> None:
     await inject_stop_hook_fault(ops_test, non_primary)
     logger.info(f"{non_primary} patched")
 
-    # Disable the automatic retry of hooks to avoid the stop hook being retried.
-    await ops_test.model.set_config({"automatically-retry-hooks": "false"})
-
     logger.info("restarting all the units by deleting their pods")
     client = dynamic.DynamicClient(api_client.ApiClient(configuration=config.load_kube_config()))
     api = client.resources.get(api_version="v1", kind="Pod")
@@ -79,10 +77,24 @@ async def test_restart(ops_test: OpsTest, continuous_writes) -> None:
         namespace=ops_test.model.info.name,
         label_selector=f"app.kubernetes.io/name={DATABASE_APP_NAME}",
     )
+    await ops_test.model.block_until(
+        lambda: all(
+            unit.workload_status == "error"
+            for unit in ops_test.model.units.values()
+            if unit.name == non_primary
+        )
+    )
+
+    # Resolve the error on the non-primary unit.
+    for unit in ops_test.model.units.values():
+        if unit.name == non_primary and unit.workload_status == "error":
+            logger.info(f"resolving {non_primary} error")
+            await unit.resolved(retry=False)
+            break
 
     async with ops_test.fast_forward():
-        await gather(
-            ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=1000)
+        await ops_test.model.wait_for_idle(
+            apps=[DATABASE_APP_NAME], status="active", raise_on_error=False, timeout=300
         )
 
     # Check that all replication slots are present in the primary

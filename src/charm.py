@@ -201,7 +201,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
         self.framework.observe(self.on.pgdata_storage_detaching, self._on_pgdata_storage_detaching)
-        self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.stop, self._on_stop)
         self.framework.observe(self.on.get_password_action, self._on_get_password)
         self.framework.observe(self.on.set_password_action, self._on_set_password)
@@ -878,6 +877,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
         """Event handler for PostgreSQL container on PebbleReadyEvent."""
+        if self._endpoint in self._endpoints:
+            self._fix_pod()
+
         # TODO: move this code to an "_update_layer" method in order to also utilize it in
         # config-changed hook.
         # Get the postgresql container so we can configure/manipulate it.
@@ -1238,12 +1240,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             event.set_results({"primary": primary})
         except RetryError as e:
             logger.error(f"failed to get primary with error {e}")
-
-    def _on_start(self, _) -> None:
-        if self._endpoint not in self._endpoints:
-            return
-
-        self._fix_pod()
 
     def _fix_pod(self) -> None:
         # Recreate k8s resources and add labels required for replication
