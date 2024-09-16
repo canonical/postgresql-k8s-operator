@@ -11,6 +11,7 @@ import os
 import re
 import shutil
 import sys
+import time
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Tuple, get_args
 
@@ -561,6 +562,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         ) and isinstance(self.unit.status, BlockedStatus):
             event.defer()
             return
+
+        services = container.pebble.get_services(names=[self._postgresql_service])
+        if len(services) > 0 and services[0].current != ServiceStatus.ACTIVE:
+            logger.warning("Restarting pebble service container.")
+            try:
+                container.restart(self._postgresql_service)
+            except ChangeError:
+                logger.exception("Failed to restart patroni service!")
 
         # Validate the status of the member before setting an ActiveStatus.
         if not self._patroni.member_started:
@@ -2115,15 +2124,19 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 re.MULTILINE,
             )
         except ExecError:  # For Juju 2.
-            log_exec = container.pebble.exec(["cat", "/var/log/postgresql/patroni.log"])
-            patroni_logs = log_exec.wait_output()[0]
-            patroni_exceptions = re.findall(
-                r"^([0-9- :]+) UTC \[[0-9]+\]: INFO: removing initialize key after failed attempt to bootstrap the cluster",
-                patroni_logs,
-                re.MULTILINE,
-            )
-            # If no match, look at older logs
-            if len(patroni_exceptions) == 0:
+            patroni_exceptions = []
+            count = 0
+            while len(patroni_exceptions) == 0 and count < 10:
+                log_exec = container.pebble.exec(["cat", "/var/log/postgresql/patroni.log"])
+                patroni_logs = log_exec.wait_output()[0]
+                patroni_exceptions = re.findall(
+                    r"^([0-9- :]+) UTC \[[0-9]+\]: INFO: removing initialize key after failed attempt to bootstrap the cluster",
+                    patroni_logs,
+                    re.MULTILINE,
+                )
+                if len(patroni_exceptions) != 0:
+                    break
+                # If no match, look at older logs
                 log_exec = container.pebble.exec([
                     "find",
                     "/var/log/postgresql/",
@@ -2140,6 +2153,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     patroni_logs,
                     re.MULTILINE,
                 )
+                count += 1
+                time.sleep(3)
 
         if len(patroni_exceptions) > 0:
             logger.debug("Failures to bootstrap cluster detected on Patroni service logs")
