@@ -67,6 +67,7 @@ async def test_restart(ops_test: OpsTest, continuous_writes) -> None:
             non_primary = unit
             break
     await inject_stop_hook_fault(ops_test, non_primary)
+    logger.info(f"{non_primary} patched")
 
     # Disable the automatic retry of hooks to avoid the stop hook being retried.
     await ops_test.model.set_config({"automatically-retry-hooks": "false"})

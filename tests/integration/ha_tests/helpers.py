@@ -548,10 +548,11 @@ async def inject_dependency_fault(
 async def inject_stop_hook_fault(ops_test: OpsTest, unit_name: str) -> None:
     """Inject a stop hook fault into the PostgreSQL charm."""
     # Load the src/charm.py contents from the unit.
+    path = f'/var/lib/juju/agents/unit-{unit_name.replace("/", "-")}/charm/src/charm.py'
     charm_code = await run_command_on_unit(
         ops_test,
         unit_name,
-        f'cat agents/unit-{unit_name.replace("/", "-")}/charm/src/charm.py',
+        f"cat {path}",
         "charm",
     )
 
@@ -568,7 +569,31 @@ async def inject_stop_hook_fault(ops_test: OpsTest, unit_name: str) -> None:
                 break
 
     # Overwrite src/charm.py in the unit.
-    # TODO.
+    kubernetes.config.load_kube_config()
+    client = kubernetes.client.api.core_v1_api.CoreV1Api()
+
+    pod_name = unit_name.replace("/", "-")
+    container_name = "charm"
+
+    with tempfile.NamedTemporaryFile() as temp_file:
+        temp_file.write(str.encode(ast.unparse(parsed_charm_code)))
+        temp_file.flush()
+
+        copy_file_into_pod(
+            client,
+            ops_test.model.info.name,
+            pod_name,
+            container_name,
+            path,
+            temp_file.name,
+        )
+
+    await run_command_on_unit(
+        ops_test,
+        unit_name,
+        f"chown root:root {path} && chmod 755 {path}",
+        "charm",
+    )
 
 
 async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
