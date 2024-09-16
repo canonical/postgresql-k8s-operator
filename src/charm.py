@@ -9,6 +9,7 @@ import json
 import logging
 import os
 import re
+import shutil
 import sys
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Tuple, get_args
@@ -31,7 +32,7 @@ except ModuleNotFoundError:
 from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerUnitData
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
-from charms.loki_k8s.v1.loki_push_api import LogProxyConsumer
+from charms.loki_k8s.v1.loki_push_api import LogForwarder, LogProxyConsumer
 from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
 from charms.postgresql_k8s.v0.postgresql import (
     REQUIRED_PLUGINS,
@@ -126,6 +127,7 @@ logger = logging.getLogger(__name__)
 
 EXTENSIONS_DEPENDENCY_MESSAGE = "Unsatisfied plugin dependencies. Please check the logs"
 EXTENSION_OBJECT_MESSAGE = "Cannot disable plugins: Existing objects depend on it. See logs"
+INSUFFICIENT_SIZE_WARNING = "<10% free space on pgdata volume."
 
 ORIGINAL_PATRONI_ON_FAILURE_CONDITION = "restart"
 
@@ -207,6 +209,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
         self.framework.observe(self.on.update_status, self._on_update_status)
         self._storage_path = self.meta.storages["pgdata"].location
+        self.pgdata_path = f"{self._storage_path}/pgdata"
 
         self.upgrade = PostgreSQLUpgrade(
             self,
@@ -230,10 +233,17 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             refresh_event=[self.on.start],
             jobs=self._generate_metrics_jobs(self.is_tls_enabled),
         )
-        self.loki_push = LogProxyConsumer(
-            self,
-            logs_scheme={"postgresql": {"log-files": POSTGRES_LOG_FILES}},
-            relation_name="logging",
+        self.loki_push = (
+            LogForwarder(
+                self,
+                relation_name="logging",
+            )
+            if self._pebble_log_forwarding_supported
+            else LogProxyConsumer(
+                self,
+                logs_scheme={"postgresql": {"log-files": POSTGRES_LOG_FILES}},
+                relation_name="logging",
+            )
         )
 
         postgresql_db_port = ServicePort(5432, name="database")
@@ -861,10 +871,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _create_pgdata(self, container: Container):
         """Create the PostgreSQL data directory."""
-        path = f"{self._storage_path}/pgdata"
-        if not container.exists(path):
+        if not container.exists(self.pgdata_path):
             container.make_dir(
-                path, permissions=0o770, user=WORKLOAD_OS_USER, group=WORKLOAD_OS_GROUP
+                self.pgdata_path, permissions=0o770, user=WORKLOAD_OS_USER, group=WORKLOAD_OS_GROUP
             )
         # Also, fix the permissions from the parent directory.
         container.exec([
@@ -940,6 +949,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._set_active_status()
 
     def _set_active_status(self):
+        # The charm should not override this status outside of the function checking disk space.
+        if self.unit.status.message == INSUFFICIENT_SIZE_WARNING:
+            return
         if "require-change-bucket-after-restore" in self.app_peer_data:
             if self.unit.is_leader():
                 self.app_peer_data.update({
@@ -1328,11 +1340,33 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return False
         return True
 
+    def _check_pgdata_storage_size(self) -> None:
+        """Asserts that pgdata volume has at least 10% free space and blocks charm if not."""
+        try:
+            total_size, _, free_size = shutil.disk_usage(self.pgdata_path)
+        except FileNotFoundError:
+            logger.error("pgdata folder not found in %s", self.pgdata_path)
+            return
+
+        logger.debug(
+            "pgdata free disk space: %s out of %s, ratio of %s",
+            free_size,
+            total_size,
+            free_size / total_size,
+        )
+        if free_size / total_size < 0.1:
+            self.unit.status = BlockedStatus(INSUFFICIENT_SIZE_WARNING)
+        elif self.unit.status.message == INSUFFICIENT_SIZE_WARNING:
+            self.unit.status = ActiveStatus()
+            self._set_active_status()
+
     def _on_update_status(self, _) -> None:
         """Update the unit status message."""
         container = self.unit.get_container("postgresql")
         if not self._on_update_status_early_exit_checks(container):
             return
+
+        self._check_pgdata_storage_size()
 
         if self._has_blocked_status or self._has_non_restore_waiting_status:
             # If charm was failing to disable plugin, try again (user may have removed the objects)
