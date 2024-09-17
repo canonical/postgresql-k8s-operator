@@ -558,7 +558,17 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         # Should not override a blocked status
         if isinstance(self.unit.status, BlockedStatus):
+            logger.debug("Deferring on_peer_relation_changed: Unit in blocked status")
             event.defer()
+            return
+
+        services = container.pebble.get_services(names=[self._postgresql_service])
+        if (
+            ("restoring-backup" in self.app_peer_data or "restore-to-time" in self.app_peer_data)
+            and len(services) > 0
+            and not self._was_restore_successful(container, services[0])
+        ):
+            logger.debug("on_peer_relation_changed early exit: Backup estore failed")
             return
 
         # Validate the status of the member before setting an ActiveStatus.
