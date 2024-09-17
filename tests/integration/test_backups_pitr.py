@@ -222,6 +222,9 @@ async def pitr_backup_operations(
             == CANNOT_RESTORE_PITR,
             timeout=600,
         )
+    logger.info(
+        "database charm become in blocked state, as supposed to be with unreachable PITR parameter"
+    )
 
     # Run the "restore backup" action.
     for attempt in Retrying(

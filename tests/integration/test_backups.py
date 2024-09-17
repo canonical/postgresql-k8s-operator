@@ -194,9 +194,15 @@ async def test_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
     # Remove the database app.
-    await ops_test.model.remove_application(database_app_name, block_until_done=True)
+    await ops_test.model.remove_application(database_app_name)
+    await ops_test.model.block_until(
+        lambda: database_app_name not in ops_test.model.applications, timeout=1000
+    )
     # Remove the TLS operator.
-    await ops_test.model.remove_application(tls_certificates_app_name, block_until_done=True)
+    await ops_test.model.remove_application(tls_certificates_app_name)
+    await ops_test.model.block_until(
+        lambda: tls_certificates_app_name not in ops_test.model.applications, timeout=1000
+    )
 
 
 @pytest.mark.group(2)
@@ -219,9 +225,15 @@ async def test_backup_gcp(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -
     database_app_name = f"{DATABASE_APP_NAME}-gcp"
 
     # Remove the database app.
-    await ops_test.model.remove_application(database_app_name, block_until_done=True)
+    await ops_test.model.remove_application(database_app_name)
+    await ops_test.model.block_until(
+        lambda: database_app_name not in ops_test.model.applications, timeout=1000
+    )
     # Remove the TLS operator.
-    await ops_test.model.remove_application(tls_certificates_app_name, block_until_done=True)
+    await ops_test.model.remove_application(tls_certificates_app_name)
+    await ops_test.model.block_until(
+        lambda: tls_certificates_app_name not in ops_test.model.applications, timeout=1000
+    )
 
 
 @pytest.mark.group(2)
