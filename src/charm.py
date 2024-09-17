@@ -884,6 +884,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
         """Event handler for PostgreSQL container on PebbleReadyEvent."""
+        if self._endpoint in self._endpoints:
+            self._fix_pod()
+
         # TODO: move this code to an "_update_layer" method in order to also utilize it in
         # config-changed hook.
         # Get the postgresql container so we can configure/manipulate it.
@@ -1033,25 +1036,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         return isinstance(self.unit.status, BlockedStatus)
 
     def _on_upgrade_charm(self, _) -> None:
-        # Recreate k8s resources and add labels required for replication
-        # when the pod loses them (like when it's deleted).
-        if self.upgrade.idle:
-            try:
-                self._create_services()
-            except ApiError:
-                logger.exception("failed to create k8s services")
-                self.unit.status = BlockedStatus("failed to create k8s services")
-                return
-
-        try:
-            self._patch_pod_labels(self.unit.name)
-        except ApiError as e:
-            logger.error("failed to patch pod")
-            self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
-            return
-
-        # Update the sync-standby endpoint in the async replication data.
-        self.async_replication.update_async_replication_data()
+        self._fix_pod()
 
     def _patch_pod_labels(self, member: str) -> None:
         """Add labels required for replication to the current pod.
@@ -1262,6 +1247,27 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             event.set_results({"primary": primary})
         except RetryError as e:
             logger.error(f"failed to get primary with error {e}")
+
+    def _fix_pod(self) -> None:
+        # Recreate k8s resources and add labels required for replication
+        # when the pod loses them (like when it's deleted).
+        if self.upgrade.idle:
+            try:
+                self._create_services()
+            except ApiError:
+                logger.exception("failed to create k8s services")
+                self.unit.status = BlockedStatus("failed to create k8s services")
+                return
+
+        try:
+            self._patch_pod_labels(self.unit.name)
+        except ApiError as e:
+            logger.error("failed to patch pod")
+            self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
+            return
+
+        # Update the sync-standby endpoint in the async replication data.
+        self.async_replication.update_async_replication_data()
 
     def _on_stop(self, _):
         # Remove data from the drive when scaling down to zero to prevent
