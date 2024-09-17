@@ -2122,7 +2122,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         while len(patroni_exceptions) == 0 and count < 10:
             try:
                 log_exec = container.pebble.exec(
-                    ["pebble", "logs", "postgresql"], combine_stderr=True
+                    ["pebble", "logs", "postgresql", "-n", "all"], combine_stderr=True
                 )
                 patroni_logs = log_exec.wait_output()[0]
                 patroni_exceptions = re.findall(
