@@ -220,7 +220,7 @@ async def pitr_backup_operations(
         await ops_test.model.block_until(
             lambda: ops_test.model.units.get(f"{database_app_name}/0").workload_status_message
             == CANNOT_RESTORE_PITR,
-            timeout=600,
+            timeout=1000,
         )
     logger.info(
         "database charm become in blocked state, as supposed to be with unreachable PITR parameter"

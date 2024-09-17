@@ -558,8 +558,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         # Should not override a blocked status
         if isinstance(self.unit.status, BlockedStatus):
-            logger.debug("Deferring on_peer_relation_changed: Unit in blocked status")
-            event.defer()
+            logger.debug("on_peer_relation_changed early exit: Unit in blocked status")
             return
 
         services = container.pebble.get_services(names=[self._postgresql_service])
@@ -568,7 +567,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             and len(services) > 0
             and not self._was_restore_successful(container, services[0])
         ):
-            logger.debug("on_peer_relation_changed early exit: Backup estore failed")
+            logger.debug("on_peer_relation_changed early exit: Backup restore check failed")
             return
 
         # Validate the status of the member before setting an ActiveStatus.
@@ -1366,7 +1365,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self.unit.status.message == MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET
                 and "require-change-bucket-after-restore" not in self.app_peer_data
             ):
-                logger.debug("Will try to resolve blocked status due to move restored cluster")
                 return True
 
             logger.debug("on_update_status early exit: Unit is in Blocked/Waiting status")
@@ -1455,7 +1453,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return False
 
         if not self._patroni.member_started:
-            logger.debug("on_update_status early exit: Patroni has not started yet")
+            logger.debug("Restore check early exit: Patroni has not started yet")
             return False
 
         # Remove the restoring backup flag and the restore stanza name.
