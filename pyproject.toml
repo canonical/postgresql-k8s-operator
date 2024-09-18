@@ -8,11 +8,11 @@ package-mode = false
 python = "^3.10"
 ops = "^2.16.1"
 cryptography = "^43.0.1"
-boto3 = "^1.35.19"
+boto3 = "^1.35.21"
 pgconnstr = "^1.0.1"
 requests = "^2.32.3"
 tenacity = "^9.0.0"
-cosl = "^0.0.33"
+cosl = "^0.0.34"
 pydantic = "^1.10.18"
 poetry-core = "^1.9.0"
 jsonschema = "^4.23.0"
@@ -72,7 +72,7 @@ allure-pytest-collection-report = {git = "https://github.com/canonical/data-plat
 # renovate caret doesn't work: https://github.com/renovatebot/renovate/issues/26940
 juju = "<=3.5.2.0"
 psycopg2-binary = "^2.9.9"
-boto3 = "^1.35.19"
+boto3 = "^1.35.21"
 tenacity = "^9.0.0"
 allure-pytest = "^2.13.5"
 

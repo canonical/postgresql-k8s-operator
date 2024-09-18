@@ -162,17 +162,17 @@ typecheck = ["mypy"]
 
 [[package]]
 name = "boto3"
-version = "1.35.19"
+version = "1.35.21"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "boto3-1.35.19-py3-none-any.whl", hash = "sha256:84b3fe1727945bc3cada832d969ddb3dc0d08fce1677064ca8bdc13a89c1a143"},
-    {file = "boto3-1.35.19.tar.gz", hash = "sha256:9979fe674780a0b7100eae9156d74ee374cd1638a9f61c77277e3ce712f3e496"},
+    {file = "boto3-1.35.21-py3-none-any.whl", hash = "sha256:247f88eedce9ae4e014a8fc14a9473759bb8e391460d49396a3b600fb649f33b"},
+    {file = "boto3-1.35.21.tar.gz", hash = "sha256:db5fbbd10248db060f2ccce3ae17764f1641c99c8b9f51d422c26ebe25703a1e"},
 ]
 
 [package.dependencies]
-botocore = ">=1.35.19,<1.36.0"
+botocore = ">=1.35.21,<1.36.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.10.0,<0.11.0"
 
@@ -181,13 +181,13 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.35.19"
+version = "1.35.21"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "botocore-1.35.19-py3-none-any.whl", hash = "sha256:c83f7f0cacfe7c19b109b363ebfa8736e570d24922f16ed371681f58ebab44a9"},
-    {file = "botocore-1.35.19.tar.gz", hash = "sha256:42d6d8db7250cbd7899f786f9861e02cab17dc238f64d6acb976098ed9809625"},
+    {file = "botocore-1.35.21-py3-none-any.whl", hash = "sha256:3db9ddfe521edc0753fc8c68caef71c7806e1d2d21ce8cbabc2065b7d79192f2"},
+    {file = "botocore-1.35.21.tar.gz", hash = "sha256:db917e7d7b3a2eed1310c6496784bc813c91f020a021c2ab5f9df7d28cdb4f1d"},
 ]
 
 [package.dependencies]
@@ -428,13 +428,13 @@ files = [
 
 [[package]]
 name = "cosl"
-version = "0.0.33"
+version = "0.0.34"
 description = "Utils for COS Lite charms"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "cosl-0.0.33-py3-none-any.whl", hash = "sha256:c8a522af9829e6058d08afc28038bde7b2ccbab6a034a9d609ee6f683e589cef"},
-    {file = "cosl-0.0.33.tar.gz", hash = "sha256:00d682049976737b0012718c071f15f2e492c1b71e231f8b7e3c74da365d9814"},
+    {file = "cosl-0.0.34-py3-none-any.whl", hash = "sha256:f083ddb7f0a2d008bbc9a58a783e5df497e81e628861e4fd161cb5b83bccc0d7"},
+    {file = "cosl-0.0.34.tar.gz", hash = "sha256:2faf097ecfc77fa58c95c91ddb7076813c608d6b32e2a8ce4ecf41b8bcd56e06"},
 ]
 
 [package.dependencies]
@@ -2490,4 +2490,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "91891e7ae1ccc76e19922673f790958d9ce287e66e251c93994c227a57fee332"
+content-hash = "e39fc8c982202bf989d353bff90e79c4b89799b1378383d13f07d2bb3daa8877"
