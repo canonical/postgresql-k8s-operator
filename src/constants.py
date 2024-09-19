@@ -42,6 +42,9 @@ UNIT_SCOPE = "unit"
 
 SECRET_KEY_OVERRIDES = {"ca": "cauth"}
 BACKUP_TYPE_OVERRIDES = {"full": "full", "differential": "diff", "incremental": "incr"}
+PLUGIN_OVERRIDES = {"audit": "pgaudit", "uuid_ossp": '"uuid-ossp"'}
+
+SPI_MODULE = ["refint", "autoinc", "insert_username", "moddatetime"]
 
 TRACING_RELATION_NAME = "tracing"
 TRACING_PROTOCOL = "otlp_http"
