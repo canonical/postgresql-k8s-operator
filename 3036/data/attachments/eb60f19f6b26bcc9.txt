@@ -1,0 +1,25 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:766 Connecting to existing model microk8s-localhost:test on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:578 Receiver: Connection closed, reconnecting
+[31m[1mERROR   [0m asyncio:base_events.py:1758 Task exception was never retrieved
+future: <Task finished name='Task-71' coro=<Connection.reconnect() done, defined at /home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py:779> exception=OSError(9, 'Bad file descriptor')>
+Traceback (most recent call last):
+  File "/home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 788, in reconnect
+    res = await connector(
+  File "/home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 868, in _connect_with_login
+    await self._connect(endpoints)
+  File "/home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 817, in _connect
+    result = await task
+  File "/usr/lib/python3.10/asyncio/tasks.py", line 571, in _wait_for_one
+    return f.result()  # May raise f.exception().
+  File "/home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 806, in _try_endpoint
+    return await self._open(endpoint, cacert)
+  File "/home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 427, in _open
+    return (await websockets.connect(
+  File "/home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/websockets/legacy/client.py", line 653, in __await_impl__
+    _transport, protocol = await self._create_connection()
+  File "/usr/lib/python3.10/asyncio/base_events.py", line 1103, in create_connection
+    transport, protocol = await self._create_connection_transport(
+  File "/usr/lib/python3.10/asyncio/base_events.py", line 1119, in _create_connection_transport
+    sock.setblocking(False)
+OSError: [Errno 9] Bad file descriptor
+[32mINFO    [0m integration.test_trust:test_trust.py:58 Response from rbac check ('no' means enabled): no
