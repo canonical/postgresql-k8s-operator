@@ -337,8 +337,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if scope not in get_args(Scopes):
             raise RuntimeError("Unknown secret scope.")
 
-        peers = self.model.get_relation(PEER)
-        if not peers:
+        if not (peers := self.model.get_relation(PEER)):
             return None
 
         secret_key = self._translate_field_to_secret_key(key)
@@ -356,8 +355,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if not value:
             return self.remove_secret(scope, key)
 
-        peers = self.model.get_relation(PEER)
-        if not peers:
+        if not (peers := self.model.get_relation(PEER)):
             return None
 
         secret_key = self._translate_field_to_secret_key(key)
@@ -370,8 +368,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if scope not in get_args(Scopes):
             raise RuntimeError("Unknown secret scope.")
 
-        peers = self.model.get_relation(PEER)
-        if not peers:
+        if not (peers := self.model.get_relation(PEER)):
             return None
 
         secret_key = self._translate_field_to_secret_key(key)
