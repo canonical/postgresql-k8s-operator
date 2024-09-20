@@ -24,7 +24,8 @@ from ops.testing import Harness
 from requests import ConnectionError
 from tenacity import RetryError, wait_fixed
 
-from charm import PostgresqlOperatorCharm
+from backups import MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET
+from charm import EXTENSION_OBJECT_MESSAGE, PostgresqlOperatorCharm
 from constants import PEER, SECRET_INTERNAL_LABEL
 from patroni import NotReadyError
 from tests.unit.helpers import _FakeApiError
@@ -448,6 +449,9 @@ def test_on_update_status(harness):
         patch(
             "charm.PostgresqlOperatorCharm._handle_processes_failures"
         ) as _handle_processes_failures,
+        patch(
+            "charm.PostgresqlOperatorCharm.enable_disable_extensions"
+        ) as _enable_disable_extensions,
         patch("charm.Patroni.member_started") as _member_started,
         patch("charm.Patroni.get_primary") as _get_primary,
         patch("ops.model.Container.pebble") as _pebble,
@@ -467,6 +471,28 @@ def test_on_update_status(harness):
         harness.set_can_connect(POSTGRESQL_CONTAINER, True)
         harness.charm.on.update_status.emit()
         _get_primary.assert_not_called()
+
+        # Test unit in blocked status, without message.
+        _pebble.get_services.reset_mock()
+        harness.model.unit.status = BlockedStatus()
+        harness.charm.on.update_status.emit()
+        _enable_disable_extensions.assert_not_called()
+        _pebble.get_services.assert_not_called()
+
+        # Test unit in blocked status due to blocking extensions.
+        harness.model.unit.status = BlockedStatus(EXTENSION_OBJECT_MESSAGE)
+        harness.charm.on.update_status.emit()
+        _enable_disable_extensions.assert_called_once()
+        _pebble.get_services.assert_called_once()
+
+        # Test unit in blocked status due to restored cluster.
+        _pebble.get_services.reset_mock()
+        _enable_disable_extensions.reset_mock()
+        harness.model.unit.status = BlockedStatus(MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET)
+        harness.charm.on.update_status.emit()
+        _enable_disable_extensions.assert_not_called()
+        _pebble.get_services.assert_called_once()
+        harness.model.unit.status = ActiveStatus()
 
         # Test when a failure need to be handled.
         _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.ACTIVE)]
