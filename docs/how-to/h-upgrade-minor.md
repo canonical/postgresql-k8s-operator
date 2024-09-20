@@ -1,3 +1,9 @@
+[note]
+**Note**: All commands are written for `juju >= v.3.0`
+
+If you are using an earlier version, check the [Juju 3.0 Release Notes](https://juju.is/docs/juju/roadmap#heading--juju-3-0-0---22-oct-2022).
+[/note]
+
 # Perform a minor upgrade
 
 **Example**: PostgreSQL 14.8 -> PostgreSQL 14.9<br/>
@@ -5,13 +11,22 @@
 
 This guide is part of [Charmed PostgreSQL K8s Upgrades](/t/12092). Please refer to this page for more information and an overview of the content.
 
-[note]
-**Note**: All commands are written for `juju >= v.3.0`
+## Summary
 
-If you are using an earlier version, check the [Juju 3.0 Release Notes](https://juju.is/docs/juju/roadmap#heading--juju-3-0-0---22-oct-2022).
-[/note]
+- [**Pre-upgrade checks**](#pre-upgrade-checks): Important information to consider before starting an upgrade.
+- [**1. Collect**](#step-1-collect) all necessary pre-upgrade information. It will be necessary for a rollback, if needed. **Do not skip this step**; better to be safe than sorry!
+- [**2. (Optional) Scale up**](#step-2-scale-up-optional). The new unit will be the first one to be updated, and it will simplify the rollback procedure a lot in case of an upgrade failure.
+- [**3. Prepare**](#step-3-prepare) your Charmed PostgreSQL K8s application for the in-place upgrade. See the step details for all technical details executed by charm here.
+- [**4. Upgrade** - phase 1](#step-4-upgrade). Once started, only one unit in a cluster will be upgraded. In case of failure, the rollback is simple: remove the pod that was recently added in [Step 2: Scale up](#step-2-scale-up-optional).
+- [**5. Resume upgrade** - phase 2](#step-5-resume). If the new pod is OK after the refresh, the upgrade can be resumed for all other units in the cluster. All units in a cluster will be executed sequentially: from biggest ordinal to the lowest one.
+- [**4. (Optional) Consider a rollback**](#step-6-rollback-optional) in case of disaster. 
+  - Please [inform us](/t/11852) about your case scenario troubleshooting to trace the source of the issue and prevent it in the future. 
+- [**7. (optional) Scale back**](#step-7-scale-back-optional). Remove no longer necessary K8s pods created in [Step 2: Scale up](#step-2-scale-up-optional) (if any).
+- [**Post-upgrade check**](#step-5-post-upgrade-check). Make sure all units are in their proper state and the cluster is healthy.
 
-## Before upgrading
+---
+
+## Pre-upgrade checks
 Before performing a minor PostgreSQL upgrade, there are some important considerations to take into account:
 * Concurrency with other operations during the upgrade
 * Backing up your data
@@ -37,18 +52,6 @@ Guides on how to configure backups with S3-compatible storage can be found [here
 **It is recommended to deploy your application in conjunction with the [Charmed PgBouncer K8s](https://charmhub.io/pgbouncer-k8s) operator.** 
 
 This will ensure minimal service disruption, if any.
-
-## Minor upgrade steps
-Here is a summary of the steps to perform a minor upgrade.:
-
-1. **Collect** all necessary pre-upgrade information. It will be necessary for a rollback, if needed. Do NOT skip this step, it is better to be safe than sorry!
-2. (optional) **Scale up**. The new unit will be the first one to be updated, and it will simplify the rollback procedure a lot in case of an upgrade failure.
-3. **Prepare** your Charmed PostgreSQL Juju application for the in-place upgrade. See the step description below for all technical details executed by charm here.
-4. **Upgrade** - phase 1. Once started, only one unit in a cluster will be upgraded. In case of failure, the rollback is simple: remove the pod that was recently added in Step 2: **Scale up**.
-5. **Resume** upgrade - phase 2. If the new pod is OK after the refresh, the upgrade can be resumed for all other units in the cluster. All units in a cluster will be executed sequentially: from biggest ordinal to the lowest one.
-6. (optional) Consider [**rolling back**](/t/12096) in case of disaster. Please inform and include us in your case scenario troubleshooting to trace the source of the issue and prevent it in the future. [Contact us](/t/11852)!
-7. (optional) **Scale back**. Remove no longer necessary K8s pod created in step 2 (if any).
-8. Do a post-upgrade **check**. Make sure all units are in the proper state and the cluster is healthy.
 
 ## Step 1: Collect
 [note]
@@ -183,7 +186,7 @@ If the application scale was changed for the upgrade procedure, it is now safe t
 juju scale-application postgresql-k8s <unit_count>
 ```
 
-## Step 8: Check
+## Post-upgrade check
 
 Future [improvements are planned](https://warthogs.atlassian.net/browse/DPE-2620) to check the state of a pod/cluster on a low level. 
 
