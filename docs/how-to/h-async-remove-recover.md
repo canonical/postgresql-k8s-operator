@@ -3,9 +3,11 @@
 This guide will cover how to manage clusters (switchover, detach, reuse, remove, recover) using an example PostgreSQL deployment with two servers: one in Rome and one in Lisbon. 
 
 ## Prerequisites
-* `juju v.3.4.2+`
+* Juju `v.3.4.2+`
+* Make sure your machine(s) fulfill the [system requirements](/t/11744)
+* See [supported target/source model relationships](t/15413#substrate-dependencies).
 * A cross-regional async replication setup
-  * Refer to the page [How to set up clusters](/t/13895)
+  * See [How to set up clusters](/t/13895)
 
 ## Summary
 * [Switchover](#switchover)

@@ -4,6 +4,11 @@ Cross-regional (or multi-server) asynchronous replication focuses on disaster re
 
 This guide will show you the basics of initiating a cross-regional async setup using an example PostgreSQL K8s deployment with two servers: one in Rome and one in Lisbon.
 
+## Prerequisites
+* Juju `v.3.4.2+`
+* Make sure your machine(s) fulfill the [system requirements](/t/11744)
+* See [supported target/source model relationships](t/15413#substrate-dependencies).
+
 ## Summary
 * [Deploy](#deploy)
 * [Offer](#offer)
