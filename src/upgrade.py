@@ -75,6 +75,9 @@ class PostgreSQLUpgrade(DataUpgrade):
     @property
     def is_no_sync_member(self) -> bool:
         """Whether this member shouldn't be a synchronous standby (when it's a replica)."""
+        if not self.peer_relation:
+            return False
+
         sync_standbys = self.peer_relation.data[self.charm.app].get("sync-standbys")
         if sync_standbys is None:
             return False

@@ -11,6 +11,7 @@ import os
 import re
 import shutil
 import sys
+import time
 from pathlib import Path
 from typing import Dict, List, Literal, Optional, Tuple, get_args
 
@@ -338,8 +339,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if scope not in get_args(Scopes):
             raise RuntimeError("Unknown secret scope.")
 
-        peers = self.model.get_relation(PEER)
-        if not peers:
+        if not (peers := self.model.get_relation(PEER)):
             return None
 
         secret_key = self._translate_field_to_secret_key(key)
@@ -357,7 +357,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if not value:
             return self.remove_secret(scope, key)
 
-        peers = self.model.get_relation(PEER)
+        if not (peers := self.model.get_relation(PEER)):
+            return None
+
         secret_key = self._translate_field_to_secret_key(key)
         # Old translation in databag is to be deleted
         self.peer_relation_data(scope).delete_relation_data(peers.id, [key])
@@ -368,7 +370,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if scope not in get_args(Scopes):
             raise RuntimeError("Unknown secret scope.")
 
-        peers = self.model.get_relation(PEER)
+        if not (peers := self.model.get_relation(PEER)):
+            return None
+
         secret_key = self._translate_field_to_secret_key(key)
         if scope == APP_SCOPE:
             self.peer_relation_app.delete_relation_data(peers.id, [secret_key])
@@ -551,11 +555,18 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.error("Invalid configuration: %s", str(e))
             return
 
-        # If PITR restore failed, then wait it for resolve.
+        # Should not override a blocked status
+        if isinstance(self.unit.status, BlockedStatus):
+            logger.debug("on_peer_relation_changed early exit: Unit in blocked status")
+            return
+
+        services = container.pebble.get_services(names=[self._postgresql_service])
         if (
-            "restoring-backup" in self.app_peer_data or "restore-to-time" in self.app_peer_data
-        ) and isinstance(self.unit.status, BlockedStatus):
-            event.defer()
+            ("restoring-backup" in self.app_peer_data or "restore-to-time" in self.app_peer_data)
+            and len(services) > 0
+            and not self._was_restore_successful(container, services[0])
+        ):
+            logger.debug("on_peer_relation_changed early exit: Backup restore check failed")
             return
 
         # Validate the status of the member before setting an ActiveStatus.
@@ -1344,6 +1355,23 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if not container.can_connect():
             logger.debug("on_update_status early exit: Cannot connect to container")
             return False
+
+        self._check_pgdata_storage_size()
+
+        if self._has_blocked_status or self._has_non_restore_waiting_status:
+            # If charm was failing to disable plugin, try again and continue (user may have removed the objects)
+            if self.unit.status.message == EXTENSION_OBJECT_MESSAGE:
+                self.enable_disable_extensions()
+                return True
+
+            if (
+                self.unit.status.message == MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET
+                and "require-change-bucket-after-restore" not in self.app_peer_data
+            ):
+                return True
+
+            logger.debug("on_update_status early exit: Unit is in Blocked/Waiting status")
+            return False
         return True
 
     def _check_pgdata_storage_size(self) -> None:
@@ -1370,15 +1398,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Update the unit status message."""
         container = self.unit.get_container("postgresql")
         if not self._on_update_status_early_exit_checks(container):
-            return
-
-        self._check_pgdata_storage_size()
-
-        if self._has_blocked_status or self._has_non_restore_waiting_status:
-            # If charm was failing to disable plugin, try again (user may have removed the objects)
-            if self.unit.status.message == EXTENSION_OBJECT_MESSAGE:
-                self.enable_disable_extensions()
-            logger.debug("on_update_status early exit: Unit is in Blocked/Waiting status")
             return
 
         services = container.pebble.get_services(names=[self._postgresql_service])
@@ -1419,23 +1438,25 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _was_restore_successful(self, container: Container, service: ServiceInfo) -> bool:
         """Checks if restore operation succeeded and S3 is properly configured."""
-        if service.current != ServiceStatus.ACTIVE:
-            if "restore-to-time" in self.app_peer_data and all(self.is_pitr_failed(container)):
-                logger.error(
-                    "Restore failed: database service failed to reach point-in-time-recovery target. "
-                    "You can launch another restore with different parameters"
-                )
-                self.log_pitr_last_transaction_time()
-                self.unit.status = BlockedStatus(CANNOT_RESTORE_PITR)
-                return False
+        if "restore-to-time" in self.app_peer_data and all(self.is_pitr_failed(container)):
+            logger.error(
+                "Restore failed: database service failed to reach point-in-time-recovery target. "
+                "You can launch another restore with different parameters"
+            )
+            self.log_pitr_last_transaction_time()
+            self.unit.status = BlockedStatus(CANNOT_RESTORE_PITR)
+            return False
 
-            if self.unit.status.message != CANNOT_RESTORE_PITR:
-                logger.error("Restore failed: database service failed to start")
-                self.unit.status = BlockedStatus("Failed to restore backup")
+        if (
+            service.current != ServiceStatus.ACTIVE
+            and self.unit.status.message != CANNOT_RESTORE_PITR
+        ):
+            logger.error("Restore failed: database service failed to start")
+            self.unit.status = BlockedStatus("Failed to restore backup")
             return False
 
         if not self._patroni.member_started:
-            logger.debug("on_update_status early exit: Patroni has not started yet")
+            logger.debug("Restore check early exit: Patroni has not started yet")
             return False
 
         # Remove the restoring backup flag and the restore stanza name.
@@ -2097,26 +2118,56 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 - Is patroni service failed to bootstrap cluster.
                 - Is it new fail, that wasn't observed previously.
         """
-        try:
-            log_exec = container.pebble.exec(["pebble", "logs", "postgresql"], combine_stderr=True)
-            patroni_logs = log_exec.wait_output()[0]
-            patroni_exceptions = re.findall(
-                r"^([0-9-:TZ.]+) \[postgresql] patroni\.exceptions\.PatroniFatalException: Failed to bootstrap cluster$",
-                patroni_logs,
-                re.MULTILINE,
-            )
-        except ExecError:  # For Juju 2.
-            log_exec = container.pebble.exec(["cat", "/var/log/postgresql/patroni.log"])
-            patroni_logs = log_exec.wait_output()[0]
-            patroni_exceptions = re.findall(
-                r"^([0-9- :]+) UTC \[[0-9]+\]: INFO: removing initialize key after failed attempt to bootstrap the cluster",
-                patroni_logs,
-                re.MULTILINE,
-            )
+        patroni_exceptions = []
+        count = 0
+        while len(patroni_exceptions) == 0 and count < 10:
+            try:
+                log_exec = container.pebble.exec(
+                    ["pebble", "logs", "postgresql", "-n", "all"], combine_stderr=True
+                )
+                patroni_logs = log_exec.wait_output()[0]
+                patroni_exceptions = re.findall(
+                    r"^([0-9-:TZ.]+) \[postgresql] patroni\.exceptions\.PatroniFatalException: Failed to bootstrap cluster$",
+                    patroni_logs,
+                    re.MULTILINE,
+                )
+            except ExecError:  # For Juju 2.
+                log_exec = container.pebble.exec(["cat", "/var/log/postgresql/patroni.log"])
+                patroni_logs = log_exec.wait_output()[0]
+                patroni_exceptions = re.findall(
+                    r"^([0-9- :]+) UTC \[[0-9]+\]: INFO: removing initialize key after failed attempt to bootstrap the cluster",
+                    patroni_logs,
+                    re.MULTILINE,
+                )
+                if len(patroni_exceptions) != 0:
+                    break
+                # If no match, look at older logs
+                log_exec = container.pebble.exec([
+                    "find",
+                    "/var/log/postgresql/",
+                    "-name",
+                    "'patroni.log.*'",
+                    "-exec",
+                    "cat",
+                    "{}",
+                    "+",
+                ])
+                patroni_logs = log_exec.wait_output()[0]
+                patroni_exceptions = re.findall(
+                    r"^([0-9- :]+) UTC \[[0-9]+\]: INFO: removing initialize key after failed attempt to bootstrap the cluster",
+                    patroni_logs,
+                    re.MULTILINE,
+                )
+            count += 1
+            time.sleep(3)
+
         if len(patroni_exceptions) > 0:
+            logger.debug("Failures to bootstrap cluster detected on Patroni service logs")
             old_pitr_fail_id = self.unit_peer_data.get("last_pitr_fail_id", None)
             self.unit_peer_data["last_pitr_fail_id"] = patroni_exceptions[-1]
             return True, patroni_exceptions[-1] != old_pitr_fail_id
+
+        logger.debug("No failures detected on Patroni service logs")
         return False, False
 
     def log_pitr_last_transaction_time(self) -> None:
