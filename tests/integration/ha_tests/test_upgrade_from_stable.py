@@ -29,7 +29,7 @@ from .helpers import (
 
 logger = logging.getLogger(__name__)
 
-TIMEOUT = 5 * 60
+TIMEOUT = 10 * 60
 
 
 @pytest.mark.group(1)
