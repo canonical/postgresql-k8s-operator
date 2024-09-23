@@ -8,7 +8,6 @@ from pytest_operator.plugin import OpsTest
 
 from . import markers
 from .helpers import (
-    CHARM_BASE,
     DATABASE_APP_NAME,
     build_and_deploy,
     check_database_creation,
