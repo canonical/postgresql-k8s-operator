@@ -32,7 +32,7 @@ async def test_discourse_from_discourse_charmers(ops_test: OpsTest):
         await asyncio.gather(
             build_and_deploy(ops_test, DATABASE_UNITS),
             ops_test.model.deploy(
-                REDIS_APP_NAME, application_name=REDIS_APP_NAME, base=CHARM_BASE
+                REDIS_APP_NAME, application_name=REDIS_APP_NAME, base="ubuntu@20.04"
             ),
         )
         await ops_test.model.wait_for_idle(

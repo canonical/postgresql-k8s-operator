@@ -107,13 +107,13 @@ async def test_extensions_blocking(ops_test: OpsTest) -> None:
     await ops_test.model.deploy(
         APPLICATION_NAME,
         application_name=APPLICATION_NAME,
-        series=CHARM_BASE,
+        base=CHARM_BASE,
         channel="edge",
     )
     await ops_test.model.deploy(
         APPLICATION_NAME,
         application_name=f"{APPLICATION_NAME}2",
-        series=CHARM_BASE,
+        base=CHARM_BASE,
         channel="edge",
     )
 
