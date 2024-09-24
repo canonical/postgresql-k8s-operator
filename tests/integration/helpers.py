@@ -41,7 +41,7 @@ STORAGE_PATH = METADATA["storage"]["pgdata"]["location"]
 MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET = "Move restored cluster to another S3 bucket"
 
 try:
-    check_call(["kubectl", "version"])
+    check_call(["kubectl", "version", "--client=true"])
     KUBECTL = "kubectl"
 except FileNotFoundError:
     KUBECTL = "microk8s kubectl"
