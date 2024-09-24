@@ -38,6 +38,7 @@ from tenacity import (
 
 from ..helpers import (
     APPLICATION_NAME,
+    KUBECTL,
     app_name,
     db_connect,
     execute_query_on_unit,
@@ -85,7 +86,7 @@ async def are_all_db_processes_down(ops_test: OpsTest, process: str, signal: str
                 for unit in ops_test.model.applications[app].units:
                     pod_name = unit.name.replace("/", "-")
                     call = subprocess.run(
-                        f"microk8s kubectl -n {ops_test.model.info.name} exec {pod_name} -c postgresql -- {' '.join(pgrep_cmd)}",
+                        f"{KUBECTL} -n {ops_test.model.info.name} exec {pod_name} -c postgresql -- {' '.join(pgrep_cmd)}",
                         shell=True,
                     )
 
@@ -641,7 +642,7 @@ def isolate_instance_from_cluster(ops_test: OpsTest, unit_name: str) -> None:
         env = os.environ
         env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
         subprocess.check_output(
-            " ".join(["kubectl", "apply", "-f", temp_file.name]), shell=True, env=env
+            " ".join([*KUBECTL.split(), "apply", "-f", temp_file.name]), shell=True, env=env
         )
 
 
@@ -737,7 +738,7 @@ def remove_instance_isolation(ops_test: OpsTest) -> None:
     env = os.environ
     env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
     subprocess.check_output(
-        f"kubectl -n {ops_test.model.info.name} delete --ignore-not-found=true networkchaos network-loss-primary",
+        f"{KUBECTL} -n {ops_test.model.info.name} delete --ignore-not-found=true networkchaos network-loss-primary",
         shell=True,
         env=env,
     )
