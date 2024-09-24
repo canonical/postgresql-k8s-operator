@@ -16,7 +16,6 @@ from ops.testing import Harness
 
 from charm import PostgresqlOperatorCharm
 from constants import PEER
-from tests.helpers import patch_network_get
 
 DATABASE = "test_database"
 EXTRA_USER_ROLES = "CREATEDB,CREATEROLE"
@@ -74,7 +73,6 @@ def request_database(_harness):
     )
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_on_database_requested(harness):
     with (
         patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock,
@@ -115,7 +113,7 @@ def test_on_database_requested(harness):
         database_relation = harness.model.get_relation(RELATION_NAME)
         client_relations = [database_relation]
         postgresql_mock.create_database.assert_called_once_with(
-            DATABASE, user, plugins=[], client_relations=client_relations
+            DATABASE, user, plugins=["pgaudit"], client_relations=client_relations
         )
         postgresql_mock.get_postgresql_version.assert_called_once()
 
@@ -161,7 +159,6 @@ def test_on_database_requested(harness):
         assert isinstance(harness.model.unit.status, BlockedStatus)
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_on_relation_departed(harness):
     with patch("charm.Patroni.member_started", new_callable=PropertyMock(return_value=True)):
         peer_rel_id = harness.model.get_relation(PEER).id
@@ -183,7 +180,6 @@ def test_on_relation_departed(harness):
         assert "departing" not in relation_data
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_on_relation_broken(harness):
     with harness.hooks_disabled():
         harness.set_leader()

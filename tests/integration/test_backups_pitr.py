@@ -25,11 +25,6 @@ from .helpers import (
 from .juju_ import juju_major_version
 
 CANNOT_RESTORE_PITR = "cannot restore PITR, juju debug-log for details"
-ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE = "the S3 repository has backups from another cluster"
-FAILED_TO_ACCESS_CREATE_BUCKET_ERROR_MESSAGE = (
-    "failed to access/create the bucket, check your S3 settings"
-)
-FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE = "failed to initialize stanza, check your S3 settings"
 S3_INTEGRATOR_APP_NAME = "s3-integrator"
 if juju_major_version < 3:
     tls_certificates_app_name = "tls-certificates-operator"
@@ -97,16 +92,19 @@ async def cloud_configs(ops_test: OpsTest, github_secrets) -> None:
             bucket_object.delete()
 
 
-@pytest.mark.group(1)
-@pytest.mark.abort_on_fail
-async def test_pitr_backup(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> None:
-    """Build and deploy two units of PostgreSQL in AWS and then test the backup and restore actions."""
-    config = cloud_configs[0][AWS]
-    credentials = cloud_configs[1][AWS]
-    cloud = AWS.lower()
-
+async def pitr_backup_operations(
+    ops_test: OpsTest,
+    s3_integrator_app_name: str,
+    tls_certificates_app_name: str,
+    tls_config,
+    tls_channel,
+    credentials,
+    cloud,
+    config,
+) -> None:
+    """Utility function containing PITR backup operations for both cloud tests."""
     # Deploy S3 Integrator and TLS Certificates Operator.
-    await ops_test.model.deploy(S3_INTEGRATOR_APP_NAME)
+    await ops_test.model.deploy(s3_integrator_app_name)
     await ops_test.model.deploy(tls_certificates_app_name, config=tls_config, channel=tls_channel)
     # Deploy and relate PostgreSQL to S3 integrator (one database app for each cloud for now
     # as archivo_mode is disabled after restoring the backup) and to TLS Certificates Operator
@@ -119,19 +117,19 @@ async def test_pitr_backup(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) 
         await ops_test.model.wait_for_idle(
             apps=[database_app_name], status="active", timeout=1000, raise_on_error=False
         )
-    await ops_test.model.relate(database_app_name, S3_INTEGRATOR_APP_NAME)
+    await ops_test.model.relate(database_app_name, s3_integrator_app_name)
 
     # Configure and set access and secret keys.
     logger.info(f"configuring S3 integrator for {cloud}")
-    await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config(config)
-    action = await ops_test.model.units.get(f"{S3_INTEGRATOR_APP_NAME}/0").run_action(
+    await ops_test.model.applications[s3_integrator_app_name].set_config(config)
+    action = await ops_test.model.units.get(f"{s3_integrator_app_name}/0").run_action(
         "sync-s3-credentials",
         **credentials,
     )
     await action.wait()
     async with ops_test.fast_forward(fast_interval="60s"):
         await ops_test.model.wait_for_idle(
-            apps=[database_app_name, S3_INTEGRATOR_APP_NAME], status="active", timeout=1000
+            apps=[database_app_name, s3_integrator_app_name], status="active", timeout=1000
         )
 
     primary = await get_primary(ops_test, database_app_name)
@@ -278,12 +276,58 @@ async def test_pitr_backup(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) 
 
         # Remove S3 relation to ensure "move to another cluster" blocked status is gone
         await ops_test.model.applications[database_app_name].remove_relation(
-            f"{database_app_name}:s3-parameters", f"{S3_INTEGRATOR_APP_NAME}:s3-credentials"
+            f"{database_app_name}:s3-parameters", f"{s3_integrator_app_name}:s3-credentials"
         )
 
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
     # Remove the database app.
-    await ops_test.model.remove_application(database_app_name, block_until_done=True)
+    await ops_test.model.remove_application(database_app_name)
+    await ops_test.model.block_until(
+        lambda: database_app_name not in ops_test.model.applications, timeout=1000
+    )
     # Remove the TLS operator.
-    await ops_test.model.remove_application(tls_certificates_app_name, block_until_done=True)
+    await ops_test.model.remove_application(tls_certificates_app_name)
+    await ops_test.model.block_until(
+        lambda: tls_certificates_app_name not in ops_test.model.applications, timeout=1000
+    )
+
+
+@pytest.mark.group(1)
+@pytest.mark.abort_on_fail
+async def test_pitr_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> None:
+    """Build and deploy two units of PostgreSQL in AWS and then test PITR backup and restore actions."""
+    config = cloud_configs[0][AWS]
+    credentials = cloud_configs[1][AWS]
+    cloud = AWS.lower()
+
+    await pitr_backup_operations(
+        ops_test,
+        S3_INTEGRATOR_APP_NAME,
+        tls_certificates_app_name,
+        tls_config,
+        tls_channel,
+        credentials,
+        cloud,
+        config,
+    )
+
+
+@pytest.mark.group(2)
+@pytest.mark.abort_on_fail
+async def test_pitr_backup_gcp(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> None:
+    """Build and deploy two units of PostgreSQL in GCP and then test PITR backup and restore actions."""
+    config = cloud_configs[0][GCP]
+    credentials = cloud_configs[1][GCP]
+    cloud = GCP.lower()
+
+    await pitr_backup_operations(
+        ops_test,
+        S3_INTEGRATOR_APP_NAME,
+        tls_certificates_app_name,
+        tls_config,
+        tls_channel,
+        credentials,
+        cloud,
+        config,
+    )

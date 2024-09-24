@@ -97,7 +97,7 @@ from ops.charm import (
 )
 from ops.framework import EventSource, Object
 from ops.model import ModelError, Relation
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, Field
 
 # The unique Charmhub library identifier, never change it
 LIBID = "12977e9aa0b34367903d8afeb8c3d85d"
@@ -107,7 +107,7 @@ LIBAPI = 2
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 8
+LIBPATCH = 9
 
 PYDEPS = ["pydantic"]
 
@@ -338,7 +338,7 @@ else:
     class ProtocolType(BaseModel):
         """Protocol Type."""
 
-        model_config = ConfigDict(
+        model_config = ConfigDict(  # type: ignore
             # Allow serializing enum values.
             use_enum_values=True
         )
@@ -925,7 +925,7 @@ class TracingEndpointRequirer(Object):
 def charm_tracing_config(
     endpoint_requirer: TracingEndpointRequirer, cert_path: Optional[Union[Path, str]]
 ) -> Tuple[Optional[str], Optional[str]]:
-    """Utility function to determine the charm_tracing config you will likely want.
+    """Return the charm_tracing config you likely want.
 
     If no endpoint is provided:
      disable charm tracing.

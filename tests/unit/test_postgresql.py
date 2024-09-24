@@ -324,3 +324,30 @@ def test_build_postgresql_parameters(harness):
     parameters = harness.charm.postgresql.build_postgresql_parameters(config_options, 1000000000)
     assert "shared_buffers" not in parameters
     assert "effective_cache_size" not in parameters
+
+
+def test_configure_pgaudit(harness):
+    with patch(
+        "charms.postgresql_k8s.v0.postgresql.PostgreSQL._connect_to_database"
+    ) as _connect_to_database:
+        # Test when pgAudit is enabled.
+        execute = (
+            _connect_to_database.return_value.cursor.return_value.__enter__.return_value.execute
+        )
+        harness.charm.postgresql._configure_pgaudit(True)
+        execute.assert_has_calls([
+            call("ALTER SYSTEM SET pgaudit.log = 'ROLE,DDL,MISC,MISC_SET';"),
+            call("ALTER SYSTEM SET pgaudit.log_client TO off;"),
+            call("ALTER SYSTEM SET pgaudit.log_parameter TO off"),
+            call("SELECT pg_reload_conf();"),
+        ])
+
+        # Test when pgAudit is disabled.
+        execute.reset_mock()
+        harness.charm.postgresql._configure_pgaudit(False)
+        execute.assert_has_calls([
+            call("ALTER SYSTEM RESET pgaudit.log;"),
+            call("ALTER SYSTEM RESET pgaudit.log_client;"),
+            call("ALTER SYSTEM RESET pgaudit.log_parameter;"),
+            call("SELECT pg_reload_conf();"),
+        ])

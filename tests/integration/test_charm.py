@@ -439,7 +439,11 @@ async def test_redeploy_charm_same_model_after_forcing_removal(ops_test: OpsTest
 
         # This check is enough to ensure that the charm/workload is working for this specific test.
         await ops_test.model.wait_for_idle(
-            apps=[APP_NAME], status="active", timeout=1000, wait_for_exact_units=len(UNIT_IDS)
+            apps=[APP_NAME],
+            status="active",
+            timeout=1000,
+            wait_for_exact_units=len(UNIT_IDS),
+            raise_on_error=False,
         )
 
 

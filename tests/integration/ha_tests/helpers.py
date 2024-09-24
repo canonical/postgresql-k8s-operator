@@ -779,6 +779,16 @@ async def is_secondary_up_to_date(ops_test: OpsTest, unit_name: str, expected_wr
     return True
 
 
+async def remove_charm_code(ops_test: OpsTest, unit_name: str) -> None:
+    """Remove src/charm.py from the PostgreSQL unit."""
+    await run_command_on_unit(
+        ops_test,
+        unit_name,
+        f'rm /var/lib/juju/agents/unit-{unit_name.replace("/", "-")}/charm/src/charm.py',
+        "charm",
+    )
+
+
 async def send_signal_to_process(
     ops_test: OpsTest, unit_name: str, process: str, signal: str, use_ssh: bool = False
 ) -> None:

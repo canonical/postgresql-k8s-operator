@@ -495,8 +495,9 @@ class PostgreSQLBackups(Object):
         except RetryError as e:
             # If the check command doesn't succeed, remove the stanza name
             # and rollback the configuration.
-            self.charm.app_peer_data.update({"stanza": ""})
-            self.charm.app_peer_data.pop("init-pgbackrest", None)
+            if self.charm.unit.is_leader():
+                self.charm.app_peer_data.update({"stanza": ""})
+                self.charm.app_peer_data.pop("init-pgbackrest", None)
             self.charm.unit_peer_data.update({"stanza": "", "init-pgbackrest": ""})
             self.charm.update_config()
 

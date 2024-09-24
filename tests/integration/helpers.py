@@ -666,18 +666,21 @@ def resource_exists(client: Client, resource: GenericNamespacedResource) -> bool
         return False
 
 
-async def run_command_on_unit(ops_test: OpsTest, unit_name: str, command: str) -> str:
+async def run_command_on_unit(
+    ops_test: OpsTest, unit_name: str, command: str, container: str = "postgresql"
+) -> str:
     """Run a command on a specific unit.
 
     Args:
         ops_test: The ops test framework instance
         unit_name: The name of the unit to run the command on
         command: The command to run
+        container: The container to run the command in (default: postgresql)
 
     Returns:
         the command output if it succeeds, otherwise raises an exception.
     """
-    complete_command = f"ssh --container postgresql {unit_name} {command}"
+    complete_command = f"ssh --container {container} {unit_name} {command}"
     return_code, stdout, stderr = await ops_test.juju(*complete_command.split())
     if return_code != 0:
         raise Exception(
@@ -744,7 +747,7 @@ async def switchover(
         candidate: The unit that should be elected the new primary.
     """
     primary_ip = await get_unit_address(ops_test, current_primary)
-    for attempt in Retrying(stop=stop_after_attempt(4), wait=wait_fixed(5), reraise=True):
+    for attempt in Retrying(stop=stop_after_attempt(60), wait=wait_fixed(3), reraise=True):
         with attempt:
             response = requests.post(
                 f"http://{primary_ip}:8008/switchover",

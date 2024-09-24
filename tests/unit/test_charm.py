@@ -24,10 +24,10 @@ from ops.testing import Harness
 from requests import ConnectionError
 from tenacity import RetryError, wait_fixed
 
-from charm import PostgresqlOperatorCharm
+from backups import MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET
+from charm import EXTENSION_OBJECT_MESSAGE, PostgresqlOperatorCharm
 from constants import PEER, SECRET_INTERNAL_LABEL
 from patroni import NotReadyError
-from tests.helpers import patch_network_get
 from tests.unit.helpers import _FakeApiError
 
 POSTGRESQL_CONTAINER = "postgresql"
@@ -156,7 +156,6 @@ def test_on_leader_elected(harness):
         )
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_get_unit_ip(harness):
     with (
         patch("charm.PostgresqlOperatorCharm._peers", new_callable=PropertyMock) as _peers,
@@ -164,7 +163,7 @@ def test_get_unit_ip(harness):
         _peers.return_value.data = {sentinel.unit: {"private-address": "2.2.2.2"}}
 
         # Current host
-        assert harness.charm.get_unit_ip(harness.charm.unit) == "1.1.1.1"
+        assert harness.charm.get_unit_ip(harness.charm.unit) == "192.0.2.0"
 
         # Not existing unit
         assert harness.charm.get_unit_ip(None) is None
@@ -172,7 +171,6 @@ def test_get_unit_ip(harness):
         assert harness.charm.get_unit_ip(sentinel.unit) == "2.2.2.2"
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_on_postgresql_pebble_ready(harness):
     with (
         patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
@@ -427,7 +425,6 @@ def test_on_set_password(harness):
         )
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_on_get_primary(harness):
     with patch("charm.Patroni.get_primary") as _get_primary:
         mock_event = Mock()
@@ -437,7 +434,6 @@ def test_on_get_primary(harness):
         mock_event.set_results.assert_called_once_with({"primary": "postgresql-k8s-1"})
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_fail_to_get_primary(harness):
     with patch("charm.Patroni.get_primary") as _get_primary:
         mock_event = Mock()
@@ -447,13 +443,15 @@ def test_fail_to_get_primary(harness):
         mock_event.set_results.assert_not_called()
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_on_update_status(harness):
     with (
         patch("charm.logger") as _logger,
         patch(
             "charm.PostgresqlOperatorCharm._handle_processes_failures"
         ) as _handle_processes_failures,
+        patch(
+            "charm.PostgresqlOperatorCharm.enable_disable_extensions"
+        ) as _enable_disable_extensions,
         patch("charm.Patroni.member_started") as _member_started,
         patch("charm.Patroni.get_primary") as _get_primary,
         patch("ops.model.Container.pebble") as _pebble,
@@ -473,6 +471,28 @@ def test_on_update_status(harness):
         harness.set_can_connect(POSTGRESQL_CONTAINER, True)
         harness.charm.on.update_status.emit()
         _get_primary.assert_not_called()
+
+        # Test unit in blocked status, without message.
+        _pebble.get_services.reset_mock()
+        harness.model.unit.status = BlockedStatus()
+        harness.charm.on.update_status.emit()
+        _enable_disable_extensions.assert_not_called()
+        _pebble.get_services.assert_not_called()
+
+        # Test unit in blocked status due to blocking extensions.
+        harness.model.unit.status = BlockedStatus(EXTENSION_OBJECT_MESSAGE)
+        harness.charm.on.update_status.emit()
+        _enable_disable_extensions.assert_called_once()
+        _pebble.get_services.assert_called_once()
+
+        # Test unit in blocked status due to restored cluster.
+        _pebble.get_services.reset_mock()
+        _enable_disable_extensions.reset_mock()
+        harness.model.unit.status = BlockedStatus(MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET)
+        harness.charm.on.update_status.emit()
+        _enable_disable_extensions.assert_not_called()
+        _pebble.get_services.assert_called_once()
+        harness.model.unit.status = ActiveStatus()
 
         # Test when a failure need to be handled.
         _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.ACTIVE)]
@@ -526,7 +546,6 @@ def test_on_update_status_no_connection(harness):
         _get_primary.assert_not_called()
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_on_update_status_with_error_on_get_primary(harness):
     with (
         patch(
@@ -1102,7 +1121,6 @@ def test_scope_obj(harness):
     assert harness.charm._scope_obj("test") is None
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_get_secret_from_databag(harness):
     """Asserts that get_secret method can read secrets from databag.
 
@@ -1129,7 +1147,6 @@ def test_get_secret_from_databag(harness):
         assert harness.charm.get_secret("unit", "operator_password") == "test-password"
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_on_get_password_secrets(harness):
     with patch("charm.PostgresqlOperatorCharm._on_leader_elected"):
         # Create a mock event and set passwords in peer relation data.
@@ -1158,7 +1175,6 @@ def test_on_get_password_secrets(harness):
 
 
 @pytest.mark.parametrize("scope", [("app"), ("unit")])
-@patch_network_get(private_address="1.1.1.1")
 def test_get_secret_secrets(harness, scope):
     with patch("charm.PostgresqlOperatorCharm._on_leader_elected"):
         harness.set_leader()
@@ -1168,7 +1184,6 @@ def test_get_secret_secrets(harness, scope):
         assert harness.charm.get_secret(scope, "operator-password") == "test-password"
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_set_secret_in_databag(harness, only_without_juju_secrets):
     """Asserts that set_secret method writes to relation databag.
 
@@ -1204,7 +1219,6 @@ def test_set_secret_in_databag(harness, only_without_juju_secrets):
 
 
 @pytest.mark.parametrize("scope,is_leader", [("app", True), ("unit", True), ("unit", False)])
-@patch_network_get(private_address="1.1.1.1")
 def test_set_reset_new_secret(harness, scope, is_leader):
     """NOTE: currently ops.testing seems to allow for non-leader to set secrets too!"""
     with patch("charm.PostgresqlOperatorCharm._on_leader_elected"):
@@ -1224,7 +1238,6 @@ def test_set_reset_new_secret(harness, scope, is_leader):
 
 
 @pytest.mark.parametrize("scope,is_leader", [("app", True), ("unit", True), ("unit", False)])
-@patch_network_get(private_address="1.1.1.1")
 def test_invalid_secret(harness, scope, is_leader):
     with patch("charm.PostgresqlOperatorCharm._on_leader_elected"):
         # App has to be leader, unit can be either
@@ -1237,7 +1250,6 @@ def test_invalid_secret(harness, scope, is_leader):
         assert harness.charm.get_secret(scope, "somekey") is None
 
 
-@patch_network_get(private_address="1.1.1.1")
 def test_delete_password(harness, juju_has_secrets, caplog):
     """NOTE: currently ops.testing seems to allow for non-leader to remove secrets too!"""
     with patch("charm.PostgresqlOperatorCharm._on_leader_elected"):
@@ -1282,7 +1294,6 @@ def test_delete_password(harness, juju_has_secrets, caplog):
 
 
 @pytest.mark.parametrize("scope,is_leader", [("app", True), ("unit", True), ("unit", False)])
-@patch_network_get(private_address="1.1.1.1")
 def test_migration_from_databag(harness, only_with_juju_secrets, scope, is_leader):
     """Check if we're moving on to use secrets when live upgrade from databag to Secrets usage.
 
@@ -1308,7 +1319,6 @@ def test_migration_from_databag(harness, only_with_juju_secrets, scope, is_leade
 
 
 @pytest.mark.parametrize("scope,is_leader", [("app", True), ("unit", True), ("unit", False)])
-@patch_network_get(private_address="1.1.1.1")
 def test_migration_from_single_secret(harness, only_with_juju_secrets, scope, is_leader):
     """Check if we're moving on to use secrets when live upgrade from databag to Secrets usage.
 
@@ -1794,3 +1804,34 @@ def test_create_pgdata(harness):
         "postgres:postgres",
         "/var/lib/postgresql/data",
     ])
+
+
+def test_get_plugins(harness):
+    with patch("charm.PostgresqlOperatorCharm._on_config_changed"):
+        # Test when the charm has no plugins enabled.
+        assert harness.charm.get_plugins() == ["pgaudit"]
+
+        # Test when the charm has some plugins enabled.
+        harness.update_config({
+            "plugin_audit_enable": True,
+            "plugin_citext_enable": True,
+            "plugin_spi_enable": True,
+        })
+        assert harness.charm.get_plugins() == [
+            "pgaudit",
+            "citext",
+            "refint",
+            "autoinc",
+            "insert_username",
+            "moddatetime",
+        ]
+
+        # Test when the charm has the pgAudit plugin disabled.
+        harness.update_config({"plugin_audit_enable": False})
+        assert harness.charm.get_plugins() == [
+            "citext",
+            "refint",
+            "autoinc",
+            "insert_username",
+            "moddatetime",
+        ]
