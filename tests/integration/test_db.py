@@ -51,7 +51,12 @@ async def test_finos_waltz_db(ops_test: OpsTest) -> None:
 
         # Deploy and test the first deployment of Finos Waltz.
         relation_id = await deploy_and_relate_application_with_postgresql(
-            ops_test, "finos-waltz-k8s", FINOS_WALTZ_APP_NAME, APPLICATION_UNITS, channel="edge"
+            ops_test,
+            "finos-waltz-k8s",
+            FINOS_WALTZ_APP_NAME,
+            APPLICATION_UNITS,
+            channel="edge",
+            base="ubuntu@20.04",
         )
         await check_database_creation(ops_test, "waltz")
 

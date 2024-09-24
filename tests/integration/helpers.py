@@ -271,6 +271,7 @@ async def deploy_and_relate_application_with_postgresql(
     channel: str = "stable",
     relation: str = "db",
     status: str = "blocked",
+    base: str = CHARM_BASE,
 ) -> int:
     """Helper function to deploy and relate application with PostgreSQL.
 
@@ -283,6 +284,7 @@ async def deploy_and_relate_application_with_postgresql(
         relation: Name of the PostgreSQL relation to relate
             the application to.
         status: The status to wait for in the application (default: blocked).
+        base: The base of the charm to deploy
 
     Returns:
         the id of the created relation.
@@ -293,7 +295,7 @@ async def deploy_and_relate_application_with_postgresql(
         channel=channel,
         application_name=application_name,
         num_units=number_of_units,
-        base=CHARM_BASE,
+        base=base,
     )
     await ops_test.model.wait_for_idle(
         apps=[application_name],
