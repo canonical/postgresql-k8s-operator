@@ -20,7 +20,7 @@ fi
 destroy_chaos_mesh() {
 	echo "deleting api-resources"
 	for i in $(k8sctl api-resources | awk '/chaos-mesh/ {print $1}'); do
-	    timeout 30 k8s delete "${i}" --all --all-namespaces || true
+	    timeout 30 k8sctl delete "${i}" --all --all-namespaces || true
 	done
 
 	if k8sctl -n "${chaos_mesh_ns}" get mutatingwebhookconfiguration | grep -q 'choas-mesh-mutation'; then
@@ -35,7 +35,7 @@ destroy_chaos_mesh() {
 		timeout 30 k8sctl -n "${chaos_mesh_ns}" delete validatingwebhookconfiguration chaos-mesh-validate-auth || true
 	fi
 
-	if k8sctk get clusterrolebinding | grep -q 'chaos-mesh'; then
+	if k8sctl get clusterrolebinding | grep -q 'chaos-mesh'; then
 		echo "deleting clusterrolebindings"
 		readarray -t args < <(k8sctl get clusterrolebinding | awk '/chaos-mesh/ {print $1}')
 		timeout 30 k8sctl delete clusterrolebinding "${args[@]}" || true
