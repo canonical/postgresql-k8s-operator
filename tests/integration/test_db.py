@@ -66,6 +66,7 @@ async def test_finos_waltz_db(ops_test: OpsTest) -> None:
             ANOTHER_FINOS_WALTZ_APP_NAME,
             APPLICATION_UNITS,
             channel="edge",
+            base="ubuntu@20.04",
         )
         # In this case, the database name is the same as in the first deployment
         # because it's a fixed value in Finos Waltz charm.
