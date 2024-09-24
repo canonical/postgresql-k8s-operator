@@ -293,7 +293,7 @@ async def pitr_backup_operations(
     )
 
 
-@pytest.mark.group(1)
+@pytest.mark.group("AWS")
 @pytest.mark.abort_on_fail
 async def test_pitr_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> None:
     """Build and deploy two units of PostgreSQL in AWS and then test PITR backup and restore actions."""
@@ -313,7 +313,7 @@ async def test_pitr_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dic
     )
 
 
-@pytest.mark.group(2)
+@pytest.mark.group("GCP")
 @pytest.mark.abort_on_fail
 async def test_pitr_backup_gcp(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> None:
     """Build and deploy two units of PostgreSQL in GCP and then test PITR backup and restore actions."""
