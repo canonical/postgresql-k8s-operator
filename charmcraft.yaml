@@ -24,6 +24,7 @@ parts:
 
       craftctl default
     charm-strict-dependencies: true
+    charm-requirements: [requirements.txt]
   libpq:
     build-packages:
       - libpq-dev
