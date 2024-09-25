@@ -12,7 +12,7 @@ jobs:
     name: Sync docs from Discourse
     uses: canonical/data-platform-workflows/.github/workflows/sync_docs.yaml@v21.0.1
     with:
-      reviewers: a-velasco,izmalk
+      reviewers: a-velasco
     permissions:
       contents: write  # Needed to push branch & tag
       pull-requests: write  # Needed to create PR
