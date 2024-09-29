@@ -1,6 +1,7 @@
 bootstrap:
   dcs:
     synchronous_mode: true
+    failsafe_mode: true
     synchronous_node_count: {{ minority_count }}
     postgresql:
       use_pg_rewind: true
