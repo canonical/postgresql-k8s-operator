@@ -57,7 +57,7 @@ from ops.charm import (
     RelationDepartedEvent,
     WorkloadEvent,
 )
-from ops.jujuversion import JujuVersion
+from ops import JujuVersion
 from ops.main import main
 from ops.model import (
     ActiveStatus,
