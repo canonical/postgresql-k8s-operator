@@ -90,8 +90,7 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 2 | h-enable-plugins-extensions | [Enable plugins/extensions](/t/10907) |
 | 1 | reference | [Reference]() |
 | 2 | r-overview | [Overview](/t/13977) |
-| 2 | r-releases | [Release Notes]() |
-| 3 | r-all-releases | [All releases](/t/11872) |
+| 2 | r-releases | [Release Notes](/t/11872) |
 | 3 | r-revision-381-382 | [Revision 381/382](/t/15442) |
 | 3 | r-revision-280-281 | [Revision 280/281](/t/14068) |
 | 3 | r-revision-193 | [Revision 193](/t/13208) |
