@@ -488,7 +488,6 @@ def test_on_update_status(harness):
         # Test unit in blocked status due to restored cluster.
         _pebble.get_services.reset_mock()
         _enable_disable_extensions.reset_mock()
-        harness.model.unit.status = BlockedStatus(MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET)
         harness.charm.on.update_status.emit()
         _enable_disable_extensions.assert_not_called()
         _pebble.get_services.assert_called_once()
