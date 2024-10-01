@@ -51,7 +51,7 @@ DB_PROCESSES = [POSTGRESQL_PROCESS, PATRONI_PROCESS]
 MEDIAN_ELECTION_TIME = 10
 
 
-@pytest.mark.group(1)
+@pytest.mark.group("ha_tests")
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy three unit of PostgreSQL."""
@@ -77,7 +77,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             await ops_test.model.wait_for_idle(status="active", timeout=1000, raise_on_error=False)
 
 
-@pytest.mark.group(1)
+@pytest.mark.group("ha_tests")
 @pytest.mark.parametrize("process", DB_PROCESSES)
 @pytest.mark.parametrize("signal", ["SIGTERM", "SIGKILL"])
 async def test_interruption_db_process(
@@ -112,7 +112,7 @@ async def test_interruption_db_process(
     await is_cluster_updated(ops_test, primary_name)
 
 
-@pytest.mark.group(1)
+@pytest.mark.group("ha_tests")
 @pytest.mark.parametrize("process", DB_PROCESSES)
 async def test_freeze_db_process(
     ops_test: OpsTest, process: str, continuous_writes, primary_start_timeout
@@ -155,7 +155,7 @@ async def test_freeze_db_process(
     await is_cluster_updated(ops_test, primary_name)
 
 
-@pytest.mark.group(1)
+@pytest.mark.group("ha_tests")
 @pytest.mark.parametrize("process", DB_PROCESSES)
 @pytest.mark.parametrize("signal", ["SIGTERM", "SIGKILL"])
 async def test_full_cluster_restart(
@@ -220,7 +220,7 @@ async def test_full_cluster_restart(
     await check_writes(ops_test)
 
 
-@pytest.mark.group(1)
+@pytest.mark.group("ha_tests")
 async def test_forceful_restart_without_data_and_transaction_logs(
     ops_test: OpsTest,
     continuous_writes,
@@ -307,7 +307,7 @@ async def test_forceful_restart_without_data_and_transaction_logs(
     await is_cluster_updated(ops_test, primary_name)
 
 
-@pytest.mark.group(1)
+@pytest.mark.group("ha_tests")
 async def test_network_cut(
     ops_test: OpsTest, continuous_writes, primary_start_timeout, chaos_mesh
 ) -> None:
@@ -371,7 +371,7 @@ async def test_network_cut(
     await is_cluster_updated(ops_test, primary_name)
 
 
-@pytest.mark.group(2)
+@pytest.mark.group("scaling_to_zero")
 async def test_scaling_to_zero(ops_test: OpsTest, continuous_writes) -> None:
     """Scale the database to zero units and scale up again."""
     # Deploy applications
