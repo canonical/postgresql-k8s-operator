@@ -79,6 +79,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.group("ha_tests")
+@pytest.mark.abort_on_fail
 @pytest.mark.parametrize("process", DB_PROCESSES)
 @pytest.mark.parametrize("signal", ["SIGTERM", "SIGKILL"])
 async def test_interruption_db_process(
@@ -101,7 +102,7 @@ async def test_interruption_db_process(
         await are_writes_increasing(ops_test, primary_name)
 
         # Verify that a new primary gets elected (ie old primary is secondary).
-        for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
+        for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3), reraise=True):
             with attempt:
                 new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
                 assert new_primary_name != primary_name
@@ -114,6 +115,7 @@ async def test_interruption_db_process(
 
 
 @pytest.mark.group("ha_tests")
+@pytest.mark.abort_on_fail
 @pytest.mark.parametrize("process", DB_PROCESSES)
 async def test_freeze_db_process(
     ops_test: OpsTest, process: str, continuous_writes, primary_start_timeout
@@ -157,6 +159,7 @@ async def test_freeze_db_process(
 
 
 @pytest.mark.group("ha_tests")
+@pytest.mark.abort_on_fail
 @pytest.mark.parametrize("process", DB_PROCESSES)
 @pytest.mark.parametrize("signal", ["SIGTERM", "SIGKILL"])
 async def test_full_cluster_restart(
@@ -222,6 +225,7 @@ async def test_full_cluster_restart(
 
 
 @pytest.mark.group("ha_tests")
+@pytest.mark.abort_on_fail
 async def test_forceful_restart_without_data_and_transaction_logs(
     ops_test: OpsTest,
     continuous_writes,
@@ -309,6 +313,7 @@ async def test_forceful_restart_without_data_and_transaction_logs(
 
 
 @pytest.mark.group("ha_tests")
+@pytest.mark.abort_on_fail
 @markers.amd64_only
 async def test_network_cut(
     ops_test: OpsTest, continuous_writes, primary_start_timeout, chaos_mesh
@@ -374,6 +379,7 @@ async def test_network_cut(
 
 
 @pytest.mark.group("scaling_to_zero")
+@pytest.mark.abort_on_fail
 async def test_scaling_to_zero(ops_test: OpsTest, continuous_writes) -> None:
     """Scale the database to zero units and scale up again."""
     # Deploy applications

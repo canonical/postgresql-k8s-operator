@@ -699,7 +699,7 @@ def modify_pebble_restart_delay(
         response.returncode == 0
     ), f"Failed to add to pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
 
-    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
         with attempt:
             replan_pebble_layer_commands = "/charm/bin/pebble replan"
             response = kubernetes.stream.stream(
