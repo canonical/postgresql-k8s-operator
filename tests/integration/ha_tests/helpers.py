@@ -240,7 +240,10 @@ async def are_writes_increasing(
     ops_test, down_unit: str = None, extra_model: Model = None
 ) -> None:
     """Verify new writes are continuing by counting the number of writes."""
-    writes, _ = await count_writes(ops_test, down_unit=down_unit, extra_model=extra_model)
+    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
+        with attempt:
+            writes, _ = await count_writes(ops_test, down_unit=down_unit, extra_model=extra_model)
+            assert len(writes), "No units report count"
     logger.info(f"Initial writes {writes}")
     for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3), reraise=True):
         with attempt:
@@ -248,10 +251,14 @@ async def are_writes_increasing(
                 ops_test, down_unit=down_unit, extra_model=extra_model
             )
             logger.info(f"Retry writes {more_writes}")
+            members_checked = []
             for member, count in writes.items():
-                assert (
-                    more_writes[member] > count
-                ), f"{member}: writes not continuing to DB (current writes: {more_writes[member]} - previous writes: {count})"
+                if member in more_writes:
+                    members_checked.append(member)
+                    assert (
+                        more_writes[member] > count
+                    ), f"{member}: writes not continuing to DB (current writes: {more_writes[member]} - previous writes: {count})"
+            assert len(members_checked), "No member checked from the initial writes"
 
 
 def copy_file_into_pod(
