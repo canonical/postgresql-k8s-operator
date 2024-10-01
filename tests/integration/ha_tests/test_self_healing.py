@@ -83,7 +83,12 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 @pytest.mark.parametrize("process", DB_PROCESSES)
 @pytest.mark.parametrize("signal", ["SIGTERM", "SIGKILL"])
 async def test_interruption_db_process(
-    ops_test: OpsTest, process: str, signal: str, continuous_writes, primary_start_timeout
+    ops_test: OpsTest,
+    process: str,
+    signal: str,
+    continuous_writes,
+    primary_start_timeout,
+    restart_policy,
 ) -> None:
     # Locate primary unit.
     app = await app_name(ops_test)
