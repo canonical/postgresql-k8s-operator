@@ -1448,11 +1448,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         restoring_backup = self.app_peer_data.get("restoring-backup")
         restore_timeline = self.app_peer_data.get("restore-timeline")
         restore_to_time = self.app_peer_data.get("restore-to-time")
-        # Sometimes this check fails to connect to the PostgreSQL. Not happened on VM, so it's a k8s-specific try-catch
-        # try:
-        #     current_timeline = self.postgresql.get_current_timeline()
-        # except PostgreSQLGetCurrentTimelineError:
-        #     logger.debug("Restore check early exit: can't get current wal timeline")
         current_timeline = self.postgresql.get_current_timeline()
 
         # Remove the restoring backup flag and the restore stanza name.
