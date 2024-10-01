@@ -20,37 +20,37 @@ fi
 destroy_chaos_mesh() {
 	echo "deleting api-resources"
 	for i in $(k8sctl api-resources | awk '/chaos-mesh/ {print $1}'); do
-	    timeout 30 `k8sctl delete "${i}" --all --all-namespaces` || true
+	    timeout 30 "$(k8sctl delete "${i}" --all --all-namespaces)" || true
 	done
 
 	if k8sctl -n "${chaos_mesh_ns}" get mutatingwebhookconfiguration | grep -q 'choas-mesh-mutation'; then
-		timeout 30 `k8sctl -n "${chaos_mesh_ns}" delete mutatingwebhookconfiguration chaos-mesh-mutation` || true
+		timeout 30 "$(k8sctl -n "${chaos_mesh_ns}" delete mutatingwebhookconfiguration chaos-mesh-mutation)" || true
 	fi
 
 	if k8sctl -n "${chaos_mesh_ns}" get validatingwebhookconfiguration | grep -q 'chaos-mesh-validation'; then
-		timeout 30 `k8sctl -n "${chaos_mesh_ns}" delete validatingwebhookconfiguration chaos-mesh-validation` || true
+		timeout 30 "$(k8sctl -n "${chaos_mesh_ns}" delete validatingwebhookconfiguration chaos-mesh-validation)" || true
 	fi
 
 	if k8sctl -n "${chaos_mesh_ns}" get validatingwebhookconfiguration | grep -q 'chaos-mesh-validate-auth'; then
-		timeout 30 `k8sctl -n "${chaos_mesh_ns}" delete validatingwebhookconfiguration chaos-mesh-validate-auth` || true
+		timeout 30 "$(k8sctl -n "${chaos_mesh_ns}" delete validatingwebhookconfiguration chaos-mesh-validate-auth)" || true
 	fi
 
 	if k8sctl get clusterrolebinding | grep -q 'chaos-mesh'; then
 		echo "deleting clusterrolebindings"
 		readarray -t args < <(k8sctl get clusterrolebinding | awk '/chaos-mesh/ {print $1}')
-		timeout 30 `k8sctl delete clusterrolebinding "${args[@]}"` || true
+		timeout 30 "$(k8sctl delete clusterrolebinding "${args[@]}")" || true
 	fi
 
 	if k8sctl get clusterrole | grep -q 'chaos-mesh'; then
 		echo "deleting clusterroles"
 		readarray -t args < <(k8sctl get clusterrole | awk '/chaos-mesh/ {print $1}')
-		timeout 30 `k8sctl delete clusterrole "${args[@]}"` || true
+		timeout 30 "$(k8sctl delete clusterrole "${args[@]}")" || true
 	fi
 
 	if k8sctl get crd | grep -q 'chaos-mesh.org'; then
 		echo "deleting crds"
 		readarray -t args < <(k8sctl get crd | awk '/chaos-mesh.org/ {print $1}')
-		timeout 30 `k8sctl delete crd "${args[@]}"` || true
+		timeout 30 "$(k8sctl delete crd "${args[@]}")" || true
 	fi
 
 	if [ -n "${chaos_mesh_ns}" ] && sg snap_microk8s -c "microk8s.helm3 repo list --namespace=${chaos_mesh_ns}" | grep -q 'chaos-mesh'; then
