@@ -9,6 +9,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
+from .. import markers
 from ..helpers import (
     APPLICATION_NAME,
     CHARM_SERIES,
@@ -308,6 +309,7 @@ async def test_forceful_restart_without_data_and_transaction_logs(
 
 
 @pytest.mark.group("ha_tests")
+@markers.amd64_only
 async def test_network_cut(
     ops_test: OpsTest, continuous_writes, primary_start_timeout, chaos_mesh
 ) -> None:
