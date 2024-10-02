@@ -192,7 +192,12 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
         # Deploy and check Mattermost user and database existence.
         relation_id = await deploy_and_relate_application_with_postgresql(
-            ops_test, "mattermost-k8s", MATTERMOST_APP_NAME, APPLICATION_UNITS, status="waiting", base="ubuntu@20.04"
+            ops_test,
+            "mattermost-k8s",
+            MATTERMOST_APP_NAME,
+            APPLICATION_UNITS,
+            status="waiting",
+            base="ubuntu@20.04",
         )
         await check_database_creation(ops_test, "mattermost")
 
