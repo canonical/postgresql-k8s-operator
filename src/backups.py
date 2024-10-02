@@ -1042,6 +1042,11 @@ Stderr:
             group=WORKLOAD_OS_GROUP,
         )
 
+        # Render the logrotate configuration file.
+        with open("templates/pgbackrest.logrotate.j2", "r") as file:
+            template = Template(file.read())
+        self.container.push("/etc/logrotate.d/pgbackrest.logrotate", template.render())
+
         return True
 
     def _restart_database(self) -> None:
