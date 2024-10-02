@@ -282,12 +282,18 @@ async def pitr_backup_operations(
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
     # Remove the database app.
-    await ops_test.model.remove_application(database_app_name, block_until_done=True)
+    await ops_test.model.remove_application(database_app_name)
+    await ops_test.model.block_until(
+        lambda: database_app_name not in ops_test.model.applications, timeout=1000
+    )
     # Remove the TLS operator.
-    await ops_test.model.remove_application(tls_certificates_app_name, block_until_done=True)
+    await ops_test.model.remove_application(tls_certificates_app_name)
+    await ops_test.model.block_until(
+        lambda: tls_certificates_app_name not in ops_test.model.applications, timeout=1000
+    )
 
 
-@pytest.mark.group(1)
+@pytest.mark.group("AWS")
 @pytest.mark.abort_on_fail
 async def test_pitr_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> None:
     """Build and deploy two units of PostgreSQL in AWS and then test PITR backup and restore actions."""
@@ -307,7 +313,7 @@ async def test_pitr_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dic
     )
 
 
-@pytest.mark.group(2)
+@pytest.mark.group("GCP")
 @pytest.mark.abort_on_fail
 async def test_pitr_backup_gcp(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> None:
     """Build and deploy two units of PostgreSQL in GCP and then test PITR backup and restore actions."""
