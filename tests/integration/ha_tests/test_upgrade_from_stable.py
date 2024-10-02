@@ -13,6 +13,7 @@ from tenacity import Retrying, stop_after_attempt, wait_fixed
 from .. import markers
 from ..helpers import (
     APPLICATION_NAME,
+    CHARM_BASE,
     DATABASE_APP_NAME,
     METADATA,
     count_switchovers,
@@ -42,11 +43,13 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
             num_units=3,
             channel="14/stable",
             trust=True,
+            base=CHARM_BASE,
         ),
         ops_test.model.deploy(
             APPLICATION_NAME,
             num_units=1,
             channel="latest/edge",
+            base=CHARM_BASE,
         ),
     )
     logger.info("Wait for applications to become active")
