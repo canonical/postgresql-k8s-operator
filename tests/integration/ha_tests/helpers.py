@@ -708,21 +708,6 @@ def modify_pebble_restart_delay(
 
     for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
         with attempt:
-            start_pebble_layer_commands = "/charm/bin/pebble start postgresql"
-            response = kubernetes.stream.stream(
-                client.connect_get_namespaced_pod_exec,
-                pod_name,
-                ops_test.model.info.name,
-                container=container_name,
-                command=start_pebble_layer_commands.split(),
-                stdin=False,
-                stdout=True,
-                stderr=True,
-                tty=False,
-                _preload_content=False,
-            )
-            response.run_forever(timeout=60)
-
             replan_pebble_layer_commands = "/charm/bin/pebble replan"
             response = kubernetes.stream.stream(
                 client.connect_get_namespaced_pod_exec,
@@ -737,7 +722,9 @@ def modify_pebble_restart_delay(
                 _preload_content=False,
             )
             response.run_forever(timeout=60)
-            if ensure_replan:
+            if ensure_replan and response.returncode != 0:
+                # Juju 2 fix service is spawned but pebble is reporting inactive
+                await send_signal_to_process(ops_test, unit_name, "/usr/bin/patroni", "SIGTERM")
                 assert (
                     response.returncode == 0
                 ), f"Failed to replan pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
