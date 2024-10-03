@@ -201,7 +201,7 @@ async def test_full_cluster_restart(
         ), "Not all units down at the same time."
     finally:
         for unit in ops_test.model.applications[app].units:
-            modify_pebble_restart_delay(
+            await modify_pebble_restart_delay(
                 ops_test,
                 unit.name,
                 "tests/integration/ha_tests/manifests/restore_pebble_restart_delay.yml",

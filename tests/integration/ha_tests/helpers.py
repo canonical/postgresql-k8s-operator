@@ -655,7 +655,7 @@ def isolate_instance_from_cluster(ops_test: OpsTest, unit_name: str) -> None:
         )
 
 
-def modify_pebble_restart_delay(
+async def modify_pebble_restart_delay(
     ops_test: OpsTest,
     unit_name: str,
     pebble_plan_path: str,
@@ -724,7 +724,12 @@ def modify_pebble_restart_delay(
             response.run_forever(timeout=60)
             if ensure_replan and response.returncode != 0:
                 # Juju 2 fix service is spawned but pebble is reporting inactive
-                await send_signal_to_process(ops_test, unit_name, "/usr/bin/patroni", "SIGTERM")
+                try:
+                    await send_signal_to_process(
+                        ops_test, unit_name, "/usr/bin/patroni", "SIGTERM"
+                    )
+                except (ProcessError, ProcessRunningError):
+                    pass
                 assert (
                     response.returncode == 0
                 ), f"Failed to replan pebble layer, unit={unit_name}, container={container_name}, service={service_name}"

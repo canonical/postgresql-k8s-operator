@@ -100,7 +100,7 @@ async def restart_policy(ops_test: OpsTest) -> None:
     app = await app_name(ops_test)
 
     for unit in ops_test.model.applications[app].units:
-        modify_pebble_restart_delay(
+        await modify_pebble_restart_delay(
             ops_test,
             unit.name,
             "tests/integration/ha_tests/manifests/extend_pebble_restart_delay.yml",
