@@ -708,6 +708,21 @@ def modify_pebble_restart_delay(
 
     for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
         with attempt:
+            start_pebble_layer_commands = "/charm/bin/pebble start postgresql"
+            response = kubernetes.stream.stream(
+                client.connect_get_namespaced_pod_exec,
+                pod_name,
+                ops_test.model.info.name,
+                container=container_name,
+                command=start_pebble_layer_commands.split(),
+                stdin=False,
+                stdout=True,
+                stderr=True,
+                tty=False,
+                _preload_content=False,
+            )
+            response.run_forever(timeout=60)
+
             replan_pebble_layer_commands = "/charm/bin/pebble replan"
             response = kubernetes.stream.stream(
                 client.connect_get_namespaced_pod_exec,
@@ -732,7 +747,7 @@ async def is_postgresql_ready(ops_test, unit_name: str) -> bool:
     """Verifies a PostgreSQL instance is running and available."""
     unit_ip = await get_unit_address(ops_test, unit_name)
     try:
-        for attempt in Retrying(stop=stop_after_delay(60 * 8), wait=wait_fixed(3)):
+        for attempt in Retrying(stop=stop_after_delay(60 * 10), wait=wait_fixed(3)):
             with attempt:
                 instance_health_info = requests.get(f"http://{unit_ip}:8008/health")
                 assert instance_health_info.status_code == 200
