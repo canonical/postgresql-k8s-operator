@@ -10,7 +10,6 @@ from lightkube.resources.apps_v1 import StatefulSet
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 
-from .. import markers
 from ..helpers import (
     APPLICATION_NAME,
     DATABASE_APP_NAME,
@@ -32,7 +31,6 @@ TIMEOUT = 10 * 60
 
 
 @pytest.mark.group(1)
-@markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_deploy_stable(ops_test: OpsTest) -> None:
     """Simple test to ensure that the PostgreSQL and application charms get deployed."""
@@ -52,13 +50,15 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
     logger.info("Wait for applications to become active")
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME, APPLICATION_NAME], status="active", raise_on_error=False
+            apps=[DATABASE_APP_NAME, APPLICATION_NAME],
+            status="active",
+            raise_on_error=False,
+            timeout=1200,
         )
     assert len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3
 
 
 @pytest.mark.group(1)
-@markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     """Test that the pre-upgrade-check action runs successfully."""
@@ -91,7 +91,6 @@ async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.group(1)
-@markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_upgrade_from_stable(ops_test: OpsTest, continuous_writes):
     """Test updating from stable channel."""
