@@ -1446,9 +1446,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return False
 
         if not self._patroni.primary_endpoint_ready:
-            logger.debug(
-                "Restore check early exit: Waiting for primary endpoint to be ready"
-            )
+            logger.debug("Restore check early exit: Waiting for primary endpoint to be ready")
             return False
 
         restoring_backup = self.app_peer_data.get("restoring-backup")
@@ -1468,9 +1466,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         logger.info(
             "Restored"
-            f"{' to ' + restore_to_time if restore_to_time else ''}"
-            f"{' from timeline ' + restore_timeline if restore_timeline and not restoring_backup else ''}"
-            f"{' from backup ' + self.backup._parse_backup_id(restoring_backup)[0] if restoring_backup else ''}"
+            f"{f' to {restore_to_time}' if restore_to_time else ''}"
+            f"{f' from timeline {restore_timeline}' if restore_timeline and not restoring_backup else ''}"
+            f"{f' from backup {self.backup._parse_backup_id(restoring_backup)[0]}' if restoring_backup else ''}"
             f". Currently tracking the newly created timeline {current_timeline}."
         )
 
