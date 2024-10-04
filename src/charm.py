@@ -50,6 +50,7 @@ from lightkube import ApiError, Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Endpoints, Node, Pod, Service
+from ops import main
 from ops.charm import (
     ActionEvent,
     HookEvent,
@@ -58,7 +59,6 @@ from ops.charm import (
     WorkloadEvent,
 )
 from ops.jujuversion import JujuVersion
-from ops.main import main
 from ops.model import (
     ActiveStatus,
     BlockedStatus,

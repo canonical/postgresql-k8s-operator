@@ -54,7 +54,8 @@ async def loop_wait(ops_test: OpsTest) -> None:
     initial_loop_wait = await get_patroni_setting(ops_test, "loop_wait")
     yield
     # Rollback to the initial configuration.
-    await change_patroni_setting(ops_test, "loop_wait", initial_loop_wait)
+    patroni_password = await get_password(ops_test, "patroni")
+    await change_patroni_setting(ops_test, "loop_wait", initial_loop_wait, patroni_password)
 
 
 @pytest.fixture(scope="module")
@@ -99,7 +100,7 @@ async def restart_policy(ops_test: OpsTest) -> None:
     app = await app_name(ops_test)
 
     for unit in ops_test.model.applications[app].units:
-        modify_pebble_restart_delay(
+        await modify_pebble_restart_delay(
             ops_test,
             unit.name,
             "tests/integration/ha_tests/manifests/extend_pebble_restart_delay.yml",
