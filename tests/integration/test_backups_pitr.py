@@ -261,8 +261,8 @@ async def pitr_backup_operations(
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
     logger.info("3: successful restore")
-    primary = await get_primary(ops_test, remaining_unit.name)
-    address = get_unit_address(ops_test, primary)
+    primary = await get_primary(ops_test, database_app_name)
+    address = await get_unit_address(ops_test, primary)
     timeline_t3 = await _get_most_recent_backup(ops_test, remaining_unit)
     assert (
         backup_b1 != timeline_t3 and timeline_t2 != timeline_t3
@@ -300,8 +300,8 @@ async def pitr_backup_operations(
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
     logger.info("4: successful restore")
-    primary = await get_primary(ops_test, remaining_unit.name)
-    address = get_unit_address(ops_test, primary)
+    primary = await get_primary(ops_test, database_app_name)
+    address = await get_unit_address(ops_test, primary)
     timeline_t4 = await _get_most_recent_backup(ops_test, remaining_unit)
     assert (
         backup_b1 != timeline_t4 and timeline_t2 != timeline_t4 and timeline_t3 != timeline_t4

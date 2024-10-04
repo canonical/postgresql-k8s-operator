@@ -1445,6 +1445,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("Restore check early exit: Patroni has not started yet")
             return False
 
+        if not self._patroni.primary_endpoint_ready:
+            logger.debug(
+                "Restore check early exit: Waiting for primary endpoint to be ready"
+            )
+            return False
+
         restoring_backup = self.app_peer_data.get("restoring-backup")
         restore_timeline = self.app_peer_data.get("restore-timeline")
         restore_to_time = self.app_peer_data.get("restore-to-time")
