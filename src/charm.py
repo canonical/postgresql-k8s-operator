@@ -39,6 +39,7 @@ from charms.postgresql_k8s.v0.postgresql import (
     REQUIRED_PLUGINS,
     PostgreSQL,
     PostgreSQLEnableDisableExtensionError,
+    PostgreSQLGetCurrentTimelineError,
     PostgreSQLUpdateUserPasswordError,
 )
 from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
@@ -1445,14 +1446,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("Restore check early exit: Patroni has not started yet")
             return False
 
-        if not self._patroni.primary_endpoint_ready:
-            logger.debug("Restore check early exit: Waiting for primary endpoint to be ready")
-            return False
-
         restoring_backup = self.app_peer_data.get("restoring-backup")
         restore_timeline = self.app_peer_data.get("restore-timeline")
         restore_to_time = self.app_peer_data.get("restore-to-time")
-        current_timeline = self.postgresql.get_current_timeline()
+        try:
+            current_timeline = self.postgresql.get_current_timeline()
+        except PostgreSQLGetCurrentTimelineError:
+            logger.debug("Restore check early exit: can't get current wal timeline")
+            return False
 
         # Remove the restoring backup flag and the restore stanza name.
         self.app_peer_data.update({
