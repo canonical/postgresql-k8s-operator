@@ -35,7 +35,7 @@ Canonical Data issues are now public on both [Jira](https://warthogs.atlassian.n
 * PostgreSQL cluster manager **Patroni** - `v.3.1.2`
 * Backup tools **pgBackRest** - `v.2.48`
 * The Prometheus **postgres_exporter** is `0.12.1-0ubuntu0.22.04.1~ppa1`
-* This charm uses [ROCK OCI](https://github.com/orgs/canonical/packages?tab=packages&q=charmed)  based on SNAP revision 96
+* This charm uses [ROCK OCI](https://github.com/orgs/canonical/packages?tab=packages&q=charmed) (postgresql-image resource-revision 149)  based on SNAP revision 96
 * This charm ships the latest base `Ubuntu LTS 22.04.3`
 
 ## Technical notes

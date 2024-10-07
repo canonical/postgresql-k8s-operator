@@ -8,9 +8,9 @@ If you're using `juju 2.9`, check the [`juju 3.0` Release Notes](https://juju.is
 This guide contains the steps to enable tracing with [Grafana Tempo](https://grafana.com/docs/tempo/latest/) for your PostgreSQL K8s application. 
 
 To summarize:
-* [Deploy the Tempo charm in a COS K8s environment](#heading--deploy)
-* [Integrate it with the COS charms](#heading--integrate)
+* [Deploy the Tempo charms and their dependencies in a COS K8s environment](#heading--deploy)
 * [Offer interfaces for cross-model integrations](#heading--offer)
+* [Consume and integrate cross-model integrations](#heading--consume)
 * [View PostgreSQL K8s traces on Grafana](#heading--view)
 
 
@@ -35,31 +35,13 @@ First, switch to the Kubernetes controller where the COS model is deployed:
 ```shell
 juju switch <k8s_controller_name>:<cos_model_name>
 ```
-Then, deploy the [`tempo-k8s`](https://charmhub.io/tempo-k8s) charm:
-```shell
-juju deploy -n 1 tempo-k8s --channel latest/edge
-```
+Then, deploy the dependencies of Tempo following [this tutorial](https://discourse.charmhub.io/t/tutorial-deploy-tempo-ha-on-top-of-cos-lite/15489). In particular, we would want to:
+- Deploy the minio charm
+- Deploy the s3 integrator charm
+- Add a bucket in minio using a python script
+- Configure s3 integrator with the minio credentials
 
-<a href="#heading--integrate"><h2 id="heading--integrate"> Integrate with the COS charms </h2></a>
-
-Integrate `tempo-k8s` with the COS charms as follows:
-
-```shell
-juju integrate tempo-k8s:grafana-dashboard grafana:grafana-dashboard
-juju integrate tempo-k8s:grafana-source grafana:grafana-source
-juju integrate tempo-k8s:ingress traefik:traefik-route
-juju integrate tempo-k8s:metrics-endpoint prometheus:metrics-endpoint
-juju integrate tempo-k8s:logging loki:logging
-```
-If you would like to instrument traces from the COS charms as well, create the following integrations:
-```shell
-juju integrate tempo-k8s:tracing alertmanager:tracing
-juju integrate tempo-k8s:tracing catalogue:tracing
-juju integrate tempo-k8s:tracing grafana:tracing
-juju integrate tempo-k8s:tracing loki:tracing
-juju integrate tempo-k8s:tracing prometheus:tracing
-juju integrate tempo-k8s:tracing traefik:tracing
-```
+Finally, deploy and integratre with Tempo HA in [a monolithic setup](https://discourse.charmhub.io/t/tutorial-deploy-tempo-ha-on-top-of-cos-lite/15489#heading--deploy-monolithic-setup).
 
 <a href="#heading--offer"><h2 id="heading--offer"> Offer interfaces </h2></a>
 
@@ -68,7 +50,7 @@ Next, offer interfaces for cross-model integrations from the model where Charmed
 To offer the Tempo integration, run
 
 ```shell
-juju offer tempo-k8s:tracing
+juju offer <tempo_coordinator_k8s_application_name>:tracing
 ```
 
 Then, switch to the Charmed PostgreSQL K8s model, find the offers, and integrate (relate) with them:
@@ -84,42 +66,57 @@ Below is a sample output where `k8s` is the K8s controller name and `cos` is the
 
 ```shell
 Store  URL                            Access  Interfaces
-k8s    admin/cos.tempo-k8s            admin   tracing:tracing
+k8s    admin/cos.tempo                admin   tracing:tracing
 ```
 
 Next, consume this offer so that it is reachable from the current model:
 
 ```shell
-juju consume k8s:admin/cos.tempo-k8s
+juju consume k8s:admin/cos.tempo
 ```
 
-Relate Charmed PostgreSQL with the above consumed interface:
+<a href="#heading--consume"><h2 id="heading--consume"> Consume interfaces </h2></a>
+
+First, deploy [Grafana Agent K8s](https://charmhub.io/grafana-agent-k8s) from the `latest/edge` channel:
 
 ```shell
-juju integrate postgresql-k8s:tracing tempo-k8s:tracing
+juju deploy grafana-agent-k8s --channel latest-edge 
+```
+
+Then, integrate Grafana Agent K8s with the consumed interface from the previous section:
+```shell
+juju integrate grafana-agent-k8s: tracing tempo:tracing
+```
+
+Finally, integrate Charmed PostgreSQL K8s with Grafana Agent K8s:
+```shell
+juju integrate postgresql-k8s:tracing grafana-agent-k8s:tracing-provider
 ```
 
 Wait until the model settles. The following is an example of the `juju status --relations` on the Charmed PostgreSQL model:
 
-```shell
-
+```shell  
 Model     Controller  Cloud/Region        Version  SLA          Timestamp
-database  k8s         microk8s/localhost  3.4.3    unsupported  20:33:10Z
+database  k8s         microk8s/localhost  3.5.4    unsupported  16:52:21Z
 
-SAAS       Status  Store  URL
-tempo-k8s  active  k8s    admin/cos.tempo-k8s
+SAAS   Status  Store       URL
+tempo  active  k8s         admin/cos.tempo
 
-App             Version  Status  Scale  Charm           Channel  Rev  Address         Exposed  Message
-postgresql-k8s  14.11    active      1  postgresql-k8s           292  10.152.183.249  no       
+App                Version  Status  Scale  Charm              Channel      Rev  Address         Exposed  Message
+grafana-agent-k8s  0.40.4   active      1  grafana-agent-k8s  latest/edge   93  10.152.183.226  no       grafana-dashboards-provider: off, logging-consumer: off, send-remote-write: off
+postgresql-k8s     14.13    active      1  postgresql-k8s                    0  10.152.183.96   no       
 
-Unit               Workload  Agent  Address       Ports  Message
-postgresql-k8s/0*  active    idle   10.1.241.252         Primary
+Unit                  Workload  Agent  Address       Ports  Message
+grafana-agent-k8s/0*  active    idle   10.1.241.195         grafana-dashboards-provider: off, logging-consumer: off, send-remote-write: off
+postgresql-k8s/0*     active    idle   10.1.241.197         Primary
 
-Integration provider           Requirer                       Interface         Type     Message
-postgresql-k8s:database-peers  postgresql-k8s:database-peers  postgresql_peers  peer     
-postgresql-k8s:restart         postgresql-k8s:restart         rolling_op        peer     
-postgresql-k8s:upgrade         postgresql-k8s:upgrade         upgrade           peer     
-tempo-k8s:tracing              postgresql-k8s:tracing         tracing           regular  
+Integration provider                Requirer                       Interface              Type     Message
+grafana-agent-k8s:peers             grafana-agent-k8s:peers        grafana_agent_replica  peer     
+grafana-agent-k8s:tracing-provider  postgresql-k8s:tracing         tracing                regular  
+postgresql-k8s:database-peers       postgresql-k8s:database-peers  postgresql_peers       peer     
+postgresql-k8s:restart              postgresql-k8s:restart         rolling_op             peer     
+postgresql-k8s:upgrade              postgresql-k8s:upgrade         upgrade                peer     
+tempo:tracing                       grafana-agent-k8s:tracing      tracing                regular  
 
 ```
 
@@ -136,4 +133,4 @@ Below is a screenshot demonstrating a Charmed PostgreSQL K8s trace:
 
 ![Example PostgreSQL K8s trace with Grafana Tempo|690x382](upload://vweRlTS48WILFxvSdvFVFFeuIe5.jpeg)
 
-Feel free to read through the [Tempo documentation](https://discourse.charmhub.io/t/tempo-k8s-docs-index/14005) at your leisure to explore its deployment and its integrations.
+Feel free to read through the [Tempo HA documentation](https://discourse.charmhub.io/t/charmed-tempo-ha/15531) at your leisure to explore its deployment and its integrations.
