@@ -9,7 +9,8 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 
-from .. import architecture, markers
+from .. import markers
+from ..architecture import architecture
 from ..helpers import (
     APPLICATION_NAME,
     DATABASE_APP_NAME,
