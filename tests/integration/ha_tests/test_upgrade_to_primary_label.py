@@ -38,6 +38,7 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
         ops_test.model.deploy(
             DATABASE_APP_NAME,
             num_units=3,
+            channel="14/stable",
             revision=(280 if architecture == "arm64" else 281),
             trust=True,
         ),
