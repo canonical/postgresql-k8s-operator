@@ -141,6 +141,8 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
         "14/stable",
         "--revision",
         label_revision,
+        "--resource",
+        "postgresql-image=ghcr.io/canonical/charmed-postgresql@sha256:76ef26c7d11a524bcac206d5cb042ebc3c8c8ead73fa0cd69d21921552db03b6",
     )
 
     async with ops_test.fast_forward("60s"):
