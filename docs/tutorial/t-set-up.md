@@ -47,9 +47,9 @@ All necessary components have been pre-installed inside the VM already, like Mic
 
 <a href="#heading--juju"><h2 id="heading--juju"> Set up Juju </h2></a>
 
-Let's bootstrap Juju to use the local LXD controller:
+Let's bootstrap Juju to use the local MicroK8s controller:
 ```shell
-juju bootstrap localhost overlord
+juju bootstrap microk8s overlord
 ```
 
 A controller can work with different [models](https://juju.is/docs/juju/model). Set up a specific model for Charmed PostgreSQL K8s named ‘tutorial’:
@@ -60,7 +60,7 @@ juju add-model tutorial
 You can now view the model you created above by running the command `juju status`. You should see something similar to the following example output:
 ```
 Model     Controller  Cloud/Region        Version  SLA          Timestamp
-tutorial  charm-dev   microk8s/localhost  2.9.42   unsupported  11:56:38+01:00
+tutorial  overlord    microk8s/localhost  3.1.7    unsupported  11:56:38+01:00
 
 Model "admin/tutorial" is empty.
 ```
