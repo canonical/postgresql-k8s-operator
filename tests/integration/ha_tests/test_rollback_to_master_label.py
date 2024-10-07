@@ -33,6 +33,8 @@ logger = logging.getLogger(__name__)
 
 TIMEOUT = 600
 
+label_revision = 280 if architecture == "arm64" else 281
+
 
 @pytest.mark.group(1)
 @markers.amd64_only  # TODO: remove after arm64 stable release
@@ -44,7 +46,7 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
             DATABASE_APP_NAME,
             num_units=3,
             channel="14/stable",
-            revision=(280 if architecture == "arm64" else 281),
+            revision=label_revision,
             series=CHARM_SERIES,
             trust=True,
         ),
@@ -131,7 +133,14 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
 
     logger.info("Re-refresh the charm")
     await ops_test.juju(
-        "refresh", DATABASE_APP_NAME, "--switch", "postgresql-k8s", "--channel", "14/stable"
+        "refresh",
+        DATABASE_APP_NAME,
+        "--switch",
+        "postgresql-k8s",
+        "--channel",
+        "14/stable",
+        "--revision",
+        label_revision,
     )
 
     async with ops_test.fast_forward("60s"):
