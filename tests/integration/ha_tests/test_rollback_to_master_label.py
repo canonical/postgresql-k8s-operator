@@ -35,7 +35,6 @@ TIMEOUT = 600
 
 
 @pytest.mark.group(1)
-@pytest.mark.unstable
 @markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_deploy_stable(ops_test: OpsTest) -> None:
@@ -44,7 +43,6 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
         ops_test.model.deploy(
             DATABASE_APP_NAME,
             num_units=3,
-            channel="14/stable",
             revision=(280 if architecture == "arm64" else 281),
             series=CHARM_SERIES,
             trust=True,
@@ -68,7 +66,6 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.group(1)
-@pytest.mark.unstable
 @markers.amd64_only  # TODO: remove after arm64 stable release
 async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
     # Start an application that continuously writes data to the database.
