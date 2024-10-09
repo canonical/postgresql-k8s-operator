@@ -216,7 +216,8 @@
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "",
-          "refId": "A"
+          "refId": "A",
+          "type": "instant"
         }
       ],
       "thresholds": "",
@@ -558,7 +559,8 @@
           "expr": "pg_settings_max_connections{release=\"$release\", instance=\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "refId": "A"
+          "refId": "A",
+          "type": "instant"
         }
       ],
       "thresholds": "",
@@ -620,7 +622,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(rate(process_cpu_seconds_total{release=\"$release\", instance=\"$instance\"}[5m]) * 1000)",
+          "expr": "avg(irate(process_cpu_seconds_total{release=\"$release\", instance=\"$instance\"}[5m]) * 1000)",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "CPU Time",
@@ -714,14 +716,14 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "avg(rate(process_resident_memory_bytes{release=\"$release\", instance=\"$instance\"}[5m]))",
+          "expr": "avg(irate(process_resident_memory_bytes{release=\"$release\", instance=\"$instance\"}[5m]))",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Resident Mem",
           "refId": "A"
         },
         {
-          "expr": "avg(rate(process_virtual_memory_bytes{release=\"$release\", instance=\"$instance\"}[5m]))",
+          "expr": "avg(irate(process_virtual_memory_bytes{release=\"$release\", instance=\"$instance\"}[5m]))",
           "format": "time_series",
           "intervalFactor": 2,
           "legendFormat": "Virtual Mem",
@@ -946,7 +948,8 @@
           "expr": "pg_settings_shared_buffers_bytes{instance=\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "refId": "A"
+          "refId": "A",
+          "type": "instant"
         }
       ],
       "thresholds": "",
@@ -1030,7 +1033,8 @@
           "expr": "pg_settings_effective_cache_size_bytes{instance=\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "refId": "A"
+          "refId": "A",
+          "type": "instant"
         }
       ],
       "thresholds": "",
@@ -1114,7 +1118,8 @@
           "expr": "pg_settings_maintenance_work_mem_bytes{instance=\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "refId": "A"
+          "refId": "A",
+          "type": "instant"
         }
       ],
       "thresholds": "",
@@ -1199,7 +1204,8 @@
           "format": "time_series",
           "intervalFactor": 1,
           "legendFormat": "",
-          "refId": "A"
+          "refId": "A",
+          "type": "instant"
         }
       ],
       "thresholds": "",
@@ -1284,7 +1290,8 @@
           "expr": "pg_settings_max_wal_size_bytes{instance=\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "refId": "A"
+          "refId": "A",
+          "type": "instant"
         }
       ],
       "thresholds": "",
@@ -1368,7 +1375,8 @@
           "expr": "pg_settings_random_page_cost{instance=\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "refId": "A"
+          "refId": "A",
+          "type": "instant"
         }
       ],
       "thresholds": "",
@@ -1452,7 +1460,8 @@
           "expr": "pg_settings_seq_page_cost",
           "format": "time_series",
           "intervalFactor": 1,
-          "refId": "A"
+          "refId": "A",
+          "type": "instant"
         }
       ],
       "thresholds": "",
@@ -1536,7 +1545,8 @@
           "expr": "pg_settings_max_worker_processes{instance=\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "refId": "A"
+          "refId": "A",
+          "type": "instant"
         }
       ],
       "thresholds": "",
@@ -1620,7 +1630,8 @@
           "expr": "pg_settings_max_parallel_workers{instance=\"$instance\"}",
           "format": "time_series",
           "intervalFactor": 1,
-          "refId": "A"
+          "refId": "A",
+          "type": "instant"
         }
       ],
       "thresholds": "",
@@ -1664,7 +1675,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 15
+        "y": 22
       },
       "id": 1,
       "legend": {
@@ -1762,7 +1773,7 @@
       "gridPos": {
         "h": 7,
         "w": 8,
-        "x": 0,
+        "x": 16,
         "y": 15
       },
       "id": 60,
@@ -1926,8 +1937,105 @@
       },
       "yaxes": [
         {
-          "format": "bytes",
+          "format": "short",
+          "label": "Rows",
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
           "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "datasource",
+        "uid": "${prometheusds}"
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 0,
+        "y": 15
+      },
+      "id": 509,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "max": false,
+        "min": false,
+        "rightSide": false,
+        "show": true,
+        "sort": "current",
+        "sortDesc": true,
+        "total": true,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "irate(pg_stat_database_tup_fetched{datname=~\"$datname\", instance=~\"$instance\"}[5m])",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "{{datname}}",
+          "refId": "A",
+          "step": 2
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Read rate (fetched)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "ops",
+          "label": "Rows/sec",
           "logBase": 1,
           "max": null,
           "min": null,
@@ -2023,8 +2131,8 @@
       },
       "yaxes": [
         {
-          "format": "bytes",
-          "label": null,
+          "format": "ops",
+          "label": "Rows/sec",
           "logBase": 1,
           "max": null,
           "min": null,
@@ -2120,8 +2228,8 @@
       },
       "yaxes": [
         {
-          "format": "bytes",
-          "label": null,
+          "format": "ops",
+          "label": "Rows/sec",
           "logBase": 1,
           "max": null,
           "min": null,
@@ -2217,8 +2325,8 @@
       },
       "yaxes": [
         {
-          "format": "bytes",
-          "label": null,
+          "format": "ops",
+          "label": "Rows/sec",
           "logBase": 1,
           "max": null,
           "min": null,
@@ -2314,8 +2422,8 @@
       },
       "yaxes": [
         {
-          "format": "bytes",
-          "label": null,
+          "format": "ops",
+          "label": "Rows/sec",
           "logBase": 1,
           "max": null,
           "min": null,
@@ -2411,8 +2519,8 @@
       },
       "yaxes": [
         {
-          "format": "bytes",
-          "label": null,
+          "format": "short",
+          "label": "Rows",
           "logBase": 1,
           "max": null,
           "min": null,
@@ -2448,7 +2556,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 29
+        "y": 36
       },
       "id": 3,
       "legend": {
@@ -2547,6 +2655,103 @@
         "h": 7,
         "w": 8,
         "x": 8,
+        "y": 15
+      },
+      "id": 141,
+      "legend": {
+        "alignAsTable": true,
+        "avg": true,
+        "current": true,
+        "max": false,
+        "min": false,
+        "rightSide": false,
+        "show": true,
+        "sort": "total",
+        "sortDesc": true,
+        "total": true,
+        "values": true
+      },
+      "lines": true,
+      "linewidth": 1,
+      "links": [],
+      "nullPointMode": "null",
+      "options": {
+        "dataLinks": []
+      },
+      "percentage": false,
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "pg_stat_database_tup_fetched{datname=~\"$datname\", instance=~\"$instance\"}",
+          "format": "time_series",
+          "intervalFactor": 2,
+          "legendFormat": "{{datname}}",
+          "refId": "A",
+          "step": 2
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Read count (fetched)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "format": "short",
+          "label": "Rows",
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": {
+        "type": "datasource",
+        "uid": "${prometheusds}"
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 7,
+        "w": 8,
+        "x": 8,
         "y": 22
       },
       "id": 14,
@@ -2608,8 +2813,8 @@
       },
       "yaxes": [
         {
-          "format": "bytes",
-          "label": null,
+          "format": "short",
+          "label": "Rows",
           "logBase": 1,
           "max": null,
           "min": null,
@@ -2644,7 +2849,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 22
+        "y": 29
       },
       "id": 4,
       "legend": {
@@ -2802,8 +3007,8 @@
       },
       "yaxes": [
         {
-          "format": "bytes",
-          "label": null,
+          "format": "short",
+          "label": "Rows",
           "logBase": 1,
           "max": null,
           "min": null,
@@ -2929,7 +3134,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 36
+        "y": 43
       },
       "id": 64,
       "legend": {
@@ -3048,7 +3253,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 43
+        "y": 50
       },
       "id": 66,
       "legend": {
@@ -3146,7 +3351,7 @@
         "h": 7,
         "w": 8,
         "x": 16,
-        "y": 50
+        "y": 57
       },
       "id": 68,
       "legend": {
