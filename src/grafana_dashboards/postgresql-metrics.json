@@ -217,7 +217,7 @@
           "intervalFactor": 2,
           "legendFormat": "",
           "refId": "A",
-          "type": "instant"
+          "instant": true
         }
       ],
       "thresholds": "",
@@ -560,7 +560,7 @@
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
-          "type": "instant"
+          "instant": true
         }
       ],
       "thresholds": "",
@@ -949,7 +949,7 @@
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
-          "type": "instant"
+          "instant": true
         }
       ],
       "thresholds": "",
@@ -1034,7 +1034,7 @@
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
-          "type": "instant"
+          "instant": true
         }
       ],
       "thresholds": "",
@@ -1119,7 +1119,7 @@
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
-          "type": "instant"
+          "instant": true
         }
       ],
       "thresholds": "",
@@ -1205,7 +1205,7 @@
           "intervalFactor": 1,
           "legendFormat": "",
           "refId": "A",
-          "type": "instant"
+          "instant": true
         }
       ],
       "thresholds": "",
@@ -1291,7 +1291,7 @@
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
-          "type": "instant"
+          "instant": true
         }
       ],
       "thresholds": "",
@@ -1376,7 +1376,7 @@
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
-          "type": "instant"
+          "instant": true
         }
       ],
       "thresholds": "",
@@ -1461,7 +1461,7 @@
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
-          "type": "instant"
+          "instant": true
         }
       ],
       "thresholds": "",
@@ -1546,7 +1546,7 @@
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
-          "type": "instant"
+          "instant": true
         }
       ],
       "thresholds": "",
@@ -1631,7 +1631,7 @@
           "format": "time_series",
           "intervalFactor": 1,
           "refId": "A",
-          "type": "instant"
+          "instant": true
         }
       ],
       "thresholds": "",
