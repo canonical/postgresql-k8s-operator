@@ -53,18 +53,18 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 2 | t-enable-tls | [7. Enable TLS encryption](/t/9302) |
 | 2 | t-clean-up | [8. Clean up environment](/t/9303) |
 | 1 | how-to | [How to]() |
-| 2 | h-set-up | [Set up]() |
-| 3 | h-deploy-microk8s | [Deploy on MicroK8s](/t/11858) |
-| 3 | h-deploy-gke | [Deploy on GKE](/t/11237) |
-| 3 | h-deploy-eks | [Deploy on EKS](/t/12106) |
-| 3 | h-deploy-aks | [Deploy on AKS](/t/14307) |
-| 3 | h-deploy-multi-az | [Deploy on multi-AZ](/t/15678) |
-| 3 | h-deploy-terraform | [Deploy via Terraform](/t/14924) |
-| 3 | h-deploy-airgapped | [Deploy in an air-gapped environment](/t/15691) |
-| 3 | h-scale | [Scale replicas](/t/9592) |
-| 3 | h-enable-tls | [Enable TLS](/t/9593) |
-| 3 | h-manage-applications | [Manage client applications](/t/9594) |
-| 3 | h-external-k8s-connection | [External k8s connection](/t/15701) |
+| 2 | h-deploy | [Deploy]() |
+| 3 | h-deploy-microk8s | [MicroK8s](/t/11858) |
+| 3 | h-deploy-gke | [GKE](/t/11237) |
+| 3 | h-deploy-eks | [EKS](/t/12106) |
+| 3 | h-deploy-aks | [AKS](/t/14307) |
+| 3 | h-deploy-multi-az | [Multi-AZ](/t/15678) |
+| 3 | h-deploy-terraform | [Terraform](/t/14924) |
+| 3 | h-deploy-airgapped | [Air-gapped](/t/15691) |
+| 2 | h-manage-applications | [Integrate with another application](/t/9594) |
+| 2 | h-external-access | [External access](/t/15701) |
+| 2 | h-scale | [Scale replicas](/t/9592) |
+| 2 | h-enable-tls | [Enable TLS](/t/9593) |
 | 2 | h-backup | [Back up and restore]() |
 | 3 | h-configure-s3-aws | [Configure S3 AWS](/t/9595) |
 | 3 | h-configure-s3-radosgw | [Configure S3 RadosGW](/t/10316) |
@@ -74,23 +74,20 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 3 | h-migrate-cluster | [Migrate a cluster](/t/9598) |
 | 2 | h-monitor | [Monitoring (COS)]() |
 | 3 | h-enable-monitoring | [Enable monitoring](/t/10812) |
+| 3 | h-enable-alert-rules | [Enable alert rules](/t/12982) |
 | 3 | h-enable-tracing | [Enable tracing](/t/14786) |
-| 3 | h-enable-alert-rules | [Enable Alert Rules](/t/12982) |
-| 2 | h-upgrade | [Upgrade]() |
-| 3 | h-upgrade-intro | [Overview](/t/12092) |
-| 3 | h-upgrade-major | [Perform a major upgrade](/t/12093) |
-| 3 | h-rollback-major | [Perform a major rollback](/t/12094) |
+| 2 | h-upgrade | [Minor upgrades]() |
 | 3 | h-upgrade-minor | [Perform a minor upgrade](/t/12095) |
 | 3 | h-rollback-minor | [Perform a minor rollback](/t/12096) |
-| 2 | h-integrate-your-charm | [Integrate with your charm]() |
-| 3 | h-integrate-db-with-your-charm | [Integrate a database with your charm](/t/11853) |
-| 3 | h-migrate-pgdump | [Migrate data via pg_dump](/t/12162) |
-| 3 | h-migrate-backup-restore | [Migrate data via backup/restore](/t/12161) |
 | 2 | h-async | [Cross-regional async replication](/t/15413) |
 | 3 | h-async-set-up | [Set up clusters](/t/13895) |
 | 3 | h-async-integrate | [Integrate with a client app](/t/13896) |
 | 3 | h-async-remove-recover | [Remove or recover a cluster](/t/13897) |
 | 2 | h-enable-plugins-extensions | [Enable plugins/extensions](/t/10907) |
+| 2 | h-integrate | [Development]() |
+| 3 | h-integrate-db-with-your-charm | [Integrate a database with your charm](/t/11853) |
+| 3 | h-migrate-pgdump | [Migrate data via pg_dump](/t/12162) |
+| 3 | h-migrate-backup-restore | [Migrate data via backup/restore](/t/12161) |
 | 1 | reference | [Reference]() |
 | 2 | r-overview | [Overview](/t/13977) |
 | 2 | r-releases | [Release Notes](/t/11872) |
@@ -121,3 +118,9 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 1 | search | [Search](https://canonical.com/data/docs/postgresql/k8s) |
 
 [/details]
+
+<!-- Removed from navigation - to be archived.
+| 3 | h-upgrade-intro | [Overview](/t/12092) |
+| 3 | h-upgrade-major | [Perform a major upgrade](/t/12093) |
+| 3 | h-rollback-major | [Perform a major rollback](/t/12094) |
+-->
