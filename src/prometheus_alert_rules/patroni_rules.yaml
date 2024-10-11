@@ -14,7 +14,7 @@ groups:
       annotations:
         summary: Patroni PostgreSQL is down (instance {{ $labels.instance }})
         description: |
-        Patroni Postgresql instance is down.
+        Patroni Postgresql instance is down. Please check for errors on Loki logs.
         VALUE = {{ $value }}
         LABELS = {{ $labels }}
 
@@ -27,6 +27,6 @@ groups:
       annotations:
         summary: Patroni has no Leader (instance {{ $labels.instance }})
         description: |
-        A leader node (neither primary nor standby) cannot be found inside the cluster {{ $labels.scope }}.
+        A leader node (neither primary nor standby) cannot be found inside the cluster {{ $labels.scope }}. Please check for errors on Loki logs.
         VALUE = {{ $value }}
         LABELS = {{ $labels }}

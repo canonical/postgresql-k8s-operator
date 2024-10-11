@@ -43,6 +43,6 @@ groups:
       annotations:
         summary: PgBouncer max connections (instance {{ $labels.instance }})
         description: |
-        The number of PgBouncer client connections has reached `max_client_conn`.
+        The number of PgBouncer client connections has reached `max_client_conn`. Consider double-checking how many connections the client application is opening.
         VALUE = {{ $value }}
         LABELS = {{ $labels }}

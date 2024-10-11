@@ -15,7 +15,7 @@ groups:
       annotations:
         summary: PostgresSQL down (instance {{ $labels.instance }})
         description: |
-        PostgresSQL instance is down
+        PostgresSQL instance is down. If you are not upgrading or configuring cross-region async replication clusters, please check for errors on Loki logs.
         VALUE = {{ $value }}
         LABELS = {{ $labels }}
 
@@ -29,7 +29,7 @@ groups:
       annotations:
         summary: PostgresSQL restarted (instance {{ $labels.instance }})
         description: |
-        PostgresSQL restarted
+        PostgresSQL restarted. If you are not enabling/disabling TLS or upgrading or configuring cross-region async replication clusters, please check for errors on Loki logs.
         VALUE = {{ $value }}
         LABELS = {{ $labels }}
 
@@ -57,7 +57,7 @@ groups:
       annotations:
         summary: PostgresSQL table not auto vacuumed (instance {{ $labels.instance }})
         description: |
-        Table {{ $labels.relname }} has not been auto vacuumed for 7 days
+        Table {{ $labels.relname }} has not been auto vacuumed for 7 days. Please double-check your VACUUM settings.
         VALUE = {{ $value }}
         LABELS = {{ $labels }}
 
@@ -71,7 +71,7 @@ groups:
       annotations:
         summary: PostgresSQL table not auto analyzed (instance {{ $labels.instance }})
         description: |
-        Table {{ $labels.relname }} has not been auto analyzed for 7 days
+        Table {{ $labels.relname }} has not been auto analyzed for 7 days. Please double-check your AUTOVACUUM ANALYZE settings.
         VALUE = {{ $value }}
         LABELS = {{ $labels }}
 
@@ -84,7 +84,7 @@ groups:
       annotations:
         summary: PostgresSQL too many connections (instance {{ $labels.instance }})
         description: |
-        PostgreSQL instance has too many connections (> 80%).
+        PostgreSQL instance has too many connections (> 80%). Consider double-checking how many connections the client application is opening and/or using PgBouncer in front of the database.
         VALUE = {{ $value }}
         LABELS = {{ $labels }}
 
@@ -98,7 +98,7 @@ groups:
       annotations:
         summary: PostgresSQL not enough connections (instance {{ $labels.instance }})
         description: |
-        PostgreSQL instance should have more connections (> 5)
+        PostgreSQL instance should have more connections (> 5). Consider double-checking how many connections the client application is opening and/or using PgBouncer in front of the database.
         VALUE = {{ $value }}
         LABELS = {{ $labels }}
 
@@ -111,7 +111,7 @@ groups:
       annotations:
         summary: PostgresSQL dead locks (instance {{ $labels.instance }})
         description: |
-        PostgreSQL has dead-locks
+        PostgreSQL has dead-locks. More details can be obtained through the pg_locks view.
         VALUE = {{ $value }}
         LABELS = {{ $labels }}
 
@@ -124,7 +124,7 @@ groups:
       annotations:
         summary: PostgresSQL high rollback rate (instance {{ $labels.instance }})
         description: |
-        Ratio of transactions being aborted compared to committed is > 2 %
+        Ratio of transactions being aborted compared to committed is > 2 %. This issue is probably happening due to unoptimized configurations related to commit delay, connections, memory and WAL files.
         VALUE = {{ $value }}
         LABELS = {{ $labels }}
 
@@ -138,7 +138,7 @@ groups:
       annotations:
         summary: PostgresSQL commit rate low (instance {{ $labels.instance }})
         description: |
-        PostgresSQL seems to be processing very few transactions.
+        PostgresSQL seems to be processing very few transactions. Please check for long-running queries and configuration issues, like not enough cache size.
         VALUE = {{ $value }}
         LABELS = {{ $labels }}
 
@@ -152,7 +152,7 @@ groups:
       annotations:
         summary: PostgresSQL low XID consumption (instance {{ $labels.instance }})
         description: |
-        PostgresSQL seems to be consuming transaction IDs very slowly
+        PostgresSQL seems to be consuming transaction IDs very slowly. Please run ANALYZE to update the optimizer statistics, ensuring that query plans are correct, and double-check your VACUUM settings.
         VALUE = {{ $value }}
         LABELS = {{ $labels }}
 
@@ -165,7 +165,7 @@ groups:
       annotations:
         summary: PostgresSQL high rate statement timeout (instance {{ $labels.instance }})
         description: |
-        PostgresSQL transactions showing high rate of statement timeouts
+        PostgresSQL transactions showing high rate of statement timeouts. Please, either tune statement_timeout when sending queries or use EXPLAIN ANALYZE to understand how the queries can be improved.
         VALUE = {{ $value }}
         LABELS = {{ $labels }}
 
@@ -179,7 +179,7 @@ groups:
       annotations:
         summary: PostgresSQL high rate deadlock (instance {{ $labels.instance }})
         description: |
-        PostgresSQL detected deadlocks
+        PostgresSQL detected deadlocks. More details can be obtained through the pg_locks view.
         VALUE = {{ $value }}
         LABELS = {{ $labels }}
 
@@ -193,7 +193,7 @@ groups:
       annotations:
         summary: PostgresSQL unused replication slot (instance {{ $labels.instance }})
         description: |
-        Unused Replication Slots
+        Unused Replication Slots. Please check if a replica is not using any of them before deleting it.
         VALUE = {{ $value }}
         LABELS = {{ $labels }}
 
@@ -206,7 +206,7 @@ groups:
       annotations:
         summary: PostgresSQL too many dead tuples (instance {{ $labels.instance }})
         description: |
-        PostgreSQL dead tuples is too large
+        PostgreSQL dead tuples is too large. Please double-check your VACUUM settings.
         VALUE = {{ $value }}
         LABELS = {{ $labels }}
 
