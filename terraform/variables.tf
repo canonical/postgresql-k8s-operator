@@ -36,7 +36,7 @@ variable "units" {
 variable "constraints" {
   description = "Juju constraints to apply for this application."
   type        = string
-  default     = ""
+  default     = "arch=amd64"
 }
 
 variable "storage_size" {
