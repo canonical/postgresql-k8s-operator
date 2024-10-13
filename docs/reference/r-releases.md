@@ -30,25 +30,66 @@ For more details about a particular revision, refer to its dedicated Release Not
 For more details about each feature/interface, refer to their dedicated How-To guide.
 
 ## Architecture and base
-One release may come with more than one revision. This is because each revision is built for a specific combination of hardware architecture and base (Ubuntu version).
+Several [revisions](https://juju.is/docs/sdk/revision) are released simultaneously for different [bases/series](https://juju.is/docs/juju/base) using the same charm code. In other words, one release contains multiple revisions.
 
-| Release | amd64 | arm64 | Ubuntu 22.04 LTS
+> If you do not specify a revision on deploy time, Juju will automatically choose the revision that matches your base and architecture.
+
+> If you deploy a specific revision, **you must make sure it matches your base and architecture** via the tables below or with [`juju info`](https://juju.is/docs/juju/juju-info).
+
+### Release 381-382 (`14/stable`)
+
+| Revision | amd64 | arm64 | Ubuntu 22.04 LTS
 |:--------:|:-----:|:-----:|:-----:|
 |[382] | | ![check] | ![check]  |
 |[381] | ![check] | | ![check] |
+
+[details=Release 280-281]
+
+| Revision| amd64 | arm64 | Ubuntu 22.04 LTS
+|:--------:|:-----:|:-----:|:-----:|
 |[281] |![check]| | ![check]   |
 |[280] |  | ![check]| ![check] |
+
+[/details]
+
+[details=Release 193]
+
+| Revision| amd64 | arm64 | Ubuntu 22.04 LTS
+|:--------:|:-----:|:-----:|:-----:|
 |[193] | ![check]| | ![check]  |
+
+[/details]
+
+[details=Release 177]
+
+| Revision| amd64 | arm64 | Ubuntu 22.04 LTS
+|:--------:|:-----:|:-----:|:-----:|
 |[177] |![check]| | ![check]   |
+
+[/details]
+
+[details=Release 158]
+
+| Revision| amd64 | arm64 | Ubuntu 22.04 LTS
+|:--------:|:-----:|:-----:|:-----:|
 |[158] |![check]| | ![check]   |
+
+[/details]
+
+[details=Release 73]
+
+| Revision| amd64 | arm64 | Ubuntu 22.04 LTS
+|:--------:|:-----:|:-----:|:-----:|
 |[73] |![check]| | ![check]   |
+
+[/details]
 
 ## Plugins/extensions
 
 For a list of all plugins supported for each revision, see the reference page [Plugins/extensions](/t/10945).
 
 [note]
- Our release notes are an ongoing work in progress. If there is any additional information about releases that you would like to see or suggestions for other improvements, don't hesitate to contact us on [Matrix ](https://matrix.to/#/#charmhub-data-platform:ubuntu.com) or [leave a comment](https://discourse.charmhub.io/t/charmed-postgresql-reference-release-notes/11875).
+ Our release notes are an ongoing work in progress. If there is any additional information about releases that you would like to see or suggestions for other improvements, don't hesitate to contact us on [Matrix ](https://matrix.to/#/#charmhub-data-platform:ubuntu.com) or [leave a comment](https://discourse.charmhub.io/t/charmed-postgresql-k8s-reference-release-notes/11872).
 [/note]
 
 <!-- LINKS -->

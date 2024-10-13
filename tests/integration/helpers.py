@@ -7,6 +7,7 @@ import logging
 from datetime import datetime
 from multiprocessing import ProcessError
 from pathlib import Path
+from subprocess import check_call
 from typing import List, Optional
 
 import botocore
@@ -37,6 +38,12 @@ METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
 APPLICATION_NAME = "postgresql-test-app"
 STORAGE_PATH = METADATA["storage"]["pgdata"]["location"]
+
+try:
+    check_call(["kubectl", "version", "--client=true"])
+    KUBECTL = "kubectl"
+except FileNotFoundError:
+    KUBECTL = "microk8s kubectl"
 
 charm = None
 

@@ -19,7 +19,7 @@ This guide will walk you through setting up a cluster and deploying PostgreSQL K
 Install `juju`, `kubectl`, and Google Cloud command-line tools using snap:
 
 ```shell
-sudo snap install juju --classic
+sudo snap install juju
 sudo snap install kubectl --classic
 sudo snap install google-cloud-cli --classic
 ```
@@ -67,8 +67,11 @@ kubectl create clusterrolebinding cluster-admin-binding-$USER --clusterrole=clus
 <a href="#heading--boostrap-juju"><h2 id="heading--boostrap-juju"> Bootstrap Juju on GKE</h2></a>
 
 Bootstrap a new juju controller on the new cluster by running the following commands:
+
+> Note: [the known issue](https://bugs.launchpad.net/juju/+bug/2007575) forces unSNAPed Juju usage to add-k8s credentials on Juju.
+
 ```shell
-juju add-k8s gke-jun-9 --storage=standard --client
+/snap/juju/current/bin/juju add-k8s gke-jun-9 --storage=standard --client
 juju bootstrap gke-jun-9
 juju add-model welcome-model
 ```

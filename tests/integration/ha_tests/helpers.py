@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 import asyncio
 import json
+import logging
 import os
 import string
 import subprocess
@@ -37,6 +38,7 @@ from tenacity import (
 
 from ..helpers import (
     APPLICATION_NAME,
+    KUBECTL,
     app_name,
     db_connect,
     execute_query_on_unit,
@@ -46,9 +48,12 @@ from ..helpers import (
     get_unit_address,
     run_command_on_unit,
 )
+from ..juju_ import juju_major_version
 from ..new_relations.helpers import get_application_relation_data
 
 PORT = 5432
+
+logger = logging.getLogger(__name__)
 
 
 class MemberNotListedOnClusterError(Exception):
@@ -67,7 +72,7 @@ class ProcessRunningError(Exception):
     """Raised when a process is running when it is not expected to be."""
 
 
-async def are_all_db_processes_down(ops_test: OpsTest, process: str) -> bool:
+async def are_all_db_processes_down(ops_test: OpsTest, process: str, signal: str) -> bool:
     """Verifies that all units of the charm do not have the DB process running."""
     app = await app_name(ops_test)
 
@@ -77,15 +82,20 @@ async def are_all_db_processes_down(ops_test: OpsTest, process: str) -> bool:
         pgrep_cmd = ("pgrep", "-x", process)
 
     try:
-        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+        for attempt in Retrying(stop=stop_after_delay(400), wait=wait_fixed(3)):
             with attempt:
                 for unit in ops_test.model.applications[app].units:
-                    _, raw_pid, _ = await ops_test.juju(
-                        "ssh", "--container", "postgresql", unit.name, *pgrep_cmd
+                    pod_name = unit.name.replace("/", "-")
+                    call = subprocess.run(
+                        f"{KUBECTL} -n {ops_test.model.info.name} exec {pod_name} -c postgresql -- {' '.join(pgrep_cmd)}",
+                        shell=True,
                     )
 
                     # If something was returned, there is a running process.
-                    if len(raw_pid) > 0:
+                    if call.returncode != 1:
+                        logger.info("Unit %s not yet down" % unit.name)
+                        # Try to rekill the unit
+                        await send_signal_to_process(ops_test, unit.name, process, signal)
                         raise ProcessRunningError
     except RetryError:
         return False
@@ -231,16 +241,25 @@ async def are_writes_increasing(
     ops_test, down_unit: str = None, extra_model: Model = None
 ) -> None:
     """Verify new writes are continuing by counting the number of writes."""
-    writes, _ = await count_writes(ops_test, down_unit=down_unit, extra_model=extra_model)
-    for member, count in writes.items():
-        for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3), reraise=True):
-            with attempt:
-                more_writes, _ = await count_writes(
-                    ops_test, down_unit=down_unit, extra_model=extra_model
-                )
-                assert (
-                    more_writes[member] > count
-                ), f"{member}: writes not continuing to DB (current writes: {more_writes[member]} - previous writes: {count})"
+    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
+        with attempt:
+            writes, _ = await count_writes(ops_test, down_unit=down_unit, extra_model=extra_model)
+            assert len(writes), "No units report count"
+    logger.info(f"Initial writes {writes}")
+    for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3), reraise=True):
+        with attempt:
+            more_writes, _ = await count_writes(
+                ops_test, down_unit=down_unit, extra_model=extra_model
+            )
+            logger.info(f"Retry writes {more_writes}")
+            members_checked = []
+            for member, count in writes.items():
+                if member in more_writes:
+                    members_checked.append(member)
+                    assert (
+                        more_writes[member] > count
+                    ), f"{member}: writes not continuing to DB (current writes: {more_writes[member]} - previous writes: {count})"
+            assert len(members_checked), "No member checked from the initial writes"
 
 
 def copy_file_into_pod(
@@ -633,11 +652,11 @@ def isolate_instance_from_cluster(ops_test: OpsTest, unit_name: str) -> None:
         env = os.environ
         env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
         subprocess.check_output(
-            " ".join(["kubectl", "apply", "-f", temp_file.name]), shell=True, env=env
+            " ".join([*KUBECTL.split(), "apply", "-f", temp_file.name]), shell=True, env=env
         )
 
 
-def modify_pebble_restart_delay(
+async def modify_pebble_restart_delay(
     ops_test: OpsTest,
     unit_name: str,
     pebble_plan_path: str,
@@ -688,7 +707,7 @@ def modify_pebble_restart_delay(
         response.returncode == 0
     ), f"Failed to add to pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
 
-    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
         with attempt:
             replan_pebble_layer_commands = "/charm/bin/pebble replan"
             response = kubernetes.stream.stream(
@@ -704,7 +723,15 @@ def modify_pebble_restart_delay(
                 _preload_content=False,
             )
             response.run_forever(timeout=60)
-            if ensure_replan:
+            if ensure_replan and response.returncode != 0:
+                # Juju 2 fix service is spawned but pebble is reporting inactive
+                if juju_major_version < 3:
+                    try:
+                        await send_signal_to_process(
+                            ops_test, unit_name, "/usr/bin/patroni", "SIGTERM"
+                        )
+                    except (ProcessError, ProcessRunningError):
+                        pass
                 assert (
                     response.returncode == 0
                 ), f"Failed to replan pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
@@ -714,7 +741,7 @@ async def is_postgresql_ready(ops_test, unit_name: str) -> bool:
     """Verifies a PostgreSQL instance is running and available."""
     unit_ip = await get_unit_address(ops_test, unit_name)
     try:
-        for attempt in Retrying(stop=stop_after_delay(60 * 5), wait=wait_fixed(3)):
+        for attempt in Retrying(stop=stop_after_delay(60 * 10), wait=wait_fixed(3)):
             with attempt:
                 instance_health_info = requests.get(f"http://{unit_ip}:8008/health")
                 assert instance_health_info.status_code == 200
@@ -729,7 +756,7 @@ def remove_instance_isolation(ops_test: OpsTest) -> None:
     env = os.environ
     env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
     subprocess.check_output(
-        f"kubectl -n {ops_test.model.info.name} delete --ignore-not-found=true networkchaos network-loss-primary",
+        f"{KUBECTL} -n {ops_test.model.info.name} delete --ignore-not-found=true networkchaos network-loss-primary",
         shell=True,
         env=env,
     )

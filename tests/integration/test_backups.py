@@ -101,7 +101,7 @@ async def cloud_configs(ops_test: OpsTest, github_secrets) -> None:
             bucket_object.delete()
 
 
-@pytest.mark.group(1)
+@pytest.mark.group("AWS")
 @pytest.mark.abort_on_fail
 async def test_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> None:
     """Build and deploy two units of PostgreSQL in AWS and then test the backup and restore actions."""
@@ -195,7 +195,7 @@ async def test_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -
     )
 
 
-@pytest.mark.group(2)
+@pytest.mark.group("GCP")
 @pytest.mark.abort_on_fail
 async def test_backup_gcp(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> None:
     """Build and deploy two units of PostgreSQL in GCP and then test the backup and restore actions."""
@@ -226,7 +226,7 @@ async def test_backup_gcp(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -
     )
 
 
-@pytest.mark.group(2)
+@pytest.mark.group("GCP")
 async def test_restore_on_new_cluster(ops_test: OpsTest, github_secrets) -> None:
     """Test that is possible to restore a backup to another PostgreSQL cluster."""
     previous_database_app_name = f"{DATABASE_APP_NAME}-gcp"
@@ -318,7 +318,7 @@ async def test_restore_on_new_cluster(ops_test: OpsTest, github_secrets) -> None
     connection.close()
 
 
-@pytest.mark.group(2)
+@pytest.mark.group("GCP")
 async def test_invalid_config_and_recovery_after_fixing_it(
     ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]
 ) -> None:
@@ -379,7 +379,7 @@ async def test_invalid_config_and_recovery_after_fixing_it(
     )
 
 
-@pytest.mark.group(2)
+@pytest.mark.group("GCP")
 async def test_delete_pod(ops_test: OpsTest, github_secrets) -> None:
     logger.info("Getting original backup config")
     database_app_name = f"new-{DATABASE_APP_NAME}"

@@ -16,7 +16,7 @@ object only requires instantiating it, typically in the constructor of your char
  This relation must use the `tracing` interface.
  The `TracingEndpointRequirer` object may be instantiated as follows
 
-    from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
+    from charms.tempo_coordinator_k8s.v0.tracing import TracingEndpointRequirer
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -58,7 +58,7 @@ default value.
 For example a Tempo charm may instantiate the `TracingEndpointProvider` in its constructor as
 follows
 
-    from charms.tempo_k8s.v2.tracing import TracingEndpointProvider
+    from charms.tempo_coordinator_k8s.v0.tracing import TracingEndpointProvider
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -100,14 +100,14 @@ from ops.model import ModelError, Relation
 from pydantic import BaseModel, Field
 
 # The unique Charmhub library identifier, never change it
-LIBID = "12977e9aa0b34367903d8afeb8c3d85d"
+LIBID = "d2f02b1f8d1244b5989fd55bc3a28943"
 
 # Increment this major API version when introducing breaking changes
-LIBAPI = 2
+LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 9
+LIBPATCH = 1
 
 PYDEPS = ["pydantic"]
 
@@ -902,7 +902,16 @@ class TracingEndpointRequirer(Object):
     def get_endpoint(
         self, protocol: ReceiverProtocol, relation: Optional[Relation] = None
     ) -> Optional[str]:
-        """Receiver endpoint for the given protocol."""
+        """Receiver endpoint for the given protocol.
+
+        It could happen that this function gets called before the provider publishes the endpoints.
+        In such a scenario, if a non-leader unit calls this function, a permission denied exception will be raised due to
+        restricted access. To prevent this, this function needs to be guarded by the `is_ready` check.
+
+        Raises:
+        ProtocolNotRequestedError:
+            If the charm unit is the leader unit and attempts to obtain an endpoint for a protocol it did not request.
+        """
         endpoint = self._get_endpoint(relation or self._relation, protocol=protocol)
         if not endpoint:
             requested_protocols = set()
@@ -938,8 +947,8 @@ def charm_tracing_config(
 
     Usage:
       If you are using charm_tracing >= v1.9:
-    >>> from lib.charms.tempo_k8s.v1.charm_tracing import trace_charm
-    >>> from lib.charms.tempo_k8s.v2.tracing import charm_tracing_config
+    >>> from lib.charms.tempo_coordinator_k8s.v0.charm_tracing import trace_charm
+    >>> from lib.charms.tempo_coordinator_k8s.v0.tracing import charm_tracing_config
     >>> @trace_charm(tracing_endpoint="my_endpoint", cert_path="cert_path")
     >>> class MyCharm(...):
     >>>     _cert_path = "/path/to/cert/on/charm/container.crt"
@@ -949,8 +958,8 @@ def charm_tracing_config(
     ...             self.tracing, self._cert_path)
 
       If you are using charm_tracing < v1.9:
-    >>> from lib.charms.tempo_k8s.v1.charm_tracing import trace_charm
-    >>> from lib.charms.tempo_k8s.v2.tracing import charm_tracing_config
+    >>> from lib.charms.tempo_coordinator_k8s.v0.charm_tracing import trace_charm
+    >>> from lib.charms.tempo_coordinator_k8s.v0.tracing import charm_tracing_config
     >>> @trace_charm(tracing_endpoint="my_endpoint", cert_path="cert_path")
     >>> class MyCharm(...):
     >>>     _cert_path = "/path/to/cert/on/charm/container.crt"
