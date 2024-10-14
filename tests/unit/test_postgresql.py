@@ -186,12 +186,12 @@ def test_generate_database_privileges_statements(harness):
         ]),
         Composed([
             SQL(
-                "UPDATE pg_catalog.pg_largeobject_metadata\nSET lomowner = (SELECT oid FROM pg_roles WHERE rolname = '"
+                "UPDATE pg_catalog.pg_largeobject_metadata\nSET lomowner = (SELECT oid FROM pg_roles WHERE rolname = "
             ),
             Identifier("test_user"),
-            SQL("')\nWHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = '"),
+            SQL(")\nWHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = "),
             Identifier("operator"),
-            SQL("');"),
+            SQL(");"),
         ]),
     ]
     # Test with multiple established relations.

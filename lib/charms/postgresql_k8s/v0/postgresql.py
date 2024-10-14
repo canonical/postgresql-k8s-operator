@@ -175,7 +175,7 @@ class PostgreSQL:
             connection = self._connect_to_database()
             cursor = connection.cursor()
             cursor.execute(
-                sql.SQL("SELECT datname FROM pg_database WHERE datname='{}';").format(
+                sql.SQL("SELECT datname FROM pg_database WHERE datname={};").format(
                     sql.Identifier(database)
                 )
             )
@@ -255,7 +255,7 @@ class PostgreSQL:
             with self._connect_to_database() as connection, connection.cursor() as cursor:
                 # Create or update the user.
                 cursor.execute(
-                    sql.SQL("SELECT TRUE FROM pg_roles WHERE rolname='{}';").format(
+                    sql.SQL("SELECT TRUE FROM pg_roles WHERE rolname={};").format(
                         sql.Identifier(user)
                     )
                 )
@@ -400,8 +400,8 @@ END; $$;"""
             statements.append(
                 sql.SQL(
                     "UPDATE pg_catalog.pg_largeobject_metadata\n"
-                    "SET lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}')\n"
-                    "WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}');"
+                    "SET lomowner = (SELECT oid FROM pg_roles WHERE rolname = {})\n"
+                    "WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = {});"
                 ).format(sql.Identifier(user), sql.Identifier(self.user))
             )
         else:
