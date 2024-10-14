@@ -174,9 +174,7 @@ class PostgreSQL:
             connection = self._connect_to_database()
             cursor = connection.cursor()
             cursor.execute(
-                SQL("SELECT datname FROM pg_database WHERE datname={};").format(
-                    Identifier(database)
-                )
+                SQL("SELECT datname FROM pg_database WHERE datname={};").format(Literal(database))
             )
             if cursor.fetchone() is None:
                 cursor.execute(SQL("CREATE DATABASE {};").format(Identifier(database)))
