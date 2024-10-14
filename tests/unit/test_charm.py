@@ -24,6 +24,7 @@ from ops.testing import Harness
 from requests import ConnectionError
 from tenacity import RetryError, wait_fixed
 
+from backups import MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET
 from charm import EXTENSION_OBJECT_MESSAGE, PostgresqlOperatorCharm
 from constants import PEER, SECRET_INTERNAL_LABEL
 from patroni import NotReadyError
@@ -443,7 +444,6 @@ def test_fail_to_get_primary(harness):
 
 
 def test_on_update_status(harness):
-    return
     with (
         patch("charm.logger") as _logger,
         patch(
@@ -715,7 +715,6 @@ def test_on_pgdata_storage_detaching(harness):
 
 
 def test_on_update_status_after_restore_operation(harness):
-    return
     with (
         patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
         patch(
@@ -1598,7 +1597,6 @@ def test_handle_processes_failures(harness):
 
 
 def test_update_config(harness):
-    return
     with (
         patch("ops.model.Container.get_plan") as _get_plan,
         patch(

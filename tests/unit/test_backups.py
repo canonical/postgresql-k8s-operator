@@ -557,7 +557,6 @@ def test_execute_command(harness):
 
 
 def test_format_backup_list(harness):
-    return
     with patch(
         "charms.data_platform_libs.v0.s3.S3Requirer.get_s3_connection_info"
     ) as _get_s3_connection_info:
@@ -613,7 +612,6 @@ backup-id            | type         | status   | reference-backup-id  | LSN star
 
 
 def test_generate_backup_list_output(harness):
-    return
     with (
         patch(
             "charms.data_platform_libs.v0.s3.S3Requirer.get_s3_connection_info"
@@ -654,7 +652,6 @@ backup-id            | type         | status   | reference-backup-id  | LSN star
 
 
 def test_list_backups(harness):
-    return
     with patch("charm.PostgreSQLBackups._execute_command") as _execute_command:
         # Test when no backups are available.
         _execute_command.return_value = ("[]", None)
@@ -1383,7 +1380,6 @@ def test_on_list_backups_action(harness):
 
 
 def test_on_restore_action(harness):
-    return
     with (
         patch("ops.model.Container.start") as _start,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
