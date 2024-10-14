@@ -1519,7 +1519,6 @@ def test_on_restore_action(harness):
 
 
 def test_pre_restore_checks(harness):
-    return
     with (
         patch("ops.model.Application.planned_units") as _planned_units,
         patch("charm.PostgreSQLBackups._are_backup_settings_ok") as _are_backup_settings_ok,
