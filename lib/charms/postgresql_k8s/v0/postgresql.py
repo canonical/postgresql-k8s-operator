@@ -25,8 +25,7 @@ from typing import Dict, List, Optional, Set, Tuple
 
 import psycopg2
 from ops.model import Relation
-from psycopg2 import sql
-from psycopg2.sql import Composed
+from psycopg2.sql import SQL, Composed, Identifier, Literal
 
 # The unique Charmhub library identifier, never change it
 LIBID = "24ee217a54e840a598ff21a079c3e678"
@@ -175,21 +174,21 @@ class PostgreSQL:
             connection = self._connect_to_database()
             cursor = connection.cursor()
             cursor.execute(
-                sql.SQL("SELECT datname FROM pg_database WHERE datname={};").format(
-                    sql.Identifier(database)
+                SQL("SELECT datname FROM pg_database WHERE datname={};").format(
+                    Identifier(database)
                 )
             )
             if cursor.fetchone() is None:
-                cursor.execute(sql.SQL("CREATE DATABASE {};").format(sql.Identifier(database)))
+                cursor.execute(SQL("CREATE DATABASE {};").format(Identifier(database)))
             cursor.execute(
-                sql.SQL("REVOKE ALL PRIVILEGES ON DATABASE {} FROM PUBLIC;").format(
-                    sql.Identifier(database)
+                SQL("REVOKE ALL PRIVILEGES ON DATABASE {} FROM PUBLIC;").format(
+                    Identifier(database)
                 )
             )
             for user_to_grant_access in [user, "admin", *self.system_users]:
                 cursor.execute(
-                    sql.SQL("GRANT ALL PRIVILEGES ON DATABASE {} TO {};").format(
-                        sql.Identifier(database), sql.Identifier(user_to_grant_access)
+                    SQL("GRANT ALL PRIVILEGES ON DATABASE {} TO {};").format(
+                        Identifier(database), Identifier(user_to_grant_access)
                     )
                 )
             relations_accessing_this_database = 0
@@ -255,9 +254,7 @@ class PostgreSQL:
             with self._connect_to_database() as connection, connection.cursor() as cursor:
                 # Create or update the user.
                 cursor.execute(
-                    sql.SQL("SELECT TRUE FROM pg_roles WHERE rolname={};").format(
-                        sql.Identifier(user)
-                    )
+                    SQL("SELECT TRUE FROM pg_roles WHERE rolname={};").format(Literal(user))
                 )
                 if cursor.fetchone() is not None:
                     user_definition = "ALTER ROLE {}"
@@ -266,18 +263,16 @@ class PostgreSQL:
                 user_definition += f"WITH {'NOLOGIN' if user == 'admin' else 'LOGIN'}{' SUPERUSER' if admin else ''} ENCRYPTED PASSWORD '{password}'{'IN ROLE admin CREATEDB' if admin_role else ''}"
                 if privileges:
                     user_definition += f' {" ".join(privileges)}'
-                cursor.execute(sql.SQL("BEGIN;"))
-                cursor.execute(sql.SQL("SET LOCAL log_statement = 'none';"))
-                cursor.execute(sql.SQL(f"{user_definition};").format(sql.Identifier(user)))
-                cursor.execute(sql.SQL("COMMIT;"))
+                cursor.execute(SQL("BEGIN;"))
+                cursor.execute(SQL("SET LOCAL log_statement = 'none';"))
+                cursor.execute(SQL(f"{user_definition};").format(Identifier(user)))
+                cursor.execute(SQL("COMMIT;"))
 
                 # Add extra user roles to the new user.
                 if roles:
                     for role in roles:
                         cursor.execute(
-                            sql.SQL("GRANT {} TO {};").format(
-                                sql.Identifier(role), sql.Identifier(user)
-                            )
+                            SQL("GRANT {} TO {};").format(Identifier(role), Identifier(user))
                         )
         except psycopg2.Error as e:
             logger.error(f"Failed to create user: {e}")
@@ -307,15 +302,15 @@ class PostgreSQL:
                     database
                 ) as connection, connection.cursor() as cursor:
                     cursor.execute(
-                        sql.SQL("REASSIGN OWNED BY {} TO {};").format(
-                            sql.Identifier(user), sql.Identifier(self.user)
+                        SQL("REASSIGN OWNED BY {} TO {};").format(
+                            Identifier(user), Identifier(self.user)
                         )
                     )
-                    cursor.execute(sql.SQL("DROP OWNED BY {};").format(sql.Identifier(user)))
+                    cursor.execute(SQL("DROP OWNED BY {};").format(Identifier(user)))
 
             # Delete the user.
             with self._connect_to_database() as connection, connection.cursor() as cursor:
-                cursor.execute(sql.SQL("DROP ROLE {};").format(sql.Identifier(user)))
+                cursor.execute(SQL("DROP ROLE {};").format(Identifier(user)))
         except psycopg2.Error as e:
             logger.error(f"Failed to delete user: {e}")
             raise PostgreSQLDeleteUserError() from e
@@ -375,7 +370,7 @@ class PostgreSQL:
         statements = []
         if relations_accessing_this_database == 1:
             statements.append(
-                sql.SQL(
+                SQL(
                     """DO $$
 DECLARE r RECORD;
 BEGIN
@@ -391,35 +386,35 @@ FROM pg_catalog.pg_views WHERE NOT schemaname IN ('pg_catalog', 'information_sch
   END LOOP;
 END; $$;"""
                 ).format(
-                    sql.Identifier(user),
-                    sql.Identifier(user),
-                    sql.Identifier(user),
-                    sql.Identifier(user),
+                    Identifier(user),
+                    Identifier(user),
+                    Identifier(user),
+                    Identifier(user),
                 )
             )
             statements.append(
-                sql.SQL(
+                SQL(
                     "UPDATE pg_catalog.pg_largeobject_metadata\n"
                     "SET lomowner = (SELECT oid FROM pg_roles WHERE rolname = {})\n"
                     "WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = {});"
-                ).format(sql.Identifier(user), sql.Identifier(self.user))
+                ).format(Literal(user), Literal(self.user))
             )
         else:
             for schema in schemas:
-                schema = sql.Identifier(schema)
+                schema = Identifier(schema)
                 statements.append(
-                    sql.SQL("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA {} TO {};").format(
-                        schema, sql.Identifier(user)
+                    SQL("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA {} TO {};").format(
+                        schema, Identifier(user)
                     )
                 )
                 statements.append(
-                    sql.SQL("GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA {} TO {};").format(
-                        schema, sql.Identifier(user)
+                    SQL("GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA {} TO {};").format(
+                        schema, Identifier(user)
                     )
                 )
                 statements.append(
-                    sql.SQL("GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA {} TO {};").format(
-                        schema, sql.Identifier(user)
+                    SQL("GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA {} TO {};").format(
+                        schema, Identifier(user)
                     )
                 )
         return statements
@@ -542,8 +537,8 @@ END; $$;"""
                 cursor.execute("REVOKE CREATE ON SCHEMA public FROM PUBLIC;")
                 for user in self.system_users:
                     cursor.execute(
-                        sql.SQL("GRANT ALL PRIVILEGES ON DATABASE postgres TO {};").format(
-                            sql.Identifier(user)
+                        SQL("GRANT ALL PRIVILEGES ON DATABASE postgres TO {};").format(
+                            Identifier(user)
                         )
                     )
                 self.create_user(
@@ -576,14 +571,14 @@ END; $$;"""
             with self._connect_to_database(
                 database_host=database_host
             ) as connection, connection.cursor() as cursor:
-                cursor.execute(sql.SQL("BEGIN;"))
-                cursor.execute(sql.SQL("SET LOCAL log_statement = 'none';"))
+                cursor.execute(SQL("BEGIN;"))
+                cursor.execute(SQL("SET LOCAL log_statement = 'none';"))
                 cursor.execute(
-                    sql.SQL("ALTER USER {} WITH ENCRYPTED PASSWORD '" + password + "';").format(
-                        sql.Identifier(username)
+                    SQL("ALTER USER {} WITH ENCRYPTED PASSWORD {};").format(
+                        Identifier(username), Literal(password)
                     )
                 )
-                cursor.execute(sql.SQL("COMMIT;"))
+                cursor.execute(SQL("COMMIT;"))
         except psycopg2.Error as e:
             logger.error(f"Failed to update user password: {e}")
             raise PostgreSQLUpdateUserPasswordError() from e
@@ -675,11 +670,7 @@ END; $$;"""
             with self._connect_to_database(
                 database_host=self.current_host
             ) as connection, connection.cursor() as cursor:
-                cursor.execute(
-                    sql.SQL(
-                        "SET DateStyle to {};",
-                    ).format(sql.Identifier(date_style))
-                )
+                cursor.execute(SQL("SET DateStyle to {};").format(Identifier(date_style)))
             return True
         except psycopg2.Error:
             return False
