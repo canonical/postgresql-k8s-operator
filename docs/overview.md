@@ -52,17 +52,20 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 2 | t-integrate | [6. Integrate with other applications](/t/9301) |
 | 2 | t-enable-tls | [7. Enable TLS encryption](/t/9302) |
 | 2 | t-clean-up | [8. Clean up environment](/t/9303) |
-| 1 | how-to | [How-to guides]() |
+| 1 | how-to | [How to]() |
 | 2 | h-set-up | [Set up]() |
 | 3 | h-deploy-microk8s | [Deploy on MicroK8s](/t/11858) |
 | 3 | h-deploy-gke | [Deploy on GKE](/t/11237) |
 | 3 | h-deploy-eks | [Deploy on EKS](/t/12106) |
 | 3 | h-deploy-aks | [Deploy on AKS](/t/14307) |
+| 3 | h-deploy-multi-az | [Deploy on multi-AZ](/t/15678) |
 | 3 | h-deploy-terraform | [Deploy via Terraform](/t/14924) |
+| 3 | h-deploy-airgapped | [Deploy in an air-gapped environment](/t/15691) |
 | 3 | h-scale | [Scale replicas](/t/9592) |
 | 3 | h-enable-tls | [Enable TLS](/t/9593) |
 | 3 | h-manage-applications | [Manage client applications](/t/9594) |
-| 2 | h-backups | [Back up and restore]() |
+| 3 | h-external-k8s-connection | [External k8s connection](/t/15701) |
+| 2 | h-backup | [Back up and restore]() |
 | 3 | h-configure-s3-aws | [Configure S3 AWS](/t/9595) |
 | 3 | h-configure-s3-radosgw | [Configure S3 RadosGW](/t/10316) |
 | 3 | h-create-backup | [Create a backup](/t/9596) |

@@ -7,6 +7,7 @@ import logging
 from datetime import datetime
 from multiprocessing import ProcessError
 from pathlib import Path
+from subprocess import check_call
 from typing import List, Optional
 
 import botocore
@@ -38,6 +39,12 @@ DATABASE_APP_NAME = METADATA["name"]
 APPLICATION_NAME = "postgresql-test-app"
 STORAGE_PATH = METADATA["storage"]["pgdata"]["location"]
 MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET = "Move restored cluster to another S3 bucket"
+
+try:
+    check_call(["kubectl", "version", "--client=true"])
+    KUBECTL = "kubectl"
+except FileNotFoundError:
+    KUBECTL = "microk8s kubectl"
 
 charm = None
 

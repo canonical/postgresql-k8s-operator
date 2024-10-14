@@ -22,7 +22,7 @@ If you are using an earlier version,  check the [Juju 3.0 Release Notes](https:/
 
 Install Juju and kubectl CLI tools via snap:
 ```shell
-sudo snap install juju --classic
+sudo snap install juju
 sudo snap install kubectl --classic
 ```
 Follow the installation guides for:
@@ -76,8 +76,7 @@ Sample `cluster.yaml`:
 
 ```shell
 ~$ cat <<-EOF > cluster.yaml
-```
-```yaml
+---
 apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 
