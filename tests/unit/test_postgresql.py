@@ -184,7 +184,15 @@ def test_generate_database_privileges_statements(harness):
                 ";' AS statement\nFROM pg_catalog.pg_views WHERE NOT schemaname IN ('pg_catalog', 'information_schema')) AS statements ORDER BY index) LOOP\n      EXECUTE format(r.statement);\n  END LOOP;\nEND; $$;"
             ),
         ]),
-        "UPDATE pg_catalog.pg_largeobject_metadata\nSET lomowner = (SELECT oid FROM pg_roles WHERE rolname = 'test_user')\nWHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = 'operator');",
+        Composed([
+            SQL(
+                "UPDATE pg_catalog.pg_largeobject_metadata\nSET lomowner = (SELECT oid FROM pg_roles WHERE rolname = '"
+            ),
+            Identifier("test_user"),
+            SQL("')\nWHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = '"),
+            Identifier("operator"),
+            SQL("');"),
+        ]),
     ]
     # Test with multiple established relations.
     assert harness.charm.postgresql._generate_database_privileges_statements(

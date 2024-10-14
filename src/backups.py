@@ -99,15 +99,16 @@ class PostgreSQLBackups(Object):
         # Don't allow stanza initialisation if this unit hasn't started the database
         # yet and either hasn't joined the peer relation yet or hasn't configured TLS
         # yet while other unit already has TLS enabled.
-        if not self.charm._patroni.member_started and (
-            (len(self.charm._peers.data.keys()) == 2)
-            or (
-                "tls" not in self.charm.unit_peer_data
-                and any("tls" in unit_data for _, unit_data in self.charm._peers.data.items())
+        return not (
+            not self.charm._patroni.member_started
+            and (
+                (len(self.charm._peers.data.keys()) == 2)
+                or (
+                    "tls" not in self.charm.unit_peer_data
+                    and any("tls" in unit_data for _, unit_data in self.charm._peers.data.items())
+                )
             )
-        ):
-            return False
-        return True
+        )
 
     def _can_unit_perform_backup(self) -> Tuple[bool, Optional[str]]:
         """Validates whether this unit can perform a backup."""
@@ -156,11 +157,11 @@ class PostgreSQLBackups(Object):
                 ])
                 if error != "":
                     raise Exception(error)
-                system_identifier_from_instance = [
+                system_identifier_from_instance = next(
                     line
                     for line in system_identifier_from_instance.splitlines()
                     if "Database system identifier" in line
-                ][0].split(" ")[-1]
+                ).split(" ")[-1]
                 system_identifier_from_stanza = str(stanza.get("db")[0]["system-id"])
                 if system_identifier_from_instance != system_identifier_from_stanza or stanza.get(
                     "name"
@@ -182,7 +183,7 @@ class PostgreSQLBackups(Object):
         s3_archive = stanza.get("archive", [])
         if len(s3_archive) > 0:
             s3_last_archived_wal = s3_archive[0].get("max")
-            logger.debug(f"last s3 wal: {str(s3_last_archived_wal)}")
+            logger.debug(f"last s3 wal: {s3_last_archived_wal!s}")
             if (
                 charm_last_archived_wal
                 and s3_last_archived_wal
@@ -276,7 +277,7 @@ class PostgreSQLBackups(Object):
         self.charm.update_config(is_creating_backup=True)
 
     def _execute_command(
-        self, command: List[str], timeout: float = None, stream: bool = False
+        self, command: List[str], timeout: Optional[float] = None, stream: bool = False
     ) -> Tuple[Optional[str], Optional[str]]:
         """Execute a command in the workload container."""
         try:
@@ -334,16 +335,7 @@ class PostgreSQLBackups(Object):
             path,
         ) in backup_list:
             backups.append(
-                "{:<20s} | {:<12s} | {:<8s} | {:<20s} | {:<23s} | {:<20s} | {:<20s} | {:s}".format(
-                    backup_id,
-                    backup_type,
-                    backup_status,
-                    reference,
-                    lsn_start_stop,
-                    start,
-                    stop,
-                    path,
-                )
+                f"{backup_id:<20s} | {backup_type:<12s} | {backup_status:<8s} | {reference:<20s} | {lsn_start_stop:<23s} | {start:<20s} | {stop:<20s} | {path:s}"
             )
         return "\n".join(backups)
 
@@ -538,7 +530,7 @@ class PostgreSQLBackups(Object):
         try:
             primary = self.charm._patroni.get_primary()
         except (RetryError, ConnectionError) as e:
-            logger.error(f"failed to get primary with error {str(e)}")
+            logger.error(f"failed to get primary with error {e!s}")
             return False
 
         if primary is None:
@@ -556,7 +548,7 @@ class PostgreSQLBackups(Object):
             ])
         except ExecError as e:
             logger.warning(
-                f"Failed to contact pgBackRest TLS server on {primary_endpoint} with error {str(e)}"
+                f"Failed to contact pgBackRest TLS server on {primary_endpoint} with error {e!s}"
             )
             return False
 
@@ -650,7 +642,7 @@ class PostgreSQLBackups(Object):
 Model Name: {self.model.name}
 Application Name: {self.model.app.name}
 Unit Name: {self.charm.unit.name}
-Juju Version: {str(juju_version)}
+Juju Version: {juju_version!s}
 """
         if not self._upload_content_to_s3(
             metadata,
@@ -718,7 +710,7 @@ Stderr:
                 ),
                 s3_parameters,
             )
-            error_message = f"Failed to backup PostgreSQL with error: {str(e)}"
+            error_message = f"Failed to backup PostgreSQL with error: {e!s}"
             logger.error(f"Backup failed: {error_message}")
             event.fail(error_message)
         else:
@@ -776,7 +768,7 @@ Stderr:
             event.set_results({"backups": formatted_list})
         except ExecError as e:
             logger.exception(e)
-            event.fail(f"Failed to list PostgreSQL backups with error: {str(e)}")
+            event.fail(f"Failed to list PostgreSQL backups with error: {e!s}")
 
     def _on_restore_action(self, event):
         """Request that pgBackRest restores a backup."""
@@ -795,7 +787,7 @@ Stderr:
         # Validate the provided backup id and restore to time.
         logger.info("Validating provided backup-id and restore-to-time")
         backups = self._list_backups(show_failed=False)
-        if backup_id and backup_id not in backups.keys():
+        if backup_id and backup_id not in backups:
             error_message = f"Invalid backup-id: {backup_id}"
             logger.error(f"Restore failed: {error_message}")
             event.fail(error_message)
@@ -835,7 +827,7 @@ Stderr:
         try:
             self.container.stop(self.charm._postgresql_service)
         except ChangeError as e:
-            error_message = f"Failed to stop database service with error: {str(e)}"
+            error_message = f"Failed to stop database service with error: {e!s}"
             logger.error(f"Restore failed: {error_message}")
             event.fail(error_message)
             return
@@ -859,9 +851,7 @@ Stderr:
         except ApiError as e:
             # If previous PITR restore was unsuccessful, there are no such endpoints.
             if "restore-to-time" not in self.charm.app_peer_data:
-                error_message = (
-                    f"Failed to remove previous cluster information with error: {str(e)}"
-                )
+                error_message = f"Failed to remove previous cluster information with error: {e!s}"
                 logger.error(f"Restore failed: {error_message}")
                 event.fail(error_message)
                 self._restart_database()
@@ -871,7 +861,7 @@ Stderr:
         try:
             self._empty_data_files()
         except ExecError as e:
-            error_message = f"Failed to remove contents of the data directory with error: {str(e)}"
+            error_message = f"Failed to remove contents of the data directory with error: {e!s}"
             logger.error(f"Restore failed: {error_message}")
             event.fail(error_message)
             self._restart_database()
@@ -1014,7 +1004,7 @@ Stderr:
             )
 
         # Open the template pgbackrest.conf file.
-        with open("templates/pgbackrest.conf.j2", "r") as file:
+        with open("templates/pgbackrest.conf.j2") as file:
             template = Template(file.read())
         # Render the template file with the correct values.
         rendered = template.render(

@@ -44,7 +44,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version.
-LIBPATCH = 9
+LIBPATCH = 10
 
 logger = logging.getLogger(__name__)
 SCOPE = "unit"
@@ -81,10 +81,7 @@ class PostgreSQLTLS(Object):
 
     def _request_certificate(self, param: Optional[str]):
         """Request a certificate to TLS Certificates Operator."""
-        if param is None:
-            key = generate_private_key()
-        else:
-            key = self._parse_tls_file(param)
+        key = generate_private_key() if param is None else self._parse_tls_file(param)
 
         csr = generate_csr(
             private_key=key,

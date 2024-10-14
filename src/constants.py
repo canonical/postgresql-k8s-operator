@@ -7,17 +7,12 @@ DATABASE_PORT = "5432"
 PEER = "database-peers"
 BACKUP_USER = "backup"
 REPLICATION_USER = "replication"
-REPLICATION_PASSWORD_KEY = "replication-password"
 REWIND_USER = "rewind"
-REWIND_PASSWORD_KEY = "rewind-password"
 MONITORING_USER = "monitoring"
-MONITORING_PASSWORD_KEY = "monitoring-password"
-PATRONI_PASSWORD_KEY = "patroni-password"
 TLS_KEY_FILE = "key.pem"
 TLS_CA_FILE = "ca.pem"
 TLS_CERT_FILE = "cert.pem"
 USER = "operator"
-USER_PASSWORD_KEY = "operator-password"
 WORKLOAD_OS_GROUP = "postgres"
 WORKLOAD_OS_USER = "postgres"
 METRICS_PORT = "9187"
@@ -32,10 +27,16 @@ POSTGRES_LOG_FILES = [
 # List of system usernames needed for correct work of the charm/workload.
 SYSTEM_USERS = [BACKUP_USER, REPLICATION_USER, REWIND_USER, USER, MONITORING_USER]
 
-SECRET_LABEL = "secret"
-SECRET_CACHE_LABEL = "cache"
-SECRET_INTERNAL_LABEL = "internal-secret"
-SECRET_DELETED_LABEL = "None"
+# Labels are not confidential
+REPLICATION_PASSWORD_KEY = "replication-password"  # noqa: S105
+REWIND_PASSWORD_KEY = "rewind-password"  # noqa: S105
+MONITORING_PASSWORD_KEY = "monitoring-password"  # noqa: S105
+PATRONI_PASSWORD_KEY = "patroni-password"  # noqa: S105
+USER_PASSWORD_KEY = "operator-password"  # noqa: S105
+SECRET_LABEL = "secret"  # noqa: S105
+SECRET_CACHE_LABEL = "cache"  # noqa: S105
+SECRET_INTERNAL_LABEL = "internal-secret"  # noqa: S105
+SECRET_DELETED_LABEL = "None"  # noqa: S105
 
 APP_SCOPE = "app"
 UNIT_SCOPE = "unit"

@@ -1677,7 +1677,7 @@ def test_update_config(harness):
         _handle_postgresql_restart_need.reset_mock()
         harness.charm.update_config()
         _handle_postgresql_restart_need.assert_not_called()
-        harness.get_relation_data(rel_id, harness.charm.unit.name)["tls"] == "enabled"
+        assert harness.get_relation_data(rel_id, harness.charm.unit.name)["tls"] == "enabled"
 
         # Test with member not started yet.
         harness.update_relation_data(
