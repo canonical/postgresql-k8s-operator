@@ -513,7 +513,9 @@ async def get_standby_leader(model: Model, application_name: str) -> str:
         the name of the standby leader.
     """
     status = await model.get_status()
-    first_unit_ip = next(status["applications"][application_name]["units"].values())["address"]
+    first_unit_ip = next(
+        val for val in status["applications"][application_name]["units"].values()
+    )["address"]
     cluster = get_patroni_cluster(first_unit_ip)
     for member in cluster["members"]:
         if member["role"] == "standby_leader":
@@ -531,7 +533,9 @@ async def get_sync_standby(model: Model, application_name: str) -> str:
         the name of the sync standby.
     """
     status = await model.get_status()
-    first_unit_ip = next(status["applications"][application_name]["units"].values())["address"]
+    first_unit_ip = next(
+        val for val in status["applications"][application_name]["units"].values()
+    )["address"]
     cluster = get_patroni_cluster(first_unit_ip)
     for member in cluster["members"]:
         if member["role"] == "sync_standby":
