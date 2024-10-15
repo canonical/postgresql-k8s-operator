@@ -57,6 +57,7 @@ bootstrap:
     command: >
       pgbackrest --stanza={{ restore_stanza }} --pg1-path={{ storage_path }}/pgdata
       {%- if backup_id %} --set={{ backup_id }} {%- endif %}
+      {%- if restore_timeline %} --target-timeline="0x{{ restore_timeline }}" {% endif %}
       {%- if restore_to_latest %} --type=default {%- else %}
       --target-action=promote {%- if pitr_target %} --target="{{ pitr_target }}" --type=time {%- else %} --type=immediate {%- endif %}
       {%- endif %}
