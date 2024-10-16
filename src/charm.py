@@ -1771,7 +1771,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         try:
             for attempt in Retrying(wait=wait_fixed(3), stop=stop_after_delay(300)):
                 with attempt:
-                    _ = self._can_connect_to_postgresql
+                    if not self._can_connect_to_postgresql:
+                        raise CannotConnectError
         except Exception:
             logger.exception("Unable to reconnect to postgresql")
 
