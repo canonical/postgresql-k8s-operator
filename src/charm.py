@@ -189,6 +189,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         )
 
         self._postgresql_service = "postgresql"
+        self.rotate_logs_service = "rotate-logs"
         self.pgbackrest_server_service = "pgbackrest server"
         self._metrics_service = "metrics_server"
         self._unit = self.model.unit.name
@@ -1670,6 +1671,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     "group": WORKLOAD_OS_GROUP,
                 },
                 self._metrics_service: self._generate_metrics_service(),
+                self.rotate_logs_service: {
+                    "override": "replace",
+                    "summary": "rotate logs",
+                    "command": "python3 /home/postgres/rotate_logs.py",
+                    "startup": "disabled",
+                },
             },
             "checks": {
                 self._postgresql_service: {
