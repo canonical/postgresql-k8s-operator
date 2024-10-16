@@ -1,36 +1,41 @@
 # How to deploy on MicroK8s
 
-This guide goes shows you how to deploy Charmed PostgreSQL on [MicroK8s](https://microk8s.io/docs), Canonical's lightweight Kubernetes engine.
+This guide assumes you have a running Juju and  [MicroK8s](https://microk8s.io/docs) environment. 
 
-## Prerequisites
-* Charmed PostgreSQL K8s Revision 73+
-* Canonical MicroK8s 1.27+
-* Fulfill the general [system requirements](/t/11744)
-
-## Summary
-* [MicroK8s on Multipass](#heading--multipass)
-* [MicroK8s on other platforms](#heading--other-platforms)
-
----
-<a href="#heading--multipass"><h2 id="heading--multipass"> MicroK8s on Multipass </h2></a>
-
-The Charmed PostgreSQL K8s Tutorial contains detailed instructions to deploy PostgreSQL on MicroK8s and Multipass in the following pages:
+For a detailed walkthrough of setting up an environment and deploying the charm on MicroK8s, refer to the following Tutorial pages:
 * [1. Set up the environment](/t/9297) - set up Multipass and Juju
 * [2. Deploy PostgreSQL](/t/9298) - deploy PostgresQL K8s in a Multipass instance
 
-### Summary
-Below is an example of the commands to deploy PostgreSQL K8s on MicroK8s running inside a Multipass VM from scratch on Ubuntu 22.04 LTS:
+MicroK8s can be installed on a multitude of platforms and environments for different use cases. See all options and details in the [official documentation](https://microk8s.io/docs/install-alternatives).
 
+[note type="caution"]
+Not all platforms supported by MicroK8s will work with this charm - keep in mind the [system requirements](/t/11744) of Charmed PostgreSQL.
+[/note]
+
+## Prerequisites
+* Canonical MicroK8s 1.27+
+* Fulfill the general [system requirements](/t/11744)
+
+---
+
+[Bootstrap](https://juju.is/docs/juju/juju-bootstrap) a juju controller and create a [model](https://juju.is/docs/juju/juju-add-model) if you haven't already:
 ```shell
-sudo snap install multipass
-multipass launch --cpus 4 --memory 8G --disk 30G --name my-vm charm-dev
-multipass shell my-vm
-
-juju add-model example
-juju deploy postgresql-k8s --trust
+juju bootstrap localhost <controller name>
+juju add-model <model name>
 ```
 
-Example `juju status` output:
+Deploy PostgreSQL K8s:
+
+```shell
+juju deploy postgresql-k8s --trust
+```
+> :warning: The `--trust` flag is necessary to create some K8s resources
+
+> See the [`juju deploy` documentation](https://juju.is/docs/juju/juju-deploy) for all available options at deploy time.
+> 
+> See the [Configurations tab](https://charmhub.io/postgresql-k8s/configurations) for specific PostgreSQL K8s parameters.
+
+Example `juju status --wait 1s` output:
 ```shell
 Model       Controller  Cloud/Region        Version  SLA          Timestamp
 example  charm-dev   microk8s/localhost  2.9.42   unsupported  12:00:43+01:00
@@ -41,14 +46,3 @@ postgresql-k8s           active      1  postgresql-k8s  14/stable  56   10.152.1
 Unit               Workload  Agent  Address       Ports  Message
 postgresql-k8s/0*  active    idle   10.1.188.206
 ```
-
-<a href="#heading--other-platforms"><h2 id="heading--other-platforms"> MicroK8s on other platforms </h2></a>
-
-MicroK8s can be installed on a multitude of platforms and environments for different use cases. See all options and details in the [official documentation](https://microk8s.io/docs/install-alternatives).
-
-[note type="caution"]
-Not all platforms supported by MicroK8s will work with this charm - keep in mind the [system requirements](/t/11744) of Charmed PostgreSQL.
-[/note]
-
-## Test your deployment
-Check the [Testing](/t/11774) reference to test your deployment.
