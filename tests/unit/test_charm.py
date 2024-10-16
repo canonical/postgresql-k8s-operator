@@ -33,6 +33,7 @@ POSTGRESQL_CONTAINER = "postgresql"
 POSTGRESQL_SERVICE = "postgresql"
 METRICS_SERVICE = "metrics_server"
 PGBACKREST_SERVER_SERVICE = "pgbackrest server"
+ROTATE_LOGS_SERVICE = "rotate-logs"
 
 # used for assert functions
 tc = TestCase()
@@ -950,6 +951,12 @@ def test_postgresql_layer(harness):
                     "startup": "disabled",
                     "user": "postgres",
                     "group": "postgres",
+                },
+                ROTATE_LOGS_SERVICE: {
+                    "override": "replace",
+                    "summary": "rotate logs",
+                    "command": "python3 /home/postgres/rotate_logs.py",
+                    "startup": "disabled",
                 },
             },
             "checks": {

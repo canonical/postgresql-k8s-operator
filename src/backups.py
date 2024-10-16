@@ -25,7 +25,13 @@ from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus
 from ops.pebble import ChangeError, ExecError
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
-from constants import BACKUP_TYPE_OVERRIDES, BACKUP_USER, WORKLOAD_OS_GROUP, WORKLOAD_OS_USER
+from constants import (
+    BACKUP_TYPE_OVERRIDES,
+    BACKUP_USER,
+    PGBACKREST_LOGROTATE_FILE,
+    WORKLOAD_OS_GROUP,
+    WORKLOAD_OS_USER,
+)
 from relations.async_replication import REPLICATION_CONSUMER_RELATION, REPLICATION_OFFER_RELATION
 
 logger = logging.getLogger(__name__)
@@ -825,6 +831,7 @@ Stderr:
         self.charm.unit.status = ActiveStatus()
 
     def _on_s3_credential_gone(self, _) -> None:
+        self.container.stop(self.charm.rotate_logs_service)
         if self.charm.unit.is_leader():
             self.charm.app_peer_data.update({
                 "stanza": "",
@@ -1129,6 +1136,16 @@ Stderr:
             user=WORKLOAD_OS_USER,
             group=WORKLOAD_OS_GROUP,
         )
+
+        # Render the logrotate configuration file.
+        with open("templates/pgbackrest.logrotate.j2", "r") as file:
+            template = Template(file.read())
+        self.container.push(PGBACKREST_LOGROTATE_FILE, template.render())
+        self.container.push(
+            "/home/postgres/rotate_logs.py",
+            open("src/rotate_logs.py", "r").read(),
+        )
+        self.container.start(self.charm.rotate_logs_service)
 
         return True
 
