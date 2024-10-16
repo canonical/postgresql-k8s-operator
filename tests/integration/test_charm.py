@@ -282,7 +282,7 @@ async def test_persist_data_through_graceful_restart(ops_test: OpsTest):
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
     # Testing write occurred to every postgres instance by reading from them
-    status = await ops_test.model.get_status()  # noqa: F821
+    status = await ops_test.model.get_status()
     for unit in status["applications"][APP_NAME]["units"].values():
         host = unit["address"]
         logger.info("connecting to the database host: %s", host)
@@ -323,7 +323,7 @@ async def test_persist_data_through_failure(ops_test: OpsTest):
     logger.info("juju has reset postgres container")
 
     # Testing write occurred to every postgres instance by reading from them
-    status = await ops_test.model.get_status()  # noqa: F821
+    status = await ops_test.model.get_status()
     for unit in status["applications"][APP_NAME]["units"].values():
         host = unit["address"]
         logger.info("connecting to the database host: %s", host)

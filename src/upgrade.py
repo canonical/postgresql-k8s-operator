@@ -52,7 +52,7 @@ class PostgreSQLUpgrade(DataUpgrade):
 
         self.framework.observe(self.charm.on.upgrade_relation_changed, self._on_upgrade_changed)
         self.framework.observe(
-            getattr(self.charm.on, "postgresql_pebble_ready"), self._on_postgresql_pebble_ready
+            self.charm.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready
         )
         self.framework.observe(self.charm.on.upgrade_charm, self._on_upgrade_charm_check_legacy)
 
@@ -217,7 +217,7 @@ class PostgreSQLUpgrade(DataUpgrade):
             except SwitchoverFailedError as e:
                 raise ClusterNotReadyError(
                     str(e), f"try to switchover manually to {unit_zero_name}"
-                )
+                ) from e
             self._set_first_rolling_update_partition()
             return
 
@@ -259,18 +259,15 @@ class PostgreSQLUpgrade(DataUpgrade):
             )
             logger.debug(f"Kubernetes StatefulSet partition set to {partition}")
         except ApiError as e:
-            if e.status.code == 403:
-                cause = "`juju trust` needed"
-            else:
-                cause = str(e)
-            raise KubernetesClientError("Kubernetes StatefulSet patch failed", cause)
+            cause = "`juju trust` needed" if e.status.code == 403 else str(e)
+            raise KubernetesClientError("Kubernetes StatefulSet patch failed", cause) from e
 
     def _set_first_rolling_update_partition(self) -> None:
         """Set the initial rolling update partition value."""
         try:
             self._set_rolling_update_partition(self.charm.app.planned_units() - 1)
         except KubernetesClientError as e:
-            raise ClusterNotReadyError(e.message, e.cause)
+            raise ClusterNotReadyError(e.message, e.cause) from e
 
     def _set_up_new_credentials_for_legacy(self) -> None:
         """Create missing password and user."""
