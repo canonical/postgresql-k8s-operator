@@ -28,7 +28,7 @@ from tenacity import (
 from constants import POSTGRESQL_LOGS_PATH, POSTGRESQL_LOGS_PATTERN, REWIND_USER, TLS_CA_FILE
 
 RUNNING_STATES = ["running", "streaming"]
-PATRONI_TIMEOUT = 5
+PATRONI_TIMEOUT = 10
 
 logger = logging.getLogger(__name__)
 
