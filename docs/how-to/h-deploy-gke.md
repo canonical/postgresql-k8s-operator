@@ -68,7 +68,7 @@ kubectl create clusterrolebinding cluster-admin-binding-$USER --clusterrole=clus
 
 Bootstrap a new juju controller on the new cluster by running the following commands:
 
-> Note: [the known issue](https://bugs.launchpad.net/juju/+bug/2007575) forces unSNAPed Juju usage to add-k8s credentials on Juju.
+> Note: [This known issue](https://bugs.launchpad.net/juju/+bug/2007575) forces unSNAPed Juju usage to add-k8s credentials on Juju.
 
 ```shell
 /snap/juju/current/bin/juju add-k8s gke-jun-9 --storage=standard --client
@@ -85,9 +85,10 @@ kubectl get pods -n welcome-model
 The following commands deploy PostgreSQL K8s and PgBouncer K8s:
 ```shell
 juju deploy postgresql-k8s --trust
+juju deploy pgbouncer-k8s --trust
 ```
 
-To track the status of the `postgresql-k8s` app, run
+To track the status of the deployment, run
 ```shell
 juju status --watch 1s
 ```

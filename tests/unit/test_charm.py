@@ -24,7 +24,6 @@ from ops.testing import Harness
 from requests import ConnectionError
 from tenacity import RetryError, wait_fixed
 
-from backups import MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET
 from charm import EXTENSION_OBJECT_MESSAGE, PostgresqlOperatorCharm
 from constants import PEER, SECRET_INTERNAL_LABEL
 from patroni import NotReadyError
@@ -486,15 +485,6 @@ def test_on_update_status(harness):
         _enable_disable_extensions.assert_called_once()
         _pebble.get_services.assert_called_once()
 
-        # Test unit in blocked status due to restored cluster.
-        _pebble.get_services.reset_mock()
-        _enable_disable_extensions.reset_mock()
-        harness.model.unit.status = BlockedStatus(MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET)
-        harness.charm.on.update_status.emit()
-        _enable_disable_extensions.assert_not_called()
-        _pebble.get_services.assert_called_once()
-        harness.model.unit.status = ActiveStatus()
-
         # Test when a failure need to be handled.
         _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.ACTIVE)]
         _handle_processes_failures.return_value = True
@@ -722,6 +712,9 @@ def test_on_update_status_after_restore_operation(harness):
             "charm.PostgresqlOperatorCharm._handle_processes_failures"
         ) as _handle_processes_failures,
         patch("charm.PostgreSQLBackups.can_use_s3_repository") as _can_use_s3_repository,
+        patch(
+            "charms.postgresql_k8s.v0.postgresql.PostgreSQL.get_current_timeline"
+        ) as _get_current_timeline,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
         patch("ops.model.Container.pebble") as _pebble,
@@ -730,6 +723,7 @@ def test_on_update_status_after_restore_operation(harness):
         rel_id = harness.model.get_relation(PEER).id
         # Mock the access to the list of Pebble services to test a failed restore.
         _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.INACTIVE)]
+        _get_current_timeline.return_value = "2"
 
         # Test when the restore operation fails.
         with harness.hooks_disabled():
@@ -737,7 +731,7 @@ def test_on_update_status_after_restore_operation(harness):
             harness.update_relation_data(
                 rel_id,
                 harness.charm.app.name,
-                {"restoring-backup": "2023-01-01T09:00:00Z"},
+                {"restoring-backup": "20230101-090000F"},
             )
         harness.set_can_connect(POSTGRESQL_CONTAINER, True)
         harness.charm.on.update_status.emit()
@@ -759,7 +753,7 @@ def test_on_update_status_after_restore_operation(harness):
         # Assert that the backup id is still in the application relation databag.
         tc.assertEqual(
             harness.get_relation_data(rel_id, harness.charm.app),
-            {"restoring-backup": "2023-01-01T09:00:00Z"},
+            {"restoring-backup": "20230101-090000F"},
         )
 
         # Test when the restore operation finished successfully.
@@ -783,7 +777,7 @@ def test_on_update_status_after_restore_operation(harness):
             harness.update_relation_data(
                 rel_id,
                 harness.charm.app.name,
-                {"restoring-backup": "2023-01-01T09:00:00Z"},
+                {"restoring-backup": "20230101-090000F"},
             )
         _can_use_s3_repository.return_value = (False, "fake validation message")
         harness.charm.on.update_status.emit()
@@ -1643,9 +1637,9 @@ def test_update_config(harness):
             backup_id=None,
             stanza=None,
             restore_stanza=None,
+            restore_timeline=None,
             pitr_target=None,
             restore_to_latest=False,
-            disable_pgbackrest_archiving=False,
             parameters={"test": "test"},
         )
         _handle_postgresql_restart_need.assert_called_once()
@@ -1667,9 +1661,9 @@ def test_update_config(harness):
             backup_id=None,
             stanza=None,
             restore_stanza=None,
+            restore_timeline=None,
             pitr_target=None,
             restore_to_latest=False,
-            disable_pgbackrest_archiving=False,
             parameters={"test": "test"},
         )
         _handle_postgresql_restart_need.assert_called_once()
