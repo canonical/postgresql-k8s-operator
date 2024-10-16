@@ -39,17 +39,19 @@ from charms.postgresql_k8s.v0.postgresql import (
     REQUIRED_PLUGINS,
     PostgreSQL,
     PostgreSQLEnableDisableExtensionError,
+    PostgreSQLGetCurrentTimelineError,
     PostgreSQLUpdateUserPasswordError,
 )
 from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
-from charms.tempo_k8s.v1.charm_tracing import trace_charm
-from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
+from charms.tempo_coordinator_k8s.v0.charm_tracing import trace_charm
+from charms.tempo_coordinator_k8s.v0.tracing import TracingEndpointRequirer
 from lightkube import ApiError, Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Endpoints, Node, Pod, Service
+from ops import main
 from ops.charm import (
     ActionEvent,
     HookEvent,
@@ -58,7 +60,6 @@ from ops.charm import (
     WorkloadEvent,
 )
 from ops.jujuversion import JujuVersion
-from ops.main import main
 from ops.model import (
     ActiveStatus,
     BlockedStatus,
@@ -82,7 +83,7 @@ from ops.pebble import (
 from requests import ConnectionError
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
-from backups import CANNOT_RESTORE_PITR, MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET, PostgreSQLBackups
+from backups import CANNOT_RESTORE_PITR, PostgreSQLBackups
 from config import CharmConfig
 from constants import (
     APP_SCOPE,
@@ -966,15 +967,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # The charm should not override this status outside of the function checking disk space.
         if self.unit.status.message == INSUFFICIENT_SIZE_WARNING:
             return
-        if "require-change-bucket-after-restore" in self.app_peer_data:
-            if self.unit.is_leader():
-                self.app_peer_data.update({
-                    "restoring-backup": "",
-                    "restore-stanza": "",
-                    "restore-to-time": "",
-                })
-            self.unit.status = BlockedStatus(MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET)
-            return
         try:
             if self._patroni.get_primary(unit_name_pattern=True) == self.unit.name:
                 self.unit.status = ActiveStatus("Primary")
@@ -1364,12 +1356,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self.enable_disable_extensions()
                 return True
 
-            if (
-                self.unit.status.message == MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET
-                and "require-change-bucket-after-restore" not in self.app_peer_data
-            ):
-                return True
-
             logger.debug("on_update_status early exit: Unit is in Blocked/Waiting status")
             return False
         return True
@@ -1408,6 +1394,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         if (
             "restoring-backup" not in self.app_peer_data
+            and "restore-to-time" not in self.app_peer_data
             and "stopped" not in self.unit_peer_data
             and services[0].current != ServiceStatus.ACTIVE
         ):
@@ -1459,15 +1446,32 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("Restore check early exit: Patroni has not started yet")
             return False
 
+        restoring_backup = self.app_peer_data.get("restoring-backup")
+        restore_timeline = self.app_peer_data.get("restore-timeline")
+        restore_to_time = self.app_peer_data.get("restore-to-time")
+        try:
+            current_timeline = self.postgresql.get_current_timeline()
+        except PostgreSQLGetCurrentTimelineError:
+            logger.debug("Restore check early exit: can't get current wal timeline")
+            return False
+
         # Remove the restoring backup flag and the restore stanza name.
         self.app_peer_data.update({
             "restoring-backup": "",
             "restore-stanza": "",
             "restore-to-time": "",
+            "restore-timeline": "",
         })
         self.update_config()
         self.restore_patroni_on_failure_condition()
-        logger.info("Restore succeeded")
+
+        logger.info(
+            "Restored"
+            f"{f' to {restore_to_time}' if restore_to_time else ''}"
+            f"{f' from timeline {restore_timeline}' if restore_timeline and not restoring_backup else ''}"
+            f"{f' from backup {self.backup._parse_backup_id(restoring_backup)[0]}' if restoring_backup else ''}"
+            f". Currently tracking the newly created timeline {current_timeline}."
+        )
 
         can_use_s3_repository, validation_message = self.backup.can_use_s3_repository()
         if not can_use_s3_repository:
@@ -1821,12 +1825,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             is_no_sync_member=self.upgrade.is_no_sync_member,
             backup_id=self.app_peer_data.get("restoring-backup"),
             pitr_target=self.app_peer_data.get("restore-to-time"),
+            restore_timeline=self.app_peer_data.get("restore-timeline"),
             restore_to_latest=self.app_peer_data.get("restore-to-time", None) == "latest",
             stanza=self.app_peer_data.get("stanza"),
             restore_stanza=self.app_peer_data.get("restore-stanza"),
-            disable_pgbackrest_archiving=bool(
-                self.app_peer_data.get("require-change-bucket-after-restore", None)
-            ),
             parameters=postgresql_parameters,
         )
 
