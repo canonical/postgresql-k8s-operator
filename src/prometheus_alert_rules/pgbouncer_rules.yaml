@@ -13,10 +13,9 @@ groups:
       labels:
         severity: warning
       annotations:
-        summary: PgBouncer active connections (instance {{ $labels.instance }})
+        summary: PgBouncer instance {{ $labels.instance }} has > 200 active connections
         description: |
-          PgBouncer pools are filling up.
-          VALUE = {{ $value }}
+          Consider checking the client application responsible for generating those additional connections.
           LABELS = {{ $labels }}
 
     # 2.5.2
@@ -27,9 +26,8 @@ groups:
       labels:
         severity: warning
       annotations:
-        summary: PgBouncer errors (instance {{ $labels.instance }})
+        summary: PgBouncer instance {{ $labels.instance }} is logging errors. 
         description: |
-          PgBouncer is logging errors.
           This may be due to a a server restart or an admin typing commands at the PgBouncer console.
           VALUE = {{ $value }}
           LABELS = {{ $labels }}
@@ -41,9 +39,8 @@ groups:
       labels:
         severity: critical
       annotations:
-        summary: PgBouncer max connections (instance {{ $labels.instance }})
+        summary: PgBouncer instance {{ $labels.instance }} has reached `max_client_conn`.
         description: |
-          The number of PgBouncer client connections has reached `max_client_conn`.
-          Consider double-checking how many connections the client application is opening.
+          Consider checking how many connections the client application is opening.
           VALUE = {{ $value }}
           LABELS = {{ $labels }}
