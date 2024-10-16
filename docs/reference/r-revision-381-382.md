@@ -83,16 +83,16 @@ See the [system requirements] for more details about Juju versions and other sof
 
 ### Integration tests
 Below are the charm integrations tested with this revision on different Juju environments and architectures:
-* Juju `v.2.9.50` on `amd64`
-* Juju  `v.3.4.5` on `amd64` and `arm64`
+* Juju `v2.9.50` on `amd64`
+* Juju  `v3.4.5` on `amd64` and `arm64`
 
-#### Juju `v.2.9.50` on `amd64`
+#### Juju `v2.9.50` on `amd64`
 
 | Software | Version |
 |-----|-----|
 | [tls-certificates-operator] | `rev 22`, `legacy/stable` | 
 
-#### Juju  `v.3.4.5` on `amd64` and `arm64`
+#### Juju  `v3.4.5` on `amd64` and `arm64`
 
 | Software | Version | 
 |-----|-----|

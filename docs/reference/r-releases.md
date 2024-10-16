@@ -16,9 +16,9 @@ For a given release, this table shows:
 
 | Revision | PostgreSQL version | Juju version | [TLS encryption](/t/9685)* | [COS monitoring](/t/10600) | [Minor version upgrades](/t/) | [Cross-regional async replication](/t/) | [Point-in-time recovery](/t/)
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| [381], [382] | 14.12 | `3.4.5+` | ![check] | ![check] | ![check] | ![check] | ![check] |
-| [280], [281] | 14.11 | `3.1.8+` | ![check] | ![check] | ![check] | ![check] |
-| [193] | 14.10 | `3.1.7+` | ![check] | ![check] | ![check] | ![check] |
+| [381], [382] | 14.12 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] | ![check] |
+| [280], [281] | 14.11 | `3.4.2+` | ![check] | ![check] | ![check] | ![check] |
+| [193] | 14.10 | `3.4.2+` | ![check] | ![check] | ![check] | ![check] |
 | [177] | 14.9 | `3.1.6+` |  | ![check] | ![check] |
 | [158] | 14.9 | `3.1.5+` |  | ![check] | ![check] |
 | [73]  | 14.7 | `2.9.32+` |  |  |
