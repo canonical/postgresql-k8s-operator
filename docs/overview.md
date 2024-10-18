@@ -75,6 +75,7 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 2 | h-monitor | [Monitoring (COS)]() |
 | 3 | h-enable-monitoring | [Enable monitoring](/t/10812) |
 | 3 | h-enable-alert-rules | [Enable alert rules](/t/12982) |
+| 4 | r-alert-rules | [Alert rules](/t/15840) |
 | 3 | h-enable-tracing | [Enable tracing](/t/14786) |
 | 2 | h-upgrade | [Minor upgrades]() |
 | 3 | h-upgrade-minor | [Perform a minor upgrade](/t/12095) |
@@ -102,6 +103,7 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 2 | r-performance | [Performance and resources](/t/11975) |
 | 2 | r-troubleshooting | [Troubleshooting](/t/11854) |
 | 2 | r-plugins-extensions | [Plugins/extensions](/t/10945) |
+| 2 | r-alert-rules | [Alert rules](/t/15840) |
 | 2 | r-contacts | [Contacts](/t/11852) |
 | 1 | explanation | [Explanation]() |
 | 2 | e-architecture | [Architecture](/t/11856) |
