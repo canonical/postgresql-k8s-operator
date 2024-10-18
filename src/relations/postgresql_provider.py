@@ -117,6 +117,11 @@ class PostgreSQLProvider(Object):
                 "True" if self.charm.is_tls_enabled else "False",
             )
 
+            # Set TLS CA
+            if self.charm.is_tls_enabled:
+                _, ca, _ = self.charm.tls.get_tls_files()
+                self.database_provides.set_tls_ca(event.relation.id, ca)
+
             # Update the read-only endpoint.
             self.update_read_only_endpoint(event)
 
@@ -209,6 +214,11 @@ class PostgreSQLProvider(Object):
         relations = self.model.relations[self.relation_name]
         for relation in relations:
             self.database_provides.set_tls(relation.id, tls)
+
+        if tls == "True":
+            _, ca, _ = self.charm.tls.get_tls_files()
+            for relation in relations:
+                self.database_provides.set_tls_ca(relation.id, ca)
 
     def _check_multiple_endpoints(self) -> bool:
         """Checks if there are relations with other endpoints."""
