@@ -1206,47 +1206,48 @@ def test_on_s3_credential_changed(harness):
 
 
 def test_on_s3_credential_gone(harness):
-    peer_rel_id = harness.model.get_relation(PEER).id
-    # Test that unrelated blocks will remain
-    harness.charm.unit.status = BlockedStatus("test block")
-    harness.charm.backup._on_s3_credential_gone(None)
-    assert isinstance(harness.charm.unit.status, BlockedStatus)
+    with patch("ops.model.Container.stop") as _stop:
+        peer_rel_id = harness.model.get_relation(PEER).id
+        # Test that unrelated blocks will remain
+        harness.charm.unit.status = BlockedStatus("test block")
+        harness.charm.backup._on_s3_credential_gone(None)
+        assert isinstance(harness.charm.unit.status, BlockedStatus)
 
-    # Test that s3 related blocks will be cleared
-    harness.charm.unit.status = BlockedStatus(ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE)
-    harness.charm.backup._on_s3_credential_gone(None)
-    assert isinstance(harness.charm.unit.status, ActiveStatus)
+        # Test that s3 related blocks will be cleared
+        harness.charm.unit.status = BlockedStatus(ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE)
+        harness.charm.backup._on_s3_credential_gone(None)
+        assert isinstance(harness.charm.unit.status, ActiveStatus)
 
-    # Test removal of relation data when the unit is not the leader.
-    with harness.hooks_disabled():
-        harness.update_relation_data(
-            peer_rel_id,
-            harness.charm.app.name,
-            {"stanza": "test-stanza", "init-pgbackrest": "True"},
-        )
-        harness.update_relation_data(
-            peer_rel_id,
-            harness.charm.app.name,
-            {"stanza": "test-stanza", "init-pgbackrest": "True"},
-        )
-    harness.charm.backup._on_s3_credential_gone(None)
-    assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {
-        "stanza": "test-stanza",
-        "init-pgbackrest": "True",
-    }
-    assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {}
+        # Test removal of relation data when the unit is not the leader.
+        with harness.hooks_disabled():
+            harness.update_relation_data(
+                peer_rel_id,
+                harness.charm.app.name,
+                {"stanza": "test-stanza", "init-pgbackrest": "True"},
+            )
+            harness.update_relation_data(
+                peer_rel_id,
+                harness.charm.app.name,
+                {"stanza": "test-stanza", "init-pgbackrest": "True"},
+            )
+        harness.charm.backup._on_s3_credential_gone(None)
+        assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {
+            "stanza": "test-stanza",
+            "init-pgbackrest": "True",
+        }
+        assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {}
 
-    # Test removal of relation data when the unit is the leader.
-    with harness.hooks_disabled():
-        harness.set_leader()
-        harness.update_relation_data(
-            peer_rel_id,
-            harness.charm.unit.name,
-            {"stanza": "test-stanza", "init-pgbackrest": "True"},
-        )
-    harness.charm.backup._on_s3_credential_gone(None)
-    assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {}
-    assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {}
+        # Test removal of relation data when the unit is the leader.
+        with harness.hooks_disabled():
+            harness.set_leader()
+            harness.update_relation_data(
+                peer_rel_id,
+                harness.charm.unit.name,
+                {"stanza": "test-stanza", "init-pgbackrest": "True"},
+            )
+        harness.charm.backup._on_s3_credential_gone(None)
+        assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {}
+        assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {}
 
 
 def test_on_create_backup_action(harness):
@@ -1744,6 +1745,7 @@ def test_pre_restore_checks(harness):
 )
 def test_render_pgbackrest_conf_file(harness, tls_ca_chain_filename):
     with (
+        patch("ops.model.Container.start") as _start,
         patch("ops.model.Container.push") as _push,
         patch(
             "charm.PostgreSQLBackups._tls_ca_chain_filename",
@@ -1811,8 +1813,16 @@ def test_render_pgbackrest_conf_file(harness, tls_ca_chain_filename):
         # Check the template is opened read-only in the call to open.
         assert mock.call_args_list[0][0] == ("templates/pgbackrest.conf.j2", "r")
 
+        # Get the expected content from a file.
+        with open("templates/pgbackrest.conf.j2") as file:
+            template = Template(file.read())
+        log_rotation_expected_content = template.render()
+
         # Ensure the correct rendered template is sent to _render_file method.
-        calls = [call("/etc/pgbackrest.conf", expected_content, user="postgres", group="postgres")]
+        calls = [
+            call("/etc/pgbackrest.conf", expected_content, user="postgres", group="postgres"),
+            call("/etc/logrotate.d/pgbackrest.logrotate", log_rotation_expected_content),
+        ]
         if tls_ca_chain_filename != "":
             calls.insert(
                 0,
