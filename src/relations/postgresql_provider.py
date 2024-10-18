@@ -210,15 +210,16 @@ class PostgreSQLProvider(Object):
             )
 
     def update_tls_flag(self, tls: str) -> None:
-        """Update TLS flag in relation databag."""
+        """Update TLS flag and CA in relation databag."""
         relations = self.model.relations[self.relation_name]
-        for relation in relations:
-            self.database_provides.set_tls(relation.id, tls)
-
         if tls == "True":
             _, ca, _ = self.charm.tls.get_tls_files()
-            for relation in relations:
-                self.database_provides.set_tls_ca(relation.id, ca)
+        else:
+            ca = ""
+
+        for relation in relations:
+            self.database_provides.set_tls(relation.id, tls)
+            self.database_provides.set_tls_ca(relation.id, ca)
 
     def _check_multiple_endpoints(self) -> bool:
         """Checks if there are relations with other endpoints."""
