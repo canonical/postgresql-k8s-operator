@@ -83,7 +83,7 @@ from ops.pebble import (
 from requests import ConnectionError
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
-from backups import CANNOT_RESTORE_PITR, PostgreSQLBackups
+from backups import CANNOT_RESTORE_PITR, S3_BLOCK_MESSAGES, PostgreSQLBackups
 from config import CharmConfig
 from constants import (
     APP_SCOPE,
@@ -599,10 +599,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         except ModelError as e:
             logger.warning("Cannot update read_only endpoints: %s", str(e))
 
-        self.backup.coordinate_stanza_fields()
-
-        self.backup.check_stanza()
-
         # Start or stop the pgBackRest TLS server service when TLS certificate change.
         if not self.backup.start_stop_pgbackrest_service():
             # Ping primary to start its TLS server.
@@ -614,6 +610,26 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
         else:
             self.unit_peer_data.pop("start-tls-server", None)
+
+        self.backup.coordinate_stanza_fields()
+
+        # This is intended to be executed only when leader is reinitializing S3 connection due to the leader change.
+        if (
+            "s3-initialization-start" in self.app_peer_data
+            and "s3-initialization-done" not in self.unit_peer_data
+            and self.is_primary
+            and not self.backup._on_s3_credential_changed_primary(event)
+        ):
+            return
+
+        # Clean-up unit initialization data after successful sync to the leader.
+        if "s3-initialization-done" in self.app_peer_data and not self.unit.is_leader():
+            self.unit_peer_data.update({
+                "stanza": "",
+                "s3-initialization-block-message": "",
+                "s3-initialization-done": "",
+                "s3-initialization-start": "",
+            })
 
         self.async_replication.handle_read_only_mode()
 
@@ -969,6 +985,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if self.unit.status.message == INSUFFICIENT_SIZE_WARNING:
             return
         try:
+            if self.unit.is_leader() and "s3-initialization-block-message" in self.app_peer_data:
+                self.unit.status = BlockedStatus(
+                    self.app_peer_data["s3-initialization-block-message"]
+                )
+                return
             if self._patroni.get_primary(unit_name_pattern=True) == self.unit.name:
                 self.unit.status = ActiveStatus("Primary")
             elif self.is_standby_leader:
@@ -1351,7 +1372,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         self._check_pgdata_storage_size()
 
-        if self._has_blocked_status or self._has_non_restore_waiting_status:
+        if (
+            self._has_blocked_status and self.unit.status not in S3_BLOCK_MESSAGES
+        ) or self._has_non_restore_waiting_status:
             # If charm was failing to disable plugin, try again and continue (user may have removed the objects)
             if self.unit.status.message == EXTENSION_OBJECT_MESSAGE:
                 self.enable_disable_extensions()
@@ -1422,6 +1445,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Update the sync-standby endpoint in the async replication data.
         self.async_replication.update_async_replication_data()
 
+        self.backup.coordinate_stanza_fields()
+
         self._set_active_status()
 
     def _was_restore_successful(self, container: Container, service: ServiceInfo) -> bool:
@@ -1476,8 +1501,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         can_use_s3_repository, validation_message = self.backup.can_use_s3_repository()
         if not can_use_s3_repository:
-            self.unit.status = BlockedStatus(validation_message)
-            return False
+            self.app_peer_data.update({
+                "stanza": "",
+                "s3-initialization-start": "",
+                "s3-initialization-done": "",
+                "s3-initialization-block-message": validation_message,
+            })
 
         return True
 
@@ -1834,7 +1863,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             pitr_target=self.app_peer_data.get("restore-to-time"),
             restore_timeline=self.app_peer_data.get("restore-timeline"),
             restore_to_latest=self.app_peer_data.get("restore-to-time", None) == "latest",
-            stanza=self.app_peer_data.get("stanza"),
+            stanza=self.app_peer_data.get("stanza", self.unit_peer_data.get("stanza")),
             restore_stanza=self.app_peer_data.get("restore-stanza"),
             parameters=postgresql_parameters,
         )
@@ -2134,6 +2163,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         patroni_exceptions = []
         count = 0
         while len(patroni_exceptions) == 0 and count < 10:
+            if count > 0:
+                time.sleep(3)
             try:
                 log_exec = container.pebble.exec(
                     ["pebble", "logs", "postgresql", "-n", "all"], combine_stderr=True
@@ -2172,7 +2203,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     re.MULTILINE,
                 )
             count += 1
-            time.sleep(3)
 
         if len(patroni_exceptions) > 0:
             logger.debug("Failures to bootstrap cluster detected on Patroni service logs")
