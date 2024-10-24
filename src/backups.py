@@ -806,10 +806,12 @@ Juju Version: {str(juju_version)}
             event.fail(error_message)
             return
 
+        disabled_connectivity = False
         if not self.charm.is_primary:
             # Create a rule to mark the cluster as in a creating backup state and update
             # the Patroni configuration.
             self._change_connectivity_to_database(connectivity=False)
+            disabled_connectivity = True
 
         self.charm.unit.status = MaintenanceStatus("creating backup")
         # Set flag due to missing in progress backups on JSON output
@@ -879,8 +881,8 @@ Stderr:
                 logger.info(f"Backup succeeded: with backup-id {datetime_backup_requested}")
                 event.set_results({"backup-status": "backup created"})
 
-        if not self.charm.is_primary:
-            # Remove the rule the marks the cluster as in a creating backup state
+        if disabled_connectivity:
+            # Remove the rule that marks the cluster as in a creating backup state
             # and update the Patroni configuration.
             self._change_connectivity_to_database(connectivity=True)
 
