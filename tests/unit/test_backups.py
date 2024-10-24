@@ -1332,6 +1332,28 @@ Juju Version: test-juju-version
         mock_event.fail.assert_not_called()
         mock_event.set_results.assert_called_once_with({"backup-status": "backup created"})
 
+        # Test when this unit is a replica but gets promoted to primary mid-way
+        mock_event.reset_mock()
+        mock_event.params = {"type": "full"}
+        _upload_content_to_s3.reset_mock()
+        _is_primary.return_value = (False, True)
+        harness.charm.backup._on_create_backup_action(mock_event)
+        _upload_content_to_s3.assert_has_calls([
+            call(
+                expected_metadata,
+                f"backup/{harness.charm.model.name}.{harness.charm.cluster_name}/latest",
+                mock_s3_parameters,
+            ),
+            call(
+                "Stdout:\nfake stdout\n\nStderr:\nfake stderr\n",
+                f"backup/{harness.charm.model.name}.{harness.charm.cluster_name}/2023-01-01T09:00:00Z/backup.log",
+                mock_s3_parameters,
+            ),
+        ])
+        assert _change_connectivity_to_database.call_count == 2
+        mock_event.fail.assert_not_called()
+        mock_event.set_results.assert_called_once_with({"backup-status": "backup created"})
+
 
 def test_on_list_backups_action(harness):
     with (
