@@ -102,6 +102,7 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 2 | r-performance | [Performance and resources](/t/11975) |
 | 2 | r-troubleshooting | [Troubleshooting](/t/11854) |
 | 2 | r-plugins-extensions | [Plugins/extensions](/t/10945) |
+| 2 | r-alert-rules | [Alert rules](/t/15840) |
 | 2 | r-contacts | [Contacts](/t/11852) |
 | 1 | explanation | [Explanation]() |
 | 2 | e-architecture | [Architecture](/t/11856) |
