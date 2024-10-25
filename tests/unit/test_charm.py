@@ -1578,9 +1578,7 @@ def test_handle_processes_failures(harness):
             harness.charm.unit.status = ActiveStatus()
             result = harness.charm._handle_processes_failures()
             assert result == (values[0] is None)
-            assert isinstance(
-                harness.charm.unit.status, MaintenanceStatus if values[0] is None else ActiveStatus
-            )
+            assert isinstance(harness.charm.unit.status, MaintenanceStatus)
             _restart.assert_not_called()
             _reinitialize_postgresql.assert_called_once()
 
