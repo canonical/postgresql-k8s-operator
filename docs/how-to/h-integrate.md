@@ -30,7 +30,7 @@ Integrations with charmed applications are supported via the modern [`postgresql
 
 To integrate, run
 ```shell
-juju integrate postgresql-k8s <charm>
+juju integrate postgresql-k8s:database <charm>
 ```
 
 To remove the integration, run
