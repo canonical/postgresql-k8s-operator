@@ -1,0 +1,112 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.4.6    unsupported  02:23:43Z
+
+App                  Version  Status   Scale  Charm                Channel      Rev  Address         Exposed  Message
+another-application           active       1  postgresql-test-app  latest/edge  271  10.152.183.170  no       received database credentials of the first database
+another-database     14.13    active       3  postgresql-k8s                      0  10.152.183.220  no       
+database             14.13    waiting      3  postgresql-k8s                      1  10.152.183.29   no       installing agent
+postgresql-test-app           active       2  postgresql-test-app  latest/edge  271  10.152.183.215  no       
+
+Unit                    Workload  Agent      Address       Ports  Message
+another-application/0*  active    idle       10.1.122.214         received database credentials of the first database
+another-database/0*     active    idle       10.1.122.211         Primary
+another-database/1      active    idle       10.1.122.213         
+another-database/2      active    idle       10.1.122.212         
+database/0*             waiting   idle       10.1.122.207         Updating extensions
+database/1              waiting   executing  10.1.122.216         Updating extensions
+database/2              waiting   executing  10.1.122.215         Updating extensions
+postgresql-test-app/0*  active    idle       10.1.122.200         
+postgresql-test-app/1   active    idle       10.1.122.201         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-database-1: 01:39:28 ERROR unit.database/1.juju-log database-peers:2: This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:39:28 ERROR unit.database/1.juju-log database-peers:2: This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:39:28 ERROR unit.database/2.juju-log database-peers:2: This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:39:28 ERROR unit.database/2.juju-log database-peers:2: This operation (update_relation_data()) can only be performed by the leader unit
+unit-another-database-1: 01:40:15 ERROR unit.another-database/1.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-another-database-2: 01:40:54 ERROR unit.another-database/2.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-database-1: 01:41:05 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:41:06 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:41:18 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:41:18 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:41:31 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:41:31 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:41:44 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:41:44 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:41:52 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:41:52 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:41:58 ERROR unit.database/1.juju-log database-peers:2: This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:41:58 ERROR unit.database/1.juju-log database-peers:2: This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:42:05 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:42:05 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:42:18 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:42:18 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-0: 01:46:50 ERROR unit.database/0.juju-log Kubernetes service get failed: services "database" not found
+unit-database-0: 01:46:50 ERROR unit.database/0.juju-log Kubernetes service patch failed: services "database" not found
+unit-database-0: 01:47:02 ERROR unit.database/0.juju-log Kubernetes service get failed: services "database" not found
+unit-database-0: 01:47:02 ERROR unit.database/0.juju-log Kubernetes service patch failed: services "database" not found
+unit-database-1: 01:47:43 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:47:43 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:47:43 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:47:43 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:47:43 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:47:43 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:47:43 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:47:43 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:47:43 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:47:43 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:47:43 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:47:43 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:47:43 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:47:43 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:47:43 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:47:43 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:47:43 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:47:43 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:47:43 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:47:43 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:48:01 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:48:01 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:48:01 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:48:01 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:48:01 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:48:01 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:48:01 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:48:01 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:48:01 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:48:01 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:48:01 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:48:01 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:48:01 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:48:01 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:48:01 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:48:01 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:48:01 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:48:01 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:48:01 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:48:01 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:48:14 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:48:14 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:48:14 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:48:14 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:48:14 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:48:14 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:48:14 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:48:14 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:48:14 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-1: 01:48:14 ERROR unit.database/1.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:48:14 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:48:14 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:48:14 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:48:14 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:48:14 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:48:14 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:48:14 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:48:14 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:48:14 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-database-2: 01:48:14 ERROR unit.database/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
