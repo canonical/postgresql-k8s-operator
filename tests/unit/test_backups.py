@@ -1351,6 +1351,10 @@ Juju Version: test-juju-version
             ),
         ])
         assert _change_connectivity_to_database.call_count == 2
+        _change_connectivity_to_database.assert_has_calls([
+            call(connectivity=False),
+            call(connectivity=True),
+        ])
         mock_event.fail.assert_not_called()
         mock_event.set_results.assert_called_once_with({"backup-status": "backup created"})
 
