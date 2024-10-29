@@ -150,16 +150,16 @@ async def test_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -
                         "SELECT EXISTS (SELECT FROM information_schema.tables"
                         " WHERE table_schema = 'public' AND table_name = 'backup_table_1');"
                     )
-                    assert cursor.fetchone()[
-                        0
-                    ], f"replication isn't working correctly: table 'backup_table_1' doesn't exist in {new_unit_name}"
+                    assert cursor.fetchone()[0], (
+                        f"replication isn't working correctly: table 'backup_table_1' doesn't exist in {new_unit_name}"
+                    )
                     cursor.execute(
                         "SELECT EXISTS (SELECT FROM information_schema.tables"
                         " WHERE table_schema = 'public' AND table_name = 'backup_table_2');"
                     )
-                    assert not cursor.fetchone()[
-                        0
-                    ], f"replication isn't working correctly: table 'backup_table_2' exists in {new_unit_name}"
+                    assert not cursor.fetchone()[0], (
+                        f"replication isn't working correctly: table 'backup_table_2' exists in {new_unit_name}"
+                    )
                 connection.close()
 
         old_primary = await get_primary(ops_test, database_app_name)
@@ -312,9 +312,9 @@ async def test_restore_on_new_cluster(ops_test: OpsTest, github_secrets) -> None
             "SELECT EXISTS (SELECT FROM information_schema.tables"
             " WHERE table_schema = 'public' AND table_name = 'backup_table_1');"
         )
-        assert cursor.fetchone()[
-            0
-        ], "backup wasn't correctly restored: table 'backup_table_1' doesn't exist"
+        assert cursor.fetchone()[0], (
+            "backup wasn't correctly restored: table 'backup_table_1' doesn't exist"
+        )
     connection.close()
 
 

@@ -177,9 +177,9 @@ async def change_wal_settings(
 
 async def is_cluster_updated(ops_test: OpsTest, primary_name: str) -> None:
     # Verify that the old primary is now a replica.
-    assert await is_replica(
-        ops_test, primary_name
-    ), "there are more than one primary in the cluster."
+    assert await is_replica(ops_test, primary_name), (
+        "there are more than one primary in the cluster."
+    )
 
     # Verify that all units are part of the same cluster.
     member_ips = await fetch_cluster_members(ops_test)
@@ -194,9 +194,9 @@ async def is_cluster_updated(ops_test: OpsTest, primary_name: str) -> None:
     total_expected_writes = await check_writes(ops_test)
 
     # Verify that old primary is up-to-date.
-    assert await is_secondary_up_to_date(
-        ops_test, primary_name, total_expected_writes
-    ), f"secondary ({primary_name}) not up to date with the cluster after restarting."
+    assert await is_secondary_up_to_date(ops_test, primary_name, total_expected_writes), (
+        f"secondary ({primary_name}) not up to date with the cluster after restarting."
+    )
 
 
 def get_member_lag(cluster: Dict, member_name: str) -> int:
@@ -230,9 +230,9 @@ async def check_writes(ops_test, extra_model: Model = None) -> int:
     total_expected_writes = await stop_continuous_writes(ops_test)
     actual_writes, max_number_written = await count_writes(ops_test, extra_model=extra_model)
     for member, count in actual_writes.items():
-        assert (
-            count == max_number_written[member]
-        ), f"{member}: writes to the db were missed: count of actual writes ({count}) on {member} different from the max number written ({max_number_written[member]})."
+        assert count == max_number_written[member], (
+            f"{member}: writes to the db were missed: count of actual writes ({count}) on {member} different from the max number written ({max_number_written[member]})."
+        )
         assert total_expected_writes == count, f"{member}: writes to the db were missed."
     return total_expected_writes
 
@@ -256,9 +256,9 @@ async def are_writes_increasing(
             for member, count in writes.items():
                 if member in more_writes:
                     members_checked.append(member)
-                    assert (
-                        more_writes[member] > count
-                    ), f"{member}: writes not continuing to DB (current writes: {more_writes[member]} - previous writes: {count})"
+                    assert more_writes[member] > count, (
+                        f"{member}: writes not continuing to DB (current writes: {more_writes[member]} - previous writes: {count})"
+                    )
             assert len(members_checked), "No member checked from the initial writes"
 
 
@@ -355,7 +355,7 @@ async def count_writes(
                 f" host='{ip}' password='{password}' connect_timeout=10"
             )
 
-            member_name = f'{member["model"]}.{member["name"]}'
+            member_name = f"{member['model']}.{member['name']}"
             connection = None
             try:
                 with psycopg2.connect(
@@ -703,9 +703,9 @@ async def modify_pebble_restart_delay(
         _preload_content=False,
     )
     response.run_forever(timeout=5)
-    assert (
-        response.returncode == 0
-    ), f"Failed to add to pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
+    assert response.returncode == 0, (
+        f"Failed to add to pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
+    )
 
     for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
         with attempt:
@@ -732,9 +732,9 @@ async def modify_pebble_restart_delay(
                         )
                     except (ProcessError, ProcessRunningError):
                         pass
-                assert (
-                    response.returncode == 0
-                ), f"Failed to replan pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
+                assert response.returncode == 0, (
+                    f"Failed to replan pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
+                )
 
 
 async def is_postgresql_ready(ops_test, unit_name: str) -> bool:
@@ -803,7 +803,7 @@ async def remove_charm_code(ops_test: OpsTest, unit_name: str) -> None:
     await run_command_on_unit(
         ops_test,
         unit_name,
-        f'rm /var/lib/juju/agents/unit-{unit_name.replace("/", "-")}/charm/src/charm.py',
+        f"rm /var/lib/juju/agents/unit-{unit_name.replace('/', '-')}/charm/src/charm.py",
         "charm",
     )
 
@@ -1045,7 +1045,7 @@ async def get_any_deatached_storage(ops_test: OpsTest) -> str:
 
 async def check_system_id_mismatch(ops_test: OpsTest, unit_name: str) -> bool:
     """Returns True if system id mismatch if found in logs."""
-    log_str = f'CRITICAL: system ID mismatch, node {unit_name.replace("/", "-")} belongs to a different cluster'
+    log_str = f"CRITICAL: system ID mismatch, node {unit_name.replace('/', '-')} belongs to a different cluster"
     stdout = await run_command_on_unit(
         ops_test,
         unit_name,
