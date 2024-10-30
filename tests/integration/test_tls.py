@@ -72,9 +72,9 @@ async def check_tls_rewind(ops_test: OpsTest) -> None:
             continue
         if "connection authorized: user=rewind database=postgres SSL enabled" in logs:
             break
-    assert (
-        "connection authorized: user=rewind database=postgres SSL enabled" in logs
-    ), "TLS is not being used on pg_rewind connections"
+    assert "connection authorized: user=rewind database=postgres SSL enabled" in logs, (
+        "TLS is not being used on pg_rewind connections"
+    )
 
 
 @pytest.mark.group(1)
