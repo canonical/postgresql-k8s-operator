@@ -36,6 +36,7 @@ LABEL_REVISION = 280 if architecture == "arm64" else 281
 
 
 @pytest.mark.group(1)
+@markers.juju3
 @markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_deploy_stable(ops_test: OpsTest) -> None:
@@ -68,6 +69,7 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.group(1)
+@markers.juju3
 @markers.amd64_only  # TODO: remove after arm64 stable release
 async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
     # Start an application that continuously writes data to the database.
@@ -131,20 +133,21 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
     await action.wait()
 
     logger.info("Re-refresh the charm")
-    print(
-        await ops_test.juju(
-            "download",
-            "postgresql-k8s",
-            "--revision",
-            str(LABEL_REVISION),
-            "--filepath",
-            f"/tmp/postgresql-k8s_r{LABEL_REVISION}.charm",
-        )
+    await ops_test.juju(
+        "download",
+        "postgresql-k8s",
+        "--revision",
+        str(LABEL_REVISION),
+        "--filepath",
+        f"/tmp/postgresql-k8s_r{LABEL_REVISION}.charm",
     )
-    print(
-        await ops_test.juju(
-            "refresh", DATABASE_APP_NAME, "--path", f"/tmp/postgresql-k8s_r{LABEL_REVISION}.charm"
-        )
+    await ops_test.juju(
+        "refresh",
+        DATABASE_APP_NAME,
+        "--path",
+        f"/tmp/postgresql-k8s_r{LABEL_REVISION}.charm",
+        "--resource",
+        "postgresql-image=ghcr.io/canonical/charmed-postgresql@sha256:76ef26c7d11a524bcac206d5cb042ebc3c8c8ead73fa0cd69d21921552db03b6",
     )
 
     async with ops_test.fast_forward("60s"):
