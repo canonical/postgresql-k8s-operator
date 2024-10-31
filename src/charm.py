@@ -592,7 +592,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.unit.status = MaintenanceStatus("reinitialising replica")
             self._patroni.reinitialize_postgresql()
             logger.debug("Deferring on_peer_relation_changed: reinitialising replica")
-            self.unit.status = MaintenanceStatus("reinitialising replica")
             event.defer()
             return
 
