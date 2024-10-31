@@ -131,11 +131,20 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
     await action.wait()
 
     logger.info("Re-refresh the charm")
-    await ops_test.juju(
-        "download", "postgresql-k8s", "--revision", str(LABEL_REVISION), "--filepath", "/tmp"
+    print(
+        await ops_test.juju(
+            "download",
+            "postgresql-k8s",
+            "--revision",
+            str(LABEL_REVISION),
+            "--filepath",
+            f"/tmp/postgresql-k8s_r{LABEL_REVISION}.charm",
+        )
     )
-    await ops_test.juju(
-        "refresh", DATABASE_APP_NAME, "--path", f"/tmp/postgresql-k8s_r{LABEL_REVISION}.charm"
+    print(
+        await ops_test.juju(
+            "refresh", DATABASE_APP_NAME, "--path", f"/tmp/postgresql-k8s_r{LABEL_REVISION}.charm"
+        )
     )
 
     async with ops_test.fast_forward("60s"):
