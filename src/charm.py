@@ -401,7 +401,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @property
     def endpoint(self) -> str:
         """Returns the endpoint of this instance's pod."""
-        return f'{self._unit.replace("/", "-")}.{self._build_service_name("endpoints")}'
+        return f"{self._unit.replace('/', '-')}.{self._build_service_name('endpoints')}"
 
     @property
     def primary_endpoint(self) -> str:
