@@ -588,9 +588,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 or int(self._patroni.member_replication_lag) > 1000
             )
         ):
+            logger.warning("Workload failure detected. Reinitialising unit.")
+            self.unit.status = MaintenanceStatus("reinitialising replica")
             self._patroni.reinitialize_postgresql()
             logger.debug("Deferring on_peer_relation_changed: reinitialising replica")
-            self.unit.status = MaintenanceStatus("reinitialising replica")
             event.defer()
             return
 
@@ -1543,9 +1544,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             and not self._patroni.member_streaming
         ):
             try:
-                self._patroni.reinitialize_postgresql()
-                logger.info("restarted the replica because it was not streaming from primary")
+                logger.warning("Degraded member detected: reinitialising unit")
                 self.unit.status = MaintenanceStatus("reinitialising replica")
+                self._patroni.reinitialize_postgresql()
             except RetryError:
                 logger.error(
                     "failed to reinitialise replica after checking that it was not streaming from primary"
