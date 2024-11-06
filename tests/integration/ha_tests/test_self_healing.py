@@ -196,9 +196,9 @@ async def test_full_cluster_restart(
     # they come back online they operate as expected. This check verifies that we meet the criteria
     # of all replicas being down at the same time.
     try:
-        assert await are_all_db_processes_down(
-            ops_test, process, signal
-        ), "Not all units down at the same time."
+        assert await are_all_db_processes_down(ops_test, process, signal), (
+            "Not all units down at the same time."
+        )
     finally:
         for unit in ops_test.model.applications[app].units:
             await modify_pebble_restart_delay(
@@ -211,9 +211,9 @@ async def test_full_cluster_restart(
 
     # Verify all units are up and running.
     for unit in ops_test.model.applications[app].units:
-        assert await is_postgresql_ready(
-            ops_test, unit.name
-        ), f"unit {unit.name} not restarted after cluster restart."
+        assert await is_postgresql_ready(ops_test, unit.name), (
+            f"unit {unit.name} not restarted after cluster restart."
+        )
 
     await are_writes_increasing(ops_test)
 
@@ -305,9 +305,9 @@ async def test_forceful_restart_without_data_and_transaction_logs(
         # Check that the WAL was correctly rotated.
 
         for unit_name in files:
-            assert not files[unit_name].intersection(
-                new_files
-            ), f"WAL segments weren't correctly rotated on {unit_name}"
+            assert not files[unit_name].intersection(new_files), (
+                f"WAL segments weren't correctly rotated on {unit_name}"
+            )
 
     # Database pebble service in old primary should recover after update-status run.
     async with ops_test.fast_forward("10s"):
@@ -333,9 +333,9 @@ async def test_network_cut(
 
     # Verify that connection is possible.
     logger.info("checking whether the connectivity to the database is working")
-    assert await is_connection_possible(
-        ops_test, primary_name
-    ), f"Connection {primary_name} is not possible"
+    assert await is_connection_possible(ops_test, primary_name), (
+        f"Connection {primary_name} is not possible"
+    )
 
     # Confirm that the primary is not isolated from the cluster.
     logger.info("confirming that the primary is not isolated from the cluster")
@@ -347,9 +347,9 @@ async def test_network_cut(
 
     # Verify that connection is not possible.
     logger.info("checking whether the connectivity to the database is not working")
-    assert not await is_connection_possible(
-        ops_test, primary_name
-    ), "Connection is possible after network cut"
+    assert not await is_connection_possible(ops_test, primary_name), (
+        "Connection is possible after network cut"
+    )
 
     logger.info("checking whether writes are increasing")
     await are_writes_increasing(ops_test, primary_name)
@@ -376,9 +376,9 @@ async def test_network_cut(
 
     # Verify that connection is possible.
     logger.info("checking whether the connectivity to the database is working")
-    assert await is_connection_possible(
-        ops_test, primary_name
-    ), f"Connection is not possible to {primary_name} after network restore"
+    assert await is_connection_possible(ops_test, primary_name), (
+        f"Connection is not possible to {primary_name} after network restore"
+    )
 
     await is_cluster_updated(ops_test, primary_name)
 
@@ -407,9 +407,9 @@ async def test_scaling_to_zero(ops_test: OpsTest, continuous_writes) -> None:
     # Verify all units are up and running.
     logger.info("waiting for the database service to start in all units")
     for unit in ops_test.model.applications[app].units:
-        assert await is_postgresql_ready(
-            ops_test, unit.name
-        ), f"unit {unit.name} not restarted after cluster restart."
+        assert await is_postgresql_ready(ops_test, unit.name), (
+            f"unit {unit.name} not restarted after cluster restart."
+        )
 
     logger.info("checking whether writes are increasing")
     await are_writes_increasing(ops_test)

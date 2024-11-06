@@ -317,7 +317,7 @@ async def test_promote_standby(
     primary = await get_primary(ops_test)
     address = await get_unit_address(ops_test, primary)
     password = await get_password(ops_test)
-    database_name = f'{APPLICATION_NAME.replace("-", "_")}_database'
+    database_name = f"{APPLICATION_NAME.replace('-', '_')}_database"
     connection = None
     try:
         connection = psycopg2.connect(

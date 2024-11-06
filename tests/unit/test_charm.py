@@ -33,6 +33,7 @@ POSTGRESQL_CONTAINER = "postgresql"
 POSTGRESQL_SERVICE = "postgresql"
 METRICS_SERVICE = "metrics_server"
 PGBACKREST_SERVER_SERVICE = "pgbackrest server"
+ROTATE_LOGS_SERVICE = "rotate-logs"
 
 # used for assert functions
 tc = TestCase()
@@ -770,7 +771,6 @@ def test_on_update_status_after_restore_operation(harness):
 
         # Test when it's not possible to use the configured S3 repository.
         _update_config.reset_mock()
-        _handle_processes_failures.reset_mock()
         _set_active_status.reset_mock()
         with harness.hooks_disabled():
             harness.update_relation_data(
@@ -781,13 +781,11 @@ def test_on_update_status_after_restore_operation(harness):
         _can_use_s3_repository.return_value = (False, "fake validation message")
         harness.charm.on.update_status.emit()
         _update_config.assert_called_once()
-        _handle_processes_failures.assert_not_called()
-        _set_active_status.assert_not_called()
-        assert isinstance(harness.charm.unit.status, BlockedStatus)
-        assert harness.charm.unit.status.message == "fake validation message"
-
+        _set_active_status.assert_called_once()
         # Assert that the backup id is not in the application relation databag anymore.
-        assert harness.get_relation_data(rel_id, harness.charm.app) == {}
+        assert harness.get_relation_data(rel_id, harness.charm.app) == {
+            "s3-initialization-block-message": "fake validation message",
+        }
 
 
 def test_on_upgrade_charm(harness):
@@ -950,6 +948,12 @@ def test_postgresql_layer(harness):
                     "startup": "disabled",
                     "user": "postgres",
                     "group": "postgres",
+                },
+                ROTATE_LOGS_SERVICE: {
+                    "override": "replace",
+                    "summary": "rotate logs",
+                    "command": "python3 /home/postgres/rotate_logs.py",
+                    "startup": "disabled",
                 },
             },
             "checks": {
@@ -1351,7 +1355,6 @@ def test_on_peer_relation_changed(harness):
         patch(
             "backups.PostgreSQLBackups.start_stop_pgbackrest_service"
         ) as _start_stop_pgbackrest_service,
-        patch("backups.PostgreSQLBackups.check_stanza") as _check_stanza,
         patch("backups.PostgreSQLBackups.coordinate_stanza_fields") as _coordinate_stanza_fields,
         patch("charm.Patroni.reinitialize_postgresql") as _reinitialize_postgresql,
         patch(
@@ -1372,7 +1375,6 @@ def test_on_peer_relation_changed(harness):
         _add_members.assert_not_called()
         _update_config.assert_not_called()
         _coordinate_stanza_fields.assert_not_called()
-        _check_stanza.assert_not_called()
         _start_stop_pgbackrest_service.assert_not_called()
 
         # Test when the cluster has already initialised, but the unit is not the leader and is not
@@ -1389,7 +1391,6 @@ def test_on_peer_relation_changed(harness):
         _add_members.assert_not_called()
         _update_config.assert_not_called()
         _coordinate_stanza_fields.assert_not_called()
-        _check_stanza.assert_not_called()
         _start_stop_pgbackrest_service.assert_not_called()
 
         # Test when the unit is the leader.
@@ -1400,7 +1401,6 @@ def test_on_peer_relation_changed(harness):
         _add_members.assert_called_once()
         _update_config.assert_not_called()
         _coordinate_stanza_fields.assert_not_called()
-        _check_stanza.assert_not_called()
         _start_stop_pgbackrest_service.assert_not_called()
 
         # Test when the unit is part of the cluster but the container
@@ -1421,7 +1421,6 @@ def test_on_peer_relation_changed(harness):
         _defer.assert_not_called()
         _update_config.assert_not_called()
         _coordinate_stanza_fields.assert_not_called()
-        _check_stanza.assert_not_called()
         _start_stop_pgbackrest_service.assert_not_called()
 
         # Test when the container is ready but Patroni hasn't started yet.
@@ -1431,7 +1430,6 @@ def test_on_peer_relation_changed(harness):
         _defer.assert_called_once()
         _update_config.assert_called_once()
         _coordinate_stanza_fields.assert_not_called()
-        _check_stanza.assert_not_called()
         _start_stop_pgbackrest_service.assert_not_called()
 
         # Test when Patroni has already started but this is a replica with a
@@ -1441,7 +1439,6 @@ def test_on_peer_relation_changed(harness):
             _set_active_status.reset_mock()
             _defer.reset_mock()
             _coordinate_stanza_fields.reset_mock()
-            _check_stanza.reset_mock()
             _start_stop_pgbackrest_service.reset_mock()
             _is_primary.return_value = values[0]
             _member_replication_lag.return_value = values[1]
@@ -1450,13 +1447,11 @@ def test_on_peer_relation_changed(harness):
             if _is_primary.return_value == values[0] or int(values[1]) <= 1000:
                 _defer.assert_not_called()
                 _coordinate_stanza_fields.assert_called_once()
-                _check_stanza.assert_called_once()
                 _start_stop_pgbackrest_service.assert_called_once()
                 _set_active_status.assert_called_once()
             else:
                 _defer.assert_called_once()
                 _coordinate_stanza_fields.assert_not_called()
-                _check_stanza.assert_not_called()
                 _start_stop_pgbackrest_service.assert_not_called()
                 _set_active_status.assert_not_called()
 
@@ -1583,9 +1578,7 @@ def test_handle_processes_failures(harness):
             harness.charm.unit.status = ActiveStatus()
             result = harness.charm._handle_processes_failures()
             assert result == (values[0] is None)
-            assert isinstance(
-                harness.charm.unit.status, MaintenanceStatus if values[0] is None else ActiveStatus
-            )
+            assert isinstance(harness.charm.unit.status, MaintenanceStatus)
             _restart.assert_not_called()
             _reinitialize_postgresql.assert_called_once()
 

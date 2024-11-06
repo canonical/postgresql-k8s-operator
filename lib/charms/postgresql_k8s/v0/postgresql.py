@@ -21,7 +21,7 @@ Any charm using this library should import the `psycopg2` or `psycopg2-binary` d
 
 import logging
 from collections import OrderedDict
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Optional, Set, Tuple
 
 import psycopg2
 from ops.model import Relation
@@ -35,7 +35,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 37
+LIBPATCH = 39
 
 INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE = "invalid role(s) for extra user roles"
 
@@ -108,7 +108,7 @@ class PostgreSQL:
         user: str,
         password: str,
         database: str,
-        system_users: Optional[List[str]] = None,
+        system_users: Optional[list[str]] = None,
     ):
         self.primary_host = primary_host
         self.current_host = current_host
@@ -161,8 +161,8 @@ class PostgreSQL:
         self,
         database: str,
         user: str,
-        plugins: Optional[List[str]] = None,
-        client_relations: Optional[List[Relation]] = None,
+        plugins: Optional[list[str]] = None,
+        client_relations: Optional[list[Relation]] = None,
     ) -> None:
         """Creates a new database and grant privileges to a user on it.
 
@@ -250,7 +250,7 @@ class PostgreSQL:
                     privilege for privilege in privileges if privilege not in valid_privileges
                 ]
                 if len(invalid_privileges) > 0:
-                    logger.error(f'Invalid extra user roles: {", ".join(privileges)}')
+                    logger.error(f"Invalid extra user roles: {', '.join(privileges)}")
                     raise PostgreSQLCreateUserError(INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE)
 
             with self._connect_to_database() as connection, connection.cursor() as cursor:
@@ -264,7 +264,7 @@ class PostgreSQL:
                     user_definition = "CREATE ROLE {}"
                 user_definition += f"WITH {'NOLOGIN' if user == 'admin' else 'LOGIN'}{' SUPERUSER' if admin else ''} ENCRYPTED PASSWORD '{password}'{'IN ROLE admin CREATEDB' if admin_role else ''}"
                 if privileges:
-                    user_definition += f' {" ".join(privileges)}'
+                    user_definition += f" {' '.join(privileges)}"
                 cursor.execute(SQL("BEGIN;"))
                 cursor.execute(SQL("SET LOCAL log_statement = 'none';"))
                 cursor.execute(SQL(f"{user_definition};").format(Identifier(user)))
@@ -318,7 +318,7 @@ class PostgreSQL:
             raise PostgreSQLDeleteUserError() from e
 
     def enable_disable_extensions(
-        self, extensions: Dict[str, bool], database: Optional[str] = None
+        self, extensions: dict[str, bool], database: Optional[str] = None
     ) -> None:
         """Enables or disables a PostgreSQL extension.
 
@@ -368,8 +368,8 @@ class PostgreSQL:
                 connection.close()
 
     def _generate_database_privileges_statements(
-        self, relations_accessing_this_database: int, schemas: List[str], user: str
-    ) -> List[Composed]:
+        self, relations_accessing_this_database: int, schemas: list[str], user: str
+    ) -> list[Composed]:
         """Generates a list of databases privileges statements."""
         statements = []
         if relations_accessing_this_database == 1:
@@ -396,31 +396,33 @@ END; $$;"""
                     Identifier(user),
                 )
             )
-            statements.append(
-                SQL(
-                    "UPDATE pg_catalog.pg_largeobject_metadata\n"
-                    "SET lomowner = (SELECT oid FROM pg_roles WHERE rolname = {})\n"
-                    "WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = {});"
-                ).format(Literal(user), Literal(self.user))
-            )
+            SQL(
+                "UPDATE pg_catalog.pg_largeobject_metadata\n"
+                "SET lomowner = (SELECT oid FROM pg_roles WHERE rolname = {})\n"
+                "WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = {});"
+            ).format(Literal(user), Literal(self.user))
+            for schema in schemas:
+                statements.append(
+                    SQL("ALTER SCHEMA {} OWNER TO {};").format(
+                        Identifier(schema), Identifier(user)
+                    )
+                )
         else:
             for schema in schemas:
                 schema = Identifier(schema)
-                statements.append(
+                statements.extend([
                     SQL("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA {} TO {};").format(
                         schema, Identifier(user)
-                    )
-                )
-                statements.append(
+                    ),
                     SQL("GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA {} TO {};").format(
                         schema, Identifier(user)
-                    )
-                )
-                statements.append(
+                    ),
                     SQL("GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA {} TO {};").format(
                         schema, Identifier(user)
-                    )
-                )
+                    ),
+                    SQL("GRANT USAGE ON SCHEMA {} TO {};").format(schema, Identifier(user)),
+                    SQL("GRANT CREATE ON SCHEMA {} TO {};").format(schema, Identifier(user)),
+                ])
         return statements
 
     def get_last_archived_wal(self) -> str:
@@ -588,8 +590,8 @@ END; $$;"""
                 cursor.execute(SQL("BEGIN;"))
                 cursor.execute(SQL("SET LOCAL log_statement = 'none';"))
                 cursor.execute(
-                    SQL("ALTER USER {} WITH ENCRYPTED PASSWORD {};").format(
-                        Identifier(username), Literal(password)
+                    SQL("ALTER USER {} WITH ENCRYPTED PASSWORD '" + password + "';").format(
+                        Identifier(username)
                     )
                 )
                 cursor.execute(SQL("COMMIT;"))
@@ -619,8 +621,8 @@ END; $$;"""
 
     @staticmethod
     def build_postgresql_parameters(
-        config_options: Dict, available_memory: int, limit_memory: Optional[int] = None
-    ) -> Optional[Dict]:
+        config_options: dict, available_memory: int, limit_memory: Optional[int] = None
+    ) -> Optional[dict]:
         """Builds the PostgreSQL parameters.
 
         Args:
@@ -684,7 +686,11 @@ END; $$;"""
             with self._connect_to_database(
                 database_host=self.current_host
             ) as connection, connection.cursor() as cursor:
-                cursor.execute(SQL("SET DateStyle to {};").format(Identifier(date_style)))
+                cursor.execute(
+                    SQL(
+                        "SET DateStyle to {};",
+                    ).format(Identifier(date_style))
+                )
             return True
         except psycopg2.Error:
             return False

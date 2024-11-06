@@ -150,9 +150,9 @@ async def test_upgrade_from_edge(ops_test: OpsTest, continuous_writes) -> None:
 
     logger.info("checking the number of switchovers")
     final_number_of_switchovers = await count_switchovers(ops_test, primary_name)
-    assert (
-        final_number_of_switchovers - initial_number_of_switchovers
-    ) <= 2, "Number of switchovers is greater than 2"
+    assert (final_number_of_switchovers - initial_number_of_switchovers) <= 2, (
+        "Number of switchovers is greater than 2"
+    )
 
 
 @pytest.mark.group(1)

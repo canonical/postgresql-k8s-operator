@@ -127,6 +127,7 @@ def test_on_database_requested(harness):
             "uris": f"postgresql://{user}:test-password@postgresql-k8s-primary.None.svc.cluster.local:5432/{DATABASE}",
             "version": POSTGRESQL_VERSION,
             "database": f"{DATABASE}",
+            "tls": "False",
         }
 
         # Assert no BlockedStatus was set.
@@ -141,6 +142,7 @@ def test_on_database_requested(harness):
             "endpoints": "postgresql-k8s-primary.None.svc.cluster.local:5432",
             "uris": f"postgresql://{user}:test-password@postgresql-k8s-primary.None.svc.cluster.local:5432/{DATABASE}",
             "read-only-endpoints": "postgresql-k8s-replicas.None.svc.cluster.local:5432",
+            "tls": "False",
         }
 
         # BlockedStatus due to a PostgreSQLCreateDatabaseError.
@@ -152,6 +154,7 @@ def test_on_database_requested(harness):
             "endpoints": "postgresql-k8s-primary.None.svc.cluster.local:5432",
             "read-only-endpoints": "postgresql-k8s-replicas.None.svc.cluster.local:5432",
             "uris": f"postgresql://{user}:test-password@postgresql-k8s-primary.None.svc.cluster.local:5432/{DATABASE}",
+            "tls": "False",
         }
 
         # BlockedStatus due to a PostgreSQLGetPostgreSQLVersionError.

@@ -91,7 +91,7 @@ async def are_all_db_processes_down(ops_test: OpsTest, process: str, signal: str
 
                     # If something was returned, there is a running process.
                     if call.returncode != 1:
-                        logger.info("Unit {unit.name} not yet down")
+                        logger.info(f"Unit {unit.name} not yet down")
                         # Try to rekill the unit
                         await send_signal_to_process(ops_test, unit.name, process, signal)
                         raise ProcessRunningError
@@ -172,9 +172,9 @@ async def change_wal_settings(
 
 async def is_cluster_updated(ops_test: OpsTest, primary_name: str) -> None:
     # Verify that the old primary is now a replica.
-    assert await is_replica(
-        ops_test, primary_name
-    ), "there are more than one primary in the cluster."
+    assert await is_replica(ops_test, primary_name), (
+        "there are more than one primary in the cluster."
+    )
 
     # Verify that all units are part of the same cluster.
     member_ips = await fetch_cluster_members(ops_test)
@@ -189,9 +189,9 @@ async def is_cluster_updated(ops_test: OpsTest, primary_name: str) -> None:
     total_expected_writes = await check_writes(ops_test)
 
     # Verify that old primary is up-to-date.
-    assert await is_secondary_up_to_date(
-        ops_test, primary_name, total_expected_writes
-    ), f"secondary ({primary_name}) not up to date with the cluster after restarting."
+    assert await is_secondary_up_to_date(ops_test, primary_name, total_expected_writes), (
+        f"secondary ({primary_name}) not up to date with the cluster after restarting."
+    )
 
 
 def get_member_lag(cluster: Dict, member_name: str) -> int:
@@ -225,15 +225,15 @@ async def check_writes(ops_test, extra_model: Model = None) -> int:
     total_expected_writes = await stop_continuous_writes(ops_test)
     actual_writes, max_number_written = await count_writes(ops_test, extra_model=extra_model)
     for member, count in actual_writes.items():
-        assert (
-            count == max_number_written[member]
-        ), f"{member}: writes to the db were missed: count of actual writes ({count}) on {member} different from the max number written ({max_number_written[member]})."
+        assert count == max_number_written[member], (
+            f"{member}: writes to the db were missed: count of actual writes ({count}) on {member} different from the max number written ({max_number_written[member]})."
+        )
         assert total_expected_writes == count, f"{member}: writes to the db were missed."
     return total_expected_writes
 
 
 async def are_writes_increasing(
-    ops_test, down_unit: Optional[str] = None, extra_model: Optional[Model] = None
+    ops_test, down_unit: str | None = None, extra_model: Model = None
 ) -> None:
     """Verify new writes are continuing by counting the number of writes."""
     for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
@@ -251,9 +251,9 @@ async def are_writes_increasing(
             for member, count in writes.items():
                 if member in more_writes:
                     members_checked.append(member)
-                    assert (
-                        more_writes[member] > count
-                    ), f"{member}: writes not continuing to DB (current writes: {more_writes[member]} - previous writes: {count})"
+                    assert more_writes[member] > count, (
+                        f"{member}: writes not continuing to DB (current writes: {more_writes[member]} - previous writes: {count})"
+                    )
             assert len(members_checked), "No member checked from the initial writes"
 
 
@@ -314,7 +314,7 @@ def copy_file_into_pod(
 
 
 async def count_writes(
-    ops_test: OpsTest, down_unit: Optional[str] = None, extra_model: Optional[Model] = None
+    ops_test: OpsTest, down_unit: str | None = None, extra_model: Model = None
 ) -> Tuple[Dict[str, int], Dict[str, int]]:
     """Count the number of writes in the database."""
     app = await app_name(ops_test)
@@ -327,7 +327,7 @@ async def count_writes(
         for unit_name, unit in status["applications"][app]["units"].items():
             if unit_name != down_unit:
                 members_data = get_patroni_cluster(unit["address"])["members"]
-                for member_data in members_data:
+                for _, member_data in enumerate(members_data):
                     member_data["model"] = model.info.name
                 members.extend(members_data)
                 break
@@ -350,7 +350,7 @@ async def count_writes(
                 f" host='{ip}' password='{password}' connect_timeout=10"
             )
 
-            member_name = f'{member["model"]}.{member["name"]}'
+            member_name = f"{member['model']}.{member['name']}"
             connection = None
             try:
                 with psycopg2.connect(
@@ -513,9 +513,9 @@ async def get_standby_leader(model: Model, application_name: str) -> str:
         the name of the standby leader.
     """
     status = await model.get_status()
-    first_unit_ip = next(
-        val for val in status["applications"][application_name]["units"].values()
-    )["address"]
+    first_unit_ip = next(list(status["applications"][application_name]["units"].values()))[
+        "address"
+    ]
     cluster = get_patroni_cluster(first_unit_ip)
     for member in cluster["members"]:
         if member["role"] == "standby_leader":
@@ -533,9 +533,9 @@ async def get_sync_standby(model: Model, application_name: str) -> str:
         the name of the sync standby.
     """
     status = await model.get_status()
-    first_unit_ip = next(
-        val for val in status["applications"][application_name]["units"].values()
-    )["address"]
+    first_unit_ip = next(list(status["applications"][application_name]["units"].values()))[
+        "address"
+    ]
     cluster = get_patroni_cluster(first_unit_ip)
     for member in cluster["members"]:
         if member["role"] == "sync_standby":
@@ -699,9 +699,9 @@ async def modify_pebble_restart_delay(
         _preload_content=False,
     )
     response.run_forever(timeout=5)
-    assert (
-        response.returncode == 0
-    ), f"Failed to add to pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
+    assert response.returncode == 0, (
+        f"Failed to add to pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
+    )
 
     for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
         with attempt:
@@ -726,9 +726,9 @@ async def modify_pebble_restart_delay(
                         await send_signal_to_process(
                             ops_test, unit_name, "/usr/bin/patroni", "SIGTERM"
                         )
-                assert (
-                    response.returncode == 0
-                ), f"Failed to replan pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
+                assert response.returncode == 0, (
+                    f"Failed to replan pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
+                )
 
 
 async def is_postgresql_ready(ops_test, unit_name: str) -> bool:
@@ -796,7 +796,7 @@ async def remove_charm_code(ops_test: OpsTest, unit_name: str) -> None:
     await run_command_on_unit(
         ops_test,
         unit_name,
-        f'rm /var/lib/juju/agents/unit-{unit_name.replace("/", "-")}/charm/src/charm.py',
+        f"rm /var/lib/juju/agents/unit-{unit_name.replace('/', '-')}/charm/src/charm.py",
         "charm",
     )
 
@@ -1035,7 +1035,7 @@ async def get_any_deatached_storage(ops_test: OpsTest) -> str:
 
 async def check_system_id_mismatch(ops_test: OpsTest, unit_name: str) -> bool:
     """Returns True if system id mismatch if found in logs."""
-    log_str = f'CRITICAL: system ID mismatch, node {unit_name.replace("/", "-")} belongs to a different cluster'
+    log_str = f"CRITICAL: system ID mismatch, node {unit_name.replace('/', '-')} belongs to a different cluster"
     stdout = await run_command_on_unit(
         ops_test,
         unit_name,
