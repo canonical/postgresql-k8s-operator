@@ -513,7 +513,7 @@ async def get_standby_leader(model: Model, application_name: str) -> str:
         the name of the standby leader.
     """
     status = await model.get_status()
-    first_unit_ip = next(list(status["applications"][application_name]["units"].values()))[
+    first_unit_ip = next(iter(status["applications"][application_name]["units"].values()))[
         "address"
     ]
     cluster = get_patroni_cluster(first_unit_ip)
@@ -533,7 +533,7 @@ async def get_sync_standby(model: Model, application_name: str) -> str:
         the name of the sync standby.
     """
     status = await model.get_status()
-    first_unit_ip = next(list(status["applications"][application_name]["units"].values()))[
+    first_unit_ip = next(iter(status["applications"][application_name]["units"].values()))[
         "address"
     ]
     cluster = get_patroni_cluster(first_unit_ip)
