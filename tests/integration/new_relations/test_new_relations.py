@@ -184,7 +184,7 @@ async def test_user_with_extra_roles(ops_test: OpsTest):
     connection.close()
 
 
-@pytest.mark.group(1)
+@pytest.mark.group("smoke")
 async def test_two_applications_doesnt_share_the_same_relation_data(ops_test: OpsTest):
     """Test that two different application connect to the database with different credentials."""
     # Set some variables to use in this test.
@@ -333,7 +333,7 @@ async def test_an_application_can_request_multiple_databases(ops_test: OpsTest):
     assert first_database_connection_string != second_database_connection_string
 
 
-@pytest.mark.group(1)
+@pytest.mark.group("smoke")
 async def test_no_read_only_endpoint_in_standalone_cluster(ops_test: OpsTest):
     """Test that there is no read-only endpoint in a standalone cluster."""
     async with ops_test.fast_forward():
