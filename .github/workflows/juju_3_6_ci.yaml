@@ -36,7 +36,7 @@ jobs:
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
       architecture: ${{ matrix.architecture }}
       cloud: microk8s
-      juju-snap-channel: 3.6/stable
+      juju-snap-channel: 3.6/candidate
       libjuju-version-constraint: 3.5.2.0
       microk8s-snap-channel: 1.31-strict/stable
     secrets:
