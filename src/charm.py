@@ -864,7 +864,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         path = f"{self._storage_path}/pgdata"
         if not container.exists(path):
             container.make_dir(
-                path, permissions=0o770, user=WORKLOAD_OS_USER, group=WORKLOAD_OS_GROUP
+                path, permissions=0o750, user=WORKLOAD_OS_USER, group=WORKLOAD_OS_GROUP
             )
         # Also, fix the permissions from the parent directory.
         container.exec([
