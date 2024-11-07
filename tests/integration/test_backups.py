@@ -15,7 +15,6 @@ from tenacity import Retrying, stop_after_attempt, wait_exponential
 from . import architecture
 from .helpers import (
     DATABASE_APP_NAME,
-    MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET,
     backup_operations,
     build_and_deploy,
     cat_file_from_unit,
@@ -24,6 +23,7 @@ from .helpers import (
     get_password,
     get_primary,
     get_unit_address,
+    scale_application,
     switchover,
     wait_for_idle_on_blocked,
 )
@@ -130,13 +130,8 @@ async def test_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -
         new_unit_name = f"{database_app_name}/1"
 
         # Scale up to be able to test primary and leader being different.
-        await ops_test.model.applications[database_app_name].scale(2)
-        await ops_test.model.block_until(
-            lambda: len(ops_test.model.applications[database_app_name].units) == 2
-            and ops_test.model.units.get(new_unit_name).workload_status_message
-            == MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET,
-            timeout=1000,
-        )
+        async with ops_test.fast_forward():
+            await scale_application(ops_test, database_app_name, 2)
 
         logger.info("ensuring that the replication is working correctly")
         address = await get_unit_address(ops_test, new_unit_name)
@@ -155,16 +150,16 @@ async def test_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -
                         "SELECT EXISTS (SELECT FROM information_schema.tables"
                         " WHERE table_schema = 'public' AND table_name = 'backup_table_1');"
                     )
-                    assert cursor.fetchone()[
-                        0
-                    ], f"replication isn't working correctly: table 'backup_table_1' doesn't exist in {new_unit_name}"
+                    assert cursor.fetchone()[0], (
+                        f"replication isn't working correctly: table 'backup_table_1' doesn't exist in {new_unit_name}"
+                    )
                     cursor.execute(
                         "SELECT EXISTS (SELECT FROM information_schema.tables"
                         " WHERE table_schema = 'public' AND table_name = 'backup_table_2');"
                     )
-                    assert not cursor.fetchone()[
-                        0
-                    ], f"replication isn't working correctly: table 'backup_table_2' exists in {new_unit_name}"
+                    assert not cursor.fetchone()[0], (
+                        f"replication isn't working correctly: table 'backup_table_2' exists in {new_unit_name}"
+                    )
                 connection.close()
 
         old_primary = await get_primary(ops_test, database_app_name)
@@ -185,11 +180,6 @@ async def test_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -
         await action.wait()
         backups = action.results.get("backups")
         assert backups, "backups not outputted"
-
-        # Remove S3 relation to ensure "move to another cluster" blocked status is gone
-        await ops_test.model.applications[database_app_name].remove_relation(
-            f"{database_app_name}:s3-parameters", f"{S3_INTEGRATOR_APP_NAME}:s3-credentials"
-        )
 
         await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
@@ -293,8 +283,9 @@ async def test_restore_on_new_cluster(ops_test: OpsTest, github_secrets) -> None
     ):
         with attempt:
             logger.info("restoring the backup")
-            most_recent_backup = backups.split("\n")[-1]
-            backup_id = most_recent_backup.split()[0]
+            # Last two entries are 'action: restore', that cannot be used without restore-to-time parameter
+            most_recent_real_backup = backups.split("\n")[-3]
+            backup_id = most_recent_real_backup.split()[0]
             action = await ops_test.model.units.get(f"{database_app_name}/0").run_action(
                 "restore", **{"backup-id": backup_id}
             )
@@ -321,9 +312,9 @@ async def test_restore_on_new_cluster(ops_test: OpsTest, github_secrets) -> None
             "SELECT EXISTS (SELECT FROM information_schema.tables"
             " WHERE table_schema = 'public' AND table_name = 'backup_table_1');"
         )
-        assert cursor.fetchone()[
-            0
-        ], "backup wasn't correctly restored: table 'backup_table_1' doesn't exist"
+        assert cursor.fetchone()[0], (
+            "backup wasn't correctly restored: table 'backup_table_1' doesn't exist"
+        )
     connection.close()
 
 

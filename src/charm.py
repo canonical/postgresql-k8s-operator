@@ -39,17 +39,19 @@ from charms.postgresql_k8s.v0.postgresql import (
     REQUIRED_PLUGINS,
     PostgreSQL,
     PostgreSQLEnableDisableExtensionError,
+    PostgreSQLGetCurrentTimelineError,
     PostgreSQLUpdateUserPasswordError,
 )
 from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
-from charms.tempo_k8s.v1.charm_tracing import trace_charm
-from charms.tempo_k8s.v2.tracing import TracingEndpointRequirer
+from charms.tempo_coordinator_k8s.v0.charm_tracing import trace_charm
+from charms.tempo_coordinator_k8s.v0.tracing import TracingEndpointRequirer
 from lightkube import ApiError, Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Endpoints, Node, Pod, Service
+from ops import main
 from ops.charm import (
     ActionEvent,
     HookEvent,
@@ -58,7 +60,6 @@ from ops.charm import (
     WorkloadEvent,
 )
 from ops.jujuversion import JujuVersion
-from ops.main import main
 from ops.model import (
     ActiveStatus,
     BlockedStatus,
@@ -82,7 +83,7 @@ from ops.pebble import (
 from requests import ConnectionError
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
-from backups import CANNOT_RESTORE_PITR, MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET, PostgreSQLBackups
+from backups import CANNOT_RESTORE_PITR, S3_BLOCK_MESSAGES, PostgreSQLBackups
 from config import CharmConfig
 from constants import (
     APP_SCOPE,
@@ -189,6 +190,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         )
 
         self._postgresql_service = "postgresql"
+        self.rotate_logs_service = "rotate-logs"
         self.pgbackrest_server_service = "pgbackrest server"
         self._metrics_service = "metrics_server"
         self._unit = self.model.unit.name
@@ -399,7 +401,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @property
     def endpoint(self) -> str:
         """Returns the endpoint of this instance's pod."""
-        return f'{self._unit.replace("/", "-")}.{self._build_service_name("endpoints")}'
+        return f"{self._unit.replace('/', '-')}.{self._build_service_name('endpoints')}"
 
     @property
     def primary_endpoint(self) -> str:
@@ -586,9 +588,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 or int(self._patroni.member_replication_lag) > 1000
             )
         ):
+            logger.warning("Workload failure detected. Reinitialising unit.")
+            self.unit.status = MaintenanceStatus("reinitialising replica")
             self._patroni.reinitialize_postgresql()
             logger.debug("Deferring on_peer_relation_changed: reinitialising replica")
-            self.unit.status = MaintenanceStatus("reinitialising replica")
             event.defer()
             return
 
@@ -596,10 +599,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.postgresql_client_relation.update_read_only_endpoint()
         except ModelError as e:
             logger.warning("Cannot update read_only endpoints: %s", str(e))
-
-        self.backup.coordinate_stanza_fields()
-
-        self.backup.check_stanza()
 
         # Start or stop the pgBackRest TLS server service when TLS certificate change.
         if not self.backup.start_stop_pgbackrest_service():
@@ -612,6 +611,26 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
         else:
             self.unit_peer_data.pop("start-tls-server", None)
+
+        self.backup.coordinate_stanza_fields()
+
+        # This is intended to be executed only when leader is reinitializing S3 connection due to the leader change.
+        if (
+            "s3-initialization-start" in self.app_peer_data
+            and "s3-initialization-done" not in self.unit_peer_data
+            and self.is_primary
+            and not self.backup._on_s3_credential_changed_primary(event)
+        ):
+            return
+
+        # Clean-up unit initialization data after successful sync to the leader.
+        if "s3-initialization-done" in self.app_peer_data and not self.unit.is_leader():
+            self.unit_peer_data.update({
+                "stanza": "",
+                "s3-initialization-block-message": "",
+                "s3-initialization-done": "",
+                "s3-initialization-start": "",
+            })
 
         self.async_replication.handle_read_only_mode()
 
@@ -966,16 +985,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # The charm should not override this status outside of the function checking disk space.
         if self.unit.status.message == INSUFFICIENT_SIZE_WARNING:
             return
-        if "require-change-bucket-after-restore" in self.app_peer_data:
-            if self.unit.is_leader():
-                self.app_peer_data.update({
-                    "restoring-backup": "",
-                    "restore-stanza": "",
-                    "restore-to-time": "",
-                })
-            self.unit.status = BlockedStatus(MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET)
-            return
         try:
+            if self.unit.is_leader() and "s3-initialization-block-message" in self.app_peer_data:
+                self.unit.status = BlockedStatus(
+                    self.app_peer_data["s3-initialization-block-message"]
+                )
+                return
             if self._patroni.get_primary(unit_name_pattern=True) == self.unit.name:
                 self.unit.status = ActiveStatus("Primary")
             elif self.is_standby_leader:
@@ -1358,16 +1373,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         self._check_pgdata_storage_size()
 
-        if self._has_blocked_status or self._has_non_restore_waiting_status:
+        if (
+            self._has_blocked_status and self.unit.status not in S3_BLOCK_MESSAGES
+        ) or self._has_non_restore_waiting_status:
             # If charm was failing to disable plugin, try again and continue (user may have removed the objects)
             if self.unit.status.message == EXTENSION_OBJECT_MESSAGE:
                 self.enable_disable_extensions()
-                return True
-
-            if (
-                self.unit.status.message == MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET
-                and "require-change-bucket-after-restore" not in self.app_peer_data
-            ):
                 return True
 
             logger.debug("on_update_status early exit: Unit is in Blocked/Waiting status")
@@ -1408,6 +1419,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         if (
             "restoring-backup" not in self.app_peer_data
+            and "restore-to-time" not in self.app_peer_data
             and "stopped" not in self.unit_peer_data
             and services[0].current != ServiceStatus.ACTIVE
         ):
@@ -1434,6 +1446,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Update the sync-standby endpoint in the async replication data.
         self.async_replication.update_async_replication_data()
 
+        self.backup.coordinate_stanza_fields()
+
         self._set_active_status()
 
     def _was_restore_successful(self, container: Container, service: ServiceInfo) -> bool:
@@ -1459,20 +1473,41 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("Restore check early exit: Patroni has not started yet")
             return False
 
+        restoring_backup = self.app_peer_data.get("restoring-backup")
+        restore_timeline = self.app_peer_data.get("restore-timeline")
+        restore_to_time = self.app_peer_data.get("restore-to-time")
+        try:
+            current_timeline = self.postgresql.get_current_timeline()
+        except PostgreSQLGetCurrentTimelineError:
+            logger.debug("Restore check early exit: can't get current wal timeline")
+            return False
+
         # Remove the restoring backup flag and the restore stanza name.
         self.app_peer_data.update({
             "restoring-backup": "",
             "restore-stanza": "",
             "restore-to-time": "",
+            "restore-timeline": "",
         })
         self.update_config()
         self.restore_patroni_on_failure_condition()
-        logger.info("Restore succeeded")
+
+        logger.info(
+            "Restored"
+            f"{f' to {restore_to_time}' if restore_to_time else ''}"
+            f"{f' from timeline {restore_timeline}' if restore_timeline and not restoring_backup else ''}"
+            f"{f' from backup {self.backup._parse_backup_id(restoring_backup)[0]}' if restoring_backup else ''}"
+            f". Currently tracking the newly created timeline {current_timeline}."
+        )
 
         can_use_s3_repository, validation_message = self.backup.can_use_s3_repository()
         if not can_use_s3_repository:
-            self.unit.status = BlockedStatus(validation_message)
-            return False
+            self.app_peer_data.update({
+                "stanza": "",
+                "s3-initialization-start": "",
+                "s3-initialization-done": "",
+                "s3-initialization-block-message": validation_message,
+            })
 
         return True
 
@@ -1509,9 +1544,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             and not self._patroni.member_streaming
         ):
             try:
-                self._patroni.reinitialize_postgresql()
-                logger.info("restarted the replica because it was not streaming from primary")
+                logger.warning("Degraded member detected: reinitialising unit")
                 self.unit.status = MaintenanceStatus("reinitialising replica")
+                self._patroni.reinitialize_postgresql()
             except RetryError:
                 logger.error(
                     "failed to reinitialise replica after checking that it was not streaming from primary"
@@ -1670,6 +1705,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     "group": WORKLOAD_OS_GROUP,
                 },
                 self._metrics_service: self._generate_metrics_service(),
+                self.rotate_logs_service: {
+                    "override": "replace",
+                    "summary": "rotate logs",
+                    "command": "python3 /home/postgres/rotate_logs.py",
+                    "startup": "disabled",
+                },
             },
             "checks": {
                 self._postgresql_service: {
@@ -1821,12 +1862,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             is_no_sync_member=self.upgrade.is_no_sync_member,
             backup_id=self.app_peer_data.get("restoring-backup"),
             pitr_target=self.app_peer_data.get("restore-to-time"),
+            restore_timeline=self.app_peer_data.get("restore-timeline"),
             restore_to_latest=self.app_peer_data.get("restore-to-time", None) == "latest",
-            stanza=self.app_peer_data.get("stanza"),
+            stanza=self.app_peer_data.get("stanza", self.unit_peer_data.get("stanza")),
             restore_stanza=self.app_peer_data.get("restore-stanza"),
-            disable_pgbackrest_archiving=bool(
-                self.app_peer_data.get("require-change-bucket-after-restore", None)
-            ),
             parameters=postgresql_parameters,
         )
 
@@ -1836,6 +1875,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             # in a bundle together with the TLS certificates operator. This flag is used to
             # know when to call the Patroni API using HTTP or HTTPS.
             self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
+            self.postgresql_client_relation.update_tls_flag(
+                "True" if self.is_tls_enabled else "False"
+            )
             logger.debug("Early exit update_config: Workload not started yet")
             return True
 
@@ -1916,6 +1958,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             # Ignore the error, as it happens only to indicate that the configuration has not changed.
             pass
         self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
+        self.postgresql_client_relation.update_tls_flag("True" if self.is_tls_enabled else "False")
 
         # Restart PostgreSQL if TLS configuration has changed
         # (so the both old and new connections use the configuration).
@@ -2121,6 +2164,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         patroni_exceptions = []
         count = 0
         while len(patroni_exceptions) == 0 and count < 10:
+            if count > 0:
+                time.sleep(3)
             try:
                 log_exec = container.pebble.exec(
                     ["pebble", "logs", "postgresql", "-n", "all"], combine_stderr=True
@@ -2159,7 +2204,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     re.MULTILINE,
                 )
             count += 1
-            time.sleep(3)
 
         if len(patroni_exceptions) > 0:
             logger.debug("Failures to bootstrap cluster detected on Patroni service logs")

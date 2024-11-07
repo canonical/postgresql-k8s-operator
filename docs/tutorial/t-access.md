@@ -11,15 +11,14 @@ This part of the tutorial accesses PostgreSQL via the `operator` user.
 In a later section about [Integrations,](https://charmhub.io/postgresql-k8s/docs/t-integrations) we will cover how to safely access PostgreSQL by creating a separate user via the [Data Integrator charm](https://charmhub.io/data-integrator)
 [/note]
 
-
 ## Summary
 
-- [Retrieve credentials](#heading--retrieve-credentials)
-- [Access PostgreSQL via `psql`](#heading--psql)
+- [Retrieve credentials](#retrieve-credentials)
+- [Access PostgreSQL via `psql`](#access-postgresql-via-psql)
   - [ Create a new database](#heading--new-database)
 
 ---
-<a href="#heading--retrieve-credentials"><h2 id="heading--retrieve-credentials"> Retrieve credentials </h2></a>
+## Retrieve credentials
 
 Connecting to the database requires that you know three pieces of information: The internal postgreSQL database's username and password, and the host machine's IP address. 
 
@@ -60,7 +59,7 @@ The following commands should be executed from this remote shell you just logged
 
 >If you’d like to leave the unit's shell and return to your local terminal, enter `Ctrl+D` or type `exit`.
 
-<a href="#heading--psql"><h2 id="heading--psql"> Access PostgreSQL via <code>psql</code> </h2></a>
+## Access PostgreSQL via `psql`
 
 The easiest way to interact with PostgreSQL is via [PostgreSQL interactive terminal `psql`](https://www.postgresql.org/docs/14/app-psql.html), which is already installed on the host you're connected to.
 
@@ -112,7 +111,7 @@ postgres=# \l
 
 The output should be the same as the one obtained before with `psql`, but this time we did not need to specify any parameters since we are already connected to the PostgreSQL application.
 
-<a href="#heading--new-database"><h3 id="heading--new-database"> Create a new database </h3></a>
+### Create a new database
 For creating and connecting to a new sample database, we can run the following commands:
 ```shell
 postgres=# CREATE DATABASE mynewdatabase;

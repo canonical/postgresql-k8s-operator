@@ -16,6 +16,9 @@ bootstrap:
         {%- endif %}
         archive_mode: on
         autovacuum: true
+        debug_print_plan: 'off'
+        debug_print_parse: 'off'
+        debug_print_rewritten: 'off'
         fsync: true
         full_page_writes: true
         lc_messages: 'en_US.UTF8'
@@ -23,11 +26,13 @@ bootstrap:
         log_checkpoints: 'on'
         log_destination: 'stderr'
         log_directory: '/var/log/postgresql'
+        log_error_verbosity: 'verbose'
         log_file_mode: '0600'
         log_filename: 'postgresql-%w_%H%M.log'
         log_hostname: 'off'
         log_line_prefix: '%t [%p]: user=%u,db=%d,app=%a,client=%h,line=%l '
         log_min_duration_sample: -1
+        log_min_error_statement: 'warning'
         log_recovery_conflict_waits: 'on'
         log_replication_commands: 'on'
         log_rotation_age: 1
@@ -52,6 +57,7 @@ bootstrap:
     command: >
       pgbackrest --stanza={{ restore_stanza }} --pg1-path={{ storage_path }}/pgdata
       {%- if backup_id %} --set={{ backup_id }} {%- endif %}
+      {%- if restore_timeline %} --target-timeline="0x{{ restore_timeline }}" {% endif %}
       {%- if restore_to_latest %} --type=default {%- else %}
       --target-action=promote {%- if pitr_target %} --target="{{ pitr_target }}" --type=time {%- else %} --type=immediate {%- endif %}
       {%- endif %}

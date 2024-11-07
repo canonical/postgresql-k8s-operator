@@ -8,8 +8,8 @@ Dear community,
 Canonical's newest Charmed PostgreSQL K8s operator has been published in the [14/stable channel].
 
 Due to the newly added support for `arm64` architecture, the PostgreSQL K8s charm now releases multiple revisions simultaneously:
-* Revision 381 is built for `amd64` on Ubuntu 22.04 LTS
-* Revision 382 is built for `arm64` on Ubuntu 22.04 LTS
+* Revision 381 is built for `amd64` on Ubuntu 22.04 LTS (postgresql-image r162)
+* Revision 382 is built for `arm64` on Ubuntu 22.04 LTS (postgresql-image r162)
 
 To make sure you deploy for the right architecture, we recommend setting an [architecture constraint](https://juju.is/docs/juju/constraint#heading--arch) for your entire juju model.
 
@@ -83,16 +83,16 @@ See the [system requirements] for more details about Juju versions and other sof
 
 ### Integration tests
 Below are the charm integrations tested with this revision on different Juju environments and architectures:
-* Juju `v.2.9.50` on `amd64`
-* Juju  `v.3.4.5` on `amd64` and `arm64`
+* Juju `v2.9.50` on `amd64`
+* Juju  `v3.4.5` on `amd64` and `arm64`
 
-#### Juju `v.2.9.50` on `amd64`
+#### Juju `v2.9.50` on `amd64`
 
 | Software | Version |
 |-----|-----|
 | [tls-certificates-operator] | `rev 22`, `legacy/stable` | 
 
-#### Juju  `v.3.4.5` on `amd64` and `arm64`
+#### Juju  `v3.4.5` on `amd64` and `arm64`
 
 | Software | Version | 
 |-----|-----|
@@ -114,7 +114,8 @@ See the [`metadata.yaml` file on GitHub] for a full list of supported interfaces
 
 ## Packaging
 
-This charm is based on the Charmed PostgreSQL K8s [rock image]. It packages:
+This charm is based on the Charmed PostgreSQL K8s [rock image]<br/>
+(CharmHub `postgresql-image` resource-revision is 162). It packages:
 * [postgresql `v.14.12`]
 * [pgbouncer `v.1.21`]
 * [patroni `v.3.1.2 `]

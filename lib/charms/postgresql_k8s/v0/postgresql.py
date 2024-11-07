@@ -36,7 +36,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 35
+LIBPATCH = 38
 
 INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE = "invalid role(s) for extra user roles"
 
@@ -81,6 +81,10 @@ class PostgreSQLEnableDisableExtensionError(Exception):
 
 class PostgreSQLGetLastArchivedWALError(Exception):
     """Exception raised when retrieving last archived WAL fails."""
+
+
+class PostgreSQLGetCurrentTimelineError(Exception):
+    """Exception raised when retrieving current timeline id for the PostgreSQL unit fails."""
 
 
 class PostgreSQLGetPostgreSQLVersionError(Exception):
@@ -240,7 +244,7 @@ class PostgreSQL:
                     privilege for privilege in privileges if privilege not in valid_privileges
                 ]
                 if len(invalid_privileges) > 0:
-                    logger.error(f'Invalid extra user roles: {", ".join(privileges)}')
+                    logger.error(f"Invalid extra user roles: {', '.join(privileges)}")
                     raise PostgreSQLCreateUserError(INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE)
 
             with self._connect_to_database() as connection, connection.cursor() as cursor:
@@ -252,7 +256,7 @@ class PostgreSQL:
                     user_definition = "CREATE ROLE {}"
                 user_definition += f"WITH {'NOLOGIN' if user == 'admin' else 'LOGIN'}{' SUPERUSER' if admin else ''} ENCRYPTED PASSWORD '{password}'{'IN ROLE admin CREATEDB' if admin_role else ''}"
                 if privileges:
-                    user_definition += f' {" ".join(privileges)}'
+                    user_definition += f" {' '.join(privileges)}"
                 cursor.execute(sql.SQL("BEGIN;"))
                 cursor.execute(sql.SQL("SET LOCAL log_statement = 'none';"))
                 cursor.execute(sql.SQL(f"{user_definition};").format(sql.Identifier(user)))
@@ -389,24 +393,32 @@ END; $$;"""
 SET lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}')
 WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}');""".format(user, self.user)
             )
+            for schema in schemas:
+                statements.append(
+                    sql.SQL("ALTER SCHEMA {} OWNER TO {};").format(
+                        sql.Identifier(schema), sql.Identifier(user)
+                    )
+                )
         else:
             for schema in schemas:
                 schema = sql.Identifier(schema)
-                statements.append(
+                statements.extend([
                     sql.SQL("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA {} TO {};").format(
                         schema, sql.Identifier(user)
-                    )
-                )
-                statements.append(
+                    ),
                     sql.SQL("GRANT ALL PRIVILEGES ON ALL SEQUENCES IN SCHEMA {} TO {};").format(
                         schema, sql.Identifier(user)
-                    )
-                )
-                statements.append(
+                    ),
                     sql.SQL("GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA {} TO {};").format(
                         schema, sql.Identifier(user)
-                    )
-                )
+                    ),
+                    sql.SQL("GRANT USAGE ON SCHEMA {} TO {};").format(
+                        schema, sql.Identifier(user)
+                    ),
+                    sql.SQL("GRANT CREATE ON SCHEMA {} TO {};").format(
+                        schema, sql.Identifier(user)
+                    ),
+                ])
         return statements
 
     def get_last_archived_wal(self) -> str:
@@ -418,6 +430,16 @@ WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}');""".format(user
         except psycopg2.Error as e:
             logger.error(f"Failed to get PostgreSQL last archived WAL: {e}")
             raise PostgreSQLGetLastArchivedWALError()
+
+    def get_current_timeline(self) -> str:
+        """Get the timeline id for the current PostgreSQL unit."""
+        try:
+            with self._connect_to_database() as connection, connection.cursor() as cursor:
+                cursor.execute("SELECT timeline_id FROM pg_control_checkpoint();")
+                return cursor.fetchone()[0]
+        except psycopg2.Error as e:
+            logger.error(f"Failed to get PostgreSQL current timeline id: {e}")
+            raise PostgreSQLGetCurrentTimelineError()
 
     def get_postgresql_text_search_configs(self) -> Set[str]:
         """Returns the PostgreSQL available text search configs.

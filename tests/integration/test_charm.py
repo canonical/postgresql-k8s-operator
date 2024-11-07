@@ -90,9 +90,9 @@ async def test_exporter_is_up(ops_test: OpsTest, unit_id: int):
     host = await get_unit_address(ops_test, f"{APP_NAME}/{unit_id}")
     result = requests.get(f"http://{host}:9187/metrics")
     assert result.status_code == 200
-    assert "pg_exporter_last_scrape_error 0" in result.content.decode(
-        "utf8"
-    ), "Scrape error in postgresql_prometheus_exporter"
+    assert "pg_exporter_last_scrape_error 0" in result.content.decode("utf8"), (
+        "Scrape error in postgresql_prometheus_exporter"
+    )
 
 
 @pytest.mark.group(1)
@@ -237,7 +237,6 @@ async def test_cluster_is_stable_after_leader_deletion(ops_test: OpsTest) -> Non
 
 
 @pytest.mark.group(1)
-@pytest.mark.unstable
 async def test_scale_down_and_up(ops_test: OpsTest):
     """Test data is replicated to new units after a scale up."""
     # Ensure the initial number of units in the application.

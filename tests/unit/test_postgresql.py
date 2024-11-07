@@ -185,6 +185,20 @@ def test_generate_database_privileges_statements(harness):
             ),
         ]),
         "UPDATE pg_catalog.pg_largeobject_metadata\nSET lomowner = (SELECT oid FROM pg_roles WHERE rolname = 'test_user')\nWHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = 'operator');",
+        Composed([
+            SQL("ALTER SCHEMA "),
+            Identifier("test_schema_1"),
+            SQL(" OWNER TO "),
+            Identifier("test_user"),
+            SQL(";"),
+        ]),
+        Composed([
+            SQL("ALTER SCHEMA "),
+            Identifier("test_schema_2"),
+            SQL(" OWNER TO "),
+            Identifier("test_user"),
+            SQL(";"),
+        ]),
     ]
     # Test with multiple established relations.
     assert harness.charm.postgresql._generate_database_privileges_statements(
@@ -212,6 +226,20 @@ def test_generate_database_privileges_statements(harness):
             SQL(";"),
         ]),
         Composed([
+            SQL("GRANT USAGE ON SCHEMA "),
+            Identifier("test_schema_1"),
+            SQL(" TO "),
+            Identifier("test_user"),
+            SQL(";"),
+        ]),
+        Composed([
+            SQL("GRANT CREATE ON SCHEMA "),
+            Identifier("test_schema_1"),
+            SQL(" TO "),
+            Identifier("test_user"),
+            SQL(";"),
+        ]),
+        Composed([
             SQL("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA "),
             Identifier("test_schema_2"),
             SQL(" TO "),
@@ -227,6 +255,20 @@ def test_generate_database_privileges_statements(harness):
         ]),
         Composed([
             SQL("GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA "),
+            Identifier("test_schema_2"),
+            SQL(" TO "),
+            Identifier("test_user"),
+            SQL(";"),
+        ]),
+        Composed([
+            SQL("GRANT USAGE ON SCHEMA "),
+            Identifier("test_schema_2"),
+            SQL(" TO "),
+            Identifier("test_user"),
+            SQL(";"),
+        ]),
+        Composed([
+            SQL("GRANT CREATE ON SCHEMA "),
             Identifier("test_schema_2"),
             SQL(" TO "),
             Identifier("test_user"),

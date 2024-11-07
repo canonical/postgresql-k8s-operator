@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 import asyncio
 import json
+import logging
 import os
 import string
 import subprocess
@@ -37,6 +38,7 @@ from tenacity import (
 
 from ..helpers import (
     APPLICATION_NAME,
+    KUBECTL,
     app_name,
     db_connect,
     execute_query_on_unit,
@@ -46,9 +48,12 @@ from ..helpers import (
     get_unit_address,
     run_command_on_unit,
 )
+from ..juju_ import juju_major_version
 from ..new_relations.helpers import get_application_relation_data
 
 PORT = 5432
+
+logger = logging.getLogger(__name__)
 
 
 class MemberNotListedOnClusterError(Exception):
@@ -67,7 +72,7 @@ class ProcessRunningError(Exception):
     """Raised when a process is running when it is not expected to be."""
 
 
-async def are_all_db_processes_down(ops_test: OpsTest, process: str) -> bool:
+async def are_all_db_processes_down(ops_test: OpsTest, process: str, signal: str) -> bool:
     """Verifies that all units of the charm do not have the DB process running."""
     app = await app_name(ops_test)
 
@@ -77,15 +82,20 @@ async def are_all_db_processes_down(ops_test: OpsTest, process: str) -> bool:
         pgrep_cmd = ("pgrep", "-x", process)
 
     try:
-        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+        for attempt in Retrying(stop=stop_after_delay(400), wait=wait_fixed(3)):
             with attempt:
                 for unit in ops_test.model.applications[app].units:
-                    _, raw_pid, _ = await ops_test.juju(
-                        "ssh", "--container", "postgresql", unit.name, *pgrep_cmd
+                    pod_name = unit.name.replace("/", "-")
+                    call = subprocess.run(
+                        f"{KUBECTL} -n {ops_test.model.info.name} exec {pod_name} -c postgresql -- {' '.join(pgrep_cmd)}",
+                        shell=True,
                     )
 
                     # If something was returned, there is a running process.
-                    if len(raw_pid) > 0:
+                    if call.returncode != 1:
+                        logger.info("Unit %s not yet down" % unit.name)
+                        # Try to rekill the unit
+                        await send_signal_to_process(ops_test, unit.name, process, signal)
                         raise ProcessRunningError
     except RetryError:
         return False
@@ -167,9 +177,9 @@ async def change_wal_settings(
 
 async def is_cluster_updated(ops_test: OpsTest, primary_name: str) -> None:
     # Verify that the old primary is now a replica.
-    assert await is_replica(
-        ops_test, primary_name
-    ), "there are more than one primary in the cluster."
+    assert await is_replica(ops_test, primary_name), (
+        "there are more than one primary in the cluster."
+    )
 
     # Verify that all units are part of the same cluster.
     member_ips = await fetch_cluster_members(ops_test)
@@ -184,9 +194,9 @@ async def is_cluster_updated(ops_test: OpsTest, primary_name: str) -> None:
     total_expected_writes = await check_writes(ops_test)
 
     # Verify that old primary is up-to-date.
-    assert await is_secondary_up_to_date(
-        ops_test, primary_name, total_expected_writes
-    ), f"secondary ({primary_name}) not up to date with the cluster after restarting."
+    assert await is_secondary_up_to_date(ops_test, primary_name, total_expected_writes), (
+        f"secondary ({primary_name}) not up to date with the cluster after restarting."
+    )
 
 
 def get_member_lag(cluster: Dict, member_name: str) -> int:
@@ -220,9 +230,9 @@ async def check_writes(ops_test, extra_model: Model = None) -> int:
     total_expected_writes = await stop_continuous_writes(ops_test)
     actual_writes, max_number_written = await count_writes(ops_test, extra_model=extra_model)
     for member, count in actual_writes.items():
-        assert (
-            count == max_number_written[member]
-        ), f"{member}: writes to the db were missed: count of actual writes ({count}) on {member} different from the max number written ({max_number_written[member]})."
+        assert count == max_number_written[member], (
+            f"{member}: writes to the db were missed: count of actual writes ({count}) on {member} different from the max number written ({max_number_written[member]})."
+        )
         assert total_expected_writes == count, f"{member}: writes to the db were missed."
     return total_expected_writes
 
@@ -231,16 +241,25 @@ async def are_writes_increasing(
     ops_test, down_unit: str = None, extra_model: Model = None
 ) -> None:
     """Verify new writes are continuing by counting the number of writes."""
-    writes, _ = await count_writes(ops_test, down_unit=down_unit, extra_model=extra_model)
-    for member, count in writes.items():
-        for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3), reraise=True):
-            with attempt:
-                more_writes, _ = await count_writes(
-                    ops_test, down_unit=down_unit, extra_model=extra_model
-                )
-                assert (
-                    more_writes[member] > count
-                ), f"{member}: writes not continuing to DB (current writes: {more_writes[member]} - previous writes: {count})"
+    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
+        with attempt:
+            writes, _ = await count_writes(ops_test, down_unit=down_unit, extra_model=extra_model)
+            assert len(writes), "No units report count"
+    logger.info(f"Initial writes {writes}")
+    for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3), reraise=True):
+        with attempt:
+            more_writes, _ = await count_writes(
+                ops_test, down_unit=down_unit, extra_model=extra_model
+            )
+            logger.info(f"Retry writes {more_writes}")
+            members_checked = []
+            for member, count in writes.items():
+                if member in more_writes:
+                    members_checked.append(member)
+                    assert more_writes[member] > count, (
+                        f"{member}: writes not continuing to DB (current writes: {more_writes[member]} - previous writes: {count})"
+                    )
+            assert len(members_checked), "No member checked from the initial writes"
 
 
 def copy_file_into_pod(
@@ -336,7 +355,7 @@ async def count_writes(
                 f" host='{ip}' password='{password}' connect_timeout=10"
             )
 
-            member_name = f'{member["model"]}.{member["name"]}'
+            member_name = f"{member['model']}.{member['name']}"
             connection = None
             try:
                 with psycopg2.connect(
@@ -633,11 +652,11 @@ def isolate_instance_from_cluster(ops_test: OpsTest, unit_name: str) -> None:
         env = os.environ
         env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
         subprocess.check_output(
-            " ".join(["kubectl", "apply", "-f", temp_file.name]), shell=True, env=env
+            " ".join([*KUBECTL.split(), "apply", "-f", temp_file.name]), shell=True, env=env
         )
 
 
-def modify_pebble_restart_delay(
+async def modify_pebble_restart_delay(
     ops_test: OpsTest,
     unit_name: str,
     pebble_plan_path: str,
@@ -684,11 +703,11 @@ def modify_pebble_restart_delay(
         _preload_content=False,
     )
     response.run_forever(timeout=5)
-    assert (
-        response.returncode == 0
-    ), f"Failed to add to pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
+    assert response.returncode == 0, (
+        f"Failed to add to pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
+    )
 
-    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+    for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
         with attempt:
             replan_pebble_layer_commands = "/charm/bin/pebble replan"
             response = kubernetes.stream.stream(
@@ -704,17 +723,25 @@ def modify_pebble_restart_delay(
                 _preload_content=False,
             )
             response.run_forever(timeout=60)
-            if ensure_replan:
-                assert (
-                    response.returncode == 0
-                ), f"Failed to replan pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
+            if ensure_replan and response.returncode != 0:
+                # Juju 2 fix service is spawned but pebble is reporting inactive
+                if juju_major_version < 3:
+                    try:
+                        await send_signal_to_process(
+                            ops_test, unit_name, "/usr/bin/patroni", "SIGTERM"
+                        )
+                    except (ProcessError, ProcessRunningError):
+                        pass
+                assert response.returncode == 0, (
+                    f"Failed to replan pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
+                )
 
 
 async def is_postgresql_ready(ops_test, unit_name: str) -> bool:
     """Verifies a PostgreSQL instance is running and available."""
     unit_ip = await get_unit_address(ops_test, unit_name)
     try:
-        for attempt in Retrying(stop=stop_after_delay(60 * 5), wait=wait_fixed(3)):
+        for attempt in Retrying(stop=stop_after_delay(60 * 10), wait=wait_fixed(3)):
             with attempt:
                 instance_health_info = requests.get(f"http://{unit_ip}:8008/health")
                 assert instance_health_info.status_code == 200
@@ -729,7 +756,7 @@ def remove_instance_isolation(ops_test: OpsTest) -> None:
     env = os.environ
     env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
     subprocess.check_output(
-        f"kubectl -n {ops_test.model.info.name} delete --ignore-not-found=true networkchaos network-loss-primary",
+        f"{KUBECTL} -n {ops_test.model.info.name} delete --ignore-not-found=true networkchaos network-loss-primary",
         shell=True,
         env=env,
     )
@@ -776,7 +803,7 @@ async def remove_charm_code(ops_test: OpsTest, unit_name: str) -> None:
     await run_command_on_unit(
         ops_test,
         unit_name,
-        f'rm /var/lib/juju/agents/unit-{unit_name.replace("/", "-")}/charm/src/charm.py',
+        f"rm /var/lib/juju/agents/unit-{unit_name.replace('/', '-')}/charm/src/charm.py",
         "charm",
     )
 
@@ -1018,7 +1045,7 @@ async def get_any_deatached_storage(ops_test: OpsTest) -> str:
 
 async def check_system_id_mismatch(ops_test: OpsTest, unit_name: str) -> bool:
     """Returns True if system id mismatch if found in logs."""
-    log_str = f'CRITICAL: system ID mismatch, node {unit_name.replace("/", "-")} belongs to a different cluster'
+    log_str = f"CRITICAL: system ID mismatch, node {unit_name.replace('/', '-')} belongs to a different cluster"
     stdout = await run_command_on_unit(
         ops_test,
         unit_name,

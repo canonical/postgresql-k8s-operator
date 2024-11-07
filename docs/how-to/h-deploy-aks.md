@@ -16,7 +16,7 @@
 
 Install Juju and Azure CLI tool:
 ```shell
-sudo snap install juju --classic
+sudo snap install juju
 sudo apt install --yes azure-cli
 ```
 Follow the installation guides for:

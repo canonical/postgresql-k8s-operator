@@ -11,6 +11,7 @@ from pytest_operator.plugin import OpsTest
 
 from .helpers import (
     CHARM_BASE,
+    KUBECTL,
     METADATA,
     get_leader_unit,
 )
@@ -42,8 +43,7 @@ async def test_enable_rbac(ops_test: OpsTest):
     retries = 0
     while is_default_auth != "no" and retries < MAX_RETRIES:
         rbac_check = await asyncio.create_subprocess_exec(
-            "microk8s",
-            "kubectl",
+            *KUBECTL.split(),
             "auth",
             "can-i",
             "get",

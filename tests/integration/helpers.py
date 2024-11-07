@@ -7,6 +7,7 @@ import logging
 from datetime import datetime
 from multiprocessing import ProcessError
 from pathlib import Path
+from subprocess import check_call
 from typing import List, Optional
 
 import botocore
@@ -37,7 +38,12 @@ METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
 APPLICATION_NAME = "postgresql-test-app"
 STORAGE_PATH = METADATA["storage"]["pgdata"]["location"]
-MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET = "Move restored cluster to another S3 bucket"
+
+try:
+    check_call(["kubectl", "version", "--client=true"])
+    KUBECTL = "kubectl"
+except FileNotFoundError:
+    KUBECTL = "microk8s kubectl"
 
 charm = None
 
@@ -227,7 +233,7 @@ def construct_endpoint(endpoint: str, region: str) -> str:
 
     # Use the built endpoint if it is an AWS endpoint.
     if endpoint_data and endpoint.endswith(endpoint_data["dnsSuffix"]):
-        endpoint = f'{endpoint.split("://")[0]}://{endpoint_data["hostname"]}'
+        endpoint = f"{endpoint.split('://')[0]}://{endpoint_data['hostname']}"
 
     return endpoint
 
@@ -955,11 +961,7 @@ async def backup_operations(
 
     # Wait for the restore to complete.
     async with ops_test.fast_forward():
-        await ops_test.model.block_until(
-            lambda: remaining_unit.workload_status_message
-            == MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET,
-            timeout=1000,
-        )
+        await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
     # Check that the backup was correctly restored by having only the first created table.
     logger.info("checking that the backup was correctly restored")
@@ -970,23 +972,23 @@ async def backup_operations(
             "SELECT EXISTS (SELECT FROM information_schema.tables"
             " WHERE table_schema = 'public' AND table_name = 'backup_table_1');"
         )
-        assert cursor.fetchone()[
-            0
-        ], "backup wasn't correctly restored: table 'backup_table_1' doesn't exist"
+        assert cursor.fetchone()[0], (
+            "backup wasn't correctly restored: table 'backup_table_1' doesn't exist"
+        )
         cursor.execute(
             "SELECT EXISTS (SELECT FROM information_schema.tables"
             " WHERE table_schema = 'public' AND table_name = 'backup_table_2');"
         )
-        assert cursor.fetchone()[
-            0
-        ], "backup wasn't correctly restored: table 'backup_table_2' doesn't exist"
+        assert cursor.fetchone()[0], (
+            "backup wasn't correctly restored: table 'backup_table_2' doesn't exist"
+        )
         cursor.execute(
             "SELECT EXISTS (SELECT FROM information_schema.tables"
             " WHERE table_schema = 'public' AND table_name = 'backup_table_3');"
         )
-        assert not cursor.fetchone()[
-            0
-        ], "backup wasn't correctly restored: table 'backup_table_3' exists"
+        assert not cursor.fetchone()[0], (
+            "backup wasn't correctly restored: table 'backup_table_3' exists"
+        )
     connection.close()
 
     # Run the "restore backup" action for full backup.
@@ -1004,11 +1006,7 @@ async def backup_operations(
 
     # Wait for the restore to complete.
     async with ops_test.fast_forward():
-        await ops_test.model.block_until(
-            lambda: remaining_unit.workload_status_message
-            == MOVE_RESTORED_CLUSTER_TO_ANOTHER_BUCKET,
-            timeout=1000,
-        )
+        await ops_test.model.wait_for_idle(status="active", timeout=1000)
 
     # Check that the backup was correctly restored by having only the first created table.
     logger.info("checking that the backup was correctly restored")
@@ -1019,21 +1017,21 @@ async def backup_operations(
             "SELECT EXISTS (SELECT FROM information_schema.tables"
             " WHERE table_schema = 'public' AND table_name = 'backup_table_1');"
         )
-        assert cursor.fetchone()[
-            0
-        ], "backup wasn't correctly restored: table 'backup_table_1' doesn't exist"
+        assert cursor.fetchone()[0], (
+            "backup wasn't correctly restored: table 'backup_table_1' doesn't exist"
+        )
         cursor.execute(
             "SELECT EXISTS (SELECT FROM information_schema.tables"
             " WHERE table_schema = 'public' AND table_name = 'backup_table_2');"
         )
-        assert not cursor.fetchone()[
-            0
-        ], "backup wasn't correctly restored: table 'backup_table_2' exists"
+        assert not cursor.fetchone()[0], (
+            "backup wasn't correctly restored: table 'backup_table_2' exists"
+        )
         cursor.execute(
             "SELECT EXISTS (SELECT FROM information_schema.tables"
             " WHERE table_schema = 'public' AND table_name = 'backup_table_3');"
         )
-        assert not cursor.fetchone()[
-            0
-        ], "backup wasn't correctly restored: table 'backup_table_3' exists"
+        assert not cursor.fetchone()[0], (
+            "backup wasn't correctly restored: table 'backup_table_3' exists"
+        )
     connection.close()

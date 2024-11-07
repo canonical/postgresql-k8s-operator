@@ -314,7 +314,7 @@ class PostgreSQLAsyncReplication(Object):
         try:
             system_identifier, error = self.container.exec(
                 [
-                    f'/usr/lib/postgresql/{self.charm._patroni.rock_postgresql_version.split(".")[0]}/bin/pg_controldata',
+                    f"/usr/lib/postgresql/{self.charm._patroni.rock_postgresql_version.split('.')[0]}/bin/pg_controldata",
                     POSTGRESQL_DATA_PATH,
                 ],
                 user=WORKLOAD_OS_USER,
@@ -635,7 +635,7 @@ class PostgreSQLAsyncReplication(Object):
     def _re_emit_async_relation_changed_event(self) -> None:
         """Re-emit the async relation changed event."""
         relation = self._relation
-        getattr(self.charm.on, f'{relation.name.replace("-", "_")}_relation_changed').emit(
+        getattr(self.charm.on, f"{relation.name.replace('-', '_')}_relation_changed").emit(
             relation,
             app=relation.app,
             unit=[unit for unit in relation.units if unit.app == relation.app][0],

@@ -79,10 +79,16 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.group("ha_tests")
+@pytest.mark.abort_on_fail
 @pytest.mark.parametrize("process", DB_PROCESSES)
-@pytest.mark.parametrize("signal", ["SIGTERM", pytest.param("SIGKILL", marks=markers.juju2)])
+@pytest.mark.parametrize("signal", ["SIGTERM", "SIGKILL"])
 async def test_interruption_db_process(
-    ops_test: OpsTest, process: str, signal: str, continuous_writes, primary_start_timeout
+    ops_test: OpsTest,
+    process: str,
+    signal: str,
+    continuous_writes,
+    primary_start_timeout,
+    restart_policy,
 ) -> None:
     # Locate primary unit.
     app = await app_name(ops_test)
@@ -101,7 +107,7 @@ async def test_interruption_db_process(
         await are_writes_increasing(ops_test, primary_name)
 
         # Verify that a new primary gets elected (ie old primary is secondary).
-        for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
+        for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3), reraise=True):
             with attempt:
                 new_primary_name = await get_primary(ops_test, app, down_unit=primary_name)
                 assert new_primary_name != primary_name
@@ -114,6 +120,7 @@ async def test_interruption_db_process(
 
 
 @pytest.mark.group("ha_tests")
+@pytest.mark.abort_on_fail
 @pytest.mark.parametrize("process", DB_PROCESSES)
 async def test_freeze_db_process(
     ops_test: OpsTest, process: str, continuous_writes, primary_start_timeout
@@ -157,7 +164,7 @@ async def test_freeze_db_process(
 
 
 @pytest.mark.group("ha_tests")
-@pytest.mark.unstable
+@pytest.mark.abort_on_fail
 @pytest.mark.parametrize("process", DB_PROCESSES)
 @pytest.mark.parametrize("signal", ["SIGTERM", "SIGKILL"])
 async def test_full_cluster_restart(
@@ -189,12 +196,12 @@ async def test_full_cluster_restart(
     # they come back online they operate as expected. This check verifies that we meet the criteria
     # of all replicas being down at the same time.
     try:
-        assert await are_all_db_processes_down(
-            ops_test, process
-        ), "Not all units down at the same time."
+        assert await are_all_db_processes_down(ops_test, process, signal), (
+            "Not all units down at the same time."
+        )
     finally:
         for unit in ops_test.model.applications[app].units:
-            modify_pebble_restart_delay(
+            await modify_pebble_restart_delay(
                 ops_test,
                 unit.name,
                 "tests/integration/ha_tests/manifests/restore_pebble_restart_delay.yml",
@@ -204,9 +211,9 @@ async def test_full_cluster_restart(
 
     # Verify all units are up and running.
     for unit in ops_test.model.applications[app].units:
-        assert await is_postgresql_ready(
-            ops_test, unit.name
-        ), f"unit {unit.name} not restarted after cluster restart."
+        assert await is_postgresql_ready(ops_test, unit.name), (
+            f"unit {unit.name} not restarted after cluster restart."
+        )
 
     await are_writes_increasing(ops_test)
 
@@ -223,6 +230,7 @@ async def test_full_cluster_restart(
 
 
 @pytest.mark.group("ha_tests")
+@pytest.mark.abort_on_fail
 async def test_forceful_restart_without_data_and_transaction_logs(
     ops_test: OpsTest,
     continuous_writes,
@@ -297,9 +305,9 @@ async def test_forceful_restart_without_data_and_transaction_logs(
         # Check that the WAL was correctly rotated.
 
         for unit_name in files:
-            assert not files[unit_name].intersection(
-                new_files
-            ), f"WAL segments weren't correctly rotated on {unit_name}"
+            assert not files[unit_name].intersection(new_files), (
+                f"WAL segments weren't correctly rotated on {unit_name}"
+            )
 
     # Database pebble service in old primary should recover after update-status run.
     async with ops_test.fast_forward("10s"):
@@ -310,6 +318,7 @@ async def test_forceful_restart_without_data_and_transaction_logs(
 
 
 @pytest.mark.group("ha_tests")
+@pytest.mark.abort_on_fail
 @markers.amd64_only
 async def test_network_cut(
     ops_test: OpsTest, continuous_writes, primary_start_timeout, chaos_mesh
@@ -324,9 +333,9 @@ async def test_network_cut(
 
     # Verify that connection is possible.
     logger.info("checking whether the connectivity to the database is working")
-    assert await is_connection_possible(
-        ops_test, primary_name
-    ), f"Connection {primary_name} is not possible"
+    assert await is_connection_possible(ops_test, primary_name), (
+        f"Connection {primary_name} is not possible"
+    )
 
     # Confirm that the primary is not isolated from the cluster.
     logger.info("confirming that the primary is not isolated from the cluster")
@@ -338,9 +347,9 @@ async def test_network_cut(
 
     # Verify that connection is not possible.
     logger.info("checking whether the connectivity to the database is not working")
-    assert not await is_connection_possible(
-        ops_test, primary_name
-    ), "Connection is possible after network cut"
+    assert not await is_connection_possible(ops_test, primary_name), (
+        "Connection is possible after network cut"
+    )
 
     logger.info("checking whether writes are increasing")
     await are_writes_increasing(ops_test, primary_name)
@@ -367,14 +376,15 @@ async def test_network_cut(
 
     # Verify that connection is possible.
     logger.info("checking whether the connectivity to the database is working")
-    assert await is_connection_possible(
-        ops_test, primary_name
-    ), f"Connection is not possible to {primary_name} after network restore"
+    assert await is_connection_possible(ops_test, primary_name), (
+        f"Connection is not possible to {primary_name} after network restore"
+    )
 
     await is_cluster_updated(ops_test, primary_name)
 
 
 @pytest.mark.group("scaling_to_zero")
+@pytest.mark.abort_on_fail
 async def test_scaling_to_zero(ops_test: OpsTest, continuous_writes) -> None:
     """Scale the database to zero units and scale up again."""
     # Deploy applications
@@ -397,9 +407,9 @@ async def test_scaling_to_zero(ops_test: OpsTest, continuous_writes) -> None:
     # Verify all units are up and running.
     logger.info("waiting for the database service to start in all units")
     for unit in ops_test.model.applications[app].units:
-        assert await is_postgresql_ready(
-            ops_test, unit.name
-        ), f"unit {unit.name} not restarted after cluster restart."
+        assert await is_postgresql_ready(ops_test, unit.name), (
+            f"unit {unit.name} not restarted after cluster restart."
+        )
 
     logger.info("checking whether writes are increasing")
     await are_writes_increasing(ops_test)
