@@ -668,6 +668,7 @@ async def test_discourse(ops_test: OpsTest):
 
 
 @pytest.mark.group(1)
+@pytest.mark.unstable
 @markers.amd64_only  # indico charm not available for arm64
 async def test_indico_datatabase(ops_test: OpsTest) -> None:
     """Tests deploying and relating to the Indico charm."""
