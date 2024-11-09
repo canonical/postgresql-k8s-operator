@@ -1,0 +1,328 @@
+[32mINFO    [0m integration.ha_tests.test_restart:test_restart.py:55 starting continuous writes to the database
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] active: 
+  postgresql-test-app/0 [idle] active: 
+[32mINFO    [0m integration.ha_tests.test_restart:test_restart.py:58 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.121:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.121:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Initial writes {'test.postgresql-k8s-0': 169, 'test.postgresql-k8s-1': 170}
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.121:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.121:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:254 Retry writes {'test.postgresql-k8s-0': 300, 'test.postgresql-k8s-1': 301}
+[32mINFO    [0m integration.ha_tests.test_restart:test_restart.py:61 removing charm code from one non-primary unit to simulate a crash and prevent firing the update-charm hook
+[32mINFO    [0m integration.ha_tests.test_restart:test_restart.py:71 removed charm code from postgresql-k8s/0
+[32mINFO    [0m integration.ha_tests.test_restart:test_restart.py:73 restarting all the units by deleting their pods
+[32mINFO    [0m integration.ha_tests.test_restart:test_restart.py:91 resolving postgresql-k8s/0 error
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] error: hook failed: "stop"
+  postgresql-k8s/1 [executing] waiting: awaiting for cluster to start
+  postgresql-k8s/2 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m integration.ha_tests.test_restart:test_restart.py:102 checking that all the replication slots are present in the primary by checking the list of cluster members
+[32mINFO    [0m integration.ha_tests.test_restart:test_restart.py:109 ensure continuous_writes after the crashed unit
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.121:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.121:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Initial writes {'test.postgresql-k8s-1': 5087, 'test.postgresql-k8s-2': 5088}
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.121:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.121:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:254 Retry writes {'test.postgresql-k8s-1': 5223, 'test.postgresql-k8s-2': 5224}
+[32mINFO    [0m integration.ha_tests.test_restart:test_restart.py:114 checking whether no writes were lost
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.121:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.121:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.4.6    unsupported  01:43:32Z
+
+App                  Version  Status  Scale  Charm                Channel        Rev  Address         Exposed  Message
+postgresql-k8s       14.13    active      3  postgresql-k8s                        0  10.152.183.221  no       
+postgresql-test-app           active      1  postgresql-test-app  latest/stable  211  10.152.183.68   no       received database credentials of the first database
+
+Unit                    Workload  Agent  Address     Ports  Message
+postgresql-k8s/0        active    idle   10.1.27.81         
+postgresql-k8s/1*       active    idle   10.1.27.79         Primary
+postgresql-k8s/2        active    idle   10.1.27.80         
+postgresql-test-app/0*  active    idle   10.1.27.78         received database credentials of the first database
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-postgresql-k8s-0: 01:41:25 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:26 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:26 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:26 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-2: 01:41:26 ERROR unit.postgresql-k8s/2.juju-log failed to patch k8s Endpoints postgresql-k8s
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/generic_client.py", line 232, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '409 Conflict' for url 'https://10.152.183.1/api/v1/namespaces/test/endpoints/postgresql-k8s?force=true&fieldManager=postgresql-k8s'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/409
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 1353, in _on_stop
+    client.apply(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/client.py", line 754, in apply
+    return self.patch(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/client.py", line 489, in patch
+    return self._client.request(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/generic_client.py", line 308, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/generic_client.py", line 248, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/generic_client.py", line 234, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Operation cannot be fulfilled on endpoints "postgresql-k8s": the object has been modified; please apply your changes to the latest version and try again
+unit-postgresql-k8s-2: 01:41:26 ERROR unit.postgresql-k8s/2.juju-log failed to patch k8s Endpoints postgresql-k8s-primary
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/generic_client.py", line 232, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '409 Conflict' for url 'https://10.152.183.1/api/v1/namespaces/test/endpoints/postgresql-k8s-primary?force=true&fieldManager=postgresql-k8s'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/409
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 1353, in _on_stop
+    client.apply(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/client.py", line 754, in apply
+    return self.patch(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/client.py", line 489, in patch
+    return self._client.request(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/generic_client.py", line 308, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/generic_client.py", line 248, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/generic_client.py", line 234, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Operation cannot be fulfilled on endpoints "postgresql-k8s-primary": the object has been modified; please apply your changes to the latest version and try again
+unit-postgresql-k8s-2: 01:41:26 ERROR unit.postgresql-k8s/2.juju-log failed to patch k8s Endpoints postgresql-k8s-replicas
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/generic_client.py", line 232, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '409 Conflict' for url 'https://10.152.183.1/api/v1/namespaces/test/endpoints/postgresql-k8s-replicas?force=true&fieldManager=postgresql-k8s'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/409
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 1353, in _on_stop
+    client.apply(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/client.py", line 754, in apply
+    return self.patch(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/client.py", line 489, in patch
+    return self._client.request(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/generic_client.py", line 308, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/generic_client.py", line 248, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/generic_client.py", line 234, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Operation cannot be fulfilled on endpoints "postgresql-k8s-replicas": the object has been modified; please apply your changes to the latest version and try again
+unit-postgresql-k8s-2: 01:41:26 ERROR unit.postgresql-k8s/2.juju-log failed to patch k8s Service patroni-postgresql-k8s-config
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/generic_client.py", line 232, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/httpx/_models.py", line 763, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '409 Conflict' for url 'https://10.152.183.1/api/v1/namespaces/test/services/patroni-postgresql-k8s-config?force=true&fieldManager=postgresql-k8s'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/409
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 1353, in _on_stop
+    client.apply(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/client.py", line 754, in apply
+    return self.patch(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/client.py", line 489, in patch
+    return self._client.request(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/generic_client.py", line 308, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/generic_client.py", line 248, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lightkube/core/generic_client.py", line 234, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Operation cannot be fulfilled on services "patroni-postgresql-k8s-config": the object has been modified; please apply your changes to the latest version and try again
+unit-postgresql-k8s-0: 01:41:27 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:27 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:27 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:27 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:27 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:28 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:28 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:28 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:28 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:29 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:29 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:29 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:29 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:30 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:30 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:30 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:30 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:30 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:31 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:31 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:31 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:31 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:32 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:32 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:32 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:32 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:33 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:33 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:33 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:33 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:33 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:34 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:34 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:34 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:34 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:35 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:35 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:35 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:35 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:36 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:36 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:36 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:36 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:36 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:37 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:37 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:37 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:37 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:38 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:38 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:38 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:38 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:38 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:39 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:39 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-2: 01:41:39 ERROR unit.postgresql-k8s/2.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-postgresql-k8s-1: 01:41:39 ERROR unit.postgresql-k8s/1.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-postgresql-k8s-0: 01:41:39 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:39 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:40 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:40 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:40 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:40 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:41 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:41 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:41 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:41 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:42 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:42 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:42 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:42 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:42 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:43 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:43 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:43 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:43 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:44 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:44 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:44 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:44 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:45 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:45 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:45 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:45 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:46 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:46 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:46 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:46 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:46 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-2: 01:41:47 ERROR unit.postgresql-k8s/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-postgresql-k8s-2: 01:41:47 ERROR unit.postgresql-k8s/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-postgresql-k8s-0: 01:41:47 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:47 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:47 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:47 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:48 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:48 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:48 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:48 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:49 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:49 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:49 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:49 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:50 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:50 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:50 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:50 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:51 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:51 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:51 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:51 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:51 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:52 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:52 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:52 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:52 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:53 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:53 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:53 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:53 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:53 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:54 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:54 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:54 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:54 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:55 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:55 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-0: 01:41:55 ERROR juju.worker.uniter.operation hook "stop" (via hook dispatching script: dispatch) failed: exit status 127
+unit-postgresql-k8s-1: 01:42:02 ERROR unit.postgresql-k8s/1.juju-log failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 330, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 734, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 154, in _connect_to_database
+    connection = psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.121), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/./src/charm.py", line 726, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 734, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 357, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError()
+charms.postgresql_k8s.v0.postgresql.PostgreSQLEnableDisableExtensionError
+unit-postgresql-k8s-0: 01:42:10 ERROR unit.postgresql-k8s/0.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-postgresql-k8s-0: 01:42:10 ERROR unit.postgresql-k8s/0.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-postgresql-k8s-2: 01:42:29 ERROR unit.postgresql-k8s/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-postgresql-k8s-2: 01:42:29 ERROR unit.postgresql-k8s/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-postgresql-k8s-0: 01:42:30 ERROR unit.postgresql-k8s/0.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-postgresql-k8s-0: 01:42:30 ERROR unit.postgresql-k8s/0.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-postgresql-k8s-2: 01:42:42 ERROR unit.postgresql-k8s/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-postgresql-k8s-2: 01:42:42 ERROR unit.postgresql-k8s/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-postgresql-k8s-0: 01:42:43 ERROR unit.postgresql-k8s/0.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-postgresql-k8s-0: 01:42:43 ERROR unit.postgresql-k8s/0.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-postgresql-k8s-2: 01:42:56 ERROR unit.postgresql-k8s/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+unit-postgresql-k8s-2: 01:42:56 ERROR unit.postgresql-k8s/2.juju-log This operation (update_relation_data()) can only be performed by the leader unit
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
