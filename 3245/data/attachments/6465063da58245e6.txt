@@ -1,0 +1,51 @@
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/jammy/postgresql-test-app-277
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/jammy/postgresql-test-app-277
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Primary
+  postgresql-test-app/0 [allocating] waiting: installing agent
+  postgresql-test-app2/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-test-app/0 [idle] active: 
+  postgresql-test-app2/0 [idle] active: 
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m integration.test_db:test_db.py:138 Verify that the charm remains blocked if there are other blocking relations
+[32mINFO    [0m integration.test_db:test_db.py:149 Verify that active status is restored when all blocking relations are gone
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [executing] active: 
+  postgresql-k8s/1 [executing] active: 
+  postgresql-k8s/2 [executing] blocked: extensions requested through relation
+[32mINFO    [0m integration.test_db:test_db.py:160 Verifying that the charm doesn't block when the extensions are enabled
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: 
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: 
+  postgresql-test-app/0 [idle] active: 
+[32mINFO    [0m integration.test_db:test_db.py:171 Verifying that the charm unblocks when the extensions are enabled
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [executing] active: 
+  postgresql-k8s/1 [executing] active: 
+  postgresql-k8s/2 [executing] active: 
+  postgresql-test-app/0 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: 
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [executing] active: 
+  postgresql-k8s/1 [executing] active: 
+  postgresql-k8s/2 [executing] blocked: extensions requested through relation
+  postgresql-test-app/0 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: 
+  postgresql-test-app/0 [idle] active:
