@@ -1,0 +1,8 @@
+[vex]
+version = "1"
+
+[files]
+ignore = [ "vex.toml", "vexes/", ".git/", ".gitignore", ".idea/", "venv/" ]
+
+[python]
+use-for = [ "*.star" ]
