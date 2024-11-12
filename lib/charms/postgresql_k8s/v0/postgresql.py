@@ -396,11 +396,13 @@ END; $$;"""
                     Identifier(user),
                 )
             )
-            SQL(
-                "UPDATE pg_catalog.pg_largeobject_metadata\n"
-                "SET lomowner = (SELECT oid FROM pg_roles WHERE rolname = {})\n"
-                "WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = {});"
-            ).format(Literal(user), Literal(self.user))
+            statements.append(
+                SQL(
+                    "UPDATE pg_catalog.pg_largeobject_metadata\n"
+                    "SET lomowner = (SELECT oid FROM pg_roles WHERE rolname = {})\n"
+                    "WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = {});"
+                ).format(Literal(user), Literal(self.user))
+            )
             for schema in schemas:
                 statements.append(
                     SQL("ALTER SCHEMA {} OWNER TO {};").format(

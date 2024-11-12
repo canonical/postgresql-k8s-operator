@@ -9,7 +9,7 @@ from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQLGetLastArchivedWALError,
 )
 from ops.testing import Harness
-from psycopg2.sql import SQL, Composed, Identifier
+from psycopg2.sql import SQL, Composed, Identifier, Literal
 
 from charm import PostgresqlOperatorCharm
 from constants import PEER
@@ -183,6 +183,15 @@ def test_generate_database_privileges_statements(harness):
             SQL(
                 ";' AS statement\nFROM pg_catalog.pg_views WHERE NOT schemaname IN ('pg_catalog', 'information_schema')) AS statements ORDER BY index) LOOP\n      EXECUTE format(r.statement);\n  END LOOP;\nEND; $$;"
             ),
+        ]),
+        Composed([
+            SQL(
+                "UPDATE pg_catalog.pg_largeobject_metadata\nSET lomowner = (SELECT oid FROM pg_roles WHERE rolname = "
+            ),
+            Literal("test_user"),
+            SQL(")\nWHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = "),
+            Literal("operator"),
+            SQL(");"),
         ]),
         Composed([
             SQL("ALTER SCHEMA "),
