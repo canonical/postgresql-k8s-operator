@@ -1,3 +1,5 @@
+> This is a **Kubernetes** operator. To deploy on IAAS/VM, see [Charmed PostgreSQL VM](https://charmhub.io/postgresql).
+
 # Charmed PostgreSQL K8s documentation
 
 Charmed PostgreSQL K8s is an open-source operator designed to deploy and operate object-relational databases on IAAS/VM. It packages the powerful database management system [PostgreSQL](https://www.postgresql.org/) into a charmed operator for deployment with [Juju](https://juju.is/docs/juju).
@@ -8,11 +10,6 @@ Charmed PostgreSQL K8s meets the need of deploying PostgreSQL in a structured an
  
 This charmed operator is made for anyone looking for a comprehensive database management interface, whether for operating a complex production environment or simply as a playground to learn more about databases and charms.
 
-[note ]
-This operator is built for **Kubernetes**.
-
-For deployments in **IAAS/VM**, see  [Charmed PostgreSQL](https://charmhub.io/postgresql).
-[/note]
 
 <!--
 This modern "Charmed PostgreSQL K8s" operator (in channel `14/stable`) is a new "[Charmed SDK](https://juju.is/docs/sdk)"-based charm that replaces the legacy "[Reactive](https://juju.is/docs/sdk/charm-taxonomy#heading--reactive)"-based charm (in channel `latest/stable`).<br/>Read more about [legacy charms here](/t/11013).
@@ -54,6 +51,7 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 2 | t-clean-up | [8. Clean up environment](/t/9303) |
 | 1 | how-to | [How to]() |
 | 2 | h-deploy | [Deploy]() |
+| 3 | h-deploy-canonical-k8s | [Canonical K8s](/t/15937) |
 | 3 | h-deploy-microk8s | [MicroK8s](/t/11858) |
 | 3 | h-deploy-gke | [GKE](/t/11237) |
 | 3 | h-deploy-eks | [EKS](/t/12106) |
@@ -102,6 +100,7 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 2 | r-performance | [Performance and resources](/t/11975) |
 | 2 | r-troubleshooting | [Troubleshooting](/t/11854) |
 | 2 | r-plugins-extensions | [Plugins/extensions](/t/10945) |
+| 2 | r-alert-rules | [Alert rules](/t/15840) |
 | 2 | r-contacts | [Contacts](/t/11852) |
 | 1 | explanation | [Explanation]() |
 | 2 | e-architecture | [Architecture](/t/11856) |

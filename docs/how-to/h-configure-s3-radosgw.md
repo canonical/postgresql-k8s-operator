@@ -10,6 +10,10 @@ A Charmed PostgreSQL K8s backup can be stored on any S3-compatible storage. S3 a
 
 This guide will teach you how to deploy and configure the s3-integrator charm on Ceph via [RadosGW](https://docs.ceph.com/en/quincy/man/8/radosgw/), send the configuration to a Charmed PostgreSQL application, and update it. (To configure S3 for AWS, see [this guide](/t/9595))
 
+[note]
+The Charmed PostgreSQL K8s backup tool ([pgBackRest](https://pgbackrest.org/)) can currently only interact with S3-compatible storages if they work with [SSL/TLS](https://github.com/pgbackrest/pgbackrest/issues/2340) (backup via the plain HTTP is currently not supported).
+[/note]
+
 ## Configure s3-integrator
 First, install the MinIO client and create a bucket:
 ```shell
