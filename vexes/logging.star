@@ -22,7 +22,6 @@ def on_open_project(_):
 
 def on_match(event):
     return_statement = event.captures['return_statement']
-    lit_str = str(return_statement)
 
     parent = find_parent(
         return_statement,
