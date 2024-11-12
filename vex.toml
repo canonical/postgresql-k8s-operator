@@ -2,7 +2,7 @@
 version = "1"
 
 [files]
-ignore = [ "vex.toml", "vexes/", ".git/", ".gitignore", ".idea/", "venv/" ]
+ignore = [ "vex.toml", "vexes/", ".git/", ".gitignore", ".idea/", "lib/", "tests/", "venv/" ]
 
 [python]
 use-for = [ "*.star" ]

@@ -3,7 +3,7 @@ def init():
 
 def find_logging_call(node):
     for previous_sibling in node.previous_siblings():
-        if str(previous_sibling).startswith('logging.'):
+        if str(previous_sibling).startswith('logger.'):
             return previous_sibling
     return None
 
