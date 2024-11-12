@@ -969,6 +969,9 @@ def test_on_s3_credential_changed(harness):
         patch(
             "charm.PostgreSQLBackups._on_s3_credential_changed_primary"
         ) as _on_s3_credential_changed_primary,
+        patch(
+            "backups.S3Requirer.get_s3_connection_info", return_value={}
+        ) as _get_s3_connection_info,
         patch("ops.framework.EventBase.defer") as _defer,
         patch(
             "charm.PostgresqlOperatorCharm.is_standby_leader", new_callable=PropertyMock
@@ -977,8 +980,16 @@ def test_on_s3_credential_changed(harness):
         patch("time.asctime", return_value="Thu Feb 24 05:00:00 2022"),
     ):
         peer_rel_id = harness.model.get_relation(PEER).id
-        # Test when the cluster was not initialised yet.
+        # Early exit when no s3 creds
         s3_rel_id = harness.add_relation(S3_PARAMETERS_RELATION, "s3-integrator")
+        harness.charm.backup.s3_client.on.credentials_changed.emit(
+            relation=harness.model.get_relation(S3_PARAMETERS_RELATION, s3_rel_id)
+        )
+        _defer.assert_not_called()
+        _render_pgbackrest_conf_file.assert_not_called()
+
+        # Test when the cluster was not initialised yet.
+        _get_s3_connection_info.return_value = {"creds": "value"}
         harness.charm.backup.s3_client.on.credentials_changed.emit(
             relation=harness.model.get_relation(S3_PARAMETERS_RELATION, s3_rel_id)
         )
