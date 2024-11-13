@@ -609,7 +609,7 @@ async def test_database_deploy_clientapps(ops_test: OpsTest, database_charm):
                 },
                 application_name=DATABASE_APP_NAME,
                 num_units=3,
-                series=CHARM_SERIES,
+                base=CHARM_BASE,
                 trust=True,
                 config={"profile": "testing"},
             ),
