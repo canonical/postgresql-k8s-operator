@@ -710,7 +710,7 @@ async def test_indico_datatabase(ops_test: OpsTest) -> None:
             channel="latest/edge",
             application_name="indico",
             num_units=1,
-            base=CHARM_BASE,
+            base="ubuntu@20.04",
         )
         await ops_test.model.deploy(
             "redis-k8s", channel="stable", application_name="redis-broker", base="ubuntu@20.04"
