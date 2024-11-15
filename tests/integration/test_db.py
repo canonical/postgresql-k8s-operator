@@ -10,7 +10,7 @@ from pytest_operator.plugin import OpsTest
 from . import markers
 from .helpers import (
     APPLICATION_NAME,
-    CHARM_SERIES,
+    CHARM_BASE,
     DATABASE_APP_NAME,
     build_and_deploy,
     check_database_creation,
@@ -51,7 +51,12 @@ async def test_finos_waltz_db(ops_test: OpsTest) -> None:
 
         # Deploy and test the first deployment of Finos Waltz.
         relation_id = await deploy_and_relate_application_with_postgresql(
-            ops_test, "finos-waltz-k8s", FINOS_WALTZ_APP_NAME, APPLICATION_UNITS, channel="edge"
+            ops_test,
+            "finos-waltz-k8s",
+            FINOS_WALTZ_APP_NAME,
+            APPLICATION_UNITS,
+            channel="edge",
+            base="ubuntu@20.04",
         )
         await check_database_creation(ops_test, "waltz")
 
@@ -66,6 +71,7 @@ async def test_finos_waltz_db(ops_test: OpsTest) -> None:
             ANOTHER_FINOS_WALTZ_APP_NAME,
             APPLICATION_UNITS,
             channel="edge",
+            base="ubuntu@20.04",
         )
         # In this case, the database name is the same as in the first deployment
         # because it's a fixed value in Finos Waltz charm.
@@ -107,13 +113,13 @@ async def test_extensions_blocking(ops_test: OpsTest) -> None:
     await ops_test.model.deploy(
         APPLICATION_NAME,
         application_name=APPLICATION_NAME,
-        series=CHARM_SERIES,
+        base=CHARM_BASE,
         channel="edge",
     )
     await ops_test.model.deploy(
         APPLICATION_NAME,
         application_name=f"{APPLICATION_NAME}2",
-        series=CHARM_SERIES,
+        base=CHARM_BASE,
         channel="edge",
     )
 
