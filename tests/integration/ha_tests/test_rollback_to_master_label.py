@@ -15,7 +15,7 @@ from .. import markers
 from ..architecture import architecture
 from ..helpers import (
     APPLICATION_NAME,
-    CHARM_SERIES,
+    CHARM_BASE,
     DATABASE_APP_NAME,
     get_leader_unit,
     get_primary,
@@ -47,13 +47,14 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
             num_units=3,
             channel="14/stable",
             revision=LABEL_REVISION,
-            series=CHARM_SERIES,
+            base=CHARM_BASE,
             trust=True,
         ),
         ops_test.model.deploy(
             APPLICATION_NAME,
             num_units=1,
             channel="latest/edge",
+            base=CHARM_BASE,
         ),
     )
     logger.info("Wait for applications to become active")

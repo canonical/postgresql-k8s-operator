@@ -13,6 +13,7 @@ from .ha_tests.helpers import (
     change_patroni_setting,
 )
 from .helpers import (
+    CHARM_BASE,
     DATABASE_APP_NAME,
     build_and_deploy,
     check_database_creation,
@@ -83,7 +84,7 @@ async def test_tls(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
         # Deploy TLS Certificates operator.
         await ops_test.model.deploy(
-            tls_certificates_app_name, config=tls_config, channel=tls_channel
+            tls_certificates_app_name, config=tls_config, channel=tls_channel, base=CHARM_BASE
         )
         # Relate it to the PostgreSQL to enable TLS.
         await ops_test.model.relate(DATABASE_APP_NAME, tls_certificates_app_name)
@@ -191,7 +192,12 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
         # Deploy and check Mattermost user and database existence.
         relation_id = await deploy_and_relate_application_with_postgresql(
-            ops_test, "mattermost-k8s", MATTERMOST_APP_NAME, APPLICATION_UNITS, status="waiting"
+            ops_test,
+            "mattermost-k8s",
+            MATTERMOST_APP_NAME,
+            APPLICATION_UNITS,
+            status="waiting",
+            base="ubuntu@20.04",
         )
         await check_database_creation(ops_test, "mattermost")
 
