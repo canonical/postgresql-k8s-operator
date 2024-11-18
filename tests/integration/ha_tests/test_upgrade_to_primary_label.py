@@ -13,12 +13,14 @@ from .. import markers
 from ..architecture import architecture
 from ..helpers import (
     APPLICATION_NAME,
+    CHARM_BASE,
     CHARM_SERIES,
     DATABASE_APP_NAME,
     get_leader_unit,
     get_primary,
     get_unit_by_index,
 )
+from ..juju_ import juju_major_version
 from .helpers import (
     are_writes_increasing,
     check_writes,
@@ -36,19 +38,26 @@ TIMEOUT = 600
 @pytest.mark.abort_on_fail
 async def test_deploy_stable(ops_test: OpsTest) -> None:
     """Simple test to ensure that the PostgreSQL and application charms get deployed."""
+    database_additional_params = {}
+    if juju_major_version >= 3:
+        database_additional_params["base"] = CHARM_BASE
+    else:
+        database_additional_params["series"] = CHARM_SERIES
+
     await asyncio.gather(
         ops_test.model.deploy(
             DATABASE_APP_NAME,
             num_units=3,
             channel="14/stable",
             revision=(280 if architecture == "arm64" else 281),
-            series=CHARM_SERIES,
             trust=True,
+            **database_additional_params,
         ),
         ops_test.model.deploy(
             APPLICATION_NAME,
             num_units=1,
             channel="latest/edge",
+            base=CHARM_BASE,
         ),
     )
     logger.info("Wait for applications to become active")

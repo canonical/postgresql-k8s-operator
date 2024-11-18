@@ -211,6 +211,9 @@ class PostgreSQLProvider(Object):
 
     def update_tls_flag(self, tls: str) -> None:
         """Update TLS flag and CA in relation databag."""
+        if not self.charm.unit.is_leader():
+            return
+
         relations = self.model.relations[self.relation_name]
         if tls == "True":
             _, ca, _ = self.charm.tls.get_tls_files()

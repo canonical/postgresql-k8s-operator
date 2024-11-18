@@ -30,7 +30,9 @@ async def test_discourse_from_discourse_charmers(ops_test: OpsTest):
     async with ops_test.fast_forward():
         await asyncio.gather(
             build_and_deploy(ops_test, DATABASE_UNITS),
-            ops_test.model.deploy(REDIS_APP_NAME, application_name=REDIS_APP_NAME),
+            ops_test.model.deploy(
+                REDIS_APP_NAME, application_name=REDIS_APP_NAME, base="ubuntu@20.04"
+            ),
         )
         await ops_test.model.wait_for_idle(
             apps=[DATABASE_APP_NAME, REDIS_APP_NAME], status="active", timeout=1500

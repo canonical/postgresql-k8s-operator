@@ -12,7 +12,7 @@ from tenacity import Retrying, stop_after_delay, wait_fixed
 from .. import markers
 from ..helpers import (
     APPLICATION_NAME,
-    CHARM_SERIES,
+    CHARM_BASE,
     METADATA,
     app_name,
     build_and_deploy,
@@ -69,7 +69,7 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             await ops_test.model.deploy(
                 APPLICATION_NAME,
                 application_name=APPLICATION_NAME,
-                series=CHARM_SERIES,
+                base=CHARM_BASE,
                 channel="edge",
             )
 

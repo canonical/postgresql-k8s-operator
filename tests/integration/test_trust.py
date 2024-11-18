@@ -10,6 +10,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from .helpers import (
+    CHARM_BASE,
     KUBECTL,
     METADATA,
     get_leader_unit,
@@ -96,6 +97,7 @@ async def test_deploy_without_trust(ops_test: OpsTest, database_charm):
         application_name=APP_NAME,
         num_units=3,
         trust=False,
+        base=CHARM_BASE,
     )
 
     await ops_test.model.block_until(

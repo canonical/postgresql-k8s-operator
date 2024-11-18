@@ -177,7 +177,15 @@ def test_generate_database_privileges_statements(harness):
             ),
             Identifier("test_user"),
             SQL(
-                ";' AS statement\nFROM pg_proc p JOIN pg_namespace nsp ON p.pronamespace = nsp.oid WHERE NOT nsp.nspname IN ('pg_catalog', 'information_schema')\nUNION SELECT 4 AS index,'ALTER VIEW '|| schemaname || '.\"' || viewname ||'\" OWNER TO "
+                ";' AS statement\nFROM pg_proc p JOIN pg_namespace nsp ON p.pronamespace = nsp.oid WHERE NOT nsp.nspname IN ('pg_catalog', 'information_schema') AND p.prokind = 'f'\nUNION SELECT 4 AS index,'ALTER PROCEDURE '|| nsp.nspname || '.\"' || p.proname ||'\"('||pg_get_function_identity_arguments(p.oid)||') OWNER TO "
+            ),
+            Identifier("test_user"),
+            SQL(
+                ";' AS statement\nFROM pg_proc p JOIN pg_namespace nsp ON p.pronamespace = nsp.oid WHERE NOT nsp.nspname IN ('pg_catalog', 'information_schema') AND p.prokind = 'p'\nUNION SELECT 5 AS index,'ALTER AGGREGATE '|| nsp.nspname || '.\"' || p.proname ||'\"('||pg_get_function_identity_arguments(p.oid)||') OWNER TO "
+            ),
+            Identifier("test_user"),
+            SQL(
+                ";' AS statement\nFROM pg_proc p JOIN pg_namespace nsp ON p.pronamespace = nsp.oid WHERE NOT nsp.nspname IN ('pg_catalog', 'information_schema') AND p.prokind = 'a'\nUNION SELECT 6 AS index,'ALTER VIEW '|| schemaname || '.\"' || viewname ||'\" OWNER TO "
             ),
             Identifier("test_user"),
             SQL(
