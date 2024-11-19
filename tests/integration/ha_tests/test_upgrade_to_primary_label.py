@@ -16,6 +16,7 @@ from ..helpers import (
     CHARM_BASE,
     CHARM_SERIES,
     DATABASE_APP_NAME,
+    METADATA,
     get_leader_unit,
     get_primary,
     get_unit_by_index,
@@ -100,8 +101,11 @@ async def test_upgrade(ops_test, continuous_writes) -> None:
     local_charm = await ops_test.build_charm(".")
     application = ops_test.model.applications[DATABASE_APP_NAME]
 
+    resources = {"postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]}
+    application = ops_test.model.applications[DATABASE_APP_NAME]
+
     logger.info("Refresh the charm")
-    await application.refresh(path=local_charm)
+    await application.refresh(path=local_charm, resources=resources)
 
     logger.info("Get first upgrading unit")
     # Highest ordinal unit always the first to upgrade.

@@ -115,6 +115,7 @@ postgresql:
   bin_dir: /usr/lib/postgresql/{{ version }}/bin
   listen: 0.0.0.0:5432
   parameters:
+    shared_preload_libraries: 'timescaledb,pgaudit'
     {%- if enable_pgbackrest_archiving %}
     archive_command: 'pgbackrest --stanza={{ stanza }} archive-push %p'
     {% else %}
