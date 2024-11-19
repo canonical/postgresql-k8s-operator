@@ -16,6 +16,7 @@ For a given release, this table shows:
 
 | Revision | PostgreSQL version | Juju version | [TLS encryption](/t/9685)* | [COS monitoring](/t/10600) | [Minor version upgrades](/t/) | [Cross-regional async replication](/t/) | [Point-in-time recovery](/t/)
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| [444], [445] | 14.12 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] | ![check] |
 | [381], [382] | 14.12 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] | ![check] |
 | [280], [281] | 14.11 | `3.4.2+` | ![check] | ![check] | ![check] | ![check] |
 | [193] | 14.10 | `3.4.2+` | ![check] | ![check] | ![check] | ![check] |
@@ -35,6 +36,13 @@ Several [revisions](https://juju.is/docs/sdk/revision) are released simultaneous
 > If you do not specify a revision on deploy time, Juju will automatically choose the revision that matches your base and architecture.
 
 > If you deploy a specific revision, **you must make sure it matches your base and architecture** via the tables below or with [`juju info`](https://juju.is/docs/juju/juju-info).
+
+### Release 444-445 (`14/stable`)
+
+| Revision | amd64 | arm64 | Ubuntu 22.04 LTS
+|:--------:|:-----:|:-----:|:-----:|
+|[445] | | ![check] | ![check]  |
+|[444] | ![check] | | ![check] |
 
 ### Release 381-382 (`14/stable`)
 
@@ -93,6 +101,8 @@ For a list of all plugins supported for each revision, see the reference page [P
 [/note]
 
 <!-- LINKS -->
+[445]: /t/15966
+[444]: /t/15966
 [382]: /t/15442
 [381]: /t/15442
 [281]: /t/14068
