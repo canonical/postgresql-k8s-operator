@@ -17,6 +17,7 @@ from ..helpers import (
     APPLICATION_NAME,
     CHARM_BASE,
     DATABASE_APP_NAME,
+    METADATA,
     get_leader_unit,
     get_primary,
     get_unit_by_index,
@@ -105,8 +106,11 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
 
     application = ops_test.model.applications[DATABASE_APP_NAME]
 
+    resources = {"postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]}
+    application = ops_test.model.applications[DATABASE_APP_NAME]
+
     logger.info("Refresh the charm")
-    await application.refresh(path=fault_charm)
+    await application.refresh(path=fault_charm, resources=resources)
 
     logger.info("Get first upgrading unit")
     # Highest ordinal unit always the first to upgrade.
