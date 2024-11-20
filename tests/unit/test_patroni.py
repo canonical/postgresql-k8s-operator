@@ -216,7 +216,7 @@ def test_render_patroni_yml_file(harness, patroni):
             replication_password=patroni._replication_password,
             rewind_user=REWIND_USER,
             rewind_password=patroni._rewind_password,
-            minority_count=patroni._members_count // 2,
+            synchronous_node_count=patroni._members_count - 1,
             version="14",
             patroni_password=patroni._patroni_password,
         )
@@ -251,7 +251,7 @@ def test_render_patroni_yml_file(harness, patroni):
             replication_password=patroni._replication_password,
             rewind_user=REWIND_USER,
             rewind_password=patroni._rewind_password,
-            minority_count=patroni._members_count // 2,
+            synchronous_node_count=patroni._members_count - 1,
             version="14",
             patroni_password=patroni._patroni_password,
         )

@@ -489,7 +489,7 @@ class Patroni:
             restore_to_latest=restore_to_latest,
             stanza=stanza,
             restore_stanza=restore_stanza,
-            minority_count=self._members_count // 2,
+            synchronous_node_count=self._members_count - 1,
             version=self.rock_postgresql_version.split(".")[0],
             pg_parameters=parameters,
             primary_cluster_endpoint=self._charm.async_replication.get_primary_cluster_endpoint(),
