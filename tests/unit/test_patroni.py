@@ -452,3 +452,28 @@ def test_last_postgresql_logs(harness, patroni):
     (root / "var" / "log" / "postgresql" / "postgresql.3.log").unlink()
     (root / "var" / "log" / "postgresql").rmdir()
     assert patroni.last_postgresql_logs() == ""
+
+
+def test_update_synchronous_node_count(harness, patroni):
+    with (
+        patch("patroni.stop_after_delay", return_value=stop_after_delay(0)) as _wait_fixed,
+        patch("patroni.wait_fixed", return_value=wait_fixed(0)) as _wait_fixed,
+        patch("requests.patch") as _patch,
+    ):
+        response = _patch.return_value
+        response.status_code = 200
+
+        patroni.update_synchronous_node_count()
+
+        _patch.assert_called_once_with(
+            "http://postgresql-k8s-0:8008/config",
+            json={"synchronous_node_count": 2},
+            verify=True,
+            auth=patroni._patroni_auth,
+        )
+
+        # Test when the request fails.
+        response.status_code = 500
+        with pytest.raises(RetryError):
+            patroni.update_synchronous_node_count()
+            assert False

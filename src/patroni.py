@@ -130,16 +130,16 @@ class Patroni:
         return url
 
     def update_synchronous_node_count(self, units: int | None = None) -> None:
-        """Update synchronous_node_count to the minority of the planned cluster."""
+        """Update synchronous_node_count."""
         if units is None:
-            units = self.planned_units
+            units = self._members_count
         # Try to update synchronous_node_count.
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
             with attempt:
                 r = requests.patch(
                     f"{self._patroni_url}/config",
-                    json={"synchronous_node_count": units // 2},
-                    verify=self.verify,
+                    json={"synchronous_node_count": units - 1},
+                    verify=self._verify,
                     auth=self._patroni_auth,
                 )
 
