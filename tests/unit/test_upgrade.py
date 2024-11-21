@@ -158,6 +158,9 @@ def test_on_upgrade_changed(harness):
     with (
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
+        patch(
+            "charm.PostgresqlOperatorCharm.updated_synchronous_node_count"
+        ) as _updated_synchronous_node_count,
     ):
         harness.set_can_connect(POSTGRESQL_CONTAINER, True)
         _member_started.return_value = False
@@ -168,6 +171,7 @@ def test_on_upgrade_changed(harness):
         _member_started.return_value = True
         harness.charm.on.upgrade_relation_changed.emit(relation)
         _update_config.assert_called_once()
+        _updated_synchronous_node_count.assert_called_once_with()
 
 
 def test_pre_upgrade_check(harness):
