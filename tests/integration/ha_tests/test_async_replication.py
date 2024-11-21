@@ -32,7 +32,6 @@ from .helpers import (
     are_writes_increasing,
     check_writes,
     get_standby_leader,
-    get_sync_standby,
     start_continuous_writes,
 )
 
@@ -416,11 +415,11 @@ async def test_async_replication_failover_in_main_cluster(
     logger.info("checking whether writes are increasing")
     await are_writes_increasing(ops_test)
 
-    sync_standby = await get_sync_standby(first_model, DATABASE_APP_NAME)
-    logger.info(f"Sync-standby: {sync_standby}")
-    logger.info("deleting the sync-standby pod")
+    primary = await get_primary(first_model, DATABASE_APP_NAME)
+    logger.info(f"Primary: {primary}")
+    logger.info("deleting the primary pod")
     client = Client(namespace=first_model.info.name)
-    client.delete(Pod, name=sync_standby.replace("/", "-"))
+    client.delete(Pod, name=primary.replace("/", "-"))
 
     async with ops_test.fast_forward(FAST_INTERVAL), fast_forward(second_model, FAST_INTERVAL):
         await gather(
@@ -433,9 +432,9 @@ async def test_async_replication_failover_in_main_cluster(
         )
 
     # Check that the sync-standby unit is not the same as before.
-    new_sync_standby = await get_sync_standby(first_model, DATABASE_APP_NAME)
-    logger.info(f"New sync-standby: {new_sync_standby}")
-    assert new_sync_standby != sync_standby, "Sync-standby is the same as before"
+    new_primary = await get_primary(first_model, DATABASE_APP_NAME)
+    logger.info(f"New sync-standby: {new_primary}")
+    assert new_primary != primary, "Sync-standby is the same as before"
 
     logger.info("Ensure continuous_writes after the crashed unit")
     await are_writes_increasing(ops_test)
