@@ -441,13 +441,24 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         else:
             return None
 
+    def updated_synchronous_node_count(self, num_units: int | None = None) -> bool:
+        """Tries to update synchronous_node_count configuration and reports the result."""
+        try:
+            self._patroni.update_synchronous_node_count(num_units)
+            return True
+        except RetryError:
+            logger.debug("Unable to set synchronous_node_count")
+            return False
+
     def _on_peer_relation_departed(self, event: RelationDepartedEvent) -> None:
         """The leader removes the departing units from the list of cluster members."""
         # Allow leader to update endpoints if it isn't leaving.
         if not self.unit.is_leader() or event.departing_unit == self.unit:
             return
 
-        if "cluster_initialised" not in self._peers.data[self.app]:
+        if "cluster_initialised" not in self._peers.data[
+            self.app
+        ] or not self.updated_synchronous_node_count(self.app.planned_units()):
             logger.debug(
                 "Deferring on_peer_relation_departed: Cluster must be initialized before members can leave"
             )
@@ -774,6 +785,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             for member in self._hosts - self._patroni.cluster_members:
                 logger.debug("Adding %s to cluster", member)
                 self.add_cluster_member(member)
+            self._patroni.update_synchronous_node_count()
         except NotReadyError:
             logger.info("Deferring reconfigure: another member doing sync right now")
             event.defer()

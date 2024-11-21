@@ -668,6 +668,7 @@ def test_on_peer_relation_departed(harness):
             "charm.PostgresqlOperatorCharm._get_endpoints_to_remove", return_value=sentinel.units
         ) as _get_endpoints_to_remove,
         patch("charm.PostgresqlOperatorCharm._remove_from_endpoints") as _remove_from_endpoints,
+        patch("charm.PostgresqlOperatorCharm.updated_synchronous_node_count"),
     ):
         # Early exit if not leader
         event = Mock()
