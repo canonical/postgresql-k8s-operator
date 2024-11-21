@@ -510,6 +510,24 @@ async def get_postgresql_parameter(ops_test: OpsTest, parameter_name: str) -> Op
             return parameter_value
 
 
+async def get_leader(model: Model, application_name: str) -> str:
+    """Get the standby leader name.
+
+    Args:
+        model: the model instance.
+        application_name: the name of the application to get the value for.
+
+    Returns:
+        the name of the standby leader.
+    """
+    status = await model.get_status()
+    first_unit_ip = list(status["applications"][application_name]["units"].values())[0]["address"]
+    cluster = get_patroni_cluster(first_unit_ip)
+    for member in cluster["members"]:
+        if member["role"] == "leader":
+            return member["name"]
+
+
 async def get_standby_leader(model: Model, application_name: str) -> str:
     """Get the standby leader name.
 

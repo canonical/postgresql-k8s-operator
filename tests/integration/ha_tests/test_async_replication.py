@@ -31,6 +31,7 @@ from ..helpers import (
 from .helpers import (
     are_writes_increasing,
     check_writes,
+    get_leader,
     get_standby_leader,
     start_continuous_writes,
 )
@@ -415,7 +416,7 @@ async def test_async_replication_failover_in_main_cluster(
     logger.info("checking whether writes are increasing")
     await are_writes_increasing(ops_test)
 
-    primary = await get_primary(first_model, DATABASE_APP_NAME)
+    primary = await get_leader(first_model, DATABASE_APP_NAME)
     logger.info(f"Primary: {primary}")
     logger.info("deleting the primary pod")
     client = Client(namespace=first_model.info.name)
@@ -432,7 +433,7 @@ async def test_async_replication_failover_in_main_cluster(
         )
 
     # Check that the sync-standby unit is not the same as before.
-    new_primary = await get_primary(first_model, DATABASE_APP_NAME)
+    new_primary = await get_leader(first_model, DATABASE_APP_NAME)
     logger.info(f"New sync-standby: {new_primary}")
     assert new_primary != primary, "Sync-standby is the same as before"
 
