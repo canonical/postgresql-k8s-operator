@@ -67,6 +67,10 @@ requires:
     interface: s3
     limit: 1
     optional: true
+  ldap:
+    interface: ldap
+    limit: 1
+    optional: true
   logging:
     interface: loki_push_api
     limit: 1
