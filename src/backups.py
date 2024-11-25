@@ -479,6 +479,8 @@ class PostgreSQLBackups(Object):
             (stanza, timeline) of the nearest timeline or backup. None, if there are no matches.
         """
         timelines = self._list_backups(show_failed=False) | self._list_timelines()
+        if timestamp == "latest":
+            return max(timelines.items())[1] if len(timelines) > 0 else None
         filtered_timelines = [
             (timeline_key, timeline_object)
             for timeline_key, timeline_object in timelines.items()

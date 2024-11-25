@@ -640,6 +640,10 @@ def test_get_nearest_timeline(harness):
         _list_timelines.return_value = dict[str, tuple[str, str]]({
             "2023-02-24T05:00:00Z": ("test-stanza", "2")
         })
+        assert harness.charm.backup._get_nearest_timeline("latest") == tuple[str, str]((
+            "test-stanza",
+            "2",
+        ))
         assert harness.charm.backup._get_nearest_timeline("2025-01-01 00:00:00") == tuple[
             str, str
         ](("test-stanza", "2"))
