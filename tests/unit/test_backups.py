@@ -1680,13 +1680,13 @@ def test_pre_restore_checks(harness):
         assert harness.charm.backup._pre_restore_checks(mock_event) is True
         mock_event.fail.assert_not_called()
 
-        # Test with single (bad) restore-to-time=latest parameter
+        # Test with single restore-to-time=latest parameter
         mock_event.reset_mock()
         mock_event.params = {"restore-to-time": "latest"}
-        assert harness.charm.backup._pre_restore_checks(mock_event) is False
-        mock_event.fail.assert_called_once()
+        assert harness.charm.backup._pre_restore_checks(mock_event) is True
+        mock_event.fail.assert_not_called()
 
-        # Test with good restore-to-time=latest parameter
+        # Test with both backup-id and restore-to-time=latest parameters
         mock_event.reset_mock()
         mock_event.params = {"backup-id": "2023-01-01T09:00:00Z", "restore-to-time": "latest"}
         assert harness.charm.backup._pre_restore_checks(mock_event) is True

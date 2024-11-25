@@ -1100,11 +1100,8 @@ Stderr:
             event.fail(validation_message)
             return False
 
-        if not event.params.get("backup-id") and event.params.get("restore-to-time") in (
-            None,
-            "latest",
-        ):
-            error_message = "Missing backup-id or non-latest restore-to-time parameter to be able to do restore"
+        if not event.params.get("backup-id") and event.params.get("restore-to-time") is None:
+            error_message = "Either backup-id or restore-to-time parameters need to be provided to be able to do restore"
             logger.error(f"Restore failed: {error_message}")
             event.fail(error_message)
             return False
