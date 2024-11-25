@@ -969,6 +969,17 @@ Stderr:
         elif is_backup_id_timeline:
             restore_stanza_timeline = timelines[backup_id]
         else:
+            backups_list = list(self._list_backups(show_failed=False).values())
+            timelines_list = self._list_timelines()
+            if (
+                restore_to_time == "latest"
+                and timelines_list is not None
+                and max(timelines_list.values()) not in backups_list
+            ):
+                error_message = "There is no base backup created from the latest timeline"
+                logger.error(f"Restore failed: {error_message}")
+                event.fail(error_message)
+                return
             restore_stanza_timeline = self._get_nearest_timeline(restore_to_time)
             if not restore_stanza_timeline:
                 error_message = f"Can't find the nearest timeline before timestamp {restore_to_time} to restore"
