@@ -1879,7 +1879,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 logger.debug(
                     "Early exit update_config: patroni not responding but TLS is enabled."
                 )
-                self._handle_postgresql_restart_need(True)
+                self._handle_postgresql_restart_need()
                 return True
             logger.debug("Early exit update_config: Patroni not started yet")
             return False
