@@ -25,7 +25,7 @@ async def fetch_charm(
     charm_path = pathlib.Path(charm_path)
     charmcraft_yaml = yaml.safe_load((charm_path / "charmcraft.yaml").read_text())
     assert charmcraft_yaml["type"] == "charm"
-    packed_charms = list(charm_path.glob(f"{architecture}.charm"))
+    packed_charms = list(charm_path.glob(f"*{architecture}.charm"))
     return packed_charms[0].resolve(strict=True)
 
 
