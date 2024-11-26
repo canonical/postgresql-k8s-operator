@@ -9,7 +9,7 @@ import psycopg2
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..helpers import CHARM_BASE, DATABASE_APP_NAME, build_and_deploy
+from ..helpers import DATABASE_APP_NAME, build_and_deploy
 from .helpers import build_connection_string
 from .test_new_relations import DATA_INTEGRATOR_APP_NAME
 
@@ -30,7 +30,7 @@ async def test_relations(ops_test: OpsTest, database_charm):
         await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=3000)
 
         # Creating first time relation with user role
-        await ops_test.model.deploy(DATA_INTEGRATOR_APP_NAME, base=CHARM_BASE)
+        await ops_test.model.deploy(DATA_INTEGRATOR_APP_NAME)
         await ops_test.model.applications[DATA_INTEGRATOR_APP_NAME].set_config({
             "database-name": DATA_INTEGRATOR_APP_NAME.replace("-", "_"),
         })

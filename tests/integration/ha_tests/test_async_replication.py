@@ -18,7 +18,6 @@ from tenacity import Retrying, stop_after_delay, wait_fixed
 from .. import architecture, markers
 from ..helpers import (
     APPLICATION_NAME,
-    CHARM_BASE,
     DATABASE_APP_NAME,
     build_and_deploy,
     get_leader_unit,
@@ -113,12 +112,8 @@ async def test_deploy_async_replication_setup(
     """Build and deploy two PostgreSQL cluster in two separate models to test async replication."""
     await build_and_deploy(ops_test, CLUSTER_SIZE, wait_for_idle=False)
     await build_and_deploy(ops_test, CLUSTER_SIZE, wait_for_idle=False, model=second_model)
-    await ops_test.model.deploy(
-        APPLICATION_NAME, channel="latest/edge", num_units=1, base=CHARM_BASE
-    )
-    await second_model.deploy(
-        APPLICATION_NAME, channel="latest/edge", num_units=1, base=CHARM_BASE
-    )
+    await ops_test.model.deploy(APPLICATION_NAME, channel="latest/edge", num_units=1)
+    await second_model.deploy(APPLICATION_NAME, channel="latest/edge", num_units=1)
 
     async with ops_test.fast_forward(), fast_forward(second_model):
         await gather(

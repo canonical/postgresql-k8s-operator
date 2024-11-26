@@ -50,7 +50,6 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
             APPLICATION_NAME,
             num_units=1,
             channel="latest/edge",
-            base=CHARM_BASE,
         ),
     )
     logger.info("Wait for applications to become active")

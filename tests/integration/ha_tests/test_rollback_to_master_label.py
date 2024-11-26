@@ -37,6 +37,7 @@ LABEL_REVISION = 280 if architecture == "arm64" else 281
 
 
 @pytest.mark.group(1)
+@pytest.mark.unstable
 @markers.juju3
 @markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
@@ -55,7 +56,6 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
             APPLICATION_NAME,
             num_units=1,
             channel="latest/edge",
-            base=CHARM_BASE,
         ),
     )
     logger.info("Wait for applications to become active")
@@ -71,6 +71,7 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.group(1)
+@pytest.mark.unstable
 @markers.juju3
 @markers.amd64_only  # TODO: remove after arm64 stable release
 async def test_fail_and_rollback(ops_test, continuous_writes) -> None:

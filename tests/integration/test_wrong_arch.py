@@ -20,16 +20,12 @@ logger = logging.getLogger(__name__)
 async def fetch_charm(
     charm_path: typing.Union[str, os.PathLike],
     architecture: str,
-    bases_index: int,
 ) -> pathlib.Path:
     """Fetches packed charm from CI runner without checking for architecture."""
     charm_path = pathlib.Path(charm_path)
     charmcraft_yaml = yaml.safe_load((charm_path / "charmcraft.yaml").read_text())
     assert charmcraft_yaml["type"] == "charm"
-    base = charmcraft_yaml["bases"][bases_index]
-    build_on = base.get("build-on", [base])[0]
-    version = build_on["channel"]
-    packed_charms = list(charm_path.glob(f"*{version}-{architecture}.charm"))
+    packed_charms = list(charm_path.glob(f"{architecture}.charm"))
     return packed_charms[0].resolve(strict=True)
 
 
@@ -37,7 +33,7 @@ async def fetch_charm(
 @markers.amd64_only
 async def test_arm_charm_on_amd_host(ops_test: OpsTest) -> None:
     """Tries deploying an arm64 charm on amd64 host."""
-    charm = await fetch_charm(".", "arm64", 1)
+    charm = await fetch_charm(".", "arm64")
     resources = {
         "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
     }
@@ -60,7 +56,7 @@ async def test_arm_charm_on_amd_host(ops_test: OpsTest) -> None:
 @markers.arm64_only
 async def test_amd_charm_on_arm_host(ops_test: OpsTest) -> None:
     """Tries deploying an amd64 charm on arm64 host."""
-    charm = await fetch_charm(".", "amd64", 0)
+    charm = await fetch_charm(".", "amd64")
     resources = {
         "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
     }
