@@ -19,7 +19,7 @@ from constants import DATABASE_PORT, PEER
 
 DATABASE = "test_database"
 RELATION_NAME = "db"
-POSTGRESQL_VERSION = "14"
+POSTGRESQL_VERSION = "16"
 
 
 @pytest.fixture(autouse=True)

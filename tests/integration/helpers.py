@@ -33,8 +33,8 @@ from tenacity import (
     wait_fixed,
 )
 
-CHARM_BASE = "ubuntu@22.04"
-CHARM_SERIES = "jammy"
+CHARM_BASE = "ubuntu@24.04"
+CHARM_SERIES = "noble"
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
 APPLICATION_NAME = "postgresql-test-app"

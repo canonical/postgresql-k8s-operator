@@ -46,7 +46,7 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
         ops_test.model.deploy(
             DATABASE_APP_NAME,
             num_units=3,
-            channel="14/stable",
+            channel="16/stable",
             revision=LABEL_REVISION,
             base=CHARM_BASE,
             trust=True,

@@ -33,6 +33,7 @@ TIMEOUT = 10 * 60
 
 
 @pytest.mark.group(1)
+@pytest.mark.unstable
 @markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_deploy_stable(ops_test: OpsTest) -> None:
@@ -41,7 +42,7 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
         ops_test.model.deploy(
             DATABASE_APP_NAME,
             num_units=3,
-            channel="14/stable",
+            channel="16/stable",
             trust=True,
             base=CHARM_BASE,
         ),
@@ -61,13 +62,14 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.group(1)
+@pytest.mark.unstable
 @markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     """Test that the pre-upgrade-check action runs successfully."""
     application = ops_test.model.applications[DATABASE_APP_NAME]
     if "pre-upgrade-check" not in await application.get_actions():
-        logger.info("skipping the test because the charm from 14/stable doesn't support upgrade")
+        logger.info("skipping the test because the charm from 16/stable doesn't support upgrade")
         return
 
     logger.info("Get leader unit")
@@ -94,6 +96,7 @@ async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.group(1)
+@pytest.mark.unstable
 @markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_upgrade_from_stable(ops_test: OpsTest, continuous_writes):

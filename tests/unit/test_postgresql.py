@@ -163,6 +163,7 @@ def test_generate_database_privileges_statements(harness):
     assert harness.charm.postgresql._generate_database_privileges_statements(
         1, ["test_schema_1", "test_schema_2"], "test_user"
     ) == [
+        SQL("GRANT USAGE, CREATE ON SCHEMA public TO admin;"),
         Composed([
             SQL(
                 "DO $$\nDECLARE r RECORD;\nBEGIN\n  FOR r IN (SELECT statement FROM (SELECT 1 AS index,'ALTER TABLE '|| schemaname || '.\"' || tablename ||'\" OWNER TO "
@@ -212,6 +213,7 @@ def test_generate_database_privileges_statements(harness):
     assert harness.charm.postgresql._generate_database_privileges_statements(
         2, ["test_schema_1", "test_schema_2"], "test_user"
     ) == [
+        SQL("GRANT USAGE, CREATE ON SCHEMA public TO admin;"),
         Composed([
             SQL("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA "),
             Identifier("test_schema_1"),
@@ -234,18 +236,16 @@ def test_generate_database_privileges_statements(harness):
             SQL(";"),
         ]),
         Composed([
-            SQL("GRANT USAGE ON SCHEMA "),
+            SQL("GRANT USAGE, CREATE ON SCHEMA "),
             Identifier("test_schema_1"),
             SQL(" TO "),
             Identifier("test_user"),
             SQL(";"),
         ]),
         Composed([
-            SQL("GRANT CREATE ON SCHEMA "),
+            SQL("GRANT USAGE, CREATE ON SCHEMA "),
             Identifier("test_schema_1"),
-            SQL(" TO "),
-            Identifier("test_user"),
-            SQL(";"),
+            SQL(" TO admin;"),
         ]),
         Composed([
             SQL("GRANT ALL PRIVILEGES ON ALL TABLES IN SCHEMA "),
@@ -269,18 +269,16 @@ def test_generate_database_privileges_statements(harness):
             SQL(";"),
         ]),
         Composed([
-            SQL("GRANT USAGE ON SCHEMA "),
+            SQL("GRANT USAGE, CREATE ON SCHEMA "),
             Identifier("test_schema_2"),
             SQL(" TO "),
             Identifier("test_user"),
             SQL(";"),
         ]),
         Composed([
-            SQL("GRANT CREATE ON SCHEMA "),
+            SQL("GRANT USAGE, CREATE ON SCHEMA "),
             Identifier("test_schema_2"),
-            SQL(" TO "),
-            Identifier("test_user"),
-            SQL(";"),
+            SQL(" TO admin;"),
         ]),
     ]
 

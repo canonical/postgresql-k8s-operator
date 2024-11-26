@@ -498,7 +498,7 @@ class Patroni:
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 
-    @retry(stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30))
+    @retry(stop=stop_after_attempt(20), wait=wait_exponential(multiplier=1, min=2, max=30))
     def reload_patroni_configuration(self) -> None:
         """Reloads the configuration after it was updated in the file."""
         requests.post(f"{self._patroni_url}/reload", verify=self._verify, auth=self._patroni_auth)
