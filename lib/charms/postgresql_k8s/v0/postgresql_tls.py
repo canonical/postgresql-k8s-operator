@@ -33,7 +33,8 @@ from charms.tls_certificates_interface.v2.tls_certificates import (
 )
 from ops.charm import ActionEvent, RelationBrokenEvent
 from ops.framework import Object
-from ops.pebble import ConnectionError, PathError, ProtocolError
+from ops.pebble import ConnectionError as PebbleConnectionError
+from ops.pebble import PathError, ProtocolError
 from tenacity import RetryError
 
 # The unique Charmhub library identifier, never change it
@@ -140,7 +141,7 @@ class PostgreSQLTLS(Object):
                 logger.debug("Cannot push TLS certificates at this moment")
                 event.defer()
                 return
-        except (ConnectionError, PathError, ProtocolError, RetryError) as e:
+        except (PebbleConnectionError, PathError, ProtocolError, RetryError) as e:
             logger.error("Cannot push TLS certificates: %r", e)
             event.defer()
             return

@@ -21,7 +21,7 @@ from ops.model import (
 )
 from ops.pebble import Change, ChangeError, ChangeID, ServiceStatus
 from ops.testing import Harness
-from requests import ConnectionError
+from requests import ConnectionError as RequestsConnectionError
 from tenacity import RetryError, wait_fixed
 
 from charm import EXTENSION_OBJECT_MESSAGE, PostgresqlOperatorCharm
@@ -1723,13 +1723,13 @@ def test_set_active_status(harness):
         for values in itertools.product(
             [
                 RetryError(last_attempt=1),
-                ConnectionError,
+                RequestsConnectionError,
                 harness.charm.unit.name,
                 f"{harness.charm.app.name}/2",
             ],
             [
                 RetryError(last_attempt=1),
-                ConnectionError,
+                RequestsConnectionError,
                 True,
                 False,
             ],

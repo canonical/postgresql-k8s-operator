@@ -640,6 +640,10 @@ def test_get_nearest_timeline(harness):
         _list_timelines.return_value = dict[str, tuple[str, str]]({
             "2023-02-24T05:00:00Z": ("test-stanza", "2")
         })
+        assert harness.charm.backup._get_nearest_timeline("latest") == tuple[str, str]((
+            "test-stanza",
+            "2",
+        ))
         assert harness.charm.backup._get_nearest_timeline("2025-01-01 00:00:00") == tuple[
             str, str
         ](("test-stanza", "2"))
@@ -1614,6 +1618,55 @@ def test_on_restore_action(harness):
         mock_event.fail.assert_not_called()
         mock_event.set_results.assert_called_once_with({"restore-status": "restore started"})
 
+        # Test a failed PITR with only the restore-to-time parameter equal to latest
+        # (it should fail when there is no base backup created from the latest timeline).
+        mock_event.reset_mock()
+        _empty_data_files.reset_mock()
+        with harness.hooks_disabled():
+            harness.update_relation_data(
+                peer_rel_id,
+                harness.charm.app.name,
+                {
+                    "restore-timeline": "",
+                    "restore-to-time": "",
+                    "restore-stanza": "",
+                },
+            )
+        _create_pgdata.reset_mock()
+        _update_config.reset_mock()
+        _start.reset_mock()
+        mock_event.params = {"restore-to-time": "latest"}
+        harness.charm.backup._on_restore_action(mock_event)
+        _empty_data_files.assert_not_called()
+        _restart_database.assert_not_called()
+        assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {}
+        _create_pgdata.assert_not_called()
+        _update_config.assert_not_called()
+        _start.assert_not_called()
+        mock_event.set_results.assert_not_called()
+        mock_event.fail.assert_called_once()
+
+        # Test a successful PITR with only the restore-to-time parameter equal to latest.
+        mock_event.reset_mock()
+        mock_event.params = {"restore-to-time": "latest"}
+        _list_backups.return_value = {
+            "2023-01-01T09:00:00Z": (harness.charm.backup.stanza_name, "1"),
+            "2024-02-24T05:00:00Z": (harness.charm.backup.stanza_name, "2"),
+        }
+        harness.charm.backup._on_restore_action(mock_event)
+        _empty_data_files.assert_called_once()
+        _restart_database.assert_not_called()
+        assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {
+            "restore-timeline": "2",
+            "restore-to-time": "latest",
+            "restore-stanza": f"{harness.charm.model.name}.{harness.charm.cluster_name}",
+        }
+        _create_pgdata.assert_called_once()
+        _update_config.assert_called_once()
+        _start.assert_called_once_with("postgresql")
+        mock_event.fail.assert_not_called()
+        mock_event.set_results.assert_called_once_with({"restore-status": "restore started"})
+
 
 def test_pre_restore_checks(harness):
     with (
@@ -1680,13 +1733,13 @@ def test_pre_restore_checks(harness):
         assert harness.charm.backup._pre_restore_checks(mock_event) is True
         mock_event.fail.assert_not_called()
 
-        # Test with single (bad) restore-to-time=latest parameter
+        # Test with single restore-to-time=latest parameter
         mock_event.reset_mock()
         mock_event.params = {"restore-to-time": "latest"}
-        assert harness.charm.backup._pre_restore_checks(mock_event) is False
-        mock_event.fail.assert_called_once()
+        assert harness.charm.backup._pre_restore_checks(mock_event) is True
+        mock_event.fail.assert_not_called()
 
-        # Test with good restore-to-time=latest parameter
+        # Test with both backup-id and restore-to-time=latest parameters
         mock_event.reset_mock()
         mock_event.params = {"backup-id": "2023-01-01T09:00:00Z", "restore-to-time": "latest"}
         assert harness.charm.backup._pre_restore_checks(mock_event) is True

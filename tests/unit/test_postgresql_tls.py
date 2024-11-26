@@ -5,7 +5,7 @@ import socket
 from unittest.mock import MagicMock, call, patch
 
 import pytest
-from ops.pebble import ConnectionError
+from ops.pebble import ConnectionError as PebbleConnectionError
 from ops.testing import Harness
 
 from charm import PostgresqlOperatorCharm
@@ -211,7 +211,7 @@ def test_on_certificate_available(harness):
         _push_tls_files_to_workload.assert_called_once()
         _defer.assert_not_called()
 
-        _push_tls_files_to_workload.side_effect = ConnectionError
+        _push_tls_files_to_workload.side_effect = PebbleConnectionError
         emit_certificate_available_event(harness)
         _defer.assert_called_once()
 
