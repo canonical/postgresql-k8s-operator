@@ -193,7 +193,11 @@ def test_on_async_relation_changed(harness, wait_for_standby):
     )
     harness.set_can_connect("postgresql", True)
     harness.handle_exec("postgresql", [], result=0)
-    harness.add_relation(REPLICATION_OFFER_RELATION, harness.charm.app.name)
+    with patch(
+        "relations.async_replication.PostgreSQLAsyncReplication._get_unit_ip",
+        return_value="10.1.1.10",
+    ):
+        harness.add_relation(REPLICATION_OFFER_RELATION, harness.charm.app.name)
     assert harness.charm.async_replication.get_primary_cluster().name == harness.charm.app.name
 
     with (
@@ -215,6 +219,10 @@ def test_on_async_relation_changed(harness, wait_for_standby):
         patch(
             "relations.async_replication.PostgreSQLAsyncReplication._wait_for_standby_leader",
             return_value=wait_for_standby,
+        ),
+        patch(
+            "relations.async_replication.PostgreSQLAsyncReplication._get_unit_ip",
+            return_value="10.2.2.10",
         ),
     ):
         _pebble.get_services.return_value = ["postgresql"]
@@ -323,9 +331,13 @@ def test_on_secret_changed(harness, relation_name):
 
     secret_id = harness.add_model_secret("primary", {"operator-password": "old"})
     peer_rel_id = harness.add_relation(PEER, "primary")
-    rel_id = harness.add_relation(
-        relation_name, harness.charm.app.name, unit_data={"unit-address": "10.1.1.10"}
-    )
+    with patch(
+        "relations.async_replication.PostgreSQLAsyncReplication._get_unit_ip",
+        return_value="10.1.1.10",
+    ):
+        rel_id = harness.add_relation(
+            relation_name, harness.charm.app.name, unit_data={"unit-address": "10.1.1.10"}
+        )
 
     secret_label = (
         f"{PEER}.{harness.charm.app.name}.app"

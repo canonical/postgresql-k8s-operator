@@ -13,7 +13,6 @@ from .ha_tests.helpers import (
     change_patroni_setting,
 )
 from .helpers import (
-    CHARM_BASE,
     DATABASE_APP_NAME,
     build_and_deploy,
     check_database_creation,
@@ -84,7 +83,7 @@ async def test_tls(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
         # Deploy TLS Certificates operator.
         await ops_test.model.deploy(
-            tls_certificates_app_name, config=tls_config, channel=tls_channel, base=CHARM_BASE
+            tls_certificates_app_name, config=tls_config, channel=tls_channel
         )
         # Relate it to the PostgreSQL to enable TLS.
         await ops_test.model.relate(DATABASE_APP_NAME, tls_certificates_app_name)
@@ -129,7 +128,7 @@ async def test_tls(ops_test: OpsTest) -> None:
                 await run_command_on_unit(
                     ops_test,
                     replica,
-                    'su postgres -c "/usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/data/pgdata promote"',
+                    'su postgres -c "/usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/data/pgdata promote"',
                 )
 
                 # Check that the replica was promoted.
