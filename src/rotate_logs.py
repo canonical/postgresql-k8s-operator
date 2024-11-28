@@ -10,7 +10,8 @@ import time
 def main():
     """Main loop that calls logrotate."""
     while True:
-        subprocess.run(["logrotate", "-f", "/etc/logrotate.d/pgbackrest.logrotate"])
+        # Command is hardcoded
+        subprocess.run(["/usr/sbin/logrotate", "-f", "/etc/logrotate.d/pgbackrest.logrotate"])  # noqa: S603
 
         # Wait 60 seconds before executing logrotate again.
         time.sleep(60)
