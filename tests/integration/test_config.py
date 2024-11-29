@@ -30,6 +30,7 @@ async def test_config_parameters(ops_test: OpsTest) -> None:
     test_string = "abcXYZ123"
 
     configs = [
+        {"durability_synchronous_node_count": [0, 1]},  # config option is greater than 0
         {
             "durability_synchronous_commit": [test_string, "on"]
         },  # config option is one of `on`, `remote_apply` or `remote_write`
