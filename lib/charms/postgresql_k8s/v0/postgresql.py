@@ -654,7 +654,7 @@ WHERE lomowner = (SELECT oid FROM pg_roles WHERE rolname = '{}');""".format(user
                 "request",
                 "response",
                 "vacuum",
-            )) or config in ("durability_synchronous_node_count"):
+            )) or config in ("durability_synchronous_node_count",):
                 continue
             parameter = "_".join(config.split("_")[1:])
             if parameter in ["date_style", "time_zone"]:
