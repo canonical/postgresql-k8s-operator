@@ -640,6 +640,10 @@ def test_get_nearest_timeline(harness):
         _list_timelines.return_value = dict[str, tuple[str, str]]({
             "2023-02-24T05:00:00Z": ("test-stanza", "2")
         })
+        assert harness.charm.backup._get_nearest_timeline("latest") == tuple[str, str]((
+            "test-stanza",
+            "2",
+        ))
         assert harness.charm.backup._get_nearest_timeline("2025-01-01 00:00:00") == tuple[
             str, str
         ](("test-stanza", "2"))
@@ -753,7 +757,6 @@ def test_check_stanza(harness):
     with (
         patch("charm.PostgresqlOperatorCharm.update_config"),
         patch("backups.wait_fixed", return_value=wait_fixed(0)),
-        patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
         patch("charm.Patroni.reload_patroni_configuration") as _reload_patroni_configuration,
         patch("charm.PostgreSQLBackups._execute_command") as _execute_command,
         patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
@@ -778,12 +781,10 @@ def test_check_stanza(harness):
             f"--stanza={harness.charm.backup.stanza_name}",
             "check",
         ]
-        _member_started.return_value = False
         _execute_command.side_effect = ExecError(
             command=stanza_check_command, exit_code=1, stdout="", stderr="fake error"
         )
         assert not harness.charm.backup.check_stanza()
-        _member_started.assert_called()
         _reload_patroni_configuration.assert_not_called()
         _set_active_status.assert_not_called()
         _s3_initialization_set_failure.assert_called_once_with(
@@ -792,10 +793,8 @@ def test_check_stanza(harness):
 
         _execute_command.reset_mock()
         _s3_initialization_set_failure.reset_mock()
-        _member_started.return_value = True
         _execute_command.side_effect = None
         assert harness.charm.backup.check_stanza()
-        _reload_patroni_configuration.assert_called_once()
         _execute_command.assert_called_once()
         _set_active_status.assert_called_once()
         _s3_initialization_set_failure.assert_not_called()
@@ -812,7 +811,6 @@ def test_check_stanza(harness):
 def test_coordinate_stanza_fields(harness):
     with (
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
-        patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
         patch("charm.Patroni.reload_patroni_configuration") as _reload_patroni_configuration,
     ):
         peer_rel_id = harness.model.get_relation(PEER).id
@@ -848,7 +846,6 @@ def test_coordinate_stanza_fields(harness):
 
         # Test with clear values.
         harness.charm.backup.coordinate_stanza_fields()
-        _member_started.assert_not_called()
         assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {}
         assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {}
         assert harness.get_relation_data(peer_rel_id, new_unit) == {}
@@ -858,7 +855,6 @@ def test_coordinate_stanza_fields(harness):
             harness.update_relation_data(peer_rel_id, new_unit_name, peer_data_primary_error)
         harness.charm.backup.coordinate_stanza_fields()
         _update_config.assert_not_called()
-        _member_started.assert_not_called()
         assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {}
         assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {}
         assert harness.get_relation_data(peer_rel_id, new_unit) == peer_data_primary_error
@@ -870,18 +866,15 @@ def test_coordinate_stanza_fields(harness):
             )
         harness.charm.backup.coordinate_stanza_fields()
         _update_config.assert_not_called()
-        _member_started.assert_not_called()
         assert harness.get_relation_data(peer_rel_id, harness.charm.app) == peer_data_leader_start
         assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {}
         assert harness.get_relation_data(peer_rel_id, new_unit) == peer_data_primary_error
 
         # Leader should sync fail result from the primary.
-        _member_started.return_value = False
         with harness.hooks_disabled():
             harness.set_leader()
         harness.charm.backup.coordinate_stanza_fields()
         _update_config.assert_called_once()
-        _member_started.assert_called_once()
         _reload_patroni_configuration.assert_not_called()
         assert harness.get_relation_data(peer_rel_id, harness.charm.app) == peer_data_leader_error
         assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {}
@@ -889,7 +882,6 @@ def test_coordinate_stanza_fields(harness):
 
         # Test with successful result from the primary.
         _update_config.reset_mock()
-        _member_started.return_value = True
         with harness.hooks_disabled():
             harness.update_relation_data(peer_rel_id, harness.charm.app.name, peer_data_clean)
             harness.update_relation_data(
@@ -899,7 +891,6 @@ def test_coordinate_stanza_fields(harness):
             harness.update_relation_data(peer_rel_id, new_unit_name, peer_data_primary_ok)
         harness.charm.backup.coordinate_stanza_fields()
         _update_config.assert_called_once()
-        _reload_patroni_configuration.assert_called_once()
         assert harness.get_relation_data(peer_rel_id, harness.charm.app) == peer_data_leader_ok
         assert harness.get_relation_data(peer_rel_id, harness.charm.unit) == {}
         assert harness.get_relation_data(peer_rel_id, new_unit) == peer_data_primary_ok
@@ -1066,7 +1057,6 @@ def test_on_s3_credential_changed(harness):
 def test_on_s3_credential_changed_primary(harness):
     with (
         patch("charm.PostgresqlOperatorCharm.update_config"),
-        patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
         patch("charm.Patroni.reload_patroni_configuration") as _reload_patroni_configuration,
         patch(
             "charm.PostgreSQLBackups._create_bucket_if_not_exists"
@@ -1085,10 +1075,8 @@ def test_on_s3_credential_changed_primary(harness):
     ):
         mock_event = MagicMock()
 
-        _member_started.return_value = False
         _create_bucket_if_not_exists.side_effect = ValueError()
         assert not harness.charm.backup._on_s3_credential_changed_primary(mock_event)
-        _member_started.assert_called_once()
         _reload_patroni_configuration.assert_not_called()
         _create_bucket_if_not_exists.assert_called_once()
         _s3_initialization_set_failure.assert_called_once_with(
@@ -1097,11 +1085,9 @@ def test_on_s3_credential_changed_primary(harness):
         _can_use_s3_repository.assert_not_called()
 
         _s3_initialization_set_failure.reset_mock()
-        _member_started.return_value = True
         _create_bucket_if_not_exists.side_effect = None
         _can_use_s3_repository.return_value = (False, ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE)
         assert not harness.charm.backup._on_s3_credential_changed_primary(mock_event)
-        _reload_patroni_configuration.assert_called_once()
         _can_use_s3_repository.assert_called_once()
         _s3_initialization_set_failure.assert_called_once_with(
             ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE
@@ -1614,6 +1600,55 @@ def test_on_restore_action(harness):
         mock_event.fail.assert_not_called()
         mock_event.set_results.assert_called_once_with({"restore-status": "restore started"})
 
+        # Test a failed PITR with only the restore-to-time parameter equal to latest
+        # (it should fail when there is no base backup created from the latest timeline).
+        mock_event.reset_mock()
+        _empty_data_files.reset_mock()
+        with harness.hooks_disabled():
+            harness.update_relation_data(
+                peer_rel_id,
+                harness.charm.app.name,
+                {
+                    "restore-timeline": "",
+                    "restore-to-time": "",
+                    "restore-stanza": "",
+                },
+            )
+        _create_pgdata.reset_mock()
+        _update_config.reset_mock()
+        _start.reset_mock()
+        mock_event.params = {"restore-to-time": "latest"}
+        harness.charm.backup._on_restore_action(mock_event)
+        _empty_data_files.assert_not_called()
+        _restart_database.assert_not_called()
+        assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {}
+        _create_pgdata.assert_not_called()
+        _update_config.assert_not_called()
+        _start.assert_not_called()
+        mock_event.set_results.assert_not_called()
+        mock_event.fail.assert_called_once()
+
+        # Test a successful PITR with only the restore-to-time parameter equal to latest.
+        mock_event.reset_mock()
+        mock_event.params = {"restore-to-time": "latest"}
+        _list_backups.return_value = {
+            "2023-01-01T09:00:00Z": (harness.charm.backup.stanza_name, "1"),
+            "2024-02-24T05:00:00Z": (harness.charm.backup.stanza_name, "2"),
+        }
+        harness.charm.backup._on_restore_action(mock_event)
+        _empty_data_files.assert_called_once()
+        _restart_database.assert_not_called()
+        assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {
+            "restore-timeline": "2",
+            "restore-to-time": "latest",
+            "restore-stanza": f"{harness.charm.model.name}.{harness.charm.cluster_name}",
+        }
+        _create_pgdata.assert_called_once()
+        _update_config.assert_called_once()
+        _start.assert_called_once_with("postgresql")
+        mock_event.fail.assert_not_called()
+        mock_event.set_results.assert_called_once_with({"restore-status": "restore started"})
+
 
 def test_pre_restore_checks(harness):
     with (
@@ -1680,13 +1715,13 @@ def test_pre_restore_checks(harness):
         assert harness.charm.backup._pre_restore_checks(mock_event) is True
         mock_event.fail.assert_not_called()
 
-        # Test with single (bad) restore-to-time=latest parameter
+        # Test with single restore-to-time=latest parameter
         mock_event.reset_mock()
         mock_event.params = {"restore-to-time": "latest"}
-        assert harness.charm.backup._pre_restore_checks(mock_event) is False
-        mock_event.fail.assert_called_once()
+        assert harness.charm.backup._pre_restore_checks(mock_event) is True
+        mock_event.fail.assert_not_called()
 
-        # Test with good restore-to-time=latest parameter
+        # Test with both backup-id and restore-to-time=latest parameters
         mock_event.reset_mock()
         mock_event.params = {"backup-id": "2023-01-01T09:00:00Z", "restore-to-time": "latest"}
         assert harness.charm.backup._pre_restore_checks(mock_event) is True

@@ -6,7 +6,7 @@ options:
     description: |
       Sets the number of synchronous nodes to be maintained in the cluster. Should be
       a positive value.
-      type: integer
+    type: int
   durability_synchronous_commit:
     description: |
       Sets the current transactions synchronization level. This charm allows only the
