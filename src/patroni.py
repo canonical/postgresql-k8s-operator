@@ -129,16 +129,26 @@ class Patroni:
             url = self._patroni_url
         return url
 
-    def update_synchronous_node_count(self, units: int | None = None) -> None:
+    @property
+    def _synchronous_node_count(self) -> int:
+        pass
+        units = (
+            self._charm.config.durability_synchronous_node_count
+            if self._charm.config.durability_synchronous_node_count
+            else self._members_count - 1
+        )
+        if units > self._members_count - 1:
+            units = self._members_count - 1
+        return units
+
+    def update_synchronous_node_count(self) -> None:
         """Update synchronous_node_count."""
-        if units is None:
-            units = self._members_count
         # Try to update synchronous_node_count.
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
             with attempt:
                 r = requests.patch(
                     f"{self._patroni_url}/config",
-                    json={"synchronous_node_count": units - 1},
+                    json={"synchronous_node_count": self._synchronous_node_count},
                     verify=self._verify,
                     auth=self._patroni_auth,
                 )
@@ -511,7 +521,7 @@ class Patroni:
             restore_to_latest=restore_to_latest,
             stanza=stanza,
             restore_stanza=restore_stanza,
-            synchronous_node_count=self._members_count - 1,
+            synchronous_node_count=self._synchronous_node_count,
             version=self.rock_postgresql_version.split(".")[0],
             pg_parameters=parameters,
             primary_cluster_endpoint=self._charm.async_replication.get_primary_cluster_endpoint(),
