@@ -80,7 +80,7 @@ from ops.pebble import (
     ServiceInfo,
     ServiceStatus,
 )
-from requests import ConnectionError
+from requests import ConnectionError as RequestsConnectionError
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
 from backups import CANNOT_RESTORE_PITR, S3_BLOCK_MESSAGES, PostgreSQLBackups
@@ -1002,7 +1002,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self.unit.status = ActiveStatus("Standby")
             elif self._patroni.member_started:
                 self.unit.status = ActiveStatus()
-        except (RetryError, ConnectionError) as e:
+        except (RetryError, RequestsConnectionError) as e:
             logger.error(f"failed to get primary with error {e}")
 
     def _initialize_cluster(self, event: WorkloadEvent) -> bool:
