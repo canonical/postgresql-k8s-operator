@@ -137,11 +137,8 @@ class Patroni:
             return self._members_count // 2
         elif self._charm.config.synchronous_node_count == "majority":
             return self._members_count // 2 + 1
-        return (
-            self._charm.config.synchronous_node_count
-            if self._charm.config.synchronous_node_count < self._members_count - 1
-            else self._members_count - 1
-        )
+        node_count = int(self._charm.config.synchronous_node_count)
+        return node_count if node_count < self._members_count - 1 else self._members_count - 1
 
     def update_synchronous_node_count(self) -> None:
         """Update synchronous_node_count."""

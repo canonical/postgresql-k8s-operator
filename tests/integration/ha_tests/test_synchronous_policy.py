@@ -31,7 +31,7 @@ async def test_default_all(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(apps=[app], status="active")
 
-    roles = get_cluster_roles(ops_test.model.applications[app].units[0].name)
+    roles = get_cluster_roles(ops_test, ops_test.model.applications[app].units[0].name)
 
     assert len(roles["primaries"]) == 1
     assert len(roles["sync_standbys"]) == 2
@@ -48,7 +48,7 @@ async def test_minority(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(apps=[app], status="active")
 
-    roles = get_cluster_roles(ops_test.model.applications[app].units[0].name)
+    roles = get_cluster_roles(ops_test, ops_test.model.applications[app].units[0].name)
 
     assert len(roles["primaries"]) == 1
     assert len(roles["sync_standbys"]) == 1
@@ -65,7 +65,7 @@ async def test_majority(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(apps=[app], status="active")
 
-    roles = get_cluster_roles(ops_test.model.applications[app].units[0].name)
+    roles = get_cluster_roles(ops_test, ops_test.model.applications[app].units[0].name)
 
     assert len(roles["primaries"]) == 1
     assert len(roles["sync_standbys"]) == 2
@@ -82,7 +82,7 @@ async def test_constant(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(apps=[app], status="active")
 
-    roles = get_cluster_roles(ops_test.model.applications[app].units[0].name)
+    roles = get_cluster_roles(ops_test, ops_test.model.applications[app].units[0].name)
 
     assert len(roles["primaries"]) == 1
     assert len(roles["sync_standbys"]) == 1

@@ -1177,7 +1177,7 @@ async def remove_unit_force(ops_test: OpsTest, num_units: int):
 
 
 async def get_cluster_roles(
-    ops_test: OpsTest, unit_name: str, use_ip_from_inside: bool = False
+    ops_test: OpsTest, unit_name: str
 ) -> dict[str, str | list[str] | None]:
     """Returns whether the unit a replica in the cluster."""
     unit_ip = await get_unit_address(ops_test, unit_name)
