@@ -131,15 +131,17 @@ class Patroni:
 
     @property
     def _synchronous_node_count(self) -> int:
-        pass
-        units = (
-            self._charm.config.durability_synchronous_node_count
-            if self._charm.config.durability_synchronous_node_count
+        if self._charm.config.synchronous_node_count == "all":
+            return self._members_count - 1
+        elif self._charm.config.synchronous_node_count == "minorty":
+            return self._members_count // 2
+        elif self._charm.config.synchronous_node_count == "majority":
+            return self._members_count // 2 + 1
+        return (
+            self._charm.config.synchronous_node_count
+            if self._charm.config.synchronous_node_count < self._members_count - 1
             else self._members_count - 1
         )
-        if units > self._members_count - 1:
-            units = self._members_count - 1
-        return units
 
     def update_synchronous_node_count(self) -> None:
         """Update synchronous_node_count."""

@@ -2,11 +2,12 @@
 # See LICENSE file for licensing details.
 
 options:
-  durability_synchronous_node_count:
+  synchronous_node_count:
     description: |
       Sets the number of synchronous nodes to be maintained in the cluster. Should be
-      a positive value.
-    type: int
+      either "all", "minority", "majority" or a positive value.
+    type: string
+    default: "all"
   durability_synchronous_commit:
     description: |
       Sets the current transactions synchronization level. This charm allows only the

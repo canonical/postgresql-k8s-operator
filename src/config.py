@@ -5,7 +5,7 @@
 """Structured configuration for the PostgreSQL charm."""
 
 import logging
-from typing import Optional
+from typing import Literal, Optional
 
 from charms.data_platform_libs.v0.data_models import BaseConfigModel
 from pydantic import PositiveInt, validator
@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class CharmConfig(BaseConfigModel):
     """Manager for the structured configuration."""
 
-    durability_synchronous_node_count: Optional[PositiveInt]
+    synchronous_node_count: Literal["all", "minority", "majority"] | PositiveInt
     durability_synchronous_commit: Optional[str]
     instance_default_text_search_config: Optional[str]
     instance_password_encryption: Optional[str]
