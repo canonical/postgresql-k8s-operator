@@ -1,0 +1,19 @@
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.25:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.25:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Initial writes {'test.postgresql-k8s-0': 2388, 'test.postgresql-k8s-1': 2389}
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.25:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.25:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:254 Retry writes {'test.postgresql-k8s-0': 2527, 'test.postgresql-k8s-1': 2528}
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:155 unfreezing postgres
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:160 waiting for the database service to restart on postgresql-k8s/2
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.25:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.25:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.25:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.25:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.25:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.25:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.25:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.25:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.25:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.25:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.25:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
