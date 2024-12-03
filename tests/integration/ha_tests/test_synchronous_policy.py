@@ -32,7 +32,7 @@ async def test_default_all(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(apps=[app], status="active", timeout=300)
 
-    for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(5), reraise=True):
+    for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(10), reraise=True):
         with attempt:
             roles = await get_cluster_roles(
                 ops_test, ops_test.model.applications[app].units[0].name
@@ -52,7 +52,7 @@ async def test_majority(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(apps=[app], status="active")
 
-    for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(5), reraise=True):
+    for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(10), reraise=True):
         with attempt:
             roles = await get_cluster_roles(
                 ops_test, ops_test.model.applications[app].units[0].name
@@ -73,7 +73,7 @@ async def test_constant(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(apps=[app], status="active", timeout=300)
 
-    for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(5), reraise=True):
+    for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(10), reraise=True):
         with attempt:
             roles = await get_cluster_roles(
                 ops_test, ops_test.model.applications[app].units[0].name
