@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class CharmConfig(BaseConfigModel):
     """Manager for the structured configuration."""
 
-    synchronous_node_count: Literal["all", "minority", "majority"] | PositiveInt
+    synchronous_node_count: Literal["all", "majority"] | PositiveInt
     durability_synchronous_commit: Optional[str]
     instance_default_text_search_config: Optional[str]
     instance_password_encryption: Optional[str]
