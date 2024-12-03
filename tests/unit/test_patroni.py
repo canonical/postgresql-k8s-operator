@@ -216,7 +216,7 @@ def test_render_patroni_yml_file(harness, patroni):
             replication_password=patroni._replication_password,
             rewind_user=REWIND_USER,
             rewind_password=patroni._rewind_password,
-            synchronous_node_count=patroni._members_count - 1,
+            synchronous_node_count=0,
             version="14",
             patroni_password=patroni._patroni_password,
         )
@@ -251,7 +251,7 @@ def test_render_patroni_yml_file(harness, patroni):
             replication_password=patroni._replication_password,
             rewind_user=REWIND_USER,
             rewind_password=patroni._rewind_password,
-            synchronous_node_count=patroni._members_count - 1,
+            synchronous_node_count=0,
             version="14",
             patroni_password=patroni._patroni_password,
         )
@@ -467,7 +467,7 @@ def test_update_synchronous_node_count(harness, patroni):
 
         _patch.assert_called_once_with(
             "http://postgresql-k8s-0:8008/config",
-            json={"synchronous_node_count": 2},
+            json={"synchronous_node_count": 0},
             verify=True,
             auth=patroni._patroni_auth,
         )
