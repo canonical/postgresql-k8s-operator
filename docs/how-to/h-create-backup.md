@@ -24,11 +24,11 @@ Once Charmed PostgreSQL is `active` and `idle`, you can create your first backup
 juju run postgresql-k8s/leader create-backup
 ```
 
-By default, backups created with command above will be **full** backups: a copy of *all* your data will be stored in S3. There are 2 other supported types of backups (available in revision 263+, currently in channel `14/edge` only):
+By default, backups created with command above will be **full** backups: a copy of *all* your data will be stored in S3. There are 2 other supported types of backups (available in revision 263+):
 * Differential: Only modified files since the last full backup will be stored.
 * Incremental: Only modified files since the last successful backup (of any type) will be stored.
 
-To specify the desired backup type, use the [`type`](https://charmhub.io/postgresql-k8s/actions?channel=14/edge#create-backup) parameter:
+To specify the desired backup type, use the [`type`](https://charmhub.io/postgresql-k8s/actions#create-backup) parameter:
 ```shell
 juju run postgresql-k8s/leader create-backup type={full|differential|incremental}
 ```
