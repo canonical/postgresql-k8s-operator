@@ -159,3 +159,15 @@ async def test_upgrade_from_stable(ops_test: OpsTest, continuous_writes):
         assert (final_number_of_switchovers - initial_number_of_switchovers) <= 2, (
             "Number of switchovers is greater than 2"
         )
+
+    # Remove the relation, and add it back again to test for errors in the upgrade process.
+    logger.info("Remove the relation")
+    await ops_test.model.applications[APPLICATION_NAME].remove_relation(
+        f"{APPLICATION_NAME}:database", DATABASE_APP_NAME
+    )
+    async with ops_test.fast_forward("60s"):
+        await ops_test.model.wait_for_idle(
+            apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
+        )
+    logger.info("Relate back again and start continuous writes to the database")
+    await start_continuous_writes(ops_test, DATABASE_APP_NAME)
