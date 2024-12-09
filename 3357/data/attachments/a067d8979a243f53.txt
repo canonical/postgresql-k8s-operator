@@ -1,0 +1,220 @@
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:494 starting continuous writes to the database
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:497 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Initial writes {'test.postgresql-k8s-0': 159, 'test.postgresql-k8s-1': 161}
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:254 Retry writes {'test.postgresql-k8s-0': 294, 'test.postgresql-k8s-1': 296}
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:501 scaling out the first cluster
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s (waiting for exactly 4 units, current : 3)
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [executing] active: Primary
+  postgresql-k8s/1 [executing] active: 
+  postgresql-k8s/2 [executing] active: 
+  postgresql-k8s/3 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: 
+  postgresql-k8s/3 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: 
+  postgresql-k8s/3 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/3 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/3 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/3 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/3 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/3 [executing] active: 
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:505 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test-other/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Initial writes {'test.postgresql-k8s-0': 12298, 'test.postgresql-k8s-1': 12300, 'test-other.postgresql-k8s-1': 12301}
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test-other/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:254 Retry writes {'test.postgresql-k8s-0': 12391, 'test.postgresql-k8s-1': 12392, 'test-other.postgresql-k8s-1': 12392}
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:508 scaling out the second cluster
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s (waiting for exactly 4 units, current : 3)
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Standby
+  postgresql-k8s/2 [idle] active: 
+  postgresql-k8s/3 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Standby
+  postgresql-k8s/2 [idle] active: 
+  postgresql-k8s/3 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Standby
+  postgresql-k8s/2 [idle] active: 
+  postgresql-k8s/3 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/3 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/3 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/3 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/3 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/3 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/3 [idle] active: 
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:514 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test-other/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Initial writes {'test.postgresql-k8s-0': 24342, 'test.postgresql-k8s-1': 24344, 'test-other.postgresql-k8s-1': 24346}
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test-other/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:254 Retry writes {'test.postgresql-k8s-0': 24456, 'test.postgresql-k8s-1': 24458, 'test-other.postgresql-k8s-1': 24459}
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:517 scaling in the first cluster
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s (waiting for exactly 3 units, current : 4)
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s (waiting for exactly 3 units, current : 4)
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:520 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test-other/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Initial writes {'test.postgresql-k8s-0': 27063, 'test.postgresql-k8s-1': 27064, 'test-other.postgresql-k8s-1': 27066}
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test-other/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:254 Retry writes {'test.postgresql-k8s-0': 27205, 'test.postgresql-k8s-1': 27206, 'test-other.postgresql-k8s-1': 27207}
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:523 scaling in the second cluster
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s (waiting for exactly 3 units, current : 4)
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s (waiting for exactly 3 units, current : 4)
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Standby
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:528 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test-other/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Initial writes {'test.postgresql-k8s-0': 30416, 'test.postgresql-k8s-1': 30417, 'test-other.postgresql-k8s-1': 30419}
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test-other/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:254 Retry writes {'test.postgresql-k8s-0': 30499, 'test.postgresql-k8s-1': 30499, 'test-other.postgresql-k8s-1': 30500}
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:533 checking whether no writes were lost
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.127:16443/api/v1/namespaces/test-other/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:87 Destroying second model
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.4.6    unsupported  02:05:07Z
+
+App                  Version  Status  Scale  Charm                Channel      Rev  Address         Exposed  Message
+postgresql-k8s       14.13    active      3  postgresql-k8s                      0  10.152.183.96   no       Primary
+postgresql-test-app           active      1  postgresql-test-app  latest/edge  295  10.152.183.107  no       received database credentials of the first database
+
+Unit                    Workload  Agent      Address      Ports  Message
+postgresql-k8s/0*       active    executing  10.1.13.140         Primary
+postgresql-k8s/1        active    executing  10.1.13.142         
+postgresql-k8s/2        active    executing  10.1.13.151         
+postgresql-test-app/0*  active    idle       10.1.13.149         received database credentials of the first database
+
+Offer              Application     Charm           Rev  Connected  Endpoint           Interface         Role
+replication        postgresql-k8s  postgresql-k8s  0    0/0        replication        postgresql_async  requirer
+replication-offer  postgresql-k8s  postgresql-k8s  0    1/1        replication-offer  postgresql_async  provider
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-postgresql-k8s-2: 01:33:52 ERROR unit.postgresql-k8s/2.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-postgresql-k8s-2: 01:45:39 ERROR juju.api.watcher error trying to stop watcher: bad catacomb ErrDying: still alive
+unit-postgresql-k8s-2: 01:45:41 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: bad catacomb ErrDying: still alive
+unit-postgresql-k8s-2: 01:49:57 ERROR unit.postgresql-k8s/2.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-postgresql-k8s-2: 02:03:12 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 02:03:12 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 02:03:16 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 02:03:16 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 02:03:16 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 02:03:16 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 02:03:21 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 02:03:21 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 02:03:26 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 02:03:26 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 02:03:26 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 02:03:26 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 02:03:31 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 02:03:31 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 02:03:35 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 02:03:35 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 02:03:35 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 02:03:35 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 02:03:44 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 02:03:44 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 02:03:48 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 02:03:48 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 02:03:50 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 02:03:50 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 02:03:52 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 02:03:52 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 02:03:57 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 02:03:57 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 02:03:57 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 02:03:57 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 02:04:00 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 02:04:00 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 02:04:06 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 02:04:06 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 02:04:06 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 02:04:06 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 02:04:11 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 02:04:11 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 02:04:16 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 02:04:16 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 02:04:16 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 02:04:16 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 02:04:21 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 02:04:21 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 02:04:26 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 02:04:26 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 02:04:26 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 02:04:26 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 02:04:30 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 02:04:30 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 02:04:34 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 02:04:34 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 02:04:34 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 02:04:34 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 02:04:40 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 02:04:40 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 02:04:45 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 02:04:45 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 02:04:45 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 02:04:45 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 02:04:50 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 02:04:50 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 02:04:57 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-1: 02:04:57 ERROR unit.postgresql-k8s/1.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 02:04:59 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-2: 02:04:59 ERROR unit.postgresql-k8s/2.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 02:05:00 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service get failed: services "postgresql-k8s" not found
+unit-postgresql-k8s-0: 02:05:00 ERROR unit.postgresql-k8s/0.juju-log Kubernetes service patch failed: services "postgresql-k8s" not found
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
