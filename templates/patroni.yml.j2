@@ -140,6 +140,8 @@ postgresql:
   {%- if not connectivity %}
   - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 reject
   - {{ 'hostssl' if enable_tls else 'host' }} all all {{ endpoint }}.{{ namespace }}.svc.cluster.local md5
+  {% elif enable_ldap %}
+  - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 ldap {{ ldap_parameters }}
   {% else %}
   - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 md5
   {%- endif %}
