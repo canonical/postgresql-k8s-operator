@@ -331,7 +331,7 @@ async def execute_query_on_unit(
     password: str,
     query: str,
     database: str = "postgres",
-    sslmode: str = None,
+    sslmode: Optional[str] = None,
 ):
     """Execute given PostgreSQL query on a unit.
 
@@ -458,8 +458,8 @@ async def get_password(
     ops_test: OpsTest,
     username: str = "operator",
     database_app_name: str = DATABASE_APP_NAME,
-    down_unit: str = None,
-    unit_name: str = None,
+    down_unit: Optional[str] = None,
+    unit_name: Optional[str] = None,
 ):
     """Retrieve a user password using the action."""
     for unit in ops_test.model.applications[database_app_name].units:
@@ -476,7 +476,7 @@ async def get_password(
     wait=wait_exponential(multiplier=1, min=2, max=30),
 )
 async def get_primary(
-    ops_test: OpsTest, database_app_name: str = DATABASE_APP_NAME, down_unit: str = None
+    ops_test: OpsTest, database_app_name: str = DATABASE_APP_NAME, down_unit: Optional[str] = None
 ) -> str:
     """Get the primary unit.
 
@@ -582,10 +582,7 @@ async def check_tls_replication(ops_test: OpsTest, unit_name: str, enabled: bool
         " AND pg_sa.usename = 'replication';",
     )
 
-    for i in range(0, len(output), 2):
-        if output[i] != enabled:
-            return False
-    return True
+    return all(output[i] == enabled for i in range(0, len(output), 2))
 
 
 async def check_tls_patroni_api(ops_test: OpsTest, unit_name: str, enabled: bool) -> bool:
@@ -694,12 +691,7 @@ async def run_command_on_unit(
     return_code, stdout, stderr = await ops_test.juju(*complete_command.split())
     if return_code != 0:
         raise Exception(
-            "Expected command %s to succeed instead it failed: %s. Code: %s"
-            % (
-                command,
-                stderr,
-                return_code,
-            )
+            f"Expected command {command} to succeed instead it failed: {stderr}. Code: {return_code}"
         )
     return stdout
 
@@ -733,7 +725,7 @@ async def scale_application(
 
 
 async def set_password(
-    ops_test: OpsTest, unit_name: str, username: str = "operator", password: str = None
+    ops_test: OpsTest, unit_name: str, username: str = "operator", password: Optional[str] = None
 ):
     """Set a user password using the action."""
     unit = ops_test.model.units.get(unit_name)
@@ -746,7 +738,7 @@ async def set_password(
 
 
 async def switchover(
-    ops_test: OpsTest, current_primary: str, password: str, candidate: str = None
+    ops_test: OpsTest, current_primary: str, password: str, candidate: Optional[str] = None
 ) -> None:
     """Trigger a switchover.
 

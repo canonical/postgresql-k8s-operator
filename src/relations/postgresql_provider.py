@@ -227,27 +227,25 @@ class PostgreSQLProvider(Object):
     def _check_multiple_endpoints(self) -> bool:
         """Checks if there are relations with other endpoints."""
         relation_names = {relation.name for relation in self.charm.client_relations}
-        if "database" in relation_names and len(relation_names) > 1:
-            return True
-        return False
+        return "database" in relation_names and len(relation_names) > 1
 
     def _update_unit_status_on_blocking_endpoint_simultaneously(self):
         """Clean up Blocked status if this is due related of multiple endpoints."""
         if (
             self.charm._has_blocked_status
             and self.charm.unit.status.message == ENDPOINT_SIMULTANEOUSLY_BLOCKING_MESSAGE
+            and not self._check_multiple_endpoints()
         ):
-            if not self._check_multiple_endpoints():
-                self.charm.unit.status = ActiveStatus()
+            self.charm.unit.status = ActiveStatus()
 
     def _update_unit_status(self, relation: Relation) -> None:
         """# Clean up Blocked status if it's due to extensions request."""
         if (
             self.charm._has_blocked_status
             and self.charm.unit.status.message == INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE
+            and not self.check_for_invalid_extra_user_roles(relation.id)
         ):
-            if not self.check_for_invalid_extra_user_roles(relation.id):
-                self.charm.unit.status = ActiveStatus()
+            self.charm.unit.status = ActiveStatus()
 
         self._update_unit_status_on_blocking_endpoint_simultaneously()
 
