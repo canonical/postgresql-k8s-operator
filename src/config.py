@@ -8,7 +8,7 @@ import logging
 from typing import Optional
 
 from charms.data_platform_libs.v1.data_models import BaseConfigModel
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 
 logger = logging.getLogger(__name__)
 
@@ -19,6 +19,13 @@ class CharmConfig(BaseConfigModel):
     durability_synchronous_commit: Optional[str]
     instance_default_text_search_config: Optional[str]
     instance_password_encryption: Optional[str]
+    ldap_base_dn: Optional[str]
+    ldap_bind_dn: Optional[str]
+    ldap_bind_password: Optional[str]
+    ldap_search_attribute: Optional[str]
+    ldap_search_filter: Optional[str]
+    ldap_tls: Optional[int]
+    ldap_url: Optional[str]
     logging_log_connections: Optional[bool]
     logging_log_disconnections: Optional[bool]
     logging_log_lock_waits: Optional[bool]
@@ -110,6 +117,25 @@ class CharmConfig(BaseConfigModel):
     def plugin_keys(cls) -> filter:
         """Return plugin config names in a iterable."""
         return filter(lambda x: x.startswith("plugin_"), cls.keys())
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_ldap_search_options(cls, values):
+        """Check the compatibility of the LDAP search configuration."""
+        ldap_tls = values.get("ldap_tls", False)
+        ldap_url = values.get("ldap_url", "")
+
+        if ldap_tls and ldap_url.startswith("ldaps"):
+            raise ValueError("To use TLS encryption: state the normal `ldap` scheme")
+
+        ldap_base_dn = values.get("ldap_base_dn")
+        ldap_bind_dn = values.get("ldap_bind_dn")
+        ldap_bind_password = values.get("ldap_bind_password")
+
+        if ldap_url and not all((ldap_base_dn, ldap_bind_dn, ldap_bind_password)):
+            raise ValueError("To use LDAP: base_dn, bind_dn and bind_password are required")
+
+        return values
 
     @field_validator("durability_synchronous_commit")
     @classmethod

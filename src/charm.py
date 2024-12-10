@@ -114,6 +114,7 @@ from constants import (
     WORKLOAD_OS_GROUP,
     WORKLOAD_OS_USER,
 )
+from ldap import PostgreSQLLDAP
 from patroni import NotReadyError, Patroni, SwitchoverFailedError
 from relations.async_replication import (
     REPLICATION_CONSUMER_RELATION,
@@ -153,6 +154,7 @@ PASSWORD_USERS = [*SYSTEM_USERS, "patroni"]
         PostgreSQLAsyncReplication,
         PostgreSQLBackups,
         PostgreSQLProvider,
+        PostgreSQLLDAP,
         PostgreSQLTLS,
         PostgreSQLUpgrade,
         RollingOpsManager,
@@ -225,6 +227,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.legacy_db_relation = DbProvides(self, admin=False)
         self.legacy_db_admin_relation = DbProvides(self, admin=True)
         self.backup = PostgreSQLBackups(self, "s3-parameters")
+        self.ldap = PostgreSQLLDAP(self, "ldap")
         self.tls = PostgreSQLTLS(self, PEER, [self.primary_endpoint, self.replicas_endpoint])
         self.async_replication = PostgreSQLAsyncReplication(self)
         self.restart_manager = RollingOpsManager(
@@ -1567,6 +1570,26 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         )
 
     @property
+    def is_connectivity_enabled(self) -> bool:
+        """Return whether this unit can be connected externally."""
+        return self.unit_peer_data.get("connectivity", "on") == "on"
+
+    @property
+    def is_ldap_charm_related(self) -> bool:
+        """Return whether this unit has an LDAP charm related."""
+        return self.app_peer_data.get("ldap_enabled", False) is True
+
+    @property
+    def is_ldap_config_provided(self) -> bool:
+        """Return whether this unit has LDAP config provided."""
+        return self.config.ldap_url != ""
+
+    @property
+    def is_ldap_enabled(self) -> bool:
+        """Return whether this unit has LDAP enabled."""
+        return self.is_ldap_charm_related or self.is_ldap_config_provided
+
+    @property
     def is_primary(self) -> bool:
         """Return whether this unit is the primary instance."""
         return self._unit == self._patroni.get_primary(unit_name_pattern=True)
@@ -1849,8 +1872,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         logger.info("Updating Patroni config file")
         # Update and reload configuration based on TLS files availability.
         self._patroni.render_patroni_yml_file(
-            connectivity=self.unit_peer_data.get("connectivity", "on") == "on",
+            connectivity=self.is_connectivity_enabled,
             is_creating_backup=is_creating_backup,
+            enable_ldap=self.is_ldap_enabled,
             enable_tls=self.is_tls_enabled,
             is_no_sync_member=self.upgrade.is_no_sync_member,
             backup_id=self.app_peer_data.get("restoring-backup"),
@@ -2233,6 +2257,56 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             for ext in SPI_MODULE:
                 plugins.append(ext)
         return plugins
+
+    def _ldap_config_to_template_params(self) -> Dict:
+        """Maps the charm configuration options into the Patroni template expected fields."""
+        params = {
+            "ldapbasedn": self.config.ldap_base_dn,
+            "ldapbinddn": self.config.ldap_bind_dn,
+            "ldapbindpasswd": self.config.ldap_bind_password,
+            "ldaptls": self.config.ldap_tls,
+            "ldapurl": self.config.ldap_url,
+        }
+
+        search_attr = self.config.ldap_search_attribute
+        search_filter = self.config.ldap_search_filter
+
+        # Only one of the two options can be provided
+        if search_attr:
+            params.update({"ldapsearchattribute": search_attr})
+        elif search_filter:
+            params.update({"ldapsearchfilter": search_filter})
+
+        return params
+
+    def _ldap_databag_to_template_params(self) -> Dict:
+        """Maps the charm configuration options into the Patroni template expected fields."""
+        config = self.ldap.get_ldap_information()
+
+        return {
+            "ldapbasedn": config["base_dn"],
+            "ldapbinddn": config["bind_dn"],
+            "ldapbindpasswd": config["bind_password"],
+            "ldaptls": config["starttls"],
+            "ldapurl": config["urls"][0],
+        }
+
+    def get_ldap_parameters(self) -> str:
+        """Returns the LDAP configuration to use.
+
+        The charm configuration options take preference over the GLAuth relationship data
+        """
+        if self.is_ldap_config_provided:
+            logger.debug("LDAP is enabled by the charm configuration")
+            params = self._ldap_config_to_template_params()
+        elif self.is_ldap_charm_related:
+            logger.debug("LDAP is enabled by another charm relation")
+            params = self._ldap_databag_to_template_params()
+        else:
+            logger.debug("LDAP is not enabled")
+            params = {}
+
+        return self.ldap.dict_to_hba_string(params)
 
 
 if __name__ == "__main__":

@@ -23,6 +23,42 @@ options:
       Allowed values are: “md5” and “scram-sha-256”.
     type: string
     default: "scram-sha-256"
+  ldap_base_dn:
+    description: |
+      Root DN to begin the search for the user in.
+    type: string
+    default: ""
+  ldap_bind_dn:
+    description: |
+      DN of user to bind to the directory with to perform the search.
+    type: string
+    default: ""
+  ldap_bind_password:
+    description: |
+      Password for user to bind to the directory with to perform the search.
+    type: string
+    default: ""
+  ldap_search_attribute:
+    description: |
+      Attribute to match against the user name in the search.
+    type: string
+    default: "uid"
+  ldap_search_filter:
+    description: |
+      The search filter to use. This allows for more flexible search than ldap_search_attribute.
+    type: string
+    default: "(uid=$username)"
+  ldap_tls:
+    description: |
+      Set to true to make the connection between PostgreSQL and the LDAP server use TLS encryption.
+    type: boolean
+    default: false
+  ldap_url:
+    description: |
+      An RFC 4516 LDAP URL. Combines the LDAP scheme, host and port.
+      Example: ldap://ldap.example.net:3893
+    type: string
+    default: ""
   logging_log_connections:
     description: |
       Logs each successful connection.
