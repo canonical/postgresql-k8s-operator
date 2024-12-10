@@ -471,6 +471,7 @@ class Patroni:
         self,
         connectivity: bool = False,
         is_creating_backup: bool = False,
+        enable_ldap: bool = False,
         enable_tls: bool = False,
         is_no_sync_member: bool = False,
         stanza: str | None = None,
@@ -486,6 +487,7 @@ class Patroni:
 
         Args:
             connectivity: whether to allow external connections to the database.
+            enable_ldap: whether to enable LDAP authentication.
             enable_tls: whether to enable TLS.
             is_creating_backup: whether this unit is creating a backup.
             is_no_sync_member: whether this member shouldn't be a synchronous standby
@@ -505,6 +507,7 @@ class Patroni:
         # Render the template file with the correct values.
         rendered = template.render(
             connectivity=connectivity,
+            enable_ldap=enable_ldap,
             enable_tls=enable_tls,
             endpoint=self._endpoint,
             endpoints=self._endpoints,
@@ -530,6 +533,7 @@ class Patroni:
             pg_parameters=parameters,
             primary_cluster_endpoint=self._charm.async_replication.get_primary_cluster_endpoint(),
             extra_replication_endpoints=self._charm.async_replication.get_standby_endpoints(),
+            ldap_parameters=self._charm.get_ldap_parameters(),
             patroni_password=self._patroni_password,
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
