@@ -82,7 +82,7 @@ jobs:
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
       architecture: ${{ matrix.architecture }}
       cloud: microk8s
-      microk8s-snap-channel: 1.31-strict/stable  # renovate: latest microk8s
+      microk8s-snap-channel: 1.32-strict/stable  # renovate: latest microk8s
       juju-agent-version: ${{ matrix.juju.agent }}
       juju-snap-channel: ${{ matrix.juju.snap_channel }}
       libjuju-version-constraint: ${{ matrix.juju.libjuju }}
