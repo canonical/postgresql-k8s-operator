@@ -24,26 +24,25 @@ POSTGRESQL_VERSION = "14"
 
 @pytest.fixture(autouse=True)
 def harness():
-    with patch("charm.KubernetesServicePatch", lambda x, y: None):
-        harness = Harness(PostgresqlOperatorCharm)
+    harness = Harness(PostgresqlOperatorCharm)
 
-        # Set up the initial relation and hooks.
-        harness.set_leader(True)
-        harness.begin()
+    # Set up the initial relation and hooks.
+    harness.set_leader(True)
+    harness.begin()
 
-        # Define some relations.
-        rel_id = harness.add_relation(RELATION_NAME, "application")
-        harness.add_relation_unit(rel_id, "application/0")
-        peer_rel_id = harness.add_relation(PEER, harness.charm.app.name)
-        harness.add_relation_unit(peer_rel_id, f"{harness.charm.app.name}/1")
-        harness.add_relation_unit(peer_rel_id, harness.charm.unit.name)
-        harness.update_relation_data(
-            peer_rel_id,
-            harness.charm.app.name,
-            {"cluster_initialised": "True"},
-        )
-        yield harness
-        harness.cleanup()
+    # Define some relations.
+    rel_id = harness.add_relation(RELATION_NAME, "application")
+    harness.add_relation_unit(rel_id, "application/0")
+    peer_rel_id = harness.add_relation(PEER, harness.charm.app.name)
+    harness.add_relation_unit(peer_rel_id, f"{harness.charm.app.name}/1")
+    harness.add_relation_unit(peer_rel_id, harness.charm.unit.name)
+    harness.update_relation_data(
+        peer_rel_id,
+        harness.charm.app.name,
+        {"cluster_initialised": "True"},
+    )
+    yield harness
+    harness.cleanup()
 
 
 def clear_relation_data(_harness):
@@ -132,57 +131,56 @@ def test_on_relation_changed(harness):
 
 
 def test_get_extensions(harness):
-    with patch("charm.KubernetesServicePatch", lambda x, y: None):
-        # Test when there are no extensions in the relation databags.
-        rel_id = harness.model.get_relation(RELATION_NAME).id
-        relation = harness.model.get_relation(RELATION_NAME, rel_id)
-        assert harness.charm.legacy_db_relation._get_extensions(relation) == ([], set())
+    # Test when there are no extensions in the relation databags.
+    rel_id = harness.model.get_relation(RELATION_NAME).id
+    relation = harness.model.get_relation(RELATION_NAME, rel_id)
+    assert harness.charm.legacy_db_relation._get_extensions(relation) == ([], set())
 
-        # Test when there are extensions in the application relation databag.
-        extensions = ["", "citext:public", "debversion"]
-        with harness.hooks_disabled():
-            harness.update_relation_data(
-                rel_id,
-                "application",
-                {"extensions": ",".join(extensions)},
-            )
-        assert harness.charm.legacy_db_relation._get_extensions(relation) == (
-            [extensions[1], extensions[2]],
-            {extensions[1].split(":")[0], extensions[2]},
+    # Test when there are extensions in the application relation databag.
+    extensions = ["", "citext:public", "debversion"]
+    with harness.hooks_disabled():
+        harness.update_relation_data(
+            rel_id,
+            "application",
+            {"extensions": ",".join(extensions)},
         )
+    assert harness.charm.legacy_db_relation._get_extensions(relation) == (
+        [extensions[1], extensions[2]],
+        {extensions[1].split(":")[0], extensions[2]},
+    )
 
-        # Test when there are extensions in the unit relation databag.
-        with harness.hooks_disabled():
-            harness.update_relation_data(
-                rel_id,
-                "application",
-                {"extensions": ""},
-            )
-            harness.update_relation_data(
-                rel_id,
-                "application/0",
-                {"extensions": ",".join(extensions)},
-            )
-        assert harness.charm.legacy_db_relation._get_extensions(relation) == (
-            [extensions[1], extensions[2]],
-            {extensions[1].split(":")[0], extensions[2]},
+    # Test when there are extensions in the unit relation databag.
+    with harness.hooks_disabled():
+        harness.update_relation_data(
+            rel_id,
+            "application",
+            {"extensions": ""},
         )
+        harness.update_relation_data(
+            rel_id,
+            "application/0",
+            {"extensions": ",".join(extensions)},
+        )
+    assert harness.charm.legacy_db_relation._get_extensions(relation) == (
+        [extensions[1], extensions[2]],
+        {extensions[1].split(":")[0], extensions[2]},
+    )
 
-        # Test when one of the plugins/extensions is enabled.
-        config = """options:
-          plugin_citext_enable:
-            default: true
-            type: boolean
-          plugin_debversion_enable:
-            default: false
-            type: boolean"""
-        harness = Harness(PostgresqlOperatorCharm, config=config)
-        harness.cleanup()
-        harness.begin()
-        assert harness.charm.legacy_db_relation._get_extensions(relation) == (
-            [extensions[1], extensions[2]],
-            {extensions[2]},
-        )
+    # Test when one of the plugins/extensions is enabled.
+    config = """options:
+      plugin_citext_enable:
+        default: true
+        type: boolean
+      plugin_debversion_enable:
+        default: false
+        type: boolean"""
+    harness = Harness(PostgresqlOperatorCharm, config=config)
+    harness.cleanup()
+    harness.begin()
+    assert harness.charm.legacy_db_relation._get_extensions(relation) == (
+        [extensions[1], extensions[2]],
+        {extensions[2]},
+    )
 
 
 def test_set_up_relation(harness):

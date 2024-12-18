@@ -25,25 +25,24 @@ POSTGRESQL_VERSION = "14"
 
 @pytest.fixture(autouse=True)
 def harness():
-    with patch("charm.KubernetesServicePatch", lambda x, y: None):
-        harness = Harness(PostgresqlOperatorCharm)
+    harness = Harness(PostgresqlOperatorCharm)
 
-        # Set up the initial relation and hooks.
-        harness.set_leader(True)
-        harness.begin()
+    # Set up the initial relation and hooks.
+    harness.set_leader(True)
+    harness.begin()
 
-        # Define some relations.
-        rel_id = harness.add_relation(RELATION_NAME, "application")
-        harness.add_relation_unit(rel_id, "application/0")
-        peer_rel_id = harness.add_relation(PEER, harness.charm.app.name)
-        harness.add_relation_unit(peer_rel_id, harness.charm.unit.name)
-        harness.update_relation_data(
-            peer_rel_id,
-            harness.charm.app.name,
-            {"cluster_initialised": "True"},
-        )
-        yield harness
-        harness.cleanup()
+    # Define some relations.
+    rel_id = harness.add_relation(RELATION_NAME, "application")
+    harness.add_relation_unit(rel_id, "application/0")
+    peer_rel_id = harness.add_relation(PEER, harness.charm.app.name)
+    harness.add_relation_unit(peer_rel_id, harness.charm.unit.name)
+    harness.update_relation_data(
+        peer_rel_id,
+        harness.charm.app.name,
+        {"cluster_initialised": "True"},
+    )
+    yield harness
+    harness.cleanup()
 
 
 def request_database(_harness):

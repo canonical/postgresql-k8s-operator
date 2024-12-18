@@ -19,29 +19,27 @@ RELATION_NAMES = ["replication-offer", "replication"]
 
 @pytest.fixture(autouse=True)
 def harness():
-    with patch("charm.KubernetesServicePatch", lambda x, y: None):
-        harness = Harness(PostgresqlOperatorCharm)
+    harness = Harness(PostgresqlOperatorCharm)
 
-        # Set up the initial relation and hooks.
-        harness.set_leader(True)
-        harness.begin()
+    # Set up the initial relation and hooks.
+    harness.set_leader(True)
+    harness.begin()
 
-        yield harness
-        harness.cleanup()
+    yield harness
+    harness.cleanup()
 
 
 @pytest.fixture(autouse=True)
 def standby():
-    with patch("charm.KubernetesServicePatch", lambda x, y: None):
-        harness = Harness(PostgresqlOperatorCharm)
-        harness.set_model_name("standby")
+    harness = Harness(PostgresqlOperatorCharm)
+    harness.set_model_name("standby")
 
-        # Set up the initial relation and hooks.
-        harness.set_leader(True)
-        harness.begin()
+    # Set up the initial relation and hooks.
+    harness.set_leader(True)
+    harness.begin()
 
-        yield harness
-        harness.cleanup()
+    yield harness
+    harness.cleanup()
 
 
 @pytest.mark.parametrize("relation_name", RELATION_NAMES)

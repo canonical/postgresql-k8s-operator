@@ -20,23 +20,22 @@ POSTGRESQL_CONTAINER = "postgresql"
 
 @pytest.fixture(autouse=True)
 def harness():
-    with patch("charm.KubernetesServicePatch", lambda x, y: None):
-        """Set up the test."""
-        patcher = patch("lightkube.core.client.GenericSyncClient")
-        patcher.start()
-        harness = Harness(PostgresqlOperatorCharm)
-        harness.begin()
-        upgrade_relation_id = harness.add_relation("upgrade", "postgresql-k8s")
-        peer_relation_id = harness.add_relation("database-peers", "postgresql-k8s")
-        for rel_id in (upgrade_relation_id, peer_relation_id):
-            harness.add_relation_unit(rel_id, "postgresql-k8s/1")
-        harness.add_relation("restart", harness.charm.app.name)
-        with harness.hooks_disabled():
-            harness.update_relation_data(
-                upgrade_relation_id, "postgresql-k8s/1", {"state": "idle"}
-            )
-        yield harness
-        harness.cleanup()
+    """Set up the test."""
+    patcher = patch("lightkube.core.client.GenericSyncClient")
+    patcher.start()
+    harness = Harness(PostgresqlOperatorCharm)
+    harness.begin()
+    upgrade_relation_id = harness.add_relation("upgrade", "postgresql-k8s")
+    peer_relation_id = harness.add_relation("database-peers", "postgresql-k8s")
+    for rel_id in (upgrade_relation_id, peer_relation_id):
+        harness.add_relation_unit(rel_id, "postgresql-k8s/1")
+    harness.add_relation("restart", harness.charm.app.name)
+    with harness.hooks_disabled():
+        harness.update_relation_data(
+            upgrade_relation_id, "postgresql-k8s/1", {"state": "idle"}
+        )
+    yield harness
+    harness.cleanup()
 
 
 def test_is_no_sync_member(harness):

@@ -41,15 +41,14 @@ tc = TestCase()
 
 @pytest.fixture(autouse=True)
 def harness():
-    with patch("charm.KubernetesServicePatch", lambda x, y: None):
-        harness = Harness(PostgresqlOperatorCharm)
-        harness.handle_exec("postgresql", ["locale", "-a"], result="C")
+    harness = Harness(PostgresqlOperatorCharm)
+    harness.handle_exec("postgresql", ["locale", "-a"], result="C")
 
-        harness.add_relation(PEER, "postgresql-k8s")
-        harness.begin()
-        harness.add_relation("restart", harness.charm.app.name)
-        yield harness
-        harness.cleanup()
+    harness.add_relation(PEER, "postgresql-k8s")
+    harness.begin()
+    harness.add_relation("restart", harness.charm.app.name)
+    yield harness
+    harness.cleanup()
 
 
 def test_on_leader_elected(harness):
