@@ -242,9 +242,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             relation_name="logging",
         )
 
-        postgresql_db_port = ServicePort(5432, name="database")
-        patroni_api_port = ServicePort(8008, name="api")
-        self.service_patcher = KubernetesServicePatch(self, [postgresql_db_port, patroni_api_port])
+        self.unit.set_ports(*[5432, 8008])
         self.tracing = TracingEndpointRequirer(
             self, relation_name=TRACING_RELATION_NAME, protocols=[TRACING_PROTOCOL]
         )
