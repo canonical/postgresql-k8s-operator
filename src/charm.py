@@ -31,7 +31,7 @@ except ModuleNotFoundError:
     raise
 
 from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerUnitData
-from charms.data_platform_libs.v0.data_models import TypedCharmBase
+from charms.data_platform_libs.v1.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v1.loki_push_api import LogProxyConsumer
 from charms.postgresql_k8s.v0.postgresql import (
