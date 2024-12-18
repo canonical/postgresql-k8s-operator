@@ -1,4 +1,4 @@
-# Copyright 2023 Canonical Ltd.
+# Copyright 2024 Canonical Ltd.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -275,19 +275,19 @@ from ops.charm import (
 )
 from ops.framework import EventBase, EventSource, Object
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, Relation, Unit, WaitingStatus
-from pydantic import BaseModel, root_validator, validator
+from pydantic import BaseModel, field_validator, model_validator
 
 # The unique Charmhub library identifier, never change it
 LIBID = "156258aefb79435a93d933409a8c8684"
 
 # Increment this major API version when introducing breaking changes
-LIBAPI = 0
+LIBAPI = 1
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 18
+LIBPATCH = 1
 
-PYDEPS = ["pydantic>=1.10,<2", "poetry-core"]
+PYDEPS = ["pydantic>=2,<3", "poetry-core"]
 
 logger = logging.getLogger(__name__)
 
@@ -343,7 +343,7 @@ class DependencyModel(BaseModel):
 
         model = KafkaDependenciesModel(**deps)  # loading dict in to model
 
-        print(model.dict())  # exporting back validated deps
+        print(model.model_dump())  # exporting back validated deps
     """
 
     dependencies: Dict[str, str]
@@ -351,21 +351,24 @@ class DependencyModel(BaseModel):
     upgrade_supported: str
     version: str
 
-    @validator("dependencies", "upgrade_supported", each_item=True)
+    @field_validator("dependencies")
     @classmethod
-    def dependencies_validator(cls, value):
+    def dependencies_validator(cls, value: Dict[str, str]):
         """Validates version constraint."""
-        if isinstance(value, dict):
-            deps = value.values()
-        else:
-            deps = [value]
-
-        for dep in deps:
+        for dep in value.values():
             poetry_version.parse_constraint(dep)
 
         return value
 
-    @root_validator(skip_on_failure=True)
+    @field_validator("upgrade_supported")
+    @classmethod
+    def upgrade_supported_validator(cls, value: str):
+        """Validates version constraint."""
+        poetry_version.parse_constraint(value)
+
+        return value
+
+    @model_validator(mode="before")
     @classmethod
     def version_upgrade_supported_validator(cls, values):
         """Validates specified `version` meets `upgrade_supported` requirement."""
@@ -567,7 +570,7 @@ class DataUpgrade(Object, ABC):
         if not (deps := self.peer_relation.data[self.charm.app].get("dependencies", "")):
             return None
 
-        return type(self.dependency_model)(**json.loads(deps))
+        return type(self.dependency_model).model_validate_json(deps)
 
     @property
     def upgrade_stack(self) -> Optional[List[int]]:
@@ -770,7 +773,7 @@ class DataUpgrade(Object, ABC):
         if self.charm.unit.is_leader():
             logger.debug("Persisting dependencies to upgrade relation data...")
             self.peer_relation.data[self.charm.app].update(
-                {"dependencies": json.dumps(self.dependency_model.dict())}
+                {"dependencies": self.dependency_model.model_dump_json()}
             )
 
     def _on_pre_upgrade_check_action(self, event: ActionEvent) -> None:
@@ -859,7 +862,7 @@ class DataUpgrade(Object, ABC):
         Raises:
             :class:`VersionError` if upgrading to existing `version` is not supported
         """
-        keys = self.dependency_model.__fields__.keys()
+        keys = self.dependency_model.model_fields.keys()
 
         compatible = True
         incompatibilities: List[Tuple[str, str, str, str]] = []
@@ -966,7 +969,7 @@ class DataUpgrade(Object, ABC):
                 if self.charm.unit.is_leader():
                     logger.debug("Persisting new dependencies to upgrade relation data...")
                     self.peer_relation.data[self.charm.app].update(
-                        {"dependencies": json.dumps(self.dependency_model.dict())}
+                        {"dependencies": self.dependency_model.model_dump_json()}
                     )
                 return
 
