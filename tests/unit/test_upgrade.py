@@ -31,9 +31,7 @@ def harness():
         harness.add_relation_unit(rel_id, "postgresql-k8s/1")
     harness.add_relation("restart", harness.charm.app.name)
     with harness.hooks_disabled():
-        harness.update_relation_data(
-            upgrade_relation_id, "postgresql-k8s/1", {"state": "idle"}
-        )
+        harness.update_relation_data(upgrade_relation_id, "postgresql-k8s/1", {"state": "idle"})
     yield harness
     harness.cleanup()
 
