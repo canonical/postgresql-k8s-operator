@@ -7,7 +7,7 @@
 import logging
 
 from charms.data_platform_libs.v1.data_models import BaseConfigModel
-from pydantic import validator
+from pydantic import field_validator
 
 logger = logging.getLogger(__name__)
 
@@ -103,14 +103,14 @@ class CharmConfig(BaseConfigModel):
     @classmethod
     def keys(cls) -> list[str]:
         """Return config as list items."""
-        return list(cls.__fields__.keys())
+        return list(cls.model_fields.keys())
 
     @classmethod
     def plugin_keys(cls) -> filter:
         """Return plugin config names in a iterable."""
         return filter(lambda x: x.startswith("plugin_"), cls.keys())
 
-    @validator("durability_synchronous_commit")
+    @field_validator("durability_synchronous_commit")
     @classmethod
     def durability_synchronous_commit_values(cls, value: str) -> str | None:
         """Check durability_synchronous_commit config option is one of `on`, `remote_apply` or `remote_write`."""
@@ -119,7 +119,7 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
-    @validator("instance_password_encryption")
+    @field_validator("instance_password_encryption")
     @classmethod
     def instance_password_encryption_values(cls, value: str) -> str | None:
         """Check instance_password_encryption config option is one of `md5` or `scram-sha-256`."""
@@ -128,7 +128,7 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
-    @validator("logging_log_min_duration_statement")
+    @field_validator("logging_log_min_duration_statement")
     @classmethod
     def logging_log_min_duration_statement_values(cls, value: int) -> int | None:
         """Check logging_log_min_duration_statement config option is between -1 and 2147483647."""
@@ -137,7 +137,7 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
-    @validator("memory_maintenance_work_mem")
+    @field_validator("memory_maintenance_work_mem")
     @classmethod
     def memory_maintenance_work_mem_values(cls, value: int) -> int | None:
         """Check memory_maintenance_work_mem config option is between 1024 and 2147483647."""
@@ -146,7 +146,7 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
-    @validator("memory_max_prepared_transactions")
+    @field_validator("memory_max_prepared_transactions")
     @classmethod
     def memory_max_prepared_transactions_values(cls, value: int) -> int | None:
         """Check memory_max_prepared_transactions config option is between 0 and 262143."""
@@ -155,7 +155,7 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
-    @validator("memory_shared_buffers")
+    @field_validator("memory_shared_buffers")
     @classmethod
     def memory_shared_buffers_values(cls, value: int) -> int | None:
         """Check memory_shared_buffers config option is greater or equal than 16."""
@@ -164,7 +164,7 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
-    @validator("memory_temp_buffers")
+    @field_validator("memory_temp_buffers")
     @classmethod
     def memory_temp_buffers_values(cls, value: int) -> int | None:
         """Check memory_temp_buffers config option is between 100 and 1073741823."""
@@ -173,7 +173,7 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
-    @validator("memory_work_mem")
+    @field_validator("memory_work_mem")
     @classmethod
     def memory_work_mem_values(cls, value: int) -> int | None:
         """Check memory_work_mem config option is between 64 and 2147483647."""
@@ -182,7 +182,7 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
-    @validator("optimizer_constraint_exclusion")
+    @field_validator("optimizer_constraint_exclusion")
     @classmethod
     def optimizer_constraint_exclusion_values(cls, value: str) -> str | None:
         """Check optimizer_constraint_exclusion config option is one of `on`, `off` or `partition`."""
@@ -191,7 +191,7 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
-    @validator("optimizer_default_statistics_target")
+    @field_validator("optimizer_default_statistics_target")
     @classmethod
     def optimizer_default_statistics_target_values(cls, value: int) -> int | None:
         """Check optimizer_default_statistics_target config option is between 1 and 10000."""
@@ -200,7 +200,7 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
-    @validator("optimizer_from_collapse_limit", "optimizer_join_collapse_limit")
+    @field_validator("optimizer_from_collapse_limit", "optimizer_join_collapse_limit")
     @classmethod
     def optimizer_collapse_limit_values(cls, value: int) -> int | None:
         """Check optimizer collapse_limit config option is between 1 and 2147483647."""
@@ -209,7 +209,7 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
-    @validator("profile")
+    @field_validator("profile")
     @classmethod
     def profile_values(cls, value: str) -> str | None:
         """Check profile config option is one of `testing` or `production`."""
@@ -218,7 +218,7 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
-    @validator("profile_limit_memory")
+    @field_validator("profile_limit_memory")
     @classmethod
     def profile_limit_memory_validator(cls, value: int) -> int | None:
         """Check profile limit memory."""
@@ -229,7 +229,7 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
-    @validator("response_bytea_output")
+    @field_validator("response_bytea_output")
     @classmethod
     def response_bytea_output_values(cls, value: str) -> str | None:
         """Check response_bytea_output config option is one of `escape` or `hex`."""
@@ -238,7 +238,10 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
-    @validator("vacuum_autovacuum_analyze_scale_factor", "vacuum_autovacuum_vacuum_scale_factor")
+    @field_validator(
+        "vacuum_autovacuum_analyze_scale_factor",
+        "vacuum_autovacuum_vacuum_scale_factor",
+    )
     @classmethod
     def vacuum_autovacuum_vacuum_scale_factor_values(cls, value: float) -> float | None:
         """Check autovacuum scale_factor config option is between 0 and 100."""
@@ -247,7 +250,7 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
-    @validator("vacuum_autovacuum_analyze_threshold")
+    @field_validator("vacuum_autovacuum_analyze_threshold")
     @classmethod
     def vacuum_autovacuum_analyze_threshold_values(cls, value: int) -> int | None:
         """Check vacuum_autovacuum_analyze_threshold config option is between 0 and 2147483647."""
@@ -256,7 +259,7 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
-    @validator("vacuum_autovacuum_freeze_max_age")
+    @field_validator("vacuum_autovacuum_freeze_max_age")
     @classmethod
     def vacuum_autovacuum_freeze_max_age_values(cls, value: int) -> int | None:
         """Check vacuum_autovacuum_freeze_max_age config option is between 100000 and 2000000000."""
@@ -265,7 +268,7 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
-    @validator("vacuum_autovacuum_vacuum_cost_delay")
+    @field_validator("vacuum_autovacuum_vacuum_cost_delay")
     @classmethod
     def vacuum_autovacuum_vacuum_cost_delay_values(cls, value: float) -> float | None:
         """Check vacuum_autovacuum_vacuum_cost_delay config option is between -1 and 100."""
@@ -274,7 +277,7 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
-    @validator("vacuum_vacuum_freeze_table_age")
+    @field_validator("vacuum_vacuum_freeze_table_age")
     @classmethod
     def vacuum_vacuum_freeze_table_age_values(cls, value: int) -> int | None:
         """Check vacuum_vacuum_freeze_table_age config option is between 0 and 2000000000."""
