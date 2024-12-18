@@ -14,7 +14,7 @@ pgconnstr = "^1.0.1"
 requests = "^2.32.3"
 tenacity = "^9.0.0"
 cosl = "^0.0.45"
-pydantic = "^1.10.19"
+pydantic = "^2.10.0"
 poetry-core = "^2.0.0"
 jsonschema = "^4.23.0"
 jinja2 = "^3.1.4"
@@ -27,10 +27,7 @@ psycopg2 = "^2.9.10"
 ops = ">=2.0.0"
 # data_platform_libs/v1/upgrade.py
 poetry-core = "*"
-# grafana_agent/v0/cos_agent.py requires pydantic <2
-# tempo_coordinator_k8s/v0/tracing.py supports both pydantic <2 and pydantic 2
-pydantic = "^1.10, <2"
-# grafana_agent/v0/cos_agent.py
+pydantic = "^2.10, <3"
 cosl = "*"
 # tempo_coordinator_k8s/v0/charm_tracing.py
 opentelemetry-exporter-otlp-proto-http = "1.21.0"
@@ -52,7 +49,7 @@ optional = true
 
 [tool.poetry.group.unit.dependencies]
 coverage = {extras = ["toml"], version = "^7.6.8"}
-pydantic = "^1.10.19"
+pydantic = "^2.10.0"
 pytest = "^8.3.3"
 pytest-mock = "^3.14.0"
 pytest-asyncio = "*"
