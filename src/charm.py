@@ -34,7 +34,6 @@ from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerU
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v1.loki_push_api import LogProxyConsumer
-from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
 from charms.postgresql_k8s.v0.postgresql import (
     REQUIRED_PLUGINS,
     PostgreSQL,
@@ -246,9 +245,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             relation_name="logging",
         )
 
-        postgresql_db_port = ServicePort(5432, name="database")
-        patroni_api_port = ServicePort(8008, name="api")
-        self.service_patcher = KubernetesServicePatch(self, [postgresql_db_port, patroni_api_port])
+        self.unit.set_ports(*[5432, 8008])
         self.tracing = TracingEndpointRequirer(
             self, relation_name=TRACING_RELATION_NAME, protocols=[TRACING_PROTOCOL]
         )
