@@ -1742,7 +1742,7 @@ def test_render_pgbackrest_conf_file(harness, tls_ca_chain_filename):
         patch("charm.PostgreSQLBackups._retrieve_s3_parameters") as _retrieve_s3_parameters,
     ):
         # Set up a mock for the `open` method, set returned data to postgresql.conf template.
-        with open("templates/pgbackrest.conf.j2", "r") as f:
+        with open("templates/pgbackrest.conf.j2") as f:
             mock = mock_open(read_data=f.read())
 
         # Test when there are missing S3 parameters.
@@ -1799,7 +1799,7 @@ def test_render_pgbackrest_conf_file(harness, tls_ca_chain_filename):
             harness.charm.backup._render_pgbackrest_conf_file()
 
         # Check the template is opened read-only in the call to open.
-        assert mock.call_args_list[0][0] == ("templates/pgbackrest.conf.j2", "r")
+        assert mock.call_args_list[0][0] == ("templates/pgbackrest.conf.j2",)
 
         # Get the expected content from a file.
         with open("templates/pgbackrest.conf.j2") as file:
