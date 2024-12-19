@@ -141,6 +141,10 @@ Scopes = Literal[APP_SCOPE, UNIT_SCOPE]
 PASSWORD_USERS = [*SYSTEM_USERS, "patroni"]
 
 
+class CannotConnectError(Exception):
+    """Cannot run smoke check on connected Database."""
+
+
 @trace_charm(
     tracing_endpoint="tracing_endpoint",
     extra_types=(
@@ -261,7 +265,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         from ops.jujuversion import JujuVersion
 
         juju_version = JujuVersion.from_environ()
-        return juju_version > JujuVersion(version=str("3.3"))
+        return juju_version > JujuVersion(version="3.3")
 
     def _generate_metrics_jobs(self, enable_tls: bool) -> Dict:
         """Generate spec for Prometheus scraping."""
@@ -698,7 +702,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 )
                 return
 
-    def enable_disable_extensions(self, database: str = None) -> None:
+    def enable_disable_extensions(self, database: Optional[str] = None) -> None:
         """Enable/disable PostgreSQL extensions set through config options.
 
         Args:
@@ -1243,11 +1247,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             other_cluster_primary = self._patroni.get_primary(
                 alternative_endpoints=other_cluster_endpoints
             )
-            other_cluster_primary_ip = [
+            other_cluster_primary_ip = next(
                 replication_offer_relation.data[unit].get("private-address")
                 for unit in replication_offer_relation.units
                 if unit.name.replace("/", "-") == other_cluster_primary
-            ][0]
+            )
             try:
                 self.postgresql.update_user_password(
                     username, password, database_host=other_cluster_primary_ip
@@ -1437,7 +1441,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             and services[0].current != ServiceStatus.ACTIVE
         ):
             logger.warning(
-                "%s pebble service inactive, restarting service" % self._postgresql_service
+                f"{self._postgresql_service} pebble service inactive, restarting service"
             )
             try:
                 container.restart(self._postgresql_service)
@@ -1642,7 +1646,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._update_endpoints(endpoints_to_remove=endpoints)
 
     def _update_endpoints(
-        self, endpoint_to_add: str = None, endpoints_to_remove: List[str] = None
+        self,
+        endpoint_to_add: Optional[str] = None,
+        endpoints_to_remove: Optional[List[str]] = None,
     ) -> None:
         """Update members IPs."""
         # Allow leader to reset which members are part of the cluster.
@@ -1816,7 +1822,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             for attempt in Retrying(wait=wait_fixed(3), stop=stop_after_delay(300)):
                 with attempt:
                     if not self._can_connect_to_postgresql:
-                        assert False
+                        raise CannotConnectError
         except Exception:
             logger.exception("Unable to reconnect to postgresql")
 
@@ -1841,7 +1847,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         try:
             for attempt in Retrying(stop=stop_after_delay(30), wait=wait_fixed(3)):
                 with attempt:
-                    assert self.postgresql.get_postgresql_timezones()
+                    if not self.postgresql.get_postgresql_timezones():
+                        raise CannotConnectError
         except RetryError:
             logger.debug("Cannot connect to database")
             return False
@@ -1915,16 +1922,17 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Restart the monitoring service if the password was rotated
         container = self.unit.get_container("postgresql")
         current_layer = container.get_plan()
-        if metrics_service := current_layer.services[self._metrics_service]:
-            if not metrics_service.environment.get("DATA_SOURCE_NAME", "").startswith(
-                f"user={MONITORING_USER} password={self.get_secret('app', MONITORING_PASSWORD_KEY)} "
-            ):
-                container.add_layer(
-                    self._metrics_service,
-                    Layer({"services": {self._metrics_service: self._generate_metrics_service()}}),
-                    combine=True,
-                )
-                container.restart(self._metrics_service)
+        if (
+            metrics_service := current_layer.services[self._metrics_service]
+        ) and not metrics_service.environment.get("DATA_SOURCE_NAME", "").startswith(
+            f"user={MONITORING_USER} password={self.get_secret('app', MONITORING_PASSWORD_KEY)} "
+        ):
+            container.add_layer(
+                self._metrics_service,
+                Layer({"services": {self._metrics_service: self._generate_metrics_service()}}),
+                combine=True,
+            )
+            container.restart(self._metrics_service)
 
         return True
 

@@ -1,6 +1,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 import asyncio
+import contextlib
 import json
 import logging
 import os
@@ -76,10 +77,7 @@ async def are_all_db_processes_down(ops_test: OpsTest, process: str, signal: str
     """Verifies that all units of the charm do not have the DB process running."""
     app = await app_name(ops_test)
 
-    if "/" in process:
-        pgrep_cmd = ("pgrep", "-f", process)
-    else:
-        pgrep_cmd = ("pgrep", "-x", process)
+    pgrep_cmd = ("pgrep", "-f", process) if "/" in process else ("pgrep", "-x", process)
 
     try:
         for attempt in Retrying(stop=stop_after_delay(400), wait=wait_fixed(3)):
@@ -93,7 +91,7 @@ async def are_all_db_processes_down(ops_test: OpsTest, process: str, signal: str
 
                     # If something was returned, there is a running process.
                     if call.returncode != 1:
-                        logger.info("Unit %s not yet down" % unit.name)
+                        logger.info(f"Unit {unit.name} not yet down")
                         # Try to rekill the unit
                         await send_signal_to_process(ops_test, unit.name, process, signal)
                         raise ProcessRunningError
@@ -122,10 +120,7 @@ async def change_patroni_setting(
         password: Patroni password.
         tls: if Patroni is serving using tls.
     """
-    if tls:
-        schema = "https"
-    else:
-        schema = "http"
+    schema = "https" if tls else "http"
     for attempt in Retrying(stop=stop_after_delay(30 * 2), wait=wait_fixed(3)):
         with attempt:
             app = await app_name(ops_test)
@@ -238,7 +233,7 @@ async def check_writes(ops_test, extra_model: Model = None) -> int:
 
 
 async def are_writes_increasing(
-    ops_test, down_unit: str = None, extra_model: Model = None
+    ops_test, down_unit: str | None = None, extra_model: Model = None
 ) -> None:
     """Verify new writes are continuing by counting the number of writes."""
     for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
@@ -319,7 +314,7 @@ def copy_file_into_pod(
 
 
 async def count_writes(
-    ops_test: OpsTest, down_unit: str = None, extra_model: Model = None
+    ops_test: OpsTest, down_unit: str | None = None, extra_model: Model = None
 ) -> Tuple[Dict[str, int], Dict[str, int]]:
     """Count the number of writes in the database."""
     app = await app_name(ops_test)
@@ -332,8 +327,8 @@ async def count_writes(
         for unit_name, unit in status["applications"][app]["units"].items():
             if unit_name != down_unit:
                 members_data = get_patroni_cluster(unit["address"])["members"]
-                for index, member_data in enumerate(members_data):
-                    members_data[index]["model"] = model.info.name
+                for _, member_data in enumerate(members_data):
+                    member_data["model"] = model.info.name
                 members.extend(members_data)
                 break
 
@@ -451,10 +446,7 @@ async def get_patroni_setting(ops_test: OpsTest, setting: str, tls: bool = False
     Returns:
         the value of the configuration or None if it's using the default value.
     """
-    if tls:
-        schema = "https"
-    else:
-        schema = "http"
+    schema = "https" if tls else "http"
     for attempt in Retrying(stop=stop_after_delay(30 * 2), wait=wait_fixed(3)):
         with attempt:
             app = await app_name(ops_test)
@@ -521,7 +513,9 @@ async def get_leader(model: Model, application_name: str) -> str:
         the name of the standby leader.
     """
     status = await model.get_status()
-    first_unit_ip = list(status["applications"][application_name]["units"].values())[0]["address"]
+    first_unit_ip = next(list(status["applications"][application_name]["units"].values()))[
+        "address"
+    ]
     cluster = get_patroni_cluster(first_unit_ip)
     for member in cluster["members"]:
         if member["role"] == "leader":
@@ -539,7 +533,9 @@ async def get_standby_leader(model: Model, application_name: str) -> str:
         the name of the standby leader.
     """
     status = await model.get_status()
-    first_unit_ip = list(status["applications"][application_name]["units"].values())[0]["address"]
+    first_unit_ip = next(iter(status["applications"][application_name]["units"].values()))[
+        "address"
+    ]
     cluster = get_patroni_cluster(first_unit_ip)
     for member in cluster["members"]:
         if member["role"] == "standby_leader":
@@ -557,7 +553,9 @@ async def get_sync_standby(model: Model, application_name: str) -> str:
         the name of the sync standby.
     """
     status = await model.get_status()
-    first_unit_ip = list(status["applications"][application_name]["units"].values())[0]["address"]
+    first_unit_ip = next(iter(status["applications"][application_name]["units"].values()))[
+        "address"
+    ]
     cluster = get_patroni_cluster(first_unit_ip)
     for member in cluster["members"]:
         if member["role"] == "sync_standby":
@@ -656,7 +654,7 @@ def isolate_instance_from_cluster(ops_test: OpsTest, unit_name: str) -> None:
     """Apply a NetworkChaos file to use chaos-mesh to simulate a network cut."""
     with tempfile.NamedTemporaryFile() as temp_file:
         with open(
-            "tests/integration/ha_tests/manifests/chaos_network_loss.yml", "r"
+            "tests/integration/ha_tests/manifests/chaos_network_loss.yml"
         ) as chaos_network_loss_file:
             template = string.Template(chaos_network_loss_file.read())
             chaos_network_loss = template.substitute(
@@ -744,12 +742,10 @@ async def modify_pebble_restart_delay(
             if ensure_replan and response.returncode != 0:
                 # Juju 2 fix service is spawned but pebble is reporting inactive
                 if juju_major_version < 3:
-                    try:
+                    with contextlib.suppress(ProcessError, ProcessRunningError):
                         await send_signal_to_process(
                             ops_test, unit_name, "/usr/bin/patroni", "SIGTERM"
                         )
-                    except (ProcessError, ProcessRunningError):
-                        pass
                 assert response.returncode == 0, (
                     f"Failed to replan pebble layer, unit={unit_name}, container={container_name}, service={service_name}"
                 )
@@ -796,18 +792,17 @@ async def is_secondary_up_to_date(ops_test: OpsTest, unit_name: str, expected_wr
 
     try:
         for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
-            with attempt:
-                with psycopg2.connect(
-                    connection_string
-                ) as connection, connection.cursor() as cursor:
-                    cursor.execute("SELECT COUNT(number), MAX(number) FROM continuous_writes;")
-                    results = cursor.fetchone()
-                    if results[0] != expected_writes or results[1] != expected_writes:
-                        async with ops_test.fast_forward(fast_interval="30s"):
-                            await ops_test.model.wait_for_idle(
-                                apps=[unit_name.split("/")[0]], idle_period=15, timeout=1000
-                            )
-                            raise Exception
+            with attempt, psycopg2.connect(
+                connection_string
+            ) as connection, connection.cursor() as cursor:
+                cursor.execute("SELECT COUNT(number), MAX(number) FROM continuous_writes;")
+                results = cursor.fetchone()
+                if results[0] != expected_writes or results[1] != expected_writes:
+                    async with ops_test.fast_forward(fast_interval="30s"):
+                        await ops_test.model.wait_for_idle(
+                            apps=[unit_name.split("/")[0]], idle_period=15, timeout=1000
+                        )
+                        raise Exception
     except RetryError:
         return False
     finally:
@@ -849,10 +844,7 @@ async def send_signal_to_process(
         await ops_test.model.wait_for_idle(apps=[app], status="active", timeout=1000)
 
     pod_name = unit_name.replace("/", "-")
-    if "/" in process:
-        opt = "-f"
-    else:
-        opt = "-x"
+    opt = "-f" if "/" in process else "-x"
 
     if signal not in ["SIGSTOP", "SIGCONT"]:
         _, old_pid, _ = await ops_test.juju(

@@ -55,7 +55,7 @@ jobs:
       matrix:
         juju:
           - agent: 2.9.51  # renovate: juju-agent-pin-minor
-            libjuju: ==2.9.49.0  # renovate: latest libjuju 2
+            libjuju: ==2.9.49.1  # renovate: latest libjuju 2
             allure_on_amd64: false
           - agent: 3.4.6  # renovate: juju-agent-pin-minor
             allure_on_amd64: true
@@ -82,7 +82,7 @@ jobs:
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
       architecture: ${{ matrix.architecture }}
       cloud: microk8s
-      microk8s-snap-channel: 1.31-strict/stable  # renovate: latest microk8s
+      microk8s-snap-channel: 1.32-strict/stable  # renovate: latest microk8s
       juju-agent-version: ${{ matrix.juju.agent }}
       juju-snap-channel: ${{ matrix.juju.snap_channel }}
       libjuju-version-constraint: ${{ matrix.juju.libjuju }}

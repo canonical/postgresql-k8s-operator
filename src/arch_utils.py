@@ -33,7 +33,7 @@ def is_wrong_architecture() -> bool:
         )
         return False
 
-    with open(manifest_file_path, "r") as file:
+    with open(manifest_file_path) as file:
         manifest = file.read()
     hw_arch = os.uname().machine
     if ("amd64" in manifest and hw_arch == "x86_64") or (

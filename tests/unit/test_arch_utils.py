@@ -27,7 +27,7 @@ def test_on_module_not_found_error(monkeypatch):
         monkeypatch.delitem(sys.modules, "charm", raising=False)
         monkeypatch.setattr(builtins, "__import__", psycopg2_not_found)
         with pytest.raises(ModuleNotFoundError):
-            import charm  # noqa: F401
+            import charm
 
         _is_wrong_arch.assert_called_once()
 
