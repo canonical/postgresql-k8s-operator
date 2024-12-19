@@ -513,9 +513,9 @@ async def get_leader(model: Model, application_name: str) -> str:
         the name of the standby leader.
     """
     status = await model.get_status()
-    first_unit_ip = next(list(status["applications"][application_name]["units"].values()))[
-        "address"
-    ]
+    first_unit_ip = next(
+        unit for unit in status["applications"][application_name]["units"].values()
+    )["address"]
     cluster = get_patroni_cluster(first_unit_ip)
     for member in cluster["members"]:
         if member["role"] == "leader":
