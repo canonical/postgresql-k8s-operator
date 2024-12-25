@@ -1,0 +1,270 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:766 Connecting to existing model microk8s-localhost:test on unspecified cloud
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:109 deploying the next charms: s3-integrator, self-signed-certificates, postgresql
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/jammy/s3-integrator-77
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/jammy/self-signed-certificates-155
+[32mINFO    [0m juju.model:model.py:2098 Deploying local:postgresql-k8s-0
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:114 integrating self-signed-certificates with postgresql and waiting them to stabilize
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [allocating] waiting: installing agent
+  postgresql-k8s-gcp/1 [allocating] waiting: installing agent
+  self-signed-certificates/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] maintenance: installing charm software
+  postgresql-k8s-gcp/1 [allocating] waiting: agent initialising
+  self-signed-certificates/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] unknown: 
+  postgresql-k8s-gcp/1 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] unknown: 
+  postgresql-k8s-gcp/1 [executing] waiting: awaiting for primary endpoint to be ready
+  self-signed-certificates/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] unknown: 
+  postgresql-k8s-gcp/1 [idle] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] unknown: 
+  postgresql-k8s-gcp/1 [executing] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s-gcp/1 [idle] active: Primary
+  self-signed-certificates/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s-gcp/1 [executing] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s-gcp/1 [executing] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s-gcp/1 [idle] maintenance: reconfiguring cluster
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] waiting: awaiting for member to start
+  postgresql-k8s-gcp/1 [idle] active: Primary
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:127 configuring S3 integrator for gcp
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:135 integrating s3-integrator with postgresql and waiting model to stabilize
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [executing] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-gcp/0 [idle] active: 
+  postgresql-k8s-gcp/1 [executing] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: 
+  postgresql-k8s-gcp/1 [executing] maintenance: initialising stanza
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] active: 
+  postgresql-k8s-gcp/1 [executing] maintenance: initialising stanza
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] active: 
+  postgresql-k8s-gcp/1 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] active: 
+  postgresql-k8s-gcp/1 [executing] maintenance: initialising stanza
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:148 1: creating table
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:151 1: creating backup b1
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-gcp/0 [idle] active: 
+  postgresql-k8s-gcp/1 [executing] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/1 [idle] active: Primary
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:459 listing the available backups
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-gcp/0 [idle] active: 
+  postgresql-k8s-gcp/1 [idle] active: Primary
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:160 1: creating test data td1
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:163 1: get timestamp ts1
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:173 1: creating test data td2
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:176 1: switching wal
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:179 1: scaling down to do restore
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp (waiting for exactly 1 units, current : 2)
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp (waiting for exactly 1 units, current : 2)
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: initialising stanza
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:184 1: restoring the backup b1 with bad restore-to-time parameter
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:193 1: restoring the backup b1 with unreachable restore-to-time parameter
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:198 1: waiting for the database charm to become blocked after restore
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:205 1: database charm become in blocked state after restore, as supposed to be with unreachable PITR parameter
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:213 1: restoring to the timestamp ts1
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:222 2: successful restore
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:459 listing the available backups
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-gcp/0 [idle] active: Primary
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:228 2: checking test data td1
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:231 2: checking not test data td2
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:236 2: creating test data td3
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:239 2: get timestamp ts2
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:245 2: creating test data td4
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:248 2: switching wal
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:255 2: restoring the backup b1 to the latest
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-gcp/0 [executing] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:264 3: successful restore
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:459 listing the available backups
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-gcp/0 [idle] active: Primary
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:272 3: checking test data td1
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:275 3: checking test data td2
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:278 3: checking not test data td3
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:283 3: checking not test data td4
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:288 3: switching wal
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:295 3: restoring the timeline 2 to the latest
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-gcp/0 [executing] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:304 4: successful restore
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:459 listing the available backups
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-gcp/0 [idle] active: Primary
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:312 4: checking test data td1
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:315 4: checking not test data td2
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:320 4: checking test data td3
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:323 4: checking test data td4
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:326 4: switching wal
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:333 4: restoring to the timestamp ts2
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:342 5: successful restore
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:459 listing the available backups
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-gcp/0 [idle] active: Primary
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:353 5: checking test data td1
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:356 5: checking not test data td2
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:361 5: checking test data td3
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:364 5: checking not test data td4
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-gcp/0 [idle] active: Primary
+[32mINFO    [0m integration.test_backups_pitr:test_backups_pitr.py:72 deleting the previously created backups
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.4.6    unsupported  02:06:21Z
+
+App            Version  Status  Scale  Charm          Channel        Rev  Address         Exposed  Message
+s3-integrator           active      1  s3-integrator  latest/stable   77  10.152.183.215  no       
+
+Unit              Workload  Agent  Address   Ports  Message
+s3-integrator/0*  active    idle   10.1.4.8         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-postgresql-k8s-gcp-0: 01:41:11 ERROR unit.postgresql-k8s-gcp/0.juju-log Restore failed: Bad restore-to-time format
+unit-postgresql-k8s-gcp-0: 01:42:21 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:42:21 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:42:50 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:42:50 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:43:16 ERROR unit.postgresql-k8s-gcp/0.juju-log Restore failed: database service failed to reach point-in-time-recovery target. You can launch another restore with different parameters
+unit-postgresql-k8s-gcp-0: 01:43:16 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:43:16 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:57 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:57 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:53:24 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:53:24 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:58:21 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:58:21 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 02:04:09 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 02:04:09 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
