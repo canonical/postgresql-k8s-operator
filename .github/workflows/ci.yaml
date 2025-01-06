@@ -45,7 +45,7 @@ jobs:
 
   build:
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@jammy-builds
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@sg-fix
     with:
       cache: true
 
@@ -71,7 +71,7 @@ jobs:
       - lint
       - unit-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@v24.0.2
+    uses: canonical/data-platform-workflows/.github/workflows/integration_test_charm.yaml@sg-fix
     with:
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
       architecture: ${{ matrix.architecture }}
