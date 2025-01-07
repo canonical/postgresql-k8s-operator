@@ -17,15 +17,14 @@ SCOPE = "unit"
 
 @pytest.fixture(autouse=True)
 def harness():
-    with patch("charm.KubernetesServicePatch", lambda x, y: None):
-        harness = Harness(PostgresqlOperatorCharm)
+    harness = Harness(PostgresqlOperatorCharm)
 
-        # Set up the initial relation and hooks.
-        peer_rel_id = harness.add_relation(PEER, "postgresql-k8s")
-        harness.add_relation_unit(peer_rel_id, "postgresql-k8s/0")
-        harness.begin()
-        yield harness
-        harness.cleanup()
+    # Set up the initial relation and hooks.
+    peer_rel_id = harness.add_relation(PEER, "postgresql-k8s")
+    harness.add_relation_unit(peer_rel_id, "postgresql-k8s/0")
+    harness.begin()
+    yield harness
+    harness.cleanup()
 
 
 def delete_secrets(_harness):

@@ -19,34 +19,32 @@ from tests.helpers import STORAGE_PATH
 
 @pytest.fixture(autouse=True)
 def harness():
-    with patch("charm.KubernetesServicePatch", lambda x, y: None):
-        harness = Harness(PostgresqlOperatorCharm)
-        harness.begin()
-        yield harness
-        harness.cleanup()
+    harness = Harness(PostgresqlOperatorCharm)
+    harness.begin()
+    yield harness
+    harness.cleanup()
 
 
 @pytest.fixture(autouse=True)
 def patroni(harness):
-    with patch("charm.KubernetesServicePatch", lambda x, y: None):
-        # Setup Patroni wrapper.
-        patroni = Patroni(
-            harness.charm,
-            "postgresql-k8s-0",
-            ["postgresql-k8s-0", "postgresql-k8s-1", "postgresql-k8s-2"],
-            "postgresql-k8s-primary.dev.svc.cluster.local",
-            "test-model",
-            STORAGE_PATH,
-            "superuser-password",
-            "replication-password",
-            "rewind-password",
-            False,
-            "patroni-password",
-        )
-        root = harness.get_filesystem_root("postgresql")
-        (root / "var" / "log" / "postgresql").mkdir(parents=True, exist_ok=True)
+    # Setup Patroni wrapper.
+    patroni = Patroni(
+        harness.charm,
+        "postgresql-k8s-0",
+        ["postgresql-k8s-0", "postgresql-k8s-1", "postgresql-k8s-2"],
+        "postgresql-k8s-primary.dev.svc.cluster.local",
+        "test-model",
+        STORAGE_PATH,
+        "superuser-password",
+        "replication-password",
+        "rewind-password",
+        False,
+        "patroni-password",
+    )
+    root = harness.get_filesystem_root("postgresql")
+    (root / "var" / "log" / "postgresql").mkdir(parents=True, exist_ok=True)
 
-        yield patroni
+    yield patroni
 
 
 # This method will be used by the mock to replace requests.get
