@@ -21,7 +21,7 @@ Any charm using this library should import the `psycopg2` or `psycopg2-binary` d
 
 import logging
 from collections import OrderedDict
-from typing import Optional, Set, Tuple
+from typing import List, Optional, Set, Tuple
 
 import psycopg2
 from ops.model import Relation
@@ -35,7 +35,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 40
+LIBPATCH = 41
 
 INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE = "invalid role(s) for extra user roles"
 
@@ -108,7 +108,7 @@ class PostgreSQL:
         user: str,
         password: str,
         database: str,
-        system_users: Optional[list[str]] = None,
+        system_users: Optional[List[str]] = None,
     ):
         self.primary_host = primary_host
         self.current_host = current_host
@@ -161,8 +161,8 @@ class PostgreSQL:
         self,
         database: str,
         user: str,
-        plugins: Optional[list[str]] = None,
-        client_relations: Optional[list[Relation]] = None,
+        plugins: Optional[List[str]] = None,
+        client_relations: Optional[List[Relation]] = None,
     ) -> None:
         """Creates a new database and grant privileges to a user on it.
 

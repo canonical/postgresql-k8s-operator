@@ -70,7 +70,7 @@ pytest-operator-cache = {git = "https://github.com/canonical/data-platform-workf
 pytest-operator-groups = {git = "https://github.com/canonical/data-platform-workflows", tag = "v24.0.5", subdirectory = "python/pytest_plugins/pytest_operator_groups"}
 allure-pytest-collection-report = {git = "https://github.com/canonical/data-platform-workflows", tag = "v24.0.5", subdirectory = "python/pytest_plugins/allure_pytest_collection_report"}
 # renovate caret doesn't work: https://github.com/renovatebot/renovate/issues/26940
-juju = "<=3.5.2.1"
+juju = "<=3.6.1.0"
 psycopg2-binary = "^2.9.10"
 boto3 = "^1.35.70"
 tenacity = "^9.0.0"
