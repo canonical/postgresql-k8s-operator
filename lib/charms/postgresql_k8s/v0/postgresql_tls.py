@@ -130,16 +130,21 @@ class PostgreSQLTLS(Object):
             logger.error("An unknown certificate available.")
             return
 
-        self.charm.set_secret(
-            SCOPE, "chain", "\n".join(event.chain) if event.chain is not None else None
-        )
-        self.charm.set_secret(SCOPE, "cert", event.certificate)
-        self.charm.set_secret(SCOPE, "ca", event.ca)
-
         if not event.certificate:
-            logger.debug("Cannot push TLS certificates at this moment")
+            logger.debug("No certificate available.")
             event.defer()
             return
+
+        chain = self.charm.get_secret(SCOPE, "chain")
+        new_chain = "\n".join(event.chain) if event.chain is not None else None
+        if chain != new_chain:
+            self.charm.set_secret(SCOPE, "chain", new_chain)
+        cert = self.charm.get_secret(SCOPE, "cert")
+        if cert != event.certificate:
+            self.charm.set_secret(SCOPE, "cert", event.certificate)
+        ca = self.charm.get_secret(SCOPE, "ca")
+        if ca != event.ca:
+            self.charm.set_secret(SCOPE, "ca", event.ca)
 
         try:
             if not self.charm.push_tls_files_to_workload():

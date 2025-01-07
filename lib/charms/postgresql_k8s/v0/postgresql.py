@@ -368,8 +368,8 @@ class PostgreSQL:
                 connection.close()
 
     def _generate_database_privileges_statements(
-        self, relations_accessing_this_database: int, schemas: list[str], user: str
-    ) -> list[Composed]:
+        self, relations_accessing_this_database: int, schemas: List[str], user: str
+    ) -> List[Composed]:
         """Generates a list of databases privileges statements."""
         statements = []
         if relations_accessing_this_database == 1:
