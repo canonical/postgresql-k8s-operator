@@ -2276,7 +2276,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             "ldapbasedn": self.config.ldap_base_dn,
             "ldapbinddn": self.config.ldap_bind_dn,
             "ldapbindpasswd": self.config.ldap_bind_password,
-            "ldaptls": self.config.ldap_tls,
+            "ldaptls": self.is_tls_enabled,
             "ldapurl": self.config.ldap_url,
         }
 

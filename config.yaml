@@ -48,11 +48,6 @@ options:
       The search filter to use. This allows for more flexible search than ldap_search_attribute.
     type: string
     default: "(uid=$username)"
-  ldap_tls:
-    description: |
-      Set to true to make the connection between PostgreSQL and the LDAP server use TLS encryption.
-    type: boolean
-    default: false
   ldap_url:
     description: |
       An RFC 4516 LDAP URL. Combines the LDAP scheme, host and port.

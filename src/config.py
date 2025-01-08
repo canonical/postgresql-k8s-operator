@@ -23,7 +23,6 @@ class CharmConfig(BaseConfigModel):
     ldap_bind_password: str | None
     ldap_search_attribute: str | None
     ldap_search_filter: str | None
-    ldap_tls: int | None
     ldap_url: str | None
     logging_log_connections: bool | None
     logging_log_disconnections: bool | None
@@ -121,10 +120,9 @@ class CharmConfig(BaseConfigModel):
     @classmethod
     def check_ldap_search_options(cls, values):
         """Check the compatibility of the LDAP search configuration."""
-        ldap_tls = values.get("ldap_tls", False)
         ldap_url = values.get("ldap_url", "")
 
-        if ldap_tls and ldap_url.startswith("ldaps"):
+        if ldap_url.startswith("ldaps"):
             raise ValueError("To use TLS encryption: state the normal `ldap` scheme")
 
         ldap_base_dn = values.get("ldap_base_dn")
