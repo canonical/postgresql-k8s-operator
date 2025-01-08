@@ -51,11 +51,11 @@ def any_memory_to_bytes(mem_str) -> int:
     try:
         num = int(mem_str)
         return num
-    except ValueError:
+    except ValueError as e:
         memory, unit = split_mem(mem_str)
         unit = unit.upper()
         if unit not in units:
-            raise ValueError(f"Invalid memory definition in '{mem_str}'")
+            raise ValueError(f"Invalid memory definition in '{mem_str}'") from e
 
         num = int(memory)
         return int(num * units[unit])

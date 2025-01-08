@@ -64,11 +64,11 @@ optional = true
 [tool.poetry.group.integration.dependencies]
 lightkube = "^0.15.5"
 pytest = "^8.3.3"
-pytest-github-secrets = {git = "https://github.com/canonical/data-platform-workflows", tag = "v23.1.1", subdirectory = "python/pytest_plugins/github_secrets"}
+pytest-github-secrets = {git = "https://github.com/canonical/data-platform-workflows", tag = "v24.0.6", subdirectory = "python/pytest_plugins/github_secrets"}
 pytest-operator = "^0.38.0"
-pytest-operator-cache = {git = "https://github.com/canonical/data-platform-workflows", tag = "v23.1.1", subdirectory = "python/pytest_plugins/pytest_operator_cache"}
-pytest-operator-groups = {git = "https://github.com/canonical/data-platform-workflows", tag = "v23.1.1", subdirectory = "python/pytest_plugins/pytest_operator_groups"}
-allure-pytest-collection-report = {git = "https://github.com/canonical/data-platform-workflows", tag = "v23.1.1", subdirectory = "python/pytest_plugins/allure_pytest_collection_report"}
+pytest-operator-cache = {git = "https://github.com/canonical/data-platform-workflows", tag = "v24.0.6", subdirectory = "python/pytest_plugins/pytest_operator_cache"}
+pytest-operator-groups = {git = "https://github.com/canonical/data-platform-workflows", tag = "v24.0.6", subdirectory = "python/pytest_plugins/pytest_operator_groups"}
+allure-pytest-collection-report = {git = "https://github.com/canonical/data-platform-workflows", tag = "v24.0.6", subdirectory = "python/pytest_plugins/allure_pytest_collection_report"}
 # renovate caret doesn't work: https://github.com/renovatebot/renovate/issues/26940
 juju = "<=3.5.2.1"
 psycopg2-binary = "^2.9.10"
@@ -111,7 +111,7 @@ line-length = 99
 
 [tool.ruff.lint]
 explicit-preview-rules = true
-select = ["A", "E", "W", "F", "C", "N", "D", "I001", "CPY001"]
+select = ["A", "E", "W", "F", "C", "N", "D", "I001", "B", "CPY", "RUF", "S", "SIM", "UP", "TC"]
 extend-ignore = [
     "D203",
     "D204",
@@ -130,12 +130,19 @@ extend-ignore = [
 ignore = ["E501", "D107"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D100", "D101", "D102", "D103", "D104"]
+"tests/*" = [
+    "D100", "D101", "D102", "D103", "D104",
+    # Asserts
+    "B011",
+    # Disable security checks for tests
+    "S",
+]
 
 [tool.ruff.lint.flake8-copyright]
 # Check for properly formatted copyright header in each file
 author = "Canonical Ltd."
 notice-rgx = "Copyright\\s\\d{4}([-,]\\d{4})*\\s+"
+min-file-size = 1
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10

@@ -13,7 +13,7 @@ from tenacity import RetryError, stop_after_delay, wait_fixed
 
 from charm import PostgresqlOperatorCharm
 from constants import REWIND_USER
-from patroni import Patroni, SwitchoverFailedError
+from patroni import PATRONI_TIMEOUT, Patroni, SwitchoverFailedError
 from tests.helpers import STORAGE_PATH
 
 
@@ -222,7 +222,7 @@ def test_render_patroni_yml_file(harness, patroni):
         )
 
         # Setup a mock for the `open` method, set returned data to postgresql.conf template.
-        with open("templates/patroni.yml.j2", "r") as f:
+        with open("templates/patroni.yml.j2") as f:
             mock = mock_open(read_data=f.read())
 
         # Patch the `open` method with our mock.
@@ -231,7 +231,7 @@ def test_render_patroni_yml_file(harness, patroni):
             patroni.render_patroni_yml_file(enable_tls=False)
 
         # Check the template is opened read-only in the call to open.
-        assert mock.call_args_list[0][0] == ("templates/patroni.yml.j2", "r")
+        assert mock.call_args_list[0][0] == ("templates/patroni.yml.j2",)
         # Ensure the correct rendered template is sent to _render_file method.
         _render_file.assert_called_once_with(
             f"{STORAGE_PATH}/patroni.yml",
@@ -315,6 +315,7 @@ def test_switchover(harness, patroni):
             json={"leader": "postgresql-k8s-0", "candidate": None},
             verify=True,
             auth=patroni._patroni_auth,
+            timeout=PATRONI_TIMEOUT,
         )
 
         # Test a successful switchover with a candidate name.
@@ -326,6 +327,7 @@ def test_switchover(harness, patroni):
             json={"leader": "postgresql-k8s-0", "candidate": "postgresql-k8s-2"},
             verify=True,
             auth=patroni._patroni_auth,
+            timeout=PATRONI_TIMEOUT,
         )
 
         # Test failed switchovers.
@@ -341,6 +343,7 @@ def test_switchover(harness, patroni):
             json={"leader": "postgresql-k8s-0", "candidate": "postgresql-k8s-2"},
             verify=True,
             auth=patroni._patroni_auth,
+            timeout=PATRONI_TIMEOUT,
         )
 
         _post.reset_mock()
@@ -356,6 +359,7 @@ def test_switchover(harness, patroni):
             json={"leader": "postgresql-k8s-0", "candidate": "postgresql-k8s-2"},
             verify=True,
             auth=patroni._patroni_auth,
+            timeout=PATRONI_TIMEOUT,
         )
 
 
@@ -392,7 +396,10 @@ def test_member_started_true(patroni):
         assert patroni.member_started
 
         _get.assert_called_once_with(
-            "http://postgresql-k8s-0:8008/health", verify=True, auth=patroni._patroni_auth
+            "http://postgresql-k8s-0:8008/health",
+            verify=True,
+            auth=patroni._patroni_auth,
+            timeout=PATRONI_TIMEOUT,
         )
 
 
@@ -407,7 +414,10 @@ def test_member_started_false(patroni):
         assert not patroni.member_started
 
         _get.assert_called_once_with(
-            "http://postgresql-k8s-0:8008/health", verify=True, auth=patroni._patroni_auth
+            "http://postgresql-k8s-0:8008/health",
+            verify=True,
+            auth=patroni._patroni_auth,
+            timeout=PATRONI_TIMEOUT,
         )
 
 
@@ -422,7 +432,10 @@ def test_member_started_error(patroni):
         assert not patroni.member_started
 
         _get.assert_called_once_with(
-            "http://postgresql-k8s-0:8008/health", verify=True, auth=patroni._patroni_auth
+            "http://postgresql-k8s-0:8008/health",
+            verify=True,
+            auth=patroni._patroni_auth,
+            timeout=PATRONI_TIMEOUT,
         )
 
 
