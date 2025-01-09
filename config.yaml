@@ -24,7 +24,7 @@ options:
       If this value is specified without units, it is taken as kilobytes.
       Allowed values are: from 64 to 2147483647.
     type: int
-    default: 65536
+    default: 64
   instance_password_encryption:
     description: |
       Determines the algorithm to use to encrypt the password.
