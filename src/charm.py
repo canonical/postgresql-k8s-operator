@@ -13,7 +13,7 @@ import shutil
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Literal, Optional, Tuple, get_args
+from typing import Dict, List, Literal, Tuple, get_args
 
 # First platform-specific import, will fail on wrong architecture
 try:
@@ -254,7 +254,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         )
 
     @property
-    def tracing_endpoint(self) -> Optional[str]:
+    def tracing_endpoint(self) -> str | None:
         """Otlp http endpoint for charm instrumentation."""
         if self.tracing.is_ready():
             return self.tracing.get_endpoint(TRACING_PROTOCOL)
@@ -333,7 +333,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         new_key = key.replace("_", "-")
         return new_key.strip("-")
 
-    def get_secret(self, scope: Scopes, key: str) -> Optional[str]:
+    def get_secret(self, scope: Scopes, key: str) -> str | None:
         """Get secret from the secret storage."""
         if scope not in get_args(Scopes):
             raise RuntimeError("Unknown secret scope.")
@@ -348,7 +348,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         return self.peer_relation_data(scope).get_secret(peers.id, secret_key)
 
-    def set_secret(self, scope: Scopes, key: str, value: Optional[str]) -> Optional[str]:
+    def set_secret(self, scope: Scopes, key: str, value: str | None) -> str | None:
         """Set secret from the secret storage."""
         if scope not in get_args(Scopes):
             raise RuntimeError("Unknown secret scope.")
@@ -433,7 +433,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         endpoints_to_remove = list(set(old) - set(current))
         return endpoints_to_remove
 
-    def get_unit_ip(self, unit: Unit) -> Optional[str]:
+    def get_unit_ip(self, unit: Unit) -> str | None:
         """Get the IP address of a specific unit."""
         # Check if host is current host.
         if unit == self.unit:
@@ -683,7 +683,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 )
                 return
 
-    def enable_disable_extensions(self, database: Optional[str] = None) -> None:
+    def enable_disable_extensions(self, database: str | None = None) -> None:
         """Enable/disable PostgreSQL extensions set through config options.
 
         Args:
@@ -1627,8 +1627,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _update_endpoints(
         self,
-        endpoint_to_add: Optional[str] = None,
-        endpoints_to_remove: Optional[List[str]] = None,
+        endpoint_to_add: str | None = None,
+        endpoints_to_remove: List[str] | None = None,
     ) -> None:
         """Update members IPs."""
         # Allow leader to reset which members are part of the cluster.

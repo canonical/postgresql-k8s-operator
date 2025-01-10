@@ -18,7 +18,7 @@ import itertools
 import json
 import logging
 from datetime import datetime
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 from lightkube import ApiError, Client
 from lightkube.resources.core_v1 import Endpoints, Service
@@ -217,7 +217,7 @@ class PostgreSQLAsyncReplication(Object):
                     promoted_cluster_counter = relation_promoted_cluster_counter
         return promoted_cluster_counter
 
-    def get_primary_cluster(self) -> Optional[Application]:
+    def get_primary_cluster(self) -> Application | None:
         """Return the primary cluster."""
         primary_cluster = None
         promoted_cluster_counter = "0"
@@ -238,7 +238,7 @@ class PostgreSQLAsyncReplication(Object):
                     primary_cluster = app
         return primary_cluster
 
-    def get_primary_cluster_endpoint(self) -> Optional[str]:
+    def get_primary_cluster_endpoint(self) -> str | None:
         """Return the primary cluster endpoint."""
         primary_cluster = self.get_primary_cluster()
         if primary_cluster is None or self.charm.app == primary_cluster:
@@ -309,7 +309,7 @@ class PostgreSQLAsyncReplication(Object):
             if relation.data[unit].get("unit-address") is not None
         ]
 
-    def get_system_identifier(self) -> Tuple[Optional[str], Optional[str]]:
+    def get_system_identifier(self) -> Tuple[str | None, str | None]:
         """Returns the PostgreSQL system identifier from this instance."""
         try:
             system_identifier, error = self.container.exec(
@@ -753,8 +753,8 @@ class PostgreSQLAsyncReplication(Object):
 
     def _update_primary_cluster_data(
         self,
-        promoted_cluster_counter: Optional[int] = None,
-        system_identifier: Optional[str] = None,
+        promoted_cluster_counter: int | None = None,
+        system_identifier: str | None = None,
     ) -> None:
         """Update the primary cluster data."""
         async_relation = self._relation

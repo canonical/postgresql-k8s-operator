@@ -12,7 +12,7 @@ import tempfile
 import zipfile
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional, Set, Tuple, Union
+from typing import Dict, Set, Tuple, Union
 
 import kubernetes as kubernetes
 import psycopg2
@@ -435,7 +435,7 @@ async def fetch_cluster_members(ops_test: OpsTest):
     return member_ips
 
 
-async def get_patroni_setting(ops_test: OpsTest, setting: str, tls: bool = False) -> Optional[int]:
+async def get_patroni_setting(ops_test: OpsTest, setting: str, tls: bool = False) -> int | None:
     """Get the value of one of the integer Patroni settings.
 
     Args:
@@ -476,7 +476,7 @@ async def get_instances_roles(ops_test: OpsTest):
     return labels
 
 
-async def get_postgresql_parameter(ops_test: OpsTest, parameter_name: str) -> Optional[int]:
+async def get_postgresql_parameter(ops_test: OpsTest, parameter_name: str) -> int | None:
     """Get the value of a PostgreSQL parameter from Patroni API.
 
     Args:

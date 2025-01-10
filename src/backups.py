@@ -11,7 +11,7 @@ import tempfile
 import time
 from datetime import datetime, timezone
 from io import BytesIO
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Tuple
 
 import boto3 as boto3
 import botocore
@@ -89,7 +89,7 @@ class PostgreSQLBackups(Object):
             return f"{self.charm._storage_path}/pgbackrest-tls-ca-chain.crt"
         return ""
 
-    def _are_backup_settings_ok(self) -> Tuple[bool, Optional[str]]:
+    def _are_backup_settings_ok(self) -> Tuple[bool, str | None]:
         """Validates whether backup settings are OK."""
         if self.model.get_relation(self.relation_name) is None:
             return (
@@ -120,7 +120,7 @@ class PostgreSQLBackups(Object):
             )
         )
 
-    def _can_unit_perform_backup(self) -> Tuple[bool, Optional[str]]:
+    def _can_unit_perform_backup(self) -> Tuple[bool, str | None]:
         """Validates whether this unit can perform a backup."""
         if self.charm.is_blocked:
             return False, "Unit is in a blocking state"
@@ -152,7 +152,7 @@ class PostgreSQLBackups(Object):
 
         return self._are_backup_settings_ok()
 
-    def can_use_s3_repository(self) -> Tuple[bool, Optional[str]]:
+    def can_use_s3_repository(self) -> Tuple[bool, str | None]:
         """Returns whether the charm was configured to use another cluster repository."""
         # Check model uuid
         s3_parameters, _ = self._retrieve_s3_parameters()
@@ -278,8 +278,11 @@ class PostgreSQLBackups(Object):
         self.charm.update_config(is_creating_backup=True)
 
     def _execute_command(
-        self, command: List[str], timeout: Optional[float] = None, stream: bool = False
-    ) -> Tuple[Optional[str], Optional[str]]:
+        self,
+        command: List[str],
+        timeout: float | None = None,
+        stream: bool = False,
+    ) -> Tuple[str | None, str | None]:
         """Execute a command in the workload container."""
         try:
             logger.debug("Running command %s", " ".join(command))
