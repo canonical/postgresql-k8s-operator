@@ -11,7 +11,7 @@ import tempfile
 import time
 from datetime import datetime, timezone
 from io import BytesIO
-from typing import Dict, Tuple
+from typing import Tuple
 
 import boto3 as boto3
 import botocore
@@ -196,7 +196,7 @@ class PostgreSQLBackups(Object):
                 return False, ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE
         return True, None
 
-    def _construct_endpoint(self, s3_parameters: Dict) -> str:
+    def _construct_endpoint(self, s3_parameters: dict) -> str:
         """Construct the S3 service endpoint using the region.
 
         This is needed when the provided endpoint is from AWS, and it doesn't contain the region.
@@ -1224,7 +1224,7 @@ Stderr:
         self.charm.update_config()
         self.container.start(self.charm._postgresql_service)
 
-    def _retrieve_s3_parameters(self) -> Tuple[Dict, list[str]]:
+    def _retrieve_s3_parameters(self) -> Tuple[dict, list[str]]:
         """Retrieve S3 parameters from the S3 integrator relation."""
         s3_parameters = self.s3_client.get_s3_connection_info()
         required_parameters = [

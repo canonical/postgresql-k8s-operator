@@ -13,7 +13,7 @@ import shutil
 import sys
 import time
 from pathlib import Path
-from typing import Dict, Literal, Tuple, get_args
+from typing import Literal, Tuple, get_args
 
 # First platform-specific import, will fail on wrong architecture
 try:
@@ -267,7 +267,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         juju_version = JujuVersion.from_environ()
         return juju_version > JujuVersion(version="3.3")
 
-    def _generate_metrics_jobs(self, enable_tls: bool) -> Dict:
+    def _generate_metrics_jobs(self, enable_tls: bool) -> dict:
         """Generate spec for Prometheus scraping."""
         return [
             {"static_configs": [{"targets": [f"*:{METRICS_PORT}"]}]},
@@ -287,7 +287,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         return {self.unit, *self._peers.units}
 
     @property
-    def app_peer_data(self) -> Dict:
+    def app_peer_data(self) -> dict:
         """Application peer relation data object."""
         relation = self.model.get_relation(PEER)
         if relation is None:
@@ -296,7 +296,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         return relation.data[self.app]
 
     @property
-    def unit_peer_data(self) -> Dict:
+    def unit_peer_data(self) -> dict:
         """Unit peer relation data object."""
         relation = self.model.get_relation(PEER)
         if relation is None:
@@ -304,7 +304,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         return relation.data[self.unit]
 
-    def _peer_data(self, scope: Scopes) -> Dict:
+    def _peer_data(self, scope: Scopes) -> dict:
         """Return corresponding databag for app/unit."""
         relation = self.model.get_relation(PEER)
         if relation is None:
@@ -1643,7 +1643,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 endpoints.remove(endpoint)
         self._peers.data[self.app]["endpoints"] = json.dumps(endpoints)
 
-    def _generate_metrics_service(self) -> Dict:
+    def _generate_metrics_service(self) -> dict:
         """Generate the metrics service definition."""
         return {
             "override": "replace",
@@ -2012,7 +2012,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         )
         return pod.spec.nodeName
 
-    def get_resources_limits(self, container_name: str) -> Dict:
+    def get_resources_limits(self, container_name: str) -> dict:
         """Return resources limits for a given container.
 
         Args:

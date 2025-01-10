@@ -3,7 +3,7 @@
 # See LICENSE file for licensing details.
 import logging
 import uuid
-from typing import Dict, Tuple
+from typing import Tuple
 
 import boto3
 import pytest as pytest
@@ -382,7 +382,7 @@ async def pitr_backup_operations(
 
 @pytest.mark.group("AWS")
 @pytest.mark.abort_on_fail
-async def test_pitr_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> None:
+async def test_pitr_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[dict, dict]) -> None:
     """Build and deploy two units of PostgreSQL in AWS and then test PITR backup and restore actions."""
     config = cloud_configs[0][AWS]
     credentials = cloud_configs[1][AWS]
@@ -402,7 +402,7 @@ async def test_pitr_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dic
 
 @pytest.mark.group("GCP")
 @pytest.mark.abort_on_fail
-async def test_pitr_backup_gcp(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> None:
+async def test_pitr_backup_gcp(ops_test: OpsTest, cloud_configs: Tuple[dict, dict]) -> None:
     """Build and deploy two units of PostgreSQL in GCP and then test PITR backup and restore actions."""
     config = cloud_configs[0][GCP]
     credentials = cloud_configs[1][GCP]

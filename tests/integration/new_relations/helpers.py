@@ -2,7 +2,6 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 import json
-from typing import Dict
 
 import yaml
 from lightkube import AsyncClient
@@ -11,7 +10,7 @@ from pytest_operator.plugin import OpsTest
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_exponential
 
 
-async def get_juju_secret(ops_test: OpsTest, secret_uri: str) -> Dict[str, str]:
+async def get_juju_secret(ops_test: OpsTest, secret_uri: str) -> dict[str, str]:
     """Retrieve juju secret."""
     secret_unique_id = secret_uri.split("/")[-1]
     complete_command = f"show-secret {secret_uri} --reveal --format=json"

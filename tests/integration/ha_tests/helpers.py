@@ -12,7 +12,7 @@ import tempfile
 import zipfile
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Set, Tuple
+from typing import Set, Tuple
 
 import kubernetes as kubernetes
 import psycopg2
@@ -101,7 +101,7 @@ async def are_all_db_processes_down(ops_test: OpsTest, process: str, signal: str
     return True
 
 
-def get_patroni_cluster(unit_ip: str) -> Dict[str, str]:
+def get_patroni_cluster(unit_ip: str) -> dict[str, str]:
     for attempt in Retrying(stop=stop_after_delay(30), wait=wait_fixed(3)):
         with attempt:
             resp = requests.get(f"http://{unit_ip}:8008/cluster")
@@ -194,7 +194,7 @@ async def is_cluster_updated(ops_test: OpsTest, primary_name: str) -> None:
     )
 
 
-def get_member_lag(cluster: Dict, member_name: str) -> int:
+def get_member_lag(cluster: dict, member_name: str) -> int:
     """Return the lag of a specific member."""
     for member in cluster["members"]:
         if member["name"] == member_name.replace("/", "-"):
@@ -315,7 +315,7 @@ def copy_file_into_pod(
 
 async def count_writes(
     ops_test: OpsTest, down_unit: str | None = None, extra_model: Model = None
-) -> Tuple[Dict[str, int], Dict[str, int]]:
+) -> Tuple[dict[str, int], dict[str, int]]:
     """Count the number of writes in the database."""
     app = await app_name(ops_test)
     password = await get_password(ops_test, database_app_name=app, down_unit=down_unit)
