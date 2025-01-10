@@ -11,7 +11,7 @@ import tempfile
 import time
 from datetime import datetime, timezone
 from io import BytesIO
-from typing import Dict, List, Tuple
+from typing import Dict, Tuple
 
 import boto3 as boto3
 import botocore
@@ -279,7 +279,7 @@ class PostgreSQLBackups(Object):
 
     def _execute_command(
         self,
-        command: List[str],
+        command: list[str],
         timeout: float | None = None,
         stream: bool = False,
     ) -> Tuple[str | None, str | None]:
@@ -1224,7 +1224,7 @@ Stderr:
         self.charm.update_config()
         self.container.start(self.charm._postgresql_service)
 
-    def _retrieve_s3_parameters(self) -> Tuple[Dict, List[str]]:
+    def _retrieve_s3_parameters(self) -> Tuple[Dict, list[str]]:
         """Retrieve S3 parameters from the S3 integrator relation."""
         s3_parameters = self.s3_client.get_s3_connection_info()
         required_parameters = [

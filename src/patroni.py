@@ -7,7 +7,7 @@
 import logging
 import os
 import pwd
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 import requests
 import yaml
@@ -60,7 +60,7 @@ class Patroni:
         self,
         charm,
         endpoint: str,
-        endpoints: List[str],
+        endpoints: list[str],
         primary_endpoint: str,
         namespace: str,
         storage_path: str,
@@ -107,7 +107,7 @@ class Patroni:
         return yaml.safe_load(snap_meta)["version"]
 
     def _get_alternative_patroni_url(
-        self, attempt: AttemptManager, alternative_endpoints: List[str] | None = None
+        self, attempt: AttemptManager, alternative_endpoints: list[str] | None = None
     ) -> str:
         """Get an alternative REST API URL from another member each time.
 
@@ -127,7 +127,7 @@ class Patroni:
         return url
 
     def get_primary(
-        self, unit_name_pattern=False, alternative_endpoints: List[str] | None = None
+        self, unit_name_pattern=False, alternative_endpoints: list[str] | None = None
     ) -> str:
         """Get primary instance.
 
@@ -190,7 +190,7 @@ class Patroni:
                         break
         return standby_leader
 
-    def get_sync_standby_names(self) -> List[str]:
+    def get_sync_standby_names(self) -> list[str]:
         """Get the list of sync standby unit names."""
         sync_standbys = []
         # Request info from cluster endpoint (which returns all members of the cluster).

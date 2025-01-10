@@ -8,7 +8,6 @@ from datetime import datetime
 from multiprocessing import ProcessError
 from pathlib import Path
 from subprocess import check_call
-from typing import List
 
 import botocore
 import psycopg2
@@ -119,8 +118,8 @@ async def build_and_deploy(
 
 async def check_database_users_existence(
     ops_test: OpsTest,
-    users_that_should_exist: List[str],
-    users_that_should_not_exist: List[str],
+    users_that_should_exist: list[str],
+    users_that_should_not_exist: list[str],
     admin: bool = False,
     database_app_name: str = DATABASE_APP_NAME,
 ) -> None:
@@ -239,7 +238,7 @@ def construct_endpoint(endpoint: str, region: str) -> str:
     return endpoint
 
 
-def convert_records_to_dict(records: List[tuple]) -> dict:
+def convert_records_to_dict(records: list[tuple]) -> dict:
     """Converts psycopg2 records list to a dict."""
     records_dict = {}
     for record in records:
@@ -355,7 +354,7 @@ async def execute_query_on_unit(
     return output
 
 
-def get_cluster_members(endpoint: str) -> List[str]:
+def get_cluster_members(endpoint: str) -> list[str]:
     """List of current Patroni cluster members.
 
     Args:
@@ -368,7 +367,7 @@ def get_cluster_members(endpoint: str) -> List[str]:
     return [member["name"] for member in r.json()["members"]]
 
 
-def get_application_units(ops_test: OpsTest, application_name: str) -> List[str]:
+def get_application_units(ops_test: OpsTest, application_name: str) -> list[str]:
     """List the unit names of an application.
 
     Args:

@@ -13,7 +13,7 @@ import shutil
 import sys
 import time
 from pathlib import Path
-from typing import Dict, List, Literal, Tuple, get_args
+from typing import Dict, Literal, Tuple, get_args
 
 # First platform-specific import, will fail on wrong architecture
 try:
@@ -426,7 +426,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         unit_id = unit_name.split("/")[1]
         return f"{self.app.name}-{unit_id}.{self.app.name}-endpoints"
 
-    def _get_endpoints_to_remove(self) -> List[str]:
+    def _get_endpoints_to_remove(self) -> list[str]:
         """List the endpoints that were part of the cluster but departed."""
         old = self._endpoints
         current = [self._get_hostname_from_unit(member) for member in self._hosts]
@@ -1593,7 +1593,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         return self._get_hostname_from_unit(self._unit_name_to_pod_name(self.unit.name))
 
     @property
-    def _endpoints(self) -> List[str]:
+    def _endpoints(self) -> list[str]:
         """Cluster members hostnames."""
         if self._peers:
             return json.loads(self._peers.data[self.app].get("endpoints", "[]"))
@@ -1602,7 +1602,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return [self._endpoint]
 
     @property
-    def peer_members_endpoints(self) -> List[str]:
+    def peer_members_endpoints(self) -> list[str]:
         """Fetch current list of peer members endpoints.
 
         Returns:
@@ -1621,14 +1621,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Add one endpoint to the members list."""
         self._update_endpoints(endpoint_to_add=endpoint)
 
-    def _remove_from_endpoints(self, endpoints: List[str]) -> None:
+    def _remove_from_endpoints(self, endpoints: list[str]) -> None:
         """Remove endpoints from the members list."""
         self._update_endpoints(endpoints_to_remove=endpoints)
 
     def _update_endpoints(
         self,
         endpoint_to_add: str | None = None,
-        endpoints_to_remove: List[str] | None = None,
+        endpoints_to_remove: list[str] | None = None,
     ) -> None:
         """Update members IPs."""
         # Allow leader to reset which members are part of the cluster.
@@ -2073,7 +2073,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         )
 
     @property
-    def client_relations(self) -> List[Relation]:
+    def client_relations(self) -> list[Relation]:
         """Return the list of established client relations."""
         relations = []
         for relation_name in ["database", "db", "db-admin"]:
@@ -2228,7 +2228,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         else:
             logger.error("Can't tell last completed transaction time")
 
-    def get_plugins(self) -> List[str]:
+    def get_plugins(self) -> list[str]:
         """Return a list of installed plugins."""
         plugins = [
             "_".join(plugin.split("_")[1:-1])

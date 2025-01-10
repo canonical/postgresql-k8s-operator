@@ -18,7 +18,7 @@ import itertools
 import json
 import logging
 from datetime import datetime
-from typing import List, Tuple
+from typing import Tuple
 
 from lightkube import ApiError, Client
 from lightkube.resources.core_v1 import Endpoints, Service
@@ -249,7 +249,7 @@ class PostgreSQLAsyncReplication(Object):
             return None
         return json.loads(primary_cluster_data).get("endpoint")
 
-    def get_all_primary_cluster_endpoints(self) -> List[str]:
+    def get_all_primary_cluster_endpoints(self) -> list[str]:
         """Return all the primary cluster endpoints."""
         relation = self._relation
         primary_cluster = self.get_primary_cluster()
@@ -291,7 +291,7 @@ class PostgreSQLAsyncReplication(Object):
 
         return self.charm.model.app.add_secret(content=shared_content, label=SECRET_LABEL)
 
-    def get_standby_endpoints(self) -> List[str]:
+    def get_standby_endpoints(self) -> list[str]:
         """Return the standby endpoints."""
         relation = self._relation
         primary_cluster = self.get_primary_cluster()
