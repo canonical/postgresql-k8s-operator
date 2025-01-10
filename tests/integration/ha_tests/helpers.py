@@ -12,7 +12,7 @@ import tempfile
 import zipfile
 from datetime import datetime
 from pathlib import Path
-from typing import Set, Tuple
+from typing import Tuple
 
 import kubernetes as kubernetes
 import psycopg2
@@ -615,7 +615,7 @@ async def is_replica(ops_test: OpsTest, unit_name: str) -> bool:
         return False
 
 
-async def list_wal_files(ops_test: OpsTest, app: str) -> Set:
+async def list_wal_files(ops_test: OpsTest, app: str) -> set:
     """Returns the list of WAL segment files in each unit."""
     units = [unit.name for unit in ops_test.model.applications[app].units]
     command = "ls -1 /var/lib/postgresql/data/pgdata/pg_wal/"
