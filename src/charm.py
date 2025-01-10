@@ -13,7 +13,7 @@ import shutil
 import sys
 import time
 from pathlib import Path
-from typing import Literal, Tuple, get_args
+from typing import Literal, get_args
 
 # First platform-specific import, will fail on wrong architecture
 try:
@@ -2040,7 +2040,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         node = client.get(Node, name=self._get_node_name_for_pod(), namespace=self._namespace)
         return any_cpu_to_cores(node.status.allocatable["cpu"])
 
-    def get_available_resources(self) -> Tuple[int, int]:
+    def get_available_resources(self) -> tuple[int, int]:
         """Get available CPU cores and memory (in bytes) for the container."""
         cpu_cores = self.get_node_cpu_cores()
         allocable_memory = self.get_node_allocable_memory()
@@ -2150,7 +2150,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         else:
             logger.warning("not restoring patroni on-failure condition as it's not overridden")
 
-    def is_pitr_failed(self, container: Container) -> Tuple[bool, bool]:
+    def is_pitr_failed(self, container: Container) -> tuple[bool, bool]:
         """Check if Patroni service failed to bootstrap cluster during point-in-time-recovery.
 
         Typically, this means that database service failed to reach point-in-time-recovery target or has been
@@ -2158,7 +2158,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         it belongs to previous action. Executes only on current unit.
 
         Returns:
-            Tuple[bool, bool]:
+            tuple[bool, bool]:
                 - Is patroni service failed to bootstrap cluster.
                 - Is it new fail, that wasn't observed previously.
         """

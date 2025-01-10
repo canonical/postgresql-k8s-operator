@@ -18,7 +18,6 @@ import itertools
 import json
 import logging
 from datetime import datetime
-from typing import Tuple
 
 from lightkube import ApiError, Client
 from lightkube.resources.core_v1 import Endpoints, Service
@@ -309,7 +308,7 @@ class PostgreSQLAsyncReplication(Object):
             if relation.data[unit].get("unit-address") is not None
         ]
 
-    def get_system_identifier(self) -> Tuple[str | None, str | None]:
+    def get_system_identifier(self) -> tuple[str | None, str | None]:
         """Returns the PostgreSQL system identifier from this instance."""
         try:
             system_identifier, error = self.container.exec(

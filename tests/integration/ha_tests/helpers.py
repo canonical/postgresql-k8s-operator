@@ -12,7 +12,6 @@ import tempfile
 import zipfile
 from datetime import datetime
 from pathlib import Path
-from typing import Tuple
 
 import kubernetes as kubernetes
 import psycopg2
@@ -315,7 +314,7 @@ def copy_file_into_pod(
 
 async def count_writes(
     ops_test: OpsTest, down_unit: str | None = None, extra_model: Model = None
-) -> Tuple[dict[str, int], dict[str, int]]:
+) -> tuple[dict[str, int], dict[str, int]]:
     """Count the number of writes in the database."""
     app = await app_name(ops_test)
     password = await get_password(ops_test, database_app_name=app, down_unit=down_unit)

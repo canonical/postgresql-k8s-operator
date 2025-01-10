@@ -4,7 +4,7 @@
 """Postgres db and db-admin relation hooks & helpers."""
 
 import logging
-from typing import Iterable, Tuple
+from typing import Iterable
 
 from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQLCreateDatabaseError,
@@ -119,7 +119,7 @@ class DbProvides(Object):
                 return True
         return False
 
-    def _get_extensions(self, relation: Relation) -> Tuple[list, set]:
+    def _get_extensions(self, relation: Relation) -> tuple[list, set]:
         """Returns the list of required and disabled extensions."""
         requested_extensions = relation.data.get(relation.app, {}).get("extensions", "").split(",")
         for unit in relation.units:
