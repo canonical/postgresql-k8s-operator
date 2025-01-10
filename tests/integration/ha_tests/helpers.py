@@ -12,7 +12,7 @@ import tempfile
 import zipfile
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Set, Tuple, Union
+from typing import Dict, Set, Tuple
 
 import kubernetes as kubernetes
 import psycopg2
@@ -109,7 +109,7 @@ def get_patroni_cluster(unit_ip: str) -> Dict[str, str]:
 
 
 async def change_patroni_setting(
-    ops_test: OpsTest, setting: str, value: Union[int, str], password: str, tls: bool = False
+    ops_test: OpsTest, setting: str, value: str | int, password: str, tls: bool = False
 ) -> None:
     """Change the value of one of the Patroni settings.
 
@@ -543,7 +543,7 @@ async def get_sync_standby(model: Model, application_name: str) -> str:
 
 
 async def inject_dependency_fault(
-    ops_test: OpsTest, application_name: str, charm_file: Union[str, Path]
+    ops_test: OpsTest, application_name: str, charm_file: str | Path
 ) -> None:
     """Inject a dependency fault into the PostgreSQL charm."""
     # Query running dependency to overwrite with incompatible version.
