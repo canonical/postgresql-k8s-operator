@@ -1,0 +1,27 @@
+dn: cn=monitoring,ou=system,dc=glauth,dc=com
+objectClass: systemUser
+uidNumber: 5001
+gidNumber: 5501
+cn: monitoring
+userPassword: {SHA256}{{ monitoring_password }}
+
+dn: cn=operator,ou=system,dc=glauth,dc=com
+objectClass: systemUser
+uidNumber: 5002
+gidNumber: 5501
+cn: operator
+userPassword: {SHA256}{{ operator_password }}
+
+dn: cn=replication,ou=system,dc=glauth,dc=com
+objectClass: systemUser
+uidNumber: 5003
+gidNumber: 5501
+cn: replication
+userPassword: {SHA256}{{ replication_password }}
+
+dn: cn=rewind,ou=system,dc=glauth,dc=com
+objectClass: systemUser
+uidNumber: 5004
+gidNumber: 5501
+cn: rewind
+userPassword: {SHA256}{{ rewind_password }}
