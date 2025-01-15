@@ -45,7 +45,7 @@ jobs:
 
   build:
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v26.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@libpq-dev-remove
     with:
       cache: true
       charmcraft-snap-channel: latest/beta/data-platform  # TODO: remove after charmcraft 3.3 stable release
