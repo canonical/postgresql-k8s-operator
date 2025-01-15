@@ -8,7 +8,6 @@ from datetime import datetime
 from multiprocessing import ProcessError
 from pathlib import Path
 from subprocess import check_call
-from typing import List, Optional
 
 import botocore
 import psycopg2
@@ -53,7 +52,7 @@ logger = logging.getLogger(__name__)
 
 async def app_name(
     ops_test: OpsTest, application_name: str = "postgresql-k8s", model: Model = None
-) -> Optional[str]:
+) -> str | None:
     """Returns the name of the cluster running PostgreSQL.
 
     This is important since not all deployments of the PostgreSQL charm have the application name
@@ -119,8 +118,8 @@ async def build_and_deploy(
 
 async def check_database_users_existence(
     ops_test: OpsTest,
-    users_that_should_exist: List[str],
-    users_that_should_not_exist: List[str],
+    users_that_should_exist: list[str],
+    users_that_should_not_exist: list[str],
     admin: bool = False,
     database_app_name: str = DATABASE_APP_NAME,
 ) -> None:
@@ -239,7 +238,7 @@ def construct_endpoint(endpoint: str, region: str) -> str:
     return endpoint
 
 
-def convert_records_to_dict(records: List[tuple]) -> dict:
+def convert_records_to_dict(records: list[tuple]) -> dict:
     """Converts psycopg2 records list to a dict."""
     records_dict = {}
     for record in records:
@@ -331,7 +330,7 @@ async def execute_query_on_unit(
     password: str,
     query: str,
     database: str = "postgres",
-    sslmode: Optional[str] = None,
+    sslmode: str | None = None,
 ):
     """Execute given PostgreSQL query on a unit.
 
@@ -355,7 +354,7 @@ async def execute_query_on_unit(
     return output
 
 
-def get_cluster_members(endpoint: str) -> List[str]:
+def get_cluster_members(endpoint: str) -> list[str]:
     """List of current Patroni cluster members.
 
     Args:
@@ -368,7 +367,7 @@ def get_cluster_members(endpoint: str) -> List[str]:
     return [member["name"] for member in r.json()["members"]]
 
 
-def get_application_units(ops_test: OpsTest, application_name: str) -> List[str]:
+def get_application_units(ops_test: OpsTest, application_name: str) -> list[str]:
     """List the unit names of an application.
 
     Args:
@@ -434,7 +433,7 @@ def get_expected_k8s_resources(application: str) -> set:
     }
 
 
-async def get_leader_unit(ops_test: OpsTest, app: str, model: Model = None) -> Optional[Unit]:
+async def get_leader_unit(ops_test: OpsTest, app: str, model: Model = None) -> Unit | None:
     leader_unit = None
     if model is None:
         model = ops_test.model
@@ -458,8 +457,8 @@ async def get_password(
     ops_test: OpsTest,
     username: str = "operator",
     database_app_name: str = DATABASE_APP_NAME,
-    down_unit: Optional[str] = None,
-    unit_name: Optional[str] = None,
+    down_unit: str | None = None,
+    unit_name: str | None = None,
 ):
     """Retrieve a user password using the action."""
     for unit in ops_test.model.applications[database_app_name].units:
@@ -476,7 +475,7 @@ async def get_password(
     wait=wait_exponential(multiplier=1, min=2, max=30),
 )
 async def get_primary(
-    ops_test: OpsTest, database_app_name: str = DATABASE_APP_NAME, down_unit: Optional[str] = None
+    ops_test: OpsTest, database_app_name: str = DATABASE_APP_NAME, down_unit: str | None = None
 ) -> str:
     """Get the primary unit.
 
@@ -512,7 +511,7 @@ async def get_unit_address(ops_test: OpsTest, unit_name: str) -> str:
     return status["applications"][unit_name.split("/")[0]].units[unit_name]["address"]
 
 
-def get_unit_by_index(app: str, units: list, index: int) -> Optional[Unit]:
+def get_unit_by_index(app: str, units: list, index: int) -> Unit | None:
     """Get unit by index.
 
     Args:
@@ -725,7 +724,7 @@ async def scale_application(
 
 
 async def set_password(
-    ops_test: OpsTest, unit_name: str, username: str = "operator", password: Optional[str] = None
+    ops_test: OpsTest, unit_name: str, username: str = "operator", password: str | None = None
 ):
     """Set a user password using the action."""
     unit = ops_test.model.units.get(unit_name)
@@ -738,7 +737,7 @@ async def set_password(
 
 
 async def switchover(
-    ops_test: OpsTest, current_primary: str, password: str, candidate: Optional[str] = None
+    ops_test: OpsTest, current_primary: str, password: str, candidate: str | None = None
 ) -> None:
     """Trigger a switchover.
 

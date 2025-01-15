@@ -12,7 +12,6 @@ import tempfile
 import zipfile
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional, Set, Tuple, Union
 
 import kubernetes as kubernetes
 import psycopg2
@@ -101,7 +100,7 @@ async def are_all_db_processes_down(ops_test: OpsTest, process: str, signal: str
     return True
 
 
-def get_patroni_cluster(unit_ip: str) -> Dict[str, str]:
+def get_patroni_cluster(unit_ip: str) -> dict[str, str]:
     for attempt in Retrying(stop=stop_after_delay(30), wait=wait_fixed(3)):
         with attempt:
             resp = requests.get(f"http://{unit_ip}:8008/cluster")
@@ -109,7 +108,7 @@ def get_patroni_cluster(unit_ip: str) -> Dict[str, str]:
 
 
 async def change_patroni_setting(
-    ops_test: OpsTest, setting: str, value: Union[int, str], password: str, tls: bool = False
+    ops_test: OpsTest, setting: str, value: str | int, password: str, tls: bool = False
 ) -> None:
     """Change the value of one of the Patroni settings.
 
@@ -194,7 +193,7 @@ async def is_cluster_updated(ops_test: OpsTest, primary_name: str) -> None:
     )
 
 
-def get_member_lag(cluster: Dict, member_name: str) -> int:
+def get_member_lag(cluster: dict, member_name: str) -> int:
     """Return the lag of a specific member."""
     for member in cluster["members"]:
         if member["name"] == member_name.replace("/", "-"):
@@ -315,7 +314,7 @@ def copy_file_into_pod(
 
 async def count_writes(
     ops_test: OpsTest, down_unit: str | None = None, extra_model: Model = None
-) -> Tuple[Dict[str, int], Dict[str, int]]:
+) -> tuple[dict[str, int], dict[str, int]]:
     """Count the number of writes in the database."""
     app = await app_name(ops_test)
     password = await get_password(ops_test, database_app_name=app, down_unit=down_unit)
@@ -435,7 +434,7 @@ async def fetch_cluster_members(ops_test: OpsTest):
     return member_ips
 
 
-async def get_patroni_setting(ops_test: OpsTest, setting: str, tls: bool = False) -> Optional[int]:
+async def get_patroni_setting(ops_test: OpsTest, setting: str, tls: bool = False) -> int | None:
     """Get the value of one of the integer Patroni settings.
 
     Args:
@@ -476,7 +475,7 @@ async def get_instances_roles(ops_test: OpsTest):
     return labels
 
 
-async def get_postgresql_parameter(ops_test: OpsTest, parameter_name: str) -> Optional[int]:
+async def get_postgresql_parameter(ops_test: OpsTest, parameter_name: str) -> int | None:
     """Get the value of a PostgreSQL parameter from Patroni API.
 
     Args:
@@ -563,7 +562,7 @@ async def get_sync_standby(model: Model, application_name: str) -> str:
 
 
 async def inject_dependency_fault(
-    ops_test: OpsTest, application_name: str, charm_file: Union[str, Path]
+    ops_test: OpsTest, application_name: str, charm_file: str | Path
 ) -> None:
     """Inject a dependency fault into the PostgreSQL charm."""
     # Query running dependency to overwrite with incompatible version.
@@ -635,7 +634,7 @@ async def is_replica(ops_test: OpsTest, unit_name: str) -> bool:
         return False
 
 
-async def list_wal_files(ops_test: OpsTest, app: str) -> Set:
+async def list_wal_files(ops_test: OpsTest, app: str) -> set:
     """Returns the list of WAL segment files in each unit."""
     units = [unit.name for unit in ops_test.model.applications[app].units]
     command = "ls -1 /var/lib/postgresql/data/pgdata/pg_wal/"

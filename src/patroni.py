@@ -7,7 +7,7 @@
 import logging
 import os
 import pwd
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import requests
 import yaml
@@ -64,7 +64,7 @@ class Patroni:
         self,
         charm,
         endpoint: str,
-        endpoints: List[str],
+        endpoints: list[str],
         primary_endpoint: str,
         namespace: str,
         storage_path: str,
@@ -101,7 +101,7 @@ class Patroni:
         return f"{'https' if self._tls_enabled else 'http'}://{self._endpoint}:8008"
 
     @property
-    def rock_postgresql_version(self) -> Optional[str]:
+    def rock_postgresql_version(self) -> str | None:
         """Version of Postgresql installed in the Rock image."""
         container = self._charm.unit.get_container("postgresql")
         if not container.can_connect():
@@ -111,7 +111,7 @@ class Patroni:
         return yaml.safe_load(snap_meta)["version"]
 
     def _get_alternative_patroni_url(
-        self, attempt: AttemptManager, alternative_endpoints: Optional[List[str]] = None
+        self, attempt: AttemptManager, alternative_endpoints: list[str] | None = None
     ) -> str:
         """Get an alternative REST API URL from another member each time.
 
@@ -161,7 +161,7 @@ class Patroni:
                     raise UpdateSyncNodeCountError(f"received {r.status_code}")
 
     def get_primary(
-        self, unit_name_pattern=False, alternative_endpoints: Optional[List[str]] = None
+        self, unit_name_pattern=False, alternative_endpoints: list[str] | None = None
     ) -> str:
         """Get primary instance.
 
@@ -191,7 +191,7 @@ class Patroni:
 
     def get_standby_leader(
         self, unit_name_pattern=False, check_whether_is_running: bool = False
-    ) -> Optional[str]:
+    ) -> str | None:
         """Get standby leader instance.
 
         Args:
@@ -224,7 +224,7 @@ class Patroni:
                         break
         return standby_leader
 
-    def get_sync_standby_names(self) -> List[str]:
+    def get_sync_standby_names(self) -> list[str]:
         """Get the list of sync standby unit names."""
         sync_standbys = []
         # Request info from cluster endpoint (which returns all members of the cluster).
@@ -434,7 +434,7 @@ class Patroni:
         return any(process for process in postgresql_processes if process.split()[7] != "T")
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-    def bulk_update_parameters_controller_by_patroni(self, parameters: Dict[str, Any]) -> None:
+    def bulk_update_parameters_controller_by_patroni(self, parameters: dict[str, Any]) -> None:
         """Update the value of a parameter controller by Patroni.
 
         For more information, check https://patroni.readthedocs.io/en/latest/patroni_configuration.html#postgresql-parameters-controlled-by-patroni.
@@ -507,14 +507,14 @@ class Patroni:
         is_creating_backup: bool = False,
         enable_tls: bool = False,
         is_no_sync_member: bool = False,
-        stanza: Optional[str] = None,
-        restore_stanza: Optional[str] = None,
+        stanza: str | None = None,
+        restore_stanza: str | None = None,
         disable_pgbackrest_archiving: bool = False,
-        backup_id: Optional[str] = None,
-        pitr_target: Optional[str] = None,
-        restore_timeline: Optional[str] = None,
+        backup_id: str | None = None,
+        pitr_target: str | None = None,
+        restore_timeline: str | None = None,
         restore_to_latest: bool = False,
-        parameters: Optional[dict[str, str]] = None,
+        parameters: dict[str, str] | None = None,
     ) -> None:
         """Render the Patroni configuration file.
 
@@ -612,7 +612,7 @@ class Patroni:
             timeout=PATRONI_TIMEOUT,
         )
 
-    def switchover(self, candidate: Optional[str] = None) -> None:
+    def switchover(self, candidate: str | None = None) -> None:
         """Trigger a switchover."""
         # Try to trigger the switchover.
         if candidate is not None:
