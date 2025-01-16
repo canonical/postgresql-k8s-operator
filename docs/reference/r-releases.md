@@ -14,19 +14,16 @@ For a given release, this table shows:
    > This charm still supports older versions of Juju down to 2.9. See the [Juju section of the system requirements](/t/) for more details
 * Support for specific features
 
-| Revision | PostgreSQL version | Juju version | [TLS encryption](/t/9685)* | [COS monitoring](/t/10600) | [Minor version upgrades](/t/) | [Cross-regional async replication](/t/) | [Point-in-time recovery](/t/)
-|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| [444], [445] | 14.12 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] | ![check] |
-| [381], [382] | 14.12 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] | ![check] |
-| [280], [281] | 14.11 | `3.4.2+` | ![check] | ![check] | ![check] | ![check] |
-| [193] | 14.10 | `3.4.2+` | ![check] | ![check] | ![check] | ![check] |
-| [177] | 14.9 | `3.1.6+` |  | ![check] | ![check] |
-| [158] | 14.9 | `3.1.5+` |  | ![check] | ![check] |
-| [73]  | 14.7 | `2.9.32+` |  |  |
-
-<!--TODO: insert as first row
-| [462], [463] | 14.12 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] | ![check] |
--->
+| Revision | PostgreSQL version | Juju version | [TLS encryption](/t/9685)* | [COS monitoring](/t/10600) | [Minor version upgrades](/t/) | [Cross-regional async replication](/t/) | [Point-in-time recovery](/t/) | [PITR Timelines](/t/) |
+|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| [462], [463] | 14.13 | `3.6.1+` | ![check] | ![check] | ![check] | ![check] | ![check] | ![check] |
+| [444], [445] | 14.12 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] | ![check] | |
+| [381], [382] | 14.12 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] | ![check] | |
+| [280], [281] | 14.11 | `3.4.2+` | ![check] | ![check] | ![check] | ![check] | |
+| [193] | 14.10 | `3.4.2+` | ![check] | ![check] | ![check] | ![check] | |
+| [177] | 14.9 | `3.1.6+` |  | ![check] | ![check] | |
+| [158] | 14.9 | `3.1.5+` |  | ![check] | ![check] | |
+| [73]  | 14.7 | `2.9.32+` |  |  | |
 
 **TLS encryption***: Support for **`v2` or higher** of the [`tls-certificates` interface](https://charmhub.io/tls-certificates-interface/libraries/tls_certificates). This means that you can integrate with [modern TLS charms](https://charmhub.io/topics/security-with-x-509-certificates).
 
@@ -40,24 +37,22 @@ Several [revisions](https://juju.is/docs/sdk/revision) are released simultaneous
 
 > If you deploy a specific revision, **you must make sure it matches your base and architecture** via the tables below or with [`juju info`](https://juju.is/docs/juju/juju-info).
 
-<!-- TODO: Fill in arch columns and remove "14/stable" from previous table
-### Release 462-463 (`14/stable`)
+### Release 462-463
 
 | Revision | amd64 | arm64 | Ubuntu 22.04 LTS
 |:--------:|:-----:|:-----:|:-----:|
-|[462]  |         |        |  ![check]  |
-|[463] |          |        |  ![check]  |
---->
+|[462]  | ![check] | |  ![check]  |
+|[463] | | ![check] |  ![check]  |
 
-### Release 444-445 (`14/stable`)
+[details=Older releases]
+### Release 444-445
 
 | Revision | amd64 | arm64 | Ubuntu 22.04 LTS
 |:--------:|:-----:|:-----:|:-----:|
 |[445] | | ![check] | ![check]  |
 |[444] | ![check] | | ![check] |
 
-[details=Older releases]
-### Release 381-382 (`14/stable`)
+### Release 381-382
 
 | Revision | amd64 | arm64 | Ubuntu 22.04 LTS
 |:--------:|:-----:|:-----:|:-----:|
@@ -106,6 +101,8 @@ For a list of all plugins supported for each revision, see the reference page [P
 [/note]
 
 <!-- LINKS -->
+[462]: /t/16008
+[463]: /t/16008
 [445]: /t/15966
 [444]: /t/15966
 [382]: /t/15442
