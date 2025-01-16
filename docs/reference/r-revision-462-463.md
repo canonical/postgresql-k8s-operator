@@ -1,17 +1,13 @@
 >Reference > Release Notes > [All revisions] > Revision 462/463
 
-[note type=caution]
-This page is a work in progress for a **future release**. Please revisit at a later date!
-[/note]
-
 # Revision 462/463
-<sub><TODO></sub>
+<sub>December 18, 2024</sub>
 
-Canonical's newest Charmed PostgreSQL K8s operator has been published in the [14/stable channel].
+Canonical's newest Charmed PostgreSQL K8s operator has been published in the `14/stable` channel.
 
 Due to the newly added support for `arm64` architecture, the PostgreSQL charm now releases multiple revisions simultaneously:
-* Revision <TODO> is built for `amd64` on Ubuntu 22.04 LTS
-* Revision <TODO> is built for `arm64` on Ubuntu 22.04 LTS
+* Revision 462 is built for `amd64` on Ubuntu 22.04 LTS
+* Revision 463 is built for `arm64` on Ubuntu 22.04 LTS
 
 > See also: [How to perform a minor upgrade]
 
@@ -25,13 +21,15 @@ Due to the newly added support for `arm64` architecture, the PostgreSQL charm no
 ---
 
 ## Highlights 
+* Upgraded PostgreSQL from v.14.12 → v.14.13
+  * Check the official [PostgreSQL release notes](https://www.postgresql.org/docs/release/14.13/)
 * Added timeline management to point-in-time recovery (PITR) ([PR #716](https://github.com/canonical/postgresql-k8s-operator/pull/716)) ([DPE-5581](https://warthogs.atlassian.net/browse/DPE-5581))
 * Added pgAudit plugin/extension  ([PR #688](https://github.com/canonical/postgresql-k8s-operator/pull/688)) ([DPE-5116](https://warthogs.atlassian.net/browse/DPE-5116))
 * Observability stack (COS) improvements
   *  Polished built-in Grafana dashboard ([PR #733](https://github.com/canonical/postgresql-k8s-operator/pull/733)) ([DPE-4469](https://warthogs.atlassian.net/browse/DPE-4469))
   *  Improved COS alert rule descriptions ([PR #727](https://github.com/canonical/postgresql-k8s-operator/pull/727)) ([DPE-5658](https://warthogs.atlassian.net/browse/DPE-5658))
 * Added fully-featured terraform module ([PR #737](https://github.com/canonical/postgresql-k8s-operator/pull/737)) ([DPE-5627](https://warthogs.atlassian.net/browse/DPE-5627))
-* Several S3 improvements ([PR #750](https://github.com/canonical/postgresql-k8s-operator/pull/750))
+* S3 backups improvements ([PR #750](https://github.com/canonical/postgresql-k8s-operator/pull/750))
 
 ## Features and improvements
 * Removed patching of private ops class. ([PR #692](https://github.com/canonical/postgresql-k8s-operator/pull/692))
@@ -76,12 +74,13 @@ Due to the newly added support for `arm64` architecture, the PostgreSQL charm no
 [/details]
 
 ## Known limitations
-...
-<TODO>
+
+ * [Juju 3.6.1+](https://discourse.charmhub.io/t/roadmap-releases/5064#juju-juju-361-11-dec-2024-2) is required for [Terraform-Provider-Juju](https://github.com/juju/terraform-provider-juju) consistent usage ([more details here](https://github.com/juju/terraform-provider-juju/issues/608)).
 
 ## Requirements and compatibility
 * (no change) Minimum Juju 2 version: `v.2.9.49`
 * (no change) Minimum Juju 3 version: `v.3.4.3`
+* (increased) Recommended Juju 3 version: `v.3.6.1`
 
 See the [system requirements] for more details about Juju versions and other software and hardware prerequisites.
 
@@ -89,6 +88,7 @@ See the [system requirements] for more details about Juju versions and other sof
 Below are some of the charm integrations tested with this revision on different Juju environments and architectures:
 * Juju `v.2.9.51` on `amd64`
 * Juju  `v.3.4.6` on `amd64` and `arm64`
+* Juju  `v.3.6.1` on `amd64` and `arm64`
 
 |  Software | Revision | Tested on | |
 |-----|-----|----|---|
@@ -108,10 +108,10 @@ Below are some of the charm integrations tested with this revision on different 
 | [discourse-k8s] | `rev 173` | ![juju-2_amd64] ![juju-3_amd64] |
 
 ### Packaging
-This charm is based on the Charmed PostgreSQL K8s [ROCK <TODO>]. It packages:
-* [postgresql] `v.14.12`
+This charm is based on the Charmed PostgreSQL K8s ROCK revision `164`. It packages:
+* [postgresql] `v.14.13`
 * [pgbouncer] `v.1.21`
-* [patroni] `v.3.1.2 `
+* [patroni] `v.3.1.2`
 * [pgBackRest] `v.2.53`
 * [prometheus-postgres-exporter] `v.0.12.1`
 
