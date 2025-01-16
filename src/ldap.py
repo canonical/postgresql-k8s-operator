@@ -4,7 +4,6 @@
 """LDAP implementation."""
 
 import logging
-import os
 from typing import Any
 
 from charms.glauth_k8s.v0.ldap import (
@@ -13,17 +12,8 @@ from charms.glauth_k8s.v0.ldap import (
     LdapRequirer,
     LdapUnavailableEvent,
 )
-from jinja2 import Template
 from ops import Relation
 from ops.framework import Object
-
-from constants import (
-    APP_SCOPE,
-    MONITORING_PASSWORD_KEY,
-    REPLICATION_PASSWORD_KEY,
-    REWIND_PASSWORD_KEY,
-    USER_PASSWORD_KEY,
-)
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +26,6 @@ class PostgreSQLLDAP(Object):
         super().__init__(charm, "ldap")
         self.charm = charm
         self.relation_name = relation_name
-        self.templates_path = f"{os.environ.get('CHARM_DIR')}/templates/ldap"
 
         # LDAP relation handles the config options for LDAP access
         self.ldap = LdapRequirer(self.charm, self.relation_name)
@@ -58,40 +47,6 @@ class PostgreSQLLDAP(Object):
     def _relation(self) -> Relation:
         """Return the relation object."""
         return self.model.get_relation(self.relation_name)
-
-    def _render_template(self, file_name: str, values: dict[str, Any]) -> None:
-        """Write a Jinja2 template file populated with the provided values.
-
-        Args:
-            file_name: name of the Jinja2 template file
-            values: dictionary of key-value to populate
-        """
-        with open(f"{self.templates_path}/{file_name}.j2") as file:
-            template = Template(file.read())
-
-        contents = template.render(**values)
-
-        with open(f"{self.charm._storage_path}/{file_name}", "w+") as file:
-            file.write(contents)
-
-    def render_initial_groups_file(self) -> None:
-        """Render the initial set of LDAP groups to create."""
-        template_name = "groups.ldif"
-        template_values = {}
-
-        self._render_template(template_name, template_values)
-
-    def render_initial_users_file(self) -> None:
-        """Render the initial set of LDAP users to create."""
-        template_name = "users.ldif"
-        template_values = {
-            "monitoring_password": self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY),
-            "replication_password": self.charm.get_secret(APP_SCOPE, REPLICATION_PASSWORD_KEY),
-            "rewind_password": self.charm.get_secret(APP_SCOPE, REWIND_PASSWORD_KEY),
-            "operator_password": self.charm.get_secret(APP_SCOPE, USER_PASSWORD_KEY),
-        }
-
-        self._render_template(template_name, template_values)
 
     def _on_ldap_ready(self, _: LdapReadyEvent) -> None:
         """Reload the Patroni configuration when the LDAP service is available."""
