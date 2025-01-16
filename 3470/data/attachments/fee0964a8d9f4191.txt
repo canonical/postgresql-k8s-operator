@@ -1,0 +1,142 @@
+[32mINFO    [0m integration.ha_tests.test_upgrade_from_stable:test_upgrade_from_stable.py:102 starting continuous writes to the database
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-test-app/0 [idle] active: 
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m integration.ha_tests.test_upgrade_from_stable:test_upgrade_from_stable.py:106 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.21:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.21:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:242 Initial writes {'test.postgresql-k8s-0': 168, 'test.postgresql-k8s-1': 170}
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.21:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.21:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Retry writes {'test.postgresql-k8s-0': 302, 'test.postgresql-k8s-1': 303}
+[32mINFO    [0m integration.ha_tests.test_upgrade_from_stable:test_upgrade_from_stable.py:116 Build charm locally
+[32mINFO    [0m integration.ha_tests.test_upgrade_from_stable:test_upgrade_from_stable.py:119 Refresh the charm
+[32mINFO    [0m integration.ha_tests.test_upgrade_from_stable:test_upgrade_from_stable.py:122 Wait for upgrade to complete on first upgrading unit
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [idle] waiting: other units upgrading first...
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [idle] waiting: other units upgrading first...
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m integration.ha_tests.test_upgrade_from_stable:test_upgrade_from_stable.py:135 Resume upgrade
+[32mINFO    [0m integration.ha_tests.test_upgrade_from_stable:test_upgrade_from_stable.py:140 Wait for upgrade to complete
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [executing] maintenance: stopping charm software
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: other units upgrading first...
+  postgresql-k8s/1 [idle] maintenance: upgrading unit
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: other units upgrading first...
+  postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: other units upgrading first...
+  postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] maintenance: 
+  postgresql-k8s/1 [idle] maintenance: upgrade completed
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/1 [idle] maintenance: upgrade completed
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] maintenance: upgrade completed
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] maintenance: upgrade completed
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.6.1    unsupported  01:41:26Z
+
+App                  Version  Status  Scale  Charm                Channel      Rev  Address         Exposed  Message
+postgresql-k8s       14.13    active      3  postgresql-k8s                      0  10.152.183.227  no       
+postgresql-test-app           active      1  postgresql-test-app  latest/edge  314  10.152.183.83   no       received database credentials of the first database
+
+Unit                    Workload  Agent      Address       Ports  Message
+postgresql-k8s/0*       active    idle       10.1.160.209         
+postgresql-k8s/1        active    executing  10.1.160.208         
+postgresql-k8s/2        active    idle       10.1.160.207         
+postgresql-test-app/0*  active    executing  10.1.160.200         received database credentials of the first database
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-postgresql-k8s-1: 01:41:20 ERROR unit.postgresql-k8s/1.juju-log upgrade:1: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/websocket/_socket.py", line 118, in recv
+    bytes_ = _recv()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/websocket/_socket.py", line 97, in _recv
+    return sock.recv(bufsize)
+TimeoutError: timed out
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2906, in exec
+    control_ws = self._connect_websocket(task_id, 'control')
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2994, in _connect_websocket
+    ws.connect(url, socket=sock)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/websocket/_core.py", line 261, in connect
+    self.handshake_response = handshake(self.sock, url, *addrs, **options)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/websocket/_handshake.py", line 65, in handshake
+    status, resp = _get_resp_headers(sock)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/websocket/_handshake.py", line 141, in _get_resp_headers
+    status, resp_headers, status_message = read_headers(sock)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/websocket/_http.py", line 351, in read_headers
+    line = recv_line(sock)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/websocket/_socket.py", line 140, in recv_line
+    c = recv(sock, 1)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/websocket/_socket.py", line 120, in recv
+    raise WebSocketTimeoutException("Connection timed out")
+websocket._exceptions.WebSocketTimeoutException: Connection timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/src/charm.py", line 2247, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 343, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 543, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 529, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 515, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 867, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 947, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1064, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/src/charm.py", line 647, in _on_config_changed
+    self._validate_config_options()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1064, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/src/charm.py", line 1936, in _validate_config_options
+    output, _ = container.exec(["locale", "-a"]).wait_output()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2996, in exec
+    return self._pebble.exec(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2915, in exec
+    raise ChangeError(change.err, change) from e
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Execute command "locale" (exec 6: timeout waiting for websocket connections: context deadline exceeded)
+----- Logs from task 0 -----
+2025-01-16T01:41:20Z ERROR exec 6: timeout waiting for websocket connections: context deadline exceeded
+-----
+unit-postgresql-k8s-1: 01:41:20 ERROR juju.worker.uniter.operation hook "upgrade-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...
