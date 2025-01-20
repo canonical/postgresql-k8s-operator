@@ -37,6 +37,7 @@ jobs:
       - name: Release charm libraries
         uses: canonical/charming-actions/release-libraries@2.6.3
         with:
+          charmcraft-channel: latest/candidate  # TODO: remove after charmcraft 3.3 stable release
           credentials: "${{ secrets.CHARMHUB_TOKEN }}"
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 
