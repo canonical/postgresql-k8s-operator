@@ -37,25 +37,19 @@ jobs:
       - name: Release charm libraries
         uses: canonical/charming-actions/release-libraries@2.6.3
         with:
+          charmcraft-channel: latest/candidate  # TODO: remove after charmcraft 3.3 stable release
           credentials: "${{ secrets.CHARMHUB_TOKEN }}"
           github-token: "${{ secrets.GITHUB_TOKEN }}"
-
-  build:
-    name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v26.0.0
-    with:
-      charmcraft-snap-channel: latest/candidate  # TODO: remove after charmcraft 3.3 stable release
 
   release:
     name: Release charm
     needs:
       - ci-tests
-      - build
-    uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v26.0.0
+    uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v29.0.1
     with:
       charmcraft-snap-channel: latest/candidate  # TODO: remove after charmcraft 3.3 stable release
       channel: 14/edge
-      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
+      artifact-prefix: ${{ needs.ci-tests.outputs.artifact-prefix }}
     secrets:
       charmhub-token: ${{ secrets.CHARMHUB_TOKEN }}
     permissions:
