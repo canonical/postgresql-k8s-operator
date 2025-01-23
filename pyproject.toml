@@ -7,14 +7,14 @@ requires-poetry = ">=2.0.0"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-ops = "^2.17.0"
-boto3 = "^1.35.70"
+ops = "^2.17.1"
+boto3 = "^1.36.4"
 pgconnstr = "^1.0.1"
 requests = "^2.32.3"
 tenacity = "^9.0.0"
-pydantic = "^1.10.19"
-jinja2 = "^3.1.4"
-lightkube = "^0.15.5"
+pydantic = "^1.10.21"
+jinja2 = "^3.1.5"
+lightkube = "^0.17.1"
 lightkube-models = "^1.28.1.4"
 psycopg2 = "^2.9.10"
 
@@ -38,36 +38,36 @@ jsonschema = "*"
 optional = true
 
 [tool.poetry.group.format.dependencies]
-ruff = "^0.8.0"
+ruff = "^0.9.2"
 
 [tool.poetry.group.lint]
 optional = true
 
 [tool.poetry.group.lint.dependencies]
-codespell = "^2.3.0"
+codespell = "^2.4.0"
 
 [tool.poetry.group.unit]
 optional = true
 
 [tool.poetry.group.unit.dependencies]
-coverage = {extras = ["toml"], version = "^7.6.8"}
-pytest = "^8.3.3"
+coverage = {extras = ["toml"], version = "^7.6.10"}
+pytest = "^8.3.4"
 
 [tool.poetry.group.integration]
 optional = true
 
 [tool.poetry.group.integration.dependencies]
-lightkube = "^0.15.5"
-pytest = "^8.3.3"
+lightkube = "^0.17.1"
+pytest = "^8.3.4"
 pytest-github-secrets = {git = "https://github.com/canonical/data-platform-workflows", tag = "v29.0.1", subdirectory = "python/pytest_plugins/github_secrets"}
-pytest-operator = "^0.38.0"
+pytest-operator = "^0.39.0"
 pytest-operator-cache = {git = "https://github.com/canonical/data-platform-workflows", tag = "v29.0.1", subdirectory = "python/pytest_plugins/pytest_operator_cache"}
 pytest-operator-groups = {git = "https://github.com/canonical/data-platform-workflows", tag = "v29.0.1", subdirectory = "python/pytest_plugins/pytest_operator_groups"}
 allure-pytest-collection-report = {git = "https://github.com/canonical/data-platform-workflows", tag = "v29.0.1", subdirectory = "python/pytest_plugins/allure_pytest_collection_report"}
 # renovate caret doesn't work: https://github.com/renovatebot/renovate/issues/26940
 juju = "<=3.6.1.0"
 psycopg2-binary = "^2.9.10"
-boto3 = "^1.35.70"
+boto3 = "^1.36.4"
 tenacity = "^9.0.0"
 allure-pytest = "^2.13.5"
 
