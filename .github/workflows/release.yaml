@@ -37,7 +37,6 @@ jobs:
       - name: Release charm libraries
         uses: canonical/charming-actions/release-libraries@2.6.3
         with:
-          charmcraft-channel: latest/candidate  # TODO: remove after charmcraft 3.3 stable release
           credentials: "${{ secrets.CHARMHUB_TOKEN }}"
           github-token: "${{ secrets.GITHUB_TOKEN }}"
 
@@ -47,10 +46,9 @@ jobs:
       - ci-tests
     uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v29.0.3
     with:
-      charmcraft-snap-channel: latest/candidate  # TODO: remove after charmcraft 3.3 stable release
       channel: 14/edge
       artifact-prefix: ${{ needs.ci-tests.outputs.artifact-prefix }}
     secrets:
       charmhub-token: ${{ secrets.CHARMHUB_TOKEN }}
     permissions:
-      contents: write  # Needed to create GitHub release
+      contents: write  # Needed to create git tags
