@@ -18,7 +18,7 @@ from charm import PostgresqlOperatorCharm
 from constants import PEER
 
 DATABASE = "test_database"
-EXTRA_USER_ROLES = "CREATEDB,CREATEROLE"
+EXTRA_USER_ROLES = ["CREATEDB", "CREATEROLE"]
 RELATION_NAME = "database"
 POSTGRESQL_VERSION = "14"
 
@@ -68,7 +68,7 @@ def request_database(_harness):
     _harness.update_relation_data(
         rel_id,
         "application",
-        {"database": DATABASE, "extra-user-roles": EXTRA_USER_ROLES},
+        {"database": DATABASE, "extra-user-roles": ",".join(EXTRA_USER_ROLES)},
     )
 
 
@@ -106,6 +106,7 @@ def test_on_database_requested(harness):
 
         # Assert that the correct calls were made.
         user = f"relation_id_{rel_id}"
+        user_extra_roles = ",".join(EXTRA_USER_ROLES)
         postgresql_mock.create_user.assert_called_once_with(
             user, "test-password", extra_user_roles=EXTRA_USER_ROLES
         )
@@ -118,7 +119,7 @@ def test_on_database_requested(harness):
 
         # Assert that the relation data was updated correctly.
         assert harness.get_relation_data(rel_id, harness.charm.app.name) == {
-            "data": f'{{"database": "{DATABASE}", "extra-user-roles": "{EXTRA_USER_ROLES}"}}',
+            "data": f'{{"database": "{DATABASE}", "extra-user-roles": "{user_extra_roles}"}}',
             "endpoints": "postgresql-k8s-primary.None.svc.cluster.local:5432",
             "username": user,
             "password": "test-password",
@@ -137,7 +138,7 @@ def test_on_database_requested(harness):
         assert isinstance(harness.model.unit.status, BlockedStatus)
         # No data is set in the databag by the database.
         assert harness.get_relation_data(rel_id, harness.charm.app.name) == {
-            "data": f'{{"database": "{DATABASE}", "extra-user-roles": "{EXTRA_USER_ROLES}"}}',
+            "data": f'{{"database": "{DATABASE}", "extra-user-roles": "{user_extra_roles}"}}',
             "endpoints": "postgresql-k8s-primary.None.svc.cluster.local:5432",
             "uris": f"postgresql://{user}:test-password@postgresql-k8s-primary.None.svc.cluster.local:5432/{DATABASE}",
             "read-only-endpoints": "postgresql-k8s-replicas.None.svc.cluster.local:5432",
@@ -149,7 +150,7 @@ def test_on_database_requested(harness):
         assert isinstance(harness.model.unit.status, BlockedStatus)
         # No data is set in the databag by the database.
         assert harness.get_relation_data(rel_id, harness.charm.app.name) == {
-            "data": f'{{"database": "{DATABASE}", "extra-user-roles": "{EXTRA_USER_ROLES}"}}',
+            "data": f'{{"database": "{DATABASE}", "extra-user-roles": "{user_extra_roles}"}}',
             "endpoints": "postgresql-k8s-primary.None.svc.cluster.local:5432",
             "read-only-endpoints": "postgresql-k8s-replicas.None.svc.cluster.local:5432",
             "uris": f"postgresql://{user}:test-password@postgresql-k8s-primary.None.svc.cluster.local:5432/{DATABASE}",

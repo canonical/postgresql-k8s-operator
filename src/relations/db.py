@@ -175,7 +175,7 @@ class DbProvides(Object):
             user = f"relation_id_{relation.id}"
             password = unit_relation_databag.get("password", new_password())
             self.charm.postgresql.create_user(
-                user, password, self.admin, extra_user_roles=ACCESS_GROUP_APPLICATION
+                user, password, self.admin, extra_user_roles=[ACCESS_GROUP_APPLICATION]
             )
 
             self.charm.postgresql.create_database(
