@@ -67,6 +67,16 @@ class PostgreSQLProvider(Object):
             self.database_provides.on.database_requested, self._on_database_requested
         )
 
+    def _sanitize_extra_roles(self, extra_roles: str | None) -> list[str]:
+        """Standardize and sanitize user extra-roles."""
+        if extra_roles is None:
+            return []
+
+        # Make sure the internal access-group is not in the list
+        extra_roles_list = [role.lower() for role in extra_roles.split(",")]
+        extra_roles_list = [role for role in extra_roles_list if role != ACCESS_GROUP_INTERNAL]
+        return extra_roles_list
+
     def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:
         """Handle the legacy postgresql-client relation changed event.
 
@@ -82,7 +92,10 @@ class PostgreSQLProvider(Object):
 
         # Retrieve the database name and extra user roles using the charm library.
         database = event.database
-        extra_user_roles = event.extra_user_roles + f",{ACCESS_GROUP_RELATION}"
+
+        # Make sure the relation access-group is added to the list
+        extra_user_roles = self._sanitize_extra_roles(event.extra_user_roles)
+        extra_user_roles.append(ACCESS_GROUP_RELATION)
 
         try:
             # Creates the user and the database for this specific relation.
