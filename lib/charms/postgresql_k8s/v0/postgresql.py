@@ -35,7 +35,11 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 42
+LIBPATCH = 43
+
+# Groups to distinguish HBA access
+ACCESS_GROUP_APPLICATION = "application_access"
+ACCESS_GROUP_OPERATOR = "operator_access"
 
 INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE = "invalid role(s) for extra user roles"
 
@@ -56,6 +60,10 @@ logger = logging.getLogger(__name__)
 
 class PostgreSQLCreateDatabaseError(Exception):
     """Exception raised when creating a database fails."""
+
+
+class PostgreSQLCreateGroupError(Exception):
+    """Exception raised when creating a group fails."""
 
 
 class PostgreSQLCreateUserError(Exception):
@@ -279,6 +287,28 @@ class PostgreSQL:
         except psycopg2.Error as e:
             logger.error(f"Failed to create user: {e}")
             raise PostgreSQLCreateUserError() from e
+
+    def create_access_groups(self) -> None:
+        """Create access groups to distinguish HBA authentication methods."""
+        connection = None
+
+        try:
+            with self._connect_to_database() as connection, connection.cursor() as cursor:
+                cursor.execute(f"CREATE ROLE {ACCESS_GROUP_APPLICATION} NOLOGIN;")
+                cursor.execute(f"CREATE ROLE {ACCESS_GROUP_OPERATOR} NOLOGIN;")
+                for user in self.system_users:
+                    cursor.execute(
+                        SQL("GRANT {} TO {};").format(
+                            Identifier(ACCESS_GROUP_OPERATOR),
+                            Identifier(user),
+                        )
+                    )
+        except psycopg2.Error as e:
+            logger.error(f"Failed to create access groups: {e}")
+            raise PostgreSQLCreateGroupError() from e
+        finally:
+            if connection is not None:
+                connection.close()
 
     def delete_user(self, user: str) -> None:
         """Deletes a database user.
