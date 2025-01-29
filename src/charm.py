@@ -1094,6 +1094,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             )
 
         self.postgresql.set_up_database()
+        self.postgresql.create_access_groups()
 
         # Mark the cluster as initialised.
         self._peers.data[self.app]["cluster_initialised"] = "True"

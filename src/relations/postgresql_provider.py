@@ -10,6 +10,8 @@ from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseRequestedEvent,
 )
 from charms.postgresql_k8s.v0.postgresql import (
+    ACCESS_GROUP_INTERNAL,
+    ACCESS_GROUP_RELATION,
     INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE,
     PostgreSQLCreateDatabaseError,
     PostgreSQLCreateUserError,
@@ -80,7 +82,7 @@ class PostgreSQLProvider(Object):
 
         # Retrieve the database name and extra user roles using the charm library.
         database = event.database
-        extra_user_roles = event.extra_user_roles
+        extra_user_roles = event.extra_user_roles + f",{ACCESS_GROUP_RELATION}"
 
         try:
             # Creates the user and the database for this specific relation.

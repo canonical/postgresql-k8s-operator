@@ -37,6 +37,10 @@ LIBAPI = 0
 # to 0 if you are raising the major API version
 LIBPATCH = 43
 
+# Groups to distinguish HBA access
+ACCESS_GROUP_INTERNAL = "internal_access"
+ACCESS_GROUP_RELATION = "relation_access"
+
 # Groups to distinguish database permissions
 PERMISSIONS_GROUP_ADMIN = "admin"
 
@@ -59,6 +63,10 @@ logger = logging.getLogger(__name__)
 
 class PostgreSQLCreateDatabaseError(Exception):
     """Exception raised when creating a database fails."""
+
+
+class PostgreSQLCreateGroupError(Exception):
+    """Exception raised when creating a group fails."""
 
 
 class PostgreSQLCreateUserError(Exception):
@@ -284,6 +292,28 @@ class PostgreSQL:
         except psycopg2.Error as e:
             logger.error(f"Failed to create user: {e}")
             raise PostgreSQLCreateUserError() from e
+
+    def create_access_groups(self) -> None:
+        """Create access groups to distinguish HBA authentication methods."""
+        connection = None
+
+        try:
+            with self._connect_to_database() as connection, connection.cursor() as cursor:
+                cursor.execute(f"CREATE ROLE {ACCESS_GROUP_INTERNAL} NOLOGIN;")
+                cursor.execute(f"CREATE ROLE {ACCESS_GROUP_RELATION} NOLOGIN;")
+                for user in self.system_users:
+                    cursor.execute(
+                        SQL("GRANT {} TO {};").format(
+                            Identifier(ACCESS_GROUP_INTERNAL),
+                            Identifier(user),
+                        )
+                    )
+        except psycopg2.Error as e:
+            logger.error(f"Failed to create access groups: {e}")
+            raise PostgreSQLCreateGroupError() from e
+        finally:
+            if connection is not None:
+                connection.close()
 
     def delete_user(self, user: str) -> None:
         """Deletes a database user.
