@@ -3529,7 +3529,8 @@
   "style": "dark",
   "tags": [
     "postgres",
-    "db"
+    "db",
+    "k8s"
   ],
   "templating": {
     "list": [
