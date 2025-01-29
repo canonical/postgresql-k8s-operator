@@ -5,6 +5,8 @@ from unittest.mock import call, patch
 import psycopg2
 import pytest
 from charms.postgresql_k8s.v0.postgresql import (
+    ACCESS_GROUP_APPLICATION,
+    ACCESS_GROUP_OPERATOR,
     PostgreSQLCreateDatabaseError,
     PostgreSQLGetLastArchivedWALError,
 )
@@ -12,7 +14,7 @@ from ops.testing import Harness
 from psycopg2.sql import SQL, Composed, Identifier, Literal
 
 from charm import PostgresqlOperatorCharm
-from constants import PEER
+from constants import PEER, SYSTEM_USERS
 
 
 @pytest.fixture(autouse=True)
@@ -155,6 +157,31 @@ def test_create_database(harness):
         except PostgreSQLCreateDatabaseError:
             pass
         _enable_disable_extensions.assert_not_called()
+
+
+def test_create_access_groups(harness):
+    with patch(
+        "charms.postgresql_k8s.v0.postgresql.PostgreSQL._connect_to_database"
+    ) as _connect_to_database:
+        execute = _connect_to_database.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value.execute
+        harness.charm.postgresql.create_access_groups()
+
+        execute.assert_has_calls([
+            call(f"CREATE ROLE {ACCESS_GROUP_APPLICATION} NOLOGIN;"),
+            call(f"CREATE ROLE {ACCESS_GROUP_OPERATOR} NOLOGIN;"),
+            *(
+                call(
+                    Composed([
+                        SQL("GRANT "),
+                        Identifier(ACCESS_GROUP_OPERATOR),
+                        SQL(" TO "),
+                        Identifier(user),
+                        SQL(";"),
+                    ])
+                )
+                for user in SYSTEM_USERS
+            ),
+        ])
 
 
 def test_generate_database_privileges_statements(harness):
