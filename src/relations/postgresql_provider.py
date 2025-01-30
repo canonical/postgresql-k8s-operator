@@ -167,7 +167,7 @@ class PostgreSQLProvider(Object):
 
         self._update_unit_status(event.relation)
 
-        if "departing" in self.charm._peers.data[self.charm.unit]:
+        if self.charm.is_unit_departing:
             logger.debug("Early exit on_relation_broken: Skipping departing unit")
             return
 
