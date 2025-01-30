@@ -669,7 +669,7 @@ class PostgreSQLBackups(Object):
             logger.debug("_on_s3_credential_changed early exit: no connection info")
             return False
 
-        if "cluster_initialised" not in self.charm.app_peer_data:
+        if not self.charm.is_cluster_initialised:
             logger.debug("Cannot set pgBackRest configurations, PostgreSQL has not yet started.")
             event.defer()
             return False

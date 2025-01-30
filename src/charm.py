@@ -456,7 +456,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if not self.unit.is_leader() or event.departing_unit == self.unit:
             return
 
-        if "cluster_initialised" not in self._peers.data[self.app]:
+        if not self.is_cluster_initialised:
             logger.debug(
                 "Deferring on_peer_relation_departed: Cluster must be initialized before members can leave"
             )
@@ -521,7 +521,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Reconfigure cluster members."""
         # The cluster must be initialized first in the leader unit
         # before any other member joins the cluster.
-        if "cluster_initialised" not in self._peers.data[self.app]:
+        if not self.is_cluster_initialised:
             if self.unit.is_leader():
                 if self._initialize_cluster(event):
                     logger.debug("Deferring on_peer_relation_changed: Leader initialized cluster")
@@ -769,7 +769,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         # Reconfiguration can be successful only if the cluster is initialised
         # (i.e. first unit has bootstrap the cluster).
-        if "cluster_initialised" not in self._peers.data[self.app]:
+        if not self.is_cluster_initialised:
             return
 
         try:
@@ -941,7 +941,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Otherwise, each unit will create a different cluster and
         # any update in the members list on the units won't have effect
         # on fixing that.
-        if not self.unit.is_leader() and "cluster_initialised" not in self._peers.data[self.app]:
+        if not self.unit.is_leader() and not self.is_cluster_initialised:
             logger.debug(
                 "Deferring on_postgresql_pebble_ready: Not leader and cluster not initialized"
             )
