@@ -681,10 +681,7 @@ class PostgreSQLBackups(Object):
             return False
 
         # Prevents S3 change in the middle of restoring backup and patroni / pgbackrest errors caused by that.
-        if (
-            "restoring-backup" in self.charm.app_peer_data
-            or "restore-to-time" in self.charm.app_peer_data
-        ):
+        if self.charm.is_cluster_restoring_backup or self.charm.is_cluster_restoring_to_time:
             logger.info("Cannot change S3 configuration during restore")
             event.defer()
             return False
@@ -1014,7 +1011,7 @@ Stderr:
             )
         except ApiError as e:
             # If previous PITR restore was unsuccessful, there are no such endpoints.
-            if "restore-to-time" not in self.charm.app_peer_data:
+            if not self.charm.is_cluster_restoring_to_time:
                 error_message = f"Failed to remove previous cluster information with error: {e!s}"
                 logger.error(f"Restore failed: {error_message}")
                 event.fail(error_message)

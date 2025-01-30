@@ -389,6 +389,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         return "cluster_initialised" in self.app_peer_data
 
     @property
+    def is_cluster_restoring_backup(self) -> bool:
+        """Returns whether the cluster is restoring a backup."""
+        return "restoring-backup" in self.app_peer_data
+
+    @property
+    def is_cluster_restoring_to_time(self) -> bool:
+        """Returns whether the cluster is restoring a backup to a specific time."""
+        return "restore-to-time" in self.app_peer_data
+
+    @property
     def postgresql(self) -> PostgreSQL:
         """Returns an instance of the object used to interact with the database."""
         return PostgreSQL(
@@ -566,7 +576,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         services = container.pebble.get_services(names=[self._postgresql_service])
         if (
-            ("restoring-backup" in self.app_peer_data or "restore-to-time" in self.app_peer_data)
+            (self.is_cluster_restoring_backup or self.is_cluster_restoring_to_time)
             and len(services) > 0
             and not self._was_restore_successful(container, services[0])
         ):
@@ -1171,8 +1181,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Returns whether the unit is in a waiting state and there is no restore process ongoing."""
         return (
             isinstance(self.unit.status, WaitingStatus)
-            and "restoring-backup" not in self.app_peer_data
-            and "restore-to-time" not in self.app_peer_data
+            and not self.is_cluster_restoring_backup
+            and not self.is_cluster_restoring_to_time
         )
 
     def _on_get_password(self, event: ActionEvent) -> None:
@@ -1420,8 +1430,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
 
         if (
-            "restoring-backup" not in self.app_peer_data
-            and "restore-to-time" not in self.app_peer_data
+            not self.is_cluster_restoring_backup
+            and not self.is_cluster_restoring_to_time
             and "stopped" not in self.unit_peer_data
             and services[0].current != ServiceStatus.ACTIVE
         ):
@@ -1438,7 +1448,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 return
 
         if (
-            "restoring-backup" in self.app_peer_data or "restore-to-time" in self.app_peer_data
+            self.is_cluster_restoring_backup or self.is_cluster_restoring_to_time
         ) and not self._was_restore_successful(container, services[0]):
             return
 
@@ -1454,7 +1464,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _was_restore_successful(self, container: Container, service: ServiceInfo) -> bool:
         """Checks if restore operation succeeded and S3 is properly configured."""
-        if "restore-to-time" in self.app_peer_data and all(self.is_pitr_failed(container)):
+        if self.is_cluster_restoring_to_time and all(self.is_pitr_failed(container)):
             logger.error(
                 "Restore failed: database service failed to reach point-in-time-recovery target. "
                 "You can launch another restore with different parameters"
