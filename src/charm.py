@@ -404,6 +404,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         return "departing" in self.unit_peer_data
 
     @property
+    def is_unit_stopped(self) -> bool:
+        """Returns whether the unit is stopped."""
+        return "stopped" in self.unit_peer_data
+
+    @property
     def postgresql(self) -> PostgreSQL:
         """Returns an instance of the object used to interact with the database."""
         return PostgreSQL(
@@ -1437,7 +1442,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if (
             not self.is_cluster_restoring_backup
             and not self.is_cluster_restoring_to_time
-            and "stopped" not in self.unit_peer_data
+            and not self.is_unit_stopped
             and services[0].current != ServiceStatus.ACTIVE
         ):
             logger.warning(
