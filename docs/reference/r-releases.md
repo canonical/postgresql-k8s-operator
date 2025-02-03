@@ -24,6 +24,9 @@ For a given release, this table shows:
 | [158] | 14.9 | `3.1.5+` |  | ![check] | ![check] |
 | [73]  | 14.7 | `2.9.32+` |  |  |
 
+<!--TODO: insert as first row
+| [462], [463] | 14.12 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] | ![check] |
+-->
 
 **TLS encryption***: Support for **`v2` or higher** of the [`tls-certificates` interface](https://charmhub.io/tls-certificates-interface/libraries/tls_certificates). This means that you can integrate with [modern TLS charms](https://charmhub.io/topics/security-with-x-509-certificates).
 
@@ -37,6 +40,15 @@ Several [revisions](https://juju.is/docs/sdk/revision) are released simultaneous
 
 > If you deploy a specific revision, **you must make sure it matches your base and architecture** via the tables below or with [`juju info`](https://juju.is/docs/juju/juju-info).
 
+<!-- TODO: Fill in arch columns and remove "14/stable" from previous table
+### Release 462-463 (`14/stable`)
+
+| Revision | amd64 | arm64 | Ubuntu 22.04 LTS
+|:--------:|:-----:|:-----:|:-----:|
+|[462]  |         |        |  ![check]  |
+|[463] |          |        |  ![check]  |
+--->
+
 ### Release 444-445 (`14/stable`)
 
 | Revision | amd64 | arm64 | Ubuntu 22.04 LTS
@@ -44,6 +56,7 @@ Several [revisions](https://juju.is/docs/sdk/revision) are released simultaneous
 |[445] | | ![check] | ![check]  |
 |[444] | ![check] | | ![check] |
 
+[details=Older releases]
 ### Release 381-382 (`14/stable`)
 
 | Revision | amd64 | arm64 | Ubuntu 22.04 LTS
@@ -51,40 +64,32 @@ Several [revisions](https://juju.is/docs/sdk/revision) are released simultaneous
 |[382] | | ![check] | ![check]  |
 |[381] | ![check] | | ![check] |
 
-[details=Release 280-281]
+### Release 280-281
 
 | Revision| amd64 | arm64 | Ubuntu 22.04 LTS
 |:--------:|:-----:|:-----:|:-----:|
 |[281] |![check]| | ![check]   |
 |[280] |  | ![check]| ![check] |
 
-[/details]
-
-[details=Release 193]
+### Release 193
 
 | Revision| amd64 | arm64 | Ubuntu 22.04 LTS
 |:--------:|:-----:|:-----:|:-----:|
 |[193] | ![check]| | ![check]  |
 
-[/details]
-
-[details=Release 177]
+### Release 177
 
 | Revision| amd64 | arm64 | Ubuntu 22.04 LTS
 |:--------:|:-----:|:-----:|:-----:|
 |[177] |![check]| | ![check]   |
 
-[/details]
-
-[details=Release 158]
+### Release 158
 
 | Revision| amd64 | arm64 | Ubuntu 22.04 LTS
 |:--------:|:-----:|:-----:|:-----:|
 |[158] |![check]| | ![check]   |
 
-[/details]
-
-[details=Release 73]
+### Release 73
 
 | Revision| amd64 | arm64 | Ubuntu 22.04 LTS
 |:--------:|:-----:|:-----:|:-----:|

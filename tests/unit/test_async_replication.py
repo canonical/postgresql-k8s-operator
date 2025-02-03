@@ -1,6 +1,7 @@
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import json
 from unittest.mock import PropertyMock, patch
 
 import pytest
@@ -185,20 +186,20 @@ def test_on_async_relation_departed(harness, relation_name):
 
 @pytest.mark.parametrize("wait_for_standby", [True, False])
 def test_on_async_relation_changed(harness, wait_for_standby):
-    harness.add_relation(
-        PEER,
-        harness.charm.app.name,
-        unit_data={"unit-address": "10.1.1.10"},
-        app_data={"promoted-cluster-counter": "1"},
-    )
-    harness.set_can_connect("postgresql", True)
-    harness.handle_exec("postgresql", [], result=0)
     with patch(
         "relations.async_replication.PostgreSQLAsyncReplication._get_unit_ip",
-        return_value="10.1.1.10",
-    ):
+        return_value="1.1.1.1",
+    ) as _get_unit_ip:
+        harness.add_relation(
+            PEER,
+            harness.charm.app.name,
+            unit_data={"unit-address": "10.1.1.10"},
+            app_data={"promoted-cluster-counter": "1"},
+        )
+        harness.set_can_connect("postgresql", True)
+        harness.handle_exec("postgresql", [], result=0)
         harness.add_relation(REPLICATION_OFFER_RELATION, harness.charm.app.name)
-    assert harness.charm.async_replication.get_primary_cluster().name == harness.charm.app.name
+        assert harness.charm.async_replication.get_primary_cluster().name == harness.charm.app.name
 
     with (
         patch("ops.model.Container.stop") as _stop,
@@ -222,8 +223,8 @@ def test_on_async_relation_changed(harness, wait_for_standby):
         ),
         patch(
             "relations.async_replication.PostgreSQLAsyncReplication._get_unit_ip",
-            return_value="10.2.2.10",
-        ),
+            return_value="1.1.1.1",
+        ) as _get_unit_ip,
     ):
         _pebble.get_services.return_value = ["postgresql"]
         _patroni_member_started.return_value = True
@@ -327,14 +328,12 @@ def test_promote_to_primary(harness, relation_name):
 
 @pytest.mark.parametrize("relation_name", RELATION_NAMES)
 def test_on_secret_changed(harness, relation_name):
-    import json
-
-    secret_id = harness.add_model_secret("primary", {"operator-password": "old"})
-    peer_rel_id = harness.add_relation(PEER, "primary")
     with patch(
         "relations.async_replication.PostgreSQLAsyncReplication._get_unit_ip",
-        return_value="10.1.1.10",
-    ):
+        return_value="1.1.1.1",
+    ) as _get_unit_ip:
+        secret_id = harness.add_model_secret("primary", {"operator-password": "old"})
+        peer_rel_id = harness.add_relation(PEER, "primary")
         rel_id = harness.add_relation(
             relation_name, harness.charm.app.name, unit_data={"unit-address": "10.1.1.10"}
         )

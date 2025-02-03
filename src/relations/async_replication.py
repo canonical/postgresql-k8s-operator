@@ -18,7 +18,6 @@ import itertools
 import json
 import logging
 from datetime import datetime
-from typing import List, Optional, Tuple
 
 from lightkube import ApiError, Client
 from lightkube.resources.core_v1 import Endpoints, Service
@@ -55,7 +54,8 @@ logger = logging.getLogger(__name__)
 READ_ONLY_MODE_BLOCKING_MESSAGE = "Standalone read-only cluster"
 REPLICATION_CONSUMER_RELATION = "replication"
 REPLICATION_OFFER_RELATION = "replication-offer"
-SECRET_LABEL = "async-replication-secret"
+# Labels are not confidential
+SECRET_LABEL = "async-replication-secret"  # noqa: S105
 
 
 class PostgreSQLAsyncReplication(Object):
@@ -180,11 +180,10 @@ class PostgreSQLAsyncReplication(Object):
     def _configure_standby_cluster(self, event: RelationChangedEvent) -> bool:
         """Configure the standby cluster."""
         relation = self._relation
-        if relation.name == REPLICATION_CONSUMER_RELATION:
-            if not self._update_internal_secret():
-                logger.debug("Secret not found, deferring event")
-                event.defer()
-                return False
+        if relation.name == REPLICATION_CONSUMER_RELATION and not self._update_internal_secret():
+            logger.debug("Secret not found, deferring event")
+            event.defer()
+            return False
         system_identifier, error = self.get_system_identifier()
         if error is not None:
             raise Exception(error)
@@ -217,7 +216,7 @@ class PostgreSQLAsyncReplication(Object):
                     promoted_cluster_counter = relation_promoted_cluster_counter
         return promoted_cluster_counter
 
-    def get_primary_cluster(self) -> Optional[Application]:
+    def get_primary_cluster(self) -> Application | None:
         """Return the primary cluster."""
         primary_cluster = None
         promoted_cluster_counter = "0"
@@ -238,7 +237,7 @@ class PostgreSQLAsyncReplication(Object):
                     primary_cluster = app
         return primary_cluster
 
-    def get_primary_cluster_endpoint(self) -> Optional[str]:
+    def get_primary_cluster_endpoint(self) -> str | None:
         """Return the primary cluster endpoint."""
         primary_cluster = self.get_primary_cluster()
         if primary_cluster is None or self.charm.app == primary_cluster:
@@ -249,7 +248,7 @@ class PostgreSQLAsyncReplication(Object):
             return None
         return json.loads(primary_cluster_data).get("endpoint")
 
-    def get_all_primary_cluster_endpoints(self) -> List[str]:
+    def get_all_primary_cluster_endpoints(self) -> list[str]:
         """Return all the primary cluster endpoints."""
         relation = self._relation
         primary_cluster = self.get_primary_cluster()
@@ -291,7 +290,7 @@ class PostgreSQLAsyncReplication(Object):
 
         return self.charm.model.app.add_secret(content=shared_content, label=SECRET_LABEL)
 
-    def get_standby_endpoints(self) -> List[str]:
+    def get_standby_endpoints(self) -> list[str]:
         """Return the standby endpoints."""
         relation = self._relation
         primary_cluster = self.get_primary_cluster()
@@ -309,7 +308,7 @@ class PostgreSQLAsyncReplication(Object):
             if relation.data[unit].get("unit-address") is not None
         ]
 
-    def get_system_identifier(self) -> Tuple[Optional[str], Optional[str]]:
+    def get_system_identifier(self) -> tuple[str | None, str | None]:
         """Returns the PostgreSQL system identifier from this instance."""
         try:
             system_identifier, error = self.container.exec(
@@ -324,9 +323,9 @@ class PostgreSQLAsyncReplication(Object):
             return None, str(e)
         if error != "":
             return None, error
-        system_identifier = [
+        system_identifier = next(
             line for line in system_identifier.splitlines() if "Database system identifier" in line
-        ][0].split(" ")[-1]
+        ).split(" ")[-1]
         return system_identifier, None
 
     def _get_unit_ip(self) -> str:
@@ -338,7 +337,7 @@ class PostgreSQLAsyncReplication(Object):
             hosts = f.read()
         with open("/etc/hostname") as f:
             hostname = f.read().replace("\n", "")
-        line = [ln for ln in hosts.split("\n") if ln.find(hostname) >= 0][0]
+        line = next(ln for ln in hosts.split("\n") if ln.find(hostname) >= 0)
         return line.split("\t")[0]
 
     def _handle_database_start(self, event: RelationChangedEvent) -> None:
@@ -638,7 +637,7 @@ class PostgreSQLAsyncReplication(Object):
         getattr(self.charm.on, f"{relation.name.replace('-', '_')}_relation_changed").emit(
             relation,
             app=relation.app,
-            unit=[unit for unit in relation.units if unit.app == relation.app][0],
+            unit=next(unit for unit in relation.units if unit.app == relation.app),
         )
 
     @property
@@ -752,7 +751,9 @@ class PostgreSQLAsyncReplication(Object):
         return True
 
     def _update_primary_cluster_data(
-        self, promoted_cluster_counter: int = None, system_identifier: str = None
+        self,
+        promoted_cluster_counter: int | None = None,
+        system_identifier: str | None = None,
     ) -> None:
         """Update the primary cluster data."""
         async_relation = self._relation

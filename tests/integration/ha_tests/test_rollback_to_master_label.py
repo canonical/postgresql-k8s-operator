@@ -39,6 +39,7 @@ LABEL_REVISION = 280 if architecture == "arm64" else 281
 @pytest.mark.group(1)
 @pytest.mark.unstable
 @markers.juju3
+@pytest.mark.unstable
 @markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_deploy_stable(ops_test: OpsTest) -> None:
@@ -73,6 +74,7 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
 @pytest.mark.group(1)
 @pytest.mark.unstable
 @markers.juju3
+@pytest.mark.unstable
 @markers.amd64_only  # TODO: remove after arm64 stable release
 async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
     # Start an application that continuously writes data to the database.
@@ -98,10 +100,7 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
             assert primary_name == f"{DATABASE_APP_NAME}/0"
 
     local_charm = await ops_test.build_charm(".")
-    if isinstance(local_charm, str):
-        filename = local_charm.split("/")[-1]
-    else:
-        filename = local_charm.name
+    filename = local_charm.split("/")[-1] if isinstance(local_charm, str) else local_charm.name
     fault_charm = Path("/tmp/", filename)
     shutil.copy(local_charm, fault_charm)
 

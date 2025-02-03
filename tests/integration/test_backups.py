@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 import logging
 import uuid
-from typing import Dict, Tuple
 
 import boto3
 import pytest as pytest
@@ -37,17 +36,11 @@ FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE = "failed to initialize stanza, check 
 S3_INTEGRATOR_APP_NAME = "s3-integrator"
 if juju_major_version < 3:
     tls_certificates_app_name = "tls-certificates-operator"
-    if architecture.architecture == "arm64":
-        tls_channel = "legacy/edge"
-    else:
-        tls_channel = "legacy/stable"
+    tls_channel = "legacy/edge" if architecture.architecture == "arm64" else "legacy/stable"
     tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
 else:
     tls_certificates_app_name = "self-signed-certificates"
-    if architecture.architecture == "arm64":
-        tls_channel = "latest/edge"
-    else:
-        tls_channel = "latest/stable"
+    tls_channel = "latest/edge" if architecture.architecture == "arm64" else "latest/stable"
     tls_config = {"ca-common-name": "Test CA"}
 
 logger = logging.getLogger(__name__)
@@ -103,7 +96,7 @@ async def cloud_configs(ops_test: OpsTest, github_secrets) -> None:
 
 @pytest.mark.group("AWS")
 @pytest.mark.abort_on_fail
-async def test_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> None:
+async def test_backup_aws(ops_test: OpsTest, cloud_configs: tuple[dict, dict]) -> None:
     """Build and deploy two units of PostgreSQL in AWS and then test the backup and restore actions."""
     config = cloud_configs[0][AWS]
     credentials = cloud_configs[1][AWS]
@@ -197,7 +190,7 @@ async def test_backup_aws(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -
 
 @pytest.mark.group("GCP")
 @pytest.mark.abort_on_fail
-async def test_backup_gcp(ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]) -> None:
+async def test_backup_gcp(ops_test: OpsTest, cloud_configs: tuple[dict, dict]) -> None:
     """Build and deploy two units of PostgreSQL in GCP and then test the backup and restore actions."""
     config = cloud_configs[0][GCP]
     credentials = cloud_configs[1][GCP]
@@ -320,7 +313,7 @@ async def test_restore_on_new_cluster(ops_test: OpsTest, github_secrets) -> None
 
 @pytest.mark.group("GCP")
 async def test_invalid_config_and_recovery_after_fixing_it(
-    ops_test: OpsTest, cloud_configs: Tuple[Dict, Dict]
+    ops_test: OpsTest, cloud_configs: tuple[dict, dict]
 ) -> None:
     """Test that the charm can handle invalid and valid backup configurations."""
     database_app_name = f"new-{DATABASE_APP_NAME}"
