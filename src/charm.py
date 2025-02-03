@@ -50,7 +50,7 @@ from lightkube import ApiError, Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Endpoints, Node, Pod, Service
-from ops import main
+from ops import JujuVersion, main
 from ops.charm import (
     ActionEvent,
     HookEvent,
@@ -58,7 +58,6 @@ from ops.charm import (
     RelationDepartedEvent,
     WorkloadEvent,
 )
-from ops.jujuversion import JujuVersion
 from ops.model import (
     ActiveStatus,
     BlockedStatus,
@@ -245,7 +244,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             relation_name="logging",
         )
 
-        self.unit.set_ports(*[5432, 8008])
+        if JujuVersion.from_environ().supports_open_port_on_k8s:
+            try:
+                self.unit.set_ports(5432, 8008)
+            except ModelError:
+                logger.exception("failed to open port")
         self.tracing = TracingEndpointRequirer(
             self, relation_name=TRACING_RELATION_NAME, protocols=[TRACING_PROTOCOL]
         )
