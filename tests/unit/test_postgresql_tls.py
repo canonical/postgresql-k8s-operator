@@ -48,7 +48,7 @@ def emit_certificate_expiring_event(_harness):
 
 
 def get_content_from_file(filename: str):
-    with open(filename, "r") as file:
+    with open(filename) as file:
         content = file.read()
     return content
 

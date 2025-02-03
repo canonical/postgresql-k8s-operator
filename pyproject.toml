@@ -3,21 +3,18 @@
 
 [tool.poetry]
 package-mode = false
+requires-poetry = ">=2.0.0"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-ops = "^2.17.0"
-cryptography = "^44.0.0"
+ops = "^2.17.1"
 boto3 = "^1.35.70"
 pgconnstr = "^1.0.1"
 requests = "^2.32.3"
 tenacity = "^9.0.0"
-cosl = "^0.0.45"
-pydantic = "^1.10.19"
-poetry-core = "^1.9.1"
-jsonschema = "^4.23.0"
-jinja2 = "^3.1.4"
-lightkube = "^0.15.5"
+pydantic = "^1.10.21"
+jinja2 = "^3.1.5"
+lightkube = "^0.17.1"
 lightkube-models = "^1.28.1.4"
 psycopg2 = "^2.9.10"
 
@@ -27,52 +24,50 @@ ops = ">=2.0.0"
 # data_platform_libs/v0/upgrade.py
 poetry-core = "*"
 # data_platform_libs/v0/upgrade.py requires pydantic ^1.10
-# grafana_agent/v0/cos_agent.py requires pydantic <2
-# tempo_coordinator_k8s/v0/tracing.py supports both pydantic <2 and pydantic 2
-pydantic = "^1.10, <2"
-# grafana_agent/v0/cos_agent.py
+# tempo_coordinator_k8s/v0/tracing.py requires pydantic
+pydantic = "^1.10"
+# loki_k8s/v1/loki_push_api.py and prometheus_k8s/v0/prometheus_scrape.py
 cosl = "*"
 # tempo_coordinator_k8s/v0/charm_tracing.py
 opentelemetry-exporter-otlp-proto-http = "1.21.0"
+# tls_certificates_interface/v2/tls_certificates.py
+cryptography = "*"
+jsonschema = "*"
 
 [tool.poetry.group.format]
 optional = true
 
 [tool.poetry.group.format.dependencies]
-ruff = "^0.8.0"
+ruff = "^0.9.2"
 
 [tool.poetry.group.lint]
 optional = true
 
 [tool.poetry.group.lint.dependencies]
-codespell = "^2.3.0"
+codespell = "^2.4.0"
 
 [tool.poetry.group.unit]
 optional = true
 
 [tool.poetry.group.unit.dependencies]
-coverage = {extras = ["toml"], version = "^7.6.8"}
-pydantic = "^1.10.19"
-pytest = "^8.3.3"
-pytest-mock = "^3.14.0"
-pytest-asyncio = "*"
-parameterized = "^0.9.0"
+coverage = {extras = ["toml"], version = "^7.6.10"}
+pytest = "^8.3.4"
 
 [tool.poetry.group.integration]
 optional = true
 
 [tool.poetry.group.integration.dependencies]
-lightkube = "^0.15.5"
-pytest = "^8.3.3"
-pytest-github-secrets = {git = "https://github.com/canonical/data-platform-workflows", tag = "v23.1.1", subdirectory = "python/pytest_plugins/github_secrets"}
-pytest-operator = "^0.38.0"
-pytest-operator-cache = {git = "https://github.com/canonical/data-platform-workflows", tag = "v23.1.1", subdirectory = "python/pytest_plugins/pytest_operator_cache"}
-pytest-operator-groups = {git = "https://github.com/canonical/data-platform-workflows", tag = "v23.1.1", subdirectory = "python/pytest_plugins/pytest_operator_groups"}
-allure-pytest-collection-report = {git = "https://github.com/canonical/data-platform-workflows", tag = "v23.1.1", subdirectory = "python/pytest_plugins/allure_pytest_collection_report"}
+lightkube = "^0.17.1"
+pytest = "^8.3.4"
+pytest-github-secrets = {git = "https://github.com/canonical/data-platform-workflows", tag = "v29.0.5", subdirectory = "python/pytest_plugins/github_secrets"}
+pytest-operator = "^0.39.0"
+pytest-operator-cache = {git = "https://github.com/canonical/data-platform-workflows", tag = "v29.0.5", subdirectory = "python/pytest_plugins/pytest_operator_cache"}
+pytest-operator-groups = {git = "https://github.com/canonical/data-platform-workflows", tag = "v29.0.5", subdirectory = "python/pytest_plugins/pytest_operator_groups"}
+allure-pytest-collection-report = {git = "https://github.com/canonical/data-platform-workflows", tag = "v29.0.5", subdirectory = "python/pytest_plugins/allure_pytest_collection_report"}
 # renovate caret doesn't work: https://github.com/renovatebot/renovate/issues/26940
-juju = "<=3.5.2.1"
+juju = "<=3.6.1.0"
 psycopg2-binary = "^2.9.10"
-boto3 = "^1.35.70"
+boto3 = "*"
 tenacity = "^9.0.0"
 allure-pytest = "^2.13.5"
 
@@ -111,7 +106,7 @@ line-length = 99
 
 [tool.ruff.lint]
 explicit-preview-rules = true
-select = ["A", "E", "W", "F", "C", "N", "D", "I001", "CPY001"]
+select = ["A", "E", "W", "F", "C", "N", "D", "I001", "B", "CPY", "RUF", "S", "SIM", "UP", "TC"]
 extend-ignore = [
     "D203",
     "D204",
@@ -130,12 +125,19 @@ extend-ignore = [
 ignore = ["E501", "D107"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/*" = ["D100", "D101", "D102", "D103", "D104"]
+"tests/*" = [
+    "D100", "D101", "D102", "D103", "D104",
+    # Asserts
+    "B011",
+    # Disable security checks for tests
+    "S",
+]
 
 [tool.ruff.lint.flake8-copyright]
 # Check for properly formatted copyright header in each file
 author = "Canonical Ltd."
 notice-rgx = "Copyright\\s\\d{4}([-,]\\d{4})*\\s+"
+min-file-size = 1
 
 [tool.ruff.lint.mccabe]
 max-complexity = 10

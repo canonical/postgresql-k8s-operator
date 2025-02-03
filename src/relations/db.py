@@ -4,7 +4,7 @@
 """Postgres db and db-admin relation hooks & helpers."""
 
 import logging
-from typing import Iterable, List, Set, Tuple
+from typing import Iterable
 
 from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQLCreateDatabaseError,
@@ -109,10 +109,7 @@ class DbProvides(Object):
             return
 
     def _check_exist_current_relation(self) -> bool:
-        for r in self.charm.client_relations:
-            if r in ALL_LEGACY_RELATIONS:
-                return True
-        return False
+        return any(r in ALL_LEGACY_RELATIONS for r in self.charm.client_relations)
 
     def _check_multiple_endpoints(self) -> bool:
         """Checks if there are relations with other endpoints."""
@@ -122,7 +119,7 @@ class DbProvides(Object):
                 return True
         return False
 
-    def _get_extensions(self, relation: Relation) -> Tuple[List, Set]:
+    def _get_extensions(self, relation: Relation) -> tuple[list, set]:
         """Returns the list of required and disabled extensions."""
         requested_extensions = relation.data.get(relation.app, {}).get("extensions", "").split(",")
         for unit in relation.units:
@@ -215,8 +212,7 @@ class DbProvides(Object):
                 postgresql_version = self.charm.postgresql.get_postgresql_version()
             except PostgreSQLGetPostgreSQLVersionError:
                 logger.exception(
-                    "Failed to retrieve the PostgreSQL version to initialise/update %s relation"
-                    % self.relation_name
+                    f"Failed to retrieve the PostgreSQL version to initialise/update {self.relation_name} relation"
                 )
 
             # Set the data in both application and unit data bag.
@@ -343,12 +339,16 @@ class DbProvides(Object):
 
     def _update_unit_status(self, relation: Relation) -> None:
         """# Clean up Blocked status if it's due to extensions request."""
-        if self.charm._has_blocked_status and self.charm.unit.status.message in [
-            EXTENSIONS_BLOCKING_MESSAGE,
-            ROLES_BLOCKING_MESSAGE,
-        ]:
-            if not self._check_for_blocking_relations(relation.id):
-                self.charm.unit.status = ActiveStatus()
+        if (
+            self.charm._has_blocked_status
+            and self.charm.unit.status.message
+            in [
+                EXTENSIONS_BLOCKING_MESSAGE,
+                ROLES_BLOCKING_MESSAGE,
+            ]
+            and not self._check_for_blocking_relations(relation.id)
+        ):
+            self.charm.unit.status = ActiveStatus()
 
         self._update_unit_status_on_blocking_endpoint_simultaneously()
 
@@ -357,16 +357,14 @@ class DbProvides(Object):
         if (
             self.charm._has_blocked_status
             and self.charm.unit.status.message == ENDPOINT_SIMULTANEOUSLY_BLOCKING_MESSAGE
+            and not self._check_multiple_endpoints()
         ):
-            if not self._check_multiple_endpoints():
-                self.charm.unit.status = ActiveStatus()
+            self.charm.unit.status = ActiveStatus()
 
     def _check_multiple_endpoints(self) -> bool:
         """Checks if there are relations with other endpoints."""
         relation_names = {relation.name for relation in self.charm.client_relations}
-        if "database" in relation_names and len(relation_names) > 1:
-            return True
-        return False
+        return "database" in relation_names and len(relation_names) > 1
 
     def _get_allowed_subnets(self, relation: Relation) -> str:
         """Build the list of allowed subnets as in the legacy charm."""
