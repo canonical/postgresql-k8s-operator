@@ -51,6 +51,18 @@ def harness():
     harness.cleanup()
 
 
+def test_set_ports(only_with_juju_secrets):
+    with (
+        patch("charm.JujuVersion") as _juju_version,
+        patch("charm.PostgresqlOperatorCharm.unit") as _unit,
+    ):
+        harness = Harness(PostgresqlOperatorCharm)
+        harness.begin()
+        _unit.set_ports.assert_called_once_with(5432, 8008)
+
+        harness.cleanup()
+
+
 def test_on_leader_elected(harness):
     with (
         patch("charm.PostgresqlOperatorCharm._add_members"),
