@@ -35,7 +35,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 42
+LIBPATCH = 43
 
 INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE = "invalid role(s) for extra user roles"
 
@@ -317,7 +317,7 @@ class PostgreSQL:
             logger.error(f"Failed to delete user: {e}")
             raise PostgreSQLDeleteUserError() from e
 
-    def enable_disable_extensions(
+    def enable_disable_extensions(  # noqa: C901
         self, extensions: Dict[str, bool], database: Optional[str] = None
     ) -> None:
         """Enables or disables a PostgreSQL extension.
@@ -374,7 +374,7 @@ class PostgreSQL:
     ) -> List[Composed]:
         """Generates a list of databases privileges statements."""
         statements = []
-        statements.append(sql.SQL("GRANT USAGE, CREATE ON SCHEMA public TO admin;"))
+        statements.append(SQL("GRANT USAGE, CREATE ON SCHEMA public TO admin;"))
         if relations_accessing_this_database == 1:
             statements.append(
                 SQL(
@@ -431,8 +431,10 @@ END; $$;"""
                     SQL("GRANT ALL PRIVILEGES ON ALL FUNCTIONS IN SCHEMA {} TO {};").format(
                         schema, Identifier(user)
                     ),
-                    SQL("GRANT USAGE ON SCHEMA {} TO {};").format(schema, Identifier(user)),
-                    SQL("GRANT CREATE ON SCHEMA {} TO {};").format(schema, Identifier(user)),
+                    SQL("GRANT USAGE, CREATE ON SCHEMA {} TO {};").format(
+                        schema, Identifier(user)
+                    ),
+                    SQL("GRANT USAGE, CREATE ON SCHEMA {} TO admin;").format(schema),
                 ])
         return statements
 
