@@ -374,10 +374,7 @@ class PostgreSQL:
     ) -> List[Composed]:
         """Generates a list of databases privileges statements."""
         statements = []
-        statements.append(SQL("GRANT USAGE, CREATE ON SCHEMA public TO admin;"))
-        statements.append(
-            SQL("GRANT USAGE, CREATE ON SCHEMA public TO {};").format(Identifier(user))
-        )
+        statements.append(SQL("GRANT USAGE, CREATE ON SCHEMA public TO PUBLIC;"))
         if relations_accessing_this_database == 1:
             statements.append(
                 SQL(

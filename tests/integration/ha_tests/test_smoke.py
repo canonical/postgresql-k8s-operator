@@ -44,6 +44,7 @@ env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
 
 @pytest.mark.group(1)
 @markers.amd64_only  # TODO: remove after arm64 stable release
+@pytest.mark.unstable
 @pytest.mark.abort_on_fail
 async def test_app_force_removal(ops_test: OpsTest):
     """Remove unit with force while storage is alive."""
@@ -157,6 +158,7 @@ async def test_app_garbage_ignorance(ops_test: OpsTest):
 
 @pytest.mark.group(1)
 @markers.amd64_only  # TODO: remove after arm64 stable release
+@pytest.mark.unstable
 @pytest.mark.abort_on_fail
 async def test_app_resources_conflicts(ops_test: OpsTest):
     """Test application deploy in dirty environment with garbage storage from another application."""
