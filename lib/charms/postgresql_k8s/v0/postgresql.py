@@ -276,6 +276,7 @@ class PostgreSQL:
                         cursor.execute(
                             SQL("GRANT {} TO {};").format(Identifier(role), Identifier(user))
                         )
+                cursor.execute(SQL("GRANT ALL ON SCHEMA public TO {};").format(Identifier(user)))
         except psycopg2.Error as e:
             logger.error(f"Failed to create user: {e}")
             raise PostgreSQLCreateUserError() from e
@@ -374,7 +375,7 @@ class PostgreSQL:
     ) -> List[Composed]:
         """Generates a list of databases privileges statements."""
         statements = []
-        statements.append(SQL("GRANT USAGE, CREATE ON SCHEMA public TO admin;"))
+        statements.append(SQL("GRANT ALL ON SCHEMA public TO admin;"))
         if relations_accessing_this_database == 1:
             statements.append(
                 SQL(
