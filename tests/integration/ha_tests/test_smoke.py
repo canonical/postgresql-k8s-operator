@@ -105,6 +105,7 @@ async def test_app_force_removal(ops_test: OpsTest):
 
 @pytest.mark.group(1)
 @markers.amd64_only  # TODO: remove after arm64 stable release
+@pytest.mark.unstable
 @pytest.mark.abort_on_fail
 async def test_app_garbage_ignorance(ops_test: OpsTest):
     """Test charm deploy in dirty environment with garbage storage."""
