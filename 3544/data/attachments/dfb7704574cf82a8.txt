@@ -1,0 +1,18 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:929 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.6.2    unsupported  01:39:53Z
+
+App             Version  Status   Scale  Charm           Channel  Rev  Address        Exposed  Message
+postgresql-k8s  14.15    waiting      3  postgresql-k8s             0  10.152.183.75  no       installing agent
+
+Unit               Workload  Agent  Address     Ports  Message
+postgresql-k8s/0   active    idle   10.1.97.11         
+postgresql-k8s/1   waiting   idle   10.1.97.13         awaiting for member to start
+postgresql-k8s/2*  active    idle   10.1.97.12         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:935 Juju error logs:
+
+unit-postgresql-k8s-1: 01:39:43 ERROR unit.postgresql-k8s/1.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1017 Forgetting model main...
