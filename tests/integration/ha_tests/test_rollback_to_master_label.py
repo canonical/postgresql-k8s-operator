@@ -15,7 +15,6 @@ from .. import markers
 from ..architecture import architecture
 from ..helpers import (
     APPLICATION_NAME,
-    CHARM_BASE,
     DATABASE_APP_NAME,
     METADATA,
     build_charm,
@@ -51,7 +50,6 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
             num_units=3,
             channel="16/stable",
             revision=LABEL_REVISION,
-            base=CHARM_BASE,
             trust=True,
         ),
         ops_test.model.deploy(

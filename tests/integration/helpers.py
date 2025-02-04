@@ -131,7 +131,6 @@ async def build_and_deploy(
             application_name=database_app_name,
             trust=True,
             num_units=num_units,
-            base=CHARM_BASE,
             config={"profile": "testing"},
         ),
     )

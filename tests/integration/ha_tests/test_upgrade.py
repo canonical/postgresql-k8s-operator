@@ -14,7 +14,6 @@ from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from ..helpers import (
     APPLICATION_NAME,
-    CHARM_BASE,
     DATABASE_APP_NAME,
     METADATA,
     build_charm,
@@ -47,7 +46,6 @@ async def test_deploy_latest(ops_test: OpsTest) -> None:
             channel="16/edge",
             trust=True,
             config={"profile": "testing"},
-            base=CHARM_BASE,
         ),
         ops_test.model.deploy(
             APPLICATION_NAME,

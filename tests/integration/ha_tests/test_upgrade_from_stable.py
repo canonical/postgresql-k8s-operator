@@ -13,7 +13,6 @@ from tenacity import Retrying, stop_after_attempt, wait_fixed
 from .. import markers
 from ..helpers import (
     APPLICATION_NAME,
-    CHARM_BASE,
     DATABASE_APP_NAME,
     METADATA,
     build_charm,
@@ -45,7 +44,6 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
             num_units=3,
             channel="16/stable",
             trust=True,
-            base=CHARM_BASE,
         ),
         ops_test.model.deploy(
             APPLICATION_NAME,

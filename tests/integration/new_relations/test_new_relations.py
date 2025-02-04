@@ -16,7 +16,6 @@ from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from .. import markers
 from ..helpers import (
-    CHARM_BASE,
     check_database_users_existence,
     scale_application,
 )
@@ -67,7 +66,6 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest, databas
                 },
                 application_name=DATABASE_APP_NAME,
                 num_units=3,
-                base=CHARM_BASE,
                 trust=True,
                 config={"profile": "testing"},
             ),
@@ -80,7 +78,6 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest, databas
                 },
                 application_name=ANOTHER_DATABASE_APP_NAME,
                 num_units=3,
-                base=CHARM_BASE,
                 trust=True,
                 config={"profile": "testing"},
             ),
@@ -606,7 +603,6 @@ async def test_database_deploy_clientapps(ops_test: OpsTest, database_charm):
                 },
                 application_name=DATABASE_APP_NAME,
                 num_units=3,
-                base=CHARM_BASE,
                 trust=True,
                 config={"profile": "testing"},
             ),

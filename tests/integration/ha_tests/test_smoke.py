@@ -12,7 +12,6 @@ from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from .. import markers
 from ..helpers import (
-    CHARM_BASE,
     DATABASE_APP_NAME,
     scale_application,
 )
@@ -56,7 +55,6 @@ async def test_app_force_removal(ops_test: OpsTest):
             application_name=DATABASE_APP_NAME,
             num_units=1,
             channel="16/stable",
-            base=CHARM_BASE,
             trust=True,
             config={"profile": "testing"},
         )
@@ -169,7 +167,6 @@ async def test_app_resources_conflicts(ops_test: OpsTest):
             application_name=DUP_DATABASE_APP_NAME,
             num_units=1,
             channel="16/stable",
-            base=CHARM_BASE,
             trust=True,
             config={"profile": "testing"},
         )

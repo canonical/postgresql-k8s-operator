@@ -14,7 +14,6 @@ from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from .helpers import (
-    CHARM_BASE,
     METADATA,
     STORAGE_PATH,
     build_and_deploy,
@@ -389,7 +388,6 @@ async def test_redeploy_charm_same_model(ops_test: OpsTest):
             },
             application_name=APP_NAME,
             num_units=len(UNIT_IDS),
-            base=CHARM_BASE,
             trust=True,
             config={"profile": "testing"},
         )
@@ -433,7 +431,6 @@ async def test_redeploy_charm_same_model_after_forcing_removal(ops_test: OpsTest
             },
             application_name=APP_NAME,
             num_units=len(UNIT_IDS),
-            base=CHARM_BASE,
             trust=True,
             config={"profile": "testing"},
         )
@@ -465,7 +462,6 @@ async def test_storage_with_more_restrictive_permissions(ops_test: OpsTest):
                 },
                 application_name=app_name,
                 num_units=1,
-                base=CHARM_BASE,
                 trust=True,
                 config={"profile": "testing"},
             )
