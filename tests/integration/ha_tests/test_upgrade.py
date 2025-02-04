@@ -17,6 +17,7 @@ from ..helpers import (
     CHARM_BASE,
     DATABASE_APP_NAME,
     METADATA,
+    build_charm,
     count_switchovers,
     get_leader_unit,
     get_primary,
@@ -112,7 +113,7 @@ async def test_upgrade_from_edge(ops_test: OpsTest, continuous_writes) -> None:
     application = ops_test.model.applications[DATABASE_APP_NAME]
 
     logger.info("Build charm locally")
-    charm = await ops_test.build_charm(".")
+    charm = await build_charm(".")
 
     logger.info("Refresh the charm")
     await application.refresh(path=charm, resources=resources)
@@ -186,7 +187,7 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
             primary_name = await get_primary(ops_test, DATABASE_APP_NAME)
             assert primary_name == f"{DATABASE_APP_NAME}/0"
 
-    local_charm = await ops_test.build_charm(".")
+    local_charm = await build_charm(".")
     filename = local_charm.split("/")[-1] if isinstance(local_charm, str) else local_charm.name
     fault_charm = Path("/tmp/", filename)
     shutil.copy(local_charm, fault_charm)

@@ -17,6 +17,7 @@ from ..helpers import (
     CHARM_SERIES,
     DATABASE_APP_NAME,
     METADATA,
+    build_charm,
     get_leader_unit,
     get_primary,
     get_unit_by_index,
@@ -101,7 +102,7 @@ async def test_upgrade(ops_test, continuous_writes) -> None:
             primary_name = await get_primary(ops_test, DATABASE_APP_NAME)
             assert primary_name == f"{DATABASE_APP_NAME}/0"
 
-    local_charm = await ops_test.build_charm(".")
+    local_charm = await build_charm(".")
     application = ops_test.model.applications[DATABASE_APP_NAME]
 
     resources = {"postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]}
