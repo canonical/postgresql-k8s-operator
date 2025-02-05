@@ -41,14 +41,25 @@ tc = TestCase()
 
 @pytest.fixture(autouse=True)
 def harness():
-    with patch("charm.KubernetesServicePatch", lambda x, y: None):
-        harness = Harness(PostgresqlOperatorCharm)
-        harness.handle_exec("postgresql", ["locale", "-a"], result="C")
+    harness = Harness(PostgresqlOperatorCharm)
+    harness.handle_exec("postgresql", ["locale", "-a"], result="C")
 
-        harness.add_relation(PEER, "postgresql-k8s")
+    harness.add_relation(PEER, "postgresql-k8s")
+    harness.begin()
+    harness.add_relation("restart", harness.charm.app.name)
+    yield harness
+    harness.cleanup()
+
+
+def test_set_ports(only_with_juju_secrets):
+    with (
+        patch("charm.JujuVersion") as _juju_version,
+        patch("charm.PostgresqlOperatorCharm.unit") as _unit,
+    ):
+        harness = Harness(PostgresqlOperatorCharm)
         harness.begin()
-        harness.add_relation("restart", harness.charm.app.name)
-        yield harness
+        _unit.set_ports.assert_called_once_with(5432, 8008)
+
         harness.cleanup()
 
 

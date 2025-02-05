@@ -9,7 +9,7 @@ platforms:
 # - dispatch (https://github.com/canonical/charmcraft/pull/1898)
 # - manifest.yaml
 #   (https://github.com/canonical/charmcraft/blob/9ff19c328e23b50cc06f04e8a5ad4835740badf4/charmcraft/services/package.py#L259)
-# Files implicitly copied/"primed" by charmcraft without a part:
+# Files implicitly copied/"staged" by charmcraft without a part:
 # - actions.yaml, config.yaml, metadata.yaml
 #   (https://github.com/canonical/charmcraft/blob/9ff19c328e23b50cc06f04e8a5ad4835740badf4/charmcraft/services/package.py#L290-L293
 #   https://github.com/canonical/charmcraft/blob/9ff19c328e23b50cc06f04e8a5ad4835740badf4/charmcraft/services/package.py#L156-L157)
@@ -24,10 +24,10 @@ parts:
       # Use environment variable instead of `--break-system-packages` to avoid failing on older
       # versions of pip that do not recognize `--break-system-packages`
       # `--user` needed (in addition to `--break-system-packages`) for Ubuntu >=24.04
-      PIP_BREAK_SYSTEM_PACKAGES=true python3 -m pip install --user --upgrade pip==24.3.1  # renovate: charmcraft-pip-latest
+      PIP_BREAK_SYSTEM_PACKAGES=true python3 -m pip install --user --upgrade pip==25.0  # renovate: charmcraft-pip-latest
 
       # Use uv to install poetry so that a newer version of Python can be installed if needed by poetry
-      curl --proto '=https' --tlsv1.2 -LsSf https://github.com/astral-sh/uv/releases/download/0.5.21/uv-installer.sh | sh  # renovate: charmcraft-uv-latest
+      curl --proto '=https' --tlsv1.2 -LsSf https://github.com/astral-sh/uv/releases/download/0.5.27/uv-installer.sh | sh  # renovate: charmcraft-uv-latest
       # poetry 2.0.0 requires Python >=3.9
       if ! "$HOME/.local/bin/uv" python find '>=3.9'
       then
@@ -41,7 +41,7 @@ parts:
   # "charm-poetry" part name is arbitrary; use for consistency
   # Avoid using "charm" part name since that has special meaning to charmcraft
   charm-poetry:
-    # By default, the `poetry` plugin creates/primes these directories:
+    # By default, the `poetry` plugin creates/stages these directories:
     # - lib, src
     #   (https://github.com/canonical/charmcraft/blob/9ff19c328e23b50cc06f04e8a5ad4835740badf4/charmcraft/parts/plugins/_poetry.py#L76-L78)
     # - venv
@@ -75,7 +75,7 @@ parts:
       # rpds-py (Python package) >=0.19.0 requires rustc >=1.76, which is not available in the
       # Ubuntu 22.04 archive. Install rustc and cargo using rustup instead of the Ubuntu archive
       rustup set profile minimal
-      rustup default 1.84.0  # renovate: charmcraft-rust-latest
+      rustup default 1.84.1  # renovate: charmcraft-rust-latest
 
       craftctl default
       # Include requirements.txt in *.charm artifact for easier debugging
@@ -84,7 +84,7 @@ parts:
   files:
     plugin: dump
     source: .
-    prime:
+    stage:
       - LICENSE
       - templates
   libpq:
@@ -93,7 +93,7 @@ parts:
     plugin: dump
     source: /usr/lib/
     source-type: local
-    prime:
+    stage:
       - lib/
     organize:
       "*-linux-gnu/libpq.so*": lib/
