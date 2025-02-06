@@ -85,7 +85,7 @@ juju deploy grafana-agent-k8s --channel latest-edge
 
 Then, integrate Grafana Agent K8s with the consumed interface from the previous section:
 ```shell
-juju integrate grafana-agent-k8s: tracing tempo:tracing
+juju integrate grafana-agent-k8s:tracing tempo:tracing
 ```
 
 Finally, integrate Charmed PostgreSQL K8s with Grafana Agent K8s:
