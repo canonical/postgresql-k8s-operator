@@ -18,12 +18,18 @@ on:
   workflow_dispatch:
 
 jobs:
+  build:
+    name: Build charm
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v29.0.5
+    with:
+      cache: false
+
   release:
     name: Release charm
     uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v29.0.5
     with:
       channel: 16/edge
-      artifact-prefix: ${{ needs.ci-tests.outputs.artifact-prefix }}
+      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
     secrets:
       charmhub-token: ${{ secrets.CHARMHUB_TOKEN }}
     permissions:
