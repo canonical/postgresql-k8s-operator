@@ -26,6 +26,8 @@ jobs:
 
   release:
     name: Release charm
+    needs:
+      - build
     uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v29.0.5
     with:
       channel: 16/edge
