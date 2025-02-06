@@ -1145,3 +1145,24 @@ async def remove_unit_force(ops_test: OpsTest, num_units: int):
             timeout=1000,
             wait_for_exact_units=scale,
         )
+
+
+async def get_cluster_roles(
+    ops_test: OpsTest, unit_name: str
+) -> dict[str, str | list[str] | None]:
+    """Returns whether the unit a replica in the cluster."""
+    unit_ip = await get_unit_address(ops_test, unit_name)
+    members = {"replicas": [], "primaries": [], "sync_standbys": []}
+    member_list = get_patroni_cluster(unit_ip)["members"]
+    logger.info(f"Cluster members are: {member_list}")
+    for member in member_list:
+        role = member["role"]
+        name = "/".join(member["name"].rsplit("-", 1))
+        if role == "leader":
+            members["primaries"].append(name)
+        elif role == "sync_standby":
+            members["sync_standbys"].append(name)
+        else:
+            members["replicas"].append(name)
+
+    return members
