@@ -1280,12 +1280,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def promote_primary_unit(self, event: ActionEvent) -> None:
         """Handles promote to primary for unit scope."""
         if event.params.get("force"):
-            event.fail("Suprerfluous force flag")
+            event.fail("Suprerfluous force flag with unit scope")
         else:
             try:
-                self._patroni.switchover(self.unit.name)
+                self._patroni.switchover(self.unit.name, wait=False)
             except SwitchoverFailedError:
-                event.fail("Unit is not sync standby")
+                event.fail("Switchover failed or timed out, check the logs for details")
 
     def _on_get_primary(self, event: ActionEvent) -> None:
         """Get primary instance."""

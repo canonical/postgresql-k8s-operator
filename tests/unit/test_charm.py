@@ -26,7 +26,7 @@ from tenacity import RetryError, wait_fixed
 
 from charm import EXTENSION_OBJECT_MESSAGE, PostgresqlOperatorCharm
 from constants import PEER, SECRET_INTERNAL_LABEL
-from patroni import NotReadyError
+from patroni import NotReadyError, SwitchoverFailedError
 from tests.unit.helpers import _FakeApiError
 
 POSTGRESQL_CONTAINER = "postgresql"
@@ -1833,3 +1833,34 @@ def test_get_plugins(harness):
             "insert_username",
             "moddatetime",
         ]
+
+
+def test_on_promote_to_primary(harness):
+    with (
+        patch("charm.PostgreSQLAsyncReplication.promote_to_primary") as _promote_to_primary,
+        patch("charm.Patroni.switchover") as _switchover,
+    ):
+        event = Mock()
+        event.params = {"scope": "cluster"}
+
+        # Cluster
+        harness.charm._on_promote_to_primary(event)
+        _promote_to_primary.assert_called_once_with(event)
+
+        # Unit, no force, regular promotion
+        event.params = {"scope": "unit"}
+
+        harness.charm._on_promote_to_primary(event)
+
+        _switchover.assert_called_once_with("postgresql-k8s/0", wait=False)
+
+        # Unit, no force, switchover failed
+        event.params = {"scope": "unit"}
+        _switchover.side_effect = SwitchoverFailedError
+
+        harness.charm._on_promote_to_primary(event)
+
+        event.fail.assert_called_once_with(
+            "Switchover failed or timed out, check the logs for details"
+        )
+        event.fail.reset_mock()
