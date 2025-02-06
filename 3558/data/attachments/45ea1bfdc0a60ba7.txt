@@ -1,0 +1,157 @@
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:490 starting continuous writes to the database
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:493 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:242 Initial writes {'test.postgresql-k8s-0': 162, 'test.postgresql-k8s-2': 163}
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Retry writes {'test.postgresql-k8s-0': 295, 'test.postgresql-k8s-2': 296}
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:497 scaling out the first cluster
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s (waiting for exactly 4 units, current : 3)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [executing] active: 
+  postgresql-k8s/2 [idle] maintenance: reconfiguring cluster
+  postgresql-k8s/3 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Primary
+  postgresql-k8s/3 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Primary
+  postgresql-k8s/3 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/3 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/3 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/3 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/3 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/3 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/3 [idle] active: 
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:501 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test-other/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:242 Initial writes {'test.postgresql-k8s-0': 14152, 'test.postgresql-k8s-2': 14154, 'test-other.postgresql-k8s-2': 14154}
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test-other/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Retry writes {'test.postgresql-k8s-0': 14323, 'test.postgresql-k8s-2': 14324, 'test-other.postgresql-k8s-2': 14325}
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:504 scaling out the second cluster
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s (waiting for exactly 4 units, current : 3)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Standby
+  postgresql-k8s/3 [idle] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Standby
+  postgresql-k8s/3 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] waiting: awaiting for member to start
+  postgresql-k8s/2 [idle] active: Standby
+  postgresql-k8s/3 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Standby
+  postgresql-k8s/3 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/3 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/3 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/3 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/3 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/3 [idle] active: 
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:510 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test-other/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:242 Initial writes {'test.postgresql-k8s-0': 25784, 'test.postgresql-k8s-2': 25785, 'test-other.postgresql-k8s-2': 25787}
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test-other/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Retry writes {'test.postgresql-k8s-0': 25949, 'test.postgresql-k8s-2': 25950, 'test-other.postgresql-k8s-2': 25952}
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:513 scaling in the first cluster
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s (waiting for exactly 3 units, current : 4)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s (waiting for exactly 3 units, current : 4)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:516 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test-other/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:242 Initial writes {'test.postgresql-k8s-0': 28634, 'test.postgresql-k8s-2': 28636, 'test-other.postgresql-k8s-2': 28637}
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test-other/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Retry writes {'test.postgresql-k8s-0': 28747, 'test.postgresql-k8s-2': 28748, 'test-other.postgresql-k8s-2': 28750}
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:519 scaling in the second cluster
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s (waiting for exactly 3 units, current : 4)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s (waiting for exactly 3 units, current : 4)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Standby
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:524 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test-other/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:242 Initial writes {'test.postgresql-k8s-0': 31533, 'test.postgresql-k8s-2': 31534, 'test-other.postgresql-k8s-2': 31535}
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test-other/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Retry writes {'test.postgresql-k8s-0': 31641, 'test.postgresql-k8s-2': 31642, 'test-other.postgresql-k8s-2': 31643}
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:529 checking whether no writes were lost
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.117:16443/api/v1/namespaces/test-other/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:83 Destroying second model
+[32mINFO    [0m pytest_operator.plugin:plugin.py:929 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.6.2    unsupported  02:04:34Z
+
+App                  Version  Status  Scale  Charm                Channel      Rev  Address         Exposed  Message
+postgresql-k8s       14.15    active      3  postgresql-k8s                      0  10.152.183.41   no       Primary
+postgresql-test-app           active      1  postgresql-test-app  latest/edge  352  10.152.183.179  no       received database credentials of the first database
+
+Unit                    Workload  Agent  Address      Ports  Message
+postgresql-k8s/0        active    idle   10.1.189.76         
+postgresql-k8s/1        active    idle   10.1.189.87         
+postgresql-k8s/2*       active    idle   10.1.189.78         Primary
+postgresql-test-app/0*  active    idle   10.1.189.85         received database credentials of the first database
+
+Offer              Application     Charm           Rev  Connected  Endpoint           Interface         Role
+replication        postgresql-k8s  postgresql-k8s  0    0/0        replication        postgresql_async  requirer
+replication-offer  postgresql-k8s  postgresql-k8s  0    1/1        replication-offer  postgresql_async  provider
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:935 Juju error logs:
+
+unit-postgresql-k8s-0: 01:32:20 ERROR unit.postgresql-k8s/0.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-postgresql-k8s-1: 01:32:20 ERROR unit.postgresql-k8s/1.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-postgresql-k8s-1: 01:32:54 ERROR unit.postgresql-k8s/1.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-postgresql-k8s-1: 01:48:50 ERROR unit.postgresql-k8s/1.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1017 Forgetting model main...
