@@ -202,7 +202,7 @@ def test_render_patroni_yml_file(harness, patroni):
         ) as _rock_postgresql_version,
         patch("charm.Patroni._render_file") as _render_file,
     ):
-        _rock_postgresql_version.return_value = "16.4"
+        _rock_postgresql_version.return_value = "16.6"
 
         # Get the expected content from a file.
         with open("templates/patroni.yml.j2") as file:

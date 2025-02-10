@@ -198,7 +198,7 @@ def test_on_postgresql_pebble_ready(harness):
         patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
         patch("charm.PostgresqlOperatorCharm._create_pgdata") as _create_pgdata,
     ):
-        _rock_postgresql_version.return_value = "16.4"
+        _rock_postgresql_version.return_value = "16.6"
 
         # Mock the primary endpoint ready property values.
         _primary_endpoint_ready.side_effect = [False, True, True]
@@ -255,7 +255,7 @@ def test_on_postgresql_pebble_ready_no_connection(harness):
     ):
         mock_event = MagicMock()
         mock_event.workload = harness.model.unit.get_container(POSTGRESQL_CONTAINER)
-        _rock_postgresql_version.return_value = "16.4"
+        _rock_postgresql_version.return_value = "16.6"
 
         harness.charm._on_postgresql_pebble_ready(mock_event)
 

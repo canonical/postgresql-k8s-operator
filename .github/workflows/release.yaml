@@ -14,24 +14,40 @@ on:
       - '.github/workflows/ci.yaml'
       - '.github/workflows/lib-check.yaml'
       - '.github/workflows/sync_docs.yaml'
-  # for testing purposes:
-  workflow_dispatch:
 
 jobs:
-  build:
-    name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v29.0.5
-    with:
-      cache: false
+  ci-tests:
+    name: Tests
+    uses: ./.github/workflows/ci.yaml
+    secrets: inherit
+    permissions:
+      contents: write  # Needed for Allure Report beta
+
+  release-libraries:
+    name: Release libraries
+    needs:
+      - ci-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Release charm libraries
+        uses: canonical/charming-actions/release-libraries@2.7.0
+        with:
+          credentials: "${{ secrets.CHARMHUB_TOKEN }}"
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
 
   release:
     name: Release charm
     needs:
-      - build
+      - ci-tests
     uses: canonical/data-platform-workflows/.github/workflows/release_charm.yaml@v29.0.5
     with:
       channel: 16/edge
-      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
+      artifact-prefix: ${{ needs.ci-tests.outputs.artifact-prefix }}
     secrets:
       charmhub-token: ${{ secrets.CHARMHUB_TOKEN }}
     permissions:
