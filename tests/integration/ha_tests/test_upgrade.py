@@ -14,9 +14,9 @@ from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from ..helpers import (
     APPLICATION_NAME,
-    CHARM_BASE,
     DATABASE_APP_NAME,
     METADATA,
+    build_charm,
     count_switchovers,
     get_leader_unit,
     get_primary,
@@ -35,6 +35,7 @@ TIMEOUT = 600
 
 
 @pytest.mark.group(1)
+@pytest.mark.unstable
 @pytest.mark.abort_on_fail
 async def test_deploy_latest(ops_test: OpsTest) -> None:
     """Simple test to ensure that the PostgreSQL and application charms get deployed."""
@@ -42,16 +43,14 @@ async def test_deploy_latest(ops_test: OpsTest) -> None:
         ops_test.model.deploy(
             DATABASE_APP_NAME,
             num_units=3,
-            channel="14/edge",
+            channel="16/edge",
             trust=True,
             config={"profile": "testing"},
-            base=CHARM_BASE,
         ),
         ops_test.model.deploy(
             APPLICATION_NAME,
             num_units=1,
             channel="latest/edge",
-            base=CHARM_BASE,
         ),
     )
     logger.info("Wait for applications to become active")
@@ -66,6 +65,7 @@ async def test_deploy_latest(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.group(1)
+@pytest.mark.unstable
 @pytest.mark.abort_on_fail
 async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     """Test that the pre-upgrade-check action runs successfully."""
@@ -93,6 +93,7 @@ async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.group(1)
+@pytest.mark.unstable
 @pytest.mark.abort_on_fail
 async def test_upgrade_from_edge(ops_test: OpsTest, continuous_writes) -> None:
     # Start an application that continuously writes data to the database.
@@ -110,7 +111,7 @@ async def test_upgrade_from_edge(ops_test: OpsTest, continuous_writes) -> None:
     application = ops_test.model.applications[DATABASE_APP_NAME]
 
     logger.info("Build charm locally")
-    charm = await ops_test.build_charm(".")
+    charm = await build_charm(".")
 
     logger.info("Refresh the charm")
     await application.refresh(path=charm, resources=resources)
@@ -159,6 +160,7 @@ async def test_upgrade_from_edge(ops_test: OpsTest, continuous_writes) -> None:
 
 
 @pytest.mark.group(1)
+@pytest.mark.unstable
 @pytest.mark.abort_on_fail
 async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
     # Start an application that continuously writes data to the database.
@@ -183,7 +185,7 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
             primary_name = await get_primary(ops_test, DATABASE_APP_NAME)
             assert primary_name == f"{DATABASE_APP_NAME}/0"
 
-    local_charm = await ops_test.build_charm(".")
+    local_charm = await build_charm(".")
     filename = local_charm.split("/")[-1] if isinstance(local_charm, str) else local_charm.name
     fault_charm = Path("/tmp/", filename)
     shutil.copy(local_charm, fault_charm)

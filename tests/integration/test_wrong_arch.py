@@ -11,7 +11,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 
 from . import markers
-from .helpers import CHARM_BASE, DATABASE_APP_NAME, METADATA
+from .helpers import DATABASE_APP_NAME, METADATA
 
 logger = logging.getLogger(__name__)
 
@@ -40,7 +40,6 @@ async def test_arm_charm_on_amd_host(ops_test: OpsTest) -> None:
         application_name=DATABASE_APP_NAME,
         trust=True,
         num_units=1,
-        base=CHARM_BASE,
         config={"profile": "testing"},
     )
 
@@ -63,7 +62,6 @@ async def test_amd_charm_on_arm_host(ops_test: OpsTest) -> None:
         application_name=DATABASE_APP_NAME,
         trust=True,
         num_units=1,
-        base=CHARM_BASE,
         config={"profile": "testing"},
     )
 

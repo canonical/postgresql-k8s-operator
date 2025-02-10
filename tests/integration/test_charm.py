@@ -14,10 +14,10 @@ from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from .helpers import (
-    CHARM_BASE,
     METADATA,
     STORAGE_PATH,
     build_and_deploy,
+    build_charm,
     convert_records_to_dict,
     db_connect,
     get_application_units,
@@ -379,7 +379,7 @@ async def test_application_removal(ops_test: OpsTest) -> None:
 @pytest.mark.group(1)
 async def test_redeploy_charm_same_model(ops_test: OpsTest):
     """Redeploy the charm in the same model to test that it works."""
-    charm = await ops_test.build_charm(".")
+    charm = await build_charm(".")
     async with ops_test.fast_forward():
         await ops_test.model.deploy(
             charm,
@@ -388,7 +388,6 @@ async def test_redeploy_charm_same_model(ops_test: OpsTest):
             },
             application_name=APP_NAME,
             num_units=len(UNIT_IDS),
-            base=CHARM_BASE,
             trust=True,
             config={"profile": "testing"},
         )
@@ -423,7 +422,7 @@ async def test_redeploy_charm_same_model_after_forcing_removal(ops_test: OpsTest
     assert set(existing_resources) == set(expected_resources)
 
     # Check that the charm can be deployed again.
-    charm = await ops_test.build_charm(".")
+    charm = await build_charm(".")
     async with ops_test.fast_forward():
         await ops_test.model.deploy(
             charm,
@@ -432,7 +431,6 @@ async def test_redeploy_charm_same_model_after_forcing_removal(ops_test: OpsTest
             },
             application_name=APP_NAME,
             num_units=len(UNIT_IDS),
-            base=CHARM_BASE,
             trust=True,
             config={"profile": "testing"},
         )
@@ -453,7 +451,7 @@ async def test_storage_with_more_restrictive_permissions(ops_test: OpsTest):
     app_name = f"test-storage-{APP_NAME}"
     async with ops_test.fast_forward():
         # Deploy and wait for the charm to get into the install hook (maintenance status).
-        charm = await ops_test.build_charm(".")
+        charm = await build_charm(".")
         async with ops_test.fast_forward():
             await ops_test.model.deploy(
                 charm,
@@ -464,7 +462,6 @@ async def test_storage_with_more_restrictive_permissions(ops_test: OpsTest):
                 },
                 application_name=app_name,
                 num_units=1,
-                base=CHARM_BASE,
                 trust=True,
                 config={"profile": "testing"},
             )

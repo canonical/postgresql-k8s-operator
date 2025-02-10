@@ -7,7 +7,7 @@ import logging
 from datetime import datetime
 from multiprocessing import ProcessError
 from pathlib import Path
-from subprocess import check_call
+from subprocess import check_call, run
 
 import botocore
 import psycopg2
@@ -32,8 +32,8 @@ from tenacity import (
     wait_fixed,
 )
 
-CHARM_BASE = "ubuntu@22.04"
-CHARM_SERIES = "jammy"
+CHARM_BASE = "ubuntu@24.04"
+CHARM_SERIES = "noble"
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
 APPLICATION_NAME = "postgresql-test-app"
@@ -70,6 +70,37 @@ async def app_name(
     return None
 
 
+async def build_charm(charm_path) -> Path:
+    charm_path = Path(charm_path)
+    architecture = run(
+        ["dpkg", "--print-architecture"],
+        capture_output=True,
+        check=True,
+        encoding="utf-8",
+    ).stdout.strip()
+    assert architecture in ("amd64", "arm64")
+    # 24.04 pin is temporary solution while multi-base integration testing not supported by data-platform-workflows
+    packed_charms = list(charm_path.glob(f"*ubuntu@24.04-{architecture}.charm"))
+    if len(packed_charms) == 1:
+        # python-libjuju's model.deploy(), juju deploy, and juju bundle files expect local charms
+        # to begin with `./` or `/` to distinguish them from Charmhub charms.
+        # Therefore, we need to return an absolute path—a relative `pathlib.Path` does not start
+        # with `./` when cast to a str.
+        # (python-libjuju model.deploy() expects a str but will cast any input to a str as a
+        # workaround for pytest-operator's non-compliant `build_charm` return type of
+        # `pathlib.Path`.)
+        return packed_charms[0].resolve(strict=True)
+    elif len(packed_charms) > 1:
+        raise ValueError(
+            f"More than one matching .charm file found at {charm_path=} for {architecture=} and "
+            f"Ubuntu 24.04: {packed_charms}."
+        )
+    else:
+        raise ValueError(
+            f"Unable to find .charm file for {architecture=} and Ubuntu 24.04 at {charm_path=}"
+        )
+
+
 async def build_and_deploy(
     ops_test: OpsTest,
     num_units: int,
@@ -89,7 +120,7 @@ async def build_and_deploy(
 
     global charm
     if not charm:
-        charm = await ops_test.build_charm(".")
+        charm = await build_charm(".")
     resources = {
         "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
     }
@@ -100,7 +131,6 @@ async def build_and_deploy(
             application_name=database_app_name,
             trust=True,
             num_units=num_units,
-            base=CHARM_BASE,
             config={"profile": "testing"},
         ),
     )
@@ -832,10 +862,8 @@ async def backup_operations(
 ) -> None:
     """Basic set of operations for backup testing in different cloud providers."""
     # Deploy S3 Integrator and TLS Certificates Operator.
-    await ops_test.model.deploy(s3_integrator_app_name, base=CHARM_BASE)
-    await ops_test.model.deploy(
-        tls_certificates_app_name, config=tls_config, channel=tls_channel, base=CHARM_BASE
-    )
+    await ops_test.model.deploy(s3_integrator_app_name)
+    await ops_test.model.deploy(tls_certificates_app_name, config=tls_config, channel=tls_channel)
     # Deploy and relate PostgreSQL to S3 integrator (one database app for each cloud for now
     # as archivo_mode is disabled after restoring the backup) and to TLS Certificates Operator
     # (to be able to create backups from replicas).
