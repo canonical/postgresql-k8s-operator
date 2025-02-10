@@ -12,7 +12,7 @@ fi
 
 deploy_chaos_mesh() {
 	echo "adding chaos-mesh helm repo"
-	sg microk8s.helm3 repo add chaos-mesh https://charts.chaos-mesh.org
+	microk8s.helm3 repo add chaos-mesh https://charts.chaos-mesh.org
 
 	echo "installing chaos-mesh"
         microk8s.helm3 install chaos-mesh chaos-mesh/chaos-mesh \
