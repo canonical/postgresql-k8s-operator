@@ -45,8 +45,6 @@ try:
 except FileNotFoundError:
     KUBECTL = "microk8s kubectl"
 
-charm = None
-
 logger = logging.getLogger(__name__)
 
 
@@ -72,6 +70,7 @@ async def app_name(
 
 async def build_and_deploy(
     ops_test: OpsTest,
+    charm,
     num_units: int,
     database_app_name: str = DATABASE_APP_NAME,
     wait_for_idle: bool = True,
@@ -87,9 +86,6 @@ async def build_and_deploy(
     if await app_name(ops_test, database_app_name, model):
         return
 
-    global charm
-    if not charm:
-        charm = await ops_test.build_charm(".")
     resources = {
         "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
     }

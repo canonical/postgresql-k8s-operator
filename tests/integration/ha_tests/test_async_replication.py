@@ -100,7 +100,6 @@ async def second_model_continuous_writes(second_model) -> None:
             assert action.results["result"] == "True", "Unable to clear up continuous_writes table"
 
 
-@pytest.mark.group(1)
 @markers.juju3
 @pytest.mark.abort_on_fail
 async def test_deploy_async_replication_setup(
@@ -133,7 +132,6 @@ async def test_deploy_async_replication_setup(
         )
 
 
-@pytest.mark.group(1)
 @markers.juju3
 @pytest.mark.abort_on_fail
 async def test_async_replication(
@@ -211,7 +209,6 @@ async def test_async_replication(
     await check_writes(ops_test, extra_model=second_model)
 
 
-@pytest.mark.group(1)
 @markers.juju3
 @pytest.mark.abort_on_fail
 async def test_switchover(
@@ -266,7 +263,6 @@ async def test_switchover(
     await are_writes_increasing(ops_test, extra_model=second_model)
 
 
-@pytest.mark.group(1)
 @markers.juju3
 @pytest.mark.abort_on_fail
 async def test_promote_standby(
@@ -341,7 +337,6 @@ async def test_promote_standby(
     await are_writes_increasing(ops_test)
 
 
-@pytest.mark.group(1)
 @markers.juju3
 @pytest.mark.abort_on_fail
 async def test_reestablish_relation(
@@ -399,7 +394,6 @@ async def test_reestablish_relation(
     await check_writes(ops_test, extra_model=second_model)
 
 
-@pytest.mark.group(1)
 @markers.juju3
 @pytest.mark.abort_on_fail
 async def test_async_replication_failover_in_main_cluster(
@@ -442,7 +436,6 @@ async def test_async_replication_failover_in_main_cluster(
     await check_writes(ops_test, extra_model=second_model)
 
 
-@pytest.mark.group(1)
 @markers.juju3
 @pytest.mark.abort_on_fail
 async def test_async_replication_failover_in_secondary_cluster(
@@ -480,7 +473,6 @@ async def test_async_replication_failover_in_secondary_cluster(
     await check_writes(ops_test, extra_model=second_model)
 
 
-@pytest.mark.group(1)
 @markers.juju3
 @pytest.mark.abort_on_fail
 async def test_scaling(

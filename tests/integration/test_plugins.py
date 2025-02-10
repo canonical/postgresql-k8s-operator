@@ -88,7 +88,6 @@ VECTOR_EXTENSION_STATEMENT = (
 TIMESCALEDB_EXTENSION_STATEMENT = "CREATE TABLE test_timescaledb (time TIMESTAMPTZ NOT NULL); SELECT create_hypertable('test_timescaledb', 'time');"
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_plugins(ops_test: OpsTest) -> None:
     """Build and deploy one unit of PostgreSQL and then test the available plugins."""
@@ -203,7 +202,6 @@ async def test_plugins(ops_test: OpsTest) -> None:
     connection.close()
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_plugin_objects(ops_test: OpsTest) -> None:
     """Checks if charm gets blocked when trying to disable a plugin in use."""

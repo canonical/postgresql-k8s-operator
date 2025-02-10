@@ -27,7 +27,6 @@ from .helpers import (
 APP_NAME = METADATA["name"]
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
 async def test_deploy_active(ops_test: OpsTest):
@@ -36,7 +35,6 @@ async def test_deploy_active(ops_test: OpsTest):
         await build_and_deploy(ops_test, 3, database_app_name=APP_NAME)
 
 
-@pytest.mark.group(1)
 async def test_password_rotation(ops_test: OpsTest):
     """Test password rotation action."""
     # Get the initial passwords set for the system users.
@@ -108,7 +106,6 @@ async def test_password_rotation(ops_test: OpsTest):
             assert await check_patroni(ops_test, unit.name, restart_time)
 
 
-@pytest.mark.group(1)
 @markers.juju_secrets
 async def test_password_from_secret_same_as_cli(ops_test: OpsTest):
     """Checking if password is same as returned by CLI.
@@ -133,7 +130,6 @@ async def test_password_from_secret_same_as_cli(ops_test: OpsTest):
     assert data[secret_id]["content"]["Data"]["replication-password"] == password
 
 
-@pytest.mark.group(1)
 async def test_empty_password(ops_test: OpsTest) -> None:
     """Test that the password can't be set to an empty string."""
     leader_unit = await get_leader_unit(ops_test, APP_NAME)
@@ -146,7 +142,6 @@ async def test_empty_password(ops_test: OpsTest) -> None:
     assert password == "None"
 
 
-@pytest.mark.group(1)
 async def test_db_connection_with_empty_password(ops_test: OpsTest):
     """Test that user can't connect with empty password."""
     primary = await get_primary(ops_test)
@@ -155,7 +150,6 @@ async def test_db_connection_with_empty_password(ops_test: OpsTest):
         connection.close()
 
 
-@pytest.mark.group(1)
 async def test_no_password_change_on_invalid_password(ops_test: OpsTest) -> None:
     """Test that in general, there is no change when password validation fails."""
     leader_unit = await get_leader_unit(ops_test, APP_NAME)
@@ -168,7 +162,6 @@ async def test_no_password_change_on_invalid_password(ops_test: OpsTest) -> None
     assert password1 == password2
 
 
-@pytest.mark.group(1)
 async def test_no_password_exposed_on_logs(ops_test: OpsTest) -> None:
     """Test that passwords don't get exposed on postgresql logs."""
     for unit in ops_test.model.applications[APP_NAME].units:

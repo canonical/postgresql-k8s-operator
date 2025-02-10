@@ -21,7 +21,6 @@ MAX_RETRIES = 20
 INSUFFICIENT_SIZE_WARNING = "<10% free space on pgdata volume."
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest):
     """Build and deploy the charm and saturate its pgdata volume."""

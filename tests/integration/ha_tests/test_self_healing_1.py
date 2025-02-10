@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 import asyncio
@@ -20,7 +19,6 @@ from ..helpers import (
     get_password,
     get_unit_address,
     run_command_on_unit,
-    scale_application,
 )
 from .helpers import (
     are_all_db_processes_down,
@@ -52,7 +50,6 @@ DB_PROCESSES = [POSTGRESQL_PROCESS, PATRONI_PROCESS]
 MEDIAN_ELECTION_TIME = 10
 
 
-@pytest.mark.group("ha_tests")
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy three unit of PostgreSQL."""
@@ -78,7 +75,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             await ops_test.model.wait_for_idle(status="active", timeout=1000, raise_on_error=False)
 
 
-@pytest.mark.group("ha_tests")
 @pytest.mark.abort_on_fail
 @pytest.mark.parametrize("process", DB_PROCESSES)
 @pytest.mark.parametrize("signal", ["SIGTERM", "SIGKILL"])
@@ -119,7 +115,6 @@ async def test_interruption_db_process(
     await is_cluster_updated(ops_test, primary_name)
 
 
-@pytest.mark.group("ha_tests")
 @pytest.mark.abort_on_fail
 @pytest.mark.parametrize("process", DB_PROCESSES)
 async def test_freeze_db_process(
@@ -163,7 +158,6 @@ async def test_freeze_db_process(
     await is_cluster_updated(ops_test, primary_name)
 
 
-@pytest.mark.group("ha_tests")
 @pytest.mark.abort_on_fail
 @pytest.mark.parametrize("process", DB_PROCESSES)
 @pytest.mark.parametrize("signal", ["SIGTERM", "SIGKILL"])
@@ -229,7 +223,6 @@ async def test_full_cluster_restart(
     await check_writes(ops_test)
 
 
-@pytest.mark.group("ha_tests")
 @pytest.mark.abort_on_fail
 async def test_forceful_restart_without_data_and_transaction_logs(
     ops_test: OpsTest,
@@ -317,7 +310,6 @@ async def test_forceful_restart_without_data_and_transaction_logs(
     await is_cluster_updated(ops_test, primary_name)
 
 
-@pytest.mark.group("ha_tests")
 @pytest.mark.abort_on_fail
 @markers.amd64_only
 async def test_network_cut(
@@ -381,48 +373,3 @@ async def test_network_cut(
     )
 
     await is_cluster_updated(ops_test, primary_name)
-
-
-@pytest.mark.group("scaling_to_zero")
-@pytest.mark.abort_on_fail
-async def test_scaling_to_zero(ops_test: OpsTest, continuous_writes) -> None:
-    """Scale the database to zero units and scale up again."""
-    # Deploy applications
-    await test_build_and_deploy(ops_test)
-
-    # Locate primary unit.
-    app = await app_name(ops_test)
-
-    # Start an application that continuously writes data to the database.
-    await start_continuous_writes(ops_test, app)
-
-    # Scale the database to zero units.
-    logger.info("scaling database to zero units")
-    await scale_application(ops_test, app, 0)
-
-    # Scale the database to three units.
-    logger.info("scaling database to three units")
-    await scale_application(ops_test, app, 3)
-
-    # Verify all units are up and running.
-    logger.info("waiting for the database service to start in all units")
-    for unit in ops_test.model.applications[app].units:
-        assert await is_postgresql_ready(ops_test, unit.name), (
-            f"unit {unit.name} not restarted after cluster restart."
-        )
-
-    logger.info("checking whether writes are increasing")
-    await are_writes_increasing(ops_test)
-
-    # Verify that all units are part of the same cluster.
-    logger.info("checking whether all units are part of the same cluster")
-    member_ips = await fetch_cluster_members(ops_test)
-    ip_addresses = [
-        await get_unit_address(ops_test, unit.name)
-        for unit in ops_test.model.applications[app].units
-    ]
-    assert set(member_ips) == set(ip_addresses), "not all units are part of the same cluster."
-
-    # Verify that no writes to the database were missed after stopping the writes.
-    logger.info("checking whether no writes to the database were missed after stopping the writes")
-    await check_writes(ops_test)

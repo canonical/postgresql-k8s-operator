@@ -21,7 +21,6 @@ APPLICATION_UNITS = 1
 DATABASE_UNITS = 3
 
 
-@pytest.mark.group(1)
 @markers.amd64_only  # discourse-charmers-discourse-k8s charm contains amd64-only binaries (pyyaml)
 @pytest.mark.abort_on_fail
 async def test_discourse_from_discourse_charmers(ops_test: OpsTest):

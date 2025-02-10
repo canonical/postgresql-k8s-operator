@@ -26,7 +26,6 @@ from .helpers import (
 )
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy three unit of PostgreSQL."""
@@ -52,7 +51,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             await ops_test.model.wait_for_idle(status="active", timeout=1000, raise_on_error=False)
 
 
-@pytest.mark.group(1)
 async def test_reelection(ops_test: OpsTest, continuous_writes, primary_start_timeout) -> None:
     """Kill primary unit, check reelection."""
     app = await app_name(ops_test)
@@ -84,7 +82,6 @@ async def test_reelection(ops_test: OpsTest, continuous_writes, primary_start_ti
     await is_cluster_updated(ops_test, primary_name)
 
 
-@pytest.mark.group(1)
 async def test_consistency(ops_test: OpsTest, continuous_writes) -> None:
     """Write to primary, read data from secondaries (check consistency)."""
     # Locate primary unit.
@@ -102,7 +99,6 @@ async def test_consistency(ops_test: OpsTest, continuous_writes) -> None:
     await check_writes(ops_test)
 
 
-@pytest.mark.group(1)
 async def test_no_data_replicated_between_clusters(ops_test: OpsTest, continuous_writes) -> None:
     """Check that writes in one cluster are not replicated to another cluster."""
     # Locate primary unit.

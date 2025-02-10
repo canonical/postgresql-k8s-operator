@@ -4,7 +4,6 @@
 import logging
 from asyncio import gather
 
-import pytest
 from pytest_operator.plugin import OpsTest
 
 from . import markers
@@ -32,7 +31,6 @@ ROLES_BLOCKING_MESSAGE = (
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.group(1)
 @markers.amd64_only  # finos-waltz-k8s charm not available for arm64
 async def test_finos_waltz_db(ops_test: OpsTest) -> None:
     """Deploy Finos Waltz to test the 'db' relation.
@@ -106,7 +104,6 @@ async def test_finos_waltz_db(ops_test: OpsTest) -> None:
         )
 
 
-@pytest.mark.group(1)
 @markers.amd64_only  # finos-waltz-k8s charm not available for arm64
 # (and this test depends on previous test with finos-waltz-k8s charm)
 async def test_extensions_blocking(ops_test: OpsTest) -> None:
@@ -202,7 +199,6 @@ async def test_extensions_blocking(ops_test: OpsTest) -> None:
     )
 
 
-@pytest.mark.group(1)
 @markers.amd64_only  # finos-waltz-k8s charm not available for arm64
 # (and this test depends on a previous test with finos-waltz-k8s charm)
 async def test_roles_blocking(ops_test: OpsTest) -> None:

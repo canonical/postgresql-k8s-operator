@@ -2,6 +2,7 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 import logging
+import os
 import uuid
 
 import boto3
@@ -40,7 +41,7 @@ GCP = "GCP"
 
 
 @pytest.fixture(scope="module")
-async def cloud_configs(ops_test: OpsTest, github_secrets) -> None:
+async def cloud_configs(ops_test: OpsTest) -> None:
     # Define some configurations and credentials.
     configs = {
         AWS: {
@@ -58,12 +59,12 @@ async def cloud_configs(ops_test: OpsTest, github_secrets) -> None:
     }
     credentials = {
         AWS: {
-            "access-key": github_secrets["AWS_ACCESS_KEY"],
-            "secret-key": github_secrets["AWS_SECRET_KEY"],
+            "access-key": os.environ["AWS_ACCESS_KEY"],
+            "secret-key": os.environ["AWS_SECRET_KEY"],
         },
         GCP: {
-            "access-key": github_secrets["GCP_ACCESS_KEY"],
-            "secret-key": github_secrets["GCP_SECRET_KEY"],
+            "access-key": os.environ["GCP_ACCESS_KEY"],
+            "secret-key": os.environ["GCP_SECRET_KEY"],
         },
     }
     yield configs, credentials
@@ -379,33 +380,12 @@ async def pitr_backup_operations(
     )
 
 
-@pytest.mark.group("AWS")
 @pytest.mark.abort_on_fail
 async def test_pitr_backup_aws(ops_test: OpsTest, cloud_configs: tuple[dict, dict]) -> None:
     """Build and deploy two units of PostgreSQL in AWS and then test PITR backup and restore actions."""
     config = cloud_configs[0][AWS]
     credentials = cloud_configs[1][AWS]
     cloud = AWS.lower()
-
-    await pitr_backup_operations(
-        ops_test,
-        S3_INTEGRATOR_APP_NAME,
-        tls_certificates_app_name,
-        tls_config,
-        tls_channel,
-        credentials,
-        cloud,
-        config,
-    )
-
-
-@pytest.mark.group("GCP")
-@pytest.mark.abort_on_fail
-async def test_pitr_backup_gcp(ops_test: OpsTest, cloud_configs: tuple[dict, dict]) -> None:
-    """Build and deploy two units of PostgreSQL in GCP and then test PITR backup and restore actions."""
-    config = cloud_configs[0][GCP]
-    credentials = cloud_configs[1][GCP]
-    cloud = GCP.lower()
 
     await pitr_backup_operations(
         ops_test,

@@ -1,11 +1,9 @@
-#!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 import asyncio
 import logging
 import secrets
 import string
-from asyncio import gather
 from pathlib import Path
 
 import psycopg2
@@ -14,7 +12,6 @@ import yaml
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 
-from .. import markers
 from ..helpers import (
     CHARM_BASE,
     check_database_users_existence,
@@ -44,9 +41,8 @@ NO_DATABASE_RELATION_NAME = "no-database"
 INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE = "invalid role(s) for extra user roles"
 
 
-@pytest.mark.group("smoke")
 @pytest.mark.abort_on_fail
-async def test_database_relation_with_charm_libraries(ops_test: OpsTest, database_charm):
+async def test_database_relation_with_charm_libraries(ops_test: OpsTest, charm):
     """Test basic functionality of database relation interface."""
     # Deploy both charms (multiple units for each application to test that later they correctly
     # set data in the relation application databag using only the leader unit).
@@ -60,7 +56,7 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest, databas
                 channel="edge",
             ),
             ops_test.model.deploy(
-                database_charm,
+                charm,
                 resources={
                     "postgresql-image": DATABASE_APP_METADATA["resources"]["postgresql-image"][
                         "upstream-source"
@@ -73,7 +69,7 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest, databas
                 config={"profile": "testing"},
             ),
             ops_test.model.deploy(
-                database_charm,
+                charm,
                 resources={
                     "postgresql-image": DATABASE_APP_METADATA["resources"]["postgresql-image"][
                         "upstream-source"
@@ -163,7 +159,6 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest, databas
             cursor.execute("DROP TABLE test;")
 
 
-@pytest.mark.group("smoke")
 async def test_user_with_extra_roles(ops_test: OpsTest):
     """Test superuser actions and the request for more permissions."""
     # Get the connection string to connect to the database.
@@ -184,7 +179,6 @@ async def test_user_with_extra_roles(ops_test: OpsTest):
     connection.close()
 
 
-@pytest.mark.group("smoke")
 async def test_two_applications_doesnt_share_the_same_relation_data(ops_test: OpsTest):
     """Test that two different application connect to the database with different credentials."""
     # Set some variables to use in this test.
@@ -238,10 +232,7 @@ async def test_two_applications_doesnt_share_the_same_relation_data(ops_test: Op
             psycopg2.connect(connection_string)
 
 
-@pytest.mark.group("smoke")
-async def test_an_application_can_connect_to_multiple_database_clusters(
-    ops_test: OpsTest, database_charm
-):
+async def test_an_application_can_connect_to_multiple_database_clusters(ops_test: OpsTest, charm):
     """Test that an application can connect to different clusters of the same database."""
     # Relate the application with both database clusters
     # and wait for them exchanging some connection data.
@@ -271,9 +262,8 @@ async def test_an_application_can_connect_to_multiple_database_clusters(
     assert application_connection_string != another_application_connection_string
 
 
-@pytest.mark.group("smoke")
 async def test_an_application_can_connect_to_multiple_aliased_database_clusters(
-    ops_test: OpsTest, database_charm
+    ops_test: OpsTest, charm
 ):
     """Test that an application can connect to different clusters of the same database."""
     # Relate the application with both database clusters
@@ -309,7 +299,6 @@ async def test_an_application_can_connect_to_multiple_aliased_database_clusters(
     assert application_connection_string != another_application_connection_string
 
 
-@pytest.mark.group("smoke")
 @pytest.mark.abort_on_fail
 async def test_an_application_can_request_multiple_databases(ops_test: OpsTest):
     """Test that an application can request additional databases using the same interface."""
@@ -333,7 +322,6 @@ async def test_an_application_can_request_multiple_databases(ops_test: OpsTest):
     assert first_database_connection_string != second_database_connection_string
 
 
-@pytest.mark.group("smoke")
 async def test_no_read_only_endpoint_in_standalone_cluster(ops_test: OpsTest):
     """Test that there is no read-only endpoint in a standalone cluster."""
     async with ops_test.fast_forward():
@@ -351,7 +339,6 @@ async def test_no_read_only_endpoint_in_standalone_cluster(ops_test: OpsTest):
         )
 
 
-@pytest.mark.group("smoke")
 async def test_read_only_endpoint_in_scaled_up_cluster(ops_test: OpsTest):
     """Test that there is read-only endpoint in a scaled up cluster."""
     async with ops_test.fast_forward():
@@ -369,7 +356,6 @@ async def test_read_only_endpoint_in_scaled_up_cluster(ops_test: OpsTest):
         )
 
 
-@pytest.mark.group("smoke")
 async def test_relation_broken(ops_test: OpsTest):
     """Test that the user is removed when the relation is broken."""
     async with ops_test.fast_forward():
@@ -390,7 +376,6 @@ async def test_relation_broken(ops_test: OpsTest):
         )
 
 
-@pytest.mark.group("smoke")
 async def test_restablish_relation(ops_test: OpsTest):
     """Test that a previously broken relation would be functional if restored."""
     # Relate the charms and wait for them exchanging some connection data.
@@ -428,7 +413,6 @@ async def test_restablish_relation(ops_test: OpsTest):
         assert data[0] == "other data"
 
 
-@pytest.mark.group("smoke")
 @pytest.mark.abort_on_fail
 async def test_relation_with_no_database_name(ops_test: OpsTest):
     """Test that a relation with no database name doesn't block the charm."""
@@ -446,7 +430,6 @@ async def test_relation_with_no_database_name(ops_test: OpsTest):
         await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active", raise_on_blocked=True)
 
 
-@pytest.mark.group("smoke")
 @pytest.mark.abort_on_fail
 async def test_admin_role(ops_test: OpsTest):
     """Test that the admin role gives access to all the databases."""
@@ -530,7 +513,6 @@ async def test_admin_role(ops_test: OpsTest):
         connection.close()
 
 
-@pytest.mark.group("smoke")
 async def test_invalid_extra_user_roles(ops_test: OpsTest):
     async with ops_test.fast_forward():
         # Remove the relation between the database and the first data integrator.
@@ -589,155 +571,4 @@ async def test_invalid_extra_user_roles(ops_test: OpsTest):
             status="active",
             raise_on_blocked=False,
             timeout=1000,
-        )
-
-
-@pytest.mark.group("clientapps")
-@pytest.mark.abort_on_fail
-async def test_database_deploy_clientapps(ops_test: OpsTest, database_charm):
-    """Test basic functionality of database relation interface."""
-    # Deploy both charms (multiple units for each application to test that later they correctly
-    # set data in the relation application databag using only the leader unit).
-    async with ops_test.fast_forward():
-        await asyncio.gather(
-            ops_test.model.deploy(
-                database_charm,
-                resources={
-                    "postgresql-image": DATABASE_APP_METADATA["resources"]["postgresql-image"][
-                        "upstream-source"
-                    ]
-                },
-                application_name=DATABASE_APP_NAME,
-                num_units=3,
-                base=CHARM_BASE,
-                trust=True,
-                config={"profile": "testing"},
-            ),
-        )
-        await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME],
-            status="active",
-            raise_on_blocked=True,
-            raise_on_error=False,
-            timeout=1000,
-        )
-
-
-@pytest.mark.group("clientapps")
-@markers.amd64_only  # discourse-k8s charm not available for arm64
-async def test_discourse(ops_test: OpsTest):
-    # Deploy Discourse and Redis.
-    await gather(
-        ops_test.model.deploy(DISCOURSE_APP_NAME, application_name=DISCOURSE_APP_NAME),
-        ops_test.model.deploy(
-            REDIS_APP_NAME, application_name=REDIS_APP_NAME, channel="latest/edge", base=CHARM_BASE
-        ),
-    )
-
-    async with ops_test.fast_forward():
-        # Enable the plugins/extensions required by Discourse.
-        logger.info("Enabling the plugins/extensions required by Discourse")
-        config = {"plugin_hstore_enable": "True", "plugin_pg_trgm_enable": "True"}
-        await ops_test.model.applications[DATABASE_APP_NAME].set_config(config)
-        await gather(
-            ops_test.model.wait_for_idle(apps=[DISCOURSE_APP_NAME], status="waiting"),
-            ops_test.model.wait_for_idle(
-                apps=[DATABASE_APP_NAME, REDIS_APP_NAME], status="active"
-            ),
-        )
-        # Add both relations to Discourse (PostgreSQL and Redis)
-        # and wait for it to be ready.
-        logger.info("Adding relations")
-        await gather(
-            ops_test.model.add_relation(DATABASE_APP_NAME, DISCOURSE_APP_NAME),
-            ops_test.model.add_relation(REDIS_APP_NAME, DISCOURSE_APP_NAME),
-        )
-        await gather(
-            ops_test.model.wait_for_idle(apps=[DISCOURSE_APP_NAME], timeout=2000),
-            ops_test.model.wait_for_idle(
-                apps=[DATABASE_APP_NAME, REDIS_APP_NAME], status="active"
-            ),
-        )
-        logger.info("Configuring Discourse")
-        config = {
-            "developer_emails": "noreply@canonical.com",
-            "external_hostname": "discourse-k8s",
-            "smtp_address": "test.local",
-            "smtp_domain": "test.local",
-            "s3_install_cors_rule": "false",
-        }
-        await ops_test.model.applications[DISCOURSE_APP_NAME].set_config(config)
-        await ops_test.model.wait_for_idle(apps=[DISCOURSE_APP_NAME], status="active")
-
-        # Deploy a new discourse application (https://github.com/canonical/data-platform-libs/issues/118
-        # prevents from re-relating the same Discourse application; Discourse uses the old secret and fails).
-        await ops_test.model.applications[DISCOURSE_APP_NAME].remove()
-        other_discourse_app_name = f"other-{DISCOURSE_APP_NAME}"
-        await ops_test.model.deploy(DISCOURSE_APP_NAME, application_name=other_discourse_app_name)
-
-        # Add both relations to Discourse (PostgreSQL and Redis)
-        # and wait for it to be ready.
-        logger.info("Adding relations")
-        await gather(
-            ops_test.model.add_relation(DATABASE_APP_NAME, other_discourse_app_name),
-            ops_test.model.add_relation(REDIS_APP_NAME, other_discourse_app_name),
-        )
-        await gather(
-            ops_test.model.wait_for_idle(apps=[other_discourse_app_name], timeout=2000),
-            ops_test.model.wait_for_idle(
-                apps=[DATABASE_APP_NAME, REDIS_APP_NAME], status="active"
-            ),
-        )
-        logger.info("Configuring Discourse")
-        config = {
-            "developer_emails": "noreply@canonical.com",
-            "external_hostname": "discourse-k8s",
-            "smtp_address": "test.local",
-            "smtp_domain": "test.local",
-            "s3_install_cors_rule": "false",
-        }
-        await ops_test.model.applications[other_discourse_app_name].set_config(config)
-        await ops_test.model.wait_for_idle(apps=[other_discourse_app_name], status="active")
-
-
-@pytest.mark.group("clientapps")
-@markers.amd64_only  # indico charm not available for arm64
-async def test_indico_datatabase(ops_test: OpsTest) -> None:
-    """Tests deploying and relating to the Indico charm."""
-    async with ops_test.fast_forward(fast_interval="30s"):
-        await ops_test.model.deploy(
-            "indico",
-            channel="latest/edge",
-            application_name="indico",
-            num_units=1,
-            series="focal",
-        )
-        await ops_test.model.deploy(
-            "redis-k8s", channel="stable", application_name="redis-broker", base="ubuntu@20.04"
-        )
-        await ops_test.model.deploy(
-            "redis-k8s", channel="stable", application_name="redis-cache", base="ubuntu@20.04"
-        )
-        await asyncio.gather(
-            ops_test.model.relate("redis-broker", "indico:redis-broker"),
-            ops_test.model.relate("redis-cache", "indico:redis-cache"),
-        )
-
-        # Wait for model to stabilise
-        await ops_test.model.wait_for_idle(
-            apps=["indico"],
-            status="waiting",
-            timeout=1000,
-        )
-
-        # Verify that the charm doesn't block when the extensions are enabled.
-        logger.info("Verifying that the charm doesn't block when the extensions are enabled")
-        config = {"plugin_pg_trgm_enable": "True", "plugin_unaccent_enable": "True"}
-        await ops_test.model.applications[DATABASE_APP_NAME].set_config(config)
-        await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active")
-        await ops_test.model.relate(DATABASE_APP_NAME, "indico")
-        await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME, "indico"],
-            status="active",
-            timeout=2000,
         )
