@@ -1205,7 +1205,7 @@ Stderr:
         with open("templates/pgbackrest.logrotate.j2") as file:
             template = Template(file.read())
         self.container.push(PGBACKREST_LOGROTATE_FILE, template.render())
-        with open("src/rotate_logs.py") as f:
+        with open("scripts/rotate_logs.py") as f:
             self.container.push(
                 "/home/postgres/rotate_logs.py",
                 f.read(),
