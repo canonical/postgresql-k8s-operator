@@ -59,8 +59,6 @@ async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
 @pytest.mark.abort_on_fail
 async def test_scaling_to_zero(ops_test: OpsTest, continuous_writes) -> None:
     """Scale the database to zero units and scale up again."""
-    # Deploy applications
-    await test_build_and_deploy(ops_test)
 
     # Locate primary unit.
     app = await app_name(ops_test)
