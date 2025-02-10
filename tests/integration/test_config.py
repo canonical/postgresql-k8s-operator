@@ -17,11 +17,11 @@ logger = logging.getLogger(__name__)
 
 
 @pytest.mark.abort_on_fail
-async def test_config_parameters(ops_test: OpsTest) -> None:
+async def test_config_parameters(ops_test: OpsTest, charm) -> None:
     """Build and deploy one unit of PostgreSQL and then test config with wrong parameters."""
     # Build and deploy the PostgreSQL charm.
     async with ops_test.fast_forward():
-        await build_and_deploy(ops_test, 1)
+        await build_and_deploy(ops_test, charm, 1)
 
     await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active")
 

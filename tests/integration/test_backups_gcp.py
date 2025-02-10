@@ -93,13 +93,14 @@ async def cloud_configs(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_backup_gcp(ops_test: OpsTest, cloud_configs: tuple[dict, dict]) -> None:
+async def test_backup_gcp(ops_test: OpsTest, charm, cloud_configs: tuple[dict, dict]) -> None:
     """Build and deploy two units of PostgreSQL in GCP and then test the backup and restore actions."""
     config = cloud_configs[0][GCP]
     credentials = cloud_configs[1][GCP]
 
     await backup_operations(
         ops_test,
+        charm,
         S3_INTEGRATOR_APP_NAME,
         tls_certificates_app_name,
         tls_config,
@@ -122,14 +123,16 @@ async def test_backup_gcp(ops_test: OpsTest, cloud_configs: tuple[dict, dict]) -
     )
 
 
-async def test_restore_on_new_cluster(ops_test: OpsTest) -> None:
+async def test_restore_on_new_cluster(ops_test: OpsTest, charm) -> None:
     """Test that is possible to restore a backup to another PostgreSQL cluster."""
     previous_database_app_name = f"{DATABASE_APP_NAME}-gcp"
     database_app_name = f"new-{DATABASE_APP_NAME}"
     await build_and_deploy(
-        ops_test, 1, database_app_name=previous_database_app_name, wait_for_idle=False
+        ops_test, charm, 1, database_app_name=previous_database_app_name, wait_for_idle=False
     )
-    await build_and_deploy(ops_test, 1, database_app_name=database_app_name, wait_for_idle=False)
+    await build_and_deploy(
+        ops_test, charm, 1, database_app_name=database_app_name, wait_for_idle=False
+    )
     await ops_test.model.relate(previous_database_app_name, S3_INTEGRATOR_APP_NAME)
     await ops_test.model.relate(database_app_name, S3_INTEGRATOR_APP_NAME)
     async with ops_test.fast_forward():

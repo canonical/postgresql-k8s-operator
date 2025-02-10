@@ -29,10 +29,10 @@ APP_NAME = METADATA["name"]
 
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_deploy_active(ops_test: OpsTest):
+async def test_deploy_active(ops_test: OpsTest, charm):
     """Build the charm and deploy it."""
     async with ops_test.fast_forward():
-        await build_and_deploy(ops_test, 3, database_app_name=APP_NAME)
+        await build_and_deploy(ops_test, charm, 3, database_app_name=APP_NAME)
 
 
 async def test_password_rotation(ops_test: OpsTest):

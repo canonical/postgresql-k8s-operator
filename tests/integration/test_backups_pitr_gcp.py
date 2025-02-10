@@ -87,6 +87,7 @@ async def cloud_configs(ops_test: OpsTest) -> None:
 
 async def pitr_backup_operations(
     ops_test: OpsTest,
+    charm,
     s3_integrator_app_name: str,
     tls_certificates_app_name: str,
     tls_config,
@@ -109,7 +110,9 @@ async def pitr_backup_operations(
     logger.info("deploying the next charms: s3-integrator, self-signed-certificates, postgresql")
     await ops_test.model.deploy(s3_integrator_app_name)
     await ops_test.model.deploy(tls_certificates_app_name, config=tls_config, channel=tls_channel)
-    await build_and_deploy(ops_test, 2, database_app_name=database_app_name, wait_for_idle=False)
+    await build_and_deploy(
+        ops_test, charm, 2, database_app_name=database_app_name, wait_for_idle=False
+    )
 
     logger.info(
         "integrating self-signed-certificates with postgresql and waiting them to stabilize"

@@ -103,11 +103,11 @@ async def second_model_continuous_writes(second_model) -> None:
 @markers.juju3
 @pytest.mark.abort_on_fail
 async def test_deploy_async_replication_setup(
-    ops_test: OpsTest, first_model: Model, second_model: Model
+    ops_test: OpsTest, charm, first_model: Model, second_model: Model
 ) -> None:
     """Build and deploy two PostgreSQL cluster in two separate models to test async replication."""
-    await build_and_deploy(ops_test, CLUSTER_SIZE, wait_for_idle=False)
-    await build_and_deploy(ops_test, CLUSTER_SIZE, wait_for_idle=False, model=second_model)
+    await build_and_deploy(ops_test, charm, CLUSTER_SIZE, wait_for_idle=False)
+    await build_and_deploy(ops_test, charm, CLUSTER_SIZE, wait_for_idle=False, model=second_model)
     await ops_test.model.deploy(
         APPLICATION_NAME, channel="latest/edge", num_units=1, base=CHARM_BASE
     )

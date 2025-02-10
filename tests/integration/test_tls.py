@@ -47,9 +47,9 @@ DATABASE_UNITS = 3
 
 
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
     """Build and deploy three units of PostgreSQL."""
-    await build_and_deploy(ops_test, DATABASE_UNITS, wait_for_idle=False)
+    await build_and_deploy(ops_test, charm, DATABASE_UNITS, wait_for_idle=False)
 
 
 async def check_tls_rewind(ops_test: OpsTest) -> None:

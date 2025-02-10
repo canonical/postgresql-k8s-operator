@@ -23,12 +23,12 @@ DATABASE_UNITS = 3
 
 @markers.amd64_only  # discourse-charmers-discourse-k8s charm contains amd64-only binaries (pyyaml)
 @pytest.mark.abort_on_fail
-async def test_discourse_from_discourse_charmers(ops_test: OpsTest):
+async def test_discourse_from_discourse_charmers(ops_test: OpsTest, charm):
     # Build and deploy charm from local source folder (and also redis from Charmhub).
     # Both are needed by Discourse.
     async with ops_test.fast_forward():
         await asyncio.gather(
-            build_and_deploy(ops_test, DATABASE_UNITS),
+            build_and_deploy(ops_test, charm, DATABASE_UNITS),
             ops_test.model.deploy(
                 REDIS_APP_NAME, application_name=REDIS_APP_NAME, base="ubuntu@20.04"
             ),

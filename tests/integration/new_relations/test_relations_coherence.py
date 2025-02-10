@@ -24,7 +24,7 @@ FIRST_DATABASE_RELATION_NAME = "database"
 async def test_relations(ops_test: OpsTest, charm):
     """Test that check relation data."""
     async with ops_test.fast_forward():
-        await build_and_deploy(ops_test, 1, DATABASE_APP_NAME)
+        await build_and_deploy(ops_test, charm, 1, DATABASE_APP_NAME)
 
         await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=3000)
 

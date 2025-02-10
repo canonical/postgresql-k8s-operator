@@ -38,13 +38,13 @@ UNIT_IDS = [0, 1, 2]
 
 @pytest.mark.abort_on_fail
 @pytest.mark.skip_if_deployed
-async def test_build_and_deploy(ops_test: OpsTest):
+async def test_build_and_deploy(ops_test: OpsTest, charm):
     """Build the charm-under-test and deploy it.
 
     Assert on the unit status before any relations/configurations take place.
     """
     async with ops_test.fast_forward():
-        await build_and_deploy(ops_test, len(UNIT_IDS), APP_NAME)
+        await build_and_deploy(ops_test, charm, len(UNIT_IDS), APP_NAME)
     for unit_id in UNIT_IDS:
         assert ops_test.model.applications[APP_NAME].units[unit_id].workload_status == "active"
 

@@ -89,11 +89,11 @@ TIMESCALEDB_EXTENSION_STATEMENT = "CREATE TABLE test_timescaledb (time TIMESTAMP
 
 
 @pytest.mark.abort_on_fail
-async def test_plugins(ops_test: OpsTest) -> None:
+async def test_plugins(ops_test: OpsTest, charm) -> None:
     """Build and deploy one unit of PostgreSQL and then test the available plugins."""
     # Build and deploy the PostgreSQL charm.
     async with ops_test.fast_forward():
-        await build_and_deploy(ops_test, 2)
+        await build_and_deploy(ops_test, charm, 2)
 
     sql_tests = {
         "plugin_citext_enable": CITEXT_EXTENSION_STATEMENT,

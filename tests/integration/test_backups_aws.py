@@ -91,13 +91,14 @@ async def cloud_configs(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_backup_aws(ops_test: OpsTest, cloud_configs: tuple[dict, dict]) -> None:
+async def test_backup_aws(ops_test: OpsTest, charm, cloud_configs: tuple[dict, dict]) -> None:
     """Build and deploy two units of PostgreSQL in AWS and then test the backup and restore actions."""
     config = cloud_configs[0][AWS]
     credentials = cloud_configs[1][AWS]
 
     await backup_operations(
         ops_test,
+        charm,
         S3_INTEGRATOR_APP_NAME,
         tls_certificates_app_name,
         tls_config,
