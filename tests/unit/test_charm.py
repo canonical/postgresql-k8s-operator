@@ -32,6 +32,7 @@ from tests.unit.helpers import _FakeApiError
 POSTGRESQL_CONTAINER = "postgresql"
 POSTGRESQL_SERVICE = "postgresql"
 METRICS_SERVICE = "metrics_server"
+PG_LDAP_SYNC_SERVICE = "pg-ldap-sync"
 PGBACKREST_SERVER_SERVICE = "pgbackrest server"
 ROTATE_LOGS_SERVICE = "rotate-logs"
 
@@ -953,6 +954,12 @@ def test_postgresql_layer(harness):
                             "host=/var/run/postgresql port=5432 database=postgres"
                         ),
                     },
+                },
+                PG_LDAP_SYNC_SERVICE: {
+                    "override": "replace",
+                    "summary": "synchronize LDAP users",
+                    "command": "python3 /home/postgres/synchronize_ldap.py",
+                    "startup": "disabled",
                 },
                 PGBACKREST_SERVER_SERVICE: {
                     "override": "replace",
