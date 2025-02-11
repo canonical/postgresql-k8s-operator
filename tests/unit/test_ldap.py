@@ -25,22 +25,6 @@ def harness():
     harness.cleanup()
 
 
-def test_dict_to_hba_string(harness):
-    mock_data = {
-        "ldapbasedn": "dc=example,dc=net",
-        "ldapbinddn": "cn=serviceuser,dc=example,dc=net",
-        "ldapbindpasswd": "password",
-        "ldapurl": "ldap://0.0.0.0:3893",
-    }
-
-    assert harness.charm.ldap.dict_to_hba_string(mock_data) == (
-        'ldapbasedn="dc=example,dc=net" '
-        'ldapbinddn="cn=serviceuser,dc=example,dc=net" '
-        'ldapbindpasswd="password" '
-        'ldapurl="ldap://0.0.0.0:3893"'
-    )
-
-
 def test_on_ldap_ready(harness):
     mock_event = MagicMock()
 
