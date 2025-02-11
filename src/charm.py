@@ -14,6 +14,7 @@ import sys
 import time
 from pathlib import Path
 from typing import Literal, get_args
+from urllib.parse import urlparse
 
 # First platform-specific import, will fail on wrong architecture
 try:
@@ -35,6 +36,7 @@ from charms.data_platform_libs.v1.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v1.loki_push_api import LogProxyConsumer
 from charms.postgresql_k8s.v0.postgresql import (
+    PERMISSIONS_GROUP_ADMIN,
     REQUIRED_PLUGINS,
     PostgreSQL,
     PostgreSQLEnableDisableExtensionError,
@@ -87,6 +89,7 @@ from constants import (
     APP_SCOPE,
     BACKUP_USER,
     DATABASE_DEFAULT_NAME,
+    DATABASE_PORT,
     METRICS_PORT,
     MONITORING_PASSWORD_KEY,
     MONITORING_USER,
@@ -194,10 +197,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             deleted_label=SECRET_DELETED_LABEL,
         )
 
-        self._postgresql_service = "postgresql"
+        self.postgresql_service = "postgresql"
         self.rotate_logs_service = "rotate-logs"
+        self.pg_ldap_sync_service = "pg-ldap-sync"
         self.pgbackrest_server_service = "pgbackrest server"
-        self._metrics_service = "metrics_server"
+        self.metrics_service = "metrics_server"
         self._unit = self.model.unit.name
         self._name = self.model.app.name
         self._namespace = self.model.name
@@ -598,7 +602,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("on_peer_relation_changed early exit: Unit in blocked status")
             return
 
-        services = container.pebble.get_services(names=[self._postgresql_service])
+        services = container.pebble.get_services(names=[self.postgresql_service])
         if (
             (self.is_cluster_restoring_backup or self.is_cluster_restoring_to_time)
             and len(services) > 0
@@ -1485,7 +1489,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if not self._on_update_status_early_exit_checks(container):
             return
 
-        services = container.pebble.get_services(names=[self._postgresql_service])
+        services = container.pebble.get_services(names=[self.postgresql_service])
         if len(services) == 0:
             # Service has not been added nor started yet, so don't try to check Patroni API.
             logger.debug("on_update_status early exit: Service has not been added nor started yet")
@@ -1498,10 +1502,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             and services[0].current != ServiceStatus.ACTIVE
         ):
             logger.warning(
-                f"{self._postgresql_service} pebble service inactive, restarting service"
+                f"{self.postgresql_service} pebble service inactive, restarting service"
             )
             try:
-                container.restart(self._postgresql_service)
+                container.restart(self.postgresql_service)
             except ChangeError:
                 logger.exception("Failed to restart patroni")
             # If service doesn't recover fast, exit and wait for next hook run to re-check
@@ -1598,7 +1602,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # https://github.com/canonical/pebble/issues/149 is resolved.
         if not self._patroni.member_started and self._patroni.is_database_running:
             try:
-                container.restart(self._postgresql_service)
+                container.restart(self.postgresql_service)
                 logger.info("restarted Patroni because it was not running")
             except ChangeError:
                 logger.error("failed to restart Patroni after checking that it was not running")
@@ -1742,6 +1746,43 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 endpoints.remove(endpoint)
         self._peers.data[self.app]["endpoints"] = json.dumps(endpoints)
 
+    def _generate_ldap_service(self) -> dict:
+        """Generate the LDAP service definition."""
+        ldap_params = self.get_ldap_parameters()
+
+        ldap_url = urlparse(ldap_params["ldapurl"])
+        ldap_host = ldap_url.hostname
+        ldap_port = ldap_url.port
+
+        ldap_base_dn = ldap_params["ldapbasedn"]
+        ldap_bind_username = ldap_params["ldapbinddn"]
+        ldap_bing_password = ldap_params["ldapbindpasswd"]
+
+        ldap_mapping_rules = self.postgresql.build_postgresql_user_map(self.config.ldap_map)
+        ldap_mapping_rules = json.dumps(ldap_mapping_rules)
+        ldap_mapping_filter = json.dumps([PERMISSIONS_GROUP_ADMIN])
+
+        return {
+            "override": "replace",
+            "summary": "synchronize LDAP users",
+            "command": "/bin/python3 /home/postgres/synchronize_ldap.py",
+            "startup": "enabled",
+            "environment": {
+                "LDAP_HOST": ldap_host,
+                "LDAP_PORT": ldap_port,
+                "LDAP_BASE_DN": ldap_base_dn,
+                "LDAP_BIND_USERNAME": ldap_bind_username,
+                "LDAP_BIND_PASSWORD": ldap_bing_password,
+                "LDAP_MAPPING_RULES": ldap_mapping_rules,
+                "LDAP_MAPPING_FILTERS": ldap_mapping_filter,
+                "POSTGRES_HOST": "127.0.0.1",
+                "POSTGRES_PORT": DATABASE_PORT,
+                "POSTGRES_DATABASE": DATABASE_DEFAULT_NAME,
+                "POSTGRES_USERNAME": USER,
+                "POSTGRES_PASSWORD": self.get_secret(APP_SCOPE, USER_PASSWORD_KEY),
+            },
+        }
+
     def _generate_metrics_service(self) -> dict:
         """Generate the metrics service definition."""
         return {
@@ -1753,7 +1794,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 if self.get_secret("app", MONITORING_PASSWORD_KEY) is not None
                 else "disabled"
             ),
-            "after": [self._postgresql_service],
+            "after": [self.postgresql_service],
             "user": WORKLOAD_OS_USER,
             "group": WORKLOAD_OS_GROUP,
             "environment": {
@@ -1772,7 +1813,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             "summary": "postgresql + patroni layer",
             "description": "pebble config layer for postgresql + patroni",
             "services": {
-                self._postgresql_service: {
+                self.postgresql_service: {
                     "override": "replace",
                     "summary": "entrypoint of the postgresql + patroni image",
                     "command": f"patroni {self._storage_path}/patroni.yml",
@@ -1802,16 +1843,22 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     "user": WORKLOAD_OS_USER,
                     "group": WORKLOAD_OS_GROUP,
                 },
-                self._metrics_service: self._generate_metrics_service(),
+                self.pg_ldap_sync_service: {
+                    "override": "replace",
+                    "summary": "synchronize LDAP users",
+                    "command": "/bin/python3 /home/postgres/synchronize_ldap.py",
+                    "startup": "disabled",
+                },
+                self.metrics_service: self._generate_metrics_service(),
                 self.rotate_logs_service: {
                     "override": "replace",
                     "summary": "rotate logs",
-                    "command": "python3 /home/postgres/rotate_logs.py",
+                    "command": "/bin/python3 /home/postgres/rotate_logs.py",
                     "startup": "disabled",
                 },
             },
             "checks": {
-                self._postgresql_service: {
+                self.postgresql_service: {
                     "override": "replace",
                     "level": "ready",
                     "http": {
@@ -1926,6 +1973,52 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Start or stop the pgBackRest TLS server service when TLS certificate change.
         self.backup.start_stop_pgbackrest_service()
 
+    def _restart_metrics_service(self) -> None:
+        """Restart the monitoring service if the password was rotated."""
+        container = self.unit.get_container("postgresql")
+        current_layer = container.get_plan()
+
+        metrics_service = current_layer.services[self.metrics_service]
+        data_source_name = metrics_service.environment.get("DATA_SOURCE_NAME", "")
+
+        if metrics_service and not data_source_name.startswith(
+            f"user={MONITORING_USER} password={self.get_secret('app', MONITORING_PASSWORD_KEY)} "
+        ):
+            container.add_layer(
+                self.metrics_service,
+                Layer({"services": {self.metrics_service: self._generate_metrics_service()}}),
+                combine=True,
+            )
+            container.restart(self.metrics_service)
+
+    def _restart_ldap_sync_service(self) -> None:
+        """Restart the LDAP sync service in case any configuration changed."""
+        if not self.is_primary:
+            return
+
+        container = self.unit.get_container("postgresql")
+        sync_service = container.pebble.get_services(names=[self.pg_ldap_sync_service])
+
+        if not self.is_ldap_enabled and sync_service[0].is_running():
+            logger.debug("Stopping LDAP sync service")
+            container.stop(self.pg_ldap_sync_service)
+            return
+
+        if self.is_ldap_enabled and not sync_service[0].is_running():
+            with open("scripts/synchronize_ldap.py") as file:
+                contents = file.read()
+                container.push("/home/postgres/synchronize_ldap.py", contents)
+
+        if self.is_ldap_enabled:
+            container.add_layer(
+                self.pg_ldap_sync_service,
+                Layer({"services": {self.pg_ldap_sync_service: self._generate_ldap_service()}}),
+                combine=True,
+            )
+
+            logger.debug("Starting LDAP sync service")
+            container.restart(self.pg_ldap_sync_service)
+
     @property
     def _is_workload_running(self) -> bool:
         """Returns whether the workload is running (in an active state)."""
@@ -1933,7 +2026,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if not container.can_connect():
             return False
 
-        services = container.pebble.get_services(names=[self._postgresql_service])
+        services = container.pebble.get_services(names=[self.postgresql_service])
         if len(services) == 0:
             return False
 
@@ -2017,25 +2110,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         self._handle_postgresql_restart_need()
 
-        # Restart the monitoring service if the password was rotated
-        container = self.unit.get_container("postgresql")
-        current_layer = container.get_plan()
-        if (
-            metrics_service := current_layer.services[self._metrics_service]
-        ) and not metrics_service.environment.get("DATA_SOURCE_NAME", "").startswith(
-            f"user={MONITORING_USER} password={self.get_secret('app', MONITORING_PASSWORD_KEY)} "
-        ):
-            container.add_layer(
-                self._metrics_service,
-                Layer({"services": {self._metrics_service: self._generate_metrics_service()}}),
-                combine=True,
-            )
-            container.restart(self._metrics_service)
-
-        return True
+        self._restart_metrics_service()
+        self._restart_ldap_sync_service()
 
     def _validate_config_options(self) -> None:
         """Validates specific config options that need access to the database or to the TLS status."""
+        if not self.postgresql.validate_user_map(self.config.ldap_map):
+            raise ValueError("ldap_map config option has an invalid value")
+
         if (
             self.config.instance_default_text_search_config
             not in self.postgresql.get_postgresql_text_search_configs()
@@ -2101,14 +2183,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Check if there are any changes to layer services.
         if current_layer.services != new_layer.services:
             # Changes were made, add the new layer.
-            container.add_layer(self._postgresql_service, new_layer, combine=True)
+            container.add_layer(self.postgresql_service, new_layer, combine=True)
             logging.info("Added updated layer 'postgresql' to Pebble plan")
             if replan:
                 container.replan()
                 logging.info("Restarted postgresql service")
         if current_layer.checks != new_layer.checks:
             # Changes were made, add the new layer.
-            container.add_layer(self._postgresql_service, new_layer, combine=True)
+            container.add_layer(self.postgresql_service, new_layer, combine=True)
             logging.info("Updated health checks")
 
     def _unit_name_to_pod_name(self, unit_name: str) -> str:

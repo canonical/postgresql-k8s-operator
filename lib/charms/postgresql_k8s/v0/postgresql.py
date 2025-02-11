@@ -20,6 +20,7 @@ Any charm using this library should import the `psycopg2` or `psycopg2-binary` d
 """
 
 import logging
+import re
 from collections import OrderedDict
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -35,7 +36,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 43
+LIBPATCH = 44
 
 # Groups to distinguish HBA access
 ACCESS_GROUP_INTERNAL = "internal_access"
@@ -662,6 +663,34 @@ END; $$;"""
                 connection.close()
 
     @staticmethod
+    def build_postgresql_user_map(user_map: str) -> List[tuple]:
+        """Build the PostgreSQL authorization user-map.
+
+        Args:
+            user_map: serialized user-map following the pg_ident.conf format.
+
+        Returns:
+            List of PostgreSQL user regex selector to PostgreSQL group tuples.
+        """
+        if not user_map:
+            return []
+
+        user_map_rules = user_map.split("\n")
+        user_map_rules = (rule.strip() for rule in user_map_rules)
+        user_map_list = []
+
+        for rule in user_map_rules:
+            rule_parts = rule.split(" ")
+            if len(rule_parts) != 2:
+                raise Exception("The user-map must contain value pairs separated by a whitespace")
+
+            regex = rule_parts[0]
+            group = rule_parts[1]
+            user_map_list.append((regex, group))
+
+        return user_map_list
+
+    @staticmethod
     def build_postgresql_parameters(
         config_options: dict, available_memory: int, limit_memory: Optional[int] = None
     ) -> Optional[dict]:
@@ -736,3 +765,43 @@ END; $$;"""
             return True
         except psycopg2.Error:
             return False
+
+    def validate_user_map(self, user_map: str) -> bool:
+        """Validate the PostgreSQL authorization user-map.
+
+        Args:
+            user_map: serialized user-map following the pg_ident.conf format.
+
+        Returns:
+            Whether the user-map is valid.
+        """
+        try:
+            user_map = self.build_postgresql_user_map(user_map)
+        except ValueError:
+            return False
+
+        return all(self._validate_user_map_rule(regex, group) for regex, group in user_map)
+
+    def _validate_user_map_rule(self, regex: str, group: str) -> bool:
+        """Validate the PostgreSQL authorization user-map rule.
+
+        Args:
+            regex: regex of the users to select
+            group: name of the group to assign users to
+
+        Returns:
+            Whether the user-map rule is valid.
+        """
+        try:
+            re.compile(regex)
+        except re.error:
+            return False
+
+        with self._connect_to_database() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                SQL("SELECT TRUE FROM pg_roles WHERE rolname={};").format(Literal(group))
+            )
+            if cursor.fetchone() is None:
+                return False
+
+        return True
