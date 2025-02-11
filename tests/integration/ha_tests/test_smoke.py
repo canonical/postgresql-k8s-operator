@@ -43,7 +43,6 @@ env = os.environ
 env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
 
 
-@pytest.mark.group(1)
 @markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_app_force_removal(ops_test: OpsTest):
@@ -104,7 +103,6 @@ async def test_app_force_removal(ops_test: OpsTest):
                 assert await is_storage_exists(ops_test, storage_id)
 
 
-@pytest.mark.group(1)
 @markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_app_garbage_ignorance(ops_test: OpsTest):
@@ -157,7 +155,6 @@ async def test_app_garbage_ignorance(ops_test: OpsTest):
         delete_pvc(ops_test, primary_pvc)
 
 
-@pytest.mark.group(1)
 @markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_app_resources_conflicts(ops_test: OpsTest):

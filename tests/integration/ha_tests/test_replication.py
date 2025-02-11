@@ -26,16 +26,15 @@ from .helpers import (
 )
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
     """Build and deploy three unit of PostgreSQL."""
     wait_for_apps = False
     # It is possible for users to provide their own cluster for HA testing. Hence, check if there
     # is a pre-existing cluster.
     if not await app_name(ops_test):
         wait_for_apps = True
-        await build_and_deploy(ops_test, 3, wait_for_idle=False)
+        await build_and_deploy(ops_test, charm, 3, wait_for_idle=False)
     # Deploy the continuous writes application charm if it wasn't already deployed.
     if not await app_name(ops_test, APPLICATION_NAME):
         wait_for_apps = True
@@ -52,7 +51,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             await ops_test.model.wait_for_idle(status="active", timeout=1000, raise_on_error=False)
 
 
-@pytest.mark.group(1)
 async def test_reelection(ops_test: OpsTest, continuous_writes, primary_start_timeout) -> None:
     """Kill primary unit, check reelection."""
     app = await app_name(ops_test)
@@ -84,7 +82,6 @@ async def test_reelection(ops_test: OpsTest, continuous_writes, primary_start_ti
     await is_cluster_updated(ops_test, primary_name)
 
 
-@pytest.mark.group(1)
 async def test_consistency(ops_test: OpsTest, continuous_writes) -> None:
     """Write to primary, read data from secondaries (check consistency)."""
     # Locate primary unit.
@@ -102,8 +99,9 @@ async def test_consistency(ops_test: OpsTest, continuous_writes) -> None:
     await check_writes(ops_test)
 
 
-@pytest.mark.group(1)
-async def test_no_data_replicated_between_clusters(ops_test: OpsTest, continuous_writes) -> None:
+async def test_no_data_replicated_between_clusters(
+    ops_test: OpsTest, charm, continuous_writes
+) -> None:
     """Check that writes in one cluster are not replicated to another cluster."""
     # Locate primary unit.
     app = await app_name(ops_test)
@@ -111,7 +109,7 @@ async def test_no_data_replicated_between_clusters(ops_test: OpsTest, continuous
 
     # Deploy another cluster.
     new_cluster_app = f"second-{app}"
-    await build_and_deploy(ops_test, 2, database_app_name=new_cluster_app)
+    await build_and_deploy(ops_test, charm, 2, database_app_name=new_cluster_app)
 
     # Start an application that continuously writes data to the database.
     await start_continuous_writes(ops_test, app)

@@ -7,7 +7,6 @@ import os
 import pathlib
 import typing
 
-import pytest
 from pytest_operator.plugin import OpsTest
 
 from . import markers
@@ -26,7 +25,6 @@ async def fetch_charm(
     return packed_charms[0].resolve(strict=True)
 
 
-@pytest.mark.group(1)
 @markers.amd64_only
 async def test_arm_charm_on_amd_host(ops_test: OpsTest) -> None:
     """Tries deploying an arm64 charm on amd64 host."""
@@ -49,7 +47,6 @@ async def test_arm_charm_on_amd_host(ops_test: OpsTest) -> None:
     )
 
 
-@pytest.mark.group(1)
 @markers.arm64_only
 async def test_amd_charm_on_arm_host(ops_test: OpsTest) -> None:
     """Tries deploying an amd64 charm on arm64 host."""
