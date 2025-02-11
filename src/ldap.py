@@ -4,7 +4,6 @@
 """LDAP implementation."""
 
 import logging
-from typing import Any
 
 from charms.glauth_k8s.v0.ldap import (
     LdapProviderData,
@@ -31,17 +30,6 @@ class PostgreSQLLDAP(Object):
         self.ldap = LdapRequirer(self.charm, self.relation_name)
         self.framework.observe(self.ldap.on.ldap_ready, self._on_ldap_ready)
         self.framework.observe(self.ldap.on.ldap_unavailable, self._on_ldap_unavailable)
-
-    @staticmethod
-    def dict_to_hba_string(_dict: dict[str, Any]) -> str:
-        """Transform a Python dictionary into a Host Based Authentication valid string."""
-        for key, value in _dict.items():
-            if isinstance(value, bool):
-                _dict[key] = int(value)
-            if isinstance(value, str):
-                _dict[key] = f'"{value}"'
-
-        return " ".join(f"{key}={value}" for key, value in _dict.items())
 
     @property
     def _relation(self) -> Relation:

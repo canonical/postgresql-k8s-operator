@@ -2342,7 +2342,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             "ldapurl": data.urls[0],
         }
 
-    def get_ldap_parameters(self) -> str:
+    def get_ldap_parameters(self) -> dict:
         """Returns the LDAP configuration to use.
 
         The charm configuration options take preference over the GLAuth relationship data
@@ -2358,7 +2358,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("LDAP is enabled by another charm relation")
             params = self._ldap_databag_to_params()
 
-        return self.ldap.dict_to_hba_string(params)
+        return params
 
 
 if __name__ == "__main__":
