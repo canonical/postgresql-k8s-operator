@@ -20,6 +20,7 @@ Any charm using this library should import the `psycopg2` or `psycopg2-binary` d
 """
 
 import logging
+import re
 from collections import OrderedDict
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -35,11 +36,14 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 43
+LIBPATCH = 44
 
 # Groups to distinguish HBA access
 ACCESS_GROUP_APPLICATION = "application_access"
 ACCESS_GROUP_OPERATOR = "operator_access"
+
+# Groups to distinguish database permissions
+PERMISSIONS_GROUP_ADMIN = "admin"
 
 INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE = "invalid role(s) for extra user roles"
 
@@ -195,7 +199,7 @@ class PostgreSQL:
                     Identifier(database)
                 )
             )
-            for user_to_grant_access in [user, "admin", *self.system_users]:
+            for user_to_grant_access in [user, PERMISSIONS_GROUP_ADMIN, *self.system_users]:
                 cursor.execute(
                     SQL("GRANT ALL PRIVILEGES ON DATABASE {} TO {};").format(
                         Identifier(database), Identifier(user_to_grant_access)
@@ -243,15 +247,17 @@ class PostgreSQL:
             admin_role = False
             roles = privileges = None
             if extra_user_roles:
-                admin_role = "admin" in extra_user_roles
+                admin_role = PERMISSIONS_GROUP_ADMIN in extra_user_roles
                 valid_privileges, valid_roles = self.list_valid_privileges_and_roles()
                 roles = [
-                    role for role in extra_user_roles if role in valid_roles and role != "admin"
+                    role
+                    for role in extra_user_roles
+                    if role in valid_roles and role != PERMISSIONS_GROUP_ADMIN
                 ]
                 privileges = {
                     extra_user_role
                     for extra_user_role in extra_user_roles
-                    if extra_user_role not in roles and extra_user_role != "admin"
+                    if extra_user_role not in roles and extra_user_role != PERMISSIONS_GROUP_ADMIN
                 }
                 invalid_privileges = [
                     privilege for privilege in privileges if privilege not in valid_privileges
@@ -595,7 +601,7 @@ END; $$;"""
                         )
                     )
                 self.create_user(
-                    "admin",
+                    PERMISSIONS_GROUP_ADMIN,
                     extra_user_roles=["pg_read_all_data", "pg_write_all_data"],
                 )
                 cursor.execute("GRANT CONNECT ON DATABASE postgres TO admin;")
@@ -655,6 +661,31 @@ END; $$;"""
         finally:
             if connection:
                 connection.close()
+
+    @staticmethod
+    def build_postgresql_user_map(user_map: str) -> List[tuple]:
+        """Build the PostgreSQL authorization user-map.
+
+        Args:
+            user_map: serialized user-map following the pg_ident.conf format.
+
+        Returns:
+            Dictionary with the PostgreSQL user regex selector to PostgreSQL group rules.
+        """
+        user_map_rules = user_map.split("\n")
+        user_map_rules = (rule.strip() for rule in user_map_rules)
+        user_map_list = []
+
+        for rule in user_map_rules:
+            rule_parts = rule.split(" ")
+            if len(rule_parts) != 2:
+                raise Exception("The user-map must contain value pairs separated by a whitespace")
+
+            regex = rule_parts[0]
+            group = rule_parts[1]
+            user_map_list.append((regex, group))
+
+        return user_map_list
 
     @staticmethod
     def build_postgresql_parameters(
@@ -731,3 +762,43 @@ END; $$;"""
             return True
         except psycopg2.Error:
             return False
+
+    def validate_user_map(self, user_map: str) -> bool:
+        """Validate the PostgreSQL authorization user-map.
+
+        Args:
+            user_map: serialized user-map following the pg_ident.conf format.
+
+        Returns:
+            Whether the user-map is valid.
+        """
+        try:
+            user_map = self.build_postgresql_user_map(user_map)
+        except ValueError:
+            return False
+
+        return all(self._validate_user_map_rule(regex, group) for regex, group in user_map)
+
+    def _validate_user_map_rule(self, regex: str, group: str) -> bool:
+        """Validate the PostgreSQL authorization user-map rule.
+
+        Args:
+            regex: regex of the users to select
+            group: name of the group to assign users to
+
+        Returns:
+            Whether the user-map rule is valid.
+        """
+        try:
+            re.compile(regex)
+        except re.error:
+            return False
+
+        with self._connect_to_database() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                SQL("SELECT TRUE FROM pg_roles WHERE rolname={};").format(Literal(group))
+            )
+            if cursor.fetchone() is None:
+                return False
+
+        return True

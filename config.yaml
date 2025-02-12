@@ -46,6 +46,13 @@ options:
       Password for user to bind to the directory with to perform the search.
     type: string
     default: ""
+  ldap_map:
+    description: |
+      File containing a map between PostgreSQL username regex selectors, and the desired
+      PostgreSQL group to assign the selected users to. It is meant to be used to assign
+      users to already pre-configured roles.
+    type: string
+    default: ""
   ldap_search_attribute:
     description: |
       Attribute to match against the user name in the search.

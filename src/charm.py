@@ -36,6 +36,7 @@ from charms.data_platform_libs.v1.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v1.loki_push_api import LogProxyConsumer
 from charms.postgresql_k8s.v0.postgresql import (
+    PERMISSIONS_GROUP_ADMIN,
     REQUIRED_PLUGINS,
     PostgreSQL,
     PostgreSQLEnableDisableExtensionError,
@@ -1719,6 +1720,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         ldap_bind_username = ldap_params["ldapbinddn"]
         ldap_bing_password = ldap_params["ldapbindpasswd"]
 
+        ldap_mapping_rules = self.postgresql.build_postgresql_user_map(self.config.ldap_map)
+        ldap_mapping_rules = json.dumps(ldap_mapping_rules)
+        ldap_mapping_filter = json.dumps([PERMISSIONS_GROUP_ADMIN])
+
         return {
             "override": "replace",
             "summary": "synchronize LDAP users",
@@ -1730,6 +1735,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 "LDAP_BASE_DN": ldap_base_dn,
                 "LDAP_BIND_USERNAME": ldap_bind_username,
                 "LDAP_BIND_PASSWORD": ldap_bing_password,
+                "LDAP_MAPPING_RULES": ldap_mapping_rules,
+                "LDAP_MAPPING_FILTERS": ldap_mapping_filter,
                 "POSTGRES_HOST": "127.0.0.1",
                 "POSTGRES_PORT": DATABASE_PORT,
                 "POSTGRES_DATABASE": DATABASE_NAME,
@@ -2071,6 +2078,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _validate_config_options(self) -> None:
         """Validates specific config options that need access to the database or to the TLS status."""
+        if not self.postgresql.validate_user_map(self.config.ldap_map):
+            raise ValueError("ldap_map config option has an invalid value")
+
         if (
             self.config.instance_default_text_search_config
             not in self.postgresql.get_postgresql_text_search_configs()
