@@ -32,6 +32,8 @@ from tenacity import (
     wait_fixed,
 )
 
+from constants import DATABASE_DEFAULT_NAME
+
 CHARM_BASE = "ubuntu@22.04"
 CHARM_SERIES = "jammy"
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
@@ -325,7 +327,7 @@ async def execute_query_on_unit(
     unit_address: str,
     password: str,
     query: str,
-    database: str = "postgres",
+    database: str = DATABASE_DEFAULT_NAME,
     sslmode: str | None = None,
 ):
     """Execute given PostgreSQL query on a unit.
