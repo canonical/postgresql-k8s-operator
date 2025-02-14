@@ -1839,6 +1839,24 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         return self.update_config()
 
+    def remove_tls_files_from_workload(self, container: Container = None) -> bool:
+        """Removes TLS files from the workload container."""
+        if container is None:
+            container = self.unit.get_container("postgresql")
+
+        key, ca, cert = self.tls.get_tls_files()
+
+        if key is not None:
+            container.remove_path(f"{self._storage_path}/{TLS_KEY_FILE}")
+        if ca is not None:
+            container.remove_path(f"{self._storage_path}/{TLS_CA_FILE}")
+            container.remove_path("/usr/local/share/ca-certificates/ca.crt")
+            container.exec(["update-ca-certificates"]).wait()
+        if cert is not None:
+            container.remove_path(f"{self._storage_path}/{TLS_CERT_FILE}")
+
+        return self.update_config()
+
     def _restart(self, event: RunWithLock) -> None:
         """Restart PostgreSQL."""
         if not self._patroni.are_all_members_ready():
