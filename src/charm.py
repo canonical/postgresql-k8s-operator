@@ -112,7 +112,7 @@ from constants import (
     WORKLOAD_OS_GROUP,
     WORKLOAD_OS_USER,
 )
-from patroni import NotReadyError, Patroni, SwitchoverFailedError
+from patroni import NotReadyError, Patroni, SwitchoverFailedError, SwitchoverNotSyncError
 from relations.async_replication import (
     REPLICATION_CONSUMER_RELATION,
     REPLICATION_OFFER_RELATION,
@@ -1304,6 +1304,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         else:
             try:
                 self._patroni.switchover(self.unit.name, wait=False)
+            except SwitchoverNotSyncError:
+                event.fail("Unit is not sync standby")
             except SwitchoverFailedError:
                 event.fail("Switchover failed or timed out, check the logs for details")
 

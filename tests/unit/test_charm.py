@@ -26,7 +26,7 @@ from tenacity import RetryError, wait_fixed
 
 from charm import EXTENSION_OBJECT_MESSAGE, PostgresqlOperatorCharm
 from constants import PEER, SECRET_INTERNAL_LABEL
-from patroni import NotReadyError, SwitchoverFailedError
+from patroni import NotReadyError, SwitchoverFailedError, SwitchoverNotSyncError
 from tests.unit.helpers import _FakeApiError
 
 POSTGRESQL_CONTAINER = "postgresql"
@@ -1866,3 +1866,11 @@ def test_on_promote_to_primary(harness):
             "Switchover failed or timed out, check the logs for details"
         )
         event.fail.reset_mock()
+
+        # Unit, no force, not sync
+        event.params = {"scope": "unit"}
+        _switchover.side_effect = SwitchoverNotSyncError
+
+        harness.charm._on_promote_to_primary(event)
+
+        event.fail.assert_called_once_with("Unit is not sync standby")

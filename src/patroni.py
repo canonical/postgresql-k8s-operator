@@ -53,6 +53,10 @@ class SwitchoverFailedError(Exception):
     """Raised when a switchover failed for some reason."""
 
 
+class SwitchoverNotSyncError(SwitchoverFailedError):
+    """Raised when a switchover failed because node is not sync."""
+
+
 class Patroni:
     """This class handles the communication with Patroni API and configuration files."""
 
@@ -597,6 +601,12 @@ class Patroni:
 
         # Check whether the switchover was unsuccessful.
         if r.status_code != 200:
+            if (
+                r.status_code == 412
+                and r.text == "candidate name does not match with sync_standby"
+            ):
+                logger.debug("Unit is not sync standby")
+                raise SwitchoverNotSyncError()
             logger.warning(f"Switchover call failed with code {r.status_code} {r.text}")
             raise SwitchoverFailedError(f"received {r.status_code}")
 
