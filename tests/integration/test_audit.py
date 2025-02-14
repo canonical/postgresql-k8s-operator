@@ -22,11 +22,12 @@ logger = logging.getLogger(__name__)
 RELATION_ENDPOINT = "database"
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_audit_plugin(ops_test: OpsTest) -> None:
+async def test_audit_plugin(ops_test: OpsTest, charm) -> None:
     """Test the audit plugin."""
-    await asyncio.gather(build_and_deploy(ops_test, 1), ops_test.model.deploy(APPLICATION_NAME))
+    await asyncio.gather(
+        build_and_deploy(ops_test, charm, 1), ops_test.model.deploy(APPLICATION_NAME)
+    )
     await ops_test.model.relate(f"{APPLICATION_NAME}:{RELATION_ENDPOINT}", DATABASE_APP_NAME)
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(

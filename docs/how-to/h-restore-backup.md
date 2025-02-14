@@ -15,9 +15,9 @@ To restore a backup that was made from a *different* cluster, (i.e. cluster migr
 - Access to S3 storage
 - [Configured settings for S3 storage](/t/charmed-postgresql-k8s-how-to-configure-s3/9595?channel=14/stable)
 - [Existing backups in your S3-storage](/t/charmed-postgresql-k8s-how-to-create-and-list-backups/9596?channel=14/stable)
-- [Point-in-time recovery](#point-in-time-recovery) requires the following PostgreSQL charm revisions:
-   - 435+ for `arm64`
-  -  436+ for `amd64`
+- [Point-in-time recovery](#point-in-time-recovery) requires the following PostgreSQL K8s charm revisions:
+   - 382+ for `arm64`
+  -  381+ for `amd64`
 
 ## Summary
 * [List backups](#list-backups)

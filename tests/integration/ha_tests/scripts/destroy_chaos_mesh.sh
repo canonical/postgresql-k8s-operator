@@ -45,9 +45,9 @@ destroy_chaos_mesh() {
 		timeout 30 kubectl delete crd "${args[@]}" || true
 	fi
 
-	if [ -n "${chaos_mesh_ns}" ] && sg snap_microk8s -c "microk8s.helm3 repo list --namespace=${chaos_mesh_ns}" | grep -q 'chaos-mesh'; then
+	if [ -n "${chaos_mesh_ns}" ] && microk8s.helm3 repo list --namespace="${chaos_mesh_ns}" | grep -q 'chaos-mesh'; then
 		echo "uninstalling chaos-mesh helm repo"
-		sg snap_microk8s -c "microk8s.helm3 uninstall chaos-mesh --namespace=\"${chaos_mesh_ns}\"" || true
+		microk8s.helm3 uninstall chaos-mesh --namespace="${chaos_mesh_ns}" || true
 	fi
 }
 

@@ -11,7 +11,7 @@ from pytest_operator.plugin import OpsTest
 
 from ..helpers import CHARM_BASE, DATABASE_APP_NAME, build_and_deploy
 from .helpers import build_connection_string
-from .test_new_relations import DATA_INTEGRATOR_APP_NAME
+from .test_new_relations_1 import DATA_INTEGRATOR_APP_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -20,12 +20,11 @@ APP_NAMES = [DATABASE_APP_NAME, DATA_INTEGRATOR_APP_NAME]
 FIRST_DATABASE_RELATION_NAME = "database"
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_relations(ops_test: OpsTest, database_charm):
+async def test_relations(ops_test: OpsTest, charm):
     """Test that check relation data."""
     async with ops_test.fast_forward():
-        await build_and_deploy(ops_test, 1, DATABASE_APP_NAME)
+        await build_and_deploy(ops_test, charm, 1, DATABASE_APP_NAME)
 
         await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=3000)
 

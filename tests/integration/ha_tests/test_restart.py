@@ -31,11 +31,10 @@ logger = logging.getLogger(__name__)
 CLUSTER_SIZE = 3
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_deploy(ops_test: OpsTest) -> None:
+async def test_deploy(ops_test: OpsTest, charm) -> None:
     """Build and deploy a PostgreSQL cluster and a test application."""
-    await build_and_deploy(ops_test, CLUSTER_SIZE, wait_for_idle=False)
+    await build_and_deploy(ops_test, charm, CLUSTER_SIZE, wait_for_idle=False)
     if not await app_name(ops_test, APPLICATION_NAME):
         await ops_test.model.deploy(APPLICATION_NAME, num_units=1)
 
@@ -48,7 +47,6 @@ async def test_deploy(ops_test: OpsTest) -> None:
         )
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_restart(ops_test: OpsTest, continuous_writes) -> None:
     """Test restart of all the units simultaneously."""

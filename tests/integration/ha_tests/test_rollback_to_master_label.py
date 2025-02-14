@@ -36,9 +36,8 @@ TIMEOUT = 600
 LABEL_REVISION = 280 if architecture == "arm64" else 281
 
 
-@pytest.mark.group(1)
 @markers.juju3
-@pytest.mark.unstable
+@pytest.mark.skip(reason="Unstable")
 @markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_deploy_stable(ops_test: OpsTest) -> None:
@@ -71,11 +70,10 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
     assert operator.countOf(instances_roles.values(), "replica") == 2
 
 
-@pytest.mark.group(1)
 @markers.juju3
-@pytest.mark.unstable
+@pytest.mark.skip(reason="Unstable")
 @markers.amd64_only  # TODO: remove after arm64 stable release
-async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
+async def test_fail_and_rollback(ops_test, charm, continuous_writes) -> None:
     # Start an application that continuously writes data to the database.
     logger.info("starting continuous writes to the database")
     await start_continuous_writes(ops_test, DATABASE_APP_NAME)
@@ -98,10 +96,9 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
             primary_name = await get_primary(ops_test, DATABASE_APP_NAME)
             assert primary_name == f"{DATABASE_APP_NAME}/0"
 
-    local_charm = await ops_test.build_charm(".")
-    filename = local_charm.split("/")[-1] if isinstance(local_charm, str) else local_charm.name
+    filename = Path(charm).name
     fault_charm = Path("/tmp/", filename)
-    shutil.copy(local_charm, fault_charm)
+    shutil.copy(charm, fault_charm)
 
     logger.info("Inject dependency fault")
     await inject_dependency_fault(ops_test, DATABASE_APP_NAME, fault_charm)
