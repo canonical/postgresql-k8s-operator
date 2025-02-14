@@ -3,7 +3,7 @@
 import contextlib
 from unittest.mock import call, patch
 
-from rotate_logs import main
+from scripts.rotate_logs import main
 
 
 def test_main():

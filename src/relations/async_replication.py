@@ -467,7 +467,7 @@ class PostgreSQLAsyncReplication(Object):
         return self.charm.app == self.get_primary_cluster()
 
     def _on_async_relation_broken(self, _) -> None:
-        if self.charm._peers is None or "departing" in self.charm._peers.data[self.charm.unit]:
+        if self.charm._peers is None or self.charm.is_unit_departing:
             logger.debug("Early exit on_async_relation_broken: Skipping departing unit.")
             return
 
@@ -509,11 +509,11 @@ class PostgreSQLAsyncReplication(Object):
         if not self._stop_database(event):
             return
 
-        if not all(
+        if not (self.charm.is_unit_stopped or self._is_following_promoted_cluster()) or not all(
             "stopped" in self.charm._peers.data[unit]
             or self.charm._peers.data[unit].get("unit-promoted-cluster-counter")
             == self._get_highest_promoted_cluster_counter_value()
-            for unit in {*self.charm._peers.units, self.charm.unit}
+            for unit in self.charm._peers.units
         ):
             self.charm.unit.status = WaitingStatus(
                 "Waiting for the database to be stopped in all units"
@@ -692,10 +692,7 @@ class PostgreSQLAsyncReplication(Object):
 
     def _stop_database(self, event: RelationChangedEvent) -> bool:
         """Stop the database."""
-        if (
-            "stopped" not in self.charm._peers.data[self.charm.unit]
-            and not self._is_following_promoted_cluster()
-        ):
+        if not self.charm.is_unit_stopped and not self._is_following_promoted_cluster():
             if not self.charm.unit.is_leader() and not self.container.exists(POSTGRESQL_DATA_PATH):
                 logger.debug("Early exit on_async_relation_changed: following promoted cluster.")
                 return False

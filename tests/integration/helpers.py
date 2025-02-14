@@ -45,8 +45,6 @@ try:
 except FileNotFoundError:
     KUBECTL = "microk8s kubectl"
 
-charm = None
-
 logger = logging.getLogger(__name__)
 
 
@@ -72,6 +70,7 @@ async def app_name(
 
 async def build_and_deploy(
     ops_test: OpsTest,
+    charm,
     num_units: int,
     database_app_name: str = DATABASE_APP_NAME,
     wait_for_idle: bool = True,
@@ -87,9 +86,6 @@ async def build_and_deploy(
     if await app_name(ops_test, database_app_name, model):
         return
 
-    global charm
-    if not charm:
-        charm = await ops_test.build_charm(".")
     resources = {
         "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
     }
@@ -819,6 +815,7 @@ async def cat_file_from_unit(ops_test: OpsTest, filepath: str, unit_name: str) -
 
 async def backup_operations(
     ops_test: OpsTest,
+    charm,
     s3_integrator_app_name: str,
     tls_certificates_app_name: str,
     tls_config,
@@ -837,7 +834,9 @@ async def backup_operations(
     # as archivo_mode is disabled after restoring the backup) and to TLS Certificates Operator
     # (to be able to create backups from replicas).
     database_app_name = f"{DATABASE_APP_NAME}-{cloud.lower()}"
-    await build_and_deploy(ops_test, 2, database_app_name=database_app_name, wait_for_idle=False)
+    await build_and_deploy(
+        ops_test, charm, 2, database_app_name=database_app_name, wait_for_idle=False
+    )
 
     await ops_test.model.relate(database_app_name, tls_certificates_app_name)
     async with ops_test.fast_forward(fast_interval="60s"):

@@ -23,7 +23,6 @@ MAX_RETRIES = 20
 UNTRUST_ERROR_MESSAGE = f"Insufficient permissions, try: `juju trust {APP_NAME} --scope=cluster`"
 
 
-@pytest.mark.group(1)
 async def test_enable_rbac(ops_test: OpsTest):
     """Enables RBAC from inside test runner's environment.
 
@@ -62,7 +61,6 @@ async def test_enable_rbac(ops_test: OpsTest):
     assert is_default_auth == "no"
 
 
-@pytest.mark.group(1)
 async def test_model_connectivity(ops_test: OpsTest):
     """Tries to regain connectivity to model after microK8s restart."""
     retries = 0
@@ -82,15 +80,14 @@ async def test_model_connectivity(ops_test: OpsTest):
     assert False
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_deploy_without_trust(ops_test: OpsTest, database_charm):
+async def test_deploy_without_trust(ops_test: OpsTest, charm):
     """Build and deploy the charm with trust set to false.
 
     Assert on the unit status being blocked due to lack of trust.
     """
     await ops_test.model.deploy(
-        database_charm,
+        charm,
         resources={
             "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
         },
@@ -113,7 +110,6 @@ async def test_deploy_without_trust(ops_test: OpsTest, database_charm):
     assert leader_unit.workload_status_message == UNTRUST_ERROR_MESSAGE
 
 
-@pytest.mark.group(1)
 async def test_trust_blocked_deployment(ops_test: OpsTest):
     """Trust existing blocked deployment.
 

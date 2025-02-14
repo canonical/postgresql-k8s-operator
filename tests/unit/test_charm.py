@@ -685,7 +685,9 @@ def test_on_peer_relation_departed(harness):
         patch(
             "charm.PostgresqlOperatorCharm._get_endpoints_to_remove"
         ) as _get_endpoints_to_remove,
-        patch("charm.PostgresqlOperatorCharm._peers", new_callable=PropertyMock) as _peers,
+        patch(
+            "charm.PostgresqlOperatorCharm.app_peer_data", new_callable=PropertyMock
+        ) as _app_peer_data,
         patch(
             "charm.PostgresqlOperatorCharm._get_endpoints_to_remove", return_value=sentinel.units
         ) as _get_endpoints_to_remove,
@@ -703,7 +705,7 @@ def test_on_peer_relation_departed(harness):
         harness.charm._on_peer_relation_departed(event)
         event.defer.assert_called_once_with()
 
-        _peers.return_value.data = {harness.charm.app: {"cluster_initialised": True}}
+        _app_peer_data.return_value = {"cluster_initialised": True}
         harness.charm._on_peer_relation_departed(event)
         _get_endpoints_to_remove.assert_called_once_with()
         _remove_from_endpoints.assert_called_once_with(sentinel.units)

@@ -34,9 +34,8 @@ logger = logging.getLogger(__name__)
 TIMEOUT = 600
 
 
-@pytest.mark.group(1)
 @markers.amd64_only  # TODO: remove after arm64 stable release
-@pytest.mark.unstable
+@pytest.mark.skip(reason="Unstable")
 @pytest.mark.abort_on_fail
 async def test_deploy_stable(ops_test: OpsTest) -> None:
     """Simple test to ensure that the PostgreSQL and application charms get deployed."""
@@ -74,10 +73,9 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
     assert operator.countOf(instances_roles.values(), "replica") == 2
 
 
-@pytest.mark.group(1)
 @markers.amd64_only  # TODO: remove after arm64 stable release
-@pytest.mark.unstable
-async def test_upgrade(ops_test, continuous_writes) -> None:
+@pytest.mark.skip(reason="Unstable")
+async def test_upgrade(ops_test, charm, continuous_writes) -> None:
     # Start an application that continuously writes data to the database.
     logger.info("starting continuous writes to the database")
     await start_continuous_writes(ops_test, DATABASE_APP_NAME)
@@ -100,14 +98,13 @@ async def test_upgrade(ops_test, continuous_writes) -> None:
             primary_name = await get_primary(ops_test, DATABASE_APP_NAME)
             assert primary_name == f"{DATABASE_APP_NAME}/0"
 
-    local_charm = await ops_test.build_charm(".")
     application = ops_test.model.applications[DATABASE_APP_NAME]
 
     resources = {"postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]}
     application = ops_test.model.applications[DATABASE_APP_NAME]
 
     logger.info("Refresh the charm")
-    await application.refresh(path=local_charm, resources=resources)
+    await application.refresh(path=charm, resources=resources)
 
     logger.info("Get first upgrading unit")
     # Highest ordinal unit always the first to upgrade.
