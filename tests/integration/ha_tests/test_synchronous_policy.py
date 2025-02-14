@@ -10,14 +10,14 @@ from .helpers import get_cluster_roles
 
 
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
     """Build and deploy three unit of PostgreSQL."""
     wait_for_apps = False
     # It is possible for users to provide their own cluster for HA testing. Hence, check if there
     # is a pre-existing cluster.
     if not await app_name(ops_test):
         wait_for_apps = True
-        await build_and_deploy(ops_test, 3, wait_for_idle=False)
+        await build_and_deploy(ops_test, charm, 3, wait_for_idle=False)
 
     if wait_for_apps:
         async with ops_test.fast_forward():
