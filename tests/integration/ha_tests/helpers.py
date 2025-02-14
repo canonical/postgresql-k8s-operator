@@ -501,6 +501,26 @@ async def get_postgresql_parameter(ops_test: OpsTest, parameter_name: str) -> in
             return parameter_value
 
 
+async def get_leader(model: Model, application_name: str) -> str:
+    """Get the standby leader name.
+
+    Args:
+        model: the model instance.
+        application_name: the name of the application to get the value for.
+
+    Returns:
+        the name of the standby leader.
+    """
+    status = await model.get_status()
+    first_unit_ip = next(
+        unit for unit in status["applications"][application_name]["units"].values()
+    )["address"]
+    cluster = get_patroni_cluster(first_unit_ip)
+    for member in cluster["members"]:
+        if member["role"] == "leader":
+            return member["name"]
+
+
 async def get_standby_leader(model: Model, application_name: str) -> str:
     """Get the standby leader name.
 
@@ -1145,3 +1165,24 @@ async def remove_unit_force(ops_test: OpsTest, num_units: int):
             timeout=1000,
             wait_for_exact_units=scale,
         )
+
+
+async def get_cluster_roles(
+    ops_test: OpsTest, unit_name: str
+) -> dict[str, str | list[str] | None]:
+    """Returns whether the unit a replica in the cluster."""
+    unit_ip = await get_unit_address(ops_test, unit_name)
+    members = {"replicas": [], "primaries": [], "sync_standbys": []}
+    member_list = get_patroni_cluster(unit_ip)["members"]
+    logger.info(f"Cluster members are: {member_list}")
+    for member in member_list:
+        role = member["role"]
+        name = "/".join(member["name"].rsplit("-", 1))
+        if role == "leader":
+            members["primaries"].append(name)
+        elif role == "sync_standby":
+            members["sync_standbys"].append(name)
+        else:
+            members["replicas"].append(name)
+
+    return members

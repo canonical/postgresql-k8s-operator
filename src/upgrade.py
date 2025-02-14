@@ -152,6 +152,7 @@ class PostgreSQLUpgrade(DataUpgrade):
             return
 
         self.charm.update_config()
+        self.charm.updated_synchronous_node_count()
 
     def _on_upgrade_charm_check_legacy(self, event: UpgradeCharmEvent) -> None:
         if not self.peer_relation:
