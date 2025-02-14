@@ -13,6 +13,7 @@ from psycopg2 import sql
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
+from .ha_tests.helpers import get_cluster_roles
 from .helpers import (
     CHARM_BASE,
     METADATA,
@@ -251,6 +252,21 @@ async def test_scale_down_and_up(ops_test: OpsTest):
 
     # Scale the application to the initial scale.
     await scale_application(ops_test, APP_NAME, initial_scale)
+
+
+async def test_switchover_sync_standby(ops_test: OpsTest):
+    original_roles = await get_cluster_roles(
+        ops_test, ops_test.model.applications[APP_NAME].units[0].name
+    )
+    run_action = await ops_test.model.units[original_roles["sync_standbys"][0]].run_action(
+        "promote-to-primary", scope="unit"
+    )
+    await run_action.wait()
+    await ops_test.model.wait_for_idle(status="active", timeout=200)
+    new_roles = await get_cluster_roles(
+        ops_test, ops_test.model.applications[APP_NAME].units[0].name
+    )
+    assert new_roles["primaries"][0] == original_roles["sync_standbys"][0]
 
 
 async def test_persist_data_through_graceful_restart(ops_test: OpsTest):

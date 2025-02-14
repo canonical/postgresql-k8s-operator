@@ -314,7 +314,7 @@ def test_promote_to_primary(harness, relation_name):
             )
             harness.update_relation_data(rel_id, "standby/0", {"unit-address": "10.2.2.10"})
 
-        harness.run_action("promote-to-primary")
+        harness.run_action("promote-to-primary", {"scope": "cluster"})
 
         assert (
             harness.get_relation_data(rel_id, harness.charm.app.name).get(
