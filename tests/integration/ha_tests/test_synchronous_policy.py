@@ -9,7 +9,6 @@ from ..helpers import app_name, build_and_deploy
 from .helpers import get_cluster_roles
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_build_and_deploy(ops_test: OpsTest) -> None:
     """Build and deploy three unit of PostgreSQL."""
@@ -25,7 +24,6 @@ async def test_build_and_deploy(ops_test: OpsTest) -> None:
             await ops_test.model.wait_for_idle(status="active", timeout=1000, raise_on_error=False)
 
 
-@pytest.mark.group(1)
 async def test_default_all(ops_test: OpsTest) -> None:
     app = await app_name(ops_test)
 
@@ -43,7 +41,6 @@ async def test_default_all(ops_test: OpsTest) -> None:
             assert len(roles["replicas"]) == 0
 
 
-@pytest.mark.group(1)
 async def test_majority(ops_test: OpsTest) -> None:
     app = await app_name(ops_test)
 
@@ -63,9 +60,7 @@ async def test_majority(ops_test: OpsTest) -> None:
             assert len(roles["replicas"]) == 1
 
 
-@pytest.mark.group(1)
 async def test_constant(ops_test: OpsTest) -> None:
-    """Kill primary unit, check reelection."""
     app = await app_name(ops_test)
 
     await ops_test.model.applications[app].set_config({"synchronous_node_count": "2"})
