@@ -27,7 +27,7 @@ poetry-core = "*"
 # tempo_coordinator_k8s/v0/tracing.py requires pydantic
 pydantic = "^1.10"
 # loki_k8s/v1/loki_push_api.py and prometheus_k8s/v0/prometheus_scrape.py
-cosl = "*"
+cosl = ">=0.0.50"
 # tempo_coordinator_k8s/v0/charm_tracing.py
 opentelemetry-exporter-otlp-proto-http = "1.21.0"
 # tls_certificates_interface/v2/tls_certificates.py
