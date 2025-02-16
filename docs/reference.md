@@ -1,4 +1,4 @@
-# Overview
+# Reference
 
 The Reference section of our documentation contains pages for technical specifications, APIs, release notes, and other reference material for fast lookup.
 
@@ -6,11 +6,12 @@ The Reference section of our documentation contains pages for technical specific
 | Page                      | Description                                       |
 |---------------------------|---------------------------------------------------|
 | [Release Notes](/t/11872) | Release notes for major revisions of this charm |
-| [Requirements](/t/11744) | Software and hardware requirements  |
-| [Testing](/t/11774) | Software tests (e.g. smoke, unit, performance...) |
+| [System requirements](/t/11744) | Software and hardware requirements  |
+| [Software testing](/t/11774) | Software tests (e.g. smoke, unit, performance...) |
+| [Performance and resources](/t/11975) | Config profiles related to performance |
 | [Troubleshooting](/t/11854) | Troubleshooting tips and tricks |
-| [Profiles](/t/11975) | Config profiles related to performance |
 | [Plugins/extensions](/t/10945) |  Plugins/extensions supported by each charm revision |
+| [Alert rules](/t/15840) | Pre-configured Prometheus alert rules |
 | [Contacts](/t/11852) | Contact information |
 
 **In the tabs at the top of the page**, you can find the following automatically generated API references:
