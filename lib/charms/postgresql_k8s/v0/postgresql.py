@@ -673,7 +673,7 @@ END; $$;"""
                 "storage",
                 "cpu",
                 "connection",
-                "session"
+                "session",
             )):
                 continue
             parameter = "_".join(config.split("_")[1:])
