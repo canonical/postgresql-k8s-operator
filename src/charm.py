@@ -2370,14 +2370,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             "ldapurl": self.config.ldap_url,
         }
 
-        search_attr = self.config.ldap_search_attribute
-        search_filter = self.config.ldap_search_filter
-
-        # Only one of the two options can be provided
-        if search_attr:
-            params.update({"ldapsearchattribute": search_attr})
-        elif search_filter:
-            params.update({"ldapsearchfilter": search_filter})
+        # One of the two options needs to be provided
+        if self.config.ldap_search_attribute:
+            params.update({"ldapsearchattribute": self.config.ldap_search_attribute})
+        elif self.config.ldap_search_filter:
+            params.update({"ldapsearchfilter": self.config.ldap_search_filter})
 
         return params
 
@@ -2391,13 +2388,21 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         secret_content = secret_object.get_content()
         bind_password = secret_content["password"]
 
-        return {
+        params = {
             "ldapbasedn": data.base_dn,
             "ldapbinddn": data.bind_dn,
             "ldapbindpasswd": bind_password,
             "ldaptls": data.starttls,
             "ldapurl": data.urls[0],
         }
+
+        # One of the two options needs to be provided
+        if self.config.ldap_search_attribute:
+            params.update({"ldapsearchattribute": self.config.ldap_search_attribute})
+        elif self.config.ldap_search_filter:
+            params.update({"ldapsearchfilter": self.config.ldap_search_filter})
+
+        return params
 
     def get_ldap_parameters(self) -> dict:
         """Returns the LDAP configuration to use.
