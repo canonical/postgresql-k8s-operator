@@ -1,20 +1,20 @@
-# Release Notes
+# Releases
 
 This page provides high-level overviews of the dependencies and features that are supported by each revision in every stable release.
 
 To learn more about the different release tracks and channels, see the [Juju documentation about channels](https://juju.is/docs/juju/channel#heading--risk).
 
-To see all releases and commits, check the [Charmed PostgreSQL Releases page on GitHub](https://github.com/canonical/postgresql-k8s-operator/releases).
+To see all releases and commits, check the [Charmed PostgreSQL Releases on GitHub](https://github.com/canonical/postgresql-k8s-operator/releases).
 
 ## Dependencies and supported features
 
 For a given release, this table shows:
 * The PostgreSQL version packaged inside
 * The minimum Juju version required to reliably operate **all** features of the release
-   > This charm still supports older versions of Juju down to 2.9. See the [Juju section of the system requirements](/t/) for more details
+   > This charm still supports older versions of Juju down to 2.9. See the [system requirements](/t/11744) for more details
 * Support for specific features
 
-| Revision | PostgreSQL version | Juju version | [TLS encryption](/t/9685)* | [COS monitoring](/t/10600) | [Minor version upgrades](/t/) | [Cross-regional async replication](/t/) | [Point-in-time recovery](/t/) | [PITR Timelines](/t/) |
+| Revision | PostgreSQL version | Juju version | [TLS encryption](/t/9685)* | [COS monitoring](/t/10600) | [Minor version upgrades](/t/12092) | [Cross-regional async replication](/t/15413) | [Point-in-time recovery](/t/9597) | [PITR Timelines](/t/9597) |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | [462], [463] | 14.13 | `3.6.1+` | ![check] | ![check] | ![check] | ![check] | ![check] | ![check] |
 | [444], [445] | 14.12 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] | ![check] | |
@@ -96,23 +96,26 @@ Several [revisions](https://juju.is/docs/sdk/revision) are released simultaneous
 
 For a list of all plugins supported for each revision, see the reference page [Plugins/extensions](/t/10945).
 
-[note]
- Our release notes are an ongoing work in progress. If there is any additional information about releases that you would like to see or suggestions for other improvements, don't hesitate to contact us on [Matrix ](https://matrix.to/#/#charmhub-data-platform:ubuntu.com) or [leave a comment](https://discourse.charmhub.io/t/charmed-postgresql-k8s-reference-release-notes/11872).
-[/note]
+
+> **Note** Our release notes are an ongoing work in progress. If there is any additional information about releases that you would like to see or suggestions for other improvements, don't hesitate to contact us on [Matrix ](https://matrix.to/#/#charmhub-data-platform:ubuntu.com) or [leave a comment](https://discourse.charmhub.io/t/charmed-postgresql-k8s-reference-release-notes/11872).
 
 <!-- LINKS -->
-[462]: /t/16008
-[463]: /t/16008
-[445]: /t/15966
-[444]: /t/15966
-[382]: /t/15442
-[381]: /t/15442
-[281]: /t/14068
-[280]: /t/14068
-[193]: /t/13208
-[177]: /t/12668
-[158]: /t/11874
-[73]: /t/11873
+[462]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev462
+[463]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev462
+
+[445]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev444
+[444]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev444
+
+[382]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev381
+[381]: [/t/15442](https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev381)
+
+[281]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev280
+[280]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev280
+
+[193]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev193
+[177]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev177
+[158]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev158
+[73]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev73
 
 <!--BADGES-->
 [check]: https://img.icons8.com/color/20/checkmark--v1.png
