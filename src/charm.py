@@ -470,13 +470,22 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         else:
             return None
 
+    def updated_synchronous_node_count(self) -> bool:
+        """Tries to update synchronous_node_count configuration and reports the result."""
+        try:
+            self._patroni.update_synchronous_node_count()
+            return True
+        except RetryError:
+            logger.debug("Unable to set synchronous_node_count")
+            return False
+
     def _on_peer_relation_departed(self, event: RelationDepartedEvent) -> None:
         """The leader removes the departing units from the list of cluster members."""
         # Allow leader to update endpoints if it isn't leaving.
         if not self.unit.is_leader() or event.departing_unit == self.unit:
             return
 
-        if not self.is_cluster_initialised:
+        if not self.is_cluster_initialised or not self.updated_synchronous_node_count():
             logger.debug(
                 "Deferring on_peer_relation_departed: Cluster must be initialized before members can leave"
             )
@@ -680,6 +689,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.unit.status = BlockedStatus("Configuration Error. Please check the logs")
             logger.error("Invalid configuration: %s", str(e))
             return
+        if not self.updated_synchronous_node_count():
+            logger.debug("Defer on_config_changed: unable to set synchronous node count")
+            event.defer()
+            return
 
         if self.is_blocked and "Configuration Error" in self.unit.status.message:
             self._set_active_status()
@@ -693,6 +706,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Enable and/or disable the extensions.
         self.enable_disable_extensions()
 
+        self._unblock_extensions()
+
+    def _unblock_extensions(self) -> None:
         # Unblock the charm after extensions are enabled (only if it's blocked due to application
         # charms requesting extensions).
         if self.unit.status.message != EXTENSIONS_BLOCKING_MESSAGE:
@@ -803,6 +819,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             for member in self._hosts - self._patroni.cluster_members:
                 logger.debug("Adding %s to cluster", member)
                 self.add_cluster_member(member)
+            self._patroni.update_synchronous_node_count()
         except NotReadyError:
             logger.info("Deferring reconfigure: another member doing sync right now")
             event.defer()
