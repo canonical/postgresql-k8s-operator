@@ -47,9 +47,7 @@ async def test_config_parameters(ops_test: OpsTest, charm) -> None:
         {
             "instance_password_encryption": [test_string, "scram-sha-256"]
         },  # config option is one of `md5` or `scram-sha-256`
-        {
-            "logging_client_min_messages": [test_string, "notice"]
-        },
+        {"logging_client_min_messages": [test_string, "notice"]},
         # config option is one of 'debug5', 'debug4', 'debug3', 'debug2', 'debug1', 'log', 'notice', 'warning' or 'error'.
         {
             "logging_log_min_duration_statement": ["-2", "-1"]
@@ -108,9 +106,9 @@ async def test_config_parameters(ops_test: OpsTest, charm) -> None:
             "optimizer_parallel_tuple_cost": ["-1", "0.1"]
         },  # config option is between 0 and 1.80E+308
         {"profile": [test_string, "testing"]},  # config option is one of `testing` or `production`
-        #{
+        # {
         #    "profile_limit_memory": {"127", "128"}
-        #},  # config option is between 128 and 9999999
+        # },  # config option is between 128 and 9999999
         {
             "request_backslash_quote": [test_string, "safe_encoding"]
         },  # config option is one of `safe_encoding` and `on` and `off`

@@ -580,7 +580,7 @@ options:
       Production will tune postgresql for maximum performance while testing will tune for
       minimal running performance.
     type: string
-    default: production
+    default: "production"
   profile_limit_memory:
     type: int
     description: |
