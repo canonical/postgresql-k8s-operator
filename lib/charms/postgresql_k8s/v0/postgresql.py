@@ -662,6 +662,8 @@ END; $$;"""
         for config, value in config_options.items():
             # Filter config option not related to PostgreSQL parameters.
             if not config.startswith((
+                "connection",
+                "cpu",
                 "durability",
                 "instance",
                 "logging",
@@ -669,11 +671,9 @@ END; $$;"""
                 "optimizer",
                 "request",
                 "response",
-                "vacuum",
-                "storage",
-                "cpu",
-                "connection",
                 "session",
+                "storage",
+                "vacuum",
             )):
                 continue
             parameter = "_".join(config.split("_")[1:])
