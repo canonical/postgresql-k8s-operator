@@ -13,7 +13,7 @@ from tenacity import RetryError, stop_after_delay, wait_fixed
 
 from charm import PostgresqlOperatorCharm
 from constants import REWIND_USER
-from patroni import PATRONI_TIMEOUT, Patroni, SwitchoverFailedError
+from patroni import PATRONI_TIMEOUT, Patroni, SwitchoverFailedError, SwitchoverNotSyncError
 from tests.helpers import STORAGE_PATH
 
 
@@ -331,11 +331,9 @@ def test_switchover(harness, patroni):
         # Test failed switchovers.
         _post.reset_mock()
         _get_primary.side_effect = ["postgresql-k8s-0", "postgresql-k8s-1"]
-        try:
+        with pytest.raises(SwitchoverFailedError):
             patroni.switchover("postgresql-k8s/2")
             assert False
-        except SwitchoverFailedError:
-            pass
         _post.assert_called_once_with(
             "http://postgresql-k8s-0:8008/switchover",
             json={"leader": "postgresql-k8s-0", "candidate": "postgresql-k8s-2"},
@@ -347,11 +345,9 @@ def test_switchover(harness, patroni):
         _post.reset_mock()
         _get_primary.side_effect = ["postgresql-k8s-0", "postgresql-k8s-2"]
         response.status_code = 400
-        try:
+        with pytest.raises(SwitchoverFailedError):
             patroni.switchover("postgresql-k8s/2")
             assert False
-        except SwitchoverFailedError:
-            pass
         _post.assert_called_once_with(
             "http://postgresql-k8s-0:8008/switchover",
             json={"leader": "postgresql-k8s-0", "candidate": "postgresql-k8s-2"},
@@ -359,6 +355,14 @@ def test_switchover(harness, patroni):
             auth=patroni._patroni_auth,
             timeout=PATRONI_TIMEOUT,
         )
+
+        # Test candidate, not sync
+        response = _post.return_value
+        response.status_code = 412
+        response.text = "candidate name does not match with sync_standby"
+        with pytest.raises(SwitchoverNotSyncError):
+            patroni.switchover("candidate")
+            assert False
 
 
 def test_member_replication_lag(harness, patroni):

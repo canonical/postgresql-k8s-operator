@@ -53,6 +53,10 @@ class SwitchoverFailedError(Exception):
     """Raised when a switchover failed for some reason."""
 
 
+class SwitchoverNotSyncError(SwitchoverFailedError):
+    """Raised when a switchover failed because node is not sync."""
+
+
 class UpdateSyncNodeCountError(Exception):
     """Raised when updating synchronous_node_count failed for some reason."""
 
@@ -612,7 +616,7 @@ class Patroni:
             timeout=PATRONI_TIMEOUT,
         )
 
-    def switchover(self, candidate: str | None = None) -> None:
+    def switchover(self, candidate: str | None = None, wait: bool = True) -> None:
         """Trigger a switchover."""
         # Try to trigger the switchover.
         if candidate is not None:
@@ -631,7 +635,17 @@ class Patroni:
 
         # Check whether the switchover was unsuccessful.
         if r.status_code != 200:
+            if (
+                r.status_code == 412
+                and r.text == "candidate name does not match with sync_standby"
+            ):
+                logger.debug("Unit is not sync standby")
+                raise SwitchoverNotSyncError()
+            logger.warning(f"Switchover call failed with code {r.status_code} {r.text}")
             raise SwitchoverFailedError(f"received {r.status_code}")
+
+        if not wait:
+            return
 
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
             with attempt:

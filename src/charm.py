@@ -112,7 +112,7 @@ from constants import (
     WORKLOAD_OS_GROUP,
     WORKLOAD_OS_USER,
 )
-from patroni import NotReadyError, Patroni, SwitchoverFailedError
+from patroni import NotReadyError, Patroni, SwitchoverFailedError, SwitchoverNotSyncError
 from relations.async_replication import (
     REPLICATION_CONSUMER_RELATION,
     REPLICATION_OFFER_RELATION,
@@ -211,6 +211,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.framework.observe(self.on.stop, self._on_stop)
         self.framework.observe(self.on.get_password_action, self._on_get_password)
         self.framework.observe(self.on.set_password_action, self._on_set_password)
+        self.framework.observe(self.on.promote_to_primary_action, self._on_promote_to_primary)
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
         self.framework.observe(self.on.update_status, self._on_update_status)
         self._storage_path = self.meta.storages["pgdata"].location
@@ -1304,6 +1305,26 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.update_config()
 
         event.set_results({"password": password})
+
+    def _on_promote_to_primary(self, event: ActionEvent) -> None:
+        if event.params.get("scope") == "cluster":
+            return self.async_replication.promote_to_primary(event)
+        elif event.params.get("scope") == "unit":
+            return self.promote_primary_unit(event)
+        else:
+            event.fail("Scope should be either cluster or unit")
+
+    def promote_primary_unit(self, event: ActionEvent) -> None:
+        """Handles promote to primary for unit scope."""
+        if event.params.get("force"):
+            event.fail("Suprerfluous force flag with unit scope")
+        else:
+            try:
+                self._patroni.switchover(self.unit.name, wait=False)
+            except SwitchoverNotSyncError:
+                event.fail("Unit is not sync standby")
+            except SwitchoverFailedError:
+                event.fail("Switchover failed or timed out, check the logs for details")
 
     def _on_get_primary(self, event: ActionEvent) -> None:
         """Get primary instance."""
