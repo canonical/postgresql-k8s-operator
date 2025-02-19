@@ -51,6 +51,7 @@ async def test_deploy_charms(ops_test: OpsTest, charm):
                     "plugin_unaccent_enable": "True",
                     "plugin_pg_trgm_enable": "True",
                 },
+                trust=True,
             ),
         )
 

@@ -30,8 +30,8 @@ from ..helpers import (
 from .helpers import (
     are_writes_increasing,
     check_writes,
+    get_leader,
     get_standby_leader,
-    get_sync_standby,
     start_continuous_writes,
 )
 
@@ -240,7 +240,7 @@ async def test_switchover(
     leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME, model=second_model)
     assert leader_unit is not None, "No leader unit found"
     logger.info("promoting the second cluster")
-    run_action = await leader_unit.run_action("promote-to-primary", **{"force": True})
+    run_action = await leader_unit.run_action("promote-to-primary", force=True, scope="cluster")
     await run_action.wait()
     assert (run_action.results.get("return-code", None) == 0) or (
         run_action.results.get("Code", None) == "0"
@@ -295,7 +295,7 @@ async def test_promote_standby(
     leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
     assert leader_unit is not None, "No leader unit found"
     logger.info("promoting the first cluster")
-    run_action = await leader_unit.run_action("promote-to-primary")
+    run_action = await leader_unit.run_action("promote-to-primary", scope="cluster")
     await run_action.wait()
     assert (run_action.results.get("return-code", None) == 0) or (
         run_action.results.get("Code", None) == "0"
@@ -406,11 +406,11 @@ async def test_async_replication_failover_in_main_cluster(
     logger.info("checking whether writes are increasing")
     await are_writes_increasing(ops_test)
 
-    sync_standby = await get_sync_standby(first_model, DATABASE_APP_NAME)
-    logger.info(f"Sync-standby: {sync_standby}")
-    logger.info("deleting the sync-standby pod")
+    primary = await get_leader(first_model, DATABASE_APP_NAME)
+    logger.info(f"Primary: {primary}")
+    logger.info("deleting the primary pod")
     client = Client(namespace=first_model.info.name)
-    client.delete(Pod, name=sync_standby.replace("/", "-"))
+    client.delete(Pod, name=primary.replace("/", "-"))
 
     async with ops_test.fast_forward(FAST_INTERVAL), fast_forward(second_model, FAST_INTERVAL):
         await gather(
@@ -423,9 +423,9 @@ async def test_async_replication_failover_in_main_cluster(
         )
 
     # Check that the sync-standby unit is not the same as before.
-    new_sync_standby = await get_sync_standby(first_model, DATABASE_APP_NAME)
-    logger.info(f"New sync-standby: {new_sync_standby}")
-    assert new_sync_standby != sync_standby, "Sync-standby is the same as before"
+    new_primary = await get_leader(first_model, DATABASE_APP_NAME)
+    logger.info(f"New sync-standby: {new_primary}")
+    assert new_primary != primary, "Sync-standby is the same as before"
 
     logger.info("Ensure continuous_writes after the crashed unit")
     await are_writes_increasing(ops_test)

@@ -5,9 +5,10 @@
 """Structured configuration for the PostgreSQL charm."""
 
 import logging
+from typing import Literal
 
 from charms.data_platform_libs.v0.data_models import BaseConfigModel
-from pydantic import validator
+from pydantic import PositiveInt, validator
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 class CharmConfig(BaseConfigModel):
     """Manager for the structured configuration."""
 
+    synchronous_node_count: Literal["all", "majority"] | PositiveInt
     connection_authentication_timeout: int | None
     connection_statement_timeout: int | None
     cpu_parallel_leader_participation: bool | None

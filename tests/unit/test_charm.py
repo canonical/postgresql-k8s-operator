@@ -26,7 +26,7 @@ from tenacity import RetryError, wait_fixed
 
 from charm import EXTENSION_OBJECT_MESSAGE, PostgresqlOperatorCharm
 from constants import PEER, SECRET_INTERNAL_LABEL
-from patroni import NotReadyError
+from patroni import NotReadyError, SwitchoverFailedError, SwitchoverNotSyncError
 from tests.unit.helpers import _FakeApiError
 
 POSTGRESQL_CONTAINER = "postgresql"
@@ -290,6 +290,9 @@ def test_on_config_changed(harness):
             "charm.PostgreSQLUpgrade.idle", return_value=False, new_callable=PropertyMock
         ) as _idle,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
+        patch(
+            "charm.PostgresqlOperatorCharm.updated_synchronous_node_count", return_value=True
+        ) as _updated_synchronous_node_count,
         patch("charm.Patroni.member_started", return_value=True, new_callable=PropertyMock),
         patch("charm.Patroni.get_primary"),
         patch(
@@ -332,6 +335,14 @@ def test_on_config_changed(harness):
         harness.charm._on_config_changed(mock_event)
         assert isinstance(harness.charm.unit.status, ActiveStatus)
         assert not _enable_disable_extensions.called
+        _updated_synchronous_node_count.assert_called_once_with()
+
+        # Deferst on update sync nodes failure
+        _updated_synchronous_node_count.return_value = False
+        harness.charm._on_config_changed(mock_event)
+        mock_event.defer.assert_called_once_with()
+        mock_event.defer.reset_mock()
+        _updated_synchronous_node_count.return_value = True
 
         # Leader enables extensions
         with harness.hooks_disabled():
@@ -681,6 +692,7 @@ def test_on_peer_relation_departed(harness):
             "charm.PostgresqlOperatorCharm._get_endpoints_to_remove", return_value=sentinel.units
         ) as _get_endpoints_to_remove,
         patch("charm.PostgresqlOperatorCharm._remove_from_endpoints") as _remove_from_endpoints,
+        patch("charm.PostgresqlOperatorCharm.updated_synchronous_node_count"),
     ):
         # Early exit if not leader
         event = Mock()
@@ -1835,3 +1847,42 @@ def test_get_plugins(harness):
             "insert_username",
             "moddatetime",
         ]
+
+
+def test_on_promote_to_primary(harness):
+    with (
+        patch("charm.PostgreSQLAsyncReplication.promote_to_primary") as _promote_to_primary,
+        patch("charm.Patroni.switchover") as _switchover,
+    ):
+        event = Mock()
+        event.params = {"scope": "cluster"}
+
+        # Cluster
+        harness.charm._on_promote_to_primary(event)
+        _promote_to_primary.assert_called_once_with(event)
+
+        # Unit, no force, regular promotion
+        event.params = {"scope": "unit"}
+
+        harness.charm._on_promote_to_primary(event)
+
+        _switchover.assert_called_once_with("postgresql-k8s/0", wait=False)
+
+        # Unit, no force, switchover failed
+        event.params = {"scope": "unit"}
+        _switchover.side_effect = SwitchoverFailedError
+
+        harness.charm._on_promote_to_primary(event)
+
+        event.fail.assert_called_once_with(
+            "Switchover failed or timed out, check the logs for details"
+        )
+        event.fail.reset_mock()
+
+        # Unit, no force, not sync
+        event.params = {"scope": "unit"}
+        _switchover.side_effect = SwitchoverNotSyncError
+
+        harness.charm._on_promote_to_primary(event)
+
+        event.fail.assert_called_once_with("Unit is not sync standby")

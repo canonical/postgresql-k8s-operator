@@ -97,7 +97,7 @@ async def test_tls(ops_test: OpsTest) -> None:
         patroni_password = await get_password(ops_test, "patroni")
         cluster_info = requests.get(f"https://{primary_address}:8008/cluster", verify=False)
         for member in cluster_info.json()["members"]:
-            if member["role"] == "replica":
+            if member["role"] != "leader":
                 replica = "/".join(member["name"].rsplit("-", 1))
 
         # Check if TLS enabled for replication

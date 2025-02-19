@@ -53,6 +53,14 @@ class SwitchoverFailedError(Exception):
     """Raised when a switchover failed for some reason."""
 
 
+class SwitchoverNotSyncError(SwitchoverFailedError):
+    """Raised when a switchover failed because node is not sync."""
+
+
+class UpdateSyncNodeCountError(Exception):
+    """Raised when updating synchronous_node_count failed for some reason."""
+
+
 class Patroni:
     """This class handles the communication with Patroni API and configuration files."""
 
@@ -125,6 +133,36 @@ class Patroni:
         else:
             url = self._patroni_url
         return url
+
+    @property
+    def _synchronous_node_count(self) -> int:
+        planned_units = self._charm.app.planned_units()
+        if self._charm.config.synchronous_node_count == "all":
+            return planned_units - 1
+        elif self._charm.config.synchronous_node_count == "majority":
+            return planned_units // 2
+        return (
+            self._charm.config.synchronous_node_count
+            if self._charm.config.synchronous_node_count < self._members_count - 1
+            else planned_units - 1
+        )
+
+    def update_synchronous_node_count(self) -> None:
+        """Update synchronous_node_count."""
+        # Try to update synchronous_node_count.
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+            with attempt:
+                r = requests.patch(
+                    f"{self._patroni_url}/config",
+                    json={"synchronous_node_count": self._synchronous_node_count},
+                    verify=self._verify,
+                    auth=self._patroni_auth,
+                    timeout=PATRONI_TIMEOUT,
+                )
+
+                # Check whether the update was unsuccessful.
+                if r.status_code != 200:
+                    raise UpdateSyncNodeCountError(f"received {r.status_code}")
 
     def get_primary(
         self, unit_name_pattern=False, alternative_endpoints: list[str] | None = None
@@ -525,7 +563,7 @@ class Patroni:
             restore_to_latest=restore_to_latest,
             stanza=stanza,
             restore_stanza=restore_stanza,
-            minority_count=self._members_count // 2,
+            synchronous_node_count=self._synchronous_node_count,
             version=self.rock_postgresql_version.split(".")[0],
             pg_parameters=parameters,
             primary_cluster_endpoint=self._charm.async_replication.get_primary_cluster_endpoint(),
@@ -578,7 +616,7 @@ class Patroni:
             timeout=PATRONI_TIMEOUT,
         )
 
-    def switchover(self, candidate: str | None = None) -> None:
+    def switchover(self, candidate: str | None = None, wait: bool = True) -> None:
         """Trigger a switchover."""
         # Try to trigger the switchover.
         if candidate is not None:
@@ -597,7 +635,17 @@ class Patroni:
 
         # Check whether the switchover was unsuccessful.
         if r.status_code != 200:
+            if (
+                r.status_code == 412
+                and r.text == "candidate name does not match with sync_standby"
+            ):
+                logger.debug("Unit is not sync standby")
+                raise SwitchoverNotSyncError()
+            logger.warning(f"Switchover call failed with code {r.status_code} {r.text}")
             raise SwitchoverFailedError(f"received {r.status_code}")
+
+        if not wait:
+            return
 
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
             with attempt:

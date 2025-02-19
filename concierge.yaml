@@ -8,6 +8,7 @@ providers:
     addons:
       - dns
       - hostpath-storage
+      - rbac
 host:
   snaps:
     jhack:
