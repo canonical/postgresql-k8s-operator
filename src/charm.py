@@ -86,6 +86,7 @@ from config import CharmConfig
 from constants import (
     APP_SCOPE,
     BACKUP_USER,
+    DATABASE_DEFAULT_NAME,
     METRICS_PORT,
     MONITORING_PASSWORD_KEY,
     MONITORING_USER,
@@ -417,7 +418,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             current_host=self.endpoint,
             user=USER,
             password=self.get_secret(APP_SCOPE, f"{USER}-password"),
-            database="postgres",
+            database=DATABASE_DEFAULT_NAME,
             system_users=SYSTEM_USERS,
         )
 
