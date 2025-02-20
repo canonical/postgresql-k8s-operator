@@ -193,14 +193,11 @@ class PostgreSQLTLS(Object):
 
     def _on_certificate_added(self, event: CertificateAddedEvent) -> None:
         """Enable TLS when TLS certificate is added."""
-        if not event.certificate:
+        if not event.ca:
             logger.debug("No certificate available.")
             event.defer()
             return
 
-        new_chain = "\n".join(event.chain) if event.chain is not None else None
-        self.charm.set_secret(SCOPE, "chain", new_chain)
-        self.charm.set_secret(SCOPE, "cert", event.certificate)
         self.charm.set_secret(SCOPE, "ca", event.ca)
 
         try:
@@ -216,8 +213,6 @@ class PostgreSQLTLS(Object):
     def _on_certificate_removed(self, event: CertificateRemovedEvent) -> None:
         """Disable TLS when TLS certificate is removed."""
         self.charm.set_secret(SCOPE, "ca", None)
-        self.charm.set_secret(SCOPE, "cert", None)
-        self.charm.set_secret(SCOPE, "chain", None)
 
         try:
             if not self.charm.remove_tls_files_from_workload():
