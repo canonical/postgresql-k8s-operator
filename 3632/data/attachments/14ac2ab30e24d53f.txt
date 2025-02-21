@@ -1,0 +1,2 @@
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.186:16443/api/v1/namespaces/testing/endpoints?labelSelector=app.juju.is%2Fcreated-by%3Dpostgresql-k8s "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.186:16443/api/v1/namespaces/testing/services?labelSelector=app.juju.is%2Fcreated-by%3Dpostgresql-k8s "HTTP/1.1 200 OK"
