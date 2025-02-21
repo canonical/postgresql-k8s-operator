@@ -141,9 +141,9 @@ postgresql:
   - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 reject
   - {{ 'hostssl' if enable_tls else 'host' }} all all {{ endpoint }}.{{ namespace }}.svc.cluster.local md5
   {%- elif enable_ldap %}
+  - {{ 'hostssl' if enable_tls else 'host' }} all +identity_access 0.0.0.0/0 ldap {{ ldap_parameters }}
   - {{ 'hostssl' if enable_tls else 'host' }} all +internal_access 0.0.0.0/0 md5
   - {{ 'hostssl' if enable_tls else 'host' }} all +relation_access 0.0.0.0/0 md5
-  - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 ldap {{ ldap_parameters }}
   {%- else %}
   - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 md5
   {%- endif %}

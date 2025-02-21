@@ -5,6 +5,7 @@ from unittest.mock import call, patch
 import psycopg2
 import pytest
 from charms.postgresql_k8s.v0.postgresql import (
+    ACCESS_GROUP_IDENTITY,
     ACCESS_GROUP_INTERNAL,
     ACCESS_GROUP_RELATION,
     PERMISSIONS_GROUP_ADMIN,
@@ -176,6 +177,7 @@ def test_create_access_groups(harness):
         harness.charm.postgresql.create_access_groups()
 
         execute.assert_has_calls([
+            call(f"CREATE ROLE {ACCESS_GROUP_IDENTITY} NOLOGIN;"),
             call(f"CREATE ROLE {ACCESS_GROUP_INTERNAL} NOLOGIN;"),
             call(f"CREATE ROLE {ACCESS_GROUP_RELATION} NOLOGIN;"),
             *(

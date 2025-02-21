@@ -39,6 +39,7 @@ LIBAPI = 0
 LIBPATCH = 44
 
 # Groups to distinguish HBA access
+ACCESS_GROUP_IDENTITY = "identity_access"
 ACCESS_GROUP_INTERNAL = "internal_access"
 ACCESS_GROUP_RELATION = "relation_access"
 
@@ -299,6 +300,7 @@ class PostgreSQL:
 
         try:
             with self._connect_to_database() as connection, connection.cursor() as cursor:
+                cursor.execute(f"CREATE ROLE {ACCESS_GROUP_IDENTITY} NOLOGIN;")
                 cursor.execute(f"CREATE ROLE {ACCESS_GROUP_INTERNAL} NOLOGIN;")
                 cursor.execute(f"CREATE ROLE {ACCESS_GROUP_RELATION} NOLOGIN;")
                 for user in self.system_users:

@@ -93,10 +93,11 @@ def _apply_roles(
     psql_groups = list(psql_groups)
 
     for regex, group in mapping_rules:
+        groups = [group, "identity_access"]
         users = [user for user in psql_users if regex.match(user)]
 
         psql_client.revoke_group_memberships(psql_groups, users)
-        psql_client.grant_group_memberships([group], users)
+        psql_client.grant_group_memberships(groups, users)
         memberships_updated += len(users)
 
     logger.info(f"Updated {memberships_updated} group memberships")
@@ -115,7 +116,7 @@ def main():
     while True:
         logger.info("Fetching users from PostgreSQL and LDAP")
         ldap_users = ldap_client.search_users()
-        psql_users = psql_client.search_users()
+        psql_users = psql_client.search_users(from_group="identity_access")
         matched_users = matcher.match_users(ldap_users, psql_users)
 
         logger.info("Fetching groups from PostgreSQL")
