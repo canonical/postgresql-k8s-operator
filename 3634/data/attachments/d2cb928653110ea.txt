@@ -1,0 +1,169 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/postgresql-k8s-495
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:174 waiting for idle
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [idle] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] active: Primary
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:184 get pvc for postgresql-k8s2/0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.72:16443/api/v1/namespaces/testing/persistentvolumeclaims "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:189 scale to 0
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:192 load and change pv-name config for pvc postgresql-k8s2-pgdata-4cf5cc1c-postgresql-k8s2-0
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:195 delete pvc postgresql-k8s2-pgdata-4cf5cc1c-postgresql-k8s2-0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: DELETE https://10.1.0.72:16443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s2-pgdata-4cf5cc1c-postgresql-k8s2-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:198 remove claimref from pv pvc-a2805196-7121-4451-b945-077da24373eb
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH https://10.1.0.72:16443/api/v1/persistentvolumes/pvc-a2805196-7121-4451-b945-077da24373eb "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:201 apply pvc for postgresql-k8s2/0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH https://10.1.0.72:16443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s2-pgdata-4cf5cc1c-postgresql-k8s2-0?fieldManager=lightkube "HTTP/1.1 201 Created"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:204 scale to 1
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:207 waiting for duplicate application to be blocked
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2 (not enough units yet - 0/1)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:213 Application is not in blocked state. Checking logs...
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:216 checking operator password auth
+[32mINFO    [0m pytest_operator.plugin:plugin.py:936 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.2    unsupported  01:46:33Z
+
+App              Version  Status   Scale  Charm           Channel    Rev  Address         Exposed  Message
+postgresql-k8s2  14.15    waiting      1  postgresql-k8s  14/stable  495  10.152.183.190  no       installing agent
+
+Unit                Workload  Agent      Address       Ports  Message
+postgresql-k8s2/0*  waiting   executing  10.1.232.142         awaiting for primary endpoint to be ready
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:942 Juju error logs:
+
+unit-postgresql-k8s-0: 01:34:23 ERROR unit.postgresql-k8s/0.juju-log failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 338, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 153, in _connect_to_database
+    connection = psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.testing.svc.cluster.local" (10.152.183.187), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/charm.py", line 728, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 365, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+charms.postgresql_k8s.v0.postgresql.PostgreSQLEnableDisableExtensionError
+unit-postgresql-k8s-0: 01:34:37 ERROR unit.postgresql-k8s/0.juju-log failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 338, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 153, in _connect_to_database
+    connection = psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.testing.svc.cluster.local" (10.152.183.187), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/charm.py", line 728, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 365, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+charms.postgresql_k8s.v0.postgresql.PostgreSQLEnableDisableExtensionError
+unit-postgresql-k8s2-0: 01:36:59 ERROR unit.postgresql-k8s2/0.juju-log failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 338, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 153, in _connect_to_database
+    connection = psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/venv/lib/python3.10/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s2-primary.testing.svc.cluster.local" (10.152.183.122), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/src/charm.py", line 728, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 365, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+charms.postgresql_k8s.v0.postgresql.PostgreSQLEnableDisableExtensionError
+unit-postgresql-k8s2-0: 01:37:11 ERROR unit.postgresql-k8s2/0.juju-log failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 338, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 153, in _connect_to_database
+    connection = psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/venv/lib/python3.10/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s2-primary.testing.svc.cluster.local" (10.152.183.122), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/src/charm.py", line 728, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1065, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 365, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+charms.postgresql_k8s.v0.postgresql.PostgreSQLEnableDisableExtensionError
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1024 Forgetting model main...
