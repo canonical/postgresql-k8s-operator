@@ -3,9 +3,9 @@
 import datetime
 from unittest.mock import MagicMock, PropertyMock, call, mock_open, patch
 
+import botocore
 import pytest
 from boto3.exceptions import S3UploadFailedError
-import botocore
 from botocore.exceptions import ClientError
 from jinja2 import Template
 from ops import ActiveStatus, BlockedStatus, MaintenanceStatus, Unit
