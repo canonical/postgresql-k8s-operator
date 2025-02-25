@@ -5,6 +5,7 @@ from unittest.mock import MagicMock, PropertyMock, call, mock_open, patch
 
 import pytest
 from boto3.exceptions import S3UploadFailedError
+import botocore
 from botocore.exceptions import ClientError
 from jinja2 import Template
 from ops import ActiveStatus, BlockedStatus, MaintenanceStatus, Unit
@@ -2028,6 +2029,7 @@ def test_upload_content_to_s3(harness, tls_ca_chain_filename):
         assert harness.charm.backup._upload_content_to_s3(content, s3_path, s3_parameters) is False
         _resource.assert_called_once_with(
             "s3",
+            config=botocore.client.Config(signature_version="s3"),
             endpoint_url="https://s3.us-east-1.amazonaws.com",
             verify=(tls_ca_chain_filename or None),
         )
@@ -2040,6 +2042,7 @@ def test_upload_content_to_s3(harness, tls_ca_chain_filename):
         assert harness.charm.backup._upload_content_to_s3(content, s3_path, s3_parameters) is False
         _resource.assert_called_once_with(
             "s3",
+            config=botocore.client.Config(signature_version="s3"),
             endpoint_url="https://s3.us-east-1.amazonaws.com",
             verify=(tls_ca_chain_filename or None),
         )
@@ -2054,6 +2057,7 @@ def test_upload_content_to_s3(harness, tls_ca_chain_filename):
         assert harness.charm.backup._upload_content_to_s3(content, s3_path, s3_parameters) is True
         _resource.assert_called_once_with(
             "s3",
+            config=botocore.client.Config(signature_version="s3"),
             endpoint_url="https://s3.us-east-1.amazonaws.com",
             verify=(tls_ca_chain_filename or None),
         )
