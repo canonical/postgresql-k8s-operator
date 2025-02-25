@@ -7,7 +7,7 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from .. import markers
+from . import markers
 from .helpers import (
     DATABASE_APP_NAME,
     STORAGE_PATH,
