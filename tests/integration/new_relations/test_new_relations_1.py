@@ -327,7 +327,7 @@ async def test_an_application_can_request_multiple_databases(ops_test: OpsTest):
     assert first_database_connection_string != second_database_connection_string
 
 
-async def test_no_read_only_endpoint_in_standalone_cluster(ops_test: OpsTest):
+async def test_primary_read_only_endpoint_in_standalone_cluster(ops_test: OpsTest):
     """Test that there is no read-only endpoint in a standalone cluster."""
     async with ops_test.fast_forward():
         # Scale down the database.
@@ -340,7 +340,7 @@ async def test_no_read_only_endpoint_in_standalone_cluster(ops_test: OpsTest):
             APPLICATION_APP_NAME,
             FIRST_DATABASE_RELATION_NAME,
             "read-only-endpoints",
-            exists=False,
+            exists=True,
         )
 
 

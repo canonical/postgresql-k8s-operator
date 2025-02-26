@@ -120,7 +120,7 @@ class PostgreSQLProvider(Object):
                 self.database_provides.set_tls_ca(event.relation.id, ca)
 
             # Update the read-only endpoint.
-            self.update_read_only_endpoint(event)
+            self.update_read_only_endpoint(event, user, password)
 
             # Set the database version.
             self.database_provides.set_version(
@@ -184,7 +184,13 @@ class PostgreSQLProvider(Object):
                 f"Failed to delete user during {self.relation_name} relation broken event"
             )
 
-    def update_read_only_endpoint(self, event: DatabaseRequestedEvent = None) -> None:
+    def update_read_only_endpoint(
+        self,
+        event: DatabaseRequestedEvent | None = None,
+        user: str | None = None,
+        password: str | None = None,
+        database: str | None = None,
+    ) -> None:
         """Set the read-only endpoint only if there are replicas."""
         if not self.charm.unit.is_leader():
             return
@@ -193,18 +199,36 @@ class PostgreSQLProvider(Object):
         endpoints = (
             f"{self.charm.replicas_endpoint}:{DATABASE_PORT}"
             if len(self.charm._peers.units) > 0
-            else ""
+            else f"{self.charm.primary_endpoint}:{DATABASE_PORT}"
         )
 
         # Get the current relation or all the relations
         # if this is triggered by another type of event.
         relations = [event.relation] if event else self.model.relations[self.relation_name]
+        if not event:
+            user = None
+            password = None
+            database = None
 
         for relation in relations:
+            if not user or not password or not database:
+                user = f"relation_id_{relation.id}"
+                database = self.database_provides.fetch_relation_field(relation.id, "database")
+                password = self.database_provides.fetch_my_relation_field(relation.id, "password")
+
             self.database_provides.set_read_only_endpoints(
                 relation.id,
                 endpoints,
             )
+            # Set connection string URI.
+            self.database_provides.set_read_only_uris(
+                event.relation.id,
+                f"postgresql://{user}:{password}@{endpoints}/{database}",
+            )
+            # Reset the creds for the next iteration
+            user = None
+            password = None
+            database = None
 
     def update_tls_flag(self, tls: str) -> None:
         """Update TLS flag and CA in relation databag."""
