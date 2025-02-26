@@ -259,7 +259,7 @@ class Patroni:
                     return [
                         member["name"]
                         for member in self.get_cluster(attempt)["members"]
-                        if member["state"] in ("streaming", "running")
+                        if member["state"] in RUNNING_STATES
                     ]
         except Exception:
             return []
