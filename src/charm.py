@@ -36,7 +36,7 @@ from charms.data_platform_libs.v1.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v1.loki_push_api import LogProxyConsumer
 from charms.postgresql_k8s.v0.postgresql import (
-    PERMISSIONS_GROUP_ADMIN,
+    ACCESS_GROUP_IDENTITY,
     REQUIRED_PLUGINS,
     PostgreSQL,
     PostgreSQLEnableDisableExtensionError,
@@ -1757,10 +1757,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         ldap_base_dn = ldap_params["ldapbasedn"]
         ldap_bind_username = ldap_params["ldapbinddn"]
         ldap_bing_password = ldap_params["ldapbindpasswd"]
-
-        ldap_mapping_rules = self.postgresql.build_postgresql_user_map(self.config.ldap_map)
-        ldap_mapping_rules = json.dumps(ldap_mapping_rules)
-        ldap_mapping_filter = json.dumps([PERMISSIONS_GROUP_ADMIN])
+        ldap_group_mappings = self.postgresql.build_postgresql_group_map(self.config.ldap_map)
 
         return {
             "override": "replace",
@@ -1773,8 +1770,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 "LDAP_BASE_DN": ldap_base_dn,
                 "LDAP_BIND_USERNAME": ldap_bind_username,
                 "LDAP_BIND_PASSWORD": ldap_bing_password,
-                "LDAP_MAPPING_RULES": ldap_mapping_rules,
-                "LDAP_MAPPING_FILTERS": ldap_mapping_filter,
+                "LDAP_GROUP_IDENTITY": json.dumps(ACCESS_GROUP_IDENTITY),
+                "LDAP_GROUP_MAPPINGS": json.dumps(ldap_group_mappings),
                 "POSTGRES_HOST": "127.0.0.1",
                 "POSTGRES_PORT": DATABASE_PORT,
                 "POSTGRES_DATABASE": DATABASE_DEFAULT_NAME,
@@ -2115,7 +2112,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _validate_config_options(self) -> None:
         """Validates specific config options that need access to the database or to the TLS status."""
-        if not self.postgresql.validate_user_map(self.config.ldap_map):
+        if not self.postgresql.validate_group_map(self.config.ldap_map):
             raise ValueError("ldap_map config option has an invalid value")
 
         if (

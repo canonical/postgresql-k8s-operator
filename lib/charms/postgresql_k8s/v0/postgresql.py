@@ -20,7 +20,6 @@ Any charm using this library should import the `psycopg2` or `psycopg2-binary` d
 """
 
 import logging
-import re
 from collections import OrderedDict
 from typing import Dict, List, Optional, Set, Tuple
 
@@ -42,6 +41,13 @@ LIBPATCH = 44
 ACCESS_GROUP_IDENTITY = "identity_access"
 ACCESS_GROUP_INTERNAL = "internal_access"
 ACCESS_GROUP_RELATION = "relation_access"
+
+# List of access groups to filter role assignments by
+ACCESS_GROUPS = [
+    ACCESS_GROUP_IDENTITY,
+    ACCESS_GROUP_INTERNAL,
+    ACCESS_GROUP_RELATION,
+]
 
 # Groups to distinguish database permissions
 PERMISSIONS_GROUP_ADMIN = "admin"
@@ -665,32 +671,40 @@ END; $$;"""
                 connection.close()
 
     @staticmethod
-    def build_postgresql_user_map(user_map: str) -> List[tuple]:
-        """Build the PostgreSQL authorization user-map.
+    def build_postgresql_group_map(group_map: str) -> List[tuple]:
+        """Build the PostgreSQL authorization group-map.
 
         Args:
-            user_map: serialized user-map following the pg_ident.conf format.
+            group_map: serialized group-map with the following format:
+                <ldap_group_1>=<psql_group_1>,
+                <ldap_group_2>=<psql_group_2>,
+                ...
 
         Returns:
-            List of PostgreSQL user regex selector to PostgreSQL group tuples.
+            List of LDAP group to PostgreSQL group tuples.
         """
-        if not user_map:
+        if not group_map:
             return []
 
-        user_map_rules = user_map.split("\n")
-        user_map_rules = (rule.strip() for rule in user_map_rules)
-        user_map_list = []
+        group_mappings = group_map.split(",")
+        group_mappings = (mapping.strip() for mapping in group_mappings)
+        group_map_list = []
 
-        for rule in user_map_rules:
-            rule_parts = rule.split(" ")
-            if len(rule_parts) != 2:
-                raise Exception("The user-map must contain value pairs separated by a whitespace")
+        for mapping in group_mappings:
+            mapping_parts = mapping.split("=")
+            if len(mapping_parts) != 2:
+                raise Exception("The group-map must contain value pairs split by the equal sign")
 
-            regex = rule_parts[0]
-            group = rule_parts[1]
-            user_map_list.append((regex, group))
+            ldap_group = mapping_parts[0]
+            psql_group = mapping_parts[1]
 
-        return user_map_list
+            if psql_group in [*ACCESS_GROUPS, PERMISSIONS_GROUP_ADMIN]:
+                logger.warning(f"Tried to assign LDAP users to forbidden group: {psql_group}")
+                continue
+
+            group_map_list.append((ldap_group, psql_group))
+
+        return group_map_list
 
     @staticmethod
     def build_postgresql_parameters(
@@ -768,42 +782,30 @@ END; $$;"""
         except psycopg2.Error:
             return False
 
-    def validate_user_map(self, user_map: str) -> bool:
-        """Validate the PostgreSQL authorization user-map.
+    def validate_group_map(self, group_map: str) -> bool:
+        """Validate the PostgreSQL authorization group-map.
 
         Args:
-            user_map: serialized user-map following the pg_ident.conf format.
+            group_map: serialized group-map with the following format:
+                <ldap_group_1>=<psql_group_1>,
+                <ldap_group_2>=<psql_group_2>,
+                ...
 
         Returns:
-            Whether the user-map is valid.
+            Whether the group-map is valid.
         """
         try:
-            user_map = self.build_postgresql_user_map(user_map)
+            group_map = self.build_postgresql_group_map(group_map)
         except ValueError:
             return False
 
-        return all(self._validate_user_map_rule(regex, group) for regex, group in user_map)
+        for _, psql_group in group_map:
+            with self._connect_to_database() as connection, connection.cursor() as cursor:
+                query = SQL("SELECT TRUE FROM pg_roles WHERE rolname={};")
+                query = query.format(Literal(psql_group))
+                cursor.execute(query)
 
-    def _validate_user_map_rule(self, regex: str, group: str) -> bool:
-        """Validate the PostgreSQL authorization user-map rule.
-
-        Args:
-            regex: regex of the users to select
-            group: name of the group to assign users to
-
-        Returns:
-            Whether the user-map rule is valid.
-        """
-        try:
-            re.compile(regex)
-        except re.error:
-            return False
-
-        with self._connect_to_database() as connection, connection.cursor() as cursor:
-            cursor.execute(
-                SQL("SELECT TRUE FROM pg_roles WHERE rolname={};").format(Literal(group))
-            )
-            if cursor.fetchone() is None:
-                return False
+                if cursor.fetchone() is None:
+                    return False
 
         return True

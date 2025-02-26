@@ -10,8 +10,8 @@ from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseRequestedEvent,
 )
 from charms.postgresql_k8s.v0.postgresql import (
-    ACCESS_GROUP_INTERNAL,
     ACCESS_GROUP_RELATION,
+    ACCESS_GROUPS,
     INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE,
     PostgreSQLCreateDatabaseError,
     PostgreSQLCreateUserError,
@@ -72,9 +72,9 @@ class PostgreSQLProvider(Object):
         if extra_roles is None:
             return []
 
-        # Make sure the internal access-group is not in the list
+        # Make sure the access-groups are not in the list
         extra_roles_list = [role.lower() for role in extra_roles.split(",")]
-        extra_roles_list = [role for role in extra_roles_list if role != ACCESS_GROUP_INTERNAL]
+        extra_roles_list = [role for role in extra_roles_list if role != ACCESS_GROUPS]
         return extra_roles_list
 
     def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:
