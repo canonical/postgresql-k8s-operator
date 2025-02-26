@@ -164,6 +164,19 @@ class Patroni:
                 if r.status_code != 200:
                     raise UpdateSyncNodeCountError(f"received {r.status_code}")
 
+    def get_cluster(
+        self, attempt: AttemptManager, alternative_endpoints: list[str] | None = None
+    ) -> dict[str, str | int]:
+        """Call the cluster endpoint."""
+        url = self._get_alternative_patroni_url(attempt, alternative_endpoints)
+        r = requests.get(
+            f"{url}/cluster",
+            verify=self._verify,
+            auth=self._patroni_auth,
+            timeout=PATRONI_TIMEOUT,
+        )
+        return r.json()
+
     def get_primary(
         self, unit_name_pattern=False, alternative_endpoints: list[str] | None = None
     ) -> str:
@@ -180,11 +193,7 @@ class Patroni:
         # Request info from cluster endpoint (which returns all members of the cluster).
         for attempt in Retrying(stop=stop_after_attempt(len(self._endpoints) + 1)):
             with attempt:
-                url = self._get_alternative_patroni_url(attempt, alternative_endpoints)
-                r = requests.get(
-                    f"{url}/cluster", verify=self._verify, timeout=5, auth=self._patroni_auth
-                )
-                for member in r.json()["members"]:
+                for member in self.get_cluster(attempt, alternative_endpoints)["members"]:
                     if member["role"] == "leader":
                         primary = member["name"]
                         if unit_name_pattern:
@@ -209,14 +218,7 @@ class Patroni:
         # Request info from cluster endpoint (which returns all members of the cluster).
         for attempt in Retrying(stop=stop_after_attempt(len(self._endpoints) + 1)):
             with attempt:
-                url = self._get_alternative_patroni_url(attempt)
-                r = requests.get(
-                    f"{url}/cluster",
-                    verify=self._verify,
-                    auth=self._patroni_auth,
-                    timeout=PATRONI_TIMEOUT,
-                )
-                for member in r.json()["members"]:
+                for member in self.get_cluster(attempt)["members"]:
                     if member["role"] == "standby_leader":
                         if check_whether_is_running and member["state"] not in RUNNING_STATES:
                             logger.warning(f"standby leader {member['name']} is not running")
@@ -234,30 +236,33 @@ class Patroni:
         # Request info from cluster endpoint (which returns all members of the cluster).
         for attempt in Retrying(stop=stop_after_attempt(len(self._endpoints) + 1)):
             with attempt:
-                url = self._get_alternative_patroni_url(attempt)
-                r = requests.get(
-                    f"{url}/cluster",
-                    verify=self._verify,
-                    auth=self._patroni_auth,
-                    timeout=PATRONI_TIMEOUT,
-                )
-                for member in r.json()["members"]:
+                for member in self.get_cluster(attempt)["members"]:
                     if member["role"] == "sync_standby":
                         sync_standbys.append("/".join(member["name"].rsplit("-", 1)))
         return sync_standbys
 
     @property
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def cluster_members(self) -> set:
         """Get the current cluster members."""
         # Request info from cluster endpoint (which returns all members of the cluster).
-        r = requests.get(
-            f"{self._patroni_url}/cluster",
-            verify=self._verify,
-            auth=self._patroni_auth,
-            timeout=PATRONI_TIMEOUT,
-        )
-        return {member["name"] for member in r.json()["members"]}
+        for attempt in Retrying(
+            stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10)
+        ):
+            with attempt:
+                return {member["name"] for member in self.get_cluster(attempt)["members"]}
+
+    def get_running_cluster_members(self) -> list[str]:
+        """List running patroni members."""
+        try:
+            for attempt in Retrying(stop=stop_after_attempt(1)):
+                with attempt:
+                    return [
+                        member["name"]
+                        for member in self.get_cluster(attempt)["members"]
+                        if member["state"] in ("streaming", "running")
+                    ]
+        except Exception:
+            return []
 
     def are_all_members_ready(self) -> bool:
         """Check if all members are correctly running Patroni and PostgreSQL.
@@ -271,16 +276,12 @@ class Patroni:
         try:
             for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(3)):
                 with attempt:
-                    r = requests.get(
-                        f"{self._patroni_url}/cluster",
-                        verify=self._verify,
-                        auth=self._patroni_auth,
-                        timeout=PATRONI_TIMEOUT,
+                    return all(
+                        member["state"] in RUNNING_STATES
+                        for member in self.get_cluster(attempt)["members"]
                     )
         except RetryError:
             return False
-
-        return all(member["state"] in RUNNING_STATES for member in r.json()["members"])
 
     @property
     def is_creating_backup(self) -> bool:
@@ -291,19 +292,12 @@ class Patroni:
         try:
             for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(3)):
                 with attempt:
-                    r = requests.get(
-                        f"{self._patroni_url}/cluster",
-                        verify=self._verify,
-                        auth=self._patroni_auth,
-                        timeout=PATRONI_TIMEOUT,
+                    return any(
+                        "tags" in member and member["tags"].get("is_creating_backup")
+                        for member in self.get_cluster(attempt)["members"]
                     )
         except RetryError:
             return False
-
-        return any(
-            "tags" in member and member["tags"].get("is_creating_backup")
-            for member in r.json()["members"]
-        )
 
     @property
     def is_replication_healthy(self) -> bool:
