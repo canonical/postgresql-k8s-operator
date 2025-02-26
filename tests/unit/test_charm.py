@@ -479,6 +479,12 @@ def test_on_update_status(harness):
         patch("ops.model.Container.pebble") as _pebble,
         patch("ops.model.Container.restart") as _restart,
         patch("upgrade.PostgreSQLUpgrade.idle", return_value="idle"),
+        patch(
+            "charm.PostgresqlOperatorCharm.is_standby_leader",
+            new_callable=PropertyMock,
+            return_value=False,
+        ),
+        patch("charm.Patroni.get_running_cluster_members", return_value=["test"]),
     ):
         # Early exit on can connect.
         harness.set_can_connect(POSTGRESQL_CONTAINER, False)
@@ -1740,6 +1746,7 @@ def test_handle_postgresql_restart_need(harness):
 def test_set_active_status(harness):
     with (
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
+        patch("charm.Patroni.get_running_cluster_members", return_value=["test"]),
         patch(
             "charm.PostgresqlOperatorCharm.is_standby_leader", new_callable=PropertyMock
         ) as _is_standby_leader,
@@ -1772,7 +1779,9 @@ def test_set_active_status(harness):
                     assert isinstance(harness.charm.unit.status, MaintenanceStatus)
                 else:
                     _is_standby_leader.side_effect = None
-                    _is_standby_leader.return_value = values[1]
+                    _is_standby_leader.return_value = (
+                        values[0] != harness.charm.unit.name and values[1]
+                    )
                     harness.charm._set_active_status()
                     assert isinstance(
                         harness.charm.unit.status,

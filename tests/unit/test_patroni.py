@@ -88,7 +88,7 @@ def test_get_primary(harness, patroni):
         _get.assert_called_once_with(
             "http://postgresql-k8s-0:8008/cluster",
             verify=True,
-            timeout=5,
+            timeout=10,
             auth=patroni._patroni_auth,
         )
 
@@ -99,7 +99,7 @@ def test_get_primary(harness, patroni):
         _get.assert_called_once_with(
             "http://postgresql-k8s-0:8008/cluster",
             verify=True,
-            timeout=5,
+            timeout=10,
             auth=patroni._patroni_auth,
         )
 
