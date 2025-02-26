@@ -222,7 +222,7 @@ class PostgreSQLProvider(Object):
             )
             # Set connection string URI.
             self.database_provides.set_read_only_uris(
-                event.relation.id,
+                relation.id,
                 f"postgresql://{user}:{password}@{endpoints}/{database}",
             )
             # Reset the creds for the next iteration
