@@ -960,6 +960,7 @@ class Data(ABC):
         "username": SECRET_GROUPS.USER,
         "password": SECRET_GROUPS.USER,
         "uris": SECRET_GROUPS.USER,
+        "read-only-uris": SECRET_GROUPS.USER,
         "tls": SECRET_GROUPS.TLS,
         "tls-ca": SECRET_GROUPS.TLS,
     }
