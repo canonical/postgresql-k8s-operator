@@ -21,7 +21,6 @@ from ..helpers import (
 )
 from .helpers import (
     build_connection_string,
-    check_relation_data_existence,
     get_application_relation_data,
 )
 
@@ -335,13 +334,18 @@ async def test_primary_read_only_endpoint_in_standalone_cluster(ops_test: OpsTes
 
         # Try to get the connection string of the database using the read-only endpoint.
         # It should not be available anymore.
-        assert await check_relation_data_existence(
-            ops_test,
-            APPLICATION_APP_NAME,
-            FIRST_DATABASE_RELATION_NAME,
-            "read-only-endpoints",
-            exists=True,
-        )
+        for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True):
+            with attempt:
+                data = await get_application_relation_data(
+                    ops_test,
+                    APPLICATION_APP_NAME,
+                    FIRST_DATABASE_RELATION_NAME,
+                    "read-only-endpoints",
+                )
+                assert (
+                    data
+                    == f"{DATABASE_APP_NAME}-primary.{ops_test.model.name}.svc.cluster.local:5432"
+                )
 
 
 async def test_read_only_endpoint_in_scaled_up_cluster(ops_test: OpsTest):
@@ -352,13 +356,18 @@ async def test_read_only_endpoint_in_scaled_up_cluster(ops_test: OpsTest):
 
         # Try to get the connection string of the database using the read-only endpoint.
         # It should be available again.
-        assert await check_relation_data_existence(
-            ops_test,
-            APPLICATION_APP_NAME,
-            FIRST_DATABASE_RELATION_NAME,
-            "read-only-endpoints",
-            exists=True,
-        )
+        for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(3), reraise=True):
+            with attempt:
+                data = await get_application_relation_data(
+                    ops_test,
+                    APPLICATION_APP_NAME,
+                    FIRST_DATABASE_RELATION_NAME,
+                    "read-only-endpoints",
+                )
+                assert (
+                    data
+                    == f"{DATABASE_APP_NAME}-replicas.{ops_test.model.name}.svc.cluster.local:5432"
+                )
 
 
 async def test_relation_broken(ops_test: OpsTest):
