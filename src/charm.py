@@ -1093,7 +1093,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.postgresql.create_user(
                 MONITORING_USER,
                 self.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY),
-                extra_user_roles="pg_monitor",
+                extra_user_roles=["pg_monitor"],
             )
 
         self.postgresql.set_up_database()
