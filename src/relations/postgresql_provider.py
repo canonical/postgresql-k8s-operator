@@ -211,20 +211,27 @@ class PostgreSQLProvider(Object):
             database = None
 
         for relation in relations:
-            if not user or not password or not database:
-                user = f"relation_id_{relation.id}"
-                database = self.database_provides.fetch_relation_field(relation.id, "database")
-                password = self.database_provides.fetch_my_relation_field(relation.id, "password")
-
             self.database_provides.set_read_only_endpoints(
                 relation.id,
                 endpoints,
             )
-            # Set connection string URI.
-            self.database_provides.set_read_only_uris(
-                relation.id,
-                f"postgresql://{user}:{password}@{endpoints}/{database}",
-            )
+            # Make sure that the URI will be a secret
+            if (
+                secret_fields := self.database_provides.fetch_relation_field(
+                    relation.id, "requested-secrets"
+                )
+            ) and "read-only-uris" in secret_fields:
+                if not user or not password or not database:
+                    user = f"relation_id_{relation.id}"
+                    database = self.database_provides.fetch_relation_field(relation.id, "database")
+                    password = self.database_provides.fetch_my_relation_field(
+                        relation.id, "password"
+                    )
+
+                self.database_provides.set_read_only_uris(
+                    relation.id,
+                    f"postgresql://{user}:{password}@{endpoints}/{database}",
+                )
             # Reset the creds for the next iteration
             user = None
             password = None

@@ -123,7 +123,6 @@ def test_on_database_requested(harness):
             "username": user,
             "password": "test-password",
             "read-only-endpoints": "postgresql-k8s-replicas.None.svc.cluster.local:5432",
-            "read-only-uris": f"postgresql://{user}:test-password@postgresql-k8s-replicas.None.svc.cluster.local:5432/{DATABASE}",
             "uris": f"postgresql://{user}:test-password@postgresql-k8s-primary.None.svc.cluster.local:5432/{DATABASE}",
             "version": POSTGRESQL_VERSION,
             "database": f"{DATABASE}",
@@ -142,7 +141,6 @@ def test_on_database_requested(harness):
             "endpoints": "postgresql-k8s-primary.None.svc.cluster.local:5432",
             "uris": f"postgresql://{user}:test-password@postgresql-k8s-primary.None.svc.cluster.local:5432/{DATABASE}",
             "read-only-endpoints": "postgresql-k8s-replicas.None.svc.cluster.local:5432",
-            "read-only-uris": f"postgresql://{user}:test-password@postgresql-k8s-replicas.None.svc.cluster.local:5432/{DATABASE}",
             "tls": "False",
         }
 
@@ -154,7 +152,6 @@ def test_on_database_requested(harness):
             "data": f'{{"database": "{DATABASE}", "extra-user-roles": "{EXTRA_USER_ROLES}"}}',
             "endpoints": "postgresql-k8s-primary.None.svc.cluster.local:5432",
             "read-only-endpoints": "postgresql-k8s-replicas.None.svc.cluster.local:5432",
-            "read-only-uris": f"postgresql://{user}:test-password@postgresql-k8s-replicas.None.svc.cluster.local:5432/{DATABASE}",
             "uris": f"postgresql://{user}:test-password@postgresql-k8s-primary.None.svc.cluster.local:5432/{DATABASE}",
             "tls": "False",
         }
