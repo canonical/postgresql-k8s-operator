@@ -35,6 +35,7 @@ from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v1.loki_push_api import LogProxyConsumer
 from charms.postgresql_k8s.v0.postgresql import (
+    ACCESS_GROUPS,
     REQUIRED_PLUGINS,
     PostgreSQL,
     PostgreSQLEnableDisableExtensionError,
@@ -1097,6 +1098,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             )
 
         self.postgresql.set_up_database()
+
+        access_groups = self.postgresql.list_access_groups()
+        if access_groups != set(ACCESS_GROUPS):
+            self.postgresql.create_access_groups()
+            self.postgresql.grant_internal_access_group_memberships()
 
         # Mark the cluster as initialised.
         self._peers.data[self.app]["cluster_initialised"] = "True"
