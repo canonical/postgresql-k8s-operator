@@ -107,12 +107,17 @@ def test_on_database_requested(harness):
         # Assert that the correct calls were made.
         user = f"relation_id_{rel_id}"
         postgresql_mock.create_user.assert_called_once_with(
-            user, "test-password", extra_user_roles=EXTRA_USER_ROLES
+            user,
+            "test-password",
+            extra_user_roles=[role.lower() for role in EXTRA_USER_ROLES.split(",")],
         )
         database_relation = harness.model.get_relation(RELATION_NAME)
         client_relations = [database_relation]
         postgresql_mock.create_database.assert_called_once_with(
-            DATABASE, user, plugins=["pgaudit"], client_relations=client_relations
+            DATABASE,
+            user,
+            plugins=["pgaudit"],
+            client_relations=client_relations,
         )
         postgresql_mock.get_postgresql_version.assert_called_once()
 
