@@ -7,6 +7,7 @@ import logging
 from typing import Iterable
 
 from charms.postgresql_k8s.v0.postgresql import (
+    ACCESS_GROUP_RELATION,
     PostgreSQLCreateDatabaseError,
     PostgreSQLCreateUserError,
     PostgreSQLDeleteUserError,
@@ -173,9 +174,11 @@ class DbProvides(Object):
             # created in a previous relation changed event.
             user = f"relation_id_{relation.id}"
             password = unit_relation_databag.get("password", new_password())
-            self.charm.postgresql.create_user(user, password, self.admin)
-            plugins = self.charm.get_plugins()
+            self.charm.postgresql.create_user(
+                user, password, self.admin, extra_user_roles=[ACCESS_GROUP_RELATION]
+            )
 
+            plugins = self.charm.get_plugins()
             self.charm.postgresql.create_database(
                 database, user, plugins=plugins, client_relations=self.charm.client_relations
             )

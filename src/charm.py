@@ -1066,6 +1066,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self.unit.status = BlockedStatus("failed to create k8s services")
                 return False
 
+            # NOTE:
+            # This section has been added to migrate old PostgreSQL instances
+            # to how the modern versions of this codebase (PostgreSQL operator)
+            # assumes access groups will be setup.
+            if not self.postgresql.update_access_roles():
+                logger.exception("failed to create PostgreSQL access groups")
+                self.unit.status = BlockedStatus("failed to create PostgreSQL access groups")
+                return False
+
         async_replication_primary_cluster = self.async_replication.get_primary_cluster()
         if (
             async_replication_primary_cluster is not None
@@ -1097,6 +1106,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             )
 
         self.postgresql.set_up_database()
+        self.postgresql.set_up_access_roles()
 
         # Mark the cluster as initialised.
         self._peers.data[self.app]["cluster_initialised"] = "True"

@@ -5,6 +5,8 @@ from unittest.mock import call, patch
 import psycopg2
 import pytest
 from charms.postgresql_k8s.v0.postgresql import (
+    ACCESS_GROUP_INTERNAL,
+    ACCESS_GROUPS,
     PERMISSIONS_GROUP_ADMIN,
     PostgreSQLCreateDatabaseError,
     PostgreSQLGetLastArchivedWALError,
@@ -19,6 +21,7 @@ from constants import (
     PEER,
     REPLICATION_USER,
     REWIND_USER,
+    SYSTEM_USERS,
     USER,
 )
 
@@ -321,6 +324,55 @@ def test_get_last_archived_wal(harness):
         except PostgreSQLGetLastArchivedWALError:
             pass
         execute.assert_called_once_with("SELECT last_archived_wal FROM pg_stat_archiver;")
+
+
+def test_set_up_access_roles(harness):
+    with patch(
+        "charms.postgresql_k8s.v0.postgresql.PostgreSQL._connect_to_database"
+    ) as _connect_to_database:
+        execute = _connect_to_database.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value.execute
+        harness.charm.postgresql.set_up_access_roles()
+
+        create_role_queries = [
+            SQL("CREATE ROLE {} NOLOGIN;").format(Identifier(access_group))
+            for access_group in ACCESS_GROUPS
+        ]
+
+        assign_role_queries = [
+            SQL("GRANT {} TO {};").format(Identifier(ACCESS_GROUP_INTERNAL), Identifier(user))
+            for user in SYSTEM_USERS
+        ]
+
+        execute.assert_has_calls([
+            call("SELECT groname FROM pg_catalog.pg_groups WHERE groname LIKE '%_access';"),
+            *(call(query) for query in create_role_queries),
+            *(call(query) for query in assign_role_queries),
+        ])
+
+
+def test_update_access_roles(harness):
+    with patch(
+        "charms.postgresql_k8s.v0.postgresql.PostgreSQL._connect_to_database"
+    ) as _connect_to_database:
+        execute = _connect_to_database.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value.execute
+        harness.charm.postgresql.update_access_roles()
+
+        create_role_queries = [
+            SQL("CREATE ROLE {} NOLOGIN;").format(Identifier(access_group))
+            for access_group in ACCESS_GROUPS
+        ]
+
+        assign_role_queries = [
+            SQL("GRANT {} TO {};").format(Identifier(ACCESS_GROUP_INTERNAL), Identifier(user))
+            for user in SYSTEM_USERS
+        ]
+
+        execute.assert_has_calls([
+            call("SELECT groname FROM pg_catalog.pg_groups WHERE groname LIKE '%_access';"),
+            *(call(query) for query in create_role_queries),
+            *(call(query) for query in assign_role_queries),
+            call("SELECT usename FROM pg_catalog.pg_user WHERE usename LIKE 'relation_id_%';"),
+        ])
 
 
 def test_build_postgresql_parameters(harness):
