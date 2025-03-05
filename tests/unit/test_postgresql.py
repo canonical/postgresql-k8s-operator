@@ -375,6 +375,27 @@ def test_update_access_roles(harness):
         ])
 
 
+def test_build_postgresql_group_map(harness):
+    assert harness.charm.postgresql.build_postgresql_group_map("") == []
+    assert harness.charm.postgresql.build_postgresql_group_map("ldap_group=admin") == []
+
+    for group in ACCESS_GROUPS:
+        assert harness.charm.postgresql.build_postgresql_group_map(f"ldap_group={group}") == []
+
+    mapping_1 = "ldap_group_1=psql_group_1"
+    mapping_2 = "ldap_group_2=psql_group_2"
+
+    assert harness.charm.postgresql.build_postgresql_group_map(f"{mapping_1},{mapping_2}") == [
+        ("ldap_group_1", "psql_group_1"),
+        ("ldap_group_2", "psql_group_2"),
+    ]
+    try:
+        harness.charm.postgresql.build_postgresql_group_map(f"{mapping_1} {mapping_2}")
+        assert False
+    except ValueError:
+        assert True
+
+
 def test_build_postgresql_parameters(harness):
     # Test when not limit is imposed to the available memory.
     config_options = {
