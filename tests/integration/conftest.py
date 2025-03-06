@@ -70,9 +70,9 @@ def cleanup_cloud(config: dict[str, str], credentials: dict[str, str]) -> None:
 async def aws_cloud_configs(ops_test: OpsTest) -> None:
     if (
         "AWS_ACCESS_KEY" not in os.environ
-        or not os.envioron["AWS_ACCESS_KEY"].strip()
+        or not os.environ["AWS_ACCESS_KEY"].strip()
         or "AWS_SECRET_KEY" not in os.environ
-        or not os.envioron["AWS_SECRET_KEY"].strip()
+        or not os.environ["AWS_SECRET_KEY"].strip()
     ):
         pytest.skip("AWS configs not set")
         return
@@ -87,9 +87,9 @@ async def aws_cloud_configs(ops_test: OpsTest) -> None:
 async def gcp_cloud_configs(ops_test: OpsTest) -> None:
     if (
         "GCP_ACCESS_KEY" not in os.environ
-        or not os.envioron["GCP_ACCESS_KEY"].strip()
+        or not os.environ["GCP_ACCESS_KEY"].strip()
         or "GCP_SECRET_KEY" not in os.environ
-        or not os.envioron["GCP_SECRET_KEY"].strip()
+        or not os.environ["GCP_SECRET_KEY"].strip()
     ):
         pytest.skip("GCP configs not set")
         return
