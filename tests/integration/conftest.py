@@ -84,7 +84,7 @@ async def aws_cloud_configs(ops_test: OpsTest) -> None:
 @pytest.fixture(scope="module")
 async def gcp_cloud_configs(ops_test: OpsTest) -> None:
     if (
-        not os.environ("GCP_ACCESS_KEY", "").strip()
+        not os.environ.get("GCP_ACCESS_KEY", "").strip()
         or not os.environ.get("GCP_SECRET_KEY", "").strip()
     ):
         pytest.skip("GCP configs not set")
