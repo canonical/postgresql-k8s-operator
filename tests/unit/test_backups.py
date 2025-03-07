@@ -288,6 +288,18 @@ def test_can_use_s3_repository(harness):
         ]
         assert harness.charm.backup.can_use_s3_repository() == (True, None)
 
+        # Empty db
+        _execute_command.side_effect = [
+            (
+                f'[{{"db": [], "name": "another-model.{harness.charm.cluster_name}"}}]',
+                None,
+            )
+        ]
+        assert harness.charm.backup.can_use_s3_repository() == (
+            False,
+            ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE,
+        )
+
 
 def test_construct_endpoint(harness):
     # Test with an AWS endpoint without region.

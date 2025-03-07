@@ -1032,10 +1032,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     self.app_peer_data["s3-initialization-block-message"]
                 )
                 return
-            if self._patroni.get_primary(unit_name_pattern=True) == self.unit.name:
-                self.unit.status = ActiveStatus("Primary")
-            elif self.is_standby_leader:
-                self.unit.status = ActiveStatus("Standby")
+            if (
+                self._patroni.get_primary(unit_name_pattern=True) == self.unit.name
+                or self.is_standby_leader
+            ):
+                danger_state = ""
+                if len(self._patroni.get_running_cluster_members()) < self.app.planned_units():
+                    danger_state = " (degraded)"
+                self.unit.status = ActiveStatus(
+                    f"{'Standby' if self.is_standby_leader else 'Primary'}{danger_state}"
+                )
             elif self._patroni.member_started:
                 self.unit.status = ActiveStatus()
         except (RetryError, RequestsConnectionError) as e:
@@ -1087,7 +1093,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.postgresql.create_user(
                 MONITORING_USER,
                 self.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY),
-                extra_user_roles="pg_monitor",
+                extra_user_roles=["pg_monitor"],
             )
 
         self.postgresql.set_up_database()
