@@ -1,0 +1,91 @@
+[32mINFO    [0m integration.ha_tests.test_upgrade:test_upgrade.py:96 starting continuous writes to the database
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-test-app/0 [idle] active: 
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m integration.ha_tests.test_upgrade:test_upgrade.py:100 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.231:16443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.231:16443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.231:16443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:242 Initial writes {'testing.postgresql-k8s-0': 176, 'testing.postgresql-k8s-1': 178, 'testing.postgresql-k8s-2': 179}
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.231:16443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.231:16443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.231:16443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Retry writes {'testing.postgresql-k8s-0': 307, 'testing.postgresql-k8s-1': 309, 'testing.postgresql-k8s-2': 310}
+[32mINFO    [0m integration.ha_tests.test_upgrade:test_upgrade.py:109 Refresh the charm
+[32mINFO    [0m integration.ha_tests.test_upgrade:test_upgrade.py:112 Wait for upgrade to complete on first upgrading unit
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [idle] waiting: other units upgrading first...
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [idle] waiting: other units upgrading first...
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m integration.ha_tests.test_upgrade:test_upgrade.py:125 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.231:16443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.231:16443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.231:16443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:242 Initial writes {'testing.postgresql-k8s-0': 11435, 'testing.postgresql-k8s-1': 11436, 'testing.postgresql-k8s-2': 11438}
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.231:16443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.231:16443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.231:16443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Retry writes {'testing.postgresql-k8s-0': 11572, 'testing.postgresql-k8s-1': 11574, 'testing.postgresql-k8s-2': 11575}
+[32mINFO    [0m integration.ha_tests.test_upgrade:test_upgrade.py:128 Resume upgrade
+[32mINFO    [0m integration.ha_tests.test_upgrade:test_upgrade.py:133 Wait for upgrade to complete
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [executing] maintenance: stopping charm software
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: other units upgrading first...
+  postgresql-k8s/1 [executing] maintenance: upgrading unit
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: other units upgrading first...
+  postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: other units upgrading first...
+  postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: other units upgrading first...
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] maintenance: 
+  postgresql-k8s/1 [idle] maintenance: upgrade completed
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/1 [idle] maintenance: upgrade completed
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] maintenance: upgrade completed
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m integration.ha_tests.test_upgrade:test_upgrade.py:140 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.231:16443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.231:16443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.231:16443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:242 Initial writes {'testing.postgresql-k8s-0': 30756, 'testing.postgresql-k8s-1': 30757, 'testing.postgresql-k8s-2': 30759}
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.231:16443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.231:16443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.231:16443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Retry writes {'testing.postgresql-k8s-0': 30898, 'testing.postgresql-k8s-1': 30900, 'testing.postgresql-k8s-2': 30901}
+[32mINFO    [0m integration.ha_tests.test_upgrade:test_upgrade.py:145 checking whether no writes were lost
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.231:16443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.231:16443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.231:16443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_upgrade:test_upgrade.py:148 checking the number of switchovers
