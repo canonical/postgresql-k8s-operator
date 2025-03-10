@@ -12,6 +12,7 @@ from charms.data_platform_libs.v0.upgrade import (
     DependencyModel,
     KubernetesClientError,
 )
+from charms.postgresql_k8s.v0.postgresql import ACCESS_GROUPS
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
 from lightkube.resources.apps_v1 import StatefulSet
@@ -121,6 +122,7 @@ class PostgreSQLUpgrade(DataUpgrade):
                 event.defer()
                 return
             self._set_up_new_credentials_for_legacy()
+            self._set_up_new_access_roles_for_legacy()
 
         try:
             for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(10)):
@@ -269,6 +271,16 @@ class PostgreSQLUpgrade(DataUpgrade):
             self._set_rolling_update_partition(self.charm.app.planned_units() - 1)
         except KubernetesClientError as e:
             raise ClusterNotReadyError(e.message, e.cause) from e
+
+    def _set_up_new_access_roles_for_legacy(self) -> None:
+        """Create missing access groups and their memberships."""
+        access_groups = self.charm.postgresql.list_access_groups()
+        if access_groups == set(ACCESS_GROUPS):
+            return
+
+        self.charm.postgresql.create_access_groups()
+        self.charm.postgresql.grant_internal_access_group_memberships()
+        self.charm.postgresql.grant_relation_access_group_memberships()
 
     def _set_up_new_credentials_for_legacy(self) -> None:
         """Create missing password and user."""
