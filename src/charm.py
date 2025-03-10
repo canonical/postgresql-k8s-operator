@@ -2002,6 +2002,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if self.config.request_time_zone not in self.postgresql.get_postgresql_timezones():
             raise ValueError("request_time_zone config option has an invalid value")
 
+        if (
+            self.config.storage_default_table_access_method
+            not in self.postgresql.get_postgresql_default_table_access_methods()
+        ):
+            raise ValueError(
+                "storage_default_table_access_method config option has an invalid value"
+            )
+
         container = self.unit.get_container("postgresql")
         output, _ = container.exec(["locale", "-a"]).wait_output()
         locales = list(output.splitlines())
