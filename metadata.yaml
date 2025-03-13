@@ -45,10 +45,6 @@ provides:
     optional: true
   database:
     interface: postgresql_client
-  db:
-    interface: pgsql
-  db-admin:
-    interface: pgsql
   metrics-endpoint:
     interface: prometheus_scrape
   grafana-dashboard:

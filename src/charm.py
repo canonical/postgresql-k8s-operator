@@ -119,7 +119,6 @@ from relations.async_replication import (
     REPLICATION_OFFER_RELATION,
     PostgreSQLAsyncReplication,
 )
-from relations.db import EXTENSIONS_BLOCKING_MESSAGE, DbProvides
 from relations.postgresql_provider import PostgreSQLProvider
 from upgrade import PostgreSQLUpgrade, get_postgresql_k8s_dependencies_model
 from utils import any_cpu_to_cores, any_memory_to_bytes, new_password
@@ -147,7 +146,6 @@ class CannotConnectError(Exception):
 @trace_charm(
     tracing_endpoint="tracing_endpoint",
     extra_types=(
-        DbProvides,
         GrafanaDashboardProvider,
         LogProxyConsumer,
         MetricsEndpointProvider,
@@ -226,8 +224,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         )
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.postgresql_client_relation = PostgreSQLProvider(self)
-        self.legacy_db_relation = DbProvides(self, admin=False)
-        self.legacy_db_admin_relation = DbProvides(self, admin=True)
         self.backup = PostgreSQLBackups(self, "s3-parameters")
         self.tls = PostgreSQLTLS(self, PEER, [self.primary_endpoint, self.replicas_endpoint])
         self.async_replication = PostgreSQLAsyncReplication(self)
@@ -699,24 +695,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         # Enable and/or disable the extensions.
         self.enable_disable_extensions()
-
-        self._unblock_extensions()
-
-    def _unblock_extensions(self) -> None:
-        # Unblock the charm after extensions are enabled (only if it's blocked due to application
-        # charms requesting extensions).
-        if self.unit.status.message != EXTENSIONS_BLOCKING_MESSAGE:
-            return
-
-        for relation in [
-            *self.model.relations.get("db", []),
-            *self.model.relations.get("db-admin", []),
-        ]:
-            if not self.legacy_db_relation.set_up_relation(relation):
-                logger.debug(
-                    "Early exit on_config_changed: legacy relation requested extensions that are still disabled"
-                )
-                return
 
     def enable_disable_extensions(self, database: str | None = None) -> None:
         """Enable/disable PostgreSQL extensions set through config options.
@@ -2157,11 +2135,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @property
     def client_relations(self) -> list[Relation]:
         """Return the list of established client relations."""
-        relations = []
-        for relation_name in ["database", "db", "db-admin"]:
-            for relation in self.model.relations.get(relation_name, []):
-                relations.append(relation)
-        return relations
+        return self.model.relations.get("database", [])
 
     def override_patroni_on_failure_condition(
         self, new_condition: str, repeat_cause: str | None

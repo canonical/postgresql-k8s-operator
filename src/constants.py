@@ -52,9 +52,6 @@ TRACING_RELATION_NAME = "tracing"
 TRACING_PROTOCOL = "otlp_http"
 
 DATABASE = "database"
-LEGACY_DB = "db"
-LEGACY_DB_ADMIN = "db-admin"
-ALL_LEGACY_RELATIONS = [LEGACY_DB, LEGACY_DB_ADMIN]
 
 ENDPOINT_SIMULTANEOUSLY_BLOCKING_MESSAGE = (
     "Please choose one endpoint to use. No need to relate all of them simultaneously!"

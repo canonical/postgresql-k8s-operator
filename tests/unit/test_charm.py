@@ -1078,12 +1078,8 @@ def test_client_relations(harness):
 
     # Test when the charm has some relations.
     harness.add_relation("database", "application")
-    harness.add_relation("db", "legacy-application")
-    harness.add_relation("db-admin", "legacy-admin-application")
     database_relation = harness.model.get_relation("database")
-    db_relation = harness.model.get_relation("db")
-    db_admin_relation = harness.model.get_relation("db-admin")
-    assert harness.charm.client_relations == [database_relation, db_relation, db_admin_relation]
+    assert harness.charm.client_relations == [database_relation]
 
 
 def test_validate_config_options(harness):
