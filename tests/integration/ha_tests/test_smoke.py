@@ -14,6 +14,7 @@ from .. import markers
 from ..helpers import (
     CHARM_BASE,
     DATABASE_APP_NAME,
+    build_and_deploy,
     scale_application,
 )
 from .helpers import (
@@ -49,17 +50,7 @@ async def test_app_force_removal(ops_test: OpsTest, charm):
     global primary_pv, primary_pvc
     # Deploy the charm.
     async with ops_test.fast_forward():
-        await ops_test.model.deploy(
-            charm,
-            DATABASE_APP_NAME,
-            application_name=DATABASE_APP_NAME,
-            num_units=1,
-            base=CHARM_BASE,
-            trust=True,
-            config={"profile": "testing"},
-        )
-
-        await ops_test.model.wait_for_idle(status="active", timeout=1000)
+        await build_and_deploy(ops_test, charm, 1)
 
         assert ops_test.model.applications[DATABASE_APP_NAME].units[0].workload_status == "active"
 
