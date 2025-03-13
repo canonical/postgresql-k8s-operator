@@ -570,8 +570,8 @@ async def inject_dependency_fault(
         ops_test, application_name, "upgrade", "dependencies"
     )
     loaded_dependency_dict = json.loads(dependencies)
-    loaded_dependency_dict["charm"]["upgrade_supported"] = "^15"
-    loaded_dependency_dict["charm"]["version"] = "15.0"
+    loaded_dependency_dict["charm"]["upgrade_supported"] = "^25"
+    loaded_dependency_dict["charm"]["version"] = "25.0"
 
     # Overwrite dependency.json with incompatible version.
     with zipfile.ZipFile(charm_file, mode="a") as charm_zip:

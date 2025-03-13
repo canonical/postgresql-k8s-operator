@@ -12,6 +12,7 @@ from lightkube.resources.apps_v1 import StatefulSet
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 
+from .. import markers
 from ..helpers import (
     APPLICATION_NAME,
     CHARM_BASE,
@@ -35,6 +36,8 @@ logger = logging.getLogger(__name__)
 TIMEOUT = 600
 
 
+# No arm edge
+@markers.amd64_only
 @pytest.mark.abort_on_fail
 async def test_deploy_latest(ops_test: OpsTest) -> None:
     """Simple test to ensure that the PostgreSQL and application charms get deployed."""
@@ -65,6 +68,8 @@ async def test_deploy_latest(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3
 
 
+# No arm edge
+@markers.amd64_only
 @pytest.mark.abort_on_fail
 async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     """Test that the pre-upgrade-check action runs successfully."""
@@ -91,6 +96,8 @@ async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     assert stateful_set.spec.updateStrategy.rollingUpdate.partition == 2, "Partition not set to 2"
 
 
+# No arm edge
+@markers.amd64_only
 @pytest.mark.abort_on_fail
 async def test_upgrade_from_edge(ops_test: OpsTest, charm, continuous_writes) -> None:
     # Start an application that continuously writes data to the database.
@@ -153,6 +160,8 @@ async def test_upgrade_from_edge(ops_test: OpsTest, charm, continuous_writes) ->
     )
 
 
+# No arm edge
+@markers.amd64_only
 @pytest.mark.abort_on_fail
 async def test_fail_and_rollback(ops_test, charm, continuous_writes) -> None:
     # Start an application that continuously writes data to the database.
