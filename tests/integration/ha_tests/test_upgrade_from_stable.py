@@ -93,7 +93,7 @@ async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_upgrade_from_stable(ops_test: OpsTest, charm, continuous_writes):
+async def test_upgrade_from_stable(ops_test: OpsTest, charm):
     """Test updating from stable channel."""
     # TODO remove once we release to stable
     pytest.skip("No 16/stable yet.")

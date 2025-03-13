@@ -91,16 +91,14 @@ async def build_and_deploy(
     resources = {
         "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
     }
-    (
-        await model.deploy(
-            charm,
-            resources=resources,
-            application_name=database_app_name,
-            trust=True,
-            num_units=num_units,
-            base=CHARM_BASE_NOBLE,
-            config={"profile": "testing"},
-        ),
+    await model.deploy(
+        charm,
+        resources=resources,
+        application_name=database_app_name,
+        trust=True,
+        num_units=num_units,
+        base=CHARM_BASE_NOBLE,
+        config={"profile": "testing"},
     )
     if wait_for_idle:
         # Wait until the PostgreSQL charm is successfully deployed.
