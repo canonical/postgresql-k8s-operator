@@ -30,10 +30,9 @@ from .juju_ import juju_major_version
 
 logger = logging.getLogger(__name__)
 
-MATTERMOST_APP_NAME = "mattermost"
-tls_certificates_app_name = "tls-certificates-operator"
-tls_channel = "legacy/edge" if architecture.architecture == "arm64" else "legacy/stable"
-tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
+tls_certificates_app_name = "self-signed-certificates"
+tls_channel = "latest/edge" if architecture.architecture == "arm64" else "latest/stable"
+tls_config = {"ca-common-name": "Test CA"}
 APPLICATION_UNITS = 2
 DATABASE_UNITS = 3
 
