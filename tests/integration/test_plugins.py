@@ -97,7 +97,9 @@ async def test_plugins(ops_test: OpsTest, charm) -> None:
     async with ops_test.fast_forward():
         await build_and_deploy(ops_test, charm, 2)
         # TODO Figure out how to deal with pgaudit
-        await ops_test.model.applications[DATABASE_APP_NAME].set_config({"profile": "testing", "plugin_audit_enable": "False"})
+        await ops_test.model.applications[DATABASE_APP_NAME].set_config({
+            "plugin_audit_enable": "False"
+        })
         await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=200)
 
     sql_tests = {
