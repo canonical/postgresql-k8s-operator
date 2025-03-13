@@ -51,7 +51,7 @@ def harness():
     harness.cleanup()
 
 
-def test_set_ports(only_with_juju_secrets):
+def test_set_ports():
     with (
         patch("charm.JujuVersion") as _juju_version,
         patch("charm.PostgresqlOperatorCharm.unit") as _unit,
@@ -353,17 +353,10 @@ def test_on_config_changed(harness):
 
 
 def test_on_get_password(harness):
-    # Create a mock event and set passwords in peer relation data.
+    harness.set_leader()
     mock_event = MagicMock(params={})
-    rel_id = harness.model.get_relation(PEER).id
-    harness.update_relation_data(
-        rel_id,
-        harness.charm.app.name,
-        {
-            "operator-password": "test-password",
-            "replication-password": "replication-test-password",
-        },
-    )
+    harness.charm.set_secret("app", "operator-password", "test-password")
+    harness.charm.set_secret("app", "replication-password", "replication-test-password")
 
     # Test providing an invalid username.
     mock_event.params["username"] = "user"
@@ -1150,32 +1143,6 @@ def test_scope_obj(harness):
     assert harness.charm._scope_obj("test") is None
 
 
-def test_get_secret_from_databag(harness):
-    """Asserts that get_secret method can read secrets from databag.
-
-    This must be backwards-compatible so it runs on both juju2 and juju3.
-    """
-    with patch("charm.PostgresqlOperatorCharm._on_leader_elected"):
-        rel_id = harness.model.get_relation(PEER).id
-        # App level changes require leader privileges
-        harness.set_leader()
-        # Test application scope.
-        assert harness.charm.get_secret("app", "operator_password") is None
-        harness.update_relation_data(
-            rel_id, harness.charm.app.name, {"operator_password": "test-password"}
-        )
-        assert harness.charm.get_secret("app", "operator_password") == "test-password"
-
-        # Unit level changes don't require leader privileges
-        harness.set_leader(False)
-        # Test unit scope.
-        assert harness.charm.get_secret("unit", "operator_password") is None
-        harness.update_relation_data(
-            rel_id, harness.charm.unit.name, {"operator_password": "test-password"}
-        )
-        assert harness.charm.get_secret("unit", "operator_password") == "test-password"
-
-
 def test_on_get_password_secrets(harness):
     with patch("charm.PostgresqlOperatorCharm._on_leader_elected"):
         # Create a mock event and set passwords in peer relation data.
@@ -1213,40 +1180,6 @@ def test_get_secret_secrets(harness, scope):
         assert harness.charm.get_secret(scope, "operator-password") == "test-password"
 
 
-def test_set_secret_in_databag(harness, only_without_juju_secrets):
-    """Asserts that set_secret method writes to relation databag.
-
-    This is juju2 specific. In juju3, set_secret writes to juju secrets.
-    """
-    with patch("charm.PostgresqlOperatorCharm._on_leader_elected"):
-        rel_id = harness.model.get_relation(PEER).id
-        harness.set_leader()
-
-        # Test application scope.
-        assert "password" not in harness.get_relation_data(rel_id, harness.charm.app.name)
-        harness.charm.set_secret("app", "password", "test-password")
-        assert (
-            harness.get_relation_data(rel_id, harness.charm.app.name)["password"]
-            == "test-password"
-        )
-        harness.charm.set_secret("app", "password", None)
-        assert "password" not in harness.get_relation_data(rel_id, harness.charm.app.name)
-
-        # Test unit scope.
-        assert "password" not in harness.get_relation_data(rel_id, harness.charm.unit.name)
-        harness.charm.set_secret("unit", "password", "test-password")
-        assert (
-            harness.get_relation_data(rel_id, harness.charm.unit.name)["password"]
-            == "test-password"
-        )
-        harness.charm.set_secret("unit", "password", None)
-        assert "password" not in harness.get_relation_data(rel_id, harness.charm.unit.name)
-
-        with pytest.raises(RuntimeError):
-            harness.charm.set_secret("test", "password", "test")
-            assert False
-
-
 @pytest.mark.parametrize("scope,is_leader", [("app", True), ("unit", True), ("unit", False)])
 def test_set_reset_new_secret(harness, scope, is_leader):
     """NOTE: currently ops.testing seems to allow for non-leader to set secrets too!"""
@@ -1279,7 +1212,7 @@ def test_invalid_secret(harness, scope, is_leader):
         assert harness.charm.get_secret(scope, "somekey") is None
 
 
-def test_delete_password(harness, juju_has_secrets, caplog):
+def test_delete_password(harness, caplog):
     """NOTE: currently ops.testing seems to allow for non-leader to remove secrets too!"""
     with patch("charm.PostgresqlOperatorCharm._on_leader_elected"):
         harness.set_leader(True)
@@ -1294,14 +1227,7 @@ def test_delete_password(harness, juju_has_secrets, caplog):
 
         harness.set_leader(True)
         with caplog.at_level(logging.DEBUG):
-            if juju_has_secrets:
-                error_message = (
-                    "Non-existing secret operator-password was attempted to be removed."
-                )
-            else:
-                error_message = (
-                    "Non-existing field 'operator-password' was attempted to be removed"
-                )
+            error_message = "Non-existing secret operator-password was attempted to be removed."
 
             harness.charm.remove_secret("app", "operator-password")
             assert error_message in caplog.text
@@ -1323,32 +1249,7 @@ def test_delete_password(harness, juju_has_secrets, caplog):
 
 
 @pytest.mark.parametrize("scope,is_leader", [("app", True), ("unit", True), ("unit", False)])
-def test_migration_from_databag(harness, only_with_juju_secrets, scope, is_leader):
-    """Check if we're moving on to use secrets when live upgrade from databag to Secrets usage.
-
-    Since it checks for a migration from databag to juju secrets, it's specific to juju3.
-    """
-    with patch("charm.PostgresqlOperatorCharm._on_leader_elected"):
-        rel_id = harness.model.get_relation(PEER).id
-        # App has to be leader, unit can be either
-        harness.set_leader(is_leader)
-
-        # Getting current password
-        entity = getattr(harness.charm, scope)
-        harness.update_relation_data(rel_id, entity.name, {"operator_password": "bla"})
-        assert harness.charm.get_secret(scope, "operator_password") == "bla"
-
-        # Reset new secret
-        harness.charm.set_secret(scope, "operator-password", "blablabla")
-        assert harness.charm.model.get_secret(label=f"{PEER}.postgresql-k8s.{scope}")
-        assert harness.charm.get_secret(scope, "operator-password") == "blablabla"
-        assert "operator-password" not in harness.get_relation_data(
-            rel_id, getattr(harness.charm, scope).name
-        )
-
-
-@pytest.mark.parametrize("scope,is_leader", [("app", True), ("unit", True), ("unit", False)])
-def test_migration_from_single_secret(harness, only_with_juju_secrets, scope, is_leader):
+def test_migration_from_single_secret(harness, scope, is_leader):
     """Check if we're moving on to use secrets when live upgrade from databag to Secrets usage.
 
     Since it checks for a migration from databag to juju secrets, it's specific to juju3.
