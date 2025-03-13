@@ -32,15 +32,16 @@ logger = logging.getLogger(__name__)
 TIMEOUT = 10 * 60
 
 
-@markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_deploy_stable(ops_test: OpsTest) -> None:
     """Simple test to ensure that the PostgreSQL and application charms get deployed."""
+    # TODO remove once we release to stable
+    pytest.skip("No 16/stable yet.")
     await asyncio.gather(
         ops_test.model.deploy(
             DATABASE_APP_NAME,
             num_units=3,
-            channel="14/stable",
+            channel="16/stable",
             trust=True,
             base=CHARM_BASE,
         ),
@@ -59,7 +60,6 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3
 
 
-@markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     """Test that the pre-upgrade-check action runs successfully."""
@@ -93,7 +93,6 @@ async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     assert stateful_set.spec.updateStrategy.rollingUpdate.partition == 2, "Partition not set to 2"
 
 
-@markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_upgrade_from_stable(ops_test: OpsTest, charm, continuous_writes):
     """Test updating from stable channel."""
