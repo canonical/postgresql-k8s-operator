@@ -35,7 +35,7 @@ def delete_secrets(_harness):
 
 
 def emit_certificate_available_event(_harness):
-    _harness.charm.tls.certs.on.certificate_available.emit(
+    _harness.charm.tls.certs_creation.on.certificate_available.emit(
         certificate_signing_request="test-csr",
         certificate="test-cert",
         ca="test-ca",
@@ -44,7 +44,10 @@ def emit_certificate_available_event(_harness):
 
 
 def emit_certificate_expiring_event(_harness):
-    _harness.charm.tls.certs.on.certificate_expiring.emit(certificate="test-cert", expiry=None)
+    _harness.charm.tls.certs_creation.on.certificate_expiring.emit(
+        certificate="test-cert",
+        expiry=None,
+    )
 
 
 def get_content_from_file(filename: str):
