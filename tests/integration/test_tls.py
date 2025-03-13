@@ -13,6 +13,7 @@ from .ha_tests.helpers import (
     change_patroni_setting,
 )
 from .helpers import (
+    CHARM_BASE,
     DATABASE_APP_NAME,
     build_and_deploy,
     check_database_creation,
@@ -45,11 +46,10 @@ APPLICATION_UNITS = 2
 DATABASE_UNITS = 3
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_build_and_deploy(ops_test: OpsTest) -> None:
+async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
     """Build and deploy three units of PostgreSQL."""
-    await build_and_deploy(ops_test, DATABASE_UNITS, wait_for_idle=False)
+    await build_and_deploy(ops_test, charm, DATABASE_UNITS, wait_for_idle=False)
 
 
 async def check_tls_rewind(ops_test: OpsTest) -> None:
@@ -71,13 +71,12 @@ async def check_tls_rewind(ops_test: OpsTest) -> None:
     )
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_tls(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
         # Deploy TLS Certificates operator.
         await ops_test.model.deploy(
-            tls_certificates_app_name, config=tls_config, channel=tls_channel
+            tls_certificates_app_name, config=tls_config, channel=tls_channel, base=CHARM_BASE
         )
         # Relate it to the PostgreSQL to enable TLS.
         await ops_test.model.relate(DATABASE_APP_NAME, tls_certificates_app_name)
@@ -98,7 +97,7 @@ async def test_tls(ops_test: OpsTest) -> None:
         patroni_password = await get_password(ops_test, "patroni")
         cluster_info = requests.get(f"https://{primary_address}:8008/cluster", verify=False)
         for member in cluster_info.json()["members"]:
-            if member["role"] == "replica":
+            if member["role"] != "leader":
                 replica = "/".join(member["name"].rsplit("-", 1))
 
         # Check if TLS enabled for replication
@@ -172,7 +171,6 @@ async def test_tls(ops_test: OpsTest) -> None:
         )
 
 
-@pytest.mark.group(1)
 @markers.amd64_only  # mattermost-k8s charm not available for arm64
 async def test_mattermost_db(ops_test: OpsTest) -> None:
     """Deploy Mattermost to test the 'db' relation.
@@ -199,7 +197,6 @@ async def test_mattermost_db(ops_test: OpsTest) -> None:
         await check_database_users_existence(ops_test, mattermost_users, [])
 
 
-@pytest.mark.group(1)
 async def test_remove_tls(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
         # Remove the relation.

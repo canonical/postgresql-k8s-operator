@@ -20,23 +20,20 @@ POSTGRESQL_CONTAINER = "postgresql"
 
 @pytest.fixture(autouse=True)
 def harness():
-    with patch("charm.KubernetesServicePatch", lambda x, y: None):
-        """Set up the test."""
-        patcher = patch("lightkube.core.client.GenericSyncClient")
-        patcher.start()
-        harness = Harness(PostgresqlOperatorCharm)
-        harness.begin()
-        upgrade_relation_id = harness.add_relation("upgrade", "postgresql-k8s")
-        peer_relation_id = harness.add_relation("database-peers", "postgresql-k8s")
-        for rel_id in (upgrade_relation_id, peer_relation_id):
-            harness.add_relation_unit(rel_id, "postgresql-k8s/1")
-        harness.add_relation("restart", harness.charm.app.name)
-        with harness.hooks_disabled():
-            harness.update_relation_data(
-                upgrade_relation_id, "postgresql-k8s/1", {"state": "idle"}
-            )
-        yield harness
-        harness.cleanup()
+    """Set up the test."""
+    patcher = patch("lightkube.core.client.GenericSyncClient")
+    patcher.start()
+    harness = Harness(PostgresqlOperatorCharm)
+    harness.begin()
+    upgrade_relation_id = harness.add_relation("upgrade", "postgresql-k8s")
+    peer_relation_id = harness.add_relation("database-peers", "postgresql-k8s")
+    for rel_id in (upgrade_relation_id, peer_relation_id):
+        harness.add_relation_unit(rel_id, "postgresql-k8s/1")
+    harness.add_relation("restart", harness.charm.app.name)
+    with harness.hooks_disabled():
+        harness.update_relation_data(upgrade_relation_id, "postgresql-k8s/1", {"state": "idle"})
+    yield harness
+    harness.cleanup()
 
 
 def test_is_no_sync_member(harness):
@@ -158,6 +155,9 @@ def test_on_upgrade_changed(harness):
     with (
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
+        patch(
+            "charm.PostgresqlOperatorCharm.updated_synchronous_node_count"
+        ) as _updated_synchronous_node_count,
     ):
         harness.set_can_connect(POSTGRESQL_CONTAINER, True)
         _member_started.return_value = False
@@ -168,6 +168,7 @@ def test_on_upgrade_changed(harness):
         _member_started.return_value = True
         harness.charm.on.upgrade_relation_changed.emit(relation)
         _update_config.assert_called_once()
+        _updated_synchronous_node_count.assert_called_once_with()
 
 
 def test_pre_upgrade_check(harness):

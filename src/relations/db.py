@@ -81,10 +81,7 @@ class DbProvides(Object):
         Generate password and handle user and database creation for the related application.
         """
         # Check for some conditions before trying to access the PostgreSQL instance.
-        if (
-            "cluster_initialised" not in self.charm._peers.data[self.charm.app]
-            or not self.charm._patroni.member_started
-        ):
+        if not self.charm.is_cluster_initialised or not self.charm._patroni.member_started:
             logger.debug(
                 "Deferring on_relation_changed: Cluster not initialized or patroni not running"
             )
@@ -271,10 +268,7 @@ class DbProvides(Object):
         Remove unit name from allowed_units key.
         """
         # Check for some conditions before trying to access the PostgreSQL instance.
-        if (
-            "cluster_initialised" not in self.charm._peers.data[self.charm.app]
-            or not self.charm._patroni.member_started
-        ):
+        if not self.charm.is_cluster_initialised or not self.charm._patroni.member_started:
             logger.debug(
                 "Deferring on_relation_departed: Cluster not initialized or patroni not running"
             )
@@ -309,17 +303,14 @@ class DbProvides(Object):
     def _on_relation_broken(self, event: RelationBrokenEvent) -> None:
         """Remove the user created for this relation."""
         # Check for some conditions before trying to access the PostgreSQL instance.
-        if (
-            "cluster_initialised" not in self.charm._peers.data[self.charm.app]
-            or not self.charm._patroni.member_started
-        ):
+        if not self.charm.is_cluster_initialised or not self.charm._patroni.member_started:
             logger.debug(
                 "Deferring on_relation_broken: Cluster not initialized or patroni not running"
             )
             event.defer()
             return
 
-        if "departing" in self.charm._peers.data[self.charm.unit]:
+        if self.charm.is_unit_departing:
             logger.debug("Early exit on_relation_broken: Skipping departing unit")
             return
 

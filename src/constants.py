@@ -3,6 +3,7 @@
 
 """File containing constants to be used in the charm."""
 
+DATABASE_DEFAULT_NAME = "postgres"
 DATABASE_PORT = "5432"
 PEER = "database-peers"
 BACKUP_USER = "backup"

@@ -4,7 +4,7 @@
 
 
 from ..helpers import METADATA
-from ..new_relations.test_new_relations import (
+from ..new_relations.test_new_relations_1 import (
     APPLICATION_APP_NAME,
 )
 

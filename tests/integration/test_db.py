@@ -4,12 +4,12 @@
 import logging
 from asyncio import gather
 
-import pytest
 from pytest_operator.plugin import OpsTest
 
 from . import markers
 from .helpers import (
     APPLICATION_NAME,
+    CHARM_BASE,
     DATABASE_APP_NAME,
     build_and_deploy,
     check_database_creation,
@@ -31,17 +31,17 @@ ROLES_BLOCKING_MESSAGE = (
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.group(1)
 @markers.amd64_only  # finos-waltz-k8s charm not available for arm64
-async def test_finos_waltz_db(ops_test: OpsTest) -> None:
+async def test_finos_waltz_db(ops_test: OpsTest, charm) -> None:
     """Deploy Finos Waltz to test the 'db' relation.
 
     Args:
         ops_test: The ops test framework
+        charm: `charm` fixture
     """
     async with ops_test.fast_forward():
         # Build and deploy the PostgreSQL charm.
-        await build_and_deploy(ops_test, DATABASE_UNITS)
+        await build_and_deploy(ops_test, charm, DATABASE_UNITS)
 
         assert len(ops_test.model.applications[DATABASE_APP_NAME].units) == DATABASE_UNITS
 
@@ -105,18 +105,19 @@ async def test_finos_waltz_db(ops_test: OpsTest) -> None:
         )
 
 
-@pytest.mark.group(1)
 @markers.amd64_only  # finos-waltz-k8s charm not available for arm64
 # (and this test depends on previous test with finos-waltz-k8s charm)
 async def test_extensions_blocking(ops_test: OpsTest) -> None:
     await ops_test.model.deploy(
         APPLICATION_NAME,
         application_name=APPLICATION_NAME,
+        base=CHARM_BASE,
         channel="edge",
     )
     await ops_test.model.deploy(
         APPLICATION_NAME,
         application_name=f"{APPLICATION_NAME}2",
+        base=CHARM_BASE,
         channel="edge",
     )
 
@@ -199,7 +200,6 @@ async def test_extensions_blocking(ops_test: OpsTest) -> None:
     )
 
 
-@pytest.mark.group(1)
 @markers.amd64_only  # finos-waltz-k8s charm not available for arm64
 # (and this test depends on a previous test with finos-waltz-k8s charm)
 async def test_roles_blocking(ops_test: OpsTest) -> None:

@@ -26,19 +26,18 @@ S3_PARAMETERS_RELATION = "s3-parameters"
 
 @pytest.fixture(autouse=True)
 def harness():
-    with patch("charm.KubernetesServicePatch", lambda x, y: None):
-        # Mock generic sync client to avoid search to ~/.kube/config.
-        patcher = patch("lightkube.core.client.GenericSyncClient")
-        patcher.start()
+    # Mock generic sync client to avoid search to ~/.kube/config.
+    patcher = patch("lightkube.core.client.GenericSyncClient")
+    patcher.start()
 
-        harness = Harness(PostgresqlOperatorCharm)
+    harness = Harness(PostgresqlOperatorCharm)
 
-        # Set up the initial relation and hooks.
-        peer_rel_id = harness.add_relation(PEER, "postgresql-k8s")
-        harness.add_relation_unit(peer_rel_id, "postgresql-k8s/0")
-        harness.begin()
-        yield harness
-        harness.cleanup()
+    # Set up the initial relation and hooks.
+    peer_rel_id = harness.add_relation(PEER, "postgresql-k8s")
+    harness.add_relation_unit(peer_rel_id, "postgresql-k8s/0")
+    harness.begin()
+    yield harness
+    harness.cleanup()
 
 
 def test_stanza_name(harness):
@@ -288,6 +287,18 @@ def test_can_use_s3_repository(harness):
             same_instance_system_identifier_output,
         ]
         assert harness.charm.backup.can_use_s3_repository() == (True, None)
+
+        # Empty db
+        _execute_command.side_effect = [
+            (
+                f'[{{"db": [], "name": "another-model.{harness.charm.cluster_name}"}}]',
+                None,
+            )
+        ]
+        assert harness.charm.backup.can_use_s3_repository() == (
+            False,
+            ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE,
+        )
 
 
 def test_construct_endpoint(harness):

@@ -7,7 +7,7 @@ import logging
 from datetime import datetime
 from multiprocessing import ProcessError
 from pathlib import Path
-from subprocess import check_call, run
+from subprocess import check_call
 
 import botocore
 import psycopg2
@@ -32,8 +32,10 @@ from tenacity import (
     wait_fixed,
 )
 
-CHARM_BASE = "ubuntu@24.04"
-CHARM_SERIES = "noble"
+from constants import DATABASE_DEFAULT_NAME
+
+CHARM_BASE = "ubuntu@22.04"
+CHARM_SERIES = "jammy"
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
 APPLICATION_NAME = "postgresql-test-app"
@@ -44,8 +46,6 @@ try:
     KUBECTL = "kubectl"
 except FileNotFoundError:
     KUBECTL = "microk8s kubectl"
-
-charm = None
 
 logger = logging.getLogger(__name__)
 
@@ -70,39 +70,9 @@ async def app_name(
     return None
 
 
-async def build_charm(charm_path) -> Path:
-    charm_path = Path(charm_path)
-    architecture = run(
-        ["dpkg", "--print-architecture"],
-        capture_output=True,
-        check=True,
-        encoding="utf-8",
-    ).stdout.strip()
-    assert architecture in ("amd64", "arm64")
-    # 24.04 pin is temporary solution while multi-base integration testing not supported by data-platform-workflows
-    packed_charms = list(charm_path.glob(f"*ubuntu@24.04-{architecture}.charm"))
-    if len(packed_charms) == 1:
-        # python-libjuju's model.deploy(), juju deploy, and juju bundle files expect local charms
-        # to begin with `./` or `/` to distinguish them from Charmhub charms.
-        # Therefore, we need to return an absolute path—a relative `pathlib.Path` does not start
-        # with `./` when cast to a str.
-        # (python-libjuju model.deploy() expects a str but will cast any input to a str as a
-        # workaround for pytest-operator's non-compliant `build_charm` return type of
-        # `pathlib.Path`.)
-        return packed_charms[0].resolve(strict=True)
-    elif len(packed_charms) > 1:
-        raise ValueError(
-            f"More than one matching .charm file found at {charm_path=} for {architecture=} and "
-            f"Ubuntu 24.04: {packed_charms}."
-        )
-    else:
-        raise ValueError(
-            f"Unable to find .charm file for {architecture=} and Ubuntu 24.04 at {charm_path=}"
-        )
-
-
 async def build_and_deploy(
     ops_test: OpsTest,
+    charm,
     num_units: int,
     database_app_name: str = DATABASE_APP_NAME,
     wait_for_idle: bool = True,
@@ -118,9 +88,6 @@ async def build_and_deploy(
     if await app_name(ops_test, database_app_name, model):
         return
 
-    global charm
-    if not charm:
-        charm = await build_charm(".")
     resources = {
         "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
     }
@@ -131,6 +98,7 @@ async def build_and_deploy(
             application_name=database_app_name,
             trust=True,
             num_units=num_units,
+            base=CHARM_BASE,
             config={"profile": "testing"},
         ),
     )
@@ -359,7 +327,7 @@ async def execute_query_on_unit(
     unit_address: str,
     password: str,
     query: str,
-    database: str = "postgres",
+    database: str = DATABASE_DEFAULT_NAME,
     sslmode: str | None = None,
 ):
     """Execute given PostgreSQL query on a unit.
@@ -453,11 +421,9 @@ def get_expected_k8s_resources(application: str) -> set:
         f"Endpoints/patroni-{application}",
         f"Endpoints/patroni-{application}-config",
         f"Endpoints/patroni-{application}-sync",
-        f"Endpoints/{application}",
         f"Endpoints/{application}-primary",
         f"Endpoints/{application}-replicas",
         f"Service/patroni-{application}-config",
-        f"Service/{application}",
         f"Service/{application}-primary",
         f"Service/{application}-replicas",
     }
@@ -790,7 +756,6 @@ async def switchover(
             )
             assert response.status_code == 200, f"Switchover status code is {response.status_code}"
     app_name = current_primary.split("/")[0]
-    minority_count = len(ops_test.model.applications[app_name].units) // 2
     for attempt in Retrying(stop=stop_after_attempt(30), wait=wait_fixed(2), reraise=True):
         with attempt:
             response = requests.get(f"http://{primary_ip}:8008/cluster")
@@ -798,7 +763,7 @@ async def switchover(
             standbys = len([
                 member for member in response.json()["members"] if member["role"] == "sync_standby"
             ])
-            assert standbys >= minority_count
+            assert standbys == len(ops_test.model.applications[app_name].units) - 1
 
 
 async def wait_for_idle_on_blocked(
@@ -852,6 +817,7 @@ async def cat_file_from_unit(ops_test: OpsTest, filepath: str, unit_name: str) -
 
 async def backup_operations(
     ops_test: OpsTest,
+    charm,
     s3_integrator_app_name: str,
     tls_certificates_app_name: str,
     tls_config,
@@ -862,13 +828,17 @@ async def backup_operations(
 ) -> None:
     """Basic set of operations for backup testing in different cloud providers."""
     # Deploy S3 Integrator and TLS Certificates Operator.
-    await ops_test.model.deploy(s3_integrator_app_name)
-    await ops_test.model.deploy(tls_certificates_app_name, config=tls_config, channel=tls_channel)
+    await ops_test.model.deploy(s3_integrator_app_name, base=CHARM_BASE)
+    await ops_test.model.deploy(
+        tls_certificates_app_name, config=tls_config, channel=tls_channel, base=CHARM_BASE
+    )
     # Deploy and relate PostgreSQL to S3 integrator (one database app for each cloud for now
     # as archivo_mode is disabled after restoring the backup) and to TLS Certificates Operator
     # (to be able to create backups from replicas).
     database_app_name = f"{DATABASE_APP_NAME}-{cloud.lower()}"
-    await build_and_deploy(ops_test, 2, database_app_name=database_app_name, wait_for_idle=False)
+    await build_and_deploy(
+        ops_test, charm, 2, database_app_name=database_app_name, wait_for_idle=False
+    )
 
     await ops_test.model.relate(database_app_name, tls_certificates_app_name)
     async with ops_test.fast_forward(fast_interval="60s"):

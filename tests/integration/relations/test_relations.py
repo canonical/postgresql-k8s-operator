@@ -7,7 +7,8 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from ..new_relations.test_new_relations import (
+from ..helpers import CHARM_BASE
+from ..new_relations.test_new_relations_1 import (
     APPLICATION_APP_NAME,
     DATABASE_APP_METADATA,
 )
@@ -21,9 +22,8 @@ from ..relations.helpers import (
 logger = logging.getLogger(__name__)
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_deploy_charms(ops_test: OpsTest, database_charm):
+async def test_deploy_charms(ops_test: OpsTest, charm):
     """Deploy both charms (application and database) to use in the tests."""
     # Deploy both charms (multiple units for each application to test that later they correctly
     # set data in the relation application databag using only the leader unit).
@@ -33,10 +33,11 @@ async def test_deploy_charms(ops_test: OpsTest, database_charm):
                 APPLICATION_APP_NAME,
                 application_name=APPLICATION_APP_NAME,
                 num_units=1,
+                base=CHARM_BASE,
                 channel="edge",
             ),
             ops_test.model.deploy(
-                database_charm,
+                charm,
                 resources={
                     "postgresql-image": DATABASE_APP_METADATA["resources"]["postgresql-image"][
                         "upstream-source"
@@ -44,11 +45,13 @@ async def test_deploy_charms(ops_test: OpsTest, database_charm):
                 },
                 application_name=APP_NAME,
                 num_units=1,
+                base=CHARM_BASE,
                 config={
                     "profile": "testing",
                     "plugin_unaccent_enable": "True",
                     "plugin_pg_trgm_enable": "True",
                 },
+                trust=True,
             ),
         )
 
@@ -57,7 +60,6 @@ async def test_deploy_charms(ops_test: OpsTest, database_charm):
         )
 
 
-@pytest.mark.group(1)
 async def test_legacy_and_modern_endpoints_simultaneously(ops_test: OpsTest):
     await ops_test.model.relate(APPLICATION_APP_NAME, f"{APP_NAME}:{DB_RELATION}")
     await ops_test.model.wait_for_idle(

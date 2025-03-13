@@ -34,7 +34,6 @@ from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerU
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v1.loki_push_api import LogProxyConsumer
-from charms.observability_libs.v1.kubernetes_service_patch import KubernetesServicePatch
 from charms.postgresql_k8s.v0.postgresql import (
     REQUIRED_PLUGINS,
     PostgreSQL,
@@ -51,7 +50,7 @@ from lightkube import ApiError, Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Endpoints, Node, Pod, Service
-from ops import main
+from ops import JujuVersion, main
 from ops.charm import (
     ActionEvent,
     HookEvent,
@@ -59,7 +58,6 @@ from ops.charm import (
     RelationDepartedEvent,
     WorkloadEvent,
 )
-from ops.jujuversion import JujuVersion
 from ops.model import (
     ActiveStatus,
     BlockedStatus,
@@ -88,6 +86,7 @@ from config import CharmConfig
 from constants import (
     APP_SCOPE,
     BACKUP_USER,
+    DATABASE_DEFAULT_NAME,
     METRICS_PORT,
     MONITORING_PASSWORD_KEY,
     MONITORING_USER,
@@ -114,7 +113,7 @@ from constants import (
     WORKLOAD_OS_GROUP,
     WORKLOAD_OS_USER,
 )
-from patroni import NotReadyError, Patroni, SwitchoverFailedError
+from patroni import NotReadyError, Patroni, SwitchoverFailedError, SwitchoverNotSyncError
 from relations.async_replication import (
     REPLICATION_CONSUMER_RELATION,
     REPLICATION_OFFER_RELATION,
@@ -213,6 +212,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.framework.observe(self.on.stop, self._on_stop)
         self.framework.observe(self.on.get_password_action, self._on_get_password)
         self.framework.observe(self.on.set_password_action, self._on_set_password)
+        self.framework.observe(self.on.promote_to_primary_action, self._on_promote_to_primary)
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
         self.framework.observe(self.on.update_status, self._on_update_status)
         self._storage_path = self.meta.storages["pgdata"].location
@@ -246,9 +246,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             relation_name="logging",
         )
 
-        postgresql_db_port = ServicePort(5432, name="database")
-        patroni_api_port = ServicePort(8008, name="api")
-        self.service_patcher = KubernetesServicePatch(self, [postgresql_db_port, patroni_api_port])
+        if JujuVersion.from_environ().supports_open_port_on_k8s:
+            try:
+                self.unit.set_ports(5432, 8008)
+            except ModelError:
+                logger.exception("failed to open port")
         self.tracing = TracingEndpointRequirer(
             self, relation_name=TRACING_RELATION_NAME, protocols=[TRACING_PROTOCOL]
         )
@@ -389,6 +391,26 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         return "cluster_initialised" in self.app_peer_data
 
     @property
+    def is_cluster_restoring_backup(self) -> bool:
+        """Returns whether the cluster is restoring a backup."""
+        return "restoring-backup" in self.app_peer_data
+
+    @property
+    def is_cluster_restoring_to_time(self) -> bool:
+        """Returns whether the cluster is restoring a backup to a specific time."""
+        return "restore-to-time" in self.app_peer_data
+
+    @property
+    def is_unit_departing(self) -> bool:
+        """Returns whether the unit is departing."""
+        return "departing" in self.unit_peer_data
+
+    @property
+    def is_unit_stopped(self) -> bool:
+        """Returns whether the unit is stopped."""
+        return "stopped" in self.unit_peer_data
+
+    @property
     def postgresql(self) -> PostgreSQL:
         """Returns an instance of the object used to interact with the database."""
         return PostgreSQL(
@@ -396,7 +418,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             current_host=self.endpoint,
             user=USER,
             password=self.get_secret(APP_SCOPE, f"{USER}-password"),
-            database="postgres",
+            database=DATABASE_DEFAULT_NAME,
             system_users=SYSTEM_USERS,
         )
 
@@ -450,13 +472,22 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         else:
             return None
 
+    def updated_synchronous_node_count(self) -> bool:
+        """Tries to update synchronous_node_count configuration and reports the result."""
+        try:
+            self._patroni.update_synchronous_node_count()
+            return True
+        except RetryError:
+            logger.debug("Unable to set synchronous_node_count")
+            return False
+
     def _on_peer_relation_departed(self, event: RelationDepartedEvent) -> None:
         """The leader removes the departing units from the list of cluster members."""
         # Allow leader to update endpoints if it isn't leaving.
         if not self.unit.is_leader() or event.departing_unit == self.unit:
             return
 
-        if "cluster_initialised" not in self._peers.data[self.app]:
+        if not self.is_cluster_initialised or not self.updated_synchronous_node_count():
             logger.debug(
                 "Deferring on_peer_relation_departed: Cluster must be initialized before members can leave"
             )
@@ -521,7 +552,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Reconfigure cluster members."""
         # The cluster must be initialized first in the leader unit
         # before any other member joins the cluster.
-        if "cluster_initialised" not in self._peers.data[self.app]:
+        if not self.is_cluster_initialised:
             if self.unit.is_leader():
                 if self._initialize_cluster(event):
                     logger.debug("Deferring on_peer_relation_changed: Leader initialized cluster")
@@ -566,7 +597,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         services = container.pebble.get_services(names=[self._postgresql_service])
         if (
-            ("restoring-backup" in self.app_peer_data or "restore-to-time" in self.app_peer_data)
+            (self.is_cluster_restoring_backup or self.is_cluster_restoring_to_time)
             and len(services) > 0
             and not self._was_restore_successful(container, services[0])
         ):
@@ -660,6 +691,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.unit.status = BlockedStatus("Configuration Error. Please check the logs")
             logger.error("Invalid configuration: %s", str(e))
             return
+        if not self.updated_synchronous_node_count():
+            logger.debug("Defer on_config_changed: unable to set synchronous node count")
+            event.defer()
+            return
 
         if self.is_blocked and "Configuration Error" in self.unit.status.message:
             self._set_active_status()
@@ -673,6 +708,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Enable and/or disable the extensions.
         self.enable_disable_extensions()
 
+        self._unblock_extensions()
+
+    def _unblock_extensions(self) -> None:
         # Unblock the charm after extensions are enabled (only if it's blocked due to application
         # charms requesting extensions).
         if self.unit.status.message != EXTENSIONS_BLOCKING_MESSAGE:
@@ -769,7 +807,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         # Reconfiguration can be successful only if the cluster is initialised
         # (i.e. first unit has bootstrap the cluster).
-        if "cluster_initialised" not in self._peers.data[self.app]:
+        if not self.is_cluster_initialised:
             return
 
         try:
@@ -783,6 +821,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             for member in self._hosts - self._patroni.cluster_members:
                 logger.debug("Adding %s to cluster", member)
                 self.add_cluster_member(member)
+            self._patroni.update_synchronous_node_count()
         except NotReadyError:
             logger.info("Deferring reconfigure: another member doing sync right now")
             event.defer()
@@ -941,7 +980,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Otherwise, each unit will create a different cluster and
         # any update in the members list on the units won't have effect
         # on fixing that.
-        if not self.unit.is_leader() and "cluster_initialised" not in self._peers.data[self.app]:
+        if not self.unit.is_leader() and not self.is_cluster_initialised:
             logger.debug(
                 "Deferring on_postgresql_pebble_ready: Not leader and cluster not initialized"
             )
@@ -993,10 +1032,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     self.app_peer_data["s3-initialization-block-message"]
                 )
                 return
-            if self._patroni.get_primary(unit_name_pattern=True) == self.unit.name:
-                self.unit.status = ActiveStatus("Primary")
-            elif self.is_standby_leader:
-                self.unit.status = ActiveStatus("Standby")
+            if (
+                self._patroni.get_primary(unit_name_pattern=True) == self.unit.name
+                or self.is_standby_leader
+            ):
+                danger_state = ""
+                if len(self._patroni.get_running_cluster_members()) < self.app.planned_units():
+                    danger_state = " (degraded)"
+                self.unit.status = ActiveStatus(
+                    f"{'Standby' if self.is_standby_leader else 'Primary'}{danger_state}"
+                )
             elif self._patroni.member_started:
                 self.unit.status = ActiveStatus()
         except (RetryError, RequestsConnectionError) as e:
@@ -1048,7 +1093,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.postgresql.create_user(
                 MONITORING_USER,
                 self.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY),
-                extra_user_roles="pg_monitor",
+                extra_user_roles=["pg_monitor"],
             )
 
         self.postgresql.set_up_database()
@@ -1171,8 +1216,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Returns whether the unit is in a waiting state and there is no restore process ongoing."""
         return (
             isinstance(self.unit.status, WaitingStatus)
-            and "restoring-backup" not in self.app_peer_data
-            and "restore-to-time" not in self.app_peer_data
+            and not self.is_cluster_restoring_backup
+            and not self.is_cluster_restoring_to_time
         )
 
     def _on_get_password(self, event: ActionEvent) -> None:
@@ -1267,6 +1312,26 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.update_config()
 
         event.set_results({"password": password})
+
+    def _on_promote_to_primary(self, event: ActionEvent) -> None:
+        if event.params.get("scope") == "cluster":
+            return self.async_replication.promote_to_primary(event)
+        elif event.params.get("scope") == "unit":
+            return self.promote_primary_unit(event)
+        else:
+            event.fail("Scope should be either cluster or unit")
+
+    def promote_primary_unit(self, event: ActionEvent) -> None:
+        """Handles promote to primary for unit scope."""
+        if event.params.get("force"):
+            event.fail("Suprerfluous force flag with unit scope")
+        else:
+            try:
+                self._patroni.switchover(self.unit.name, wait=False)
+            except SwitchoverNotSyncError:
+                event.fail("Unit is not sync standby")
+            except SwitchoverFailedError:
+                event.fail("Switchover failed or timed out, check the logs for details")
 
     def _on_get_primary(self, event: ActionEvent) -> None:
         """Get primary instance."""
@@ -1420,9 +1485,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
 
         if (
-            "restoring-backup" not in self.app_peer_data
-            and "restore-to-time" not in self.app_peer_data
-            and "stopped" not in self.unit_peer_data
+            not self.is_cluster_restoring_backup
+            and not self.is_cluster_restoring_to_time
+            and not self.is_unit_stopped
             and services[0].current != ServiceStatus.ACTIVE
         ):
             logger.warning(
@@ -1438,7 +1503,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 return
 
         if (
-            "restoring-backup" in self.app_peer_data or "restore-to-time" in self.app_peer_data
+            self.is_cluster_restoring_backup or self.is_cluster_restoring_to_time
         ) and not self._was_restore_successful(container, services[0]):
             return
 
@@ -1454,7 +1519,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _was_restore_successful(self, container: Container, service: ServiceInfo) -> bool:
         """Checks if restore operation succeeded and S3 is properly configured."""
-        if "restore-to-time" in self.app_peer_data and all(self.is_pitr_failed(container)):
+        if self.is_cluster_restoring_to_time and all(self.is_pitr_failed(container)):
             logger.error(
                 "Restore failed: database service failed to reach point-in-time-recovery target. "
                 "You can launch another restore with different parameters"
@@ -1942,6 +2007,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         if self.config.request_time_zone not in self.postgresql.get_postgresql_timezones():
             raise ValueError("request_time_zone config option has an invalid value")
+
+        if (
+            self.config.storage_default_table_access_method
+            not in self.postgresql.get_postgresql_default_table_access_methods()
+        ):
+            raise ValueError(
+                "storage_default_table_access_method config option has an invalid value"
+            )
 
         container = self.unit.get_container("postgresql")
         output, _ = container.exec(["locale", "-a"]).wait_output()

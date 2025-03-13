@@ -187,7 +187,10 @@ class PostgreSQLBackups(Object):
                 for line in system_identifier_from_instance.splitlines()
                 if "Database system identifier" in line
             ).split(" ")[-1]
-            system_identifier_from_stanza = str(stanza.get("db")[0]["system-id"])
+            stanza_dbs = stanza.get("db")
+            system_identifier_from_stanza = (
+                str(stanza_dbs[0]["system-id"]) if len(stanza_dbs) else None
+            )
             if system_identifier_from_instance != system_identifier_from_stanza:
                 logger.debug(
                     f"can_use_s3_repository: incompatible system identifier s3={system_identifier_from_stanza}, local={system_identifier_from_instance}"
@@ -669,7 +672,7 @@ class PostgreSQLBackups(Object):
             logger.debug("_on_s3_credential_changed early exit: no connection info")
             return False
 
-        if "cluster_initialised" not in self.charm.app_peer_data:
+        if not self.charm.is_cluster_initialised:
             logger.debug("Cannot set pgBackRest configurations, PostgreSQL has not yet started.")
             event.defer()
             return False
@@ -681,10 +684,7 @@ class PostgreSQLBackups(Object):
             return False
 
         # Prevents S3 change in the middle of restoring backup and patroni / pgbackrest errors caused by that.
-        if (
-            "restoring-backup" in self.charm.app_peer_data
-            or "restore-to-time" in self.charm.app_peer_data
-        ):
+        if self.charm.is_cluster_restoring_backup or self.charm.is_cluster_restoring_to_time:
             logger.info("Cannot change S3 configuration during restore")
             event.defer()
             return False
@@ -1014,7 +1014,7 @@ Stderr:
             )
         except ApiError as e:
             # If previous PITR restore was unsuccessful, there are no such endpoints.
-            if "restore-to-time" not in self.charm.app_peer_data:
+            if not self.charm.is_cluster_restoring_to_time:
                 error_message = f"Failed to remove previous cluster information with error: {e!s}"
                 logger.error(f"Restore failed: {error_message}")
                 event.fail(error_message)
@@ -1208,7 +1208,7 @@ Stderr:
         with open("templates/pgbackrest.logrotate.j2") as file:
             template = Template(file.read())
         self.container.push(PGBACKREST_LOGROTATE_FILE, template.render())
-        with open("src/rotate_logs.py") as f:
+        with open("scripts/rotate_logs.py") as f:
             self.container.push(
                 "/home/postgres/rotate_logs.py",
                 f.read(),

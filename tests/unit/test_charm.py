@@ -26,7 +26,7 @@ from tenacity import RetryError, wait_fixed
 
 from charm import EXTENSION_OBJECT_MESSAGE, PostgresqlOperatorCharm
 from constants import PEER, SECRET_INTERNAL_LABEL
-from patroni import NotReadyError
+from patroni import NotReadyError, SwitchoverFailedError, SwitchoverNotSyncError
 from tests.unit.helpers import _FakeApiError
 
 POSTGRESQL_CONTAINER = "postgresql"
@@ -41,14 +41,25 @@ tc = TestCase()
 
 @pytest.fixture(autouse=True)
 def harness():
-    with patch("charm.KubernetesServicePatch", lambda x, y: None):
-        harness = Harness(PostgresqlOperatorCharm)
-        harness.handle_exec("postgresql", ["locale", "-a"], result="C")
+    harness = Harness(PostgresqlOperatorCharm)
+    harness.handle_exec("postgresql", ["locale", "-a"], result="C")
 
-        harness.add_relation(PEER, "postgresql-k8s")
+    harness.add_relation(PEER, "postgresql-k8s")
+    harness.begin()
+    harness.add_relation("restart", harness.charm.app.name)
+    yield harness
+    harness.cleanup()
+
+
+def test_set_ports(only_with_juju_secrets):
+    with (
+        patch("charm.JujuVersion") as _juju_version,
+        patch("charm.PostgresqlOperatorCharm.unit") as _unit,
+    ):
+        harness = Harness(PostgresqlOperatorCharm)
         harness.begin()
-        harness.add_relation("restart", harness.charm.app.name)
-        yield harness
+        _unit.set_ports.assert_called_once_with(5432, 8008)
+
         harness.cleanup()
 
 
@@ -279,6 +290,9 @@ def test_on_config_changed(harness):
             "charm.PostgreSQLUpgrade.idle", return_value=False, new_callable=PropertyMock
         ) as _idle,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
+        patch(
+            "charm.PostgresqlOperatorCharm.updated_synchronous_node_count", return_value=True
+        ) as _updated_synchronous_node_count,
         patch("charm.Patroni.member_started", return_value=True, new_callable=PropertyMock),
         patch("charm.Patroni.get_primary"),
         patch(
@@ -321,6 +335,14 @@ def test_on_config_changed(harness):
         harness.charm._on_config_changed(mock_event)
         assert isinstance(harness.charm.unit.status, ActiveStatus)
         assert not _enable_disable_extensions.called
+        _updated_synchronous_node_count.assert_called_once_with()
+
+        # Deferst on update sync nodes failure
+        _updated_synchronous_node_count.return_value = False
+        harness.charm._on_config_changed(mock_event)
+        mock_event.defer.assert_called_once_with()
+        mock_event.defer.reset_mock()
+        _updated_synchronous_node_count.return_value = True
 
         # Leader enables extensions
         with harness.hooks_disabled():
@@ -457,6 +479,12 @@ def test_on_update_status(harness):
         patch("ops.model.Container.pebble") as _pebble,
         patch("ops.model.Container.restart") as _restart,
         patch("upgrade.PostgreSQLUpgrade.idle", return_value="idle"),
+        patch(
+            "charm.PostgresqlOperatorCharm.is_standby_leader",
+            new_callable=PropertyMock,
+            return_value=False,
+        ),
+        patch("charm.Patroni.get_running_cluster_members", return_value=["test"]),
     ):
         # Early exit on can connect.
         harness.set_can_connect(POSTGRESQL_CONTAINER, False)
@@ -663,11 +691,14 @@ def test_on_peer_relation_departed(harness):
         patch(
             "charm.PostgresqlOperatorCharm._get_endpoints_to_remove"
         ) as _get_endpoints_to_remove,
-        patch("charm.PostgresqlOperatorCharm._peers", new_callable=PropertyMock) as _peers,
+        patch(
+            "charm.PostgresqlOperatorCharm.app_peer_data", new_callable=PropertyMock
+        ) as _app_peer_data,
         patch(
             "charm.PostgresqlOperatorCharm._get_endpoints_to_remove", return_value=sentinel.units
         ) as _get_endpoints_to_remove,
         patch("charm.PostgresqlOperatorCharm._remove_from_endpoints") as _remove_from_endpoints,
+        patch("charm.PostgresqlOperatorCharm.updated_synchronous_node_count"),
     ):
         # Early exit if not leader
         event = Mock()
@@ -680,7 +711,7 @@ def test_on_peer_relation_departed(harness):
         harness.charm._on_peer_relation_departed(event)
         event.defer.assert_called_once_with()
 
-        _peers.return_value.data = {harness.charm.app: {"cluster_initialised": True}}
+        _app_peer_data.return_value = {"cluster_initialised": True}
         harness.charm._on_peer_relation_departed(event)
         _get_endpoints_to_remove.assert_called_once_with()
         _remove_from_endpoints.assert_called_once_with(sentinel.units)
@@ -1716,6 +1747,7 @@ def test_handle_postgresql_restart_need(harness):
 def test_set_active_status(harness):
     with (
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
+        patch("charm.Patroni.get_running_cluster_members", return_value=["test"]),
         patch(
             "charm.PostgresqlOperatorCharm.is_standby_leader", new_callable=PropertyMock
         ) as _is_standby_leader,
@@ -1748,7 +1780,9 @@ def test_set_active_status(harness):
                     assert isinstance(harness.charm.unit.status, MaintenanceStatus)
                 else:
                     _is_standby_leader.side_effect = None
-                    _is_standby_leader.return_value = values[1]
+                    _is_standby_leader.return_value = (
+                        values[0] != harness.charm.unit.name and values[1]
+                    )
                     harness.charm._set_active_status()
                     assert isinstance(
                         harness.charm.unit.status,
@@ -1823,3 +1857,42 @@ def test_get_plugins(harness):
             "insert_username",
             "moddatetime",
         ]
+
+
+def test_on_promote_to_primary(harness):
+    with (
+        patch("charm.PostgreSQLAsyncReplication.promote_to_primary") as _promote_to_primary,
+        patch("charm.Patroni.switchover") as _switchover,
+    ):
+        event = Mock()
+        event.params = {"scope": "cluster"}
+
+        # Cluster
+        harness.charm._on_promote_to_primary(event)
+        _promote_to_primary.assert_called_once_with(event)
+
+        # Unit, no force, regular promotion
+        event.params = {"scope": "unit"}
+
+        harness.charm._on_promote_to_primary(event)
+
+        _switchover.assert_called_once_with("postgresql-k8s/0", wait=False)
+
+        # Unit, no force, switchover failed
+        event.params = {"scope": "unit"}
+        _switchover.side_effect = SwitchoverFailedError
+
+        harness.charm._on_promote_to_primary(event)
+
+        event.fail.assert_called_once_with(
+            "Switchover failed or timed out, check the logs for details"
+        )
+        event.fail.reset_mock()
+
+        # Unit, no force, not sync
+        event.params = {"scope": "unit"}
+        _switchover.side_effect = SwitchoverNotSyncError
+
+        harness.charm._on_promote_to_primary(event)
+
+        event.fail.assert_called_once_with("Unit is not sync standby")

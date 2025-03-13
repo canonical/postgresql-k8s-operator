@@ -28,7 +28,7 @@ resources:
   postgresql-image:
     type: oci-image
     description: OCI image for PostgreSQL
-    upstream-source: ghcr.io/canonical/charmed-postgresql:16.4-24.04_edge
+    upstream-source: ghcr.io/canonical/charmed-postgresql@sha256:549ec3436be86318a9b935e47ac47a092a7ea485dd07e54e772081d62a19ee21  # renovate: oci-image tag: 16.8-24.04_edge
 
 peers:
   database-peers:
@@ -84,9 +84,6 @@ storage:
 assumes:
   - k8s-api
   - any-of:
-      - all-of:
-          - juju >= 2.9.49
-          - juju < 3
       - all-of:
           - juju >= 3.4.3
           - juju < 3.5

@@ -12,6 +12,7 @@ from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from .. import markers
 from ..helpers import (
+    CHARM_BASE,
     DATABASE_APP_NAME,
     scale_application,
 )
@@ -42,9 +43,7 @@ env = os.environ
 env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
 
 
-@pytest.mark.group(1)
 @markers.amd64_only  # TODO: remove after arm64 stable release
-@pytest.mark.unstable
 @pytest.mark.abort_on_fail
 async def test_app_force_removal(ops_test: OpsTest):
     """Remove unit with force while storage is alive."""
@@ -55,7 +54,8 @@ async def test_app_force_removal(ops_test: OpsTest):
             DATABASE_APP_NAME,
             application_name=DATABASE_APP_NAME,
             num_units=1,
-            channel="16/stable",
+            channel="14/stable",
+            base=CHARM_BASE,
             trust=True,
             config={"profile": "testing"},
         )
@@ -103,9 +103,7 @@ async def test_app_force_removal(ops_test: OpsTest):
                 assert await is_storage_exists(ops_test, storage_id)
 
 
-@pytest.mark.group(1)
 @markers.amd64_only  # TODO: remove after arm64 stable release
-@pytest.mark.unstable
 @pytest.mark.abort_on_fail
 async def test_app_garbage_ignorance(ops_test: OpsTest):
     """Test charm deploy in dirty environment with garbage storage."""
@@ -157,9 +155,7 @@ async def test_app_garbage_ignorance(ops_test: OpsTest):
         delete_pvc(ops_test, primary_pvc)
 
 
-@pytest.mark.group(1)
 @markers.amd64_only  # TODO: remove after arm64 stable release
-@pytest.mark.unstable
 @pytest.mark.abort_on_fail
 async def test_app_resources_conflicts(ops_test: OpsTest):
     """Test application deploy in dirty environment with garbage storage from another application."""
@@ -169,7 +165,8 @@ async def test_app_resources_conflicts(ops_test: OpsTest):
             DATABASE_APP_NAME,
             application_name=DUP_DATABASE_APP_NAME,
             num_units=1,
-            channel="16/stable",
+            channel="14/stable",
+            base=CHARM_BASE,
             trust=True,
             config={"profile": "testing"},
         )
