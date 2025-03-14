@@ -78,10 +78,13 @@ async def build_and_deploy(
     wait_for_idle: bool = True,
     status: str = "active",
     model: Model = None,
+    extra_config: dict[str, str] | None = None,
 ) -> None:
     """Builds the charm and deploys a specified number of units."""
     if model is None:
         model = ops_test.model
+    if not extra_config:
+        extra_config = {}
 
     # It is possible for users to provide their own cluster for testing. Hence, check if there
     # is a pre-existing cluster.
@@ -98,7 +101,7 @@ async def build_and_deploy(
         trust=True,
         num_units=num_units,
         base=CHARM_BASE_NOBLE,
-        config={"profile": "testing"},
+        config={**extra_config, "profile": "testing"},
     )
     if wait_for_idle:
         # Wait until the PostgreSQL charm is successfully deployed.

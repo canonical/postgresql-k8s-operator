@@ -95,12 +95,8 @@ async def test_plugins(ops_test: OpsTest, charm) -> None:
     """Build and deploy one unit of PostgreSQL and then test the available plugins."""
     # Build and deploy the PostgreSQL charm.
     async with ops_test.fast_forward():
-        await build_and_deploy(ops_test, charm, 2)
         # TODO Figure out how to deal with pgaudit
-        await ops_test.model.applications[DATABASE_APP_NAME].set_config({
-            "plugin_audit_enable": "False"
-        })
-    await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", idle_period=60)
+        await build_and_deploy(ops_test, charm, 2, extra_config={"plugin_audit_enable": "False"})
 
     sql_tests = {
         "plugin_citext_enable": CITEXT_EXTENSION_STATEMENT,
