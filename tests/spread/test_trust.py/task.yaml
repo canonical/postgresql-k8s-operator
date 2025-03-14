@@ -1,0 +1,7 @@
+summary: test_trust.py
+environment:
+  TEST_MODULE: test_trust.py
+execute: |
+  tox run -e integration -- "tests/integration/$TEST_MODULE" --model testing --alluredir="$SPREAD_TASK/allure-results"
+artifacts:
+  - allure-results

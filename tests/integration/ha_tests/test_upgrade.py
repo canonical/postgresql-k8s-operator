@@ -12,11 +12,13 @@ from lightkube.resources.apps_v1 import StatefulSet
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 
+from .. import markers
 from ..helpers import (
     APPLICATION_NAME,
+    CHARM_BASE,
+    CHARM_BASE_NOBLE,
     DATABASE_APP_NAME,
     METADATA,
-    build_charm,
     count_switchovers,
     get_leader_unit,
     get_primary,
@@ -34,8 +36,8 @@ logger = logging.getLogger(__name__)
 TIMEOUT = 600
 
 
-@pytest.mark.group(1)
-@pytest.mark.unstable
+# No arm edge
+@markers.amd64_only
 @pytest.mark.abort_on_fail
 async def test_deploy_latest(ops_test: OpsTest) -> None:
     """Simple test to ensure that the PostgreSQL and application charms get deployed."""
@@ -46,11 +48,13 @@ async def test_deploy_latest(ops_test: OpsTest) -> None:
             channel="16/edge",
             trust=True,
             config={"profile": "testing"},
+            base=CHARM_BASE_NOBLE,
         ),
         ops_test.model.deploy(
             APPLICATION_NAME,
             num_units=1,
             channel="latest/edge",
+            base=CHARM_BASE,
         ),
     )
     logger.info("Wait for applications to become active")
@@ -64,8 +68,8 @@ async def test_deploy_latest(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3
 
 
-@pytest.mark.group(1)
-@pytest.mark.unstable
+# No arm edge
+@markers.amd64_only
 @pytest.mark.abort_on_fail
 async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     """Test that the pre-upgrade-check action runs successfully."""
@@ -92,10 +96,10 @@ async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     assert stateful_set.spec.updateStrategy.rollingUpdate.partition == 2, "Partition not set to 2"
 
 
-@pytest.mark.group(1)
-@pytest.mark.unstable
+# No arm edge
+@markers.amd64_only
 @pytest.mark.abort_on_fail
-async def test_upgrade_from_edge(ops_test: OpsTest, continuous_writes) -> None:
+async def test_upgrade_from_edge(ops_test: OpsTest, charm, continuous_writes) -> None:
     # Start an application that continuously writes data to the database.
     logger.info("starting continuous writes to the database")
     await start_continuous_writes(ops_test, DATABASE_APP_NAME)
@@ -109,9 +113,6 @@ async def test_upgrade_from_edge(ops_test: OpsTest, continuous_writes) -> None:
 
     resources = {"postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]}
     application = ops_test.model.applications[DATABASE_APP_NAME]
-
-    logger.info("Build charm locally")
-    charm = await build_charm(".")
 
     logger.info("Refresh the charm")
     await application.refresh(path=charm, resources=resources)
@@ -159,10 +160,10 @@ async def test_upgrade_from_edge(ops_test: OpsTest, continuous_writes) -> None:
     )
 
 
-@pytest.mark.group(1)
-@pytest.mark.unstable
+# No arm edge
+@markers.amd64_only
 @pytest.mark.abort_on_fail
-async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
+async def test_fail_and_rollback(ops_test, charm, continuous_writes) -> None:
     # Start an application that continuously writes data to the database.
     logger.info("starting continuous writes to the database")
     await start_continuous_writes(ops_test, DATABASE_APP_NAME)
@@ -185,10 +186,9 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
             primary_name = await get_primary(ops_test, DATABASE_APP_NAME)
             assert primary_name == f"{DATABASE_APP_NAME}/0"
 
-    local_charm = await build_charm(".")
-    filename = local_charm.split("/")[-1] if isinstance(local_charm, str) else local_charm.name
+    filename = Path(charm).name
     fault_charm = Path("/tmp/", filename)
-    shutil.copy(local_charm, fault_charm)
+    shutil.copy(charm, fault_charm)
 
     logger.info("Inject dependency fault")
     await inject_dependency_fault(ops_test, DATABASE_APP_NAME, fault_charm)
@@ -217,7 +217,7 @@ async def test_fail_and_rollback(ops_test, continuous_writes) -> None:
     await action.wait()
 
     logger.info("Re-refresh the charm")
-    await application.refresh(path=local_charm)
+    await application.refresh(path=charm)
 
     async with ops_test.fast_forward("60s"):
         await ops_test.model.block_until(

@@ -39,8 +39,7 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 
 | Level | Path | Navlink |
 |--------|--------|-------------|
-| 1 | tutorial | [Tutorial]() |
-| 2 | t-overview | [Overview](/t/9296) |
+| 1 | tutorial | [Tutorial](/t/9296) |
 | 2 | t-set-up | [1. Set up environment](/t/9297) |
 | 2 | t-deploy | [2. Deploy PostgreSQL](/t/9298) |
 | 2 | t-access | [3. Access PostgreSQL](/t/13702) |
@@ -49,10 +48,9 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 2 | t-integrate | [6. Integrate with other applications](/t/9301) |
 | 2 | t-enable-tls | [7. Enable TLS encryption](/t/9302) |
 | 2 | t-clean-up | [8. Clean up environment](/t/9303) |
-| 1 | how-to | [How to]() |
-| 2 | h-deploy | [Deploy]() |
+| 1 | how-to | [How-to guides](/t/16767) |
+| 2 | h-deploy | [Deploy](/t/16810) |
 | 3 | h-deploy-canonical-k8s | [Canonical K8s](/t/15937) |
-| 3 | h-deploy-microk8s | [MicroK8s](/t/11858) |
 | 3 | h-deploy-gke | [GKE](/t/11237) |
 | 3 | h-deploy-eks | [EKS](/t/12106) |
 | 3 | h-deploy-aks | [AKS](/t/14307) |
@@ -60,9 +58,10 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 3 | h-deploy-terraform | [Terraform](/t/14924) |
 | 3 | h-deploy-airgapped | [Air-gapped](/t/15691) |
 | 2 | h-integrate | [Integrate with another application](/t/9594) |
-| 2 | h-external-access | [External access](/t/15701) |
+| 2 | h-external-access | [External network access](/t/15701) |
 | 2 | h-scale | [Scale replicas](/t/9592) |
 | 2 | h-enable-tls | [Enable TLS](/t/9593) |
+| 2 | h-enable-plugins-extensions | [Enable plugins/extensions](/t/10907) |
 | 2 | h-backup | [Back up and restore]() |
 | 3 | h-configure-s3-aws | [Configure S3 AWS](/t/9595) |
 | 3 | h-configure-s3-radosgw | [Configure S3 RadosGW](/t/10316) |
@@ -74,29 +73,19 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 3 | h-enable-monitoring | [Enable monitoring](/t/10812) |
 | 3 | h-enable-alert-rules | [Enable alert rules](/t/12982) |
 | 3 | h-enable-tracing | [Enable tracing](/t/14786) |
-| 2 | h-upgrade | [Minor upgrades]() |
+| 2 | h-upgrade | [Upgrade](/t/12092) |
 | 3 | h-upgrade-minor | [Perform a minor upgrade](/t/12095) |
 | 3 | h-rollback-minor | [Perform a minor rollback](/t/12096) |
 | 2 | h-async | [Cross-regional async replication](/t/15413) |
 | 3 | h-async-set-up | [Set up clusters](/t/13895) |
 | 3 | h-async-integrate | [Integrate with a client app](/t/13896) |
 | 3 | h-async-remove-recover | [Remove or recover a cluster](/t/13897) |
-| 2 | h-enable-plugins-extensions | [Enable plugins/extensions](/t/10907) |
 | 2 | h-development| [Development]() |
-| 3 | h-development-integrate | [Integrate a database with your charm](/t/11853) |
+| 3 | h-development-integrate | [Integrate with your charm](/t/11853) |
 | 3 | h-migrate-pgdump | [Migrate data via pg_dump](/t/12162) |
 | 3 | h-migrate-backup-restore | [Migrate data via backup/restore](/t/12161) |
-| 1 | reference | [Reference]() |
-| 2 | r-overview | [Overview](/t/13977) |
-| 2 | r-releases | [Release Notes](/t/11872) |
-| 3 | r-revision-462-463 | [Revision 462/463](/t/16008) |
-| 3 | r-revision-444-445 | [Revision 444/445](/t/15966) |
-| 3 | r-revision-381-382 | [Revision 381/382](/t/15442) |
-| 3 | r-revision-280-281 | [Revision 280/281](/t/14068) |
-| 3 | r-revision-193 | [Revision 193](/t/13208) |
-| 3 | r-revision-177 | [Revision 177](/t/12668) |
-| 3 | r-revision-158 | [Revision 158](/t/11874) |
-| 3 | r-revision-73 | [Revision 73](/t/11873) |
+| 1 | reference | [Reference](/t/13977) |
+| 2 | r-releases | [Releases](/t/11872) |
 | 2 | r-system-requirements | [System requirements](/t/11744) |
 | 2 | r-software-testing | [Software testing](/t/11774) |
 | 2 | r-performance | [Performance and resources](/t/11975) |
@@ -104,15 +93,15 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 2 | r-plugins-extensions | [Plugins/extensions](/t/10945) |
 | 2 | r-alert-rules | [Alert rules](/t/15840) |
 | 2 | r-contacts | [Contacts](/t/11852) |
-| 1 | explanation | [Explanation]() |
+| 1 | explanation | [Explanation](/t/16769) |
 | 2 | e-architecture | [Architecture](/t/11856) |
 | 2 | e-interfaces-endpoints | [Interfaces/endpoints](/t/10252) |
+| 2 | e-connection-pooling| [Connection pooling](/t/15799) |
 | 2 | e-statuses | [Statuses](/t/11855) |
 | 2 | e-users | [Users](/t/10843) |
 | 2 | e-logs | [Logs](/t/12098) |
 | 2 | e-juju-details | [Juju](/t/11986) |
 | 2 | e-legacy-charm | [Legacy charm](/t/11013) |
-| 2 | e-connection-pooling| [Connection pooling](/t/15799) |
 | 2 | flowcharts | [Flowcharts]() |
 | 3 | e-flowchart-charm | [Charm](/t/9305) |
 | 3 | e-flowchart-peers | [Relations](/t/9306) |
@@ -121,8 +110,19 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 
 [/details]
 
-<!-- Removed from navigation - to be archived.
+<!-- Archived
 | 3 | h-upgrade-intro | [Overview](/t/12092) |
 | 3 | h-upgrade-major | [Perform a major upgrade](/t/12093) |
 | 3 | h-rollback-major | [Perform a major rollback](/t/12094) |
+
+| 3 | h-deploy-microk8s | [MicroK8s](/t/11858) |
+
+| 3 | r-revision-462-463 | [Revision 462/463](/t/16008) |
+| 3 | r-revision-444-445 | [Revision 444/445](/t/15966) |
+| 3 | r-revision-381-382 | [Revision 381/382](/t/15442) |
+| 3 | r-revision-280-281 | [Revision 280/281](/t/14068) |
+| 3 | r-revision-193 | [Revision 193](/t/13208) |
+| 3 | r-revision-177 | [Revision 177](/t/12668) |
+| 3 | r-revision-158 | [Revision 158](/t/11874) |
+| 3 | r-revision-73 | [Revision 73](/t/11873) |
 -->

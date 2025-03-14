@@ -7,11 +7,10 @@ import os
 import pathlib
 import typing
 
-import pytest
 from pytest_operator.plugin import OpsTest
 
 from . import markers
-from .helpers import DATABASE_APP_NAME, METADATA
+from .helpers import CHARM_BASE, DATABASE_APP_NAME, METADATA
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +25,6 @@ async def fetch_charm(
     return packed_charms[0].resolve(strict=True)
 
 
-@pytest.mark.group(1)
 @markers.amd64_only
 async def test_arm_charm_on_amd_host(ops_test: OpsTest) -> None:
     """Tries deploying an arm64 charm on amd64 host."""
@@ -40,6 +38,7 @@ async def test_arm_charm_on_amd_host(ops_test: OpsTest) -> None:
         application_name=DATABASE_APP_NAME,
         trust=True,
         num_units=1,
+        base=CHARM_BASE,
         config={"profile": "testing"},
     )
 
@@ -48,7 +47,6 @@ async def test_arm_charm_on_amd_host(ops_test: OpsTest) -> None:
     )
 
 
-@pytest.mark.group(1)
 @markers.arm64_only
 async def test_amd_charm_on_arm_host(ops_test: OpsTest) -> None:
     """Tries deploying an amd64 charm on arm64 host."""
@@ -62,6 +60,7 @@ async def test_amd_charm_on_arm_host(ops_test: OpsTest) -> None:
         application_name=DATABASE_APP_NAME,
         trust=True,
         num_units=1,
+        base=CHARM_BASE,
         config={"profile": "testing"},
     )
 
