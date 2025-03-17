@@ -2393,14 +2393,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if data is None:
             return {}
 
-        secret_object = self.model.get_secret(id=data.bind_password_secret)
-        secret_content = secret_object.get_content()
-        bind_password = secret_content["password"]
-
         params = {
             "ldapbasedn": data.base_dn,
             "ldapbinddn": data.bind_dn,
-            "ldapbindpasswd": bind_password,
+            "ldapbindpasswd": data.bind_password,
             "ldaptls": data.starttls,
             "ldapurl": data.urls[0],
         }
