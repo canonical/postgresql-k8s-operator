@@ -307,7 +307,7 @@ async def test_promote_standby(
 
     logger.info("rerelate test app")
     await ops_test.model.applications[DATABASE_APP_NAME].remove_relation(
-        DATABASE_APP_NAME, f"{APPLICATION_NAME}:{FIRST_DATABASE_RELATION_NAME}"
+        "database", f"{APPLICATION_NAME}:{FIRST_DATABASE_RELATION_NAME}"
     )
     await ops_test.model.wait_for_idle(
         apps=[DATABASE_APP_NAME, APPLICATION_NAME], status="active", raise_on_blocked=True
