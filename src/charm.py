@@ -242,11 +242,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             relation_name="logging",
         )
 
-        if JujuVersion.from_environ().supports_open_port_on_k8s:
-            try:
-                self.unit.set_ports(5432, 8008)
-            except ModelError:
-                logger.exception("failed to open port")
+        try:
+            self.unit.set_ports(5432, 8008)
+        except ModelError:
+            logger.exception("failed to open port")
         self.tracing = TracingEndpointRequirer(
             self, relation_name=TRACING_RELATION_NAME, protocols=[TRACING_PROTOCOL]
         )
@@ -260,8 +259,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @property
     def _pebble_log_forwarding_supported(self) -> bool:
         # https://github.com/canonical/operator/issues/1230
-        from ops.jujuversion import JujuVersion
-
         juju_version = JujuVersion.from_environ()
         return juju_version > JujuVersion(version="3.3")
 
