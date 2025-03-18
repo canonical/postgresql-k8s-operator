@@ -38,7 +38,13 @@ class PostgreSQLLDAP(Object):
     @property
     def ca_transferred(self) -> bool:
         """Return whether the CA certificate has been transferred."""
-        return self.model.relations[TLS_TRANSFER_RELATION] is not None
+        ca_transferred_relations = self.model.relations[TLS_TRANSFER_RELATION]
+
+        for relation in ca_transferred_relations:
+            if relation.app.name == self._relation.app.name:
+                return True
+
+        return False
 
     @property
     def _relation(self) -> Relation:
