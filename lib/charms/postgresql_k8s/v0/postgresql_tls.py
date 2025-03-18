@@ -194,15 +194,16 @@ class PostgreSQLTLS(Object):
 
     def _on_certificate_added(self, event: CertificateAddedEvent) -> None:
         """Enable TLS when TLS certificate is added."""
-        if not event.ca:
-            logger.debug("No certificate available.")
-            event.defer()
+        relation = self.charm.model.get_relation(TLS_TRANSFER_RELATION, event.relation_id)
+        if relation is None:
+            logger.error("Relationship not established anymore.")
             return
 
-        self.charm.set_secret(SCOPE, "ca", event.ca)
+        secret_name = f"ca-{relation.app.name}"
+        self.charm.set_secret(SCOPE, secret_name, event.ca)
 
         try:
-            if not self.charm.push_tls_files_to_workload():
+            if not self.charm.push_ca_file_into_workload(secret_name):
                 logger.debug("Cannot push TLS certificates at this moment")
                 event.defer()
                 return
@@ -213,11 +214,23 @@ class PostgreSQLTLS(Object):
 
     def _on_certificate_removed(self, event: CertificateRemovedEvent) -> None:
         """Disable TLS when TLS certificate is removed."""
-        self.charm.set_secret(SCOPE, "ca", None)
+        relation = self.charm.model.get_relation(TLS_TRANSFER_RELATION, event.relation_id)
+        if relation is None:
+            logger.error("Relationship not established anymore.")
+            return
 
-        if not self.charm.update_config():
-            logger.debug("Cannot update config at this moment")
+        secret_name = f"ca-{relation.app.name}"
+        self.charm.set_secret(SCOPE, secret_name, None)
+
+        try:
+            if not self.charm.clean_ca_file_from_workload(secret_name):
+                logger.debug("Cannot clean CA certificates at this moment")
+                event.defer()
+                return
+        except (PebbleConnectionError, PathError, ProtocolError, RetryError) as e:
+            logger.error("Cannot clean CA certificates: %r", e)
             event.defer()
+            return
 
     def _get_sans(self) -> dict:
         """Create a list of Subject Alternative Names for a PostgreSQL unit.
