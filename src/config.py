@@ -18,6 +18,7 @@ class CharmConfig(BaseConfigModel):
 
     synchronous_node_count: Literal["all", "majority"] | PositiveInt
     durability_synchronous_commit: str | None
+    durability_wal_keep_size: int | None
     instance_default_text_search_config: str | None
     instance_max_locks_per_transaction: int | None
     instance_password_encryption: str | None
