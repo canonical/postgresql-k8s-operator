@@ -204,6 +204,15 @@ class CharmConfig(BaseConfigModel):
 
         return value
 
+    @validator("durability_wal_keep_size")
+    @classmethod
+    def durability_wal_keep_size_values(cls, value: int) -> int | None:
+        """Check durability_wal_keep_size config option is between 0 and 2147483647."""
+        if value < 0 or value > 2147483647:
+            raise ValueError("Value is not between 0 and 2147483647")
+
+        return value
+
     @validator("instance_password_encryption")
     @classmethod
     def instance_password_encryption_values(cls, value: str) -> str | None:
