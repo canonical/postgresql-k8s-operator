@@ -943,6 +943,14 @@ async def stop_continuous_writes(ops_test: OpsTest) -> int:
     return int(action.results["writes"])
 
 
+async def clear_continuous_writes(ops_test: OpsTest) -> None:
+    """Clears continuous writes to PostgreSQL."""
+    action = await ops_test.model.units.get(f"{APPLICATION_NAME}/0").run_action(
+        "clear-continuous-writes"
+    )
+    action = await action.wait()
+
+
 async def get_storage_id(ops_test: OpsTest, unit_name: str) -> str:
     """Retrieves  storage id associated with provided unit.
 

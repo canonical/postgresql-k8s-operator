@@ -6,7 +6,6 @@ import logging
 import subprocess
 from asyncio import gather
 
-import psycopg2
 import pytest as pytest
 from juju.model import Model
 from lightkube import Client
@@ -21,15 +20,13 @@ from ..helpers import (
     DATABASE_APP_NAME,
     build_and_deploy,
     get_leader_unit,
-    get_password,
-    get_primary,
-    get_unit_address,
     scale_application,
     wait_for_relation_removed_between,
 )
 from .helpers import (
     are_writes_increasing,
     check_writes,
+    clear_continuous_writes,
     get_leader,
     get_standby_leader,
     start_continuous_writes,
@@ -42,6 +39,7 @@ CLUSTER_SIZE = 3
 FAST_INTERVAL = "10s"
 IDLE_PERIOD = 5
 TIMEOUT = 2000
+FIRST_DATABASE_RELATION_NAME = "database"
 
 
 @contextlib.asynccontextmanager
@@ -307,24 +305,22 @@ async def test_promote_standby(
             ),
         )
 
+    logger.info("rerelate test app")
+    await ops_test.model.applications[DATABASE_APP_NAME].remove_relation(
+        DATABASE_APP_NAME, f"{APPLICATION_NAME}:{FIRST_DATABASE_RELATION_NAME}"
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[DATABASE_APP_NAME, APPLICATION_NAME], status="active", raise_on_blocked=True
+    )
+    await ops_test.model.relate(
+        DATABASE_APP_NAME, f"{APPLICATION_NAME}:{FIRST_DATABASE_RELATION_NAME}"
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[DATABASE_APP_NAME, APPLICATION_NAME], status="active", raise_on_blocked=True
+    )
+
     logger.info("removing the previous data")
-    primary = await get_primary(ops_test)
-    address = await get_unit_address(ops_test, primary)
-    password = await get_password(ops_test)
-    database_name = f"{APPLICATION_NAME.replace('-', '_')}_database"
-    connection = None
-    try:
-        connection = psycopg2.connect(
-            f"dbname={database_name} user=operator password={password} host={address}"
-        )
-        connection.autocommit = True
-        cursor = connection.cursor()
-        cursor.execute("DROP TABLE IF EXISTS continuous_writes;")
-    except psycopg2.Error as e:
-        assert False, f"Failed to drop continuous writes table: {e}"
-    finally:
-        if connection is not None:
-            connection.close()
+    await clear_continuous_writes(ops_test)
 
     logger.info("starting continuous writes to the database")
     await start_continuous_writes(ops_test, DATABASE_APP_NAME)
