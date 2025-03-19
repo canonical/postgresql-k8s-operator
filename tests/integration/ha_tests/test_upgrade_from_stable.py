@@ -34,7 +34,6 @@ TIMEOUT = 10 * 60
 @pytest.mark.abort_on_fail
 async def test_deploy_stable(ops_test: OpsTest) -> None:
     """Simple test to ensure that the PostgreSQL and application charms get deployed."""
-    pytest.skip("No 16/stable yet.")
     await asyncio.gather(
         ops_test.model.deploy(
             DATABASE_APP_NAME,
