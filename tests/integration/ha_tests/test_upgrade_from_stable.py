@@ -13,6 +13,7 @@ from tenacity import Retrying, stop_after_attempt, wait_fixed
 from ..helpers import (
     APPLICATION_NAME,
     CHARM_BASE,
+    CHARM_BASE_NOBLE,
     DATABASE_APP_NAME,
     METADATA,
     count_switchovers,
@@ -41,7 +42,7 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
             # TODO move to stable once we release
             channel="16/beta",
             trust=True,
-            base=CHARM_BASE,
+            base=CHARM_BASE_NOBLE,
         ),
         ops_test.model.deploy(
             APPLICATION_NAME,
