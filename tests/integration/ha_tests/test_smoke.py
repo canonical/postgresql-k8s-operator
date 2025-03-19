@@ -10,10 +10,11 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from .. import markers
 from ..helpers import (
     CHARM_BASE,
     DATABASE_APP_NAME,
+    METADATA,
+    build_and_deploy,
     scale_application,
 )
 from .helpers import (
@@ -43,24 +44,13 @@ env = os.environ
 env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
 
 
-@markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
-async def test_app_force_removal(ops_test: OpsTest):
+async def test_app_force_removal(ops_test: OpsTest, charm):
     """Remove unit with force while storage is alive."""
     global primary_pv, primary_pvc
     # Deploy the charm.
     async with ops_test.fast_forward():
-        await ops_test.model.deploy(
-            DATABASE_APP_NAME,
-            application_name=DATABASE_APP_NAME,
-            num_units=1,
-            channel="14/stable",
-            base=CHARM_BASE,
-            trust=True,
-            config={"profile": "testing"},
-        )
-
-        await ops_test.model.wait_for_idle(status="active", timeout=1000)
+        await build_and_deploy(ops_test, charm, 1)
 
         assert ops_test.model.applications[DATABASE_APP_NAME].units[0].workload_status == "active"
 
@@ -103,7 +93,6 @@ async def test_app_force_removal(ops_test: OpsTest):
                 assert await is_storage_exists(ops_test, storage_id)
 
 
-@markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_app_garbage_ignorance(ops_test: OpsTest):
     """Test charm deploy in dirty environment with garbage storage."""
@@ -155,17 +144,19 @@ async def test_app_garbage_ignorance(ops_test: OpsTest):
         delete_pvc(ops_test, primary_pvc)
 
 
-@markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
-async def test_app_resources_conflicts(ops_test: OpsTest):
+async def test_app_resources_conflicts(ops_test: OpsTest, charm):
     """Test application deploy in dirty environment with garbage storage from another application."""
     global primary_pv, primary_pvc
     async with ops_test.fast_forward():
+        resources = {
+            "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
+        }
         await ops_test.model.deploy(
-            DATABASE_APP_NAME,
+            charm,
+            resources=resources,
             application_name=DUP_DATABASE_APP_NAME,
             num_units=1,
-            channel="14/stable",
             base=CHARM_BASE,
             trust=True,
             config={"profile": "testing"},
