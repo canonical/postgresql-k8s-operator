@@ -53,6 +53,14 @@ class SwitchoverFailedError(Exception):
     """Raised when a switchover failed for some reason."""
 
 
+class SwitchoverNotSyncError(SwitchoverFailedError):
+    """Raised when a switchover failed because node is not sync."""
+
+
+class UpdateSyncNodeCountError(Exception):
+    """Raised when updating synchronous_node_count failed for some reason."""
+
+
 class Patroni:
     """This class handles the communication with Patroni API and configuration files."""
 
@@ -126,6 +134,49 @@ class Patroni:
             url = self._patroni_url
         return url
 
+    @property
+    def _synchronous_node_count(self) -> int:
+        planned_units = self._charm.app.planned_units()
+        if self._charm.config.synchronous_node_count == "all":
+            return planned_units - 1
+        elif self._charm.config.synchronous_node_count == "majority":
+            return planned_units // 2
+        return (
+            self._charm.config.synchronous_node_count
+            if self._charm.config.synchronous_node_count < self._members_count - 1
+            else planned_units - 1
+        )
+
+    def update_synchronous_node_count(self) -> None:
+        """Update synchronous_node_count."""
+        # Try to update synchronous_node_count.
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+            with attempt:
+                r = requests.patch(
+                    f"{self._patroni_url}/config",
+                    json={"synchronous_node_count": self._synchronous_node_count},
+                    verify=self._verify,
+                    auth=self._patroni_auth,
+                    timeout=PATRONI_TIMEOUT,
+                )
+
+                # Check whether the update was unsuccessful.
+                if r.status_code != 200:
+                    raise UpdateSyncNodeCountError(f"received {r.status_code}")
+
+    def get_cluster(
+        self, attempt: AttemptManager, alternative_endpoints: list[str] | None = None
+    ) -> dict[str, str | int]:
+        """Call the cluster endpoint."""
+        url = self._get_alternative_patroni_url(attempt, alternative_endpoints)
+        r = requests.get(
+            f"{url}/cluster",
+            verify=self._verify,
+            auth=self._patroni_auth,
+            timeout=PATRONI_TIMEOUT,
+        )
+        return r.json()
+
     def get_primary(
         self, unit_name_pattern=False, alternative_endpoints: list[str] | None = None
     ) -> str:
@@ -142,11 +193,7 @@ class Patroni:
         # Request info from cluster endpoint (which returns all members of the cluster).
         for attempt in Retrying(stop=stop_after_attempt(len(self._endpoints) + 1)):
             with attempt:
-                url = self._get_alternative_patroni_url(attempt, alternative_endpoints)
-                r = requests.get(
-                    f"{url}/cluster", verify=self._verify, timeout=5, auth=self._patroni_auth
-                )
-                for member in r.json()["members"]:
+                for member in self.get_cluster(attempt, alternative_endpoints)["members"]:
                     if member["role"] == "leader":
                         primary = member["name"]
                         if unit_name_pattern:
@@ -171,14 +218,7 @@ class Patroni:
         # Request info from cluster endpoint (which returns all members of the cluster).
         for attempt in Retrying(stop=stop_after_attempt(len(self._endpoints) + 1)):
             with attempt:
-                url = self._get_alternative_patroni_url(attempt)
-                r = requests.get(
-                    f"{url}/cluster",
-                    verify=self._verify,
-                    auth=self._patroni_auth,
-                    timeout=PATRONI_TIMEOUT,
-                )
-                for member in r.json()["members"]:
+                for member in self.get_cluster(attempt)["members"]:
                     if member["role"] == "standby_leader":
                         if check_whether_is_running and member["state"] not in RUNNING_STATES:
                             logger.warning(f"standby leader {member['name']} is not running")
@@ -196,30 +236,33 @@ class Patroni:
         # Request info from cluster endpoint (which returns all members of the cluster).
         for attempt in Retrying(stop=stop_after_attempt(len(self._endpoints) + 1)):
             with attempt:
-                url = self._get_alternative_patroni_url(attempt)
-                r = requests.get(
-                    f"{url}/cluster",
-                    verify=self._verify,
-                    auth=self._patroni_auth,
-                    timeout=PATRONI_TIMEOUT,
-                )
-                for member in r.json()["members"]:
+                for member in self.get_cluster(attempt)["members"]:
                     if member["role"] == "sync_standby":
                         sync_standbys.append("/".join(member["name"].rsplit("-", 1)))
         return sync_standbys
 
     @property
-    @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def cluster_members(self) -> set:
         """Get the current cluster members."""
         # Request info from cluster endpoint (which returns all members of the cluster).
-        r = requests.get(
-            f"{self._patroni_url}/cluster",
-            verify=self._verify,
-            auth=self._patroni_auth,
-            timeout=PATRONI_TIMEOUT,
-        )
-        return {member["name"] for member in r.json()["members"]}
+        for attempt in Retrying(
+            stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10)
+        ):
+            with attempt:
+                return {member["name"] for member in self.get_cluster(attempt)["members"]}
+
+    def get_running_cluster_members(self) -> list[str]:
+        """List running patroni members."""
+        try:
+            for attempt in Retrying(stop=stop_after_attempt(1)):
+                with attempt:
+                    return [
+                        member["name"]
+                        for member in self.get_cluster(attempt)["members"]
+                        if member["state"] in RUNNING_STATES
+                    ]
+        except Exception:
+            return []
 
     def are_all_members_ready(self) -> bool:
         """Check if all members are correctly running Patroni and PostgreSQL.
@@ -233,16 +276,12 @@ class Patroni:
         try:
             for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(3)):
                 with attempt:
-                    r = requests.get(
-                        f"{self._patroni_url}/cluster",
-                        verify=self._verify,
-                        auth=self._patroni_auth,
-                        timeout=PATRONI_TIMEOUT,
+                    return all(
+                        member["state"] in RUNNING_STATES
+                        for member in self.get_cluster(attempt)["members"]
                     )
         except RetryError:
             return False
-
-        return all(member["state"] in RUNNING_STATES for member in r.json()["members"])
 
     @property
     def is_creating_backup(self) -> bool:
@@ -253,19 +292,12 @@ class Patroni:
         try:
             for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(3)):
                 with attempt:
-                    r = requests.get(
-                        f"{self._patroni_url}/cluster",
-                        verify=self._verify,
-                        auth=self._patroni_auth,
-                        timeout=PATRONI_TIMEOUT,
+                    return any(
+                        "tags" in member and member["tags"].get("is_creating_backup")
+                        for member in self.get_cluster(attempt)["members"]
                     )
         except RetryError:
             return False
-
-        return any(
-            "tags" in member and member["tags"].get("is_creating_backup")
-            for member in r.json()["members"]
-        )
 
     @property
     def is_replication_healthy(self) -> bool:
@@ -525,7 +557,7 @@ class Patroni:
             restore_to_latest=restore_to_latest,
             stanza=stanza,
             restore_stanza=restore_stanza,
-            minority_count=self._members_count // 2,
+            synchronous_node_count=self._synchronous_node_count,
             version=self.rock_postgresql_version.split(".")[0],
             pg_parameters=parameters,
             primary_cluster_endpoint=self._charm.async_replication.get_primary_cluster_endpoint(),
@@ -534,7 +566,7 @@ class Patroni:
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 
-    @retry(stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30))
+    @retry(stop=stop_after_attempt(20), wait=wait_exponential(multiplier=1, min=2, max=30))
     def reload_patroni_configuration(self) -> None:
         """Reloads the configuration after it was updated in the file."""
         requests.post(
@@ -578,7 +610,7 @@ class Patroni:
             timeout=PATRONI_TIMEOUT,
         )
 
-    def switchover(self, candidate: str | None = None) -> None:
+    def switchover(self, candidate: str | None = None, wait: bool = True) -> None:
         """Trigger a switchover."""
         # Try to trigger the switchover.
         if candidate is not None:
@@ -597,7 +629,17 @@ class Patroni:
 
         # Check whether the switchover was unsuccessful.
         if r.status_code != 200:
+            if (
+                r.status_code == 412
+                and r.text == "candidate name does not match with sync_standby"
+            ):
+                logger.debug("Unit is not sync standby")
+                raise SwitchoverNotSyncError()
+            logger.warning(f"Switchover call failed with code {r.status_code} {r.text}")
             raise SwitchoverFailedError(f"received {r.status_code}")
+
+        if not wait:
+            return
 
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
             with attempt:

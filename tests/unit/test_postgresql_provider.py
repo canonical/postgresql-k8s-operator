@@ -20,30 +20,29 @@ from constants import PEER
 DATABASE = "test_database"
 EXTRA_USER_ROLES = "CREATEDB,CREATEROLE"
 RELATION_NAME = "database"
-POSTGRESQL_VERSION = "14"
+POSTGRESQL_VERSION = "16"
 
 
 @pytest.fixture(autouse=True)
 def harness():
-    with patch("charm.KubernetesServicePatch", lambda x, y: None):
-        harness = Harness(PostgresqlOperatorCharm)
+    harness = Harness(PostgresqlOperatorCharm)
 
-        # Set up the initial relation and hooks.
-        harness.set_leader(True)
-        harness.begin()
+    # Set up the initial relation and hooks.
+    harness.set_leader(True)
+    harness.begin()
 
-        # Define some relations.
-        rel_id = harness.add_relation(RELATION_NAME, "application")
-        harness.add_relation_unit(rel_id, "application/0")
-        peer_rel_id = harness.add_relation(PEER, harness.charm.app.name)
-        harness.add_relation_unit(peer_rel_id, harness.charm.unit.name)
-        harness.update_relation_data(
-            peer_rel_id,
-            harness.charm.app.name,
-            {"cluster_initialised": "True"},
-        )
-        yield harness
-        harness.cleanup()
+    # Define some relations.
+    rel_id = harness.add_relation(RELATION_NAME, "application")
+    harness.add_relation_unit(rel_id, "application/0")
+    peer_rel_id = harness.add_relation(PEER, harness.charm.app.name)
+    harness.add_relation_unit(peer_rel_id, harness.charm.unit.name)
+    harness.update_relation_data(
+        peer_rel_id,
+        harness.charm.app.name,
+        {"cluster_initialised": "True"},
+    )
+    yield harness
+    harness.cleanup()
 
 
 def request_database(_harness):
@@ -108,12 +107,17 @@ def test_on_database_requested(harness):
         # Assert that the correct calls were made.
         user = f"relation_id_{rel_id}"
         postgresql_mock.create_user.assert_called_once_with(
-            user, "test-password", extra_user_roles=EXTRA_USER_ROLES
+            user,
+            "test-password",
+            extra_user_roles=[role.lower() for role in EXTRA_USER_ROLES.split(",")],
         )
         database_relation = harness.model.get_relation(RELATION_NAME)
         client_relations = [database_relation]
         postgresql_mock.create_database.assert_called_once_with(
-            DATABASE, user, plugins=["pgaudit"], client_relations=client_relations
+            DATABASE,
+            user,
+            plugins=["pgaudit"],
+            client_relations=client_relations,
         )
         postgresql_mock.get_postgresql_version.assert_called_once()
 

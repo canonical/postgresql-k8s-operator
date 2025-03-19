@@ -34,14 +34,8 @@ source venv/bin/activate
 tox run -e format          # update your code according to linting rules
 tox run -e lint            # code style
 tox run -e unit            # unit tests
-tox run -e integration-*   # integration tests
+charmcraft test lxd-vm:    # integration tests
 tox                        # runs 'lint' and 'unit' environments
-```
-
-Before running integration tests, run this command to ensure your config is accessible by lightkube:
-
-```shell
-microk8s config > ~/.kube/config
 ```
 
 ## Build charm
@@ -65,7 +59,7 @@ juju model-config logging-config="<root>=INFO;unit=DEBUG"
 microk8s enable rbac
 
 # Deploy the charm
-juju deploy ./postgresql-k8s_ubuntu-22.04-amd64.charm --trust \
+juju deploy ./postgresql-k8s_ubuntu-24.04-amd64.charm --trust \
     --resource postgresql-image=$(yq '(.resources.postgresql-image.upstream-source)' metadata.yaml)
 ```
 

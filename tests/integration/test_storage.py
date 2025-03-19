@@ -7,6 +7,7 @@ import logging
 import pytest
 from pytest_operator.plugin import OpsTest
 
+from . import markers
 from .helpers import (
     DATABASE_APP_NAME,
     STORAGE_PATH,
@@ -17,17 +18,16 @@ from .helpers import (
 
 logger = logging.getLogger(__name__)
 
-MAX_RETRIES = 20
 INSUFFICIENT_SIZE_WARNING = "<10% free space on pgdata volume."
 
 
-@pytest.mark.group(1)
+@markers.amd64_only
 @pytest.mark.abort_on_fail
-async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest):
+async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest, charm):
     """Build and deploy the charm and saturate its pgdata volume."""
     # Build and deploy the PostgreSQL charm.
     async with ops_test.fast_forward():
-        await build_and_deploy(ops_test, 1)
+        await build_and_deploy(ops_test, charm, 1)
 
     # Saturate pgdata storage with random data
     primary = await get_primary(ops_test, DATABASE_APP_NAME)

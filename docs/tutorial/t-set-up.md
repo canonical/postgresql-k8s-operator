@@ -47,7 +47,7 @@ All necessary components have been pre-installed inside the VM already, like Mic
 
 <a href="#heading--juju"><h2 id="heading--juju"> Set up Juju </h2></a>
 
-Let's bootstrap Juju to use the local MicroK8s controller:
+Let's bootstrap Juju to use the local MicroK8s controller. We will call it "overlord", but you can give it any name you'd like.
 ```shell
 juju bootstrap microk8s overlord
 ```

@@ -35,7 +35,10 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 42
+LIBPATCH = 46
+
+# Groups to distinguish database permissions
+PERMISSIONS_GROUP_ADMIN = "admin"
 
 INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE = "invalid role(s) for extra user roles"
 
@@ -187,7 +190,7 @@ class PostgreSQL:
                     Identifier(database)
                 )
             )
-            for user_to_grant_access in [user, "admin", *self.system_users]:
+            for user_to_grant_access in [user, PERMISSIONS_GROUP_ADMIN, *self.system_users]:
                 cursor.execute(
                     SQL("GRANT ALL PRIVILEGES ON DATABASE {} TO {};").format(
                         Identifier(database), Identifier(user_to_grant_access)
@@ -220,7 +223,7 @@ class PostgreSQL:
         user: str,
         password: Optional[str] = None,
         admin: bool = False,
-        extra_user_roles: Optional[str] = None,
+        extra_user_roles: Optional[List[str]] = None,
     ) -> None:
         """Creates a database user.
 
@@ -235,16 +238,17 @@ class PostgreSQL:
             admin_role = False
             roles = privileges = None
             if extra_user_roles:
-                extra_user_roles = tuple(extra_user_roles.lower().split(","))
-                admin_role = "admin" in extra_user_roles
+                admin_role = PERMISSIONS_GROUP_ADMIN in extra_user_roles
                 valid_privileges, valid_roles = self.list_valid_privileges_and_roles()
                 roles = [
-                    role for role in extra_user_roles if role in valid_roles and role != "admin"
+                    role
+                    for role in extra_user_roles
+                    if role in valid_roles and role != PERMISSIONS_GROUP_ADMIN
                 ]
                 privileges = {
                     extra_user_role
                     for extra_user_role in extra_user_roles
-                    if extra_user_role not in roles and extra_user_role != "admin"
+                    if extra_user_role not in roles and extra_user_role != PERMISSIONS_GROUP_ADMIN
                 }
                 invalid_privileges = [
                     privilege for privilege in privileges if privilege not in valid_privileges
@@ -479,6 +483,19 @@ END; $$;"""
             timezones = cursor.fetchall()
             return {timezone[0] for timezone in timezones}
 
+    def get_postgresql_default_table_access_methods(self) -> Set[str]:
+        """Returns the PostgreSQL available table access methods.
+
+        Returns:
+            Set of PostgreSQL table access methods.
+        """
+        with self._connect_to_database(
+            database_host=self.current_host
+        ) as connection, connection.cursor() as cursor:
+            cursor.execute("SELECT amname FROM pg_am WHERE amtype = 't';")
+            access_methods = cursor.fetchall()
+            return {access_method[0] for access_method in access_methods}
+
     def get_postgresql_version(self, current_host=True) -> str:
         """Returns the PostgreSQL version.
 
@@ -566,8 +583,8 @@ END; $$;"""
                         )
                     )
                 self.create_user(
-                    "admin",
-                    extra_user_roles="pg_read_all_data,pg_write_all_data",
+                    PERMISSIONS_GROUP_ADMIN,
+                    extra_user_roles=["pg_read_all_data", "pg_write_all_data"],
                 )
                 cursor.execute("GRANT CONNECT ON DATABASE postgres TO admin;")
         except psycopg2.Error as e:
@@ -649,6 +666,8 @@ END; $$;"""
         for config, value in config_options.items():
             # Filter config option not related to PostgreSQL parameters.
             if not config.startswith((
+                "connection",
+                "cpu",
                 "durability",
                 "instance",
                 "logging",
@@ -656,6 +675,8 @@ END; $$;"""
                 "optimizer",
                 "request",
                 "response",
+                "session",
+                "storage",
                 "vacuum",
             )):
                 continue

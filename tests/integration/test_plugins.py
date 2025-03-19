@@ -62,8 +62,10 @@ HLL_EXTENSION_STATEMENT = "CREATE TABLE hll_test (users hll);"
 HYPOPG_EXTENSION_STATEMENT = "CREATE TABLE hypopg_test (id integer, val text); SELECT hypopg_create_index('CREATE INDEX ON hypopg_test (id)');"
 IP4R_EXTENSION_STATEMENT = "CREATE TABLE ip4r_test (ip ip4);"
 JSONB_PLPERL_EXTENSION_STATEMENT = "CREATE OR REPLACE FUNCTION jsonb_plperl_test(val jsonb) RETURNS jsonb TRANSFORM FOR TYPE jsonb LANGUAGE plperl as $$ return $_[0]; $$;"
-ORAFCE_EXTENSION_STATEMENT = "SELECT add_months(date '2005-05-31',1);"
-PG_SIMILARITY_EXTENSION_STATEMENT = "SHOW pg_similarity.levenshtein_threshold;"
+ORAFCE_EXTENSION_STATEMENT = "SELECT oracle.add_months(date '2005-05-31',1);"
+PG_SIMILARITY_EXTENSION_STATEMENT = (
+    "SET pg_similarity.levenshtein_threshold = 0.7; SELECT 'aaa', 'aab', lev('aaa','aab');"
+)
 PLPERL_EXTENSION_STATEMENT = "CREATE OR REPLACE FUNCTION plperl_test(name text) RETURNS text AS $$ return $_SHARED{$_[0]}; $$ LANGUAGE plperl;"
 PREFIX_EXTENSION_STATEMENT = "SELECT '123'::prefix_range @> '123456';"
 RDKIT_EXTENSION_STATEMENT = "SELECT is_valid_smiles('CCC');"
@@ -88,13 +90,13 @@ VECTOR_EXTENSION_STATEMENT = (
 TIMESCALEDB_EXTENSION_STATEMENT = "CREATE TABLE test_timescaledb (time TIMESTAMPTZ NOT NULL); SELECT create_hypertable('test_timescaledb', 'time');"
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
-async def test_plugins(ops_test: OpsTest) -> None:
+async def test_plugins(ops_test: OpsTest, charm) -> None:
     """Build and deploy one unit of PostgreSQL and then test the available plugins."""
     # Build and deploy the PostgreSQL charm.
     async with ops_test.fast_forward():
-        await build_and_deploy(ops_test, 2)
+        # TODO Figure out how to deal with pgaudit
+        await build_and_deploy(ops_test, charm, 2, extra_config={"plugin_audit_enable": "False"})
 
     sql_tests = {
         "plugin_citext_enable": CITEXT_EXTENSION_STATEMENT,
@@ -203,7 +205,6 @@ async def test_plugins(ops_test: OpsTest) -> None:
     connection.close()
 
 
-@pytest.mark.group(1)
 @pytest.mark.abort_on_fail
 async def test_plugin_objects(ops_test: OpsTest) -> None:
     """Checks if charm gets blocked when trying to disable a plugin in use."""

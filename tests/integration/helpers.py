@@ -32,8 +32,10 @@ from tenacity import (
     wait_fixed,
 )
 
+from constants import DATABASE_DEFAULT_NAME
+
 CHARM_BASE = "ubuntu@22.04"
-CHARM_SERIES = "jammy"
+CHARM_BASE_NOBLE = "ubuntu@24.04"
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
 APPLICATION_NAME = "postgresql-test-app"
@@ -44,8 +46,6 @@ try:
     KUBECTL = "kubectl"
 except FileNotFoundError:
     KUBECTL = "microk8s kubectl"
-
-charm = None
 
 logger = logging.getLogger(__name__)
 
@@ -72,37 +72,36 @@ async def app_name(
 
 async def build_and_deploy(
     ops_test: OpsTest,
+    charm,
     num_units: int,
     database_app_name: str = DATABASE_APP_NAME,
     wait_for_idle: bool = True,
     status: str = "active",
     model: Model = None,
+    extra_config: dict[str, str] | None = None,
 ) -> None:
     """Builds the charm and deploys a specified number of units."""
     if model is None:
         model = ops_test.model
+    if not extra_config:
+        extra_config = {}
 
     # It is possible for users to provide their own cluster for testing. Hence, check if there
     # is a pre-existing cluster.
     if await app_name(ops_test, database_app_name, model):
         return
 
-    global charm
-    if not charm:
-        charm = await ops_test.build_charm(".")
     resources = {
         "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
     }
-    (
-        await model.deploy(
-            charm,
-            resources=resources,
-            application_name=database_app_name,
-            trust=True,
-            num_units=num_units,
-            base=CHARM_BASE,
-            config={"profile": "testing"},
-        ),
+    await model.deploy(
+        charm,
+        resources=resources,
+        application_name=database_app_name,
+        trust=True,
+        num_units=num_units,
+        base=CHARM_BASE_NOBLE,
+        config={**extra_config, "profile": "testing"},
     )
     if wait_for_idle:
         # Wait until the PostgreSQL charm is successfully deployed.
@@ -329,7 +328,7 @@ async def execute_query_on_unit(
     unit_address: str,
     password: str,
     query: str,
-    database: str = "postgres",
+    database: str = DATABASE_DEFAULT_NAME,
     sslmode: str | None = None,
 ):
     """Execute given PostgreSQL query on a unit.
@@ -423,11 +422,9 @@ def get_expected_k8s_resources(application: str) -> set:
         f"Endpoints/patroni-{application}",
         f"Endpoints/patroni-{application}-config",
         f"Endpoints/patroni-{application}-sync",
-        f"Endpoints/{application}",
         f"Endpoints/{application}-primary",
         f"Endpoints/{application}-replicas",
         f"Service/patroni-{application}-config",
-        f"Service/{application}",
         f"Service/{application}-primary",
         f"Service/{application}-replicas",
     }
@@ -760,7 +757,6 @@ async def switchover(
             )
             assert response.status_code == 200, f"Switchover status code is {response.status_code}"
     app_name = current_primary.split("/")[0]
-    minority_count = len(ops_test.model.applications[app_name].units) // 2
     for attempt in Retrying(stop=stop_after_attempt(30), wait=wait_fixed(2), reraise=True):
         with attempt:
             response = requests.get(f"http://{primary_ip}:8008/cluster")
@@ -768,7 +764,7 @@ async def switchover(
             standbys = len([
                 member for member in response.json()["members"] if member["role"] == "sync_standby"
             ])
-            assert standbys >= minority_count
+            assert standbys == len(ops_test.model.applications[app_name].units) - 1
 
 
 async def wait_for_idle_on_blocked(
@@ -822,6 +818,7 @@ async def cat_file_from_unit(ops_test: OpsTest, filepath: str, unit_name: str) -
 
 async def backup_operations(
     ops_test: OpsTest,
+    charm,
     s3_integrator_app_name: str,
     tls_certificates_app_name: str,
     tls_config,
@@ -840,7 +837,9 @@ async def backup_operations(
     # as archivo_mode is disabled after restoring the backup) and to TLS Certificates Operator
     # (to be able to create backups from replicas).
     database_app_name = f"{DATABASE_APP_NAME}-{cloud.lower()}"
-    await build_and_deploy(ops_test, 2, database_app_name=database_app_name, wait_for_idle=False)
+    await build_and_deploy(
+        ops_test, charm, 2, database_app_name=database_app_name, wait_for_idle=False
+    )
 
     await ops_test.model.relate(database_app_name, tls_certificates_app_name)
     async with ops_test.fast_forward(fast_interval="60s"):

@@ -5,6 +5,7 @@ from unittest.mock import call, patch
 import psycopg2
 import pytest
 from charms.postgresql_k8s.v0.postgresql import (
+    PERMISSIONS_GROUP_ADMIN,
     PostgreSQLCreateDatabaseError,
     PostgreSQLGetLastArchivedWALError,
 )
@@ -12,20 +13,26 @@ from ops.testing import Harness
 from psycopg2.sql import SQL, Composed, Identifier, Literal
 
 from charm import PostgresqlOperatorCharm
-from constants import PEER
+from constants import (
+    BACKUP_USER,
+    MONITORING_USER,
+    PEER,
+    REPLICATION_USER,
+    REWIND_USER,
+    USER,
+)
 
 
 @pytest.fixture(autouse=True)
 def harness():
-    with patch("charm.KubernetesServicePatch", lambda x, y: None):
-        harness = Harness(PostgresqlOperatorCharm)
+    harness = Harness(PostgresqlOperatorCharm)
 
-        # Set up the initial relation and hooks.
-        peer_rel_id = harness.add_relation(PEER, "postgresql-k8s")
-        harness.add_relation_unit(peer_rel_id, "postgresql-k8s/0")
-        harness.begin()
-        yield harness
-        harness.cleanup()
+    # Set up the initial relation and hooks.
+    peer_rel_id = harness.add_relation(PEER, "postgresql-k8s")
+    harness.add_relation_unit(peer_rel_id, "postgresql-k8s/0")
+    harness.begin()
+    yield harness
+    harness.cleanup()
 
 
 def test_create_database(harness):
@@ -76,7 +83,7 @@ def test_create_database(harness):
                     SQL("GRANT ALL PRIVILEGES ON DATABASE "),
                     Identifier(database),
                     SQL(" TO "),
-                    Identifier("admin"),
+                    Identifier(PERMISSIONS_GROUP_ADMIN),
                     SQL(";"),
                 ])
             ),
@@ -85,7 +92,7 @@ def test_create_database(harness):
                     SQL("GRANT ALL PRIVILEGES ON DATABASE "),
                     Identifier(database),
                     SQL(" TO "),
-                    Identifier("backup"),
+                    Identifier(BACKUP_USER),
                     SQL(";"),
                 ])
             ),
@@ -94,7 +101,7 @@ def test_create_database(harness):
                     SQL("GRANT ALL PRIVILEGES ON DATABASE "),
                     Identifier(database),
                     SQL(" TO "),
-                    Identifier("replication"),
+                    Identifier(REPLICATION_USER),
                     SQL(";"),
                 ])
             ),
@@ -103,7 +110,7 @@ def test_create_database(harness):
                     SQL("GRANT ALL PRIVILEGES ON DATABASE "),
                     Identifier(database),
                     SQL(" TO "),
-                    Identifier("rewind"),
+                    Identifier(REWIND_USER),
                     SQL(";"),
                 ])
             ),
@@ -112,7 +119,7 @@ def test_create_database(harness):
                     SQL("GRANT ALL PRIVILEGES ON DATABASE "),
                     Identifier(database),
                     SQL(" TO "),
-                    Identifier("operator"),
+                    Identifier(USER),
                     SQL(";"),
                 ])
             ),
@@ -121,7 +128,7 @@ def test_create_database(harness):
                     SQL("GRANT ALL PRIVILEGES ON DATABASE "),
                     Identifier(database),
                     SQL(" TO "),
-                    Identifier("monitoring"),
+                    Identifier(MONITORING_USER),
                     SQL(";"),
                 ])
             ),
