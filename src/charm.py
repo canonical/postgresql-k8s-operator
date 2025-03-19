@@ -1238,11 +1238,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """
         username = event.params.get("username", USER)
         if username not in PASSWORD_USERS and self.is_ldap_enabled:
-            event.fail("The action cannot be performed when LDAP is enabled")
+            event.fail("The action can be run only for system users when LDAP is enabled")
             return
         if username not in PASSWORD_USERS:
             event.fail(
-                f"The action can be run only for users used by the charm or Patroni:"
+                f"The action can be run only for system users or Patroni:"
                 f" {', '.join(PASSWORD_USERS)} not {username}"
             )
             return
@@ -1258,11 +1258,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         username = event.params.get("username", USER)
         if username not in SYSTEM_USERS and self.is_ldap_enabled:
-            event.fail("The action will have no effect when LDAP is enabled")
+            event.fail("The action can be run only for system users when LDAP is enabled")
             return
         if username not in SYSTEM_USERS:
             event.fail(
-                f"The action can be run only for users used by the charm:"
+                f"The action can be run only for system users:"
                 f" {', '.join(SYSTEM_USERS)} not {username}"
             )
             return
