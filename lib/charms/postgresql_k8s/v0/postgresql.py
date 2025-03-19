@@ -636,6 +636,9 @@ END; $$;"""
         except psycopg2.Error as e:
             logger.error(f"Failed to list PostgreSQL database access groups: {e}")
             raise PostgreSQLListGroupsError() from e
+        finally:
+            if connection is not None:
+                connection.close()
 
     def list_users(self) -> Set[str]:
         """Returns the list of PostgreSQL database users.
@@ -651,6 +654,9 @@ END; $$;"""
         except psycopg2.Error as e:
             logger.error(f"Failed to list PostgreSQL database users: {e}")
             raise PostgreSQLListUsersError() from e
+        finally:
+            if connection is not None:
+                connection.close()
 
     def list_users_from_relation(self) -> Set[str]:
         """Returns the list of PostgreSQL database users that were created by a relation.
@@ -668,6 +674,9 @@ END; $$;"""
         except psycopg2.Error as e:
             logger.error(f"Failed to list PostgreSQL database users: {e}")
             raise PostgreSQLListUsersError() from e
+        finally:
+            if connection is not None:
+                connection.close()
 
     def list_valid_privileges_and_roles(self) -> Tuple[Set[str], Set[str]]:
         """Returns two sets with valid privileges and roles.
