@@ -13,6 +13,7 @@ from tenacity import Retrying, stop_after_attempt, wait_fixed
 from ..helpers import (
     APPLICATION_NAME,
     CHARM_BASE,
+    CHARM_BASE_NOBLE,
     DATABASE_APP_NAME,
     METADATA,
     count_switchovers,
@@ -34,15 +35,14 @@ TIMEOUT = 10 * 60
 @pytest.mark.abort_on_fail
 async def test_deploy_stable(ops_test: OpsTest) -> None:
     """Simple test to ensure that the PostgreSQL and application charms get deployed."""
-    # TODO remove once we release to stable
-    pytest.skip("No 16/stable yet.")
     await asyncio.gather(
         ops_test.model.deploy(
             DATABASE_APP_NAME,
             num_units=3,
-            channel="16/stable",
+            # TODO move to stable once we release
+            channel="16/beta",
             trust=True,
-            base=CHARM_BASE,
+            base=CHARM_BASE_NOBLE,
         ),
         ops_test.model.deploy(
             APPLICATION_NAME,
@@ -62,8 +62,6 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
 @pytest.mark.abort_on_fail
 async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     """Test that the pre-upgrade-check action runs successfully."""
-    # TODO remove once we release to stable
-    pytest.skip("No 16/stable yet.")
     application = ops_test.model.applications[DATABASE_APP_NAME]
     if "pre-upgrade-check" not in await application.get_actions():
         logger.info("skipping the test because the charm from 14/stable doesn't support upgrade")
@@ -95,8 +93,6 @@ async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
 @pytest.mark.abort_on_fail
 async def test_upgrade_from_stable(ops_test: OpsTest, charm):
     """Test updating from stable channel."""
-    # TODO remove once we release to stable
-    pytest.skip("No 16/stable yet.")
     # Start an application that continuously writes data to the database.
     logger.info("starting continuous writes to the database")
     await start_continuous_writes(ops_test, DATABASE_APP_NAME)
