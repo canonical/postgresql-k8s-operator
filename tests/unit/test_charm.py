@@ -1614,6 +1614,41 @@ def test_handle_processes_failures(harness):
             _reinitialize_postgresql.assert_called_once()
 
 
+def test_push_ca_file_into_workload(harness):
+    with (
+        patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
+    ):
+        harness.set_can_connect(POSTGRESQL_CONTAINER, True)
+        harness.handle_exec(POSTGRESQL_CONTAINER, [], result=0)
+
+        harness.charm.set_secret("unit", "ca-app", "test-ca")
+        harness.charm.push_ca_file_into_workload("ca-app")
+        _update_config.assert_called_once()
+
+        container = harness.model.unit.get_container(POSTGRESQL_CONTAINER)
+        ca_exists = container.exists(f"{harness.charm._certs_path}/ca-app.crt")
+        assert ca_exists is True
+
+
+def test_clean_ca_file_from_workload(harness):
+    with (
+        patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
+    ):
+        harness.set_can_connect(POSTGRESQL_CONTAINER, True)
+        harness.handle_exec(POSTGRESQL_CONTAINER, [], result=0)
+
+        harness.charm.set_secret("unit", "ca-app", "test-ca")
+        harness.charm.push_ca_file_into_workload("ca-app")
+        _update_config.reset_mock()
+
+        harness.charm.clean_ca_file_from_workload("ca-app")
+        _update_config.assert_called_once()
+
+        container = harness.model.unit.get_container(POSTGRESQL_CONTAINER)
+        ca_exists = container.exists(f"{harness.charm._certs_path}/ca-app.crt")
+        assert ca_exists is False
+
+
 def test_update_config(harness):
     with (
         patch("ops.model.Container.get_plan") as _get_plan,
