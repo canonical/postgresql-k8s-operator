@@ -60,7 +60,7 @@ LIBPATCH = 14
 logger = logging.getLogger(__name__)
 SCOPE = "unit"
 TLS_CREATION_RELATION = "certificates"
-TLS_TRANSFER_RELATION = "send-ca-cert"
+TLS_TRANSFER_RELATION = "receive-ca-cert"
 
 
 class PostgreSQLTLS(Object):
