@@ -147,7 +147,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 9
+LIBPATCH = 10
 
 PYDEPS = ["pydantic"]
 
@@ -178,13 +178,13 @@ if PYDANTIC_IS_V1:
 
     encoders_config = {}
 
-    def field_serializer(field_name: str, mode: Optional[str] = None) -> Callable:
+    def field_serializer(*fields: str, mode: Optional[str] = None) -> Callable:
         def _field_serializer(f: Callable, *args: Any, **kwargs: Any) -> Callable:
             @wraps(f)
             def wrapper(self: object, *args: Any, **kwargs: Any) -> Any:
                 return f(self, *args, **kwargs)
 
-            encoders_config[wrapper] = field_name
+            encoders_config[wrapper] = fields
             return wrapper
 
         return _field_serializer
@@ -195,9 +195,10 @@ if PYDANTIC_IS_V1:
                 self._encoders = {}
 
             self._encoders.update({
-                encoders_config[func]: func
+                encoder: func
                 for func in attrs.values()
                 if callable(func) and func in encoders_config
+                for encoder in encoders_config[func]
             })
 
             super().__init__(name, bases, attrs)
@@ -284,6 +285,7 @@ class Secret:
 
 class LdapProviderBaseData(BaseModel):
     urls: List[str] = Field(frozen=True)
+    ldaps_urls: List[str] = Field(frozen=True)
     base_dn: str = Field(frozen=True)
     starttls: StrictBool = Field(frozen=True)
 
@@ -301,7 +303,21 @@ class LdapProviderBaseData(BaseModel):
 
         return vs
 
-    @field_serializer("urls")
+    @field_validator("ldaps_urls", mode="before")
+    @classmethod
+    def validate_ldaps_urls(cls, vs: List[str] | str) -> List[str]:
+        if isinstance(vs, str):
+            vs = json.loads(vs)
+            if isinstance(vs, str):
+                vs = [vs]
+
+        for v in vs:
+            if not v.startswith("ldaps://"):
+                raise ValidationError.from_exception_data("Invalid LDAPS URL scheme.")
+
+        return vs
+
+    @field_serializer("urls", "ldaps_urls")
     def serialize_list(self, urls: List[str]) -> str:
         return str(json.dumps(urls))
 
