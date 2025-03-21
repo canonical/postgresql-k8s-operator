@@ -35,6 +35,7 @@ from constants import (
     WORKLOAD_OS_USER,
 )
 from relations.async_replication import REPLICATION_CONSUMER_RELATION, REPLICATION_OFFER_RELATION
+from relations.logical_replication import LOGICAL_REPLICATION_RELATION
 
 logger = logging.getLogger(__name__)
 
@@ -1082,7 +1083,7 @@ Stderr:
 
         return None
 
-    def _pre_restore_checks(self, event: ActionEvent) -> bool:
+    def _pre_restore_checks(self, event: ActionEvent) -> bool:  # noqa: C901
         """Run some checks before starting the restore.
 
         Returns:
@@ -1152,6 +1153,14 @@ Stderr:
         logger.info("Checking that this unit was already elected the leader unit")
         if not self.charm.unit.is_leader():
             error_message = "Unit cannot restore backup as it was not elected the leader unit yet"
+            logger.error(f"Restore failed: {error_message}")
+            event.fail(error_message)
+            return False
+
+        if self.model.get_relation(LOGICAL_REPLICATION_RELATION):
+            error_message = (
+                "Cannot proceed with restore with an active logical-replication connection"
+            )
             logger.error(f"Restore failed: {error_message}")
             event.fail(error_message)
             return False
