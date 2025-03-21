@@ -70,7 +70,9 @@ async def test_tls(ops_test: OpsTest) -> None:
             tls_certificates_app_name, config=tls_config, channel=tls_channel, base=CHARM_BASE
         )
         # Relate it to the PostgreSQL to enable TLS.
-        await ops_test.model.relate(DATABASE_APP_NAME, tls_certificates_app_name)
+        await ops_test.model.relate(
+            f"{DATABASE_APP_NAME}:certificates", f"{tls_certificates_app_name}:certificates"
+        )
         await ops_test.model.wait_for_idle(status="active", timeout=1000, raise_on_error=False)
 
         # Wait for all units enabling TLS.
