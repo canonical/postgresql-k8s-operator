@@ -35,7 +35,10 @@ from constants import (
     WORKLOAD_OS_USER,
 )
 from relations.async_replication import REPLICATION_CONSUMER_RELATION, REPLICATION_OFFER_RELATION
-from relations.logical_replication import LOGICAL_REPLICATION_RELATION
+from relations.logical_replication import (
+    LOGICAL_REPLICATION_OFFER_RELATION,
+    LOGICAL_REPLICATION_RELATION,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -1157,9 +1160,11 @@ Stderr:
             event.fail(error_message)
             return False
 
-        if self.model.get_relation(LOGICAL_REPLICATION_RELATION):
+        if self.model.get_relation(LOGICAL_REPLICATION_RELATION) or len(
+            self.model.relations.get(LOGICAL_REPLICATION_OFFER_RELATION, ())
+        ):
             error_message = (
-                "Cannot proceed with restore with an active logical-replication connection"
+                "Cannot proceed with restore with an active logical replication connection"
             )
             logger.error(f"Restore failed: {error_message}")
             event.fail(error_message)
