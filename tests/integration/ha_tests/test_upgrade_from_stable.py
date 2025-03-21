@@ -10,7 +10,6 @@ from lightkube.resources.apps_v1 import StatefulSet
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 
-from .. import markers
 from ..helpers import (
     APPLICATION_NAME,
     CHARM_BASE,
@@ -32,7 +31,6 @@ logger = logging.getLogger(__name__)
 TIMEOUT = 10 * 60
 
 
-@markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_deploy_stable(ops_test: OpsTest) -> None:
     """Simple test to ensure that the PostgreSQL and application charms get deployed."""
@@ -59,7 +57,6 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
     assert len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3
 
 
-@markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     """Test that the pre-upgrade-check action runs successfully."""
@@ -91,7 +88,6 @@ async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
     assert stateful_set.spec.updateStrategy.rollingUpdate.partition == 2, "Partition not set to 2"
 
 
-@markers.amd64_only  # TODO: remove after arm64 stable release
 @pytest.mark.abort_on_fail
 async def test_upgrade_from_stable(ops_test: OpsTest, charm, continuous_writes):
     """Test updating from stable channel."""
