@@ -1710,7 +1710,7 @@ def test_update_config(harness):
         )
         _handle_postgresql_restart_need.assert_called_once()
         _restart_metrics_service.assert_called_once()
-        _restart_ldap_sync_service.assert_called_once()
+        # _restart_ldap_sync_service.assert_called_once()
         assert "tls" not in harness.get_relation_data(rel_id, harness.charm.unit.name)
 
         # Test with TLS files available.
@@ -1738,7 +1738,7 @@ def test_update_config(harness):
         )
         _handle_postgresql_restart_need.assert_called_once()
         _restart_metrics_service.assert_called_once()
-        _restart_ldap_sync_service.assert_called_once()
+        # _restart_ldap_sync_service.assert_called_once()
         assert "tls" not in harness.get_relation_data(
             rel_id, harness.charm.unit.name
         )  # The "tls" flag is set in handle_postgresql_restart_need.

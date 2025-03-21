@@ -2064,7 +2064,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         self._handle_postgresql_restart_need()
         self._restart_metrics_service()
-        self._restart_ldap_sync_service()
+        # self._restart_ldap_sync_service()
 
         return True
 
