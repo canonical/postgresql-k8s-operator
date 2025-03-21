@@ -8,7 +8,6 @@ import requests
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from . import architecture
 from .ha_tests.helpers import (
     change_patroni_setting,
 )
@@ -31,7 +30,7 @@ from .juju_ import juju_major_version
 logger = logging.getLogger(__name__)
 
 tls_certificates_app_name = "self-signed-certificates"
-tls_channel = "latest/edge" if architecture.architecture == "arm64" else "latest/stable"
+tls_channel = "latest/stable"
 tls_config = {"ca-common-name": "Test CA"}
 APPLICATION_UNITS = 2
 DATABASE_UNITS = 3
@@ -70,7 +69,9 @@ async def test_tls(ops_test: OpsTest) -> None:
             tls_certificates_app_name, config=tls_config, channel=tls_channel, base=CHARM_BASE
         )
         # Relate it to the PostgreSQL to enable TLS.
-        await ops_test.model.relate(DATABASE_APP_NAME, tls_certificates_app_name)
+        await ops_test.model.relate(
+            f"{DATABASE_APP_NAME}:certificates", f"{tls_certificates_app_name}:certificates"
+        )
         await ops_test.model.wait_for_idle(status="active", timeout=1000, raise_on_error=False)
 
         # Wait for all units enabling TLS.

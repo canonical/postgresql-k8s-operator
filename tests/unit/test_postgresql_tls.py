@@ -5,13 +5,16 @@ import socket
 from unittest.mock import MagicMock, call, patch
 
 import pytest
+from charms.postgresql_k8s.v0.postgresql_tls import (
+    TLS_CREATION_RELATION,
+    TLS_TRANSFER_RELATION,
+)
 from ops.pebble import ConnectionError as PebbleConnectionError
 from ops.testing import Harness
 
 from charm import PostgresqlOperatorCharm
 from constants import PEER
 
-RELATION_NAME = "certificates"
 SCOPE = "unit"
 
 
@@ -34,8 +37,23 @@ def delete_secrets(_harness):
     _harness.charm.set_secret(SCOPE, "chain", None)
 
 
-def emit_certificate_available_event(_harness):
-    _harness.charm.tls.certs.on.certificate_available.emit(
+def emit_ca_certificate_added_event(_harness, relation_id: int):
+    _harness.charm.tls.certs_transfer.on.certificate_available.emit(
+        relation_id=relation_id,
+        certificate="test-cert",
+        ca="test-ca",
+        chain=["test-chain-ca-certificate", "test-chain-certificate"],
+    )
+
+
+def emit_ca_certificate_removed_event(_harness, relation_id: int):
+    _harness.charm.tls.certs_transfer.on.certificate_removed.emit(
+        relation_id=relation_id,
+    )
+
+
+def emit_tls_certificate_available_event(_harness):
+    _harness.charm.tls.certs_creation.on.certificate_available.emit(
         certificate_signing_request="test-csr",
         certificate="test-cert",
         ca="test-ca",
@@ -43,8 +61,11 @@ def emit_certificate_available_event(_harness):
     )
 
 
-def emit_certificate_expiring_event(_harness):
-    _harness.charm.tls.certs.on.certificate_expiring.emit(certificate="test-cert", expiry=None)
+def emit_tls_certificate_expiring_event(_harness):
+    _harness.charm.tls.certs_creation.on.certificate_expiring.emit(
+        certificate="test-cert",
+        expiry=None,
+    )
 
 
 def get_content_from_file(filename: str):
@@ -61,9 +82,16 @@ def no_secrets(_harness, include_certificate: bool = True):
     return all(secret is None for secret in secrets)
 
 
+def relate_to_ca_certificates_operator(_harness):
+    # Relate the charm to the send CA certificates operator.
+    rel_id = _harness.add_relation(TLS_TRANSFER_RELATION, "ca-certificates-operator")
+    _harness.add_relation_unit(rel_id, "ca-certificates-operator/0")
+    return rel_id
+
+
 def relate_to_tls_certificates_operator(_harness):
     # Relate the charm to the TLS certificates operator.
-    rel_id = _harness.add_relation(RELATION_NAME, "tls-certificates-operator")
+    rel_id = _harness.add_relation(TLS_CREATION_RELATION, "tls-certificates-operator")
     _harness.add_relation_unit(rel_id, "tls-certificates-operator/0")
     return rel_id
 
@@ -186,7 +214,7 @@ def test_on_tls_relation_broken(harness):
         assert no_secrets(harness)
 
 
-def test_on_certificate_available(harness):
+def test_on_tls_certificate_available(harness):
     with (
         patch("ops.framework.EventBase.defer") as _defer,
         patch(
@@ -194,13 +222,13 @@ def test_on_certificate_available(harness):
         ) as _push_tls_files_to_workload,
     ):
         # Test with no provided or invalid CSR.
-        emit_certificate_available_event(harness)
+        emit_tls_certificate_available_event(harness)
         assert no_secrets(harness)
         _push_tls_files_to_workload.assert_not_called()
 
         # Test providing CSR.
         harness.charm.set_secret(SCOPE, "csr", "test-csr\n")
-        emit_certificate_available_event(harness)
+        emit_tls_certificate_available_event(harness)
         assert harness.charm.get_secret(SCOPE, "ca") == "test-ca"
         assert harness.charm.get_secret(SCOPE, "cert") == "test-cert"
         assert (
@@ -211,18 +239,18 @@ def test_on_certificate_available(harness):
         _defer.assert_not_called()
 
         _push_tls_files_to_workload.side_effect = PebbleConnectionError
-        emit_certificate_available_event(harness)
+        emit_tls_certificate_available_event(harness)
         _defer.assert_called_once()
 
 
-def test_on_certificate_expiring(harness):
+def test_on_tls_certificate_expiring(harness):
     with (
         patch(
             "charms.tls_certificates_interface.v2.tls_certificates.TLSCertificatesRequiresV2.request_certificate_renewal"
         ) as _request_certificate_renewal,
     ):
         # Test with no provided or invalid certificate.
-        emit_certificate_expiring_event(harness)
+        emit_tls_certificate_expiring_event(harness)
         assert no_secrets(harness)
 
         # Test providing a certificate.
@@ -231,9 +259,51 @@ def test_on_certificate_expiring(harness):
         )
         harness.charm.set_secret(SCOPE, "cert", "test-cert\n")
         harness.charm.set_secret(SCOPE, "csr", "test-csr")
-        emit_certificate_expiring_event(harness)
+        emit_tls_certificate_expiring_event(harness)
         assert no_secrets(harness, include_certificate=False)
         _request_certificate_renewal.assert_called_once()
+
+
+def test_on_ca_certificate_added(harness):
+    with (
+        patch("ops.framework.EventBase.defer") as _defer,
+        patch(
+            "charm.PostgresqlOperatorCharm.push_ca_file_into_workload"
+        ) as _push_ca_file_into_workload,
+    ):
+        rel_id = relate_to_ca_certificates_operator(harness)
+
+        emit_ca_certificate_added_event(harness, rel_id)
+        _push_ca_file_into_workload.assert_called_once()
+        _defer.assert_not_called()
+
+        _push_ca_file_into_workload.reset_mock()
+        _push_ca_file_into_workload.side_effect = PebbleConnectionError
+
+        emit_ca_certificate_added_event(harness, rel_id)
+        _push_ca_file_into_workload.assert_called_once()
+        _defer.assert_called_once()
+
+
+def test_on_ca_certificate_removed(harness):
+    with (
+        patch("ops.framework.EventBase.defer") as _defer,
+        patch(
+            "charm.PostgresqlOperatorCharm.clean_ca_file_from_workload"
+        ) as _clean_ca_file_from_workload,
+    ):
+        rel_id = relate_to_ca_certificates_operator(harness)
+
+        emit_ca_certificate_removed_event(harness, rel_id)
+        _clean_ca_file_from_workload.assert_called_once()
+        _defer.assert_not_called()
+
+        _clean_ca_file_from_workload.reset_mock()
+        _clean_ca_file_from_workload.side_effect = PebbleConnectionError
+
+        emit_ca_certificate_removed_event(harness, rel_id)
+        _clean_ca_file_from_workload.assert_called_once()
+        _defer.assert_called_once()
 
 
 def test_get_sans(harness):
