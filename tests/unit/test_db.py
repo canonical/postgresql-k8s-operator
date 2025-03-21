@@ -5,6 +5,7 @@ from unittest.mock import Mock, PropertyMock, patch
 
 import pytest
 from charms.postgresql_k8s.v0.postgresql import (
+    ACCESS_GROUP_RELATION,
     PostgreSQLCreateDatabaseError,
     PostgreSQLCreateUserError,
     PostgreSQLGetPostgreSQLVersionError,
@@ -230,7 +231,9 @@ def test_set_up_relation(harness):
             )
         assert harness.charm.legacy_db_relation.set_up_relation(relation)
         user = f"relation_id_{rel_id}"
-        postgresql_mock.create_user.assert_called_once_with(user, "test-password", False)
+        postgresql_mock.create_user.assert_called_once_with(
+            user, "test-password", False, extra_user_roles=[ACCESS_GROUP_RELATION]
+        )
         postgresql_mock.create_database.assert_called_once_with(
             DATABASE, user, plugins=["pgaudit"], client_relations=[relation]
         )
@@ -275,7 +278,9 @@ def test_set_up_relation(harness):
             )
             clear_relation_data(harness)
         assert harness.charm.legacy_db_relation.set_up_relation(relation)
-        postgresql_mock.create_user.assert_called_once_with(user, "test-password", False)
+        postgresql_mock.create_user.assert_called_once_with(
+            user, "test-password", False, extra_user_roles=[ACCESS_GROUP_RELATION]
+        )
         postgresql_mock.create_database.assert_called_once_with(
             DATABASE, user, plugins=["pgaudit"], client_relations=[relation]
         )

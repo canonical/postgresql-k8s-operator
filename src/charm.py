@@ -35,6 +35,7 @@ from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v1.loki_push_api import LogProxyConsumer
 from charms.postgresql_k8s.v0.postgresql import (
+    ACCESS_GROUPS,
     REQUIRED_PLUGINS,
     PostgreSQL,
     PostgreSQLEnableDisableExtensionError,
@@ -215,6 +216,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.framework.observe(self.on.promote_to_primary_action, self._on_promote_to_primary)
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
         self.framework.observe(self.on.update_status, self._on_update_status)
+
+        self._certs_path = "/usr/local/share/ca-certificates"
         self._storage_path = self.meta.storages["pgdata"].location
         self.pgdata_path = f"{self._storage_path}/pgdata"
 
@@ -1098,6 +1101,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         self.postgresql.set_up_database()
 
+        access_groups = self.postgresql.list_access_groups()
+        if access_groups != set(ACCESS_GROUPS):
+            self.postgresql.create_access_groups()
+            self.postgresql.grant_internal_access_group_memberships()
+
         # Mark the cluster as initialised.
         self._peers.data[self.app]["cluster_initialised"] = "True"
 
@@ -1803,6 +1811,17 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """
         return self.model.get_relation(PEER)
 
+    def _push_file_to_workload(self, container: Container, file_path: str, file_data: str) -> None:
+        """Uploads a file into the provided container."""
+        container.push(
+            file_path,
+            file_data,
+            make_dirs=True,
+            permissions=0o400,
+            user=WORKLOAD_OS_USER,
+            group=WORKLOAD_OS_GROUP,
+        )
+
     def push_tls_files_to_workload(self, container: Container = None) -> bool:
         """Uploads TLS files to the workload container."""
         if container is None:
@@ -1811,41 +1830,36 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         key, ca, cert = self.tls.get_tls_files()
 
         if key is not None:
-            container.push(
-                f"{self._storage_path}/{TLS_KEY_FILE}",
-                key,
-                make_dirs=True,
-                permissions=0o400,
-                user=WORKLOAD_OS_USER,
-                group=WORKLOAD_OS_GROUP,
-            )
+            self._push_file_to_workload(container, f"{self._storage_path}/{TLS_KEY_FILE}", key)
         if ca is not None:
-            container.push(
-                f"{self._storage_path}/{TLS_CA_FILE}",
-                ca,
-                make_dirs=True,
-                permissions=0o400,
-                user=WORKLOAD_OS_USER,
-                group=WORKLOAD_OS_GROUP,
-            )
-            container.push(
-                "/usr/local/share/ca-certificates/ca.crt",
-                ca,
-                make_dirs=True,
-                permissions=0o400,
-                user=WORKLOAD_OS_USER,
-                group=WORKLOAD_OS_GROUP,
-            )
+            self._push_file_to_workload(container, f"{self._storage_path}/{TLS_CA_FILE}", ca)
+            self._push_file_to_workload(container, f"{self._certs_path}/ca.crt", ca)
             container.exec(["update-ca-certificates"]).wait()
         if cert is not None:
-            container.push(
-                f"{self._storage_path}/{TLS_CERT_FILE}",
-                cert,
-                make_dirs=True,
-                permissions=0o400,
-                user=WORKLOAD_OS_USER,
-                group=WORKLOAD_OS_GROUP,
+            self._push_file_to_workload(container, f"{self._storage_path}/{TLS_CERT_FILE}", cert)
+
+        return self.update_config()
+
+    def push_ca_file_into_workload(self, secret_name: str) -> bool:
+        """Uploads CA certificate into the workload container."""
+        container = self.unit.get_container("postgresql")
+        certificates = self.get_secret(UNIT_SCOPE, secret_name)
+
+        if certificates is not None:
+            self._push_file_to_workload(
+                container=container,
+                file_path=f"{self._certs_path}/{secret_name}.crt",
+                file_data=certificates,
             )
+            container.exec(["update-ca-certificates"]).wait()
+
+        return self.update_config()
+
+    def clean_ca_file_from_workload(self, secret_name: str) -> bool:
+        """Cleans up CA certificate from the workload container."""
+        container = self.unit.get_container("postgresql")
+        container.remove_path(f"{self._certs_path}/{secret_name}.crt")
+        container.exec(["update-ca-certificates"]).wait()
 
         return self.update_config()
 
@@ -1965,6 +1979,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             "max_connections": max_connections,
             "max_prepared_transactions": self.config.memory_max_prepared_transactions,
             "shared_buffers": self.config.memory_shared_buffers,
+            "wal_keep_size": self.config.durability_wal_keep_size,
         })
 
         self._handle_postgresql_restart_need()
