@@ -8,7 +8,6 @@ import requests
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from . import architecture
 from .ha_tests.helpers import (
     change_patroni_setting,
 )
@@ -31,7 +30,7 @@ from .juju_ import juju_major_version
 logger = logging.getLogger(__name__)
 
 tls_certificates_app_name = "self-signed-certificates"
-tls_channel = "latest/edge" if architecture.architecture == "arm64" else "latest/stable"
+tls_channel = "latest/stable"
 tls_config = {"ca-common-name": "Test CA"}
 APPLICATION_UNITS = 2
 DATABASE_UNITS = 3

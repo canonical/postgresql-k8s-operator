@@ -7,7 +7,6 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_exponential
 
-from . import architecture
 from .conftest import AWS
 from .helpers import (
     DATABASE_APP_NAME,
@@ -22,7 +21,7 @@ from .helpers import (
 CANNOT_RESTORE_PITR = "cannot restore PITR, juju debug-log for details"
 S3_INTEGRATOR_APP_NAME = "s3-integrator"
 tls_certificates_app_name = "self-signed-certificates"
-tls_channel = "latest/edge" if architecture.architecture == "arm64" else "latest/stable"
+tls_channel = "latest/stable"
 tls_config = {"ca-common-name": "Test CA"}
 
 logger = logging.getLogger(__name__)
