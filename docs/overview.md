@@ -95,6 +95,8 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 2 | r-contacts | [Contacts](/t/11852) |
 | 1 | explanation | [Explanation](/t/16769) |
 | 2 | e-architecture | [Architecture](/t/11856) |
+| 2 | e-security | [Security](/t/16850) |
+| 2 | e-cryptography | [Cryptography](/t/16851) |
 | 2 | e-interfaces-endpoints | [Interfaces/endpoints](/t/10252) |
 | 2 | e-connection-pooling| [Connection pooling](/t/15799) |
 | 2 | e-statuses | [Statuses](/t/11855) |
