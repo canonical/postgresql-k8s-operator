@@ -1978,18 +1978,19 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _restart_ldap_sync_service(self) -> None:
         """Restart the LDAP sync service in case any configuration changed."""
-        if not self.is_primary:
-            return
-
         container = self.unit.get_container("postgresql")
         sync_service = container.pebble.get_services(names=[self.ldap_sync_service])
 
-        if not self.is_ldap_enabled and sync_service[0].is_running():
+        if not self.is_primary and sync_service[0].is_running():
+            logger.debug("Stopping LDAP sync service. It must only run in the primary")
+            container.stop(self.pg_ldap_sync_service)
+
+        if self.is_primary and not self.is_ldap_enabled:
             logger.debug("Stopping LDAP sync service")
             container.stop(self.ldap_sync_service)
             return
 
-        if self.is_ldap_enabled:
+        if self.is_primary and self.is_ldap_enabled:
             container.add_layer(
                 self.ldap_sync_service,
                 Layer({"services": {self.ldap_sync_service: self._generate_ldap_service()}}),
