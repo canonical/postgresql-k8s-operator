@@ -114,6 +114,7 @@ from constants import (
     WORKLOAD_OS_GROUP,
     WORKLOAD_OS_USER,
 )
+from ldap import PostgreSQLLDAP
 from patroni import NotReadyError, Patroni, SwitchoverFailedError, SwitchoverNotSyncError
 from relations.async_replication import (
     REPLICATION_CONSUMER_RELATION,
@@ -156,6 +157,7 @@ class CannotConnectError(Exception):
         PostgreSQL,
         PostgreSQLAsyncReplication,
         PostgreSQLBackups,
+        PostgreSQLLDAP,
         PostgreSQLProvider,
         PostgreSQLTLS,
         PostgreSQLUpgrade,
@@ -232,6 +234,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.legacy_db_relation = DbProvides(self, admin=False)
         self.legacy_db_admin_relation = DbProvides(self, admin=True)
         self.backup = PostgreSQLBackups(self, "s3-parameters")
+        self.ldap = PostgreSQLLDAP(self, "ldap")
         self.tls = PostgreSQLTLS(self, PEER, [self.primary_endpoint, self.replicas_endpoint])
         self.async_replication = PostgreSQLAsyncReplication(self)
         self.restart_manager = RollingOpsManager(
@@ -1234,15 +1237,19 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         If no user is provided, the password of the operator user is returned.
         """
         username = event.params.get("username", USER)
+        if username not in PASSWORD_USERS and self.is_ldap_enabled:
+            event.fail("The action can be run only for system users when LDAP is enabled")
+            return
         if username not in PASSWORD_USERS:
             event.fail(
-                f"The action can be run only for users used by the charm or Patroni:"
+                f"The action can be run only for system users or Patroni:"
                 f" {', '.join(PASSWORD_USERS)} not {username}"
             )
             return
+
         event.set_results({"password": self.get_secret(APP_SCOPE, f"{username}-password")})
 
-    def _on_set_password(self, event: ActionEvent) -> None:
+    def _on_set_password(self, event: ActionEvent) -> None:  # noqa: C901
         """Set the password for the specified user."""
         # Only leader can write the new password into peer relation.
         if not self.unit.is_leader():
@@ -1250,9 +1257,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
 
         username = event.params.get("username", USER)
+        if username not in SYSTEM_USERS and self.is_ldap_enabled:
+            event.fail("The action can be run only for system users when LDAP is enabled")
+            return
         if username not in SYSTEM_USERS:
             event.fail(
-                f"The action can be run only for users used by the charm:"
+                f"The action can be run only for system users:"
                 f" {', '.join(SYSTEM_USERS)} not {username}"
             )
             return
@@ -1649,6 +1659,21 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         )
 
     @property
+    def is_connectivity_enabled(self) -> bool:
+        """Return whether this unit can be connected externally."""
+        return self.unit_peer_data.get("connectivity", "on") == "on"
+
+    @property
+    def is_ldap_charm_related(self) -> bool:
+        """Return whether this unit has an LDAP charm related."""
+        return self.app_peer_data.get("ldap_enabled", "False") == "True"
+
+    @property
+    def is_ldap_enabled(self) -> bool:
+        """Return whether this unit has LDAP enabled."""
+        return self.is_ldap_charm_related and self.is_cluster_initialised
+
+    @property
     def is_primary(self) -> bool:
         """Return whether this unit is the primary instance."""
         return self._unit == self._patroni.get_primary(unit_name_pattern=True)
@@ -1940,8 +1965,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         logger.info("Updating Patroni config file")
         # Update and reload configuration based on TLS files availability.
         self._patroni.render_patroni_yml_file(
-            connectivity=self.unit_peer_data.get("connectivity", "on") == "on",
+            connectivity=self.is_connectivity_enabled,
             is_creating_backup=is_creating_backup,
+            enable_ldap=self.is_ldap_enabled,
             enable_tls=self.is_tls_enabled,
             is_no_sync_member=self.upgrade.is_no_sync_member,
             backup_id=self.app_peer_data.get("restoring-backup"),
@@ -2334,6 +2360,35 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             for ext in SPI_MODULE:
                 plugins.append(ext)
         return plugins
+
+    def get_ldap_parameters(self) -> dict:
+        """Returns the LDAP configuration to use."""
+        if not self.is_cluster_initialised:
+            return {}
+        if not self.is_ldap_charm_related:
+            logger.debug("LDAP is not enabled")
+            return {}
+
+        relation_data = self.ldap.get_relation_data()
+        if relation_data is None:
+            return {}
+
+        params = {
+            "ldapbasedn": relation_data.base_dn,
+            "ldapbinddn": relation_data.bind_dn,
+            "ldapbindpasswd": relation_data.bind_password,
+            "ldaptls": relation_data.starttls,
+            "ldapurl": relation_data.urls[0],
+        }
+
+        # LDAP authentication parameters that are exclusive to
+        # one of the two supported modes (simple bind or search+bind)
+        # must be put at the very end of the parameters string
+        params.update({
+            "ldapsearchfilter": self.config.ldap_search_filter,
+        })
+
+        return params
 
 
 if __name__ == "__main__":
