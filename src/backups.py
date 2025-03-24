@@ -12,7 +12,7 @@ import time
 from datetime import datetime, timezone
 from io import BytesIO
 
-import boto3 as boto3
+import boto3
 import botocore
 from botocore.exceptions import ClientError
 from charms.data_platform_libs.v0.s3 import CredentialsChangedEvent, S3Requirer
@@ -238,6 +238,11 @@ class PostgreSQLBackups(Object):
                 "s3",
                 endpoint_url=self._construct_endpoint(s3_parameters),
                 verify=(self._tls_ca_chain_filename or None),
+                config=botocore.client.Config(
+                    # https://github.com/boto/boto3/issues/4400#issuecomment-2600742103
+                    request_checksum_calculation="when_required",
+                    response_checksum_validation="when_required",
+                ),
             )
         except ValueError as e:
             logger.exception("Failed to create a session '%s' in region=%s.", bucket_name, region)
@@ -1326,6 +1331,11 @@ Stderr:
                 "s3",
                 endpoint_url=self._construct_endpoint(s3_parameters),
                 verify=(self._tls_ca_chain_filename or None),
+                config=botocore.client.Config(
+                    # https://github.com/boto/boto3/issues/4400#issuecomment-2600742103
+                    request_checksum_calculation="when_required",
+                    response_checksum_validation="when_required",
+                ),
             )
             bucket = s3.Bucket(bucket_name)
 
@@ -1368,6 +1378,11 @@ Stderr:
                 "s3",
                 endpoint_url=self._construct_endpoint(s3_parameters),
                 verify=(self._tls_ca_chain_filename or None),
+                config=botocore.client.Config(
+                    # https://github.com/boto/boto3/issues/4400#issuecomment-2600742103
+                    request_checksum_calculation="when_required",
+                    response_checksum_validation="when_required",
+                ),
             )
             bucket = s3.Bucket(bucket_name)
             with BytesIO() as buf:
