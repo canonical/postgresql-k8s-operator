@@ -8,7 +8,7 @@ import requests
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from . import architecture, markers
+from . import markers
 from .ha_tests.helpers import (
     change_patroni_setting,
 )
@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 MATTERMOST_APP_NAME = "mattermost"
 if juju_major_version < 3:
     tls_certificates_app_name = "tls-certificates-operator"
-    tls_channel = "legacy/edge" if architecture.architecture == "arm64" else "legacy/stable"
+    tls_channel = "legacy/stable"
     tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
 else:
     tls_certificates_app_name = "self-signed-certificates"
