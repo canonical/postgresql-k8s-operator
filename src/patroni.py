@@ -114,6 +114,17 @@ class Patroni:
         snap_meta = container.pull("/meta.charmed-postgresql/snap.yaml")
         return yaml.safe_load(snap_meta)["version"]
 
+    @staticmethod
+    def _dict_to_hba_string(_dict: dict[str, Any]) -> str:
+        """Transform a dictionary into a Host Based Authentication valid string."""
+        for key, value in _dict.items():
+            if isinstance(value, bool):
+                _dict[key] = int(value)
+            if isinstance(value, str):
+                _dict[key] = f'"{value}"'
+
+        return " ".join(f"{key}={value}" for key, value in _dict.items())
+
     def _get_alternative_patroni_url(
         self, attempt: AttemptManager, alternative_endpoints: list[str] | None = None
     ) -> str:
@@ -532,6 +543,7 @@ class Patroni:
         self,
         connectivity: bool = False,
         is_creating_backup: bool = False,
+        enable_ldap: bool = False,
         enable_tls: bool = False,
         is_no_sync_member: bool = False,
         stanza: str | None = None,
@@ -548,6 +560,7 @@ class Patroni:
 
         Args:
             connectivity: whether to allow external connections to the database.
+            enable_ldap: whether to enable LDAP authentication.
             enable_tls: whether to enable TLS.
             is_creating_backup: whether this unit is creating a backup.
             is_no_sync_member: whether this member shouldn't be a synchronous standby
@@ -565,9 +578,13 @@ class Patroni:
         # Open the template patroni.yml file.
         with open("templates/patroni.yml.j2") as file:
             template = Template(file.read())
+
+        ldap_params = self._charm.get_ldap_parameters()
+
         # Render the template file with the correct values.
         rendered = template.render(
             connectivity=connectivity,
+            enable_ldap=enable_ldap,
             enable_tls=enable_tls,
             endpoint=self._endpoint,
             endpoints=self._endpoints,
@@ -593,6 +610,7 @@ class Patroni:
             pg_parameters=parameters,
             primary_cluster_endpoint=self._charm.async_replication.get_primary_cluster_endpoint(),
             extra_replication_endpoints=self._charm.async_replication.get_standby_endpoints(),
+            ldap_parameters=self._dict_to_hba_string(ldap_params),
             patroni_password=self._patroni_password,
             slots=slots,
         )

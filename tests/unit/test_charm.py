@@ -1685,6 +1685,7 @@ def test_update_config(harness):
         _render_patroni_yml_file.assert_called_once_with(
             connectivity=True,
             is_creating_backup=False,
+            enable_ldap=False,
             enable_tls=False,
             is_no_sync_member=False,
             backup_id=None,
@@ -1710,6 +1711,7 @@ def test_update_config(harness):
         _render_patroni_yml_file.assert_called_once_with(
             connectivity=True,
             is_creating_backup=False,
+            enable_ldap=False,
             enable_tls=True,
             is_no_sync_member=False,
             backup_id=None,
@@ -1933,3 +1935,35 @@ def test_on_promote_to_primary(harness):
         harness.charm._on_promote_to_primary(event)
 
         event.fail.assert_called_once_with("Unit is not sync standby")
+
+
+def test_get_ldap_parameters(harness):
+    with (
+        patch("charm.PostgreSQLLDAP.get_relation_data") as _get_relation_data,
+        patch(
+            target="charm.PostgresqlOperatorCharm.is_cluster_initialised",
+            new_callable=PropertyMock,
+            return_value=True,
+        ) as _cluster_initialised,
+    ):
+        with harness.hooks_disabled():
+            harness.update_relation_data(
+                harness.model.get_relation(PEER).id,
+                harness.charm.app.name,
+                {"ldap_enabled": "False"},
+            )
+
+        harness.charm.get_ldap_parameters()
+        _get_relation_data.assert_not_called()
+        _get_relation_data.reset_mock()
+
+        with harness.hooks_disabled():
+            harness.update_relation_data(
+                harness.model.get_relation(PEER).id,
+                harness.charm.app.name,
+                {"ldap_enabled": "True"},
+            )
+
+        harness.charm.get_ldap_parameters()
+        _get_relation_data.assert_called_once()
+        _get_relation_data.reset_mock()
