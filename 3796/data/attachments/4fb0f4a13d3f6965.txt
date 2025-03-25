@@ -1,0 +1,100 @@
+[32mINFO    [0m integration.ha_tests.test_upgrade_from_stable:test_upgrade_from_stable.py:95 starting continuous writes to the database
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-test-app/0 [idle] active: 
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m integration.ha_tests.test_upgrade_from_stable:test_upgrade_from_stable.py:99 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.156:16443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.156:16443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:242 Initial writes {'testing.postgresql-k8s-0': 181, 'testing.postgresql-k8s-1': 182}
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.156:16443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.156:16443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Retry writes {'testing.postgresql-k8s-0': 319, 'testing.postgresql-k8s-1': 320}
+[32mINFO    [0m integration.ha_tests.test_upgrade_from_stable:test_upgrade_from_stable.py:109 Refresh the charm
+[32mINFO    [0m integration.ha_tests.test_upgrade_from_stable:test_upgrade_from_stable.py:112 Wait for upgrade to complete on first upgrading unit
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [idle] waiting: other units upgrading first...
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [idle] waiting: other units upgrading first...
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m integration.ha_tests.test_upgrade_from_stable:test_upgrade_from_stable.py:125 Resume upgrade
+[32mINFO    [0m integration.ha_tests.test_upgrade_from_stable:test_upgrade_from_stable.py:130 Wait for upgrade to complete
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [executing] maintenance: stopping charm software
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: other units upgrading first...
+  postgresql-k8s/1 [executing] maintenance: upgrading unit
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: other units upgrading first...
+  postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: other units upgrading first...
+  postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: other units upgrading first...
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] maintenance: upgrading unit
+  postgresql-k8s/1 [idle] maintenance: upgrade completed
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/1 [idle] maintenance: upgrade completed
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [executing] maintenance: upgrade completed
+  postgresql-k8s/2 [executing] maintenance: upgrade completed
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] active: 
+  postgresql-k8s/1 [executing] active: 
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m integration.ha_tests.test_upgrade_from_stable:test_upgrade_from_stable.py:137 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.156:16443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.156:16443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.156:16443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:242 Initial writes {'testing.postgresql-k8s-0': 30256, 'testing.postgresql-k8s-1': 30257, 'testing.postgresql-k8s-2': 30260}
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.156:16443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.156:16443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.156:16443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Retry writes {'testing.postgresql-k8s-0': 30400, 'testing.postgresql-k8s-1': 30401, 'testing.postgresql-k8s-2': 30403}
+[32mINFO    [0m integration.ha_tests.test_upgrade_from_stable:test_upgrade_from_stable.py:142 checking whether no writes were lost
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.156:16443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.156:16443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.156:16443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_upgrade_from_stable:test_upgrade_from_stable.py:147 checking the number of switchovers
+[32mINFO    [0m pytest_operator.plugin:plugin.py:936 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.4    unsupported  01:59:42Z
+
+App                  Version  Status  Scale  Charm                Channel      Rev  Address         Exposed  Message
+postgresql-k8s       14.17    active      3  postgresql-k8s                      0  10.152.183.126  no       
+postgresql-test-app           active      1  postgresql-test-app  latest/edge  373  10.152.183.123  no       received database credentials of the first database
+
+Unit                    Workload  Agent  Address       Ports  Message
+postgresql-k8s/0*       active    idle   10.1.190.209         
+postgresql-k8s/1        active    idle   10.1.190.208         Primary
+postgresql-k8s/2        active    idle   10.1.190.207         
+postgresql-test-app/0*  active    idle   10.1.190.200         received database credentials of the first database
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:942 Juju error logs:
+
+unit-postgresql-k8s-1: 01:48:58 ERROR unit.postgresql-k8s/1.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1024 Forgetting model main...
