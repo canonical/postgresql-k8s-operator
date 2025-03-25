@@ -1511,6 +1511,41 @@ def test_handle_processes_failures(harness):
             _reinitialize_postgresql.assert_called_once()
 
 
+def test_push_ca_file_into_workload(harness):
+    with (
+        patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
+    ):
+        harness.set_can_connect(POSTGRESQL_CONTAINER, True)
+        harness.handle_exec(POSTGRESQL_CONTAINER, [], result=0)
+
+        harness.charm.set_secret("unit", "ca-app", "test-ca")
+        harness.charm.push_ca_file_into_workload("ca-app")
+        _update_config.assert_called_once()
+
+        container = harness.model.unit.get_container(POSTGRESQL_CONTAINER)
+        ca_exists = container.exists(f"{harness.charm._certs_path}/ca-app.crt")
+        assert ca_exists is True
+
+
+def test_clean_ca_file_from_workload(harness):
+    with (
+        patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
+    ):
+        harness.set_can_connect(POSTGRESQL_CONTAINER, True)
+        harness.handle_exec(POSTGRESQL_CONTAINER, [], result=0)
+
+        harness.charm.set_secret("unit", "ca-app", "test-ca")
+        harness.charm.push_ca_file_into_workload("ca-app")
+        _update_config.reset_mock()
+
+        harness.charm.clean_ca_file_from_workload("ca-app")
+        _update_config.assert_called_once()
+
+        container = harness.model.unit.get_container(POSTGRESQL_CONTAINER)
+        ca_exists = container.exists(f"{harness.charm._certs_path}/ca-app.crt")
+        assert ca_exists is False
+
+
 def test_update_config(harness):
     with (
         patch("ops.model.Container.get_plan") as _get_plan,
@@ -1546,6 +1581,7 @@ def test_update_config(harness):
         _render_patroni_yml_file.assert_called_once_with(
             connectivity=True,
             is_creating_backup=False,
+            enable_ldap=False,
             enable_tls=False,
             is_no_sync_member=False,
             backup_id=None,
@@ -1570,6 +1606,7 @@ def test_update_config(harness):
         _render_patroni_yml_file.assert_called_once_with(
             connectivity=True,
             is_creating_backup=False,
+            enable_ldap=False,
             enable_tls=True,
             is_no_sync_member=False,
             backup_id=None,
@@ -1793,3 +1830,35 @@ def test_on_promote_to_primary(harness):
         harness.charm._on_promote_to_primary(event)
 
         event.fail.assert_called_once_with("Unit is not sync standby")
+
+
+def test_get_ldap_parameters(harness):
+    with (
+        patch("charm.PostgreSQLLDAP.get_relation_data") as _get_relation_data,
+        patch(
+            target="charm.PostgresqlOperatorCharm.is_cluster_initialised",
+            new_callable=PropertyMock,
+            return_value=True,
+        ) as _cluster_initialised,
+    ):
+        with harness.hooks_disabled():
+            harness.update_relation_data(
+                harness.model.get_relation(PEER).id,
+                harness.charm.app.name,
+                {"ldap_enabled": "False"},
+            )
+
+        harness.charm.get_ldap_parameters()
+        _get_relation_data.assert_not_called()
+        _get_relation_data.reset_mock()
+
+        with harness.hooks_disabled():
+            harness.update_relation_data(
+                harness.model.get_relation(PEER).id,
+                harness.charm.app.name,
+                {"ldap_enabled": "True"},
+            )
+
+        harness.charm.get_ldap_parameters()
+        _get_relation_data.assert_called_once()
+        _get_relation_data.reset_mock()

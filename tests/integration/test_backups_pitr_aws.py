@@ -7,7 +7,6 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_exponential
 
-from . import architecture
 from .conftest import AWS
 from .helpers import (
     DATABASE_APP_NAME,
@@ -22,7 +21,7 @@ from .helpers import (
 CANNOT_RESTORE_PITR = "cannot restore PITR, juju debug-log for details"
 S3_INTEGRATOR_APP_NAME = "s3-integrator"
 tls_certificates_app_name = "self-signed-certificates"
-tls_channel = "latest/edge" if architecture.architecture == "arm64" else "latest/stable"
+tls_channel = "latest/stable"
 tls_config = {"ca-common-name": "Test CA"}
 
 logger = logging.getLogger(__name__)
@@ -60,7 +59,9 @@ async def pitr_backup_operations(
     logger.info(
         "integrating self-signed-certificates with postgresql and waiting them to stabilize"
     )
-    await ops_test.model.relate(database_app_name, tls_certificates_app_name)
+    await ops_test.model.relate(
+        f"{database_app_name}:certificates", f"{tls_certificates_app_name}:certificates"
+    )
     async with ops_test.fast_forward(fast_interval="60s"):
         await ops_test.model.wait_for_idle(
             apps=[database_app_name, tls_certificates_app_name],

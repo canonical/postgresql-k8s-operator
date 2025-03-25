@@ -71,6 +71,24 @@ def mocked_requests_get(*args, **kwargs):
     raise requests.exceptions.Timeout()
 
 
+def test_dict_to_hba_string(harness, patroni):
+    mock_data = {
+        "ldapbasedn": "dc=example,dc=net",
+        "ldapbinddn": "cn=serviceuser,dc=example,dc=net",
+        "ldapbindpasswd": "password",
+        "ldaptls": False,
+        "ldapurl": "ldap://0.0.0.0:3893",
+    }
+
+    assert patroni._dict_to_hba_string(mock_data) == (
+        'ldapbasedn="dc=example,dc=net" '
+        'ldapbinddn="cn=serviceuser,dc=example,dc=net" '
+        'ldapbindpasswd="password" '
+        "ldaptls=0 "
+        'ldapurl="ldap://0.0.0.0:3893"'
+    )
+
+
 def test_get_primary(harness, patroni):
     with patch("requests.get") as _get:
         # Mock Patroni cluster API.
