@@ -15,6 +15,8 @@ import time
 from pathlib import Path
 from typing import Literal, get_args
 
+from relations.logical_replication import PostgreSQLLogicalReplication
+
 # First platform-specific import, will fail on wrong architecture
 try:
     import psycopg2
@@ -237,6 +239,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.ldap = PostgreSQLLDAP(self, "ldap")
         self.tls = PostgreSQLTLS(self, PEER, [self.primary_endpoint, self.replicas_endpoint])
         self.async_replication = PostgreSQLAsyncReplication(self)
+        self.logical_replication = PostgreSQLLogicalReplication(self)
         self.restart_manager = RollingOpsManager(
             charm=self, relation="restart", callback=self._restart
         )
@@ -1962,6 +1965,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.model.config, available_memory, limit_memory
         )
 
+        replication_slots_json = (
+            json.loads(self.app_peer_data["replication-slots"])
+            if "replication-slots" in self.app_peer_data
+            else None
+        )
+
         logger.info("Updating Patroni config file")
         # Update and reload configuration based on TLS files availability.
         self._patroni.render_patroni_yml_file(
@@ -1977,6 +1986,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             stanza=self.app_peer_data.get("stanza", self.unit_peer_data.get("stanza")),
             restore_stanza=self.app_peer_data.get("restore-stanza"),
             parameters=postgresql_parameters,
+            slots=replication_slots_json,
         )
 
         if not self._is_workload_running:
@@ -2007,6 +2017,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             "shared_buffers": self.config.memory_shared_buffers,
             "wal_keep_size": self.config.durability_wal_keep_size,
         })
+
+        self._patroni.ensure_slots_controller_by_patroni(replication_slots_json or {})
 
         self._handle_postgresql_restart_need()
 
