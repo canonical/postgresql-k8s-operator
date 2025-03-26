@@ -989,7 +989,7 @@ Stderr:
         # Stop the database service before performing the restore.
         logger.info("Stopping database service")
         try:
-            self.container.stop(self.charm._postgresql_service)
+            self.container.stop(self.charm.postgresql_service)
         except ChangeError as e:
             error_message = f"Failed to stop database service with error: {e!s}"
             logger.error(f"Restore failed: {error_message}")
@@ -1047,7 +1047,7 @@ Stderr:
 
         # Start the database to start the restore process.
         logger.info("Configuring Patroni to restore the backup")
-        self.container.start(self.charm._postgresql_service)
+        self.container.start(self.charm.postgresql_service)
 
         event.set_results({"restore-status": "restore started"})
 
@@ -1221,7 +1221,7 @@ Stderr:
         """Removes the restoring backup flag and restart the database."""
         self.charm.app_peer_data.update({"restoring-backup": "", "restore-to-time": ""})
         self.charm.update_config()
-        self.container.start(self.charm._postgresql_service)
+        self.container.start(self.charm.postgresql_service)
 
     def _retrieve_s3_parameters(self) -> tuple[dict, list[str]]:
         """Retrieve S3 parameters from the S3 integrator relation."""
