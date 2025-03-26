@@ -1978,6 +1978,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _restart_ldap_sync_service(self) -> None:
         """Restart the LDAP sync service in case any configuration changed."""
+        if not self._patroni.member_started:
+            logger.debug("Restart LDAP sync early exit: Patroni has not started yet")
+            return
+
         container = self.unit.get_container("postgresql")
         sync_service = container.pebble.get_services(names=[self.ldap_sync_service])
 
