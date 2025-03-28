@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
+import asyncio
 import logging
 import uuid
 
@@ -138,6 +139,7 @@ async def test_restore_on_new_cluster(
             action = await ops_test.model.units.get(f"{database_app_name}/0").run_action(
                 "restore", **{"backup-id": backup_id}
             )
+            await asyncio.sleep(60)
             await action.wait()
             restore_status = action.results.get("restore-status")
             assert restore_status, "restore hasn't succeeded"
