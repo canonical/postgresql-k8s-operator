@@ -930,6 +930,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
             "/var/lib/postgresql/logs",
         ]).wait()
+        container.exec([
+            "chown",
+            f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
+            "/var/lib/postgresql/temp",
+        ]).wait()
 
     def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
         """Event handler for PostgreSQL container on PebbleReadyEvent."""

@@ -35,7 +35,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 47
+LIBPATCH = 49
 
 # Groups to distinguish HBA access
 ACCESS_GROUP_IDENTITY = "identity_access"
@@ -696,12 +696,18 @@ END; $$;"""
     def set_up_database(self) -> None:
         """Set up postgres database with the right permissions."""
         connection = None
+        cursor = None
         try:
-            with self._connect_to_database() as connection, connection.cursor() as cursor:
-                cursor.execute("SELECT TRUE FROM pg_roles WHERE rolname='admin';")
-                if cursor.fetchone() is not None:
-                    return
+            connection = self._connect_to_database()
+            cursor = connection.cursor()
 
+            cursor.execute("SELECT TRUE FROM pg_tablespace WHERE spcname='temp';")
+            if cursor.fetchone() is None:
+                cursor.execute("CREATE TABLESPACE temp LOCATION '/var/lib/postgresql/temp';")
+                cursor.execute("GRANT CREATE ON TABLESPACE temp TO public;")
+
+            cursor.execute("SELECT TRUE FROM pg_roles WHERE rolname='admin';")
+            if cursor.fetchone() is None:
                 # Allow access to the postgres database only to the system users.
                 cursor.execute("REVOKE ALL PRIVILEGES ON DATABASE postgres FROM PUBLIC;")
                 cursor.execute("REVOKE CREATE ON SCHEMA public FROM PUBLIC;")
@@ -720,6 +726,8 @@ END; $$;"""
             logger.error(f"Failed to set up databases: {e}")
             raise PostgreSQLDatabasesSetupError() from e
         finally:
+            if cursor is not None:
+                cursor.close()
             if connection is not None:
                 connection.close()
 

@@ -27,8 +27,8 @@ containers:
         location: /var/lib/postgresql/data
       - storage: logs
         location: /var/lib/postgresql/logs
-#       - storage: temp
-#         location: /var/lib/postgresql/data/pgdata/base/pgsql_tmp
+      - storage: temp
+        location: /var/lib/postgresql/temp
 
 resources:
   postgresql-image:
@@ -95,9 +95,9 @@ storage:
   logs:
     type: filesystem
     location: /var/lib/postgresql/logs
-#   temp:
-#     type: filesystem
-#     location: /var/logs/postgresql/data/pgdata/base/pgsql_tmp
+  temp:
+    type: filesystem
+    location: /var/logs/postgresql/temp
 
 assumes:
   - k8s-api

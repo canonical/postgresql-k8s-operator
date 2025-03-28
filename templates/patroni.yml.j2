@@ -131,6 +131,7 @@ postgresql:
     ssl_cert_file: {{ storage_path }}/cert.pem
     ssl_key_file: {{ storage_path }}/key.pem
     {%- endif %}
+    temp_tablespaces: temp
     {%- if pg_parameters %}
     {%- for key, value in pg_parameters.items() %}
     {{key}}: {{value}}
