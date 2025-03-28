@@ -524,7 +524,7 @@ class PostgreSQLAsyncReplication(Object):
 
         if (
             not self.container.can_connect()
-            or len(self.container.pebble.get_services(names=[self.charm._postgresql_service])) == 0
+            or len(self.container.pebble.get_services(names=[self.charm.postgresql_service])) == 0
         ):
             logger.debug("Early exit on_async_relation_changed: container hasn't started yet.")
             event.defer()
@@ -532,7 +532,7 @@ class PostgreSQLAsyncReplication(Object):
 
         # Update the asynchronous replication configuration and start the database.
         self.charm.update_config()
-        self.container.start(self.charm._postgresql_service)
+        self.container.start(self.charm.postgresql_service)
 
         self._handle_database_start(event)
 
@@ -694,7 +694,7 @@ class PostgreSQLAsyncReplication(Object):
                 logger.debug("Early exit on_async_relation_changed: following promoted cluster.")
                 return False
 
-            self.container.stop(self.charm._postgresql_service)
+            self.container.stop(self.charm.postgresql_service)
 
             if self.charm.unit.is_leader():
                 # Remove the "cluster_initialised" flag to avoid self-healing in the update status hook.

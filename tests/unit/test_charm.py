@@ -31,6 +31,7 @@ from tests.unit.helpers import _FakeApiError
 
 POSTGRESQL_CONTAINER = "postgresql"
 POSTGRESQL_SERVICE = "postgresql"
+LDAP_SYNC_SERVICE = "ldap-sync"
 METRICS_SERVICE = "metrics_server"
 PGBACKREST_SERVER_SERVICE = "pgbackrest server"
 ROTATE_LOGS_SERVICE = "rotate-logs"
@@ -956,6 +957,20 @@ def test_postgresql_layer(harness):
                         "PATRONI_SUPERUSER_USERNAME": "operator",
                     },
                 },
+                PGBACKREST_SERVER_SERVICE: {
+                    "override": "replace",
+                    "summary": "pgBackRest server",
+                    "command": PGBACKREST_SERVER_SERVICE,
+                    "startup": "disabled",
+                    "user": "postgres",
+                    "group": "postgres",
+                },
+                LDAP_SYNC_SERVICE: {
+                    "override": "replace",
+                    "summary": "synchronize LDAP users",
+                    "command": "/start-ldap-synchronizer.sh",
+                    "startup": "disabled",
+                },
                 METRICS_SERVICE: {
                     "override": "replace",
                     "summary": "postgresql metrics exporter",
@@ -971,14 +986,6 @@ def test_postgresql_layer(harness):
                             "host=/var/run/postgresql port=5432 database=postgres"
                         ),
                     },
-                },
-                PGBACKREST_SERVER_SERVICE: {
-                    "override": "replace",
-                    "summary": "pgBackRest server",
-                    "command": PGBACKREST_SERVER_SERVICE,
-                    "startup": "disabled",
-                    "user": "postgres",
-                    "group": "postgres",
                 },
                 ROTATE_LOGS_SERVICE: {
                     "override": "replace",
@@ -1655,6 +1662,12 @@ def test_update_config(harness):
         patch(
             "charm.PostgresqlOperatorCharm._handle_postgresql_restart_need"
         ) as _handle_postgresql_restart_need,
+        patch(
+            "charm.PostgresqlOperatorCharm._restart_metrics_service"
+        ) as _restart_metrics_service,
+        patch(
+            "charm.PostgresqlOperatorCharm._restart_ldap_sync_service"
+        ) as _restart_ldap_sync_service,
         patch("charm.Patroni.bulk_update_parameters_controller_by_patroni"),
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
         patch(
@@ -1662,6 +1675,7 @@ def test_update_config(harness):
         ) as _is_workload_running,
         patch("charm.Patroni.render_patroni_yml_file") as _render_patroni_yml_file,
         patch("charm.PostgreSQLUpgrade") as _upgrade,
+        patch("charm.PostgresqlOperatorCharm.is_primary", return_value=False),
         patch(
             "charm.PostgresqlOperatorCharm.is_tls_enabled", new_callable=PropertyMock
         ) as _is_tls_enabled,
@@ -1696,10 +1710,14 @@ def test_update_config(harness):
             parameters={"test": "test"},
         )
         _handle_postgresql_restart_need.assert_called_once()
+        _restart_metrics_service.assert_called_once()
+        # _restart_ldap_sync_service.assert_called_once()
         assert "tls" not in harness.get_relation_data(rel_id, harness.charm.unit.name)
 
         # Test with TLS files available.
         _handle_postgresql_restart_need.reset_mock()
+        _restart_metrics_service.reset_mock()
+        # _restart_ldap_sync_service.reset_mock()
         harness.update_relation_data(
             rel_id, harness.charm.unit.name, {"tls": ""}
         )  # Mock some data in the relation to test that it change.
@@ -1721,6 +1739,8 @@ def test_update_config(harness):
             parameters={"test": "test"},
         )
         _handle_postgresql_restart_need.assert_called_once()
+        _restart_metrics_service.assert_called_once()
+        # _restart_ldap_sync_service.assert_called_once()
         assert "tls" not in harness.get_relation_data(
             rel_id, harness.charm.unit.name
         )  # The "tls" flag is set in handle_postgresql_restart_need.
@@ -1730,8 +1750,12 @@ def test_update_config(harness):
             rel_id, harness.charm.unit.name, {"tls": ""}
         )  # Mock some data in the relation to test that it change.
         _handle_postgresql_restart_need.reset_mock()
+        _restart_metrics_service.reset_mock()
+        # _restart_ldap_sync_service.reset_mock()
         harness.charm.update_config()
         _handle_postgresql_restart_need.assert_not_called()
+        _restart_metrics_service.assert_not_called()
+        # _restart_ldap_sync_service.assert_not_called()
         assert harness.get_relation_data(rel_id, harness.charm.unit.name)["tls"] == "enabled"
 
         # Test with member not started yet.
@@ -1740,6 +1764,8 @@ def test_update_config(harness):
         )  # Mock some data in the relation to test that it doesn't change.
         harness.charm.update_config()
         _handle_postgresql_restart_need.assert_not_called()
+        _restart_metrics_service.assert_not_called()
+        # _restart_ldap_sync_service.assert_not_called()
         assert "tls" not in harness.get_relation_data(rel_id, harness.charm.unit.name)
 
 
