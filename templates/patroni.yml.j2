@@ -76,6 +76,7 @@ bootstrap:
   - auth-local: trust
   - encoding: UTF8
   - data-checksums
+  - waldir: /var/lib/postgresql/logs
   {%- endif %}
   pg_hba:
   - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 md5
@@ -111,6 +112,8 @@ ctl:
 {%- endif %}
 pod_ip: '{{ endpoint }}'
 postgresql:
+  basebackup:
+    - waldir: /var/lib/postgresql/logs
   connect_address: '{{ endpoint }}:5432'
   data_dir: {{ storage_path }}/pgdata
   bin_dir: /usr/lib/postgresql/{{ version }}/bin
