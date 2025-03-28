@@ -1107,6 +1107,7 @@ def test_validate_config_options(harness):
         harness.set_can_connect(POSTGRESQL_CONTAINER, True)
         _charm_lib.return_value.get_postgresql_text_search_configs.return_value = []
         _charm_lib.return_value.validate_date_style.return_value = []
+        _charm_lib.return_value.validate_group_map.return_value = False
         _charm_lib.return_value.get_postgresql_timezones.return_value = []
 
         # Test instance_default_text_search_config exception
@@ -1123,6 +1124,17 @@ def test_validate_config_options(harness):
         _charm_lib.return_value.get_postgresql_text_search_configs.return_value = [
             "pg_catalog.test"
         ]
+
+        # Test ldap_map exception
+        with harness.hooks_disabled():
+            harness.update_config({"ldap_map": "ldap_group="})
+
+        with tc.assertRaises(ValueError) as e:
+            harness.charm._validate_config_options()
+            assert e.msg == "ldap_map config option has an invalid value"
+
+        _charm_lib.return_value.validate_group_map.assert_called_once_with("ldap_group=")
+        _charm_lib.return_value.validate_group_map.return_value = True
 
         # Test request_date_style exception
         with harness.hooks_disabled():
@@ -1145,10 +1157,6 @@ def test_validate_config_options(harness):
 
         _charm_lib.return_value.get_postgresql_timezones.assert_called_once_with()
         _charm_lib.return_value.get_postgresql_timezones.return_value = ["TEST_ZONE"]
-
-    #
-    # Secrets
-    #
 
 
 def test_scope_obj(harness):
@@ -1711,13 +1719,13 @@ def test_update_config(harness):
         )
         _handle_postgresql_restart_need.assert_called_once()
         _restart_metrics_service.assert_called_once()
-        # _restart_ldap_sync_service.assert_called_once()
+        _restart_ldap_sync_service.assert_called_once()
         assert "tls" not in harness.get_relation_data(rel_id, harness.charm.unit.name)
 
         # Test with TLS files available.
         _handle_postgresql_restart_need.reset_mock()
         _restart_metrics_service.reset_mock()
-        # _restart_ldap_sync_service.reset_mock()
+        _restart_ldap_sync_service.reset_mock()
         harness.update_relation_data(
             rel_id, harness.charm.unit.name, {"tls": ""}
         )  # Mock some data in the relation to test that it change.
@@ -1740,7 +1748,7 @@ def test_update_config(harness):
         )
         _handle_postgresql_restart_need.assert_called_once()
         _restart_metrics_service.assert_called_once()
-        # _restart_ldap_sync_service.assert_called_once()
+        _restart_ldap_sync_service.assert_called_once()
         assert "tls" not in harness.get_relation_data(
             rel_id, harness.charm.unit.name
         )  # The "tls" flag is set in handle_postgresql_restart_need.
@@ -1751,11 +1759,11 @@ def test_update_config(harness):
         )  # Mock some data in the relation to test that it change.
         _handle_postgresql_restart_need.reset_mock()
         _restart_metrics_service.reset_mock()
-        # _restart_ldap_sync_service.reset_mock()
+        _restart_ldap_sync_service.reset_mock()
         harness.charm.update_config()
         _handle_postgresql_restart_need.assert_not_called()
         _restart_metrics_service.assert_not_called()
-        # _restart_ldap_sync_service.assert_not_called()
+        _restart_ldap_sync_service.assert_not_called()
         assert harness.get_relation_data(rel_id, harness.charm.unit.name)["tls"] == "enabled"
 
         # Test with member not started yet.
@@ -1765,7 +1773,7 @@ def test_update_config(harness):
         harness.charm.update_config()
         _handle_postgresql_restart_need.assert_not_called()
         _restart_metrics_service.assert_not_called()
-        # _restart_ldap_sync_service.assert_not_called()
+        _restart_ldap_sync_service.assert_not_called()
         assert "tls" not in harness.get_relation_data(rel_id, harness.charm.unit.name)
 
 

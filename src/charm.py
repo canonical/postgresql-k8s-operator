@@ -36,6 +36,7 @@ from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v1.loki_push_api import LogProxyConsumer
 from charms.postgresql_k8s.v0.postgresql import (
+    ACCESS_GROUP_IDENTITY,
     ACCESS_GROUPS,
     REQUIRED_PLUGINS,
     PostgreSQL,
@@ -1760,6 +1761,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         ldap_base_dn = ldap_params["ldapbasedn"]
         ldap_bind_username = ldap_params["ldapbinddn"]
         ldap_bing_password = ldap_params["ldapbindpasswd"]
+        ldap_group_mappings = self.postgresql.build_postgresql_group_map(self.config.ldap_map)
 
         return {
             "override": "replace",
@@ -1772,6 +1774,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 "LDAP_BASE_DN": ldap_base_dn,
                 "LDAP_BIND_USERNAME": ldap_bind_username,
                 "LDAP_BIND_PASSWORD": ldap_bing_password,
+                "LDAP_GROUP_IDENTITY": json.dumps(ACCESS_GROUP_IDENTITY),
+                "LDAP_GROUP_MAPPINGS": json.dumps(ldap_group_mappings),
                 "POSTGRES_HOST": "127.0.0.1",
                 "POSTGRES_PORT": DATABASE_PORT,
                 "POSTGRES_DATABASE": DATABASE_DEFAULT_NAME,
@@ -2095,11 +2099,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         self._handle_postgresql_restart_need()
         self._restart_metrics_service()
-
-        # TODO: Un-comment
-        # When PostgreSQL-rock wrapping PostgreSQL-snap versions 162 / 163 gets published
-        # (i.e. snap contains https://github.com/canonical/charmed-postgresql-snap/pull/88)
-        # self._restart_ldap_sync_service()
+        self._restart_ldap_sync_service()
 
         return True
 
@@ -2112,6 +2112,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             raise ValueError(
                 "instance_default_text_search_config config option has an invalid value"
             )
+
+        if not self.postgresql.validate_group_map(self.config.ldap_map):
+            raise ValueError("ldap_map config option has an invalid value")
 
         if not self.postgresql.validate_date_style(self.config.request_date_style):
             raise ValueError("request_date_style config option has an invalid value")
