@@ -2099,11 +2099,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         self._handle_postgresql_restart_need()
         self._restart_metrics_service()
-
-        # TODO: Un-comment
-        # When PostgreSQL-rock wrapping PostgreSQL-snap versions 162 / 163 gets published
-        # (i.e. snap contains https://github.com/canonical/charmed-postgresql-snap/pull/88)
-        # self._restart_ldap_sync_service()
+        self._restart_ldap_sync_service()
 
         return True
 
