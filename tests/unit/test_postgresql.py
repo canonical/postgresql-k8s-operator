@@ -370,6 +370,27 @@ def test_get_last_archived_wal(harness):
         execute.assert_called_once_with("SELECT last_archived_wal FROM pg_stat_archiver;")
 
 
+def test_build_postgresql_group_map(harness):
+    assert harness.charm.postgresql.build_postgresql_group_map(None) == []
+    assert harness.charm.postgresql.build_postgresql_group_map("ldap_group=admin") == []
+
+    for group in ACCESS_GROUPS:
+        assert harness.charm.postgresql.build_postgresql_group_map(f"ldap_group={group}") == []
+
+    mapping_1 = "ldap_group_1=psql_group_1"
+    mapping_2 = "ldap_group_2=psql_group_2"
+
+    assert harness.charm.postgresql.build_postgresql_group_map(f"{mapping_1},{mapping_2}") == [
+        ("ldap_group_1", "psql_group_1"),
+        ("ldap_group_2", "psql_group_2"),
+    ]
+    try:
+        harness.charm.postgresql.build_postgresql_group_map(f"{mapping_1} {mapping_2}")
+        assert False
+    except ValueError:
+        assert True
+
+
 def test_build_postgresql_parameters(harness):
     # Test when not limit is imposed to the available memory.
     config_options = {
@@ -462,4 +483,31 @@ def test_configure_pgaudit(harness):
             call("ALTER SYSTEM RESET pgaudit.log_client;"),
             call("ALTER SYSTEM RESET pgaudit.log_parameter;"),
             call("SELECT pg_reload_conf();"),
+        ])
+
+
+def test_validate_group_map(harness):
+    with patch(
+        "charms.postgresql_k8s.v0.postgresql.PostgreSQL._connect_to_database"
+    ) as _connect_to_database:
+        execute = _connect_to_database.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value.execute
+        _connect_to_database.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value.fetchone.return_value = None
+
+        query = SQL("SELECT TRUE FROM pg_roles WHERE rolname={};")
+
+        assert harness.charm.postgresql.validate_group_map(None) is True
+
+        assert harness.charm.postgresql.validate_group_map("") is False
+        assert harness.charm.postgresql.validate_group_map("ldap_group=") is False
+        execute.assert_has_calls([
+            call(query.format(Literal(""))),
+        ])
+
+        assert harness.charm.postgresql.validate_group_map("ldap_group=admin") is True
+        assert harness.charm.postgresql.validate_group_map("ldap_group=admin,") is False
+        assert harness.charm.postgresql.validate_group_map("ldap_group admin") is False
+
+        assert harness.charm.postgresql.validate_group_map("ldap_group=missing_group") is False
+        execute.assert_has_calls([
+            call(query.format(Literal("missing_group"))),
         ])
