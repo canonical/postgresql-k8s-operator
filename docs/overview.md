@@ -61,6 +61,7 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 2 | h-external-access | [External network access](/t/15701) |
 | 2 | h-scale | [Scale replicas](/t/9592) |
 | 2 | h-enable-tls | [Enable TLS](/t/9593) |
+| 2 | h-enable-ldap | [Enable LDAP](/t/17189) |
 | 2 | h-enable-plugins-extensions | [Enable plugins/extensions](/t/10907) |
 | 2 | h-backup | [Back up and restore]() |
 | 3 | h-configure-s3-aws | [Configure S3 AWS](/t/9595) |
@@ -95,6 +96,8 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 2 | r-contacts | [Contacts](/t/11852) |
 | 1 | explanation | [Explanation](/t/16769) |
 | 2 | e-architecture | [Architecture](/t/11856) |
+| 2 | e-security | [Security](/t/16850) |
+| 2 | e-cryptography | [Cryptography](/t/16851) |
 | 2 | e-interfaces-endpoints | [Interfaces/endpoints](/t/10252) |
 | 2 | e-connection-pooling| [Connection pooling](/t/15799) |
 | 2 | e-statuses | [Statuses](/t/11855) |
