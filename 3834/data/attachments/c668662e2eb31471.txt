@@ -1,0 +1,69 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/focal/indico-247
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/focal/redis-k8s-7
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/focal/redis-k8s-7
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [executing] waiting: Waiting for database availability
+[32mINFO    [0m integration.new_relations.test_new_relations_2:test_new_relations_2.py:171 Verifying that the charm doesn't block when the extensions are enabled
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: 
+  database/1 [idle] active: 
+  database/2 [idle] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: 
+  database/1 [idle] active: 
+  database/2 [idle] active: Primary
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: 
+  database/1 [idle] active: 
+  database/2 [idle] active: Primary
+  indico/0 [executing] waiting: Waiting for database availability
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: 
+  database/1 [idle] active: 
+  database/2 [idle] active: Primary
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:936 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.4    unsupported  01:52:23Z
+
+App            Version               Status  Scale  Charm           Channel        Rev  Address         Exposed  Message
+database       14.17                 active      3  postgresql-k8s                   0  10.152.183.244  no       
+discourse-k8s  3.3.0                 active      1  discourse-k8s   latest/stable  183  10.152.183.44   no       
+indico         3.3.1                 active      1  indico          latest/edge    247  10.152.183.99   no       
+redis-broker   ubuntu/redis@691f315  active      1  redis-k8s       latest/stable    7                  no       
+redis-cache    ubuntu/redis@691f315  active      1  redis-k8s       latest/stable    7                  no       
+redis-k8s      7.2.5                 active      1  redis-k8s       latest/edge     41  10.152.183.253  no       
+
+Unit              Workload  Agent  Address      Ports     Message
+database/0        active    idle   10.1.249.11            
+database/1        active    idle   10.1.249.13            
+database/2*       active    idle   10.1.249.12            Primary
+discourse-k8s/0*  active    idle   10.1.249.14            
+indico/0*         active    idle   10.1.249.18            
+redis-broker/0*   active    idle   10.1.249.21  6379/TCP  
+redis-cache/0*    active    idle   10.1.249.23  6379/TCP  
+redis-k8s/0*      active    idle   10.1.249.16            
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:942 Juju error logs:
+
+unit-database-0: 01:35:01 ERROR unit.database/0.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-database-1: 01:35:01 ERROR unit.database/1.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-redis-k8s-0: 01:37:07 ERROR unit.redis-k8s/0.juju-log redis-peers:4: Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:37:07 ERROR unit.redis-k8s/0.juju-log redis-peers:4: Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:37:07 ERROR unit.redis-k8s/0.juju-log redis-peers:4: Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1024 Forgetting model main...
