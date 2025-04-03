@@ -4,6 +4,7 @@
 name: TICS run self-hosted test (github-action)
 
 on:
+  push:
   schedule:
     - cron: "0 2 * * 6" # Every Saturday 2:00 AM UTC
   workflow_dispatch:
@@ -32,6 +33,9 @@ jobs:
           pipx install poetry
       - name: Run tox tests to create coverage.xml
         run: tox run -e unit
+
+      - name: Add unit venv to PATH
+        run: echo "${GITHUB_WORKSPACE}/.tox/unit/bin" >> "${GITHUB_PATH}"
 
       - name: Move results to necessary folder for TICS
         run: |
