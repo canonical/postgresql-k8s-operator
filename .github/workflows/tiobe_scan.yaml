@@ -35,7 +35,7 @@ jobs:
         run: tox run -e unit
 
       - name: Source unit venv
-        run: . "${GITHUB_WORKSPACE}/.tox/unit/bin"
+        run: . "${GITHUB_WORKSPACE}/.tox/unit/bin/activate"
 
       - name: Move results to necessary folder for TICS
         run: |
