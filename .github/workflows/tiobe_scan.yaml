@@ -1,0 +1,48 @@
+# Copyright 2025 Canonical Ltd.
+# See LICENSE file for licensing details.
+
+name: TICS run self-hosted test (github-action)
+
+on:
+  schedule:
+    - cron: "0 2 * * 6" # Every Saturday 2:00 AM UTC
+  workflow_dispatch:
+
+jobs:
+  tiobe-scan:
+    name: Tiobe scan
+    runs-on: [self-hosted, tiobe]
+    timeout-minutes: 60
+    steps:
+      - name: Checkout the project
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y python3-venv
+
+      - name: Install pipx
+        run: python3 -m pip install --user pipx && python3 -m pipx ensurepath
+
+      - name: Add pipx to PATH
+        run: echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
+
+      - name: Install tox and poetry using pipx
+        run: |
+          pipx install tox
+          pipx install poetry
+      - name: Run tox tests to create coverage.xml
+        run: tox run -e unit
+
+      - name: Move results to necessary folder for TICS
+        run: |
+          mkdir -p .cover
+          mv coverage.xml .cover/cobertura.xml
+      - name: Run TICS analysis with github-action
+        uses: tiobe/tics-github-action@v3
+        with:
+          mode: qserver
+          project: postgresql-k8s-operator
+          branchdir: .
+          viewerUrl: https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=default
+          ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}
+          installTics: true
