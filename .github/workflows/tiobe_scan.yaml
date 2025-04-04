@@ -1,7 +1,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-name: TICS run self-hosted test (github-action)
+name: Weekly TICS scan
 
 on:
   push:
@@ -9,44 +9,39 @@ on:
     - cron: "0 2 * * 6" # Every Saturday 2:00 AM UTC
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  tiobe-scan:
-    name: Tiobe scan
-    runs-on: [self-hosted, tiobe]
-    timeout-minutes: 60
+  TICS:
+    runs-on: ubuntu-24.04
     steps:
-      - name: Checkout the project
+      - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Install system dependencies
-        run: sudo apt-get update && sudo apt-get install -y libpq-dev python3-venv
-
-      - name: Install pipx
-        run: python3 -m pip install --user pipx && python3 -m pipx ensurepath
-
-      - name: Add pipx to PATH
-        run: echo "${HOME}/.local/bin" >> "${GITHUB_PATH}"
-
-      - name: Install tox and poetry using pipx
+      
+      - name: Install requirements
         run: |
-          pipx install tox
-          pipx install poetry
-      - name: Run tox tests to create coverage.xml
-        run: tox run -e unit
+          sudo apt update -y
+          sudo apt install python3-venv -y
 
-      - name: Install dependencies
-        run: poetry install
-
-      - name: Move results to necessary folder for TICS
+      - name: Create and activate virtual environment
         run: |
-          mkdir -p .cover
-          mv coverage.xml .cover/cobertura.xml
-      - name: Run TICS analysis with github-action
+          python3 -m venv .venv
+          . .venv/bin/activate
+          pip install tox pylint flake8 pytest
+          echo PATH=$PATH >> $GITHUB_ENV
+
+      - name: Run coverage tests
+        run: |
+          tox -e unit
+
+      - name: TICS GitHub Action
         uses: tiobe/tics-github-action@v3
         with:
           mode: qserver
           project: postgresql-k8s-operator
-          branchdir: .
           viewerUrl: https://canonical.tiobe.com/tiobeweb/TICS/api/cfg?name=default
-          ticsAuthToken: ${{ secrets.TICSAUTHTOKEN }}
+          branchdir: ${{ env.GITHUB_WORKSPACE }}
+          ticsAuthToken: ${{ secrets.TICS_AUTH_TOKEN }}
           installTics: true
+          calc: ALL
