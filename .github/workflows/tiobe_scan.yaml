@@ -28,7 +28,7 @@ jobs:
         run: |
           python3 -m venv .venv
           . .venv/bin/activate
-          pip install flake8 poetry pylint pytest tox
+          pip install flake8 juju poetry psycopg pylint pytest pytest_operator tox
           poetry install
           echo PATH=$PATH >> $GITHUB_ENV
 
