@@ -35,6 +35,11 @@ jobs:
         run: |
           tox -e unit
 
+      - name: Move results to the necessary folder for TICS
+        run: |
+          mkdir -p .cover
+          mv coverage.xml .cover/cobertura.xml
+
       - name: TICS GitHub Action
         uses: tiobe/tics-github-action@v3
         with:
