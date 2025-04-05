@@ -16,6 +16,7 @@ For a given release, this table shows:
 
 | Revision | PostgreSQL version | Juju version | [TLS encryption](/t/9685)* | [COS monitoring](/t/10600) | [Minor version upgrades](/t/12092) | [Cross-regional async replication](/t/15413) | [Point-in-time recovery](/t/9597) | [PITR Timelines](/t/9597) |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| [494], [495] | 14.15 | `3.6.1+` | ![check] | ![check] | ![check] | ![check] | ![check] | ![check] |
 | [462], [463] | 14.13 | `3.6.1+` | ![check] | ![check] | ![check] | ![check] | ![check] | ![check] |
 | [444], [445] | 14.12 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] | ![check] | |
 | [381], [382] | 14.12 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] | ![check] | |
@@ -37,14 +38,22 @@ Several [revisions](https://juju.is/docs/sdk/revision) are released simultaneous
 
 > If you deploy a specific revision, **you must make sure it matches your base and architecture** via the tables below or with [`juju info`](https://juju.is/docs/juju/juju-info).
 
-### Release 462-463
+
+### Release 494, 495
+
+| Revision | amd64 | arm64 | Ubuntu 22.04 LTS
+|:--------:|:-----:|:-----:|:-----:|
+|[494]  |   | ![check] |  ![check]  |
+|[495] | ![check] | |  ![check]  |
+
+[details=Older releases]
+### Release 462, 463
 
 | Revision | amd64 | arm64 | Ubuntu 22.04 LTS
 |:--------:|:-----:|:-----:|:-----:|
 |[462]  | ![check] | |  ![check]  |
 |[463] | | ![check] |  ![check]  |
 
-[details=Older releases]
 ### Release 444-445
 
 | Revision | amd64 | arm64 | Ubuntu 22.04 LTS
@@ -100,6 +109,9 @@ For a list of all plugins supported for each revision, see the reference page [P
 > **Note** Our release notes are an ongoing work in progress. If there is any additional information about releases that you would like to see or suggestions for other improvements, don't hesitate to contact us on [Matrix ](https://matrix.to/#/#charmhub-data-platform:ubuntu.com) or [leave a comment](https://discourse.charmhub.io/t/charmed-postgresql-k8s-reference-release-notes/11872).
 
 <!-- LINKS -->
+[494]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev494
+[495]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev494
+
 [462]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev462
 [463]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev462
 
