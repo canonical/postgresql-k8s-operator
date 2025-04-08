@@ -72,6 +72,7 @@ async def test_backup_gcp(ops_test: OpsTest, charm, gcp_cloud_configs: tuple[dic
     )
 
 
+@pytest.mark.abort_on_fail
 async def test_restore_on_new_cluster(
     ops_test: OpsTest, charm, gcp_cloud_configs: tuple[dict, dict]
 ) -> None:
