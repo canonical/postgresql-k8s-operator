@@ -2284,22 +2284,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def relations_user_database_map(self) -> dict:
         """Returns a user database map for all relations."""
         user_database_map = {}
-        for relation_name in ["database", "db", "db-admin"]:
-            for relation in self.model.relations.get(relation_name, []):
-                user = None
-                if (user := self.postgresql_client_relation.database_provides.fetch_my_relation_field(relation.id, "username")) is None:
-                    for unit in self.app_units:
-                        if user := relation.data[unit].get("user"):
-                            break
-                if user is None:
-                    logger.debug(f"No user assigned for relation {relation_name} with id {relation.id} yet")
-                    continue
-                # database = relation.data[self.app].get("database")
-                # if user not in user_database_map:
-                #     user_database_map[user] = [database]
-                # else:
-                #     user_database_map[user].append(database)
-                user_database_map[user] = self.postgresql.list_accessible_databases_for_user(user)
+        for user in self.postgresql.list_users(group="relation_access"):
+            user_database_map[user] = self.postgresql.list_accessible_databases_for_user(user)
         return user_database_map
 
     def override_patroni_on_failure_condition(

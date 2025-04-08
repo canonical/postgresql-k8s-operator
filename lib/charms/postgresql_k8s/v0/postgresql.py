@@ -671,15 +671,24 @@ END; $$;"""
             if connection is not None:
                 connection.close()
 
-    def list_users(self) -> Set[str]:
+    def list_users(self, group: Optional[str] = None) -> Set[str]:
         """Returns the list of PostgreSQL database users.
+
+        Args:
+            group: optional group to filter the users.
 
         Returns:
             List of PostgreSQL database users.
         """
         try:
             with self._connect_to_database() as connection, connection.cursor() as cursor:
-                cursor.execute("SELECT usename FROM pg_catalog.pg_user;")
+                if group:
+                    query = SQL(
+                        "SELECT usename FROM (SELECT UNNEST(grolist) AS user_id FROM pg_catalog.pg_group WHERE groname = {}) AS g JOIN pg_catalog.pg_user AS u ON g.user_id = u.usesysid;"
+                    ).format(Literal(group))
+                else:
+                    query = "SELECT usename FROM pg_catalog.pg_user;"
+                cursor.execute(query)
                 usernames = cursor.fetchall()
                 return {username[0] for username in usernames}
         except psycopg2.Error as e:
