@@ -194,6 +194,9 @@ class PostgreSQL:
         try:
             with self._connect_to_database() as connection, connection.cursor() as cursor:
                 for group in ACCESS_GROUPS:
+                    cursor.execute(SQL("SELECT TRUE FROM pg_roles WHERE rolname={};").format(Literal(group)))
+                    if cursor.fetchone() is not None:
+                        continue
                     cursor.execute(
                         SQL("CREATE ROLE {} NOLOGIN;").format(
                             Identifier(group),
@@ -680,6 +683,7 @@ END; $$;"""
         Returns:
             List of PostgreSQL database users.
         """
+        connection = None
         try:
             with self._connect_to_database() as connection, connection.cursor() as cursor:
                 if group:
@@ -707,7 +711,7 @@ END; $$;"""
         try:
             with self._connect_to_database() as connection, connection.cursor() as cursor:
                 cursor.execute(
-                    "SELECT usename FROM pg_catalog.pg_user WHERE usename LIKE 'relation_id_%';"
+                    "SELECT usename FROM pg_catalog.pg_user WHERE usename LIKE 'relation_id_%' OR usename LIKE 'pgbouncer_auth_relation_id_%' OR usename LIKE '%_user_%_%';"
                 )
                 usernames = cursor.fetchall()
                 return {username[0] for username in usernames}
