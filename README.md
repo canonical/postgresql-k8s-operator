@@ -100,7 +100,7 @@ This charm uses pinned and tested version of the [charmed-postgresql](https://gi
 
 ## Security
 
-Security issues in the Charmed PostgreSQL K8s Operator can be reported through [GitHub](https://github.com/canonical/postgresql-k8s-operator/security/advisories/new).
+Security issues in the Charmed PostgreSQL K8s Operator can be reported through [private security reports](https://github.com/canonical/postgresql-k8s-operator/security/advisories/new) on GitHub.
 For more information, see the [Security policy](SECURITY.md).
 
 ## Contributing
