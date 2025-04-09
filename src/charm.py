@@ -2285,7 +2285,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @property
     def relations_user_databases_map(self) -> dict:
         """Returns a user->databases map for all relations."""
-        if not self._patroni.primary_endpoint_ready or self.postgresql.list_access_groups() != set(ACCESS_GROUPS):
+        if not self.is_cluster_initialised or self.postgresql.list_access_groups() != set(ACCESS_GROUPS):
             return {USER: "all", REPLICATION_USER: "all", REWIND_USER: "all"}
         user_database_map = {}
         for user in self.postgresql.list_users(group="relation_access"):

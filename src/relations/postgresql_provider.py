@@ -66,6 +66,9 @@ class PostgreSQLProvider(Object):
         self.framework.observe(
             self.database_provides.on.database_requested, self._on_database_requested
         )
+        self.framework.observe(
+            charm.on[self.relation_name].relation_changed, self._on_relation_changed
+        )
 
     @staticmethod
     def _sanitize_extra_roles(extra_roles: str | None) -> list[str]:
@@ -161,6 +164,22 @@ class PostgreSQLProvider(Object):
                 else f"Failed to initialize {self.relation_name} relation"
             )
 
+    def _on_relation_changed(self, event: RelationChangedEvent) -> None:
+        # Check for some conditions before trying to access the PostgreSQL instance.
+        if not self.charm.is_cluster_initialised:
+            logger.debug(
+                "Deferring on_relation_changed: Cluster must be initialized before configuration can be updated with relation users"
+            )
+            event.defer()
+            return
+
+        if f"relation_id_{event.relation.id}" not in self.charm.postgresql.list_users():
+            logger.debug("Deferring on_relation_changed: user was not created yet")
+            event.defer()
+            return
+
+        self.charm.update_config()
+
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Set a flag to avoid deleting database users when not wanted."""
         # Set a flag to avoid deleting database users when this unit
@@ -189,11 +208,16 @@ class PostgreSQLProvider(Object):
             logger.debug("Early exit on_relation_broken: Skipping departing unit")
             return
 
+        user = f"relation_id_{event.relation.id}"
         if not self.charm.unit.is_leader():
+            if user in self.charm.postgresql.list_users():
+                logger.debug("Deferring on_relation_broken: user was not deleted yet")
+                event.defer()
+            else:
+                self.charm.update_config()
             return
 
         # Delete the user.
-        user = f"relation_id_{event.relation.id}"
         try:
             self.charm.postgresql.delete_user(user)
         except PostgreSQLDeleteUserError as e:
