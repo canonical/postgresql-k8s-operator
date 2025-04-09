@@ -669,7 +669,7 @@ END; $$;"""
                 return {database[0] for database in databases}
         except psycopg2.Error as e:
             logger.error(f"Failed to list accessible databases for user {user}: {e}")
-            # raise PostgreSQLListAccessibleDatabasesForUserError() from e
+            raise PostgreSQLListAccessibleDatabasesForUserError() from e
         finally:
             if connection is not None:
                 connection.close()
