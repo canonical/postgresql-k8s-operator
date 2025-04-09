@@ -90,6 +90,12 @@ class DbProvides(Object):
             return
 
         if not self.charm.unit.is_leader():
+            if f"relation_id_{event.relation.id}" not in self.charm.postgresql.list_users():
+                logger.debug("Deferring on_relation_changed: user was not created yet")
+                event.defer()
+                return
+
+            self.charm.update_config()
             return
 
         if self._check_multiple_endpoints():
@@ -319,11 +325,16 @@ class DbProvides(Object):
             logger.debug("Early exit on_relation_broken: Skipping departing unit")
             return
 
+        user = f"relation_id_{event.relation.id}"
         if not self.charm.unit.is_leader():
+            if user in self.charm.postgresql.list_users():
+                logger.debug("Deferring on_relation_broken: user was not deleted yet")
+                event.defer()
+            else:
+                self.charm.update_config()
             return
 
         # Delete the user.
-        user = f"relation_id_{event.relation.id}"
         try:
             self.charm.postgresql.delete_user(user)
         except PostgreSQLDeleteUserError:
