@@ -95,18 +95,23 @@ juju relate postgresql-k8s:db finos-waltz-k8s
 **Note:** The endpoint `db-admin` provides the same legacy interface `pgsql` with PostgreSQL admin-level privileges. It is NOT recommended to use it from security point of view.
 
 ## OCI Images
+
 This charm uses pinned and tested version of the [charmed-postgresql](https://github.com/canonical/charmed-postgresql-rock/pkgs/container/charmed-postgresql) rock.
 
 ## Security
+
 Security issues in the Charmed PostgreSQL K8s Operator can be reported through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). Please do not file GitHub issues about security issues.
 
 ## Contributing
+
 Please see the [Juju SDK docs](https://juju.is/docs/sdk) for guidelines on enhancements to this charm following best practice guidelines, and [CONTRIBUTING.md](https://github.com/canonical/postgresql-k8s-operator/blob/main/CONTRIBUTING.md) for developer guidance.
 
 ## License
+
 The Charmed PostgreSQL K8s Operator [is distributed](https://github.com/canonical/postgresql-k8s-operator/blob/main/LICENSE) under the Apache Software License, version 2.0.
 It installs/operates/depends on [PostgreSQL](https://www.postgresql.org/ftp/source/), which [is licensed](https://www.postgresql.org/about/licence/) under PostgreSQL License, a liberal Open Source license, similar to the BSD or MIT licenses.
 
 ## Trademark Notice
+
 PostgreSQL is a trademark or registered trademark of PostgreSQL Global Development Group.
 Other trademarks are property of their respective owners.
