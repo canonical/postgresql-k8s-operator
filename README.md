@@ -100,7 +100,8 @@ This charm uses pinned and tested version of the [charmed-postgresql](https://gi
 
 ## Security
 
-Security issues in the Charmed PostgreSQL K8s Operator can be reported through [LaunchPad](https://wiki.ubuntu.com/DebuggingSecurity#How%20to%20File). Please do not file GitHub issues about security issues.
+Security issues in the Charmed PostgreSQL K8s Operator can be reported through [GitHub](https://github.com/canonical/postgresql-k8s-operator/security/advisories/new).
+For more information, see the [Security policy](SECURITY.md).
 
 ## Contributing
 
