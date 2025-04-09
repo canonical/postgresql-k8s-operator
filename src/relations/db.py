@@ -248,6 +248,8 @@ class DbProvides(Object):
 
         self._update_unit_status(relation)
 
+        self.charm.update_config()
+
         return True
 
     def _check_for_blocking_relations(self, relation_id: int) -> bool:
@@ -330,6 +332,8 @@ class DbProvides(Object):
             )
 
         self._update_unit_status(event.relation)
+
+        self.charm.update_config()
 
     def _update_unit_status(self, relation: Relation) -> None:
         """# Clean up Blocked status if it's due to extensions request."""

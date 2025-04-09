@@ -147,6 +147,8 @@ class PostgreSQLProvider(Object):
             self.database_provides.set_database(event.relation.id, database)
 
             self._update_unit_status(event.relation)
+
+            self.charm.update_config()
         except (
             PostgreSQLCreateDatabaseError,
             PostgreSQLCreateUserError,
@@ -199,6 +201,8 @@ class PostgreSQLProvider(Object):
             self.charm.unit.status = BlockedStatus(
                 f"Failed to delete user during {self.relation_name} relation broken event"
             )
+
+        self.charm.update_config()
 
     def update_read_only_endpoint(
         self,
