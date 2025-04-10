@@ -113,6 +113,10 @@ class PostgreSQLGetPostgreSQLVersionError(Exception):
     """Exception raised when retrieving PostgreSQL version fails."""
 
 
+class PostgreSQLListAccessibleDatabasesForUserError(Exception):
+    """Exception raised when retrieving the accessible databases for a user fails."""
+
+
 class PostgreSQLListGroupsError(Exception):
     """Exception raised when retrieving PostgreSQL groups list fails."""
 
@@ -190,6 +194,9 @@ class PostgreSQL:
         try:
             with self._connect_to_database() as connection, connection.cursor() as cursor:
                 for group in ACCESS_GROUPS:
+                    cursor.execute(SQL("SELECT TRUE FROM pg_roles WHERE rolname={};").format(Literal(group)))
+                    if cursor.fetchone() is not None:
+                        continue
                     cursor.execute(
                         SQL("CREATE ROLE {} NOLOGIN;").format(
                             Identifier(group),
@@ -641,8 +648,38 @@ END; $$;"""
             if connection is not None:
                 connection.close()
 
-    def list_users(self) -> Set[str]:
+    def list_accessible_databases_for_user(self, user: str) -> Set[str]:
+        """Returns the list of accessible databases for a specific user.
+
+        Args:
+            user: the user to check.
+
+        Returns:
+            List of accessible database (the ones where
+                the user has the CONNECT privilege).
+        """
+        connection = None
+        try:
+            with self._connect_to_database() as connection, connection.cursor() as cursor:
+                cursor.execute(
+                    SQL(
+                        "SELECT datname FROM pg_catalog.pg_database WHERE has_database_privilege({}, datname, 'CONNECT') AND NOT datistemplate;"
+                    ).format(Literal(user))
+                )
+                databases = cursor.fetchall()
+                return {database[0] for database in databases}
+        except psycopg2.Error as e:
+            logger.error(f"Failed to list accessible databases for user {user}: {e}")
+            raise PostgreSQLListAccessibleDatabasesForUserError() from e
+        finally:
+            if connection is not None:
+                connection.close()
+
+    def list_users(self, group: Optional[str] = None) -> Set[str]:
         """Returns the list of PostgreSQL database users.
+
+        Args:
+            group: optional group to filter the users.
 
         Returns:
             List of PostgreSQL database users.
@@ -650,7 +687,13 @@ END; $$;"""
         connection = None
         try:
             with self._connect_to_database() as connection, connection.cursor() as cursor:
-                cursor.execute("SELECT usename FROM pg_catalog.pg_user;")
+                if group:
+                    query = SQL(
+                        "SELECT usename FROM (SELECT UNNEST(grolist) AS user_id FROM pg_catalog.pg_group WHERE groname = {}) AS g JOIN pg_catalog.pg_user AS u ON g.user_id = u.usesysid;"
+                    ).format(Literal(group))
+                else:
+                    query = "SELECT usename FROM pg_catalog.pg_user;"
+                cursor.execute(query)
                 usernames = cursor.fetchall()
                 return {username[0] for username in usernames}
         except psycopg2.Error as e:
@@ -670,7 +713,7 @@ END; $$;"""
         try:
             with self._connect_to_database() as connection, connection.cursor() as cursor:
                 cursor.execute(
-                    "SELECT usename FROM pg_catalog.pg_user WHERE usename LIKE 'relation_id_%';"
+                    "SELECT usename FROM pg_catalog.pg_user WHERE usename LIKE 'relation_id_%' OR usename LIKE 'pgbouncer_auth_relation_id_%' OR usename LIKE '%_user_%_%';"
                 )
                 usernames = cursor.fetchall()
                 return {username[0] for username in usernames}
