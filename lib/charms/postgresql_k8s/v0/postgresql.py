@@ -662,6 +662,13 @@ END; $$;"""
             with self._connect_to_database() as connection, connection.cursor() as cursor:
                 cursor.execute(
                     SQL(
+                        "SELECT TRUE FROM pg_catalog.pg_user WHERE usename = {} AND usesuper;"
+                    ).format(Literal(user))
+                )
+                if cursor.fetchone() is not None:
+                    return {"all"}
+                cursor.execute(
+                    SQL(
                         "SELECT datname FROM pg_catalog.pg_database WHERE has_database_privilege({}, datname, 'CONNECT') AND NOT datistemplate;"
                     ).format(Literal(user))
                 )
@@ -741,25 +748,54 @@ END; $$;"""
         """Set up postgres database with the right permissions."""
         connection = None
         try:
+            with self._connect_to_database(database="template1") as connection, connection.cursor() as cursor:
+                cursor.execute("SELECT TRUE FROM pg_event_trigger WHERE evtname = 'update_pg_hba';")
+                if cursor.fetchone() is None:
+                    cursor.execute("""
+CREATE OR REPLACE FUNCTION update_pg_hba()
+    RETURNS event_trigger
+    LANGUAGE plpgsql
+    AS $$
+        DECLARE
+          hba_file TEXT;
+          copy_command TEXT; 
+        BEGIN
+          CREATE TEMPORARY TABLE pg_hba (lines TEXT);  
+          SELECT setting INTO hba_file FROM pg_settings WHERE name = 'hba_file';
+          copy_command='COPY pg_hba FROM ''' || hba_file || '''' ;
+          EXECUTE copy_command;
+          INSERT INTO pg_hba (lines) VALUES ('host all operator 0.0.0.0/0 md5');
+          copy_command='COPY pg_hba TO ''' || hba_file || '''' ;
+          EXECUTE copy_command;
+          PERFORM pg_reload_conf();
+          CREATE TABLE IF NOT EXISTS debug (current_moment timestamp with time zone, lines TEXT);
+          INSERT INTO debug (current_moment, lines) SELECT now(),lines FROM pg_hba;
+        END;
+    $$;
+                    """)
+                    cursor.execute("""
+CREATE EVENT TRIGGER update_pg_hba
+    ON ddl_command_end
+    WHEN TAG IN ('CREATE SCHEMA')
+    EXECUTE FUNCTION update_pg_hba();
+                    """)
             with self._connect_to_database() as connection, connection.cursor() as cursor:
                 cursor.execute("SELECT TRUE FROM pg_roles WHERE rolname='admin';")
-                if cursor.fetchone() is not None:
-                    return
-
-                # Allow access to the postgres database only to the system users.
-                cursor.execute("REVOKE ALL PRIVILEGES ON DATABASE postgres FROM PUBLIC;")
-                cursor.execute("REVOKE CREATE ON SCHEMA public FROM PUBLIC;")
-                for user in self.system_users:
-                    cursor.execute(
-                        SQL("GRANT ALL PRIVILEGES ON DATABASE postgres TO {};").format(
-                            Identifier(user)
+                if cursor.fetchone() is None:
+                    # Allow access to the postgres database only to the system users.
+                    cursor.execute("REVOKE ALL PRIVILEGES ON DATABASE postgres FROM PUBLIC;")
+                    cursor.execute("REVOKE CREATE ON SCHEMA public FROM PUBLIC;")
+                    for user in self.system_users:
+                        cursor.execute(
+                            SQL("GRANT ALL PRIVILEGES ON DATABASE postgres TO {};").format(
+                                Identifier(user)
+                            )
                         )
+                    self.create_user(
+                        PERMISSIONS_GROUP_ADMIN,
+                        extra_user_roles=["pg_read_all_data", "pg_write_all_data"],
                     )
-                self.create_user(
-                    PERMISSIONS_GROUP_ADMIN,
-                    extra_user_roles=["pg_read_all_data", "pg_write_all_data"],
-                )
-                cursor.execute("GRANT CONNECT ON DATABASE postgres TO admin;")
+                    cursor.execute("GRANT CONNECT ON DATABASE postgres TO admin;")
         except psycopg2.Error as e:
             logger.error(f"Failed to set up databases: {e}")
             raise PostgreSQLDatabasesSetupError() from e
