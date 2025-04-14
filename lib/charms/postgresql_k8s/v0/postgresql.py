@@ -35,7 +35,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 48
+LIBPATCH = 50
 
 # Groups to distinguish HBA access
 ACCESS_GROUP_IDENTITY = "identity_access"
@@ -435,6 +435,7 @@ class PostgreSQL:
             for extension, enable in extensions.items():
                 ordered_extensions[extension] = enable
 
+            self._configure_pgaudit(False)
             # Enable/disabled the extension in each database.
             for database in databases:
                 with self._connect_to_database(
@@ -446,7 +447,6 @@ class PostgreSQL:
                             if enable
                             else f"DROP EXTENSION IF EXISTS {extension};"
                         )
-            self._configure_pgaudit(ordered_extensions.get("pgaudit", False))
         except psycopg2.errors.UniqueViolation:
             pass
         except psycopg2.errors.DependentObjectsStillExist:
@@ -454,6 +454,7 @@ class PostgreSQL:
         except psycopg2.Error as e:
             raise PostgreSQLEnableDisableExtensionError() from e
         finally:
+            self._configure_pgaudit(ordered_extensions.get("pgaudit", False))
             if connection is not None:
                 connection.close()
 
@@ -626,6 +627,7 @@ END; $$;"""
         Returns:
             List of PostgreSQL database access groups.
         """
+        connection = None
         try:
             with self._connect_to_database() as connection, connection.cursor() as cursor:
                 cursor.execute(
@@ -646,6 +648,7 @@ END; $$;"""
         Returns:
             List of PostgreSQL database users.
         """
+        connection = None
         try:
             with self._connect_to_database() as connection, connection.cursor() as cursor:
                 cursor.execute("SELECT usename FROM pg_catalog.pg_user;")
@@ -664,6 +667,7 @@ END; $$;"""
         Returns:
             List of PostgreSQL database users.
         """
+        connection = None
         try:
             with self._connect_to_database() as connection, connection.cursor() as cursor:
                 cursor.execute(
