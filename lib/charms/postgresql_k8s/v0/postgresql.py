@@ -434,6 +434,7 @@ class PostgreSQL:
                 ordered_extensions[plugin] = extensions.get(plugin, False)
             for extension, enable in extensions.items():
                 ordered_extensions[extension] = enable
+            ordered_extensions.pop("pgaudit", None)
 
             self._configure_pgaudit(False)
             # Enable/disabled the extension in each database.
@@ -454,7 +455,7 @@ class PostgreSQL:
         except psycopg2.Error as e:
             raise PostgreSQLEnableDisableExtensionError() from e
         finally:
-            self._configure_pgaudit(ordered_extensions.get("pgaudit", False))
+            self._configure_pgaudit(extensions.get("pgaudit", False))
             if connection is not None:
                 connection.close()
 
