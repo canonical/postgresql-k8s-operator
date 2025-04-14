@@ -59,6 +59,7 @@ from ops.charm import (
     HookEvent,
     LeaderElectedEvent,
     RelationDepartedEvent,
+    SecretChangedEvent,
     WorkloadEvent,
 )
 from ops.model import (
@@ -68,6 +69,7 @@ from ops.model import (
     MaintenanceStatus,
     ModelError,
     Relation,
+    SecretNotFoundError,
     Unit,
     UnknownStatus,
     WaitingStatus,
@@ -106,6 +108,7 @@ from constants import (
     SECRET_KEY_OVERRIDES,
     SPI_MODULE,
     SYSTEM_USERS,
+    SYSTEM_USERS_PASSWORD_CONFIG,
     TLS_CA_FILE,
     TLS_CERT_FILE,
     TLS_KEY_FILE,
@@ -211,12 +214,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
         self.framework.observe(self.on.secret_changed, self._on_peer_relation_changed)
+        # add specific handler for updated system-user secrets
+        self.framework.observe(self.on.secret_changed, self._on_secret_changed)
         self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
         self.framework.observe(self.on.pgdata_storage_detaching, self._on_pgdata_storage_detaching)
         self.framework.observe(self.on.stop, self._on_stop)
-        self.framework.observe(self.on.get_password_action, self._on_get_password)
-        self.framework.observe(self.on.set_password_action, self._on_set_password)
         self.framework.observe(self.on.promote_to_primary_action, self._on_promote_to_primary)
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
         self.framework.observe(self.on.update_status, self._on_update_status)
@@ -379,6 +382,25 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         secret_key = self._translate_field_to_secret_key(key)
 
         self.peer_relation_data(scope).delete_relation_data(peers.id, [secret_key])
+
+    def get_secret_from_id(self, secret_id: str) -> dict[str, str]:
+        """Resolve the given id of a Juju secret and return the content as a dict.
+
+        This method can be used to retrieve any secret, not just those used via the peer relation.
+        If the secret is not owned by the charm, it has to be granted access to it.
+
+        Args:
+            secret_id (str): The id of the secret.
+
+        Returns:
+            dict: The content of the secret.
+        """
+        try:
+            secret_content = self.model.get_secret(id=secret_id).get_content(refresh=True)
+        except (SecretNotFoundError, ModelError):
+            raise
+
+        return secret_content
 
     @property
     def is_cluster_initialised(self) -> bool:
@@ -662,6 +684,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         self.async_replication.handle_read_only_mode()
 
+    def _on_secret_changed(self, event: SecretChangedEvent) -> None:
+        """Handle the secret_changed event."""
+        if not self.unit.is_leader():
+            return
+
+        if admin_secret_id := self.config.get(SYSTEM_USERS_PASSWORD_CONFIG):  # noqa: SIM102
+            if admin_secret_id == event.secret.id:
+                self._update_admin_password(admin_secret_id)
+
     def _on_config_changed(self, event) -> None:
         """Handle configuration changes, like enabling plugins."""
         if not self.is_cluster_initialised:
@@ -702,6 +733,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         # Enable and/or disable the extensions.
         self.enable_disable_extensions()
+
+        if admin_secret_id := self.config.get(SYSTEM_USERS_PASSWORD_CONFIG):
+            self._update_admin_password(admin_secret_id)
 
     def enable_disable_extensions(self, database: str | None = None) -> None:
         """Enable/disable PostgreSQL extensions set through config options.
@@ -1202,66 +1236,23 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             and not self.is_cluster_restoring_to_time
         )
 
-    def _on_get_password(self, event: ActionEvent) -> None:
-        """Returns the password for a user as an action response.
-
-        If no user is provided, the password of the operator user is returned.
-        """
-        username = event.params.get("username", USER)
-        if username not in PASSWORD_USERS and self.is_ldap_enabled:
-            event.fail("The action can be run only for system users when LDAP is enabled")
-            return
-        if username not in PASSWORD_USERS:
-            event.fail(
-                f"The action can be run only for system users or Patroni:"
-                f" {', '.join(PASSWORD_USERS)} not {username}"
-            )
-            return
-
-        event.set_results({"password": self.get_secret(APP_SCOPE, f"{username}-password")})
-
-    def _on_set_password(self, event: ActionEvent) -> None:  # noqa: C901
-        """Set the password for the specified user."""
-        # Only leader can write the new password into peer relation.
-        if not self.unit.is_leader():
-            event.fail("The action can be run only on leader unit")
-            return
-
-        username = event.params.get("username", USER)
-        if username not in SYSTEM_USERS and self.is_ldap_enabled:
-            event.fail("The action can be run only for system users when LDAP is enabled")
-            return
-        if username not in SYSTEM_USERS:
-            event.fail(
-                f"The action can be run only for system users:"
-                f" {', '.join(SYSTEM_USERS)} not {username}"
-            )
-            return
-
-        password = new_password()
-        if "password" in event.params:
-            password = event.params["password"]
-
-        if password == self.get_secret(APP_SCOPE, f"{username}-password"):
-            event.log("The old and new passwords are equal.")
-            event.set_results({"password": password})
-            return
-
-        # Ensure all members are ready before trying to reload Patroni
-        # configuration to avoid errors (like the API not responding in
-        # one instance because PostgreSQL and/or Patroni are not ready).
+    def _update_admin_password(self, admin_secret_id: str) -> None:
+        """Check if the password of a system user was changed and update it in the database."""
         if not self._patroni.are_all_members_ready():
-            event.fail(
+            # Ensure all members are ready before reloading Patroni configuration to avoid errors
+            # e.g. API not responding in one instance because PostgreSQL / Patroni are not ready
+            logger.error(
                 "Failed changing the password: Not all members healthy or finished initial sync."
             )
+            # todo: set status to blocked
             return
 
+        # cross-cluster replication: extract the database host on which to update the passwords
         replication_offer_relation = self.model.get_relation(REPLICATION_OFFER_RELATION)
         if (
             replication_offer_relation is not None
             and not self.async_replication.is_primary_cluster()
         ):
-            # Update the password in the other cluster PostgreSQL primary instance.
             other_cluster_endpoints = self.async_replication.get_all_primary_cluster_endpoints()
             other_cluster_primary = self._patroni.get_primary(
                 alternative_endpoints=other_cluster_endpoints
@@ -1271,36 +1262,48 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 for unit in replication_offer_relation.units
                 if unit.name.replace("/", "-") == other_cluster_primary
             )
-            try:
-                self.postgresql.update_user_password(
-                    username, password, database_host=other_cluster_primary_ip
-                )
-            except PostgreSQLUpdateUserPasswordError as e:
-                logger.exception(e)
-                event.fail("Failed changing the password.")
-                return
         elif self.model.get_relation(REPLICATION_CONSUMER_RELATION) is not None:
-            event.fail(
+            logger.error(
                 "Failed changing the password: This action can be ran only in the cluster from the offer side."
             )
+            # todo: set status to blocked
             return
-        else:
-            # Update the password in this cluster PostgreSQL primary instance.
-            try:
-                self.postgresql.update_user_password(username, password)
-            except PostgreSQLUpdateUserPasswordError as e:
-                logger.exception(e)
-                event.fail("Failed changing the password.")
-                return
 
-        # Update the password in the secret store.
-        self.set_secret(APP_SCOPE, f"{username}-password", password)
+        try:
+            # get the secret content and check each user configured there
+            # only SYSTEM_USERS with changed passwords are processed, all others ignored
+            updated_passwords = self.get_secret_from_id(secret_id=admin_secret_id)
+            for user, password in updated_passwords.items():
+                if user not in SYSTEM_USERS:
+                    logger.error(
+                        f"Can only update system users: {', '.join(SYSTEM_USERS)} not {user}"
+                    )
+                    updated_passwords.pop(user)
+                    continue
+                if password == self.get_secret(APP_SCOPE, f"{user}-password"):
+                    updated_passwords.pop(user)
+        except (ModelError, SecretNotFoundError) as e:
+            logger.error(f"Error updating internal passwords: {e}")
+            # todo: set status to blocked
+
+        try:
+            # perform the actual password update for the remaining users
+            for user, password in updated_passwords.items():
+                logger.info(f"Updating password for user {user}")
+                self.postgresql.update_user_password(
+                    user,
+                    password,
+                    database_host=other_cluster_primary_ip if other_cluster_primary_ip else None,
+                )
+                # Update the password in the secret store after updating it in the database
+                self.set_secret(APP_SCOPE, f"{user}-password", password)
+        except PostgreSQLUpdateUserPasswordError as e:
+            logger.exception(e)
+            # todo: set status to blocked
 
         # Update and reload Patroni configuration in this unit to use the new password.
         # Other units Patroni configuration will be reloaded in the peer relation changed event.
         self.update_config()
-
-        event.set_results({"password": password})
 
     def _on_promote_to_primary(self, event: ActionEvent) -> None:
         if event.params.get("scope") == "cluster":
