@@ -892,6 +892,18 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _on_leader_elected(self, event: LeaderElectedEvent) -> None:
         """Handle the leader-elected event."""
+        # consider configured system user passwords
+        system_user_passwords = {}
+        if admin_secret_id := self.config.get(SYSTEM_USERS_PASSWORD_CONFIG):
+            try:
+                system_user_passwords = self.get_secret_from_id(secret_id=admin_secret_id)
+            except (ModelError, SecretNotFoundError) as e:
+                # only display the error but don't return to make sure all users have passwords
+                logger.error(f"Error setting internal passwords: {e}")
+                self.unit.status = BlockedStatus("Password setting for system users failed.")
+
+        # this list is not consistent with `SYSTEM_USERS` -> todo: check if correct
+        # backup-user is missing here, patroni-user is missing in `SYSTEM_USERS`
         for password in {
             USER_PASSWORD_KEY,
             REPLICATION_PASSWORD_KEY,
@@ -900,7 +912,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             PATRONI_PASSWORD_KEY,
         }:
             if self.get_secret(APP_SCOPE, password) is None:
-                self.set_secret(APP_SCOPE, password, new_password())
+                if password in system_user_passwords:
+                    # use provided passwords for system-users if available
+                    self.set_secret(APP_SCOPE, password, system_user_passwords[password])
+                else:
+                    # generate a password for this user if not provided
+                    self.set_secret(APP_SCOPE, password, new_password())
 
         # Add this unit to the list of cluster members
         # (the cluster should start with only this member).
