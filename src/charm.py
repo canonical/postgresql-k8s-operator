@@ -108,7 +108,6 @@ from constants import (
     SECRET_KEY_OVERRIDES,
     SPI_MODULE,
     SYSTEM_USERS,
-    SYSTEM_USERS_PASSWORD_CONFIG,
     TLS_CA_FILE,
     TLS_CERT_FILE,
     TLS_KEY_FILE,
@@ -689,7 +688,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if not self.unit.is_leader():
             return
 
-        if admin_secret_id := self.config.get(SYSTEM_USERS_PASSWORD_CONFIG):  # noqa: SIM102
+        if admin_secret_id := self.config.system_users:  # noqa: SIM102
             if admin_secret_id == event.secret.id:
                 self._update_admin_password(admin_secret_id)
 
@@ -734,7 +733,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Enable and/or disable the extensions.
         self.enable_disable_extensions()
 
-        if admin_secret_id := self.config.get(SYSTEM_USERS_PASSWORD_CONFIG):
+        if admin_secret_id := self.config.system_users:
             self._update_admin_password(admin_secret_id)
 
     def enable_disable_extensions(self, database: str | None = None) -> None:
@@ -894,7 +893,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Handle the leader-elected event."""
         # consider configured system user passwords
         system_user_passwords = {}
-        if admin_secret_id := self.config.get(SYSTEM_USERS_PASSWORD_CONFIG):
+        if admin_secret_id := self.config.system_users:
             try:
                 system_user_passwords = self.get_secret_from_id(secret_id=admin_secret_id)
             except (ModelError, SecretNotFoundError) as e:
