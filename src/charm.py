@@ -1244,7 +1244,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.error(
                 "Failed changing the password: Not all members healthy or finished initial sync."
             )
-            # todo: set status to blocked
+            self.unit.status = BlockedStatus("Password update for system users failed.")
             return
 
         # cross-cluster replication: extract the database host on which to update the passwords
@@ -1266,7 +1266,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.error(
                 "Failed changing the password: This action can be ran only in the cluster from the offer side."
             )
-            # todo: set status to blocked
+            self.unit.status = BlockedStatus("Password update for system users failed.")
             return
 
         try:
@@ -1284,7 +1284,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     updated_passwords.pop(user)
         except (ModelError, SecretNotFoundError) as e:
             logger.error(f"Error updating internal passwords: {e}")
-            # todo: set status to blocked
+            self.unit.status = BlockedStatus("Password update for system users failed.")
+            return
 
         try:
             # perform the actual password update for the remaining users
@@ -1299,7 +1300,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self.set_secret(APP_SCOPE, f"{user}-password", password)
         except PostgreSQLUpdateUserPasswordError as e:
             logger.exception(e)
-            # todo: set status to blocked
+            self.unit.status = BlockedStatus("Password update for system users failed.")
+            return
 
         # Update and reload Patroni configuration in this unit to use the new password.
         # Other units Patroni configuration will be reloaded in the peer relation changed event.
