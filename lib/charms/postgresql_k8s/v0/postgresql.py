@@ -153,7 +153,7 @@ class PostgreSQL:
                 if enable:
                     cursor.execute("ALTER SYSTEM SET pgaudit.log = 'ROLE,DDL,MISC,MISC_SET';")
                     cursor.execute("ALTER SYSTEM SET pgaudit.log_client TO off;")
-                    cursor.execute("ALTER SYSTEM SET pgaudit.log_parameter TO off")
+                    cursor.execute("ALTER SYSTEM SET pgaudit.log_parameter TO off;")
                 else:
                     cursor.execute("ALTER SYSTEM RESET pgaudit.log;")
                     cursor.execute("ALTER SYSTEM RESET pgaudit.log_client;")
