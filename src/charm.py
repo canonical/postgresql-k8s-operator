@@ -900,6 +900,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 # only display the error but don't return to make sure all users have passwords
                 logger.error(f"Error setting internal passwords: {e}")
                 self.unit.status = BlockedStatus("Password setting for system users failed.")
+                event.defer()
 
         # this list is not consistent with `SYSTEM_USERS` -> todo: check if correct
         # backup-user is missing here, patroni-user is missing in `SYSTEM_USERS`
@@ -1260,11 +1261,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.error(
                 "Failed changing the password: Not all members healthy or finished initial sync."
             )
-            self.unit.status = BlockedStatus("Password update for system users failed.")
             return
 
         # cross-cluster replication: extract the database host on which to update the passwords
         replication_offer_relation = self.model.get_relation(REPLICATION_OFFER_RELATION)
+        other_cluster_primary_ip = ""
         if (
             replication_offer_relation is not None
             and not self.async_replication.is_primary_cluster()
@@ -1289,7 +1290,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             # get the secret content and check each user configured there
             # only SYSTEM_USERS with changed passwords are processed, all others ignored
             updated_passwords = self.get_secret_from_id(secret_id=admin_secret_id)
-            for user, password in updated_passwords.items():
+            for user, password in list(updated_passwords.items()):
                 if user not in SYSTEM_USERS:
                     logger.error(
                         f"Can only update system users: {', '.join(SYSTEM_USERS)} not {user}"
