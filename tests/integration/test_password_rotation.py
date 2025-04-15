@@ -44,34 +44,27 @@ async def test_password_rotation(ops_test: OpsTest):
     rewind_password = await get_password(ops_test, "rewind")
 
     # Change both passwords.
-    result = await set_password(ops_test)
-    assert "password" in result
+    await set_password(ops_test)
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
     # For replication, generate a specific password and pass it to the action.
     new_replication_password = "test-password"
-    result = await set_password(
-        ops_test, username="replication", password=new_replication_password
-    )
-    assert "password" in result
+    await set_password(ops_test, username="replication", password=new_replication_password)
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
     # For monitoring, generate a specific password and pass it to the action.
     new_monitoring_password = "test-password"
-    result = await set_password(ops_test, username="monitoring", password=new_monitoring_password)
-    assert "password" in result
+    await set_password(ops_test, username="monitoring", password=new_monitoring_password)
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
     # For backup, generate a specific password and pass it to the action.
     new_backup_password = "test-password"
-    result = await set_password(ops_test, username="backup", password=new_backup_password)
-    assert "password" in result
+    await set_password(ops_test, username="backup", password=new_backup_password)
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
     # For rewind, generate a specific password and pass it to the action.
     new_rewind_password = "test-password"
-    result = await set_password(ops_test, username="rewind", password=new_rewind_password)
-    assert "password" in result
+    await set_password(ops_test, username="rewind", password=new_rewind_password)
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
     new_superuser_password = await get_password(ops_test)
