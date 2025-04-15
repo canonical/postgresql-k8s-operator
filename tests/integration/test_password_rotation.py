@@ -15,7 +15,6 @@ from .helpers import (
     build_and_deploy,
     check_patroni,
     db_connect,
-    get_leader_unit,
     get_password,
     get_primary,
     get_unit_address,
@@ -44,44 +43,34 @@ async def test_password_rotation(ops_test: OpsTest):
     backup_password = await get_password(ops_test, "backup")
     rewind_password = await get_password(ops_test, "rewind")
 
-    # Get the leader unit name (because passwords can only be set through it).
-    leader_unit = await get_leader_unit(ops_test, APP_NAME)
-    leader = leader_unit.name
-
     # Change both passwords.
-    result = await set_password(ops_test, unit_name=leader)
+    result = await set_password(ops_test)
     assert "password" in result
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
     # For replication, generate a specific password and pass it to the action.
     new_replication_password = "test-password"
     result = await set_password(
-        ops_test, unit_name=leader, username="replication", password=new_replication_password
+        ops_test, username="replication", password=new_replication_password
     )
     assert "password" in result
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
     # For monitoring, generate a specific password and pass it to the action.
     new_monitoring_password = "test-password"
-    result = await set_password(
-        ops_test, unit_name=leader, username="monitoring", password=new_monitoring_password
-    )
+    result = await set_password(ops_test, username="monitoring", password=new_monitoring_password)
     assert "password" in result
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
     # For backup, generate a specific password and pass it to the action.
     new_backup_password = "test-password"
-    result = await set_password(
-        ops_test, unit_name=leader, username="backup", password=new_backup_password
-    )
+    result = await set_password(ops_test, username="backup", password=new_backup_password)
     assert "password" in result
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
     # For rewind, generate a specific password and pass it to the action.
     new_rewind_password = "test-password"
-    result = await set_password(
-        ops_test, unit_name=leader, username="rewind", password=new_rewind_password
-    )
+    result = await set_password(ops_test, username="rewind", password=new_rewind_password)
     assert "password" in result
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
 
@@ -132,10 +121,8 @@ async def test_password_from_secret_same_as_cli(ops_test: OpsTest):
 
 async def test_empty_password(ops_test: OpsTest) -> None:
     """Test that the password can't be set to an empty string."""
-    leader_unit = await get_leader_unit(ops_test, APP_NAME)
-    leader = leader_unit.name
-    await set_password(ops_test, unit_name=leader, username="replication", password="")
-    password = await get_password(ops_test, unit_name=leader, username="replication")
+    await set_password(ops_test, username="replication", password="")
+    password = await get_password(ops_test, username="replication")
     # The password is 'None', BUT NOT because of SECRET_DELETED_LABEL
     # `get_secret()` returns a None value (as the field in the secret is set to string value "None")
     # And this true None value is turned to a string when the event is setting results.
@@ -152,11 +139,9 @@ async def test_db_connection_with_empty_password(ops_test: OpsTest):
 
 async def test_no_password_change_on_invalid_password(ops_test: OpsTest) -> None:
     """Test that in general, there is no change when password validation fails."""
-    leader_unit = await get_leader_unit(ops_test, APP_NAME)
-    leader = leader_unit.name
     password1 = await get_password(ops_test, username="replication")
     # The password has to be minimum 3 characters
-    await set_password(ops_test, unit_name=leader, username="replication", password="ca" * 1000000)
+    await set_password(ops_test, username="replication", password="ca" * 1000000)
     password2 = await get_password(ops_test, username="replication")
     # The password didn't change
     assert password1 == password2

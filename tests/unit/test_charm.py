@@ -9,7 +9,6 @@ from unittest.mock import MagicMock, Mock, PropertyMock, patch, sentinel
 
 import psycopg2
 import pytest
-from charms.postgresql_k8s.v0.postgresql import PostgreSQLUpdateUserPasswordError
 from lightkube import ApiError
 from lightkube.resources.core_v1 import Endpoints, Pod, Service
 from ops.model import (
