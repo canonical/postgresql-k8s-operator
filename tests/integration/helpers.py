@@ -741,15 +741,18 @@ async def set_password(
     """Set a user password via secret."""
     secret_name = "system_users_secret"
 
-    secret_id = await ops_test.model.add_secret(
-        name=secret_name, data_args=[f"{username}={password}"]
-    )
-    await ops_test.model.grant_secret(secret_name=secret_name, application=app_name)
+    try:
+        secret_id = await ops_test.model.add_secret(
+            name=secret_name, data_args=[f"{username}={password}"]
+        )
+        await ops_test.model.grant_secret(secret_name=secret_name, application=app_name)
 
-    # update the application config to include the secret
-    await ops_test.model.applications[app_name].set_config({
-        SYSTEM_USERS_PASSWORD_CONFIG: secret_id
-    })
+        # update the application config to include the secret
+        await ops_test.model.applications[app_name].set_config({
+            SYSTEM_USERS_PASSWORD_CONFIG: secret_id
+        })
+    except Exception:
+        await ops_test.model.update_secret(name=secret_name, data_args=[f"{username}={password}"])
 
 
 async def switchover(
