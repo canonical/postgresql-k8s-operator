@@ -435,6 +435,8 @@ class PostgreSQL:
             for extension, enable in extensions.items():
                 ordered_extensions[extension] = enable
 
+            self._configure_pgaudit(False)
+
             # Enable/disabled the extension in each database.
             for database in databases:
                 with self._connect_to_database(
