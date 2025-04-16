@@ -435,7 +435,6 @@ class PostgreSQL:
             for extension, enable in extensions.items():
                 ordered_extensions[extension] = enable
 
-            self._configure_pgaudit(False)
             # Enable/disabled the extension in each database.
             for database in databases:
                 with self._connect_to_database(
@@ -447,6 +446,7 @@ class PostgreSQL:
                             if enable
                             else f"DROP EXTENSION IF EXISTS {extension};"
                         )
+            self._configure_pgaudit(ordered_extensions.get("pgaudit", False))
         except psycopg2.errors.UniqueViolation:
             pass
         except psycopg2.errors.DependentObjectsStillExist:
@@ -454,7 +454,6 @@ class PostgreSQL:
         except psycopg2.Error as e:
             raise PostgreSQLEnableDisableExtensionError() from e
         finally:
-            self._configure_pgaudit(extensions.get("pgaudit", False))
             if connection is not None:
                 connection.close()
 
