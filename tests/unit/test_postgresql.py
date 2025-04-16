@@ -471,7 +471,7 @@ def test_configure_pgaudit(harness):
         execute.assert_has_calls([
             call("ALTER SYSTEM SET pgaudit.log = 'ROLE,DDL,MISC,MISC_SET';"),
             call("ALTER SYSTEM SET pgaudit.log_client TO off;"),
-            call("ALTER SYSTEM SET pgaudit.log_parameter TO off"),
+            call("ALTER SYSTEM SET pgaudit.log_parameter TO off;"),
             call("SELECT pg_reload_conf();"),
         ])
 
