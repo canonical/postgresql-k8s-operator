@@ -1,6 +1,6 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import call, patch
 
 import psycopg2
 import pytest
@@ -460,26 +460,30 @@ def test_build_postgresql_parameters(harness):
 
 
 def test_configure_pgaudit(harness):
-    # Test when pgAudit is enabled.
-    mock_conn = MagicMock()
-    execute = mock_conn.cursor.return_value.__enter__.return_value.execute
-    harness.charm.postgresql._configure_pgaudit(True, mock_conn)
-    execute.assert_has_calls([
-        call("ALTER SYSTEM SET pgaudit.log = 'ROLE,DDL,MISC,MISC_SET';"),
-        call("ALTER SYSTEM SET pgaudit.log_client TO off;"),
-        call("ALTER SYSTEM SET pgaudit.log_parameter TO off;"),
-        call("SELECT pg_reload_conf();"),
-    ])
+    with patch(
+        "charms.postgresql_k8s.v0.postgresql.PostgreSQL._connect_to_database"
+    ) as _connect_to_database:
+        # Test when pgAudit is enabled.
+        execute = (
+            _connect_to_database.return_value.cursor.return_value.__enter__.return_value.execute
+        )
+        harness.charm.postgresql._configure_pgaudit(True)
+        execute.assert_has_calls([
+            call("ALTER SYSTEM SET pgaudit.log = 'ROLE,DDL,MISC,MISC_SET';"),
+            call("ALTER SYSTEM SET pgaudit.log_client TO off;"),
+            call("ALTER SYSTEM SET pgaudit.log_parameter TO off;"),
+            call("SELECT pg_reload_conf();"),
+        ])
 
-    # Test when pgAudit is disabled.
-    execute.reset_mock()
-    harness.charm.postgresql._configure_pgaudit(False, mock_conn)
-    execute.assert_has_calls([
-        call("ALTER SYSTEM RESET pgaudit.log;"),
-        call("ALTER SYSTEM RESET pgaudit.log_client;"),
-        call("ALTER SYSTEM RESET pgaudit.log_parameter;"),
-        call("SELECT pg_reload_conf();"),
-    ])
+        # Test when pgAudit is disabled.
+        execute.reset_mock()
+        harness.charm.postgresql._configure_pgaudit(False)
+        execute.assert_has_calls([
+            call("ALTER SYSTEM RESET pgaudit.log;"),
+            call("ALTER SYSTEM RESET pgaudit.log_client;"),
+            call("ALTER SYSTEM RESET pgaudit.log_parameter;"),
+            call("SELECT pg_reload_conf();"),
+        ])
 
 
 def test_validate_group_map(harness):

@@ -144,18 +144,24 @@ class PostgreSQL:
         self.database = database
         self.system_users = system_users if system_users else []
 
-    def _configure_pgaudit(self, enable: bool, connection) -> None:
-        with connection.cursor() as cursor:
-            if enable:
-                cursor.execute("ALTER SYSTEM SET pgaudit.log = 'ROLE,DDL,MISC,MISC_SET';")
-                cursor.execute("ALTER SYSTEM SET pgaudit.log_client TO off;")
-                cursor.execute("ALTER SYSTEM SET pgaudit.log_parameter TO off;")
-            else:
-                cursor.execute("ALTER SYSTEM RESET pgaudit.log;")
-                cursor.execute("ALTER SYSTEM RESET pgaudit.log_client;")
-                cursor.execute("ALTER SYSTEM RESET pgaudit.log_parameter;")
-            cursor.execute("SELECT pg_reload_conf();")
-            cursor.execute("COMMIT;")
+    def _configure_pgaudit(self, enable: bool) -> None:
+        connection = None
+        try:
+            connection = self._connect_to_database()
+            connection.autocommit = True
+            with connection.cursor() as cursor:
+                if enable:
+                    cursor.execute("ALTER SYSTEM SET pgaudit.log = 'ROLE,DDL,MISC,MISC_SET';")
+                    cursor.execute("ALTER SYSTEM SET pgaudit.log_client TO off;")
+                    cursor.execute("ALTER SYSTEM SET pgaudit.log_parameter TO off;")
+                else:
+                    cursor.execute("ALTER SYSTEM RESET pgaudit.log;")
+                    cursor.execute("ALTER SYSTEM RESET pgaudit.log_client;")
+                    cursor.execute("ALTER SYSTEM RESET pgaudit.log_parameter;")
+                cursor.execute("SELECT pg_reload_conf();")
+        finally:
+            if connection is not None:
+                connection.close()
 
     def _connect_to_database(
         self, database: Optional[str] = None, database_host: Optional[str] = None
@@ -429,7 +435,7 @@ class PostgreSQL:
             for extension, enable in extensions.items():
                 ordered_extensions[extension] = enable
 
-            self._configure_pgaudit(False, connection)
+            self._configure_pgaudit(False)
             # Enable/disabled the extension in each database.
             for database in databases:
                 with self._connect_to_database(
@@ -448,8 +454,8 @@ class PostgreSQL:
         except psycopg2.Error as e:
             raise PostgreSQLEnableDisableExtensionError() from e
         finally:
+            self._configure_pgaudit(extensions.get("pgaudit", False))
             if connection is not None:
-                self._configure_pgaudit(extensions.get("pgaudit", False), connection)
                 connection.close()
 
     def _generate_database_privileges_statements(
