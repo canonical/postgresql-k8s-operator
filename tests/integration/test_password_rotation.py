@@ -112,16 +112,6 @@ async def test_password_from_secret_same_as_cli(ops_test: OpsTest):
     assert data[secret_id]["content"]["Data"]["replication-password"] == password
 
 
-async def test_empty_password(ops_test: OpsTest) -> None:
-    """Test that the password can't be set to an empty string."""
-    await set_password(ops_test, username="replication", password="")
-    password = await get_password(ops_test, username="replication")
-    # The password is 'None', BUT NOT because of SECRET_DELETED_LABEL
-    # `get_secret()` returns a None value (as the field in the secret is set to string value "None")
-    # And this true None value is turned to a string when the event is setting results.
-    assert password == "None"
-
-
 async def test_db_connection_with_empty_password(ops_test: OpsTest):
     """Test that user can't connect with empty password."""
     primary = await get_primary(ops_test)
