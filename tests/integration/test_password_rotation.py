@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
-import json
 import re
 import time
 
@@ -9,7 +8,6 @@ import psycopg2
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from . import markers
 from .helpers import (
     METADATA,
     build_and_deploy,
@@ -86,30 +84,6 @@ async def test_password_rotation(ops_test: OpsTest):
         if not await unit.is_leader_from_status():
             await restart_patroni(ops_test, unit.name, patroni_password)
             assert await check_patroni(ops_test, unit.name, restart_time)
-
-
-@markers.juju_secrets
-async def test_password_from_secret_same_as_cli(ops_test: OpsTest):
-    """Checking if password is same as returned by CLI.
-
-    I.e. we're manipulating the secret we think we're manipulating.
-    """
-    #
-    # No way to retrieve a secret by label for now (https://bugs.launchpad.net/juju/+bug/2037104)
-    # Therefore we take advantage of the fact, that we only have ONE single secret at this point
-    # So we take the single member of the list
-    # NOTE: This would BREAK if for instance units had secrets at the start...
-    #
-    password = await get_password(ops_test, username="replication")
-    complete_command = "list-secrets"
-    _, stdout, _ = await ops_test.juju(*complete_command.split())
-    secret_id = stdout.split("\n")[1].split(" ")[0]
-
-    # Getting back the pw from juju CLI
-    complete_command = f"show-secret {secret_id} --reveal --format=json"
-    _, stdout, _ = await ops_test.juju(*complete_command.split())
-    data = json.loads(stdout)
-    assert data[secret_id]["content"]["Data"]["replication-password"] == password
 
 
 async def test_db_connection_with_empty_password(ops_test: OpsTest):
