@@ -688,9 +688,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if not self.unit.is_leader():
             return
 
-        if admin_secret_id := self.config.system_users:  # noqa: SIM102
-            if admin_secret_id == event.secret.id:
-                self._update_admin_password(admin_secret_id)
+        if (admin_secret_id := self.config.system_users) and admin_secret_id == event.secret.id:
+            self._update_admin_password(admin_secret_id)
 
     def _on_config_changed(self, event) -> None:
         """Handle configuration changes, like enabling plugins."""
@@ -902,8 +901,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self.unit.status = BlockedStatus("Password setting for system users failed.")
                 event.defer()
 
-        # this list is not consistent with `SYSTEM_USERS` -> todo: check if correct
-        # backup-user is missing here, patroni-user is missing in `SYSTEM_USERS`
         for password in {
             USER_PASSWORD_KEY,
             REPLICATION_PASSWORD_KEY,
@@ -915,9 +912,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 if password in system_user_passwords:
                     # use provided passwords for system-users if available
                     self.set_secret(APP_SCOPE, password, system_user_passwords[password])
+                    logger.info(f"Using configured password for {password}")
                 else:
                     # generate a password for this user if not provided
                     self.set_secret(APP_SCOPE, password, new_password())
+                    logger.info(f"Generated new password for {password}")
 
         # Add this unit to the list of cluster members
         # (the cluster should start with only this member).
