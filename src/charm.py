@@ -689,7 +689,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
 
         if (admin_secret_id := self.config.system_users) and admin_secret_id == event.secret.id:
-            self._update_admin_password(admin_secret_id)
+            try:
+                self._update_admin_password(admin_secret_id)
+            except PostgreSQLUpdateUserPasswordError:
+                event.defer()
 
     def _on_config_changed(self, event) -> None:
         """Handle configuration changes, like enabling plugins."""
@@ -733,7 +736,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.enable_disable_extensions()
 
         if admin_secret_id := self.config.system_users:
-            self._update_admin_password(admin_secret_id)
+            try:
+                self._update_admin_password(admin_secret_id)
+            except PostgreSQLUpdateUserPasswordError:
+                event.defer()
 
     def enable_disable_extensions(self, database: str | None = None) -> None:
         """Enable/disable PostgreSQL extensions set through config options.
@@ -1257,10 +1263,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if not self._patroni.are_all_members_ready():
             # Ensure all members are ready before reloading Patroni configuration to avoid errors
             # e.g. API not responding in one instance because PostgreSQL / Patroni are not ready
-            logger.error(
+            raise PostgreSQLUpdateUserPasswordError(
                 "Failed changing the password: Not all members healthy or finished initial sync."
             )
-            return
 
         # cross-cluster replication: extract the database host on which to update the passwords
         replication_offer_relation = self.model.get_relation(REPLICATION_OFFER_RELATION)
