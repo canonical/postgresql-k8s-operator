@@ -43,7 +43,6 @@ from ..helpers import (
     db_connect,
     execute_query_on_unit,
     get_password,
-    get_password_on_unit,
     get_primary,
     get_unit_address,
     run_command_on_unit,
@@ -317,7 +316,7 @@ async def count_writes(
 ) -> tuple[dict[str, int], dict[str, int]]:
     """Count the number of writes in the database."""
     app = await app_name(ops_test)
-    password = await get_password(ops_test, database_app_name=app, down_unit=down_unit)
+    password = await get_password(ops_test, database_app_name=app)
     members = []
     for model in [ops_test.model, extra_model]:
         if model is None:
@@ -1015,7 +1014,7 @@ async def create_db(ops_test: OpsTest, app: str, db: str) -> None:
     """Creates database with specified name."""
     unit = ops_test.model.applications[app].units[0]
     unit_address = await get_unit_address(ops_test, unit.name)
-    password = await get_password_on_unit(ops_test, "operator", unit, app)
+    password = await get_password(ops_test, "operator", app)
 
     conn = db_connect(unit_address, password)
     conn.autocommit = True
@@ -1030,7 +1029,7 @@ async def check_db(ops_test: OpsTest, app: str, db: str) -> bool:
     """Returns True if database with specified name already exists."""
     unit = ops_test.model.applications[app].units[0]
     unit_address = await get_unit_address(ops_test, unit.name)
-    password = await get_password_on_unit(ops_test, "operator", unit, app)
+    password = await get_password(ops_test, "operator", app)
 
     query = await execute_query_on_unit(
         unit_address,

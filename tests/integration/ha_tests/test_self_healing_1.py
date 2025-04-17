@@ -284,7 +284,7 @@ async def test_forceful_restart_without_data_and_transaction_logs(
         logger.info(f"rotating WAL segments on {new_primary_name}")
         files = await list_wal_files(ops_test, app)
         host = await get_unit_address(ops_test, new_primary_name)
-        password = await get_password(ops_test, down_unit=primary_name)
+        password = await get_password(ops_test)
         with db_connect(host, password) as connection:
             connection.autocommit = True
             with connection.cursor() as cursor:

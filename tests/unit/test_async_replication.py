@@ -369,6 +369,7 @@ def test_on_secret_changed(harness, relation_name):
         patch(
             "charm.PostgresqlOperatorCharm._on_peer_relation_changed", return_value=None
         ) as _charm_on_peer_relation_changed,
+        patch("charm.PostgresqlOperatorCharm._on_secret_changed", return_value=None),
         patch(
             "relations.async_replication.PostgreSQLAsyncReplication._primary_cluster_endpoint",
             new_callable=PropertyMock,
