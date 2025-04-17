@@ -21,8 +21,14 @@ containers:
   postgresql:
     resource: postgresql-image
     mounts:
-      - storage: pgdata
+#       - storage: archive
+#         location: /tmp/pgbackrest
+      - storage: data
         location: /var/lib/postgresql/data
+      - storage: logs
+        location: /var/lib/postgresql/logs
+      - storage: temp
+        location: /var/lib/postgresql/temp
 
 resources:
   postgresql-image:
@@ -80,9 +86,18 @@ requires:
     optional: true
 
 storage:
-  pgdata:
+#   archive:
+#     type: filesystem
+#     location: /tmp/pgbackrest
+  data:
     type: filesystem
     location: /var/lib/postgresql/data
+  logs:
+    type: filesystem
+    location: /var/lib/postgresql/logs
+  temp:
+    type: filesystem
+    location: /var/logs/postgresql/temp
 
 assumes:
   - k8s-api

@@ -132,7 +132,7 @@ logger = logging.getLogger(__name__)
 
 EXTENSIONS_DEPENDENCY_MESSAGE = "Unsatisfied plugin dependencies. Please check the logs"
 EXTENSION_OBJECT_MESSAGE = "Cannot disable plugins: Existing objects depend on it. See logs"
-INSUFFICIENT_SIZE_WARNING = "<10% free space on pgdata volume."
+INSUFFICIENT_SIZE_WARNING = "<10% free space on data volume."
 
 ORIGINAL_PATRONI_ON_FAILURE_CONDITION = "restart"
 
@@ -213,7 +213,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.framework.observe(self.on.secret_changed, self._on_peer_relation_changed)
         self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
-        self.framework.observe(self.on.pgdata_storage_detaching, self._on_pgdata_storage_detaching)
+        self.framework.observe(self.on.data_storage_detaching, self._on_data_storage_detaching)
         self.framework.observe(self.on.stop, self._on_stop)
         self.framework.observe(self.on.get_password_action, self._on_get_password)
         self.framework.observe(self.on.set_password_action, self._on_set_password)
@@ -222,8 +222,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.framework.observe(self.on.update_status, self._on_update_status)
 
         self._certs_path = "/usr/local/share/ca-certificates"
-        self._storage_path = self.meta.storages["pgdata"].location
-        self.pgdata_path = f"{self._storage_path}/pgdata"
+        self._storage_path = self.meta.storages["data"].location
+        self.data_path = f"{self._storage_path}/data"
 
         self.upgrade = PostgreSQLUpgrade(
             self,
@@ -496,7 +496,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Update the sync-standby endpoint in the async replication data.
         self.async_replication.update_async_replication_data()
 
-    def _on_pgdata_storage_detaching(self, _) -> None:
+    def _on_data_storage_detaching(self, _) -> None:
         # Change the primary if it's the unit that is being removed.
         try:
             primary = self._patroni.get_primary(unit_name_pattern=True)
@@ -504,7 +504,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             # Ignore the event if the primary couldn't be retrieved.
             # If a switchover is needed, an automatic failover will be triggered
             # when the unit is removed.
-            logger.debug("Early exit on_pgdata_storage_detaching: primary cannot be retrieved")
+            logger.debug("Early exit on_data_storage_detaching: primary cannot be retrieved")
             return
 
         if self.unit.name != primary:
@@ -917,17 +917,27 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 raise e
         return True
 
-    def _create_pgdata(self, container: Container):
+    def _create_data(self, container: Container):
         """Create the PostgreSQL data directory."""
-        if not container.exists(self.pgdata_path):
+        if not container.exists(self.data_path):
             container.make_dir(
-                self.pgdata_path, permissions=0o750, user=WORKLOAD_OS_USER, group=WORKLOAD_OS_GROUP
+                self.data_path, permissions=0o750, user=WORKLOAD_OS_USER, group=WORKLOAD_OS_GROUP
             )
         # Also, fix the permissions from the parent directory.
         container.exec([
             "chown",
             f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
             self._storage_path,
+        ]).wait()
+        container.exec([
+            "chown",
+            f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
+            "/var/lib/postgresql/logs",
+        ]).wait()
+        container.exec([
+            "chown",
+            f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
+            "/var/lib/postgresql/temp",
         ]).wait()
 
     def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
@@ -948,7 +958,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         # Create the PostgreSQL data directory. This is needed on cloud environments
         # where the volume is mounted with more restrictive permissions.
-        self._create_pgdata(container)
+        self._create_data(container)
 
         self.unit.set_workload_version(self._patroni.rock_postgresql_version)
 
@@ -1073,7 +1083,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 extra_user_roles=["pg_monitor"],
             )
 
-        self.postgresql.set_up_database()
+        self.postgresql.set_up_database(temp_location="/var/lib/postgresql/temp")
 
         access_groups = self.postgresql.list_access_groups()
         if access_groups != set(ACCESS_GROUPS):
@@ -1427,7 +1437,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("on_update_status early exit: Cannot connect to container")
             return False
 
-        self._check_pgdata_storage_size()
+        self._check_data_storage_size()
 
         if (
             self._has_blocked_status and self.unit.status not in S3_BLOCK_MESSAGES
@@ -1441,16 +1451,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return False
         return True
 
-    def _check_pgdata_storage_size(self) -> None:
+    def _check_data_storage_size(self) -> None:
         """Asserts that pgdata volume has at least 10% free space and blocks charm if not."""
         try:
-            total_size, _, free_size = shutil.disk_usage(self.pgdata_path)
+            total_size, _, free_size = shutil.disk_usage(self.data_path)
         except FileNotFoundError:
-            logger.error("pgdata folder not found in %s", self.pgdata_path)
+            logger.error("data folder not found in %s", self.data_path)
             return
 
         logger.debug(
-            "pgdata free disk space: %s out of %s, ratio of %s",
+            "data free disk space: %s out of %s, ratio of %s",
             free_size,
             total_size,
             free_size / total_size,
