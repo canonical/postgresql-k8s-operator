@@ -265,8 +265,9 @@ class PostgreSQLProvider(Object):
             ca = ""
 
         for relation in relations:
-            self.database_provides.set_tls(relation.id, tls)
-            self.database_provides.set_tls_ca(relation.id, ca)
+            if self.database_provides.fetch_relation_field(relation.id, "database"):
+                self.database_provides.set_tls(relation.id, tls)
+                self.database_provides.set_tls_ca(relation.id, ca)
 
     def _check_multiple_endpoints(self) -> bool:
         """Checks if there are relations with other endpoints."""
