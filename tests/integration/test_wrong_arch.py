@@ -5,7 +5,6 @@
 import logging
 import os
 import pathlib
-import typing
 
 from pytest_operator.plugin import OpsTest
 
@@ -16,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 
 async def fetch_charm(
-    charm_path: typing.Union[str, os.PathLike],
+    charm_path: str | os.PathLike,
     architecture: str,
 ) -> pathlib.Path:
     """Fetches packed charm from CI runner without checking for architecture."""

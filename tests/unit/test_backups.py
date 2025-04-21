@@ -411,7 +411,7 @@ def test_create_bucket_if_not_exists(harness, tls_ca_chain_filename):
 def test_empty_data_files(harness):
     with patch("ops.model.Container.exec") as _exec:
         # Test when the removal of the data files fails.
-        command = "rm -r /var/lib/postgresql/data/pgdata".split()
+        command = ["rm", "-r", "/var/lib/postgresql/data/pgdata"]
         _exec.side_effect = ExecError(command=command, exit_code=1, stdout="", stderr="fake error")
         try:
             harness.charm.backup._empty_data_files()
@@ -455,7 +455,7 @@ def test_change_connectivity_to_database(harness):
 def test_execute_command(harness):
     with patch("ops.model.Container.exec") as _exec:
         # Test when the command fails.
-        command = "rm -r /var/lib/postgresql/data/pgdata".split()
+        command = ["rm", "-r", "/var/lib/postgresql/data/pgdata"]
         _exec.side_effect = ChangeError(
             err="fake error",
             change=Change(
@@ -951,7 +951,7 @@ def test_is_primary_pgbackrest_service_running(harness):
         # Test when the pgBackRest fails to contact the primary server.
         _get_primary.return_value = f"{harness.charm.app.name}/1"
         _execute_command.side_effect = ExecError(
-            command="fake command".split(), exit_code=1, stdout="", stderr="fake error"
+            command=["fake", "command"], exit_code=1, stdout="", stderr="fake error"
         )
         assert harness.charm.backup._is_primary_pgbackrest_service_running is False
         _execute_command.assert_called_once()
@@ -1265,7 +1265,7 @@ Juju Version: test-juju-version
         _upload_content_to_s3.return_value = True
         _is_primary.return_value = True
         _execute_command.side_effect = ExecError(
-            command="fake command".split(), exit_code=1, stdout="", stderr="fake error"
+            command=["fake", "command"], exit_code=1, stdout="", stderr="fake error"
         )
         harness.charm.backup._on_create_backup_action(mock_event)
         update_config_calls = [
@@ -1396,7 +1396,7 @@ def test_on_list_backups_action(harness):
         mock_event.reset_mock()
         _are_backup_settings_ok.return_value = (True, None)
         _generate_backup_list_output.side_effect = ExecError(
-            command="fake command".split(), exit_code=1, stdout="", stderr="fake error"
+            command=["fake", "command"], exit_code=1, stdout="", stderr="fake error"
         )
         harness.charm.backup._on_list_backups_action(mock_event)
         _generate_backup_list_output.assert_called_once()
@@ -1551,7 +1551,7 @@ def test_on_restore_action(harness):
         _restart_database.reset_mock()
         _delete.side_effect = None
         _empty_data_files.side_effect = ExecError(
-            command="fake command".split(), exit_code=1, stdout="", stderr="fake error"
+            command=["fake", "command"], exit_code=1, stdout="", stderr="fake error"
         )
         harness.charm.backup._on_restore_action(mock_event)
         _empty_data_files.assert_called_once()

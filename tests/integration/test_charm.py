@@ -98,9 +98,12 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
     # Connect to PostgreSQL.
     host = await get_unit_address(ops_test, f"{APP_NAME}/{unit_id}")
     logger.info("connecting to the database host: %s", host)
-    with psycopg2.connect(
-        f"dbname='postgres' user='operator' host='{host}' password='{password}' connect_timeout=1"
-    ) as connection, connection.cursor() as cursor:
+    with (
+        psycopg2.connect(
+            f"dbname='postgres' user='operator' host='{host}' password='{password}' connect_timeout=1"
+        ) as connection,
+        connection.cursor() as cursor,
+    ):
         assert connection.status == psycopg2.extensions.STATUS_READY
 
         # Retrieve settings from PostgreSQL pg_settings table.
@@ -180,9 +183,12 @@ async def test_postgresql_parameters_change(ops_test: OpsTest) -> None:
         host = await get_unit_address(ops_test, f"{APP_NAME}/{unit_id}")
         logger.info("connecting to the database host: %s", host)
         try:
-            with psycopg2.connect(
-                f"dbname='postgres' user='operator' host='{host}' password='{password}' connect_timeout=1"
-            ) as connection, connection.cursor() as cursor:
+            with (
+                psycopg2.connect(
+                    f"dbname='postgres' user='operator' host='{host}' password='{password}' connect_timeout=1"
+                ) as connection,
+                connection.cursor() as cursor,
+            ):
                 settings_names = [
                     "max_prepared_transactions",
                     "shared_buffers",
