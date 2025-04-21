@@ -352,9 +352,10 @@ async def count_writes(
             member_name = f"{member['model']}.{member['name']}"
             connection = None
             try:
-                with psycopg2.connect(
-                    connection_string
-                ) as connection, connection.cursor() as cursor:
+                with (
+                    psycopg2.connect(connection_string) as connection,
+                    connection.cursor() as cursor,
+                ):
                     cursor.execute("SELECT COUNT(number), MAX(number) FROM continuous_writes;")
                     results = cursor.fetchone()
                     count[member_name] = results[0]
@@ -589,9 +590,10 @@ async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:
                 )
                 address = await asyncio.wait_for(get_unit_address(ops_test, unit_name), 15)
 
-                with db_connect(
-                    host=address, password=password
-                ) as connection, connection.cursor() as cursor:
+                with (
+                    db_connect(host=address, password=password) as connection,
+                    connection.cursor() as cursor,
+                ):
                     cursor.execute("SELECT 1;")
                     success = cursor.fetchone()[0] == 1
                 connection.close()
@@ -791,9 +793,11 @@ async def is_secondary_up_to_date(ops_test: OpsTest, unit_name: str, expected_wr
 
     try:
         for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
-            with attempt, psycopg2.connect(
-                connection_string
-            ) as connection, connection.cursor() as cursor:
+            with (
+                attempt,
+                psycopg2.connect(connection_string) as connection,
+                connection.cursor() as cursor,
+            ):
                 cursor.execute("SELECT COUNT(number), MAX(number) FROM continuous_writes;")
                 results = cursor.fetchone()
                 if results[0] != expected_writes or results[1] != expected_writes:

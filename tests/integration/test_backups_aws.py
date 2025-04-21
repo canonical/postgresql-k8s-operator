@@ -80,9 +80,10 @@ async def test_backup_aws(ops_test: OpsTest, charm, aws_cloud_configs: tuple[dic
             stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
         ):
             with attempt:
-                with db_connect(
-                    host=address, password=password
-                ) as connection, connection.cursor() as cursor:
+                with (
+                    db_connect(host=address, password=password) as connection,
+                    connection.cursor() as cursor,
+                ):
                     cursor.execute(
                         "SELECT EXISTS (SELECT FROM information_schema.tables"
                         " WHERE table_schema = 'public' AND table_name = 'backup_table_1');"

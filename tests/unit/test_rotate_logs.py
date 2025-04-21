@@ -7,9 +7,10 @@ from scripts.rotate_logs import main
 
 
 def test_main():
-    with patch("subprocess.run") as _run, patch(
-        "time.sleep", side_effect=[None, InterruptedError]
-    ) as _sleep:
+    with (
+        patch("subprocess.run") as _run,
+        patch("time.sleep", side_effect=[None, InterruptedError]) as _sleep,
+    ):
         with contextlib.suppress(InterruptedError):
             main()
         assert _run.call_count == 2
