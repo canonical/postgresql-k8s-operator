@@ -273,7 +273,7 @@ class PostgreSQLBackups(Object):
     def _empty_data_files(self) -> None:
         """Empty the PostgreSQL data directory in preparation of backup restore."""
         try:
-            self.container.exec("rm -r /var/lib/postgresql/data".split()).wait_output()
+            self.container.exec(["rm", "-r", "/var/lib/postgresql/data"]).wait_output()
         except ExecError as e:
             # If previous PITR restore was unsuccessful, there is no such directory.
             if "No such file or directory" not in e.stderr:
