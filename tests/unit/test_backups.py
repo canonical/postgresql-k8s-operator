@@ -411,7 +411,7 @@ def test_create_bucket_if_not_exists(harness, tls_ca_chain_filename):
 def test_empty_data_files(harness):
     with patch("ops.model.Container.exec") as _exec:
         # Test when the removal of the data files fails.
-        command = "rm -r /var/lib/postgresql/data/pgdata".split()
+        command = "rm -r /var/lib/postgresql/data".split()
         _exec.side_effect = ExecError(command=command, exit_code=1, stdout="", stderr="fake error")
         try:
             harness.charm.backup._empty_data_files()
@@ -455,7 +455,7 @@ def test_change_connectivity_to_database(harness):
 def test_execute_command(harness):
     with patch("ops.model.Container.exec") as _exec:
         # Test when the command fails.
-        command = "rm -r /var/lib/postgresql/data/pgdata".split()
+        command = "rm -r /var/lib/postgresql/data".split()
         _exec.side_effect = ChangeError(
             err="fake error",
             change=Change(
@@ -1427,7 +1427,7 @@ def test_on_restore_action(harness):
     with (
         patch("ops.model.Container.start") as _start,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
-        patch("charm.PostgresqlOperatorCharm._create_pgdata") as _create_pgdata,
+        patch("charm.PostgresqlOperatorCharm._create_data") as _create_data,
         patch("charm.PostgreSQLBackups._empty_data_files") as _empty_data_files,
         patch("charm.PostgreSQLBackups._restart_database") as _restart_database,
         patch("lightkube.Client.delete") as _delete,
@@ -1454,7 +1454,7 @@ def test_on_restore_action(harness):
         _delete.assert_not_called()
         _restart_database.assert_not_called()
         _empty_data_files.assert_not_called()
-        _create_pgdata.assert_not_called()
+        _create_data.assert_not_called()
         _update_config.assert_not_called()
         _start.assert_not_called()
         mock_event.fail.assert_not_called()
@@ -1480,7 +1480,7 @@ def test_on_restore_action(harness):
         _delete.assert_not_called()
         _restart_database.assert_not_called()
         _empty_data_files.assert_not_called()
-        _create_pgdata.assert_not_called()
+        _create_data.assert_not_called()
         _update_config.assert_not_called()
         _start.assert_not_called()
         mock_event.set_results.assert_not_called()
@@ -1497,7 +1497,7 @@ def test_on_restore_action(harness):
         _delete.assert_not_called()
         _restart_database.assert_not_called()
         _empty_data_files.assert_not_called()
-        _create_pgdata.assert_not_called()
+        _create_data.assert_not_called()
         _update_config.assert_not_called()
         _start.assert_not_called()
         mock_event.set_results.assert_not_called()
@@ -1526,7 +1526,7 @@ def test_on_restore_action(harness):
         _delete.assert_not_called()
         _restart_database.assert_not_called()
         _empty_data_files.assert_not_called()
-        _create_pgdata.assert_not_called()
+        _create_data.assert_not_called()
         _update_config.assert_not_called()
         _start.assert_not_called()
         mock_event.set_results.assert_not_called()
@@ -1541,7 +1541,7 @@ def test_on_restore_action(harness):
         mock_event.fail.assert_called_once()
         _restart_database.assert_called_once()
         _empty_data_files.assert_not_called()
-        _create_pgdata.assert_not_called()
+        _create_data.assert_not_called()
         _update_config.assert_not_called()
         _start.assert_not_called()
         mock_event.set_results.assert_not_called()
@@ -1557,7 +1557,7 @@ def test_on_restore_action(harness):
         _empty_data_files.assert_called_once()
         mock_event.fail.assert_called_once()
         _restart_database.assert_called_once()
-        _create_pgdata.assert_not_called()
+        _create_data.assert_not_called()
         _update_config.assert_not_called()
         _start.assert_not_called()
         mock_event.set_results.assert_not_called()
@@ -1574,7 +1574,7 @@ def test_on_restore_action(harness):
             "restoring-backup": "20230101-090000F",
             "restore-stanza": f"{harness.charm.model.name}.{harness.charm.cluster_name}",
         }
-        _create_pgdata.assert_called_once()
+        _create_data.assert_called_once()
         _update_config.assert_called_once()
         _start.assert_called_once_with("postgresql")
         mock_event.fail.assert_not_called()
@@ -1583,7 +1583,7 @@ def test_on_restore_action(harness):
         # Test a successful PITR with the real backup id to the latest.
         mock_event.reset_mock()
         _restart_database.reset_mock()
-        _create_pgdata.reset_mock()
+        _create_data.reset_mock()
         _update_config.reset_mock()
         _start.reset_mock()
         mock_event.params = {"backup-id": "2023-01-01T09:00:00Z", "restore-to-time": "latest"}
@@ -1595,7 +1595,7 @@ def test_on_restore_action(harness):
             "restore-to-time": "latest",
             "restore-stanza": f"{harness.charm.model.name}.{harness.charm.cluster_name}",
         }
-        _create_pgdata.assert_called_once()
+        _create_data.assert_called_once()
         _update_config.assert_called_once()
         _start.assert_called_once_with("postgresql")
         mock_event.fail.assert_not_called()
@@ -1604,7 +1604,7 @@ def test_on_restore_action(harness):
         # Test a successful PITR with only the timestamp.
         mock_event.reset_mock()
         _restart_database.reset_mock()
-        _create_pgdata.reset_mock()
+        _create_data.reset_mock()
         _update_config.reset_mock()
         _start.reset_mock()
         mock_event.params = {"restore-to-time": "2025-02-24 05:00:00.001+00"}
@@ -1615,7 +1615,7 @@ def test_on_restore_action(harness):
             "restore-to-time": "2025-02-24 05:00:00.001+00",
             "restore-stanza": f"{harness.charm.model.name}.{harness.charm.cluster_name}",
         }
-        _create_pgdata.assert_called_once()
+        _create_data.assert_called_once()
         _update_config.assert_called_once()
         _start.assert_called_once_with("postgresql")
         mock_event.fail.assert_not_called()
@@ -1635,7 +1635,7 @@ def test_on_restore_action(harness):
                     "restore-stanza": "",
                 },
             )
-        _create_pgdata.reset_mock()
+        _create_data.reset_mock()
         _update_config.reset_mock()
         _start.reset_mock()
         mock_event.params = {"restore-to-time": "latest"}
@@ -1643,7 +1643,7 @@ def test_on_restore_action(harness):
         _empty_data_files.assert_not_called()
         _restart_database.assert_not_called()
         assert harness.get_relation_data(peer_rel_id, harness.charm.app) == {}
-        _create_pgdata.assert_not_called()
+        _create_data.assert_not_called()
         _update_config.assert_not_called()
         _start.assert_not_called()
         mock_event.set_results.assert_not_called()
@@ -1664,7 +1664,7 @@ def test_on_restore_action(harness):
             "restore-to-time": "latest",
             "restore-stanza": f"{harness.charm.model.name}.{harness.charm.cluster_name}",
         }
-        _create_pgdata.assert_called_once()
+        _create_data.assert_called_once()
         _update_config.assert_called_once()
         _start.assert_called_once_with("postgresql")
         mock_event.fail.assert_not_called()

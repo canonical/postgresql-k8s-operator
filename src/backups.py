@@ -195,7 +195,7 @@ class PostgreSQLBackups(Object):
 
             system_identifier_from_instance, error = self._execute_command([
                 f"/usr/lib/postgresql/{self.charm._patroni.rock_postgresql_version.split('.')[0]}/bin/pg_controldata",
-                "/var/lib/postgresql/data/pgdata",
+                "/var/lib/postgresql/data",
             ])
             if error != "":
                 raise Exception(error)
@@ -273,7 +273,7 @@ class PostgreSQLBackups(Object):
     def _empty_data_files(self) -> None:
         """Empty the PostgreSQL data directory in preparation of backup restore."""
         try:
-            self.container.exec("rm -r /var/lib/postgresql/data/pgdata".split()).wait_output()
+            self.container.exec("rm -r /var/lib/postgresql/data".split()).wait_output()
         except ExecError as e:
             # If previous PITR restore was unsuccessful, there is no such directory.
             if "No such file or directory" not in e.stderr:
@@ -1040,7 +1040,7 @@ Stderr:
             return
 
         logger.info("Creating PostgreSQL data directory")
-        self.charm._create_pgdata(self.container)
+        self.charm._create_data(self.container)
 
         # Mark the cluster as in a restoring backup state and update the Patroni configuration.
         logger.info("Configuring Patroni to restore the backup")

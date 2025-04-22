@@ -208,7 +208,7 @@ def test_on_async_relation_changed(harness, wait_for_standby):
         patch(
             "charm.Patroni.member_started", new_callable=PropertyMock
         ) as _patroni_member_started,
-        patch("charm.PostgresqlOperatorCharm._create_pgdata") as _create_pgdata,
+        patch("charm.PostgresqlOperatorCharm._create_data") as _create_data,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
         patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
         patch(
@@ -235,7 +235,7 @@ def test_on_async_relation_changed(harness, wait_for_standby):
         _stop.assert_called_once()
         if not wait_for_standby:
             _start.assert_called()
-        _create_pgdata.assert_called_once()
+        _create_data.assert_called_once()
 
     assert harness.charm.async_replication.get_primary_cluster().name == "standby"
 

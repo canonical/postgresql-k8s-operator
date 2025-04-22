@@ -223,7 +223,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         self._certs_path = "/usr/local/share/ca-certificates"
         self._storage_path = self.meta.storages["data"].location
-        self.data_path = f"{self._storage_path}/data"
+        self.data_path = self._storage_path
 
         self.upgrade = PostgreSQLUpgrade(
             self,

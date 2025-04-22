@@ -5,7 +5,7 @@ import json
 import logging
 from datetime import datetime
 from unittest import TestCase
-from unittest.mock import MagicMock, Mock, PropertyMock, patch, sentinel
+from unittest.mock import MagicMock, Mock, PropertyMock, call, patch, sentinel
 
 import psycopg2
 import pytest
@@ -208,7 +208,7 @@ def test_on_postgresql_pebble_ready(harness):
         patch("charm.PostgreSQLUpgrade.idle", new_callable=PropertyMock) as _idle,
         patch("charm.PostgresqlOperatorCharm._patch_pod_labels"),
         patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
-        patch("charm.PostgresqlOperatorCharm._create_pgdata") as _create_pgdata,
+        patch("charm.PostgresqlOperatorCharm._create_data") as _create_data,
     ):
         _rock_postgresql_version.return_value = "16.6"
 
@@ -227,7 +227,7 @@ def test_on_postgresql_pebble_ready(harness):
 
         # Check for a Waiting status when the primary k8s endpoint is not ready yet.
         harness.container_pebble_ready(POSTGRESQL_CONTAINER)
-        _create_pgdata.assert_called_once()
+        _create_data.assert_called_once()
         assert isinstance(harness.model.unit.status, WaitingStatus)
         _set_active_status.assert_not_called()
 
@@ -263,7 +263,7 @@ def test_on_postgresql_pebble_ready_no_connection(harness):
         patch(
             "charm.Patroni.rock_postgresql_version", new_callable=PropertyMock
         ) as _rock_postgresql_version,
-        patch("charm.PostgresqlOperatorCharm._create_pgdata"),
+        patch("charm.PostgresqlOperatorCharm._create_data"),
     ):
         mock_event = MagicMock()
         mock_event.workload = harness.model.unit.get_container(POSTGRESQL_CONTAINER)
@@ -711,7 +711,7 @@ def test_on_peer_relation_departed(harness):
         _remove_from_endpoints.assert_called_once_with(sentinel.units)
 
 
-def test_on_pgdata_storage_detaching(harness):
+def test_on_data_storage_detaching(harness):
     with (
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
         patch("charm.Patroni.are_all_members_ready", new_callable=PropertyMock),
@@ -721,11 +721,11 @@ def test_on_pgdata_storage_detaching(harness):
     ):
         # Early exit if not primary
         event = Mock()
-        harness.charm._on_pgdata_storage_detaching(event)
+        harness.charm._on_data_storage_detaching(event)
         assert not _member_started.called
 
         _get_primary.side_effect = [harness.charm.unit.name, "primary"]
-        harness.charm._on_pgdata_storage_detaching(event)
+        harness.charm._on_data_storage_detaching(event)
         _switchover.assert_called_once_with()
         _primary_changed.assert_called_once_with("primary")
 
@@ -1771,28 +1771,34 @@ def test_set_active_status(harness):
                 assert isinstance(harness.charm.unit.status, MaintenanceStatus)
 
 
-def test_create_pgdata(harness):
+def test_create_data_directories(harness):
     container = MagicMock()
     container.exists.return_value = False
-    harness.charm._create_pgdata(container)
+    harness.charm._create_data(container)
     container.make_dir.assert_called_once_with(
-        "/var/lib/postgresql/data/pgdata", permissions=488, user="postgres", group="postgres"
+        "/var/lib/postgresql/data", permissions=488, user="postgres", group="postgres"
     )
-    container.exec.assert_called_once_with([
-        "chown",
-        "postgres:postgres",
-        "/var/lib/postgresql/data",
+    container.exec.assert_has_calls([
+        call(["chown", "postgres:postgres", "/var/lib/postgresql/data"]),
+        call().wait(),
+        call(["chown", "postgres:postgres", "/var/lib/postgresql/logs"]),
+        call().wait(),
+        call(["chown", "postgres:postgres", "/var/lib/postgresql/temp"]),
+        call().wait(),
     ])
 
     container.make_dir.reset_mock()
     container.exec.reset_mock()
     container.exists.return_value = True
-    harness.charm._create_pgdata(container)
+    harness.charm._create_data(container)
     container.make_dir.assert_not_called()
-    container.exec.assert_called_once_with([
-        "chown",
-        "postgres:postgres",
-        "/var/lib/postgresql/data",
+    container.exec.assert_has_calls([
+        call(["chown", "postgres:postgres", "/var/lib/postgresql/data"]),
+        call().wait(),
+        call(["chown", "postgres:postgres", "/var/lib/postgresql/logs"]),
+        call().wait(),
+        call(["chown", "postgres:postgres", "/var/lib/postgresql/temp"]),
+        call().wait(),
     ])
 
 
