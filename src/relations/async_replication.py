@@ -186,7 +186,7 @@ class PostgreSQLAsyncReplication(Object):
             raise Exception(error)
         if system_identifier != relation.data[relation.app].get("system-id"):
             # Store current data in a tar.gz file.
-            logger.info("Creating backup of pgdata folder")
+            logger.info("Creating backup of data folder")
             filename = f"{POSTGRESQL_DATA_PATH}-{str(datetime.now()).replace(' ', '-').replace(':', '-')}.tar.gz"
             self.container.exec(
                 f"tar -zcf {filename} {POSTGRESQL_DATA_PATH}".split()
@@ -702,7 +702,7 @@ class PostgreSQLAsyncReplication(Object):
                 if not self._configure_standby_cluster(event):
                     return False
 
-            # Remove and recreate the pgdata folder to enable replication of the data from the
+            # Remove and recreate the data folder to enable replication of the data from the
             # primary cluster.
             logger.info("Removing and recreating data folder")
             self.container.exec(f"rm -r {POSTGRESQL_DATA_PATH}".split()).wait_output()

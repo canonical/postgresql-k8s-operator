@@ -1452,7 +1452,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         return True
 
     def _check_data_storage_size(self) -> None:
-        """Asserts that pgdata volume has at least 10% free space and blocks charm if not."""
+        """Asserts that data volume has at least 10% free space and blocks charm if not."""
         try:
             total_size, _, free_size = shutil.disk_usage(self.data_path)
         except FileNotFoundError:

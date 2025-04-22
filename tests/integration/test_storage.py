@@ -18,7 +18,7 @@ from .helpers import (
 
 logger = logging.getLogger(__name__)
 
-INSUFFICIENT_SIZE_WARNING = "<10% free space on pgdata volume."
+INSUFFICIENT_SIZE_WARNING = "<10% free space on data volume."
 
 
 @markers.amd64_only
@@ -34,7 +34,7 @@ async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest, charm):
     await run_command_on_unit(
         ops_test,
         primary,
-        f"FREE_SPACE=$(df --output=avail {STORAGE_PATH}/pgdata | tail -1) && dd if=/dev/urandom of={STORAGE_PATH}/pgdata/tmp bs=1M count=$(( (FREE_SPACE * 91 / 100) / 1024 ))",
+        f"FREE_SPACE=$(df --output=avail {STORAGE_PATH} | tail -1) && dd if=/dev/urandom of={STORAGE_PATH}/pgdata/tmp bs=1M count=$(( (FREE_SPACE * 91 / 100) / 1024 ))",
     )
 
     # wait for charm to get blocked
