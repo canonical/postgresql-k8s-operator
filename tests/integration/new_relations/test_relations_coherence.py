@@ -131,9 +131,10 @@ async def test_relations(ops_test: OpsTest, charm):
             connection = None
             should_fail = database == DATABASE_DEFAULT_NAME
             try:
-                with psycopg2.connect(
-                    connection_string
-                ) as connection, connection.cursor() as cursor:
+                with (
+                    psycopg2.connect(connection_string) as connection,
+                    connection.cursor() as cursor,
+                ):
                     cursor.execute("SELECT data FROM test;")
                     data = cursor.fetchone()
                     assert data[0] == "some data"

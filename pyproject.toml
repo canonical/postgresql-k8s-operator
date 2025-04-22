@@ -7,13 +7,13 @@ requires-poetry = ">=2.0.0"
 
 [tool.poetry.dependencies]
 python = "^3.10"
-ops = "^2.18.1"
-boto3 = "^1.37.22"
+ops = "^2.20.0"
+boto3 = "^1.37.38"
 pgconnstr = "^1.0.1"
 requests = "^2.32.3"
-tenacity = "^9.0.0"
+tenacity = "^9.1.2"
 pydantic = "^1.10.21"
-jinja2 = "^3.1.5"
+jinja2 = "^3.1.6"
 lightkube = "^0.17.1"
 lightkube-models = "^1.28.1.4"
 psycopg2 = "^2.9.10"
@@ -40,7 +40,7 @@ jsonschema = "*"
 optional = true
 
 [tool.poetry.group.format.dependencies]
-ruff = "^0.9.6"
+ruff = "^0.11.6"
 
 [tool.poetry.group.lint]
 optional = true
@@ -52,23 +52,23 @@ codespell = "^2.4.1"
 optional = true
 
 [tool.poetry.group.unit.dependencies]
-coverage = {extras = ["toml"], version = "^7.6.12"}
-pytest = "^8.3.4"
+coverage = {extras = ["toml"], version = "^7.8.0"}
+pytest = "^8.3.5"
 
 [tool.poetry.group.integration]
 optional = true
 
 [tool.poetry.group.integration.dependencies]
 lightkube = "^0.17.1"
-pytest = "^8.3.4"
-pytest-operator = "^0.40.0"
+pytest = "^8.3.5"
+pytest-operator = "^0.42.0"
 allure-pytest-default-results = "^0.1.2"
 # renovate caret doesn't work: https://github.com/renovatebot/renovate/issues/26940
-juju = "<=3.6.1.0"
+juju = "<=3.6.1.1"
 psycopg2-binary = "^2.9.10"
 boto3 = "*"
-tenacity = "^9.0.0"
-allure-pytest = "^2.13.5"
+tenacity = "^9.1.2"
+allure-pytest = "^2.14.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -90,22 +90,17 @@ log_cli_level = "INFO"
 asyncio_mode = "auto"
 markers = ["juju3", "juju_secrets"]
 
-# Formatting tools configuration
-[tool.black]
-line-length = 99
-target-version = ["py38"]
-
 # Linting tools configuration
 [tool.ruff]
 # preview and explicit preview are enabled for CPY001
 preview = true
-target-version = "py38"
+target-version = "py310"
 src = ["src", "."]
 line-length = 99
 
 [tool.ruff.lint]
 explicit-preview-rules = true
-select = ["A", "E", "W", "F", "C", "N", "D", "I001", "B", "CPY", "RUF", "S", "SIM", "UP", "TC"]
+select = ["A", "E", "W", "F", "C", "N", "D", "I001", "B", "CPY001", "RUF", "S", "SIM", "UP", "TC"]
 extend-ignore = [
     "D203",
     "D204",

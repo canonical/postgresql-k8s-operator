@@ -344,10 +344,13 @@ async def execute_query_on_unit(
         The result of the query.
     """
     extra_connection_parameters = f" sslmode={sslmode}" if sslmode is not None else ""
-    with psycopg2.connect(
-        f"dbname='{database}' user='operator' host='{unit_address}'"
-        f"password='{password}' connect_timeout=10{extra_connection_parameters}"
-    ) as connection, connection.cursor() as cursor:
+    with (
+        psycopg2.connect(
+            f"dbname='{database}' user='operator' host='{unit_address}'"
+            f"password='{password}' connect_timeout=10{extra_connection_parameters}"
+        ) as connection,
+        connection.cursor() as cursor,
+    ):
         cursor.execute(query)
         output = list(itertools.chain(*cursor.fetchall()))
     return output
