@@ -4,7 +4,7 @@
 """Postgres db and db-admin relation hooks & helpers."""
 
 import logging
-from typing import Iterable
+from collections.abc import Iterable
 
 from charms.postgresql_k8s.v0.postgresql import (
     ACCESS_GROUP_RELATION,
