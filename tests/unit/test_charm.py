@@ -5,7 +5,7 @@ import json
 import logging
 from datetime import datetime
 from unittest import TestCase
-from unittest.mock import MagicMock, Mock, PropertyMock, patch, sentinel
+from unittest.mock import MagicMock, Mock, PropertyMock, call, patch, sentinel
 
 import psycopg2
 import pytest
@@ -1666,10 +1666,15 @@ def test_create_pgdata(harness):
     container.make_dir.assert_called_once_with(
         "/var/lib/postgresql/data/pgdata", permissions=488, user="postgres", group="postgres"
     )
-    container.exec.assert_called_once_with([
-        "chown",
-        "postgres:postgres",
-        "/var/lib/postgresql/data",
+    container.exec.assert_has_calls([
+        call(["chown", "postgres:postgres", "/var/lib/postgresql/archive"]),
+        call().wait(),
+        call(["chown", "postgres:postgres", "/var/lib/postgresql/data"]),
+        call().wait(),
+        call(["chown", "postgres:postgres", "/var/lib/postgresql/logs"]),
+        call().wait(),
+        call(["chown", "postgres:postgres", "/var/lib/postgresql/temp"]),
+        call().wait(),
     ])
 
     container.make_dir.reset_mock()
@@ -1677,10 +1682,15 @@ def test_create_pgdata(harness):
     container.exists.return_value = True
     harness.charm._create_pgdata(container)
     container.make_dir.assert_not_called()
-    container.exec.assert_called_once_with([
-        "chown",
-        "postgres:postgres",
-        "/var/lib/postgresql/data",
+    container.exec.assert_has_calls([
+        call(["chown", "postgres:postgres", "/var/lib/postgresql/archive"]),
+        call().wait(),
+        call(["chown", "postgres:postgres", "/var/lib/postgresql/data"]),
+        call().wait(),
+        call(["chown", "postgres:postgres", "/var/lib/postgresql/logs"]),
+        call().wait(),
+        call(["chown", "postgres:postgres", "/var/lib/postgresql/temp"]),
+        call().wait(),
     ])
 
 
