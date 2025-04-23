@@ -9,7 +9,6 @@ from unittest.mock import MagicMock, Mock, PropertyMock, patch, sentinel
 
 import psycopg2
 import pytest
-from charms.postgresql_k8s.v0.postgresql import PostgreSQLUpdateUserPasswordError
 from lightkube import ApiError
 from lightkube.resources.core_v1 import Endpoints, Pod, Service
 from ops.model import (
@@ -75,6 +74,7 @@ def test_on_leader_elected(harness):
         patch("charm.PostgresqlOperatorCharm._patch_pod_labels"),
         patch("charm.PostgresqlOperatorCharm._create_services") as _create_services,
         patch("charm.PostgreSQLUpgrade.idle", new_callable=PropertyMock) as _idle,
+        patch("charm.PostgresqlOperatorCharm.get_secret_from_id", return_value={}),
     ):
         rel_id = harness.model.get_relation(PEER).id
         # Check that a new password was generated on leader election and nothing is done
@@ -304,6 +304,8 @@ def test_on_config_changed(harness):
         patch(
             "charm.PostgresqlOperatorCharm.enable_disable_extensions"
         ) as _enable_disable_extensions,
+        patch("charm.PostgresqlOperatorCharm.get_secret_from_id", return_value={}),
+        patch("charm.PostgresqlOperatorCharm._update_admin_password", return_value=None),
     ):
         # Defers if cluster is not initialised
         mock_event = Mock()
@@ -351,94 +353,6 @@ def test_on_config_changed(harness):
         harness.charm._on_config_changed(mock_event)
         assert isinstance(harness.charm.unit.status, ActiveStatus)
         _enable_disable_extensions.assert_called_once_with()
-
-
-def test_on_get_password(harness):
-    harness.set_leader()
-    mock_event = MagicMock(params={})
-    harness.charm.set_secret("app", "operator-password", "test-password")
-    harness.charm.set_secret("app", "replication-password", "replication-test-password")
-
-    # Test providing an invalid username.
-    mock_event.params["username"] = "user"
-    harness.charm._on_get_password(mock_event)
-    mock_event.fail.assert_called_once()
-    mock_event.set_results.assert_not_called()
-
-    # Test without providing the username option.
-    mock_event.reset_mock()
-    del mock_event.params["username"]
-    harness.charm._on_get_password(mock_event)
-    mock_event.set_results.assert_called_once_with({"password": "test-password"})
-
-    # Also test providing the username option.
-    mock_event.reset_mock()
-    mock_event.params["username"] = "replication"
-    harness.charm._on_get_password(mock_event)
-    mock_event.set_results.assert_called_once_with({"password": "replication-test-password"})
-
-
-def test_on_set_password(harness):
-    with (
-        patch("charm.Patroni.reload_patroni_configuration") as _reload_patroni_configuration,
-        patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
-        patch("charm.PostgresqlOperatorCharm.set_secret") as _set_secret,
-        patch("charm.PostgresqlOperatorCharm.postgresql") as _postgresql,
-        patch("charm.Patroni.are_all_members_ready") as _are_all_members_ready,
-        patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
-    ):
-        # Create a mock event.
-        mock_event = MagicMock(params={})
-
-        # Set some values for the other mocks.
-        _are_all_members_ready.side_effect = [False, True, True, True, True]
-        _postgresql.update_user_password = PropertyMock(
-            side_effect=[PostgreSQLUpdateUserPasswordError, None, None, None]
-        )
-
-        # Test trying to set a password through a non leader unit.
-        harness.charm._on_set_password(mock_event)
-        mock_event.fail.assert_called_once()
-        _set_secret.assert_not_called()
-
-        # Test providing an invalid username.
-        harness.set_leader()
-        mock_event.reset_mock()
-        mock_event.params["username"] = "user"
-        harness.charm._on_set_password(mock_event)
-        mock_event.fail.assert_called_once()
-        _set_secret.assert_not_called()
-
-        # Test without providing the username option but without all cluster members ready.
-        mock_event.reset_mock()
-        del mock_event.params["username"]
-        harness.charm._on_set_password(mock_event)
-        mock_event.fail.assert_called_once()
-        _set_secret.assert_not_called()
-
-        # Test for an error updating when updating the user password in the database.
-        mock_event.reset_mock()
-        harness.charm._on_set_password(mock_event)
-        mock_event.fail.assert_called_once()
-        _set_secret.assert_not_called()
-
-        # Test without providing the username option.
-        harness.charm._on_set_password(mock_event)
-        assert _set_secret.call_args_list[0][0][1] == "operator-password"
-
-        # Also test providing the username option.
-        _set_secret.reset_mock()
-        mock_event.params["username"] = "replication"
-        harness.charm._on_set_password(mock_event)
-        assert _set_secret.call_args_list[0][0][1] == "replication-password"
-
-        # And test providing both the username and password options.
-        _set_secret.reset_mock()
-        mock_event.params["password"] = "replication-test-password"
-        harness.charm._on_set_password(mock_event)
-        _set_secret.assert_called_once_with(
-            "app", "replication-password", "replication-test-password"
-        )
 
 
 def test_on_get_primary(harness):
@@ -923,6 +837,7 @@ def test_postgresql_layer(harness):
         patch("charm.Patroni.reload_patroni_configuration"),
         patch("charm.PostgresqlOperatorCharm._patch_pod_labels"),
         patch("charm.PostgresqlOperatorCharm._create_services"),
+        patch("charm.PostgresqlOperatorCharm.get_secret_from_id", return_value={}),
     ):
         # Test with the already generated password.
         harness.set_leader()
@@ -1152,33 +1067,6 @@ def test_scope_obj(harness):
     assert harness.charm._scope_obj("app") == harness.charm.framework.model.app
     assert harness.charm._scope_obj("unit") == harness.charm.framework.model.unit
     assert harness.charm._scope_obj("test") is None
-
-
-def test_on_get_password_secrets(harness):
-    with patch("charm.PostgresqlOperatorCharm._on_leader_elected"):
-        # Create a mock event and set passwords in peer relation data.
-        harness.set_leader()
-        mock_event = MagicMock(params={})
-        harness.charm.set_secret("app", "operator-password", "test-password")
-        harness.charm.set_secret("app", "replication-password", "replication-test-password")
-
-        # Test providing an invalid username.
-        mock_event.params["username"] = "user"
-        harness.charm._on_get_password(mock_event)
-        mock_event.fail.assert_called_once()
-        mock_event.set_results.assert_not_called()
-
-        # Test without providing the username option.
-        mock_event.reset_mock()
-        del mock_event.params["username"]
-        harness.charm._on_get_password(mock_event)
-        mock_event.set_results.assert_called_once_with({"password": "test-password"})
-
-        # Also test providing the username option.
-        mock_event.reset_mock()
-        mock_event.params["username"] = "replication"
-        harness.charm._on_get_password(mock_event)
-        mock_event.set_results.assert_called_once_with({"password": "replication-test-password"})
 
 
 @pytest.mark.parametrize("scope", [("app"), ("unit")])

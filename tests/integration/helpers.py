@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 import asyncio
 import itertools
+import json
 import logging
 from datetime import datetime
 from multiprocessing import ProcessError
@@ -32,7 +33,7 @@ from tenacity import (
     wait_fixed,
 )
 
-from constants import DATABASE_DEFAULT_NAME
+from constants import DATABASE_DEFAULT_NAME, PEER, SYSTEM_USERS_PASSWORD_CONFIG
 
 CHARM_BASE = "ubuntu@22.04"
 CHARM_BASE_NOBLE = "ubuntu@24.04"
@@ -40,6 +41,11 @@ METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
 APPLICATION_NAME = "postgresql-test-app"
 STORAGE_PATH = METADATA["storage"]["pgdata"]["location"]
+
+
+class SecretNotFoundError(Exception):
+    """Raised when a secret is not found."""
+
 
 try:
     check_call(["kubectl", "version", "--client=true"])
@@ -445,28 +451,34 @@ async def get_leader_unit(ops_test: OpsTest, app: str, model: Model = None) -> U
     return leader_unit
 
 
-async def get_password_on_unit(
-    ops_test: OpsTest, username: str, unit: Unit, database_app_name: str = DATABASE_APP_NAME
-) -> str:
-    action = await unit.run_action("get-password", **{"username": username})
-    result = await action.wait()
-    return result.results["password"]
-
-
 async def get_password(
     ops_test: OpsTest,
     username: str = "operator",
     database_app_name: str = DATABASE_APP_NAME,
-    down_unit: str | None = None,
-    unit_name: str | None = None,
 ):
-    """Retrieve a user password using the action."""
-    for unit in ops_test.model.applications[database_app_name].units:
-        if unit.name == down_unit:
-            continue
+    """Retrieve a user password from the secret."""
+    secret = await get_secret_by_label(ops_test, label=f"{PEER}.{database_app_name}.app")
+    password = secret.get(f"{username}-password")
 
-        if pw := await get_password_on_unit(ops_test, username, unit, database_app_name):
-            return pw
+    return password
+
+
+async def get_secret_by_label(ops_test: OpsTest, label: str) -> dict[str, str]:
+    secrets_raw = await ops_test.juju("list-secrets")
+    secret_ids = [
+        secret_line.split()[0] for secret_line in secrets_raw[1].split("\n")[1:] if secret_line
+    ]
+
+    for secret_id in secret_ids:
+        secret_data_raw = await ops_test.juju(
+            "show-secret", "--format", "json", "--reveal", secret_id
+        )
+        secret_data = json.loads(secret_data_raw[1])
+
+        if label == secret_data[secret_id].get("label"):
+            return secret_data[secret_id]["content"]["Data"]
+
+    raise SecretNotFoundError(f"Secret with label {label} not found")
 
 
 @retry(
@@ -724,16 +736,28 @@ async def scale_application(
 
 
 async def set_password(
-    ops_test: OpsTest, unit_name: str, username: str = "operator", password: str | None = None
+    ops_test: OpsTest,
+    app_name: str = DATABASE_APP_NAME,
+    username: str = "operator",
+    password: str | None = None,
 ):
-    """Set a user password using the action."""
-    unit = ops_test.model.units.get(unit_name)
-    parameters = {"username": username}
-    if password is not None:
-        parameters["password"] = password
-    action = await unit.run_action("set-password", **parameters)
-    result = await action.wait()
-    return result.results
+    """Set a user password via secret."""
+    secret_name = "system_users_secret"
+
+    try:
+        secret_id = await ops_test.model.add_secret(
+            name=secret_name, data_args=[f"{username}={password}"]
+        )
+        await ops_test.model.grant_secret(secret_name=secret_name, application=app_name)
+
+        # update the application config to include the secret
+        await ops_test.model.applications[app_name].set_config({
+            SYSTEM_USERS_PASSWORD_CONFIG: secret_id
+        })
+    except Exception:
+        await ops_test.model.update_secret(
+            name=secret_name, data_args=[f"{username}={password}"], new_name=secret_name
+        )
 
 
 async def switchover(
