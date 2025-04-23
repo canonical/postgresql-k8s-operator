@@ -961,7 +961,9 @@ async def get_storage_id(ops_test: OpsTest, unit_name: str) -> str:
     https://github.com/juju/python-libjuju/issues/694
     """
     model_name = ops_test.model.info.name
-    proc = subprocess.check_output(f"juju storage --model={model_name}".split())
+    proc = subprocess.check_output(
+        f"juju storage --model={ops_test.controller_name}:{model_name}".split()
+    )
     proc = proc.decode("utf-8")
     for line in proc.splitlines():
         if "Storage" in line:
@@ -973,7 +975,7 @@ async def get_storage_id(ops_test: OpsTest, unit_name: str) -> str:
         if "detached" in line:
             continue
 
-        if line.split()[0] == unit_name:
+        if line.split()[0] == unit_name and line.split()[1].startswith("data"):
             return line.split()[1]
 
 
@@ -1057,7 +1059,11 @@ async def get_any_deatached_storage(ops_test: OpsTest) -> str:
 
     parsed_storages_list = json.loads(storages_list)
     for storage_name, storage in parsed_storages_list["storage"].items():
-        if (str(storage["status"]["current"]) == "detached") and (str(storage["life"] == "alive")):
+        if (
+            (storage_name.startswith("data"))
+            and (str(storage["status"]["current"]) == "detached")
+            and (str(storage["life"] == "alive"))
+        ):
             return storage_name
 
     raise Exception("failed to get deatached storage")
