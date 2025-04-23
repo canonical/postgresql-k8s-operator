@@ -194,7 +194,9 @@ class PostgreSQL:
         try:
             with self._connect_to_database() as connection, connection.cursor() as cursor:
                 for group in ACCESS_GROUPS:
-                    cursor.execute(SQL("SELECT TRUE FROM pg_roles WHERE rolname={};").format(Literal(group)))
+                    cursor.execute(
+                        SQL("SELECT TRUE FROM pg_roles WHERE rolname={};").format(Literal(group))
+                    )
                     if cursor.fetchone() is not None:
                         continue
                     cursor.execute(
@@ -748,8 +750,12 @@ END; $$;"""
         """Set up postgres database with the right permissions."""
         connection = None
         try:
-            with self._connect_to_database(database="template1") as connection, connection.cursor() as cursor:
-                cursor.execute("SELECT TRUE FROM pg_event_trigger WHERE evtname = 'update_pg_hba_on_create_schema';")
+            with self._connect_to_database(
+                database="template1"
+            ) as connection, connection.cursor() as cursor:
+                cursor.execute(
+                    "SELECT TRUE FROM pg_event_trigger WHERE evtname = 'update_pg_hba_on_create_schema';"
+                )
                 if cursor.fetchone() is None:
                     cursor.execute("""
 CREATE OR REPLACE FUNCTION update_pg_hba()

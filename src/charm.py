@@ -1053,7 +1053,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self.unit.status = ActiveStatus(
                     f"{'Standby' if self.is_standby_leader else 'Primary'}{danger_state}"
                 )
-                logger.warning(f"self.relations_user_databases_map: {self.relations_user_databases_map}")
+                logger.warning(
+                    f"self.relations_user_databases_map: {self.relations_user_databases_map}"
+                )
             elif self._patroni.member_started:
                 self.unit.status = ActiveStatus()
         except (RetryError, RequestsConnectionError) as e:
@@ -2068,7 +2070,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             stanza=self.app_peer_data.get("stanza", self.unit_peer_data.get("stanza")),
             restore_stanza=self.app_peer_data.get("restore-stanza"),
             parameters=postgresql_parameters,
-            user_databases_map=self.relations_user_databases_map
+            user_databases_map=self.relations_user_databases_map,
         )
 
         if not self._is_workload_running:
@@ -2285,11 +2287,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @property
     def relations_user_databases_map(self) -> dict:
         """Returns a user->databases map for all relations."""
-        if not self.is_cluster_initialised or self.postgresql.list_access_groups() != set(ACCESS_GROUPS):
+        if not self.is_cluster_initialised or self.postgresql.list_access_groups() != set(
+            ACCESS_GROUPS
+        ):
             return {USER: "all", REPLICATION_USER: "all", REWIND_USER: "all"}
         user_database_map = {}
         for user in self.postgresql.list_users(group="relation_access"):
-            user_database_map[user] = ",".join(self.postgresql.list_accessible_databases_for_user(user))
+            user_database_map[user] = ",".join(
+                self.postgresql.list_accessible_databases_for_user(user)
+            )
         return user_database_map
 
     def override_patroni_on_failure_condition(
