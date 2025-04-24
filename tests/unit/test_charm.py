@@ -376,8 +376,7 @@ def test_on_get_password(harness):
     mock_event.reset_mock()
     del mock_event.params["username"]
     harness.charm._on_get_password(mock_event)
-    mock_event.fail.assert_called_once()
-    mock_event.set_results.assert_not_called()
+    mock_event.set_results.assert_called_once_with({"password": "test-password"})
 
     # Also test providing the username option.
     mock_event.reset_mock()
@@ -1217,7 +1216,7 @@ def test_on_get_password_secrets(harness):
         mock_event.reset_mock()
         del mock_event.params["username"]
         harness.charm._on_get_password(mock_event)
-        mock_event.fail.assert_called_once_with("The action requires a username")
+        mock_event.set_results.assert_called_once_with({"password": "test-password"})
 
         # Also test providing the username option.
         mock_event.reset_mock()
