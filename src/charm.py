@@ -1753,7 +1753,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         ldap_base_dn = ldap_params["ldapbasedn"]
         ldap_bind_username = ldap_params["ldapbinddn"]
-        ldap_bing_password = ldap_params["ldapbindpasswd"]
+        ldap_bind_password = ldap_params["ldapbindpasswd"]
         ldap_group_mappings = self.postgresql.build_postgresql_group_map(self.config.ldap_map)
 
         return {
@@ -1766,7 +1766,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 "LDAP_PORT": ldap_port,
                 "LDAP_BASE_DN": ldap_base_dn,
                 "LDAP_BIND_USERNAME": ldap_bind_username,
-                "LDAP_BIND_PASSWORD": ldap_bing_password,
+                "LDAP_BIND_PASSWORD": ldap_bind_password,
                 "LDAP_GROUP_IDENTITY": json.dumps(ACCESS_GROUP_IDENTITY),
                 "LDAP_GROUP_MAPPINGS": json.dumps(ldap_group_mappings),
                 "POSTGRES_HOST": "127.0.0.1",
@@ -1984,7 +1984,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         if not self.is_primary and sync_service[0].is_running():
             logger.debug("Stopping LDAP sync service. It must only run in the primary")
-            container.stop(self.pg_ldap_sync_service)
+            container.stop(self.ldap_sync_service)
 
         if self.is_primary and not self.is_ldap_enabled:
             logger.debug("Stopping LDAP sync service")
