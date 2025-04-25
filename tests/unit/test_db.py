@@ -91,6 +91,8 @@ def request_database(_harness):
 
 def test_on_relation_changed(harness):
     with (
+        patch("charm.PostgresqlOperatorCharm.update_config"),
+        patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock,
         patch("charm.DbProvides.set_up_relation") as _set_up_relation,
         patch.object(EventBase, "defer") as _defer,
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
@@ -98,6 +100,7 @@ def test_on_relation_changed(harness):
         peer_rel_id = harness.model.get_relation(PEER).id
         # Set some side effects to test multiple situations.
         _member_started.side_effect = [False, False, True, True]
+        postgresql_mock.list_users.return_value = {"relation_id_0"}
 
         # Request a database before the cluster is initialised.
         request_database(harness)
@@ -186,6 +189,7 @@ def test_get_extensions(harness):
 
 def test_set_up_relation(harness):
     with (
+        patch("charm.PostgresqlOperatorCharm.update_config"),
         patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock,
         patch("relations.db.DbProvides._update_unit_status") as _update_unit_status,
         patch("relations.db.new_password", return_value="test-password") as _new_password,
@@ -408,9 +412,12 @@ def test_on_relation_departed(harness):
 
 
 def test_on_relation_broken(harness):
-    with patch(
-        "charm.Patroni.member_started", new_callable=PropertyMock(return_value=True)
-    ) as _member_started:
+    with (
+        patch("charm.PostgresqlOperatorCharm.update_config"),
+        patch(
+            "charm.Patroni.member_started", new_callable=PropertyMock(return_value=True)
+        ) as _member_started,
+    ):
         rel_id = harness.model.get_relation(RELATION_NAME).id
         peer_rel_id = harness.model.get_relation(PEER).id
         with harness.hooks_disabled():
@@ -435,6 +442,7 @@ def test_on_relation_broken(harness):
 
 def test_on_relation_broken_extensions_unblock(harness):
     with (
+        patch("charm.PostgresqlOperatorCharm.update_config"),
         patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock,
         patch(
             "charm.PostgresqlOperatorCharm.primary_endpoint",
@@ -467,6 +475,7 @@ def test_on_relation_broken_extensions_unblock(harness):
 
 def test_on_relation_broken_extensions_keep_block(harness):
     with (
+        patch("charm.PostgresqlOperatorCharm.update_config"),
         patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock,
         patch(
             "charm.PostgresqlOperatorCharm.primary_endpoint",

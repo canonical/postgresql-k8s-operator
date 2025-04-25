@@ -38,19 +38,34 @@ def harness():
     harness.cleanup()
 
 
-def test_create_access_groups(harness):
+@pytest.mark.parametrize("users_exist", [True, False])
+def test_create_access_groups(harness, users_exist):
     with patch(
         "charms.postgresql_k8s.v0.postgresql.PostgreSQL._connect_to_database"
     ) as _connect_to_database:
         execute = _connect_to_database.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value.execute
+        _connect_to_database.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value.fetchone.return_value = (
+            True if users_exist else None
+        )
         harness.charm.postgresql.create_access_groups()
-
-        execute.assert_has_calls([
+        calls = [
             *(
-                call(SQL("CREATE ROLE {} NOLOGIN;").format(Identifier(group)))
+                call(
+                    Composed([
+                        SQL("SELECT TRUE FROM pg_roles WHERE rolname="),
+                        Literal(group),
+                        SQL(";"),
+                    ])
+                )
                 for group in ACCESS_GROUPS
-            ),
-        ])
+            )
+        ]
+        if not users_exist:
+            index = 1
+            for group in ACCESS_GROUPS:
+                calls.insert(index, call(SQL("CREATE ROLE {} NOLOGIN;").format(Identifier(group))))
+                index += 2
+        execute.assert_has_calls(calls)
 
 
 def test_create_database(harness):
@@ -208,7 +223,9 @@ def test_grant_relation_access_group_memberships(harness):
         harness.charm.postgresql.grant_relation_access_group_memberships()
 
         execute.assert_has_calls([
-            call("SELECT usename FROM pg_catalog.pg_user WHERE usename LIKE 'relation_id_%';"),
+            call(
+                "SELECT usename FROM pg_catalog.pg_user WHERE usename LIKE 'relation_id_%' OR usename LIKE 'pgbouncer_auth_relation_id_%' OR usename LIKE '%_user_%_%';"
+            ),
         ])
 
 
