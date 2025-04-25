@@ -1264,7 +1264,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             event.fail("The action can be run only on leader unit")
             return
 
-        username = event.params.get("username", USER)
+        if not (username := event.params.get("username")):
+            event.fail("The action requires a username")
+            return
         if username not in SYSTEM_USERS and self.is_ldap_enabled:
             event.fail("The action can be run only for system users when LDAP is enabled")
             return
