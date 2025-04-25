@@ -99,7 +99,7 @@ def test_on_relation_changed(harness):
     ):
         peer_rel_id = harness.model.get_relation(PEER).id
         # Set some side effects to test multiple situations.
-        _member_started.side_effect = [False, False, True, True]
+        _member_started.side_effect = [False, False, True, True, True, True]
         postgresql_mock.list_users.return_value = {"relation_id_0"}
 
         # Request a database before the cluster is initialised.
