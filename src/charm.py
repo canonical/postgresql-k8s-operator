@@ -1053,9 +1053,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self.unit.status = ActiveStatus(
                     f"{'Standby' if self.is_standby_leader else 'Primary'}{danger_state}"
                 )
-                logger.warning(
-                    f"self.relations_user_databases_map: {self.relations_user_databases_map}"
-                )
             elif self._patroni.member_started:
                 self.unit.status = ActiveStatus()
         except (RetryError, RequestsConnectionError) as e:
@@ -2289,14 +2286,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @property
     def relations_user_databases_map(self) -> dict:
         """Returns a user->databases map for all relations."""
-        if not self.is_cluster_initialised or self.postgresql.list_access_groups() != set(
-            ACCESS_GROUPS
+        if (
+            not self.is_cluster_initialised
+            or not self._patroni.member_started
+            or self.postgresql.list_access_groups(current_host=True) != set(ACCESS_GROUPS)
         ):
             return {USER: "all", REPLICATION_USER: "all", REWIND_USER: "all"}
         user_database_map = {}
-        for user in self.postgresql.list_users(group="relation_access"):
+        for user in self.postgresql.list_users(group="relation_access", current_host=True):
             user_database_map[user] = ",".join(
-                self.postgresql.list_accessible_databases_for_user(user)
+                self.postgresql.list_accessible_databases_for_user(user, current_host=True)
             )
         return user_database_map
 

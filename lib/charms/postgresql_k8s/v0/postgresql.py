@@ -631,15 +631,22 @@ END; $$;"""
             # Connection errors happen when PostgreSQL has not started yet.
             return False
 
-    def list_access_groups(self) -> Set[str]:
+    def list_access_groups(self, current_host=False) -> Set[str]:
         """Returns the list of PostgreSQL database access groups.
+
+        Args:
+            current_host: whether to check the current host
+                instead of the primary host.
 
         Returns:
             List of PostgreSQL database access groups.
         """
         connection = None
+        host = self.current_host if current_host else None
         try:
-            with self._connect_to_database() as connection, connection.cursor() as cursor:
+            with self._connect_to_database(
+                database_host=host
+            ) as connection, connection.cursor() as cursor:
                 cursor.execute(
                     "SELECT groname FROM pg_catalog.pg_group WHERE groname LIKE '%_access';"
                 )
@@ -652,19 +659,24 @@ END; $$;"""
             if connection is not None:
                 connection.close()
 
-    def list_accessible_databases_for_user(self, user: str) -> Set[str]:
+    def list_accessible_databases_for_user(self, user: str, current_host=False) -> Set[str]:
         """Returns the list of accessible databases for a specific user.
 
         Args:
             user: the user to check.
+            current_host: whether to check the current host
+                instead of the primary host.
 
         Returns:
             List of accessible database (the ones where
                 the user has the CONNECT privilege).
         """
         connection = None
+        host = self.current_host if current_host else None
         try:
-            with self._connect_to_database() as connection, connection.cursor() as cursor:
+            with self._connect_to_database(
+                database_host=host
+            ) as connection, connection.cursor() as cursor:
                 cursor.execute(
                     SQL(
                         "SELECT TRUE FROM pg_catalog.pg_user WHERE usename = {} AND usesuper;"
@@ -686,18 +698,23 @@ END; $$;"""
             if connection is not None:
                 connection.close()
 
-    def list_users(self, group: Optional[str] = None) -> Set[str]:
+    def list_users(self, group: Optional[str] = None, current_host=False) -> Set[str]:
         """Returns the list of PostgreSQL database users.
 
         Args:
             group: optional group to filter the users.
+            current_host: whether to check the current host
+                instead of the primary host.
 
         Returns:
             List of PostgreSQL database users.
         """
         connection = None
+        host = self.current_host if current_host else None
         try:
-            with self._connect_to_database() as connection, connection.cursor() as cursor:
+            with self._connect_to_database(
+                database_host=host
+            ) as connection, connection.cursor() as cursor:
                 if group:
                     query = SQL(
                         "SELECT usename FROM (SELECT UNNEST(grolist) AS user_id FROM pg_catalog.pg_group WHERE groname = {}) AS g JOIN pg_catalog.pg_user AS u ON g.user_id = u.usesysid;"
