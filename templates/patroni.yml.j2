@@ -133,8 +133,8 @@ postgresql:
   - local all backup peer map=operator
   - local all monitoring password
   {%- if not connectivity %}
-  - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 reject
   - {{ 'hostssl' if enable_tls else 'host' }} all all {{ endpoint }}.{{ namespace }}.svc.cluster.local md5
+  - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 reject
   {%- elif enable_ldap %}
   - {{ 'hostssl' if enable_tls else 'host' }} all +identity_access 0.0.0.0/0 ldap {{ ldap_parameters }}
   - {{ 'hostssl' if enable_tls else 'host' }} all +internal_access 0.0.0.0/0 md5

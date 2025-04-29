@@ -2289,13 +2289,18 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if (
             not self.is_cluster_initialised
             or not self._patroni.member_started
-            or self.postgresql.list_access_groups(current_host=True) != set(ACCESS_GROUPS)
+            or self.postgresql.list_access_groups(current_host=self.is_connectivity_enabled)
+            != set(ACCESS_GROUPS)
         ):
             return {USER: "all", REPLICATION_USER: "all", REWIND_USER: "all"}
         user_database_map = {}
-        for user in self.postgresql.list_users(group="relation_access", current_host=True):
+        for user in self.postgresql.list_users(
+            group="relation_access", current_host=self.is_connectivity_enabled
+        ):
             user_database_map[user] = ",".join(
-                self.postgresql.list_accessible_databases_for_user(user, current_host=True)
+                self.postgresql.list_accessible_databases_for_user(
+                    user, current_host=self.is_connectivity_enabled
+                )
             )
         return user_database_map
 
