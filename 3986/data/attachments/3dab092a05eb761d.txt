@@ -1,0 +1,128 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/focal/indico-247
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/focal/redis-k8s-7
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/focal/redis-k8s-7
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for database availability
+[32mINFO    [0m integration.new_relations.test_new_relations_2:test_new_relations_2.py:171 Verifying that the charm doesn't block when the extensions are enabled
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: 
+  database/1 [executing] active: 
+  database/2 [executing] active: Primary
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.5    unsupported  01:43:05Z
+
+App                  Version               Status   Scale  Charm           Channel        Rev  Address         Exposed  Message
+database             14.17                 active       3  postgresql-k8s                   0  10.152.183.103  no       
+indico                                     waiting      1  indico          latest/edge    247  10.152.183.219  no       Waiting for database availability
+other-discourse-k8s  3.3.0                 active       1  discourse-k8s   latest/stable  183  10.152.183.52   no       
+redis-broker         ubuntu/redis@691f315  active       1  redis-k8s       latest/stable    7                  no       
+redis-cache          ubuntu/redis@691f315  active       1  redis-k8s       latest/stable    7                  no       
+redis-k8s            7.2.5                 active       1  redis-k8s       latest/edge     41  10.152.183.59   no       
+
+Unit                    Workload  Agent  Address       Ports     Message
+database/0              error     idle   10.1.132.139            hook failed: "update-status"
+database/1              active    idle   10.1.132.141            
+database/2*             error     idle   10.1.132.140            hook failed: "secret-changed"
+indico/0*               waiting   idle   10.1.132.148            Waiting for database availability
+other-discourse-k8s/0*  active    idle   10.1.132.145            
+redis-broker/0*         active    idle   10.1.132.150  6379/TCP  
+redis-cache/0*          active    idle   10.1.132.152  6379/TCP  
+redis-k8s/0*            active    idle   10.1.132.144            
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+unit-database-1: 01:33:55 ERROR unit.database/1.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-redis-k8s-0: 01:35:56 ERROR unit.redis-k8s/0.juju-log redis-peers:3: Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:35:56 ERROR unit.redis-k8s/0.juju-log redis-peers:3: Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:35:56 ERROR unit.redis-k8s/0.juju-log redis-peers:3: Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-database-1: 01:42:02 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-other-discourse-k8s-0: 01:42:02 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-2: 01:42:02 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 01:42:24 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-redis-k8s-0: 01:42:25 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 01:43:04 ERROR unit.database/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3407, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-database-0/secret-get', '--label', 'database-peers.database.app', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-0/charm/src/charm.py", line 2476, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 347, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 565, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 550, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 502, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 537, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 348, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 907, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 997, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1109, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-database-0/charm/src/charm.py", line 1534, in _on_update_status
+    if self._handle_processes_failures():
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1109, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-database-0/charm/src/charm.py", line 1616, in _handle_processes_failures
+    if not self._patroni.member_started and self._patroni.is_database_running:
+  File "/var/lib/juju/agents/unit-database-0/charm/src/charm.py", line 1660, in _patroni
+    self.get_secret(APP_SCOPE, USER_PASSWORD_KEY),
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1109, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-database-0/charm/src/charm.py", line 365, in get_secret
+    if result := self.peer_relation_data(scope).fetch_my_relation_field(peers.id, key):
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1623, in fetch_my_relation_field
+    if relation_data := self.fetch_my_relation_data([relation_id], [field], relation_name):
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1612, in fetch_my_relation_data
+    data[relation.id] = self._fetch_my_specific_relation_data(relation, fields)
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 537, in wrapper
+    return f(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2380, in _fetch_my_specific_relation_data
+    self.component, self.local_secret_fields, relation, fields
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2003, in local_secret_fields
+    self.static_secret_fields if self.static_secret_fields else self.current_secret_fields
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2026, in current_secret_fields
+    if content := self._get_group_secret_contents(relation, group):
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2367, in _get_group_secret_contents
+    result = super()._get_group_secret_contents(relation, group, secret_fields)
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1343, in _get_group_secret_contents
+    if (secret := self._get_relation_secret(relation.id, group)) and (
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 509, in wrapper
+    return f(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2354, in _get_relation_secret
+    return self.secrets.get(
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 814, in get
+    if secret.meta:
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 644, in meta
+    self._secret_meta = self._model.get_secret(label=self.label)
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 313, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3793, in secret_get
+    result = self._run('secret-get', *args, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3409, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR cannot ensure service account "unit-database-0": rpc error: code = Unknown desc = exec (try: 500): database is locked
+
+unit-database-0: 01:43:04 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
