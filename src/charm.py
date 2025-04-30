@@ -1478,6 +1478,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self.enable_disable_extensions()
                 return True
 
+            logger.error("calling self.fix_leader_annotation()")
+            self.fix_leader_annotation()
+
             logger.debug("on_update_status early exit: Unit is in Blocked/Waiting status")
             return False
         return True

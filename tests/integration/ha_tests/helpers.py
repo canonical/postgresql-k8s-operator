@@ -21,6 +21,7 @@ from kubernetes import config
 from kubernetes.client.api import core_v1_api
 from kubernetes.stream import stream
 from lightkube.core.client import Client, GlobalResource
+from lightkube.core.exceptions import ApiError
 from lightkube.resources.core_v1 import (
     PersistentVolume,
     PersistentVolumeClaim,
@@ -954,12 +955,13 @@ async def clear_continuous_writes(ops_test: OpsTest) -> None:
     action = await action.wait()
 
 
-async def get_storage_id(ops_test: OpsTest, unit_name: str) -> str:
-    """Retrieves  storage id associated with provided unit.
+async def get_storage_ids(ops_test: OpsTest, unit_name: str) -> list[str]:
+    """Retrieves storage ids associated with provided unit.
 
     Note: this function exists as a temporary solution until this issue is ported to libjuju 2:
     https://github.com/juju/python-libjuju/issues/694
     """
+    storage_ids = []
     model_name = ops_test.model.info.name
     proc = subprocess.check_output(
         f"juju storage --model={ops_test.controller_name}:{model_name}".split()
@@ -976,7 +978,8 @@ async def get_storage_id(ops_test: OpsTest, unit_name: str) -> str:
             continue
 
         if line.split()[0] == unit_name and line.split()[1].startswith("data"):
-            return line.split()[1]
+            storage_ids.append(line.split()[1])
+    return storage_ids
 
 
 def is_pods_exists(ops_test: OpsTest, unit_name: str) -> bool:
@@ -1084,39 +1087,49 @@ async def check_system_id_mismatch(ops_test: OpsTest, unit_name: str) -> bool:
 def delete_pvc(ops_test: OpsTest, pvc: GlobalResource):
     """Deletes PersistentVolumeClaim."""
     client = Client(namespace=ops_test.model.name)
-    client.delete(PersistentVolumeClaim, namespace=ops_test.model.name, name=pvc.metadata.name)
+    try:
+        client.delete(PersistentVolumeClaim, namespace=ops_test.model.name, name=pvc.metadata.name)
+    except ApiError as e:
+        logger.warning(f"failed to delete pvc {pvc.metadata.name}: {e}")
+        pass
 
 
-def get_pvc(ops_test: OpsTest, unit_name: str):
-    """Get PersistentVolumeClaim for unit."""
+def get_pvcs(ops_test: OpsTest, unit_name: str):
+    """Get PersistentVolumeClaims for unit."""
+    pvcs = []
     client = Client(namespace=ops_test.model.name)
     pvc_list = client.list(PersistentVolumeClaim, namespace=ops_test.model.name)
     for pvc in pvc_list:
         if unit_name.replace("/", "-") in pvc.metadata.name:
-            return pvc
-    return None
+            pvcs.append(pvc)
+    return pvcs
 
 
-def get_pv(ops_test: OpsTest, unit_name: str):
-    """Get PersistentVolume for unit."""
+def get_pvs(ops_test: OpsTest, unit_name: str):
+    """Get PersistentVolumes for unit."""
+    pvs = []
     client = Client(namespace=ops_test.model.name)
     pv_list = client.list(PersistentVolume, namespace=ops_test.model.name)
     for pv in pv_list:
         if unit_name.replace("/", "-") in str(pv.spec.hostPath.path):
-            return pv
-    return None
+            pvs.append(pv)
+    return pvs
 
 
-def change_pv_reclaim_policy(ops_test: OpsTest, pvc_config: PersistentVolumeClaim, policy: str):
+def change_pvs_reclaim_policy(ops_test: OpsTest, pvs_configs: list[PersistentVolume], policy: str):
     """Change PersistentVolume reclaim policy config value."""
     client = Client(namespace=ops_test.model.name)
-    res = client.patch(
-        PersistentVolume,
-        pvc_config.metadata.name,
-        {"spec": {"persistentVolumeReclaimPolicy": f"{policy}"}},
-        namespace=ops_test.model.name,
-    )
-    return res
+    results = []
+    for pv_config in pvs_configs:
+        results.append(
+            client.patch(
+                PersistentVolume,
+                pv_config.metadata.name,
+                {"spec": {"persistentVolumeReclaimPolicy": f"{policy}"}},
+                namespace=ops_test.model.name,
+            )
+        )
+    return results
 
 
 def remove_pv_claimref(ops_test: OpsTest, pv_config: PersistentVolume):

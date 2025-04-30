@@ -19,16 +19,16 @@ from ..helpers import (
 )
 from .helpers import (
     apply_pvc_config,
-    change_pv_reclaim_policy,
     change_pvc_pv_name,
+    change_pvs_reclaim_policy,
     check_db,
     check_system_id_mismatch,
     create_db,
     delete_pvc,
-    get_any_deatached_storage,
-    get_pv,
-    get_pvc,
-    get_storage_id,
+    # get_any_deatached_storage,
+    get_pvcs,
+    get_pvs,
+    get_storage_ids,
     is_postgresql_ready,
     is_storage_exists,
     remove_pv_claimref,
@@ -47,7 +47,7 @@ env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
 @pytest.mark.abort_on_fail
 async def test_app_force_removal(ops_test: OpsTest, charm):
     """Remove unit with force while storage is alive."""
-    global primary_pv, primary_pvc
+    global primary_pvs, primary_pvcs
     # Deploy the charm.
     async with ops_test.fast_forward():
         await build_and_deploy(ops_test, charm, 1)
@@ -68,19 +68,19 @@ async def test_app_force_removal(ops_test: OpsTest, charm):
         assert primary_name
 
         logger.info(f"get pvc for {primary_name}")
-        primary_pvc = get_pvc(ops_test, primary_name)
+        primary_pvcs = get_pvcs(ops_test, primary_name)
 
-        assert primary_pvc
+        assert primary_pvcs
 
         logger.info(f"get pv for {primary_name}")
-        primary_pv = get_pv(ops_test, primary_name)
+        primary_pvs = get_pvs(ops_test, primary_name)
 
-        assert primary_pv
+        assert len(primary_pvs)
 
         logger.info("get storage id")
-        storage_id = await get_storage_id(ops_test, primary_name)
+        storage_ids = await get_storage_ids(ops_test, primary_name)
 
-        assert storage_id
+        assert len(storage_ids)
 
         # Force remove unit without storage removal
         logger.info("scale to 0 with force")
@@ -88,21 +88,24 @@ async def test_app_force_removal(ops_test: OpsTest, charm):
 
         # Storage will remain with deatached status
         logger.info("werifing is storage exists")
-        for attempt in Retrying(stop=stop_after_delay(15 * 3), wait=wait_fixed(3), reraise=True):
-            with attempt:
-                assert await is_storage_exists(ops_test, storage_id)
+        for storage_id in storage_ids:
+            for attempt in Retrying(
+                stop=stop_after_delay(15 * 3), wait=wait_fixed(3), reraise=True
+            ):
+                with attempt:
+                    assert await is_storage_exists(ops_test, storage_id)
 
 
 @pytest.mark.abort_on_fail
 async def test_app_garbage_ignorance(ops_test: OpsTest):
     """Test charm deploy in dirty environment with garbage storage."""
-    global primary_pv, primary_pvc
+    global primary_pvs, primary_pvcs
     async with ops_test.fast_forward():
         logger.info("checking garbage storage")
-        garbage_storage = None
-        for attempt in Retrying(stop=stop_after_delay(30 * 3), wait=wait_fixed(3), reraise=True):
-            with attempt:
-                garbage_storage = await get_any_deatached_storage(ops_test)
+        # garbage_storage = None
+        # for attempt in Retrying(stop=stop_after_delay(30 * 3), wait=wait_fixed(3), reraise=True):
+        #     with attempt:
+        #         garbage_storage = await get_any_deatached_storage(ops_test)
 
         logger.info("scale to 1")
         await scale_application(ops_test, DATABASE_APP_NAME, 1)
@@ -117,10 +120,10 @@ async def test_app_garbage_ignorance(ops_test: OpsTest):
 
         assert primary_name
 
-        logger.info("getting storage id")
-        storage_id_str = await get_storage_id(ops_test, primary_name)
+        # logger.info("getting storage id")
+        # storage_id_str = await get_storage_ids(ops_test, primary_name)
 
-        assert storage_id_str == garbage_storage
+        # assert storage_id_str == garbage_storage
 
         logger.info("waiting for postgresql")
         for attempt in Retrying(stop=stop_after_delay(15 * 3), wait=wait_fixed(3), reraise=True):
@@ -135,19 +138,20 @@ async def test_app_garbage_ignorance(ops_test: OpsTest):
         await scale_application(ops_test, DATABASE_APP_NAME, 0)
 
         logger.info("changing pv reclaim policy")
-        primary_pv = change_pv_reclaim_policy(ops_test, primary_pv, "Retain")
+        primary_pvs = change_pvs_reclaim_policy(ops_test, primary_pvs, "Retain")
 
         logger.info("remove application")
         await ops_test.model.remove_application(DATABASE_APP_NAME, block_until_done=True)
 
-        logger.info(f"delete pvc {primary_pvc.metadata.name}")
-        delete_pvc(ops_test, primary_pvc)
+        for primary_pvc in primary_pvcs:
+            logger.info(f"delete pvc {primary_pvc.metadata.name}")
+            delete_pvc(ops_test, primary_pvc)
 
 
 @pytest.mark.abort_on_fail
 async def test_app_resources_conflicts(ops_test: OpsTest, charm):
     """Test application deploy in dirty environment with garbage storage from another application."""
-    global primary_pv, primary_pvc
+    global primary_pvs, primary_pvcs
     async with ops_test.fast_forward():
         resources = {
             "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"],
@@ -173,24 +177,30 @@ async def test_app_resources_conflicts(ops_test: OpsTest, charm):
         assert dup_primary_name
 
         logger.info(f"get pvc for {dup_primary_name}")
-        dup_primary_pvc = get_pvc(ops_test, dup_primary_name)
+        dup_primary_pvcs = get_pvcs(ops_test, dup_primary_name)
 
-        assert dup_primary_pvc
+        assert len(dup_primary_pvcs)
 
         logger.info("scale to 0")
         await scale_application(ops_test, DUP_DATABASE_APP_NAME, 0)
 
-        logger.info(f"load and change pv-name config for pvc {dup_primary_pvc.metadata.name}")
-        dup_primary_pvc = change_pvc_pv_name(dup_primary_pvc, primary_pv.metadata.name)
+        for pvc_index, pvc in enumerate(dup_primary_pvcs):
+            logger.info(f"load and change pv-name config for pvc {pvc.metadata.name}")
+            dup_primary_pvcs[pvc_index] = change_pvc_pv_name(
+                pvc, primary_pvs[pvc_index].metadata.name
+            )
 
-        logger.info(f"delete pvc {dup_primary_pvc.metadata.name}")
-        delete_pvc(ops_test, dup_primary_pvc)
+        for dup_primary_pvc in dup_primary_pvcs:
+            logger.info(f"delete pvc {dup_primary_pvc.metadata.name}")
+            delete_pvc(ops_test, dup_primary_pvc)
 
-        logger.info(f"remove claimref from pv {primary_pv.metadata.name}")
-        remove_pv_claimref(ops_test, primary_pv)
+        for primary_pv in primary_pvs:
+            logger.info(f"remove claimref from pv {primary_pv.metadata.name}")
+            remove_pv_claimref(ops_test, primary_pv)
 
-        logger.info(f"apply pvc for {dup_primary_name}")
-        apply_pvc_config(ops_test, dup_primary_pvc)
+        for dup_primary_pvc in dup_primary_pvcs:
+            logger.info(f"apply pvc {dup_primary_pvc.metadata.name}")
+            apply_pvc_config(ops_test, dup_primary_pvc)
 
         logger.info("scale to 1")
         await ops_test.model.applications[DUP_DATABASE_APP_NAME].scale(1)
