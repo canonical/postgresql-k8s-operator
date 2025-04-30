@@ -27,6 +27,8 @@ containers:
         location: /var/lib/postgresql/data
       - storage: logs
         location: /var/lib/postgresql/logs
+      - storage: os
+        location: /usr/lib/postgresql/16/bin/
       - storage: temp
         location: /var/lib/postgresql/temp
 
@@ -95,6 +97,9 @@ storage:
   logs:
     type: filesystem
     location: /var/lib/postgresql/logs
+  os:
+    type: filesystem
+    location: /usr/lib/postgresql/16/bin/
   temp:
     type: filesystem
     location: /var/logs/postgresql/temp
