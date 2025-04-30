@@ -93,7 +93,7 @@ def test_create_database(harness):
                     Identifier(database),
                     SQL(" TO "),
                     Identifier(user),
-                    Literal(""),
+                    SQL(""),
                     SQL(";"),
                 ])
             ),
@@ -103,7 +103,7 @@ def test_create_database(harness):
                     Identifier(database),
                     SQL(" TO "),
                     Identifier(PERMISSIONS_GROUP_ADMIN),
-                    Literal("WITH GRANT OPTION"),
+                    SQL("WITH GRANT OPTION"),
                     SQL(";"),
                 ])
             ),
@@ -113,7 +113,7 @@ def test_create_database(harness):
                     Identifier(database),
                     SQL(" TO "),
                     Identifier(BACKUP_USER),
-                    Literal(""),
+                    SQL(""),
                     SQL(";"),
                 ])
             ),
@@ -123,7 +123,7 @@ def test_create_database(harness):
                     Identifier(database),
                     SQL(" TO "),
                     Identifier(REPLICATION_USER),
-                    Literal(""),
+                    SQL(""),
                     SQL(";"),
                 ])
             ),
@@ -133,7 +133,7 @@ def test_create_database(harness):
                     Identifier(database),
                     SQL(" TO "),
                     Identifier(REWIND_USER),
-                    Literal(""),
+                    SQL(""),
                     SQL(";"),
                 ])
             ),
@@ -143,7 +143,7 @@ def test_create_database(harness):
                     Identifier(database),
                     SQL(" TO "),
                     Identifier(USER),
-                    Literal(""),
+                    SQL(""),
                     SQL(";"),
                 ])
             ),
@@ -153,7 +153,7 @@ def test_create_database(harness):
                     Identifier(database),
                     SQL(" TO "),
                     Identifier(MONITORING_USER),
-                    Literal(""),
+                    SQL(""),
                     SQL(";"),
                 ])
             ),

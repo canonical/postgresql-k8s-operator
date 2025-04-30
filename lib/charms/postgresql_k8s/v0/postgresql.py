@@ -242,7 +242,7 @@ class PostgreSQL:
                     regrant = "WITH GRANT OPTION"
                 cursor.execute(
                     SQL("GRANT ALL PRIVILEGES ON DATABASE {} TO {}{};").format(
-                        Identifier(database), Identifier(user_to_grant_access), Literal(regrant)
+                        Identifier(database), Identifier(user_to_grant_access), SQL(regrant)
                     )
                 )
             relations_accessing_this_database = 0
