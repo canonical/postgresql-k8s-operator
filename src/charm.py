@@ -999,6 +999,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         try:
             self.push_tls_files_to_workload(container)
+            for ca_secret_name in self.tls.get_ca_secret_names():
+                self.push_ca_file_into_workload(ca_secret_name)
         except (PathError, ProtocolError) as e:
             logger.error(
                 "Deferring on_postgresql_pebble_ready: Cannot push TLS certificates: %r", e
