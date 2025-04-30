@@ -35,7 +35,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 51
+LIBPATCH = 52
 
 # Groups to distinguish HBA access
 ACCESS_GROUP_IDENTITY = "identity_access"
@@ -208,6 +208,7 @@ class PostgreSQL:
         user: str,
         plugins: Optional[List[str]] = None,
         client_relations: Optional[List[Relation]] = None,
+        admin: bool = False,
     ) -> None:
         """Creates a new database and grant privileges to a user on it.
 
@@ -216,6 +217,7 @@ class PostgreSQL:
             user: user that will have access to the database.
             plugins: extensions to enable in the new database.
             client_relations: current established client relations.
+            admin: if the user should be admin.
         """
         plugins = plugins if plugins else []
         client_relations = client_relations if client_relations else []
@@ -233,9 +235,14 @@ class PostgreSQL:
                 )
             )
             for user_to_grant_access in [user, PERMISSIONS_GROUP_ADMIN, *self.system_users]:
+                regrant = ""
+                if (
+                    user_to_grant_access == user and admin
+                ) or user_to_grant_access == PERMISSIONS_GROUP_ADMIN:
+                    regrant = "WITH GRANT OPTION"
                 cursor.execute(
-                    SQL("GRANT ALL PRIVILEGES ON DATABASE {} TO {};").format(
-                        Identifier(database), Identifier(user_to_grant_access)
+                    SQL("GRANT ALL PRIVILEGES ON DATABASE {} TO {}{};").format(
+                        Identifier(database), Identifier(user_to_grant_access), Literal(regrant)
                     )
                 )
             relations_accessing_this_database = 0
