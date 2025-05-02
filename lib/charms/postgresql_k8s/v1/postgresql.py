@@ -24,8 +24,7 @@ from collections import OrderedDict
 from typing import Dict, List, Optional, Set, Tuple
 
 import psycopg2
-from ops.model import Relation
-from psycopg2.sql import SQL, Composed, Identifier, Literal
+from psycopg2.sql import SQL, Identifier, Literal
 
 # The unique Charmhub library identifier, never change it
 LIBID = "24ee217a54e840a598ff21a079c3e678"
@@ -135,6 +134,7 @@ class PostgreSQLUpdateUserPasswordError(Exception):
 class PostgreSQLCreatePredefinedRolesError(Exception):
     """Exception raised when creating predefined roles."""
 
+
 class PostgreSQLGrantDatabasePrivilegesToUserError(Exception):
     """Exception raised when granting database privileges to user."""
 
@@ -241,13 +241,33 @@ class PostgreSQL:
                 return False
 
             cursor.execute(SQL("CREATE DATABASE {};").format(Identifier(database)))
-            cursor.execute(SQL("REVOKE ALL PRIVILEGES ON DATABASE {} FROM PUBLIC;").format(Identifier(database)))
+            cursor.execute(
+                SQL("REVOKE ALL PRIVILEGES ON DATABASE {} FROM PUBLIC;").format(
+                    Identifier(database)
+                )
+            )
 
-            cursor.execute(SQL("CREATE ROLE {} NOSUPERUSER NOCREATEDB NOCREATEROLE NOLOGIN NOREPLICATION;").format(Identifier(f"{database}_owner")))
-            cursor.execute(SQL("ALTER DATABASE {} OWNER TO {}").format(Identifier(database), Identifier(f"{database}_owner")))
+            cursor.execute(
+                SQL(
+                    "CREATE ROLE {} NOSUPERUSER NOCREATEDB NOCREATEROLE NOLOGIN NOREPLICATION;"
+                ).format(Identifier(f"{database}_owner"))
+            )
+            cursor.execute(
+                SQL("ALTER DATABASE {} OWNER TO {}").format(
+                    Identifier(database), Identifier(f"{database}_owner")
+                )
+            )
 
-            cursor.execute(SQL("CREATE ROLE {} NOSUPERUSER NOCREATEDB NOCREATEROLE NOLOGIN NOREPLICATION NOINHERIT IN ROLE {};").format(Identifier(f"{database}_admin"), Identifier(f"{database}_owner")))
-            cursor.execute(SQL("GRANT CONNECT ON DATABASE {} TO {};").format(Identifier(database), Identifier(f"{database}_admin")))
+            cursor.execute(
+                SQL(
+                    "CREATE ROLE {} NOSUPERUSER NOCREATEDB NOCREATEROLE NOLOGIN NOREPLICATION NOINHERIT IN ROLE {};"
+                ).format(Identifier(f"{database}_admin"), Identifier(f"{database}_owner"))
+            )
+            cursor.execute(
+                SQL("GRANT CONNECT ON DATABASE {} TO {};").format(
+                    Identifier(database), Identifier(f"{database}_admin")
+                )
+            )
 
             for user_to_grant_access in [*self.system_users, ROLE_INSTANCE_ADMIN, ROLE_DBA]:
                 cursor.execute(
@@ -256,21 +276,60 @@ class PostgreSQL:
                     )
                 )
 
-            with self._connect_to_database(database=database) as database_connection, database_connection.cursor() as database_cursor:
-                database_cursor.execute(SQL("REVOKE EXECUTE ON FUNCTION set_user_u(text) FROM {};").format(Identifier(f"{database}_owner")))
-                database_cursor.execute(SQL("REVOKE EXECUTE ON FUNCTION set_user_u(text) FROM {};").format(Identifier(f"{database}_admin")))
+            with self._connect_to_database(
+                database=database
+            ) as database_connection, database_connection.cursor() as database_cursor:
+                database_cursor.execute(
+                    SQL("REVOKE EXECUTE ON FUNCTION set_user_u(text) FROM {};").format(
+                        Identifier(f"{database}_owner")
+                    )
+                )
+                database_cursor.execute(
+                    SQL("REVOKE EXECUTE ON FUNCTION set_user_u(text) FROM {};").format(
+                        Identifier(f"{database}_admin")
+                    )
+                )
 
-                database_cursor.execute(SQL("REVOKE EXECUTE ON FUNCTION set_user(text) FROM {};").format(Identifier(f"{database}_owner")))
-                database_cursor.execute(SQL("REVOKE EXECUTE ON FUNCTION set_user(text) FROM {};").format(Identifier(f"{database}_admin")))
+                database_cursor.execute(
+                    SQL("REVOKE EXECUTE ON FUNCTION set_user(text) FROM {};").format(
+                        Identifier(f"{database}_owner")
+                    )
+                )
+                database_cursor.execute(
+                    SQL("REVOKE EXECUTE ON FUNCTION set_user(text) FROM {};").format(
+                        Identifier(f"{database}_admin")
+                    )
+                )
 
-                database_cursor.execute(SQL("REVOKE EXECUTE ON FUNCTION set_user(text, text) FROM {};").format(Identifier(f"{database}_owner")))
-                database_cursor.execute(SQL("REVOKE EXECUTE ON FUNCTION set_user(text, text) FROM {};").format(Identifier(f"{database}_admin")))
+                database_cursor.execute(
+                    SQL("REVOKE EXECUTE ON FUNCTION set_user(text, text) FROM {};").format(
+                        Identifier(f"{database}_owner")
+                    )
+                )
+                database_cursor.execute(
+                    SQL("REVOKE EXECUTE ON FUNCTION set_user(text, text) FROM {};").format(
+                        Identifier(f"{database}_admin")
+                    )
+                )
 
-                database_cursor.execute(SQL("ALTER DEFAULT PRIVILEGES FOR ROLE {} GRANT SELECT ON TABLES TO {};").format(Identifier(f"{database}_owner"), Identifier(f"{database}_admin")))
-                database_cursor.execute(SQL("ALTER DEFAULT PRIVILEGES FOR ROLE {} GRANT EXECUTE ON FUNCTIONS TO {};").format(Identifier(f"{database}_owner"), Identifier(f"{database}_admin")))
-                database_cursor.execute(SQL("ALTER DEFAULT PRIVILEGES FOR ROLE {} GRANT SELECT ON SEQUENCES TO {};").format(Identifier(f"{database}_owner"), Identifier(f"{database}_admin")))
+                database_cursor.execute(
+                    SQL(
+                        "ALTER DEFAULT PRIVILEGES FOR ROLE {} GRANT SELECT ON TABLES TO {};"
+                    ).format(Identifier(f"{database}_owner"), Identifier(f"{database}_admin"))
+                )
+                database_cursor.execute(
+                    SQL(
+                        "ALTER DEFAULT PRIVILEGES FOR ROLE {} GRANT EXECUTE ON FUNCTIONS TO {};"
+                    ).format(Identifier(f"{database}_owner"), Identifier(f"{database}_admin"))
+                )
+                database_cursor.execute(
+                    SQL(
+                        "ALTER DEFAULT PRIVILEGES FOR ROLE {} GRANT SELECT ON SEQUENCES TO {};"
+                    ).format(Identifier(f"{database}_owner"), Identifier(f"{database}_admin"))
+                )
 
-                database_cursor.execute(SQL("""CREATE OR REPLACE FUNCTION login_hook.login() RETURNS VOID AS $$
+                database_cursor.execute(
+                    SQL("""CREATE OR REPLACE FUNCTION login_hook.login() RETURNS VOID AS $$
 DECLARE
     ex_state TEXT;
     ex_message TEXT;
@@ -300,24 +359,27 @@ BEGIN
             db_owner_role = db_name || '_owner';
             EXECUTE format('SET ROLE %L', db_owner_role);
         END IF;
-	EXCEPTION
-	   WHEN OTHERS THEN
-	       GET STACKED DIAGNOSTICS ex_state   = RETURNED_SQLSTATE
-	                             , ex_message = MESSAGE_TEXT
-	                             , ex_detail  = PG_EXCEPTION_DETAIL
-	                             , ex_hint    = PG_EXCEPTION_HINT
-	                             , ex_context = PG_EXCEPTION_CONTEXT;
-	       RAISE LOG e'Error in login_hook.login()\nsqlstate: %\nmessage : %\ndetail  : %\nhint    : %\ncontext : %'
-	               , ex_state
-	               , ex_message
-	               , ex_detail
-	               , ex_hint
-	               , ex_context;
+    EXCEPTION
+       WHEN OTHERS THEN
+           GET STACKED DIAGNOSTICS ex_state   = RETURNED_SQLSTATE
+                                 , ex_message = MESSAGE_TEXT
+                                 , ex_detail  = PG_EXCEPTION_DETAIL
+                                 , ex_hint    = PG_EXCEPTION_HINT
+                                 , ex_context = PG_EXCEPTION_CONTEXT;
+           RAISE LOG e'Error in login_hook.login()\nsqlstate: %\nmessage : %\ndetail  : %\nhint    : %\ncontext : %'
+                   , ex_state
+                   , ex_message
+                   , ex_detail
+                   , ex_hint
+                   , ex_context;
     END;
 END
 $$ LANGUAGE plpgsql;
-"""))
-                database_cursor.execute(SQL("GRANT EXECUTE ON FUNCTION login_hook.login() TO PUBLIC;"))
+""")
+                )
+                database_cursor.execute(
+                    SQL("GRANT EXECUTE ON FUNCTION login_hook.login() TO PUBLIC;")
+                )
 
             return True
         except psycopg2.Error as e:
@@ -327,7 +389,7 @@ $$ LANGUAGE plpgsql;
             cursor.close()
             connection.close()
 
-    def create_user(
+    def create_user(  # noqa: C901
         self,
         user: str,
         password: Optional[str] = None,
@@ -340,8 +402,8 @@ $$ LANGUAGE plpgsql;
             user: user to be created.
             password: password to be assigned to the user.
             roles: roles to be assigned to the user.
+            database: the database that would be tied to the user
         """
-
         createdb_enabled, createrole_enabled = False, False
         if "pgbouncer" in roles:
             createdb_enabled, createrole_enabled = True, True
@@ -371,7 +433,7 @@ $$ LANGUAGE plpgsql;
             if invalid_roles:
                 logger.error(f"Invalid roles: {', '.join(invalid_roles)}")
                 raise PostgreSQLCreateUserError(INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE)
-            
+
             with self._connect_to_database() as connection, connection.cursor() as cursor:
                 cursor.execute(
                     SQL("SELECT TRUE FROM pg_roles WHERE rolname={};").format(Literal(user))
@@ -391,14 +453,20 @@ $$ LANGUAGE plpgsql;
 
                 # TODO: revoke createdb and/or createrole attributes when no longer needed (in delete_user)
                 if createdb_enabled and database:
-                    cursor.execute(SQL("ALTER ROLE {} WITH CREATEDB;").format(Identifier(f"{database}_owner")))
+                    cursor.execute(
+                        SQL("ALTER ROLE {} WITH CREATEDB;").format(Identifier(f"{database}_owner"))
+                    )
 
                 if createdb_enabled and database:
-                    cursor.execute(SQL("ALTER ROLE {} WITH CREATEROLE;").format(Identifier(f"{database}_owner")))
+                    cursor.execute(
+                        SQL("ALTER ROLE {} WITH CREATEROLE;").format(
+                            Identifier(f"{database}_owner")
+                        )
+                    )
         except psycopg2.Error as e:
             logger.error(f"Failed to create user: {e}")
             raise PostgreSQLCreateUserError() from e
-        
+
     def create_predefined_roles(self) -> None:
         """Create predefined roles."""
         role_to_queries = {
@@ -429,7 +497,7 @@ $$ LANGUAGE plpgsql;
             ROLE_INSTANCE_ADMIN: [
                 f"CREATE ROLE {ROLE_INSTANCE_ADMIN} NOSUPERUSER NOCREATEDB NOCREATEROLE NOLOGIN NOREPLICATION",
                 f"GRANT connect ON DATABASE postgres TO {ROLE_INSTANCE_ADMIN}",
-            ]
+            ],
         }
 
         existing_roles = self.list_roles()
@@ -449,13 +517,19 @@ $$ LANGUAGE plpgsql;
             logger.error(f"Failed to create predefined roles: {e}")
             raise PostgreSQLCreatePredefinedRolesError() from e
 
-    def grant_database_privileges_to_user(self, user: str, database: str, privileges: list[str]) -> None:
-        """Grant the specified priviliges on the provided database for the user."""
+    def grant_database_privileges_to_user(
+        self, user: str, database: str, privileges: list[str]
+    ) -> None:
+        """Grant the specified privileges on the provided database for the user."""
         try:
             with self._connect_to_database() as connection, connection.cursor() as cursor:
-                cursor.execute(SQL("GRANT {} ON DATABASE {} TO {};").format(Identifier(", ".join(privileges)), Identifier(database), Identifier(user)))
+                cursor.execute(
+                    SQL("GRANT {} ON DATABASE {} TO {};").format(
+                        Identifier(", ".join(privileges)), Identifier(database), Identifier(user)
+                    )
+                )
         except psycopg2.Error as e:
-            logger.error(f"Faield to grant privileges to user: {e}")
+            logger.error(f"Failed to grant privileges to user: {e}")
             raise PostgreSQLGrantDatabasePrivilegesToUserError() from e
 
     def delete_user(self, user: str) -> None:
@@ -477,9 +551,17 @@ $$ LANGUAGE plpgsql;
                 databases = [row[0] for row in cursor.fetchall()]
 
             for database in databases:
-                with self._connect_to_database(database) as connection, connection.cursor() as cursor:
-                    inheriting_role = f"{database}_owner" if f"{database}_owner" in roles else self.user
-                    cursor.execute(SQL("REASSIGN OWNED BY {} TO {};").format(Identifier(user), Identifier(inheriting_role)))
+                with self._connect_to_database(
+                    database
+                ) as connection, connection.cursor() as cursor:
+                    inheriting_role = (
+                        f"{database}_owner" if f"{database}_owner" in roles else self.user
+                    )
+                    cursor.execute(
+                        SQL("REASSIGN OWNED BY {} TO {};").format(
+                            Identifier(user), Identifier(inheriting_role)
+                        )
+                    )
                     cursor.execute(SQL("DROP OWNED BY {};").format(Identifier(user)))
 
             # Delete the user.
@@ -533,7 +615,7 @@ $$ LANGUAGE plpgsql;
             if connection is not None:
                 connection.close()
 
-    def enable_disable_extensions(
+    def enable_disable_extensions(  # noqa: C901
         self, extensions: Dict[str, bool], database: Optional[str] = None
     ) -> None:
         """Enables or disables a PostgreSQL extension.
@@ -566,7 +648,9 @@ $$ LANGUAGE plpgsql;
 
             if "set_user" in ordered_extensions:
                 for database in databases:
-                    with self._connect_to_database(database=database) as connection, connection.cursor() as cursor:
+                    with self._connect_to_database(
+                        database=database
+                    ) as connection, connection.cursor() as cursor:
                         try:
                             cursor.execute(SQL("CREATE EXTENSION IF NOT EXISTS set_user;"))
                         except psycopg2.Error:
@@ -579,11 +663,15 @@ $$ LANGUAGE plpgsql;
                         logger.info("Skipping creating extension login_hook in database postgres")
                         continue
 
-                    with self._connect_to_database(database=database) as connection, connection.cursor() as cursor:
+                    with self._connect_to_database(
+                        database=database
+                    ) as connection, connection.cursor() as cursor:
                         try:
                             cursor.execute(SQL("CREATE EXTENSION IF NOT EXISTS login_hook;"))
                         except psycopg2.Error:
-                            logger.exception(f"Unable to create extension login_hook in {database}")
+                            logger.exception(
+                                f"Unable to create extension login_hook in {database}"
+                            )
                 del ordered_extensions["login_hook"]
 
             # Enable/disabled the extension in each database.
@@ -993,4 +1081,3 @@ $$ LANGUAGE plpgsql;
                     return False
 
         return True
-
