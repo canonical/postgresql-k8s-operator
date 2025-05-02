@@ -97,7 +97,7 @@ storage:
     location: /var/lib/postgresql/logs
   temp:
     type: filesystem
-    location: /var/logs/postgresql/temp
+    location: /var/lib/postgresql/temp
 
 assumes:
   - k8s-api
