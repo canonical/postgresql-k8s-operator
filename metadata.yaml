@@ -88,15 +88,19 @@ requires:
 storage:
   archive:
     type: filesystem
+    description: Storage mount used for holding local backups (before typically sending them to remote object storage) when relevant/needed.
     location: /var/lib/postgresql/archive
   data:
     type: filesystem
+    description: Storage mount used for storing all tables, indexes, and so on (except those from temporary tablespaces).
     location: /var/lib/postgresql/data
   logs:
     type: filesystem
+    description: Storage mount used for storing all the logs that are part of the transactional commit path (WAL files).
     location: /var/lib/postgresql/logs
   temp:
     type: filesystem
+    description: Storage mount used for storing temporary tablespaces (where typically sort operations happen).
     location: /var/lib/postgresql/temp
 
 assumes:
