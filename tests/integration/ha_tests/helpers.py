@@ -1052,8 +1052,8 @@ async def check_db(ops_test: OpsTest, app: str, db: str) -> bool:
     return db in query
 
 
-async def get_any_deatached_storage(ops_test: OpsTest) -> str:
-    """Returns any of the current available deatached storage."""
+async def get_detached_storages(ops_test: OpsTest) -> list[str]:
+    """Returns the current available detached storages."""
     return_code, storages_list, stderr = await ops_test.juju(
         "storage", "-m", f"{ops_test.controller_name}:{ops_test.model.info.name}", "--format=json"
     )
@@ -1061,13 +1061,17 @@ async def get_any_deatached_storage(ops_test: OpsTest) -> str:
         raise Exception(f"failed to get storages info with error: {stderr}")
 
     parsed_storages_list = json.loads(storages_list)
+    detached_storages = []
     for storage_name, storage in parsed_storages_list["storage"].items():
         if (
             (storage_name.startswith("data"))
             and (str(storage["status"]["current"]) == "detached")
             and (str(storage["life"] == "alive"))
         ):
-            return storage_name
+            detached_storages.append(storage_name)
+
+    if len(detached_storages) > 0:
+        return detached_storages
 
     raise Exception("failed to get deatached storage")
 

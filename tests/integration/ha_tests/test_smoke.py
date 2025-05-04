@@ -25,7 +25,7 @@ from .helpers import (
     check_system_id_mismatch,
     create_db,
     delete_pvc,
-    # get_any_deatached_storage,
+    get_detached_storages,
     get_pvcs,
     get_pvs,
     get_storage_ids,
@@ -101,11 +101,11 @@ async def test_app_garbage_ignorance(ops_test: OpsTest):
     """Test charm deploy in dirty environment with garbage storage."""
     global primary_pvs, primary_pvcs
     async with ops_test.fast_forward():
-        logger.info("checking garbage storage")
-        # garbage_storage = None
-        # for attempt in Retrying(stop=stop_after_delay(30 * 3), wait=wait_fixed(3), reraise=True):
-        #     with attempt:
-        #         garbage_storage = await get_any_deatached_storage(ops_test)
+        logger.info("checking garbage storages")
+        garbage_storages = None
+        for attempt in Retrying(stop=stop_after_delay(30 * 3), wait=wait_fixed(3), reraise=True):
+            with attempt:
+                garbage_storages = await get_detached_storages(ops_test)
 
         logger.info("scale to 1")
         await scale_application(ops_test, DATABASE_APP_NAME, 1)
@@ -120,10 +120,13 @@ async def test_app_garbage_ignorance(ops_test: OpsTest):
 
         assert primary_name
 
-        # logger.info("getting storage id")
-        # storage_id_str = await get_storage_ids(ops_test, primary_name)
+        logger.info("getting storage id")
+        storage_ids = await get_storage_ids(ops_test, primary_name)
 
-        # assert storage_id_str == garbage_storage
+        assert len(storage_ids)
+
+        for storage_id in storage_ids:
+            assert storage_id in garbage_storages
 
         logger.info("waiting for postgresql")
         for attempt in Retrying(stop=stop_after_delay(15 * 3), wait=wait_fixed(3), reraise=True):
