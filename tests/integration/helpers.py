@@ -40,7 +40,7 @@ CHARM_BASE_NOBLE = "ubuntu@24.04"
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
 APPLICATION_NAME = "postgresql-test-app"
-STORAGE_PATH = METADATA["storage"]["pgdata"]["location"]
+STORAGE_PATH = METADATA["storage"]["data"]["location"]
 
 
 class SecretNotFoundError(Exception):

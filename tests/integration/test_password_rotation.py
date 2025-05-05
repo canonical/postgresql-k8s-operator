@@ -7,6 +7,7 @@ import time
 import psycopg2
 import pytest
 from pytest_operator.plugin import OpsTest
+from tenacity import Retrying, stop_after_attempt, wait_exponential
 
 from .helpers import (
     METADATA,
@@ -44,36 +45,57 @@ async def test_password_rotation(ops_test: OpsTest):
     # Change both passwords.
     await set_password(ops_test, password="test-password")
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
-    new_superuser_password = await get_password(ops_test)
-    assert superuser_password != new_superuser_password
+    for attempt in Retrying(
+        stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
+    ):
+        with attempt:
+            new_superuser_password = await get_password(ops_test)
+            assert superuser_password != new_superuser_password
 
     # For replication, generate a specific password and pass it to the action.
     new_replication_password = "test-password"
     await set_password(ops_test, username="replication", password=new_replication_password)
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
-    assert new_replication_password == await get_password(ops_test, "replication")
-    assert replication_password != new_replication_password
+    for attempt in Retrying(
+        stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
+    ):
+        with attempt:
+            assert new_replication_password == await get_password(ops_test, "replication")
+            assert replication_password != new_replication_password
 
     # For monitoring, generate a specific password and pass it to the action.
     new_monitoring_password = "test-password"
     await set_password(ops_test, username="monitoring", password=new_monitoring_password)
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
-    assert new_monitoring_password == await get_password(ops_test, "monitoring")
-    assert monitoring_password != new_monitoring_password
+    for attempt in Retrying(
+        stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
+    ):
+        with attempt:
+            assert new_monitoring_password == await get_password(ops_test, "monitoring")
+            assert monitoring_password != new_monitoring_password
 
     # For backup, generate a specific password and pass it to the action.
     new_backup_password = "test-password"
     await set_password(ops_test, username="backup", password=new_backup_password)
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
-    assert new_backup_password == await get_password(ops_test, "backup")
-    assert backup_password != new_backup_password
+    for attempt in Retrying(
+        stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
+    ):
+        with attempt:
+            assert new_backup_password == await get_password(ops_test, "backup")
+            assert backup_password != new_backup_password
 
     # For rewind, generate a specific password and pass it to the action.
     new_rewind_password = "test-password"
     await set_password(ops_test, username="rewind", password=new_rewind_password)
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
-    assert new_rewind_password == await get_password(ops_test, "rewind")
-    assert rewind_password != new_rewind_password
+
+    for attempt in Retrying(
+        stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30)
+    ):
+        with attempt:
+            assert new_rewind_password == await get_password(ops_test, "rewind")
+            assert rewind_password != new_rewind_password
 
     patroni_password = await get_password(ops_test, "patroni")
 

@@ -704,8 +704,14 @@ class PostgreSQLAsyncReplication(Object):
 
             # Remove and recreate the pgdata folder to enable replication of the data from the
             # primary cluster.
-            logger.info("Removing and recreating pgdata folder")
-            self.container.exec(f"rm -r {POSTGRESQL_DATA_PATH}".split()).wait_output()
+            for path in [
+                "/var/lib/postgresql/archive",
+                POSTGRESQL_DATA_PATH,
+                "/var/lib/postgresql/logs",
+                "/var/lib/postgresql/temp",
+            ]:
+                logger.info(f"Removing contents from {path}")
+                self.container.exec(f"find {path} -mindepth 1 -delete".split()).wait_output()
             self.charm._create_pgdata(self.container)
 
             self.charm._peers.data[self.charm.unit].update({"stopped": "True"})
