@@ -224,7 +224,10 @@ def test_grant_relation_access_group_memberships(harness):
 
         execute.assert_has_calls([
             call(
-                "SELECT usename FROM pg_catalog.pg_user WHERE usename LIKE 'relation_id_%' OR usename LIKE 'pgbouncer_auth_relation_id_%' OR usename LIKE '%_user_%_%';"
+                "SELECT usename "
+                "FROM pg_catalog.pg_user "
+                "WHERE usename LIKE 'relation_id_%' OR usename LIKE 'relation-%' "
+                "OR usename LIKE 'pgbouncer_auth_relation_id_%' OR usename LIKE '%_user_%_%';"
             ),
         ])
 

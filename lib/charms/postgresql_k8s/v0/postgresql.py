@@ -35,7 +35,7 @@ LIBAPI = 0
 
 # Increment this PATCH version before using `charmcraft publish-lib` or reset
 # to 0 if you are raising the major API version
-LIBPATCH = 52
+LIBPATCH = 54
 
 # Groups to distinguish HBA access
 ACCESS_GROUP_IDENTITY = "identity_access"
@@ -741,7 +741,10 @@ END; $$;"""
         try:
             with self._connect_to_database() as connection, connection.cursor() as cursor:
                 cursor.execute(
-                    "SELECT usename FROM pg_catalog.pg_user WHERE usename LIKE 'relation_id_%' OR usename LIKE 'pgbouncer_auth_relation_id_%' OR usename LIKE '%_user_%_%';"
+                    "SELECT usename "
+                    "FROM pg_catalog.pg_user "
+                    "WHERE usename LIKE 'relation_id_%' OR usename LIKE 'relation-%' "
+                    "OR usename LIKE 'pgbouncer_auth_relation_id_%' OR usename LIKE '%_user_%_%';"
                 )
                 usernames = cursor.fetchall()
                 return {username[0] for username in usernames}
