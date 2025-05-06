@@ -215,6 +215,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
         self.framework.observe(self.on.secret_changed, self._on_peer_relation_changed)
         self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
+        self.framework.observe(
+            self.on.postgresql_pebble_custom_notice, self._on_postgresql_pebble_custom_notice
+        )
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
         self.framework.observe(self.on.pgdata_storage_detaching, self._on_pgdata_storage_detaching)
         self.framework.observe(self.on.stop, self._on_stop)
@@ -265,6 +268,32 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.tracing = TracingEndpointRequirer(
             self, relation_name=TRACING_RELATION_NAME, protocols=[TRACING_PROTOCOL]
         )
+
+    def _on_postgresql_pebble_custom_notice(self, _):
+        """Handle authorisation rules change event."""
+        logger.error("_on_postgresql_pebble_custom_notice fired:")
+        container = self.unit.get_container("postgresql")
+        pg_hba_contents = container.pull("/var/lib/postgresql/data/pgdata/pg_hba.conf").read()
+        pg_hba_contents = [
+            line for line in pg_hba_contents.splitlines() if not line.startswith("#")
+        ]
+        # pg_hba_contents.insert(0, "local postgres operator peer map=operator")
+        # self._patroni.bulk_update_parameters_controller_by_patroni({
+        #     "postgresql": {
+        #         "pg_hba": pg_hba_contents
+        #     }
+        # })
+        current_unit_data = self._peers.data[self.unit]
+        logger.error(
+            f"pg_hba_needs_update 1 - {current_unit_data.get('pg_hba_needs_update', '0')}"
+        )
+        current_unit_data.update({
+            "pg_hba_needs_update": str(int(current_unit_data.get("pg_hba_needs_update", "0")) + 1)
+        })
+        logger.error(
+            f"pg_hba_needs_update 2 - {current_unit_data.get('pg_hba_needs_update', '0')}"
+        )
+        logger.error(f"authorisation rules changed to {pg_hba_contents}")
 
     @property
     def tracing_endpoint(self) -> str | None:
@@ -601,6 +630,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.error("Invalid configuration: %s", str(e))
             return
 
+        self._coordinate_pg_hba_update()
+
         # Should not override a blocked status
         if isinstance(self.unit.status, BlockedStatus):
             logger.debug("on_peer_relation_changed early exit: Unit in blocked status")
@@ -677,6 +708,34 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             })
 
         self.async_replication.handle_read_only_mode()
+
+    def _coordinate_pg_hba_update(self) -> None:
+        units_that_updated_their_pg_hba = 0
+        current_unit_data = self._peers.data[self.unit]
+        for unit in self._peers.units:
+            unit_data = self._peers.data[unit]
+            if "pg_hba_needs_update" in unit_data:
+                current_unit_data.update({"pg_hba_updated": "True"})
+                logger.error("Updated pg_hba_needs_update flag")
+                logger.error(self.relations_user_databases_map)
+            elif "pg_hba_updated" in unit_data:
+                units_that_updated_their_pg_hba += 1
+            elif "pg_hba_updated" in current_unit_data:
+                current_unit_data.update({"pg_hba_updated": ""})
+                logger.error("pg_hba_needs_update flag reset")
+                logger.error(self.relations_user_databases_map)
+            else:
+                logger.error(f"unit_data: {unit_data} - current_unit_data: {current_unit_data}")
+                logger.error(self.relations_user_databases_map)
+        logger.error(
+            f"units_that_updated_their_pg_hba 1: {units_that_updated_their_pg_hba} - len(self._peers.data): {len(self._peers.units)}"
+        )
+        if "pg_hba_needs_update" in current_unit_data and units_that_updated_their_pg_hba == len(
+            self._peers.units
+        ):
+            self._peers.data[self.unit].update({"pg_hba_needs_update": ""})
+            logger.error("pg_hba updated on all units")
+            logger.error(self.relations_user_databases_map)
 
     def _on_config_changed(self, event) -> None:
         """Handle configuration changes, like enabling plugins."""
@@ -1008,6 +1067,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             )
             event.defer()
             return
+
+        with open("scripts/authorisation_rules_observer.py") as f:
+            container.push(
+                "/home/postgres/authorisation_rules_observer.py",
+                f.read(),
+            )
 
         # Start the database service.
         self._update_pebble_layers()
@@ -1537,6 +1602,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if self._handle_processes_failures():
             return
 
+        container.start("authorisation_rules")
+
         # Update the sync-standby endpoint in the async replication data.
         self.async_replication.update_async_replication_data()
 
@@ -1815,6 +1882,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def _postgresql_layer(self) -> Layer:
         """Returns a Pebble configuration layer for PostgreSQL."""
         pod_name = self._unit_name_to_pod_name(self._unit)
+        juju_version = JujuVersion.from_environ()
+        run_cmd = "/usr/bin/juju-exec" if juju_version.major > 2 else "/usr/bin/juju-run"
         layer_config = {
             "summary": "postgresql + patroni layer",
             "description": "pebble config layer for postgresql + patroni",
@@ -1860,6 +1929,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     "override": "replace",
                     "summary": "rotate logs",
                     "command": "python3 /home/postgres/rotate_logs.py",
+                    "startup": "disabled",
+                },
+                "authorisation_rules": {
+                    "override": "replace",
+                    "summary": "authorisation rules observer",
+                    "command": f"python3 /home/postgres/authorisation_rules_observer.py {'https' if self.is_tls_enabled else 'http'}://{self.endpoint}:8008 {run_cmd} {self.unit.name} {self.charm_dir}",
                     "startup": "disabled",
                 },
             },
@@ -2295,8 +2370,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         ):
             return {USER: "all", REPLICATION_USER: "all", REWIND_USER: "all"}
         user_database_map = {}
-        for user in self.postgresql.list_users(
-            group="relation_access", current_host=self.is_connectivity_enabled
+        for user in self.postgresql.list_users_from_relation(
+            current_host=self.is_connectivity_enabled
         ):
             user_database_map[user] = ",".join(
                 self.postgresql.list_accessible_databases_for_user(

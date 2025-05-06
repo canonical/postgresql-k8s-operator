@@ -731,15 +731,22 @@ END; $$;"""
             if connection is not None:
                 connection.close()
 
-    def list_users_from_relation(self) -> Set[str]:
+    def list_users_from_relation(self, current_host=False) -> Set[str]:
         """Returns the list of PostgreSQL database users that were created by a relation.
+
+        Args:
+            current_host: whether to check the current host
+                instead of the primary host.
 
         Returns:
             List of PostgreSQL database users.
         """
         connection = None
+        host = self.current_host if current_host else None
         try:
-            with self._connect_to_database() as connection, connection.cursor() as cursor:
+            with self._connect_to_database(
+                database_host=host
+            ) as connection, connection.cursor() as cursor:
                 cursor.execute(
                     "SELECT usename "
                     "FROM pg_catalog.pg_user "

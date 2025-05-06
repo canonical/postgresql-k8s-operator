@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 import logging
 import re
+from time import sleep
 
 import psycopg2
 import pytest
@@ -97,6 +98,8 @@ async def test_pg_hba(ops_test: OpsTest, charm):
         finally:
             if connection:
                 connection.close()
+
+        sleep(30)
 
         for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
             try:
