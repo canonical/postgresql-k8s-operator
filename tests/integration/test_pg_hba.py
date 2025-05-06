@@ -12,6 +12,7 @@ from .helpers import (
     DATABASE_APP_NAME,
     build_and_deploy,
     db_connect,
+    get_primary,
     get_unit_address,
 )
 
@@ -30,7 +31,7 @@ async def test_pg_hba(ops_test: OpsTest, charm):
     async with ops_test.fast_forward():
         logger.info("Deploying charms")
         if DATABASE_APP_NAME not in ops_test.model.applications:
-            await build_and_deploy(ops_test, charm, num_units=1)
+            await build_and_deploy(ops_test, charm, num_units=2, wait_for_idle=False)
         if DATA_INTEGRATOR_APP_NAME not in ops_test.model.applications:
             await ops_test.model.deploy(
                 DATA_INTEGRATOR_APP_NAME,
@@ -52,9 +53,9 @@ async def test_pg_hba(ops_test: OpsTest, charm):
             apps=[DATA_INTEGRATOR_APP_NAME, DATABASE_APP_NAME], status="active"
         )
 
-        database_units = ops_test.model.applications[DATABASE_APP_NAME].units
+        primary = await get_primary(ops_test)
+        address = await get_unit_address(ops_test, primary)
         data_integrator_unit = ops_test.model.applications[DATA_INTEGRATOR_APP_NAME].units[0]
-        address = await get_unit_address(ops_test, database_units[0].name)
         action = await data_integrator_unit.run_action(action_name="get-credentials")
         result = await action.wait()
         credentials = result.results
@@ -97,12 +98,12 @@ async def test_pg_hba(ops_test: OpsTest, charm):
             if connection:
                 connection.close()
 
-        for unit in database_units:
+        for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
             try:
                 address = await get_unit_address(ops_test, unit.name)
 
                 logger.info(
-                    f"Checking that the user {FIRST_RELATION_USER} can connect to the database {FIRST_DATABASE}"
+                    f"Checking that the user {FIRST_RELATION_USER} can connect to the database {FIRST_DATABASE} on {unit.name}"
                 )
                 with (
                     db_connect(
@@ -124,7 +125,7 @@ async def test_pg_hba(ops_test: OpsTest, charm):
                 connection.close()
 
                 logger.info(
-                    f"Checking that the user {SECOND_RELATION_USER} can connect to the database {SECOND_DATABASE}"
+                    f"Checking that the user {SECOND_RELATION_USER} can connect to the database {SECOND_DATABASE} on {unit.name}"
                 )
                 with (
                     db_connect(
@@ -144,7 +145,7 @@ async def test_pg_hba(ops_test: OpsTest, charm):
                     assert credentials["postgresql"]["version"] == data
 
                 logger.info(
-                    f"Checking that the user {SECOND_RELATION_USER} cannot connect to the database {FIRST_DATABASE}"
+                    f"Checking that the user {SECOND_RELATION_USER} cannot connect to the database {FIRST_DATABASE} on {unit.name}"
                 )
                 with db_connect(
                     host=address,
