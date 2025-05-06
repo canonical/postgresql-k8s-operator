@@ -68,7 +68,7 @@ async def test_pg_hba(ops_test: OpsTest, charm):
             )
             connection.autocommit = True
             with connection.cursor() as cursor:
-                # Drop objects from the previous test run.
+                logger.info("Dropping database objects from the previous test run (if any)")
                 cursor.execute(f"DROP USER IF EXISTS {FIRST_RELATION_USER};")
                 cursor.execute(
                     f"SELECT datname FROM pg_database WHERE datname='{SECOND_DATABASE}';"
@@ -80,7 +80,8 @@ async def test_pg_hba(ops_test: OpsTest, charm):
                 cursor.execute(f"DROP USER IF EXISTS {SECOND_RELATION_USER};")
                 cursor.execute(f"DROP DATABASE IF EXISTS {SECOND_DATABASE};")
                 cursor.execute("DROP SCHEMA IF EXISTS test;")
-                # Create objects needed for the test.
+
+                logger.info("Creating database objects needed for the test")
                 cursor.execute(
                     f"CREATE USER {FIRST_RELATION_USER} WITH LOGIN SUPERUSER ENCRYPTED PASSWORD '{PASSWORD}';"
                 )
@@ -99,6 +100,10 @@ async def test_pg_hba(ops_test: OpsTest, charm):
         for unit in database_units:
             try:
                 address = await get_unit_address(ops_test, unit.name)
+
+                logger.info(
+                    f"Checking that the user {FIRST_RELATION_USER} can connect to the database {FIRST_DATABASE}"
+                )
                 with (
                     db_connect(
                         host=address,
@@ -118,6 +123,9 @@ async def test_pg_hba(ops_test: OpsTest, charm):
                     assert credentials["postgresql"]["version"] == data
                 connection.close()
 
+                logger.info(
+                    f"Checking that the user {SECOND_RELATION_USER} can connect to the database {SECOND_DATABASE}"
+                )
                 with (
                     db_connect(
                         host=address,
@@ -135,6 +143,9 @@ async def test_pg_hba(ops_test: OpsTest, charm):
                     # was retrieved directly from the database.
                     assert credentials["postgresql"]["version"] == data
 
+                logger.info(
+                    f"Checking that the user {SECOND_RELATION_USER} cannot connect to the database {FIRST_DATABASE}"
+                )
                 with db_connect(
                     host=address,
                     password=PASSWORD,
