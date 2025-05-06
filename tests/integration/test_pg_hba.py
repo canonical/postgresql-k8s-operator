@@ -2,6 +2,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 import logging
+import re
 
 import psycopg2
 import pytest
@@ -9,7 +10,6 @@ from pytest_operator.plugin import OpsTest
 
 from .helpers import (
     DATABASE_APP_NAME,
-    app_name,
     build_and_deploy,
     db_connect,
     get_unit_address,
@@ -29,9 +29,9 @@ PASSWORD = "test-password"
 async def test_pg_hba(ops_test: OpsTest, charm):
     async with ops_test.fast_forward():
         logger.info("Deploying charms")
-        if not app_name(DATABASE_APP_NAME):
+        if DATABASE_APP_NAME not in ops_test.model.applications:
             await build_and_deploy(ops_test, charm, num_units=1)
-        if not app_name(DATA_INTEGRATOR_APP_NAME):
+        if DATA_INTEGRATOR_APP_NAME not in ops_test.model.applications:
             await ops_test.model.deploy(
                 DATA_INTEGRATOR_APP_NAME,
                 config={"database-name": FIRST_DATABASE, "extra-user-roles": "SUPERUSER"},
@@ -157,8 +157,11 @@ async def test_pg_hba(ops_test: OpsTest, charm):
                     )
             except psycopg2.OperationalError as e:
                 if (
-                    f'FATAL:  no pg_hba.conf entry for host "159.69.30.76", user "{SECOND_RELATION_USER}", database "{FIRST_DATABASE}", no encryption'
-                    not in str(e)
+                    re.search(
+                        f'^(connection to server at \\").*(\\", port 5432).*(failed: FATAL:  no pg_hba.conf entry for host \\").*(\\", user \\"{SECOND_RELATION_USER}\\", database \\"{FIRST_DATABASE}\\", no encryption)$',
+                        str(e),
+                    )
+                    is None
                 ):
                     raise
             finally:
