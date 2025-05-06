@@ -791,16 +791,20 @@ CREATE OR REPLACE FUNCTION update_pg_hba()
           insert_value TEXT;
           changes INTEGER = 0;
         BEGIN
-          PERFORM pg_is_in_recovery();
-          IF NOT FOUND THEN
+          CREATE TABLE IF NOT EXISTS debug1 (current_moment TIMESTAMP WITH TIME ZONE, lines boolean);
+          INSERT INTO debug1 (current_moment, lines) SELECT now(),pg_is_in_recovery();
+          IF NOT pg_is_in_recovery() THEN
+            DROP TABLE IF EXISTS pg_hba;
             CREATE TEMPORARY TABLE pg_hba (lines TEXT);
             SELECT setting INTO hba_file FROM pg_settings WHERE name = 'hba_file';
             copy_command='COPY pg_hba FROM ''' || hba_file || '''' ;
             EXECUTE copy_command;
+            DROP TABLE IF EXISTS relation_users;
             CREATE TEMPORARY TABLE relation_users AS
               SELECT t.user, STRING_AGG(DISTINCT t.database, ',') AS databases FROM( SELECT u.usename AS user, CASE WHEN u.usesuper THEN 'all' ELSE d.datname END AS database FROM ( SELECT usename, usesuper FROM pg_catalog.pg_user WHERE usename LIKE 'relation_id_%' OR usename LIKE 'pgbouncer_auth_relation_id_%' OR usename LIKE '%_user_%_%') AS u JOIN ( SELECT datname FROM pg_catalog.pg_database WHERE NOT datistemplate ) AS d ON has_database_privilege(u.usename, d.datname, 'CONNECT') ) AS t GROUP BY 1;
-            PERFORM lines FROM pg_hba WHERE lines LIKE 'hostssl %';
-            IF FOUND THEN
+            CREATE TABLE IF NOT EXISTS debug2 (current_moment TIMESTAMP WITH TIME ZONE, username VARCHAR, databases VARCHAR);
+            INSERT INTO debug2 (current_moment, username, databases) SELECT now(),* FROM relation_users;
+            IF (SELECT COUNT(lines) FROM pg_hba WHERE lines LIKE 'hostssl %') > 0 THEN
               connection_type := 'hostssl';
             ELSE
               connection_type := 'host';
@@ -808,8 +812,8 @@ CREATE OR REPLACE FUNCTION update_pg_hba()
             FOR rec IN SELECT * FROM relation_users
             LOOP
               insert_value := connection_type || ' ' || rec.databases || ' ' || rec.user || ' 0.0.0.0/0 md5';
-              PERFORM lines FROM pg_hba WHERE lines = insert_value;
-              IF NOT FOUND THEN
+              RAISE NOTICE 'insert_value: %', insert_value;
+              IF (SELECT COUNT(lines) FROM pg_hba WHERE lines = insert_value) = 0 THEN
                 INSERT INTO pg_hba (lines) VALUES (insert_value);
                 changes := changes + 1;
               END IF;
@@ -819,11 +823,14 @@ CREATE OR REPLACE FUNCTION update_pg_hba()
               DELETE FROM pg_hba WHERE lines = rec.lines;
               changes := changes + 1;
             END LOOP;
+            CREATE TABLE IF NOT EXISTS debug3 (current_moment TIMESTAMP WITH TIME ZONE, changes INTEGER);
+            INSERT INTO debug3 (current_moment, changes) SELECT now(),changes;
+            RAISE NOTICE 'changes: %', changes;
             IF changes > 0 THEN
               copy_command='COPY pg_hba TO ''' || hba_file || '''' ;
               EXECUTE copy_command;
               PERFORM pg_reload_conf();
-              CREATE TABLE IF NOT EXISTS debug (current_moment timestamp with time zone, lines TEXT);
+              CREATE TABLE IF NOT EXISTS debug (current_moment TIMESTAMP WITH TIME ZONE, lines TEXT);
               INSERT INTO debug (current_moment, lines) SELECT now(),lines FROM pg_hba;
             END IF;
           END IF;
