@@ -217,14 +217,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.framework.observe(self.on.secret_changed, self._on_secret_changed)
         self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
-        self.framework.observe(self.on.pgdata_storage_detaching, self._on_pgdata_storage_detaching)
+        self.framework.observe(self.on.data_storage_detaching, self._on_pgdata_storage_detaching)
         self.framework.observe(self.on.stop, self._on_stop)
         self.framework.observe(self.on.promote_to_primary_action, self._on_promote_to_primary)
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
         self.framework.observe(self.on.update_status, self._on_update_status)
 
         self._certs_path = "/usr/local/share/ca-certificates"
-        self._storage_path = self.meta.storages["pgdata"].location
+        self._storage_path = self.meta.storages["data"].location
         self.pgdata_path = f"{self._storage_path}/pgdata"
 
         self.upgrade = PostgreSQLUpgrade(
@@ -983,7 +983,22 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         container.exec([
             "chown",
             f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
+            "/var/lib/postgresql/archive",
+        ]).wait()
+        container.exec([
+            "chown",
+            f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
             self._storage_path,
+        ]).wait()
+        container.exec([
+            "chown",
+            f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
+            "/var/lib/postgresql/logs",
+        ]).wait()
+        container.exec([
+            "chown",
+            f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
+            "/var/lib/postgresql/temp",
         ]).wait()
 
     def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
@@ -1131,7 +1146,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 extra_user_roles=["pg_monitor"],
             )
 
-        self.postgresql.set_up_database()
+        self.postgresql.set_up_database(temp_location="/var/lib/postgresql/temp")
 
         access_groups = self.postgresql.list_access_groups()
         if access_groups != set(ACCESS_GROUPS):
@@ -1464,6 +1479,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             if self.unit.status.message == EXTENSION_OBJECT_MESSAGE:
                 self.enable_disable_extensions()
                 return True
+
+            logger.error("calling self.fix_leader_annotation()")
+            self.fix_leader_annotation()
 
             logger.debug("on_update_status early exit: Unit is in Blocked/Waiting status")
             return False

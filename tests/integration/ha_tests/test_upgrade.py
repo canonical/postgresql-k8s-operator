@@ -1,7 +1,7 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import asyncio
+# import asyncio
 import logging
 import shutil
 from pathlib import Path
@@ -38,21 +38,25 @@ TIMEOUT = 600
 @pytest.mark.abort_on_fail
 async def test_deploy_latest(ops_test: OpsTest) -> None:
     """Simple test to ensure that the PostgreSQL and application charms get deployed."""
-    await asyncio.gather(
-        ops_test.model.deploy(
-            DATABASE_APP_NAME,
-            num_units=3,
-            channel="16/edge",
-            trust=True,
-            config={"profile": "testing"},
-            base=CHARM_BASE_NOBLE,
-        ),
-        ops_test.model.deploy(
-            APPLICATION_NAME,
-            num_units=1,
-            channel="latest/edge",
-            base=CHARM_BASE,
-        ),
+    # TODO: rollback to ops_test.model.deploy syntax when we release to edge.
+    await ops_test.juju(
+        "deploy",
+        DATABASE_APP_NAME,
+        "-n",
+        3,
+        "--channel",
+        "16/edge/multiple-storages",
+        "--trust",
+        "--config",
+        "profile=testing",
+        "--base",
+        CHARM_BASE_NOBLE,
+    )
+    await ops_test.model.deploy(
+        APPLICATION_NAME,
+        num_units=1,
+        channel="latest/edge",
+        base=CHARM_BASE,
     )
     logger.info("Wait for applications to become active")
     async with ops_test.fast_forward():
