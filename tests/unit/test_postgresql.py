@@ -208,7 +208,11 @@ def test_grant_relation_access_group_memberships(harness):
         harness.charm.postgresql.grant_relation_access_group_memberships()
 
         execute.assert_has_calls([
-            call("SELECT usename FROM pg_catalog.pg_user WHERE usename LIKE 'relation_id_%';"),
+            call(
+                "SELECT usename "
+                "FROM pg_catalog.pg_user "
+                "WHERE usename LIKE 'relation_id_%' OR usename LIKE 'relation-%';"
+            ),
         ])
 
 
