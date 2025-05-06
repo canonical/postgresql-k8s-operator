@@ -25,7 +25,7 @@ async def test_pg_hba(ops_test: OpsTest, charm):
     async with ops_test.fast_forward():
         logger.info("Deploying charms")
         await asyncio.gather(
-            build_and_deploy(ops_test, charm, num_units=2, wait_for_idle=True),
+            build_and_deploy(ops_test, charm, num_units=1),
             ops_test.model.deploy(
                 DATA_INTEGRATOR_APP_NAME,
                 config={"database-name": "test", "extra-user-roles": "SUPERUSER"},
