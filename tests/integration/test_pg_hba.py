@@ -27,8 +27,9 @@ async def test_pg_hba(ops_test: OpsTest, charm):
         await asyncio.gather(
             build_and_deploy(ops_test, charm, num_units=2, wait_for_idle=True),
             ops_test.model.deploy(
-                DATA_INTEGRATOR_APP_NAME, config={"database-name": "test", "extra-user-roles": "SUPERUSER"}
-            )
+                DATA_INTEGRATOR_APP_NAME,
+                config={"database-name": "test", "extra-user-roles": "SUPERUSER"},
+            ),
         )
 
         logger.info("Adding relation between charms")
