@@ -525,6 +525,7 @@ class Patroni:
         restore_timeline: str | None = None,
         restore_to_latest: bool = False,
         parameters: dict[str, str] | None = None,
+        user_databases_map: dict[str, str] | None = None,
     ) -> None:
         """Render the Patroni configuration file.
 
@@ -543,6 +544,7 @@ class Patroni:
             restore_timeline: timeline to restore from.
             restore_to_latest: restore all the WAL transaction logs from the stanza.
             parameters: PostgreSQL parameters to be added to the postgresql.conf file.
+            user_databases_map: map of databases to be accessible by each user.
         """
         # Open the template patroni.yml file.
         with open("templates/patroni.yml.j2") as file:
@@ -581,6 +583,7 @@ class Patroni:
             extra_replication_endpoints=self._charm.async_replication.get_standby_endpoints(),
             ldap_parameters=self._dict_to_hba_string(ldap_params),
             patroni_password=self._patroni_password,
+            user_databases_map=user_databases_map,
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 

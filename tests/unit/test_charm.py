@@ -57,6 +57,7 @@ def test_set_ports(only_with_juju_secrets):
         patch("charm.JujuVersion") as _juju_version,
         patch("charm.PostgresqlOperatorCharm.unit") as _unit,
     ):
+        _juju_version.from_environ.return_value.major = 3
         harness = Harness(PostgresqlOperatorCharm)
         harness.begin()
         _unit.set_ports.assert_called_once_with(5432, 8008)
@@ -1723,6 +1724,7 @@ def test_update_config(harness):
             pitr_target=None,
             restore_to_latest=False,
             parameters={"test": "test"},
+            user_databases_map={"operator": "all", "replication": "all", "rewind": "all"},
         )
         _handle_postgresql_restart_need.assert_called_once()
         _restart_metrics_service.assert_called_once()
@@ -1752,6 +1754,7 @@ def test_update_config(harness):
             pitr_target=None,
             restore_to_latest=False,
             parameters={"test": "test"},
+            user_databases_map={"operator": "all", "replication": "all", "rewind": "all"},
         )
         _handle_postgresql_restart_need.assert_called_once()
         _restart_metrics_service.assert_called_once()
