@@ -811,7 +811,7 @@ CREATE OR REPLACE FUNCTION update_pg_hba()
             EXECUTE copy_command;
             DROP TABLE IF EXISTS relation_users;
             CREATE TEMPORARY TABLE relation_users AS
-              SELECT t.user, STRING_AGG(DISTINCT t.database, ',') AS databases FROM( SELECT u.usename AS user, CASE WHEN u.usesuper THEN 'all' ELSE d.datname END AS database FROM ( SELECT usename, usesuper FROM pg_catalog.pg_user WHERE usename LIKE 'relation_id_%' OR usename LIKE 'pgbouncer_auth_relation_id_%' OR usename LIKE '%_user_%_%') AS u JOIN ( SELECT datname FROM pg_catalog.pg_database WHERE NOT datistemplate ) AS d ON has_database_privilege(u.usename, d.datname, 'CONNECT') ) AS t GROUP BY 1;
+              SELECT t.user, STRING_AGG(DISTINCT t.database, ',') AS databases FROM( SELECT u.usename AS user, CASE WHEN u.usesuper THEN 'all' ELSE d.datname END AS database FROM ( SELECT usename, usesuper FROM pg_catalog.pg_user WHERE usename NOT IN ('backup', 'monitoring', 'operator', 'postgres', 'replication', 'rewind')) AS u JOIN ( SELECT datname FROM pg_catalog.pg_database WHERE NOT datistemplate ) AS d ON has_database_privilege(u.usename, d.datname, 'CONNECT') ) AS t GROUP BY 1;
             CREATE TABLE IF NOT EXISTS debug2 (current_moment TIMESTAMP WITH TIME ZONE, username VARCHAR, databases VARCHAR);
             INSERT INTO debug2 (current_moment, username, databases) SELECT now(),* FROM relation_users;
             IF (SELECT COUNT(lines) FROM pg_hba WHERE lines LIKE 'hostssl %') > 0 THEN
