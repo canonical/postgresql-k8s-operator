@@ -16,6 +16,11 @@ from pathlib import Path
 from typing import Literal, get_args
 from urllib.parse import urlparse
 
+from authorisation_rules_observer import (
+    AuthorisationRulesChangeCharmEvents,
+    AuthorisationRulesObserver,
+)
+
 # First platform-specific import, will fail on wrong architecture
 try:
     import psycopg2
@@ -172,6 +177,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     """Charmed Operator for the PostgreSQL database."""
 
     config_type = CharmConfig
+    on = AuthorisationRulesChangeCharmEvents()
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -210,14 +216,17 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._context = {"namespace": self._namespace, "app_name": self._name}
         self.cluster_name = f"patroni-{self._name}"
 
+        juju_version = JujuVersion.from_environ()
+        run_cmd = "/usr/bin/juju-exec" if juju_version.major > 2 else "/usr/bin/juju-run"
+        self._observer = AuthorisationRulesObserver(self, run_cmd)
+        self.framework.observe(
+            self.on.authorisation_rules_change, self._on_authorisation_rules_change
+        )
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
         self.framework.observe(self.on.secret_changed, self._on_peer_relation_changed)
         self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
-        self.framework.observe(
-            self.on.postgresql_pebble_custom_notice, self._on_postgresql_pebble_custom_notice
-        )
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
         self.framework.observe(self.on.pgdata_storage_detaching, self._on_pgdata_storage_detaching)
         self.framework.observe(self.on.stop, self._on_stop)
@@ -248,6 +257,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.restart_manager = RollingOpsManager(
             charm=self, relation="restart", callback=self._restart
         )
+        self._observer.start_authorisation_rules_observer()
         self.grafana_dashboards = GrafanaDashboardProvider(self)
         self.metrics_endpoint = MetricsEndpointProvider(
             self,
@@ -269,7 +279,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self, relation_name=TRACING_RELATION_NAME, protocols=[TRACING_PROTOCOL]
         )
 
-    def _on_postgresql_pebble_custom_notice(self, _):
+    def _on_authorisation_rules_change(self, _):
         """Handle authorisation rules change event."""
         logger.error("_on_postgresql_pebble_custom_notice fired:")
         container = self.unit.get_container("postgresql")
@@ -1068,12 +1078,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             event.defer()
             return
 
-        with open("scripts/authorisation_rules_observer.py") as f:
-            container.push(
-                "/home/postgres/authorisation_rules_observer.py",
-                f.read(),
-            )
-
         # Start the database service.
         self._update_pebble_layers()
 
@@ -1602,8 +1606,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if self._handle_processes_failures():
             return
 
-        container.start("authorisation_rules")
-
         # Update the sync-standby endpoint in the async replication data.
         self.async_replication.update_async_replication_data()
 
@@ -1882,8 +1884,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def _postgresql_layer(self) -> Layer:
         """Returns a Pebble configuration layer for PostgreSQL."""
         pod_name = self._unit_name_to_pod_name(self._unit)
-        juju_version = JujuVersion.from_environ()
-        run_cmd = "/usr/bin/juju-exec" if juju_version.major > 2 else "/usr/bin/juju-run"
         layer_config = {
             "summary": "postgresql + patroni layer",
             "description": "pebble config layer for postgresql + patroni",
@@ -1929,12 +1929,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     "override": "replace",
                     "summary": "rotate logs",
                     "command": "python3 /home/postgres/rotate_logs.py",
-                    "startup": "disabled",
-                },
-                "authorisation_rules": {
-                    "override": "replace",
-                    "summary": "authorisation rules observer",
-                    "command": f"python3 /home/postgres/authorisation_rules_observer.py {'https' if self.is_tls_enabled else 'http'}://{self.endpoint}:8008 {run_cmd} {self.unit.name} {self.charm_dir}",
                     "startup": "disabled",
                 },
             },
