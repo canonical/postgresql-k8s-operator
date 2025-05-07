@@ -12,7 +12,11 @@ from charms.data_platform_libs.v0.upgrade import (
     DependencyModel,
     KubernetesClientError,
 )
-from charms.postgresql_k8s.v0.postgresql import ACCESS_GROUPS
+from charms.postgresql_k8s.v0.postgresql import (
+    ACCESS_GROUPS,
+    ROLE_STATS,
+    PostgreSQLCreatePredefinedRolesError,
+)
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
 from lightkube.resources.apps_v1 import StatefulSet
@@ -292,8 +296,15 @@ class PostgreSQLUpgrade(DataUpgrade):
             self.charm.postgresql.create_user(
                 MONITORING_USER,
                 self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY),
-                extra_user_roles="pg_monitor",
+                extra_user_roles=[ROLE_STATS],
             )
+
+        try:
+            self.postgresql.create_predefined_roles()
+        except PostgreSQLCreatePredefinedRolesError as e:
+            logger.exception(e)
+            self.unit.status = BlockedStatus("Failed to create pre-defined roles")
+            return
 
     @property
     def unit_upgrade_data(self) -> RelationDataContent:

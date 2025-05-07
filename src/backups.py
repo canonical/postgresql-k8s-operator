@@ -22,7 +22,6 @@ from lightkube.resources.core_v1 import Endpoints
 from ops import HookEvent
 from ops.charm import ActionEvent
 from ops.framework import Object
-from ops.jujuversion import JujuVersion
 from ops.model import ActiveStatus, MaintenanceStatus
 from ops.pebble import ChangeError, ExecError
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
@@ -793,12 +792,11 @@ class PostgreSQLBackups(Object):
 
         # Test uploading metadata to S3 to test credentials before backup.
         datetime_backup_requested = datetime.now().strftime("%Y-%m-%dT%H:%M:%SZ")
-        juju_version = JujuVersion.from_environ()
         metadata = f"""Date Backup Requested: {datetime_backup_requested}
 Model Name: {self.model.name}
 Application Name: {self.model.app.name}
 Unit Name: {self.charm.unit.name}
-Juju Version: {juju_version!s}
+Juju Version: {self.charm.model.juju_version!s}
 """
         if not self._upload_content_to_s3(
             metadata,

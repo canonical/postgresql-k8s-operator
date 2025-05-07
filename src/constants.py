@@ -26,7 +26,7 @@ POSTGRES_LOG_FILES = [
     "/var/log/postgresql/postgresql*.log",
 ]
 # List of system usernames needed for correct work of the charm/workload.
-SYSTEM_USERS = [BACKUP_USER, REPLICATION_USER, REWIND_USER, USER, MONITORING_USER]
+SYSTEM_USERS = [REPLICATION_USER, REWIND_USER, USER, MONITORING_USER]
 
 # Labels are not confidential
 REPLICATION_PASSWORD_KEY = "replication-password"  # noqa: S105
