@@ -300,7 +300,7 @@ class PostgreSQLUpgrade(DataUpgrade):
             )
 
         try:
-            self.postgresql.create_predefined_roles()
+            self.charm.postgresql.create_predefined_roles()
         except PostgreSQLCreatePredefinedRolesError as e:
             logger.exception(e)
             self.unit.status = BlockedStatus("Failed to create pre-defined roles")
