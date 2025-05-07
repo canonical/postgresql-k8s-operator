@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 """Authorisation rules changes observer."""
-
+import datetime
 import json
 import subprocess
 import sys
@@ -82,10 +82,13 @@ def main():
                 previous_authorisation_rules = current_authorisation_rules
             # If the authorisation rules changed, dispatch a charm event to handle this change.
             elif current_authorisation_rules != previous_authorisation_rules:
-                # previous_authorisation_rules = current_authorisation_rules
                 print(
                     f"current_authorisation_rules 2: {current_authorisation_rules} - previous_authorisation_rules: {previous_authorisation_rules}"
                 )
+                previous_authorisation_rules = current_authorisation_rules
+                with open("/tmp/authorisation_rules.txt", "a") as file:
+                    content = f"current_authorisation_rules 2: {current_authorisation_rules} - previous_authorisation_rules: {previous_authorisation_rules}"
+                    file.write(f"{datetime.datetime.now()} - {content}\n")
                 # data = parse.urlencode({
                 #     "postgresql": {
                 #         "pg_hba": current_authorisation_rules
