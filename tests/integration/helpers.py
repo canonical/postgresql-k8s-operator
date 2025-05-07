@@ -173,22 +173,24 @@ async def check_database_creation(
     for unit in ops_test.model.applications[database_app_name].units:
         unit_address = await get_unit_address(ops_test, unit.name)
 
-        # Ensure database exists in PostgreSQL.
-        output = await execute_query_on_unit(
-            unit_address,
-            password,
-            "SELECT datname FROM pg_database;",
-        )
-        assert database in output
+        for attempt in Retrying(stop=stop_after_attempt(30), wait=wait_fixed(2), reraise=True):
+            with attempt:
+                # Ensure database exists in PostgreSQL.
+                output = await execute_query_on_unit(
+                    unit_address,
+                    password,
+                    "SELECT datname FROM pg_database;",
+                )
+                assert database in output
 
-        # Ensure that application tables exist in the database
-        output = await execute_query_on_unit(
-            unit_address,
-            password,
-            "SELECT table_name FROM information_schema.tables;",
-            database=database,
-        )
-        assert len(output)
+                # Ensure that application tables exist in the database
+                output = await execute_query_on_unit(
+                    unit_address,
+                    password,
+                    "SELECT table_name FROM information_schema.tables;",
+                    database=database,
+                )
+                assert len(output)
 
 
 @retry(

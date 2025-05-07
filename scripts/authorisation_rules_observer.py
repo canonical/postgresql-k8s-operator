@@ -62,7 +62,7 @@ def main():
         is_primary = False
         for member in cluster_status["members"]:
             # Check if the current member is the primary.
-            if member["name"] == member_name:
+            if member["name"] == member_name and member["role"] == "leader":
                 is_primary = True
                 break
 
