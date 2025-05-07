@@ -16,7 +16,6 @@ from psycopg2.sql import SQL, Composed, Identifier, Literal
 
 from charm import PostgresqlOperatorCharm
 from constants import (
-    BACKUP_USER,
     MONITORING_USER,
     PEER,
     REPLICATION_USER,
