@@ -180,22 +180,24 @@ async def check_database_creation(
     for unit in ops_test.model.applications[database_app_name].units:
         unit_address = await get_unit_address(ops_test, unit.name)
 
-        # Ensure database exists in PostgreSQL.
-        output = await execute_query_on_unit(
-            unit_address,
-            password,
-            "SELECT datname FROM pg_database;",
-        )
-        assert database in output
+        for attempt in Retrying(stop=stop_after_attempt(30), wait=wait_fixed(2), reraise=True):
+            with attempt:
+                # Ensure database exists in PostgreSQL.
+                output = await execute_query_on_unit(
+                    unit_address,
+                    password,
+                    "SELECT datname FROM pg_database;",
+                )
+                assert database in output
 
-        # Ensure that application tables exist in the database
-        output = await execute_query_on_unit(
-            unit_address,
-            password,
-            "SELECT table_name FROM information_schema.tables;",
-            database=database,
-        )
-        assert len(output)
+                # Ensure that application tables exist in the database
+                output = await execute_query_on_unit(
+                    unit_address,
+                    password,
+                    "SELECT table_name FROM information_schema.tables;",
+                    database=database,
+                )
+                assert len(output)
 
 
 @retry(
@@ -258,18 +260,22 @@ async def count_switchovers(ops_test: OpsTest, unit_name: str) -> int:
     return len(switchover_history_info.json())
 
 
-def db_connect(host: str, password: str):
+def db_connect(
+    host: str, password: str, user: str = "operator", database: str = "postgres"
+) -> psycopg2.extensions.connection:
     """Returns psycopg2 connection object linked to postgres db in the given host.
 
     Args:
         host: the IP of the postgres host container
         password: postgres password
+        user: postgres user (default: operator)
+        database: postgres database (default: postgres)
 
     Returns:
         psycopg2 connection object linked to postgres db, under "operator" user.
     """
     return psycopg2.connect(
-        f"dbname='postgres' user='operator' host='{host}' password='{password}' connect_timeout=10"
+        f"dbname='{database}' user='{user}' host='{host}' password='{password}' connect_timeout=10"
     )
 
 
