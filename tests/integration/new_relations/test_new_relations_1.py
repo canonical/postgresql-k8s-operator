@@ -201,7 +201,7 @@ async def test_two_applications_doesnt_share_the_same_relation_data(ops_test: Op
     await ops_test.model.add_relation(
         f"{another_application_app_name}:{FIRST_DATABASE_RELATION_NAME}", DATABASE_APP_NAME
     )
-    await ops_test.model.wait_for_idle(apps=all_app_names, status="active")
+    await ops_test.model.wait_for_idle(apps=all_app_names, status="active", idle_period=30)
 
     # Assert the two application have different relation (connection) data.
     application_connection_string = await build_connection_string(
@@ -397,7 +397,9 @@ async def test_restablish_relation(ops_test: OpsTest):
         await ops_test.model.add_relation(
             f"{APPLICATION_APP_NAME}:{FIRST_DATABASE_RELATION_NAME}", DATABASE_APP_NAME
         )
-        await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active", raise_on_blocked=True)
+        await ops_test.model.wait_for_idle(
+            apps=APP_NAMES, status="active", idle_period=30, raise_on_blocked=True
+        )
 
     # Get the connection string to connect to the database using the read-only endpoint.
     connection_string = await build_connection_string(
