@@ -16,7 +16,6 @@ from psycopg2.sql import SQL, Composed, Identifier, Literal
 
 from charm import PostgresqlOperatorCharm
 from constants import (
-    BACKUP_USER,
     MONITORING_USER,
     PEER,
     REPLICATION_USER,
@@ -82,6 +81,13 @@ def test_create_database(harness):
         execute.assert_has_calls([
             call(
                 Composed([
+                    SQL("SELECT datname FROM pg_database WHERE datname="),
+                    Literal(database),
+                    SQL(";"),
+                ]),
+            ),
+            call(
+                Composed([
                     SQL("REVOKE ALL PRIVILEGES ON DATABASE "),
                     Identifier(database),
                     SQL(" FROM PUBLIC;"),
@@ -102,15 +108,6 @@ def test_create_database(harness):
                     Identifier(database),
                     SQL(" TO "),
                     Identifier(PERMISSIONS_GROUP_ADMIN),
-                    SQL(";"),
-                ])
-            ),
-            call(
-                Composed([
-                    SQL("GRANT ALL PRIVILEGES ON DATABASE "),
-                    Identifier(database),
-                    SQL(" TO "),
-                    Identifier(BACKUP_USER),
                     SQL(";"),
                 ])
             ),

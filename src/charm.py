@@ -39,7 +39,10 @@ from charms.postgresql_k8s.v0.postgresql import (
     ACCESS_GROUP_IDENTITY,
     ACCESS_GROUPS,
     REQUIRED_PLUGINS,
+    ROLE_BACKUP,
+    ROLE_STATS,
     PostgreSQL,
+    PostgreSQLCreatePredefinedRolesError,
     PostgreSQLEnableDisableExtensionError,
     PostgreSQLGetCurrentTimelineError,
     PostgreSQLUpdateUserPasswordError,
@@ -1134,16 +1137,26 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             event.defer()
             return False
 
+        try:
+            self.postgresql.create_predefined_roles()
+        except PostgreSQLCreatePredefinedRolesError as e:
+            logger.exception(e)
+            self.unit.status = BlockedStatus("Failed to create pre-defined roles")
+            return
+
         pg_users = self.postgresql.list_users()
         # Create the backup user.
         if BACKUP_USER not in pg_users:
-            self.postgresql.create_user(BACKUP_USER, new_password(), admin=True)
+            self.postgresql.create_user(
+                BACKUP_USER, new_password(), extra_user_roles=[ROLE_BACKUP]
+            )
+            self.postgresql.grant_database_privileges_to_user(BACKUP_USER, "postgres", ["connect"])
         # Create the monitoring user.
         if MONITORING_USER not in pg_users:
             self.postgresql.create_user(
                 MONITORING_USER,
                 self.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY),
-                extra_user_roles=["pg_monitor"],
+                extra_user_roles=[ROLE_STATS],
             )
 
         self.postgresql.set_up_database(temp_location="/var/lib/postgresql/temp")
@@ -1308,13 +1321,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
 
         try:
+            updateable_users = [*SYSTEM_USERS, BACKUP_USER]
             # get the secret content and check each user configured there
             # only SYSTEM_USERS with changed passwords are processed, all others ignored
             updated_passwords = self.get_secret_from_id(secret_id=admin_secret_id)
             for user, password in list(updated_passwords.items()):
-                if user not in SYSTEM_USERS:
+                if user not in updateable_users:
                     logger.error(
-                        f"Can only update system users: {', '.join(SYSTEM_USERS)} not {user}"
+                        f"Can only update system users: {', '.join(updateable_users)} not {user}"
                     )
                     updated_passwords.pop(user)
                     continue
