@@ -4,7 +4,7 @@ The following guides cover key processes and common tasks for managing and using
 
 ## Deployment and setup
 
-The following guides walk you through the details of how to install different cloud services and bootstrap them to Juju:
+Installation of different cloud services with Juju:
 * [Canonical K8s]
 * [MicroK8s]
 * [GKE]
@@ -12,7 +12,7 @@ The following guides walk you through the details of how to install different cl
 * [AKS]
 * [Multi-availability zones (AZ)][Multi-AZ]
 
-The following guides cover some specific deployment scenarios and architectures:
+Other deployment scenarios and configurations:
 * [Terraform]
 * [Air-gapped]
 
@@ -22,6 +22,7 @@ The following guides cover some specific deployment scenarios and architectures:
 * [External access]
 * [Scale replicas]
 * [Enable TLS]
+* [Enable LDAP]
 * [Enable plugins/extensions]
 
 ## Backup and restore
@@ -34,9 +35,9 @@ The following guides cover some specific deployment scenarios and architectures:
 
 ## Monitoring (COS)
 
-* [Enable monitoring]
-* [Enable alert rules]
-* [Enable tracing]
+* [Enable monitoring] with Grafana
+* [Enable alert rules] with Prometheus
+* [Enable tracing] with Parca
 
 ## Minor upgrades
 * [Perform a minor upgrade]
@@ -52,7 +53,7 @@ The following guides cover some specific deployment scenarios and architectures:
 
 ## Development
 
-This section is aimed at charm developers looking to support PostgreSQL integrations with their charm.
+This section is for charm developers looking to support PostgreSQL integrations with their charm.
 
 * [Integrate with your charm]
 * [Migrate data via pg_dump]
@@ -73,6 +74,7 @@ This section is aimed at charm developers looking to support PostgreSQL integrat
 [External access]: /t/15701
 [Scale replicas]: /t/9592
 [Enable TLS]: /t/9593
+[Enable LDAP]: /t/17189
 [Enable plugins/extensions]: /t/10907
 
 [Configure S3 AWS]: /t/9595
