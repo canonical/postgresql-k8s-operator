@@ -58,9 +58,11 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 3 | h-deploy-terraform | [Terraform](/t/14924) |
 | 3 | h-deploy-airgapped | [Air-gapped](/t/15691) |
 | 2 | h-integrate | [Integrate with another application](/t/9594) |
+| 2 | h-manage-passwords | [Manage passwords](/t/17860) |
 | 2 | h-external-access | [External network access](/t/15701) |
 | 2 | h-scale | [Scale replicas](/t/9592) |
 | 2 | h-enable-tls | [Enable TLS](/t/9593) |
+| 2 | h-enable-ldap | [Enable LDAP](/t/17189) |
 | 2 | h-enable-plugins-extensions | [Enable plugins/extensions](/t/10907) |
 | 2 | h-backup | [Back up and restore]() |
 | 3 | h-configure-s3-aws | [Configure S3 AWS](/t/9595) |
@@ -92,16 +94,18 @@ PostgreSQL is a trademark or registered trademark of PostgreSQL Global Developme
 | 2 | r-troubleshooting | [Troubleshooting](/t/11854) |
 | 2 | r-plugins-extensions | [Plugins/extensions](/t/10945) |
 | 2 | r-alert-rules | [Alert rules](/t/15840) |
+| 2 | e-statuses | [Statuses](/t/11855) |
 | 2 | r-contacts | [Contacts](/t/11852) |
 | 1 | explanation | [Explanation](/t/16769) |
 | 2 | e-architecture | [Architecture](/t/11856) |
 | 2 | e-interfaces-endpoints | [Interfaces/endpoints](/t/10252) |
-| 2 | e-connection-pooling| [Connection pooling](/t/15799) |
-| 2 | e-statuses | [Statuses](/t/11855) |
-| 2 | e-users | [Users](/t/10843) |
-| 2 | e-logs | [Logs](/t/12098) |
 | 2 | e-juju-details | [Juju](/t/11986) |
 | 2 | e-legacy-charm | [Legacy charm](/t/11013) |
+| 2 | e-users | [Users](/t/10843) |
+| 2 | e-logs | [Logs](/t/12098) |
+| 2 | e-connection-pooling| [Connection pooling](/t/15799) |
+| 2 | e-security | [Security](/t/16850) |
+| 3 | e-cryptography | [Cryptography](/t/16851) |
 | 2 | flowcharts | [Flowcharts]() |
 | 3 | e-flowchart-charm | [Charm](/t/9305) |
 | 3 | e-flowchart-peers | [Relations](/t/9306) |
