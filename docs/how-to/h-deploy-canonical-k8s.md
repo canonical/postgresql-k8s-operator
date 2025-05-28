@@ -42,7 +42,7 @@ kubectl get namespaces # to test the credentials
 
 Install Juju and bootstrap the first Juju controller in K8s:
 ```shell
-sudo snap install juju --channel 3.6/candidate
+sudo snap install juju --channel 3.6/stable
 juju add-k8s ck8s --client --context-name="k8s"
 juju bootstrap ck8s
 ```

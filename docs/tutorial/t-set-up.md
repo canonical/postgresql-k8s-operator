@@ -8,12 +8,6 @@ In this page, we will set up a development environment with the required compone
 Before we start, make sure your machine meets the [minimum system requirements](/t/11744).
 [/note]
 
-## Summary
-
-- [Set up Multipass](#heading--multipass)
-- [Set up Juju](#heading--juju)
-
----
 
 <a href="#heading--multipass"><h2 id="heading--multipass"> Set up Multipass </h2></a>
 
@@ -28,13 +22,10 @@ Launch a new VM using the [charm-dev](https://github.com/canonical/multipass-blu
 ```shell
 multipass launch --cpus 4 --memory 8G --disk 50G --name my-vm charm-dev
 ```
-[note type=""]
-**Note**: All 'multipass launch' parameters are [described here](https://multipass.run/docs/launch-command).
-[/note]
 
-The Multipass [list of commands](https://multipass.run/docs/multipass-cli-commands) is short and self-explanatory. For example, to show all running VMs, just run the command `multipass list`.
+To show all running VMs, just run the command `multipass list`. For more information about Multipass commands, see the [Multipass CLI documentation](https://multipass.run/docs/multipass-cli-commands).
 
-As soon as a new VM has started, access it using
+As soon as a new VM has started, access it with:
 ```shell
 multipass shell my-vm
 ```
@@ -43,7 +34,9 @@ multipass shell my-vm
 **Note**:  If at any point you'd like to leave a Multipass VM, enter `Ctrl+D` or type `exit`.
 [/note]
 
-All necessary components have been pre-installed inside the VM already, like MicroK8s and Juju. The files `/var/log/cloud-init.log` and `/var/log/cloud-init-output.log` contain all low-level installation details. 
+All necessary components have been pre-installed inside the VM already, like MicroK8s and Juju. 
+
+The files `/var/log/cloud-init.log` and `/var/log/cloud-init-output.log` contain all low-level installation details. 
 
 <a href="#heading--juju"><h2 id="heading--juju"> Set up Juju </h2></a>
 

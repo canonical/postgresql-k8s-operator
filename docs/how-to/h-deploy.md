@@ -25,7 +25,7 @@ juju deploy postgresql-k8s --trust
 ```
 > See also: [`juju deploy` command](https://canonical-juju.readthedocs-hosted.com/en/latest/user/reference/juju-cli/list-of-juju-cli-commands/deploy/)
 
-To deploy with `terraform juju`, follow the guide [How to deploy using Terraform](/t/).
+To deploy with `terraform juju`, follow the guide [How to deploy using Terraform].
 > See also: [Terraform Provider for Juju documentation](https://canonical-terraform-provider-juju.readthedocs-hosted.com/en/latest/)
 
 If you are not sure where to start or would like a more guided walkthrough for setting up your environment, see the [Charmed PostgreSQL K8s tutorial][Tutorial].
@@ -40,9 +40,9 @@ The guides below go through the steps to install different cloud services and bo
 
 [How to deploy on multiple availability zones (AZ)] demonstrates how to deploy a cluster on a cloud using different AZs for high availability.
 
-## Special deployments
+## Special deployment scenarios
 
-These guides cover some specific deployment scenarios and architectures.
+These guides cover some specific deployment scenarios and configurations.
 
 ### External network access 
 
@@ -66,7 +66,6 @@ The [Cross-regional async replication] guide goes through the steps to set up cl
 [Azure Kubernetes Service]: /t/14307
 
 [How to deploy on multiple availability zones (AZ)]: /t/15678
-
 
 [How to enable TLS]: /t/9593
 [How to connect from outside the local network]: /t/15701

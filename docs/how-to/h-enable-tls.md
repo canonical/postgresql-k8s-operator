@@ -23,7 +23,7 @@ juju deploy self-signed-certificates --config ca-common-name="Tutorial CA"
 
 To enable TLS, integrate (formerly known as "relate") the two applications:
 ```shell
-juju integrate postgresql-k8s self-signed-certificates
+juju integrate postgresql-k8s:certificates self-signed-certificates:certificates
 ```
 
 ## Manage keys
@@ -60,5 +60,5 @@ juju run postgresql-k8s/2 set-tls-private-key
 ## Disable TLS 
 You can disable TLS by removing the integration.
 ```shell
-juju remove-relation self-signed-certificates postgresql-k8s
+juju remove-relation postgresql-k8s:certificates self-signed-certificates:certificates
 ```
