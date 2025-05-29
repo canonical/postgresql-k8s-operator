@@ -1,6 +1,4 @@
 
-
-
 # Cryptography
 
 This document describes the cryptography used by Charmed PostgreSQL K8s.

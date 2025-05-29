@@ -1,11 +1,10 @@
-
 # Flowcharts
 
 ```{toctree}
 :titlesonly:
 :maxdepth: 2
 :glob:
-:hidden:
 
-*
-*/index
+Charm <charm>
+Backups <backups>
+Relations <relations>

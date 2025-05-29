@@ -1,6 +1,3 @@
-
-
-
 # Charm flowcharts
 
 The file `charm.py` is the entrypoint for the charm. It contains functions for its basic operation, including its major hooks and file management. This file can be found at [src/charm.py](https://github.com/canonical/postgresql-k8s-operator/blob/main/src/charm.py).
@@ -9,8 +6,7 @@ The file `charm.py` is the entrypoint for the charm. It contains functions for i
 
 These flowcharts detail the control flow of the hooks in this program. Unless otherwise stated, **a hook deferral is always followed by a return**.
 
-## Leader Elected Hook
-[Click to navigate the mermaid diagram on GitHub](https://github.com/canonical/postgresql-k8s-operator/blob/e760a3df8ceceab49357ff57c620299d9d101fc8/docs/explanation/flowcharts/e-flowchart-charm.md).
+## `leader-elected` hook
 
 ```mermaid
 flowchart TD
@@ -36,8 +32,7 @@ flowchart TD
   update_config --> rtn2([return])
 ```
 
-## PostgreSQL Pebble Ready Hook
-[Click to navigate the mermaid diagram on GitHub](https://github.com/canonical/postgresql-k8s-operator/blob/e760a3df8ceceab49357ff57c620299d9d101fc8/docs/explanation/flowcharts/e-flowchart-charm.md).
+## PostgreSQL Pebble ready hook
 
 ```mermaid
 flowchart TD

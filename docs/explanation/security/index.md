@@ -1,6 +1,3 @@
-
-
-
 # Security hardening guide
 
 This document provides an overview of security features and guidance for hardening the security of [Charmed PostgreSQL K8s](https://charmhub.io/postgresql-k8s) deployments, including setting up and managing a secure environment.
@@ -105,5 +102,4 @@ For details on the cryptography used by Charmed PostgreSQL K8s, see the [Cryptog
 :glob:
 :hidden:
 
-*
-*/index
+Cryptography <cryptography>

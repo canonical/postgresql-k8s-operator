@@ -1,9 +1,6 @@
-
-
-
 # Explanation
 
-This section contains pages with more detailed explanations that provide additional context about some of the key concepts behind the PostgreSQL charm:
+Additional context about key concepts behind the PostgreSQL charm, including design and legacy information.
 
 ## Core concepts and design
 * [Architecture]
@@ -48,5 +45,11 @@ Charm event flowcharts:
 :glob:
 :hidden:
 
-*
-*/index
+Architecture <architecture>
+Interfaces and endpoints <interfaces-and-endpoints>
+Juju <juju>
+Legacy charm <legacy-charm>
+Users <users>
+Logs <logs>
+Connection pooling <connection-pooling>
+Security <security/index>

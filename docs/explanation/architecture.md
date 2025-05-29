@@ -1,6 +1,3 @@
-
-
-
 # Architecture
 
 [PostgreSQL](https://www.postgresql.org/) is one of the most popular open source database. The “[Charmed PostgreSQL K8s](https://charmhub.io/postgresql-k8s)” is a Juju-based operator to deploy and support PostgreSQL from [day 0 to day 2](https://codilime.com/blog/day-0-day-1-day-2-the-software-lifecycle-in-the-cloud-age/), it is based on the [PostgreSQL Community Edition](https://www.postgresql.org/community/) using the [Patroni](https://github.com/zalando/patroni) to manage PostgreSQL cluster based on [PostgreSQL synchronous replication](https://patroni.readthedocs.io/en/latest/replication_modes.html#postgresql-synchronous-replication).
@@ -29,7 +26,6 @@ This shows there are 2 containers in the pod: `charm` and `workload` mentioned a
 
 And if you run `kubectl describe pod postgresql-k8s-0`, all the containers will have as Command `/charm/bin/pebble`. That’s because Pebble is responsible for the processes startup as explained above (see [troubleshooting](/reference/troubleshooting) for more details.).
 
-<a name="hld"></a>
 ## HLD (High Level Design)
 
 The "Charmed PostgreSQL K8s" (`workload` container) based on `postgresql-image` resource defined in the [charm metadata.yaml](https://github.com/canonical/postgresql-k8s-operator/blob/main/metadata.yaml). It is an official Canonical "[charmed-postgresql](https://github.com/canonical/charmed-postgresql-rock)" [OCI/Rock](https://ubuntu.com/server/docs/rock-images/introduction) image, which is recursively based on Canonical SNAP “[charmed-postgresql](https://snapcraft.io/charmed-postgresql)” (read more about the SNAP details [here](/)).
@@ -111,7 +107,6 @@ Loki is an open-source fully-featured logging system. This charms is shipped wit
 
 Prometheus is an open-source systems monitoring and alerting toolkit with a dimensional data model, flexible query language, efficient time series database and modern alerting approach. This charm is shipped with a Prometheus exporters, alerts and support for integrating with the [Prometheus Operator](https://charmhub.io/prometheus-k8s) to automatically scrape the targets. Please follow [COS Monitoring](/how-to/monitoring-cos/enable-monitoring) setup.
 
-<a name="lld"></a>
 ## LLD (Low Level Design)
 
 Please check the charm state machines displayed on [workflow diagrams](/explanation/flowcharts/charm). The low-level logic is mostly common for both VM and K8s charm flavors.

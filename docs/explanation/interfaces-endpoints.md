@@ -1,11 +1,10 @@
-
-
-
 # Interfaces/endpoints
 
 The charm supports modern `postgresql_client` and legacy `pgsql` interfaces (in a backward compatible mode).
 
-**Note:** do NOT relate both modern and legacy interfaces simultaneously!
+```{caution}
+Do **not** relate both modern and legacy interfaces simultaneously!
+```
 
 ## Modern interfaces
 
@@ -33,11 +32,15 @@ juju status --relations
 # > postgresql-k8s:database    mycharm:database  postgresql_client  regular
 ```
 
-Find all details about default and extra DB user roles in "[Charm Users explanations](/explanation/users)".
+Find all details about default and extra DB user roles in [](/explanation/users)".
 
 ## Legacy interfaces
 
-**Note:** Legacy relations are deprecated and will be discontinued on future releases. Usage should be avoided. Check the legacy interface implementation limitations in the "[Legacy charm](/explanation/legacy-charm)" document.
+```{note}
+Legacy relations are deprecated and will be discontinued on future releases. Their usage should be avoided. 
+
+Check the legacy interfaces implementation limitations in [](/explanation/legacy-charm)"
+```
 
 ### Legacy `pgsql` interface (`db` and `db-admin` endpoints):
 
@@ -49,5 +52,7 @@ juju deploy finos-waltz-k8s --channel edge
 juju relate postgresql-k8s:db finos-waltz-k8s
 ```
 
-**Note:** The endpoint `db-admin` provides the same legacy interface `pgsql` with PostgreSQL admin-level privileges. It is NOT recommended to use it from security point of view.
+```{note}
+The endpoint `db-admin` provides the same legacy interface `pgsql` with PostgreSQL admin-level privileges. It is NOT recommended to use it due to security limitations.
+```
 

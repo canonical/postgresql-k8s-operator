@@ -1,7 +1,4 @@
-
-
-
-# Charm Users explanations
+# Users
 
 There are three types of users in PostgreSQL:
 
@@ -10,8 +7,7 @@ There are three types of users in PostgreSQL:
   * Extra user roles (if default permissions are not enough)
 * Identity users (used when LDAP is enabled)
 
-<a name="internal-users"></a>
-## Internal users explanations:
+## Internal users
 
 The operator uses the following internal DB users:
 
@@ -36,9 +32,15 @@ postgres=# \du
  replication | Replication                                                | {}
  rewind      |                                                            | {}
 ```
-**Note**: it is forbidden to use/manage described above users! They are dedicated to the operators logic! Please use [data-integrator](https://charmhub.io/postgresql-k8s/docs/t-integrations) charm to generate/manage/remove an external credentials.
 
-It is allowed to rotate passwords for *internal* users using action 'set-password':
+```{note}
+It is forbidden to use/manage described above users, as they are dedicated to the operator's logic.
+
+Use the [data-integrator](https://charmhub.io/data-integrator) charm to generate, manage, and remove external credentials.
+```
+
+Passwords for *internal* users can be rotated using the action `set-password`:
+
 ```text
 > juju show-action postgresql set-password
 Change the system user's password, which is used by charm. It is for internal charm users and SHOULD NOT be used by applications.
@@ -66,6 +68,7 @@ unit-postgresql-1:
 ```
 
 To set a predefined password for the specific user, run:
+
 ```text
 > juju run-action --wait postgresql-k8s/leader set-password username=operator password=newpassword
 
@@ -76,10 +79,10 @@ unit-postgresql-1:
     password: newpassword
   status: completed
 ```
-**Note**: the action `set-password` must be executed on juju leader unit (to update peer relation data with new value).
 
-<a name="relation-users"></a>
-## Relation users explanations:
+The action `set-password` must be executed on juju leader unit (to update peer relation data with new value).
+
+## Relation users
 
 The operator created a dedicated user for every application related/integrated with database. Those users are removed on the juju relation/integration removal request. However, DB data stays in place and can be reused on re-created relations (using new user credentials):
 
@@ -94,22 +97,25 @@ postgres=# \du
  ...
 ```
 
-**Note**: If password rotation is needed for users used in relations, it is needed to remove the relation and create it again:
+If password rotation is needed for users used in relations, it is needed to remove the relation and create it again:
 ```text
-> juju remove-relation postgresql-k8s myclientapp
-> juju wait-for application postgresql-k8s
-> juju relate postgresql-k8s myclientapp
+juju remove-relation postgresql-k8s myclientapp
+juju wait-for application postgresql-k8s
+juju relate postgresql-k8s myclientapp
 ```
 
-<a name="extra-user-roles"></a>
 ### Extra user roles
 
 When an application charm requests a new user through the relation/integration it can specify that the user should have the `admin` role in the `extra-user-roles` field. The `admin` role enables the new user to read and write to all databases (for the `postgres` system database it can only read data) and also to create and delete non-system databases.
 
-**Note**: `extra-user-roles` is supported by modern interface `postgresql_client` only and missing for legacy `pgsql` interface. Read more about the supported charm interfaces [here](/explanation/interfaces-endpoints).
+```{note}
+`extra-user-roles` is only supported by the modern interface `postgresql_client`. It is not supported for the legacy `pgsql` interface. R
 
-<a name="identity-users"></a>
-## Identity users explanations:
+Read more about the supported charm interfaces in [](/explanation/interfaces-and-endpoints).
+```
+
+## Identity users
+
 The operator considers Identity users all those that are automatically created when the LDAP integration is enabled, or in other words, the [GLAuth](https://charmhub.io/glauth-k8s) charm is related/integrated.
 
 When synchronized from the LDAP server, these users do not have any permissions by default, so the LDAP group they belonged to must be mapped to a PostgreSQL pre-defined authorization role by using the `ldap_map` configuration option.

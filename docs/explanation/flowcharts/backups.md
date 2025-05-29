@@ -1,14 +1,12 @@
-
-
-
 # Backup flowcharts
+
 This document contains backups management flowchart, including all major hooks. This sources can be found at [src/backups.py](https://github.com/canonical/postgresql-k8s-operator/blob/main/src/backups.py).
 
-## Hook Handler Flowcharts
+## Hook handler flowcharts
+
 These flowcharts detail the control flow of the hooks in this program. Unless otherwise stated, **a hook deferral is always followed by a return**.
 
-## On S3 Credentials Changed Hook
-[Click to navigate the mermaid diagram on GitHub](https://github.com/canonical/postgresql-k8s-operator/blob/main/docs/explanation/e-backups.md).
+## On `s3-credentials-changed` hook
 
 ```mermaid
 flowchart TD
@@ -38,8 +36,7 @@ flowchart TD
 
 When certificates are received from TLS certificates operator through the `certificates` relation (or the relation is removed) the steps starting from `Is TLS disabled or single unit cluster` are also executed.
 
-## On Create Backup Hook
-[Click to navigate the mermaid diagram on GitHub](https://github.com/canonical/postgresql-k8s-operator/blob/main/docs/explanation/e-backups.md).
+## On `create-backup` hook
 
 ```mermaid
 flowchart TD
@@ -73,7 +70,7 @@ flowchart TD
   finish_action --> is_replica2
 ```
 
-## On List Backups Hook
+## On `list-backups` hook
 [Click to navigate the mermaid diagram on GitHub](https://github.com/canonical/postgresql-k8s-operator/blob/main/docs/explanation/e-backups.md).
 
 ```mermaid
@@ -87,7 +84,7 @@ flowchart TD
   does_pgbackrest_returned_backups_list -- yes --> return_formatted_backup_list[Return formatted\nbackup list]
 ```
 
-## On Restore Hook
+## On `restore` hook
 [Click to navigate the mermaid diagram on GitHub](https://github.com/canonical/postgresql-k8s-operator/blob/main/docs/explanation/e-backups.md).
 
 ```mermaid

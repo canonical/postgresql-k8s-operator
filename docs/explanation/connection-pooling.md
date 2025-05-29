@@ -1,6 +1,3 @@
-
-
-
 # Connection pooling 
 
 Connection pooling is a strategy to reduce the amount of active connections and the costs of reopening connections. It requires maintaining a set of persistently opened connections, called a pool, that can be reused by clients.
@@ -14,8 +11,8 @@ A way to achieve this with Charmed PostgreSQL K8s is by integrating with the [Pg
 If using PgBouncer is not enough to handle the connections load of your application, you can increase the amount of connections that PostgreSQL can open via the [`experimental_max_connections` config parameter](https://charmhub.io/postgresql-k8s/configurations#experimental_max_connections). 
 
 ```{caution}
-**Disclaimer:** Each connection opened by PostgreSQL spawns a new process, which is resource-intensive. Use this option as a last resort.
+Each connection opened by PostgreSQL spawns a new process, which is resource-intensive. Use this option as a last resort.
 
-[Contact us](/reference/contacts) for more guidance about your use-case.
+[Contact us](/reference/contacts) for more guidance for your use-case.
 ```
 

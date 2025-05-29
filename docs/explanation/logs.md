@@ -1,14 +1,13 @@
-
-
-
 # Logs
 
-The list of all the charm components are well described in the "[Architecture](/explanation/architecture)".
-It is a dedicated section to highlight logs for each component to simplify troubleshooting.
+This page summarizes all log types in Charmed PostgreSQL to simplify troubleshooting.
+
+For an overview of all charm components, see [](/explanation/architecture).
 
 ## Core logs
 
 PostgreSQL and Patroni logs can be found in `/var/log/postgresql` within the `postgresql` container of each unit:
+
 ```text
 > ls -alh /var/log/postgresql/
 total 60K
@@ -30,7 +29,9 @@ drwxr-xr-x 1 root     root     4.0K Aug 18 12:53 ..
 -rw------- 1 postgres postgres    0 Oct 11 11:44 postgresql-3_1144.log
 -rw------- 1 postgres postgres    0 Oct 11 11:45 postgresql-3_1145.log
 ```
+
 The PostgreSQL log naming convention  is `postgresql-<weekday>_<hour><minute>.log`. The log message format is `<date> <time> UTC [<pid>]: <connection details> <level>: <message>`. E.g:
+
 ```text
 > cat /var/log/postgresql/postgresql-3_1140.log
 2023-10-11 11:40:12 UTC [49]: user=,db=,app=,client=,line=3 LOG:  starting PostgreSQL 14.9 (Ubuntu 14.9-0ubuntu0.22.04.1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0, 64-bit
@@ -42,6 +43,7 @@ The PostgreSQL log naming convention  is `postgresql-<weekday>_<hour><minute>.lo
 ```
 
 The Patroni log message format is `<date> <time> UTC [<pid>]: <level>: <message>`. E.g:
+
 ```text
 > cat /var/log/postgresql/patroni.log.27
 2023-10-11 11:40:09 UTC [15]: INFO: No PostgreSQL configuration items changed, nothing to reload. 
@@ -68,6 +70,7 @@ drwxr-xr-x 1 root     root     4.0K Aug 18 12:53 ..
 ```
 
 The naming convention of the Pgbackrest logs is `<model name>.patroni-<postgresql app name>-<action>.log`. Log output should look similar to:
+
 ```text
 > cat /var/log/pgbackrest/discourse.patroni-pg-expire.log 
 -------------------PROCESS START-------------------
