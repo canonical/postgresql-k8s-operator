@@ -7,11 +7,14 @@ This guide will teach you how to deploy and configure the s3-integrator charm fo
 ## Configure s3-integrator
 
 First, deploy and run the charm:
+
 ```text
 juju deploy s3-integrator
 juju run s3-integrator/leader sync-s3-credentials access-key=<access-key-here> secret-key=<secret-key-here>
 ```
+
 Then, use `juju config` to add your configuration parameters. For example:
+
 ```text
 juju config s3-integrator \
     endpoint="https://s3.us-west-2.amazonaws.com" \
@@ -30,6 +33,7 @@ See [this post](https://repost.aws/knowledge-center/s3-http-307-response) for mo
 ```
 
 ## Integrate with Charmed PostgreSQL
+
 To pass these configurations to Charmed PostgreSQL, integrate the two applications:
 ```
 juju integrate s3-integrator postgresql-k8s
