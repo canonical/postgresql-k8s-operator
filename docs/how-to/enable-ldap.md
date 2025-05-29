@@ -1,20 +1,17 @@
-
-
-
 # How to enable LDAP authentication
 
-LDAP (*Lightweight Directory Access Protocol*) enables centralized authentication for PostgreSQL clusters, reducing the overhead of managing local credentials and access policies.
+The Lightweight Directory Access Protocol (LDAP) enables centralized authentication for PostgreSQL clusters, reducing the overhead of managing local credentials and access policies.
 
-This guide goes over the steps to integrate LDAP as an authentication method with the PostgreSQL-K8s charm, all within the Juju ecosystem.
+This guide goes over the steps to integrate LDAP as an authentication method with the PostgreSQL charm, all within the Juju ecosystem.
 
 ## Prerequisites
 * Charmed PostgreSQL channel `14/edge` or `16/edge` (revision `570` or higher)
-* Juju `v3.6` or higher
+* Juju `3.6+`
 
 ## Deploy an LDAP server
 
 ```{caution}
-**Disclaimer:** In this guide, we use [self-signed certificates](https://en.wikipedia.org/wiki/Self-signed_certificate) provided by the [`self-signed-certificates` operator](https://github.com/canonical/self-signed-certificates-operator). 
+In this guide, we use [self-signed certificates](https://en.wikipedia.org/wiki/Self-signed_certificate) provided by the [`self-signed-certificates` operator](https://github.com/canonical/self-signed-certificates-operator). 
 
 **This is not recommended for a production environment.**
 
@@ -82,7 +79,7 @@ juju integrate postgresql-k8s:receive-ca-cert send-ca-cert
 
 ## Map LDAP users to PostgreSQL
 
-To have LDAP users available in PostgreSQL, provide a comma separated list of LDAP groups to already created PostgreSQL authorization groups. To create those groups before hand, refer to the Data Integrator charm [page](https://charmhub.io/data-integrator).
+To have LDAP users available in PostgreSQL, provide a comma separated list of LDAP groups to already created PostgreSQL authorization groups. To create those groups before hand, refer to the [data integrator charm](https://charmhub.io/data-integrator).
 
 ```text
 juju config postgresql-k8s ldap_map="<ldap_group>=<psql_group>"

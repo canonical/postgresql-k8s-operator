@@ -1,18 +1,7 @@
-
-
-
-```{note}
-**Note**: All commands are written for `juju >= v.3.0`
-
-If you are using an earlier version, check the [Juju 3.0 Release Notes](https://juju.is/docs/juju/roadmap#juju-3-0-0---22-oct-2022).
-```
-
 # Perform a minor upgrade
 
 **Example**: PostgreSQL 14.8 -> PostgreSQL 14.9<br/>
 (including simple charm revision bump: from revision 99 to revision 102)
-
-This guide is part of [Charmed PostgreSQL K8s Upgrades](/how-to/upgrade/index). Please refer to this page for more information and an overview of the content.
 
 ## Summary
 
@@ -27,13 +16,9 @@ This guide is part of [Charmed PostgreSQL K8s Upgrades](/how-to/upgrade/index). 
 - [**7. (optional) Scale back**](#step-7-scale-back-optional). Remove no longer necessary K8s pods created in [Step 2: Scale up](#step-2-scale-up-optional) (if any).
 - [**Post-upgrade check**](#step-5-post-upgrade-check). Make sure all units are in their proper state and the cluster is healthy.
 
----
-
 ## Pre-upgrade checks
-Before performing a minor PostgreSQL upgrade, there are some important considerations to take into account:
-* Concurrency with other operations during the upgrade
-* Backing up your data
-* Service disruption
+
+Key topics to take into consideration before upgrading.
 
 ### Concurrency with other operations
 **We strongly recommend to NOT perform any other extraordinary operations on Charmed PostgreSQL K8s cluster while upgrading.** 
@@ -46,6 +31,7 @@ Some examples are operations like (but not limited to) the following:
 * Upgrading other connected/related/integrated applications simultaneously
 
 Concurrency with other operations is not supported, and it can lead the cluster into inconsistent states.
+
 ### Backups
 **Make sure to have a backup of your data when running any type of upgrade.**
 
@@ -57,6 +43,7 @@ Guides on how to configure backups with S3-compatible storage can be found [here
 This will ensure minimal service disruption, if any.
 
 ## Step 1: Collect
+
 ```{note}
 This step is only valid when deploying from [charmhub](https://charmhub.io/). 
 
@@ -106,22 +93,12 @@ This action will configure the charm to minimize the amount of primary switchove
 
 ## Step 4: Upgrade
 
-Use the [`juju refresh`](https://juju.is/docs/juju/juju-refresh) command to trigger the charm upgrade process. If using juju version 3 or higher, it is necessary to add the `--trust` option.
+```{important}
+**Do NOT trigger `rollback` procedure during the running `upgrade` procedure.** 
+It is expected to have some status changes during the process: `waiting`, `maintenance`, `active`. 
 
-Example with channel selection and juju 2.9.x:
-```text
-juju refresh postgresql-k8s --channel 14/edge
-```
-Example with channel selection and juju 3.x:
-```text
-juju refresh postgresql-k8s --channel 14/edge --trust
-```
-Example with specific revision selection (do NOT miss OCI resource!):
-```text
-juju refresh postgresql-k8s --revision=189 --resource postgresql-image=...
-```
+Make sure `upgrade` has failed/stopped and cannot be fixed/continued before triggering `rollback`!
 
-### Important Notes
 **The upgrade will execute only on the highest ordinal unit.** 
 
 For the running example `postgresql-k8s/3`, the `juju status` will look like:
@@ -139,13 +116,30 @@ postgresql-k8s/1   waiting      idle       10.1.12.19         other units upgrad
 postgresql-k8s/2   waiting      idle       10.1.12.20         other units upgrading first...
 postgresql-k8s/3   maintenance  executing  10.1.12.23         upgrading unit
 ```
-**Do NOT trigger `rollback` procedure during the running `upgrade` procedure.** 
-It is expected to have some status changes during the process: `waiting`, `maintenance`, `active`. 
-
-Make sure `upgrade` has failed/stopped and cannot be fixed/continued before triggering `rollback`!
 
 **Please be patient during huge installations.**
 The unit should recover shortly after, but the time can vary depending on the amount of data written to the cluster while the unit was not part of it.
+```
+
+Use the [`juju refresh`](https://juju.is/docs/juju/juju-refresh) command to trigger the charm upgrade process. If using juju version 3 or higher, it is necessary to add the `--trust` option.
+
+Example with channel selection and juju 2.9.x:
+
+```text
+juju refresh postgresql-k8s --channel 14/edge
+```
+
+Example with channel selection and juju 3.x:
+
+```text
+juju refresh postgresql-k8s --channel 14/edge --trust
+```
+
+Example with specific revision selection (do NOT miss OCI resource!):
+
+```text
+juju refresh postgresql-k8s --revision=189 --resource postgresql-image=...
+```
 
 ## Step 5: Resume
 
@@ -180,6 +174,7 @@ postgresql-k8s/3   maintenance  executing  10.1.12.23         upgrade completed
 This step must be skipped if the upgrade went well! 
 
 Although the underlying PostgreSQL Cluster continues to work, it’s important to roll back the charm to a previous revision so that an update can be attempted after further inspection of the failure. Please switch to the dedicated [minor rollback](/how-to/upgrade/perform-a-minor-rollback) guide for more information about this process.
+
 
 ## Step 7: Scale back (optional)
 

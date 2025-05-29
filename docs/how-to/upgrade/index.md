@@ -1,11 +1,4 @@
-
-
-
-# Upgrade 
-
-Currently, the charm supports PostgreSQL major version 14 only. Therefore, in-place upgrades/rollbacks are not possible for major versions. 
-
-> **Note**: Canonical is not planning to support in-place upgrades for major version change. The new PostgreSQL K8s charm will have to be installed nearby, and the data will be copied from the old to the new installation. After announcing the next PostgreSQL major version support, the appropriate documentation for data migration will be published.
+# Upgrade
 
 For instructions on carrying out **minor version upgrades**, see the following guides:
 
@@ -14,6 +7,11 @@ For instructions on carrying out **minor version upgrades**, see the following g
 * [Minor rollback](/how-to/upgrade/perform-a-minor-rollback), e.g. PostgreSQL 14.9 -> PostgreSQL 14.8<br/>
 (including charm revision return 43 -> 42).
 
+This charm does not support in-place upgrades for major version changes. 
+
+```{note}
+We will soon publish a migration guide with instructions on how to change from PostgreSQL 14 to 16.
+```
 
 ```{toctree}
 :titlesonly:
@@ -21,5 +19,5 @@ For instructions on carrying out **minor version upgrades**, see the following g
 :glob:
 :hidden:
 
-*
-*/index
+Perform a minor upgrade <perform-a-minor-upgrade>
+Perform a minor rollback <perform-a-minor-rollback>

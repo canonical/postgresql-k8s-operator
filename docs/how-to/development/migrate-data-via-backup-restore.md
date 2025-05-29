@@ -1,23 +1,22 @@
-
-
-
 # Migrate database data using ‘backup/restore’
 
 This is a guide for migrating data from modern charms. To migrate [legacy charms](/explanation/legacy-charm) data, refer to the guide [Migrate data via pg_dump](/how-to/development/migrate-data-via-pg-dump).
 
-This Charmed PostgreSQL K8s operator is able to restore its own [backups](/how-to/back-up-and-restore/restore-a-backup) stored on [S3-compatible storage](/how-to/back-up-and-restore/configure-s3-aws). The same restore approach is applicable to [restore backups made by a different installation](/how-to/back-up-and-restore/migrate-a-cluster) of Charmed PostgreSQL, or even another PostgreSQL charm. (The backups have to be created manually using [pgBackRest](https://pgbackrest.org/)!)
+This Charmed PostgreSQL K8s operator is able to restore its own [backups](/how-to/back-up-and-restore/restore-a-backup) stored on [S3-compatible storage](/how-to/back-up-and-restore/configure-s3-aws). The same restore approach is applicable to [restore backups made by a different installation](/how-to/back-up-and-restore/migrate-a-cluster) of Charmed PostgreSQL, or even another PostgreSQL charm. The backups have to be created manually using [pgBackRest](https://pgbackrest.org/)!
 
 ```{caution}
-**Warning:** The Canonical Data Team describes here the general approach and does NOT support nor guarantee the restoration results. 
+The Canonical Data team describes here a general approach to data migration, but cannot guarantee restoration results. 
 
 Always test a migration in a safe environment before performing it in production!
 ```
 
 ## Prerequisites
+
 * **Check [your application compatibility](/explanation/legacy-charm)** with Charmed PostgreSQL K8s before migrating production data from legacy charm
 * Make sure **PostgreSQL versions are identical** before the migration
 
 ## Migrate database data
+
 Below is the *general approach* to the migration (see warning above!):
 
 1. **Retrieve root/admin-level credentials from the legacy charm.**
@@ -39,6 +38,8 @@ Below is the *general approach* to the migration (see warning above!):
 5. **[Migrate this backup](/how-to/back-up-and-restore/migrate-a-cluster) to the Charmed PostgreSQL installation in your test environment.**
 6. **Perform all the necessary tests to make sure your application accepted the new database**
 7. **Schedule and perform the final production migration, re-using the last steps above.**
+
 ---
+
 Do you have questions? [Contact us](/reference/contacts) if you are interested in such a data migration!
 

@@ -1,6 +1,3 @@
-
-
-
 # How to connect DB from outside of Kubernetes
 
 It is possible to connect to a client application outside the database's Kubernetes cluster. The method depends on whether it is a non-Juju application or a Juju application.

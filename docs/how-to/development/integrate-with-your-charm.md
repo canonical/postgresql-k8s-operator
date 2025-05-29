@@ -1,19 +1,9 @@
-
-
-
 # How to integrate a database with your charm
 
 Charmed PostgreSQL K8s can be integrated with any charmed application that supports its interfaces. This page provides some guidance and resources for charm developers to develop, integrate, and troubleshoot their charm so that it may connect with PostgreSQL.
 
-## Summary
-* Check supported interfaces 
-* Integrate your charm with PostgreSQL
-* Troubleshooting & testing
-* FAQ
-
----
-
 ## Check supported interfaces
+
 First, we recommend that you check [the supported interfaces](/explanation/interfaces-endpoints) of the current charm. You have options to use modern (preferred) or legacy interfaces. 
 
 Most existing charms currently use the [ops-lib-pgsql](https://github.com/canonical/ops-lib-pgsql) interface (legacy). For new charms, **Canonical recommends using [data-platform-libs](https://github.com/canonical/data-platform-libs) instead.** 
@@ -21,6 +11,7 @@ Most existing charms currently use the [ops-lib-pgsql](https://github.com/canoni
 Legacy charm details are described [here](/explanation/legacy-charm).
 
 ## Integrate your charm with PostgreSQL
+
 **For an introduction** to the concepts of Juju integrations, see [Juju | Integration](https://juju.is/docs/juju/integration).
 
 **For a detailed tutorial** about integrating your charm with the PostgreSQL charm, refer to [Juju | Integrate your charm with PostgreSQL](https://juju.is/docs/sdk/integrate-your-charm-with-postgresql). 
@@ -31,6 +22,7 @@ Legacy charm details are described [here](/explanation/legacy-charm).
 * [How to migrate Nextcloud to new PostgreSQL (vm-charms)](/) guide
 
 ## Troubleshooting & testing
+
 * To learn the basics of charm debugging, start with [Juju | How to debug a charm](https://juju.is/docs/sdk/debug-a-charm)
 * To troubleshoot PostgreSQL on K8s, check the [Troubleshooting](/reference/troubleshooting) reference
 * To test PostgreSQL and other charms, check the [Testing](/reference/software-testing) reference

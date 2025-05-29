@@ -1,33 +1,18 @@
-
-
-
-```{note}
-**Note**: All commands are written for `juju >= v.3.0`
-
-If you are using an earlier version, check the [Juju 3.0 Release Notes](https://juju.is/docs/juju/roadmap#juju-3-0-0---22-oct-2022).
-```
-
 # How to integrate with another application
-[Integrations](https://juju.is/docs/juju/relation) (formerly “relations”) are connections between two applications with compatible endpoints. These connections simplify the creation and management of users, passwords, and other shared data.
 
-This guide shows how to integrate Charmed PostgreSQL K8s with both charmed and non-charmed applications.
+[Integrations](https://juju.is/docs/juju/relation), also known as “relations” are connections between two applications with compatible endpoints. These connections simplify the creation and management of users, passwords, and other shared data.
 
-> For developer information about how to integrate your own charmed application with PostgreSQL, see [Development > How to integrate with your charm](/how-to/development/integrate-with-your-charm).
+This guide shows how to integrate Charmed PostgreSQL with both charmed and non-charmed applications.
 
-## Summary
-* [Integrate with a charmed application](#integrate-with-a-charmed-application)
-  * [Modern interface](#modern-interface)
-  * [Legacy interface](#legacy-interface)
-* [Integrate with a non-charmed application](#integrate-with-a-non-charmed-application)
-* [Rotate application passwords](#rotate-application-passwords)
-
----
+For developer information about how to integrate your own charmed application with PostgreSQL, see [](/how-to/development/integrate-with-your-charm).
 
 ## Integrate with a charmed application
 
 Integrations with charmed applications are supported via the modern [`postgresql_client`](https://github.com/canonical/charm-relation-interfaces/blob/main/interfaces/postgresql_client/v0/README.md) interface, and the legacy `psql` interface from the [original version](https://launchpad.net/postgresql-charm) of the charm.
 
-> You can see which charms are compatible with PostgreSQL in the [Integrations](https://charmhub.io/postgresql-k8s/integrations) tab.
+```{note}
+You can see which existing charms are compatible with PostgreSQL in the [Integrations](https://charmhub.io/postgresql-k8s/integrations) tab on Charmhub.
+```
 
 ### Modern `postgresql_client` interface
 
@@ -45,7 +30,8 @@ juju remove-relation postgresql-k8s <charm>
 
 ```{caution}
 Note that this interface is **deprecated**.
-See more information in [Explanation > Legacy charm](/explanation/legacy-charm).
+
+See more information in [](/explanation/legacy-charm).
 ```
 
 Using the `mattermost-k8s` charm as an example, an integration with the legacy interface could be created as follows:
@@ -87,6 +73,7 @@ juju integrate <charm> postgresql-k8s
 >`<charm>` can be `data-integrator` in the case of connecting with a non-charmed application.
 
 ### Internal operator user
+
 The `operator` user is used internally by the Charmed PostgreSQL K8s Operator. The `set-password` action can be used to rotate its password.
 
 To set a specific password for the `operator `user, run
@@ -100,3 +87,4 @@ To randomly generate a password for the `operator` user, run
 juju run postgresql-k8s/leader set-password
 ```
 
+See also: [](/how-to/manage-passwords)

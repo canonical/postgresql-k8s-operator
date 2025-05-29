@@ -1,49 +1,49 @@
-
-
-
-```{note}
-**Note**: All commands are written for `juju >= v.3.0`
-
-If you are using an earlier version, check the [Juju 3.0 Release Notes](https://juju.is/docs/juju/roadmap#juju-3-0-0---22-oct-2022).
-```
-
 # How to enable TLS encryption
 
-```{caution}
-**Disclaimer:** In this guide, we use [self-signed certificates](https://en.wikipedia.org/wiki/Self-signed_certificate) provided by the [`self-signed-certificates` operator](https://github.com/canonical/self-signed-certificates-operator). 
+This guide will show how to enable TLS/SSL on a PostgreSQL cluster using the [`self-signed-certificates` operator](https://github.com/canonical/self-signed-certificates-operator) as an example.
 
-**This is not recommended for a production environment.**
-
-For production environments, check the collection of [Charmhub operators](https://charmhub.io/?q=tls-certificates) that implement the `tls-certificate` interface, and choose the most suitable for your use-case.
-```
-
+This guide assumes everything is deployed within the same network and Juju model.
 
 ## Enable TLS
-Deploy the TLS charm:
+
+```{caution}
+**[Self-signed certificates](https://en.wikipedia.org/wiki/Self-signed_certificate) are not recommended for a production environment.**
+
+Check [this guide about X.509 certificates](https://discourse.charmhub.io/t/security-with-x-509-certificates/11664) for an overview of all the TLS certificate charms available. 
+```
+
+First, deploy the TLS charm:
+
 ```text
 juju deploy self-signed-certificates --config ca-common-name="Tutorial CA"
 ```
 
 To enable TLS, integrate (formerly known as "relate") the two applications:
+
 ```text
 juju integrate postgresql-k8s:certificates self-signed-certificates:certificates
 ```
 
 ## Manage keys
+
 Updates to private keys for certificate signing requests (CSR) can be made via the `set-tls-private-key` action. Note that passing keys to external/internal keys should *only be done with* `base64 -w0`, *not* `cat`. 
 
 With three replicas, this schema should be followed:
 
 Generate a shared internal key:
+
 ```text
 openssl genrsa -out internal-key.pem 3072
 ```
+
 Generate external keys for each unit:
+
 ```text
 openssl genrsa -out external-key-0.pem 3072
 openssl genrsa -out external-key-1.pem 3072
 openssl genrsa -out external-key-2.pem 3072
 ```
+
 Apply both private keys to each unit. The shared internal key will be applied only to the juju leader.
 
 ```text
@@ -60,8 +60,10 @@ juju run postgresql-k8s/1 set-tls-private-key
 juju run postgresql-k8s/2 set-tls-private-key
 ```
 
-## Disable TLS 
+## Disable TLS
+
 You can disable TLS by removing the integration.
+
 ```text
 juju remove-relation postgresql-k8s:certificates self-signed-certificates:certificates
 ```

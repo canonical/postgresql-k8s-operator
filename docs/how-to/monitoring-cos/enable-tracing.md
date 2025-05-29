@@ -1,36 +1,20 @@
-
-
-
-```{note}
-**Note**: All commands are written for `juju >= v3.1`
-
-If you're using `juju 2.9`, check the [`juju 3.0` Release Notes](https://juju.is/docs/juju/roadmap#juju-3-0-0---22-oct-2022).
-```
-
 # Enable tracing
+
 This guide contains the steps to enable tracing with [Grafana Tempo](https://grafana.com/docs/tempo/latest/) for your PostgreSQL K8s application. 
 
-To summarize:
-* [Deploy the Tempo charms and their dependencies in a COS K8s environment](#deploy)
-* [Offer interfaces for cross-model integrations](#offer)
-* [Consume and integrate cross-model integrations](#consume)
-* [View PostgreSQL K8s traces on Grafana](#view)
-
-
 ```{caution}
-**Warning:** This is feature is in development. It is **not recommended** for production environments. 
-
-This feature is available for Charmed PostgreSQL K8s revision 292+ only.
+This is feature is in development. It is **not recommended** for production environments. 
 ```
 
 ## Prerequisites
+
 Enabling tracing with Tempo requires that you:
-- Have deployed a Charmed PostgreSQL K8s application
-  - See [How to scale units](https://discourse.charmhub.io/t/charmed-postgresql-k8s-how-to-scale-units/9592)
+
+- Have deployed a Charmed PostgreSQL K8s revision 292+
+  - See [](/how-to/deploy)
 - Have deployed a 'cos-lite' bundle from the `latest/edge` track in a Kubernetes environment
   - See [Getting started on MicroK8s](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s)
 
----
 ## Deploy Tempo
 
 First, switch to the Kubernetes controller where the COS model is deployed:
@@ -63,7 +47,9 @@ juju switch <k8s_controller_name>:<postgresql_k8s_model_name>
 
 juju find-offers <k8s_controller_name>:
 ```
-> :exclamation: Do not miss the "`:`" in the command above.
+```{tip}
+Don't miss the "`:`" in the command above.
+```
 
 Below is a sample output where `k8s` is the K8s controller name and `cos` is the model where `cos-lite` and `tempo-k8s` are deployed:
 
@@ -87,11 +73,13 @@ juju deploy grafana-agent-k8s --channel latest-edge
 ```
 
 Then, integrate Grafana Agent K8s with the consumed interface from the previous section:
+
 ```text
 juju integrate grafana-agent-k8s:tracing tempo:tracing
 ```
 
 Finally, integrate Charmed PostgreSQL K8s with Grafana Agent K8s:
+
 ```text
 juju integrate postgresql-k8s:tracing grafana-agent-k8s:tracing-provider
 ```
@@ -124,9 +112,8 @@ tempo:tracing                       grafana-agent-k8s:tracing      tracing      
 ```
 
 ```{note}
-**Note:** All traces are exported to Tempo using HTTP. Support for sending traces via HTTPS is an upcoming feature.
+All traces are exported to Tempo using HTTP. Support for sending traces via HTTPS is an upcoming feature.
 ```
-
 
 ## View traces
 

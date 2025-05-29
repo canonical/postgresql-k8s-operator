@@ -1,25 +1,17 @@
-
-
-
 # How to enable plugins/extensions
-
-```{note}
-**Note:** This feature is currently only available in the channel `14/edge` (revision 103+) and will be released to the channel `14/stable` soon.
-```
 
 This guide shows how to enable a plugin/extension for an application charm that you want to integrate to Charmed PostgreSQL.
 
-## Prerequisites
-* A deployed [Charmed PostgreSQL K8s operator](/)
 
 ## Enable plugin/extension
+
 Enable the plugin/extension by setting `True` as the value of its respective config option, like in the following example:
 
 ```text
 juju config postgresql-k8s plugin_<plugin name>_enable=True
 ```
+
 ## Integrate your application
-Integrate (formerly known as "relate" in `juju v.2.9`) your application charm with the PostgreSQL charm:
 
 ```text
 juju integrate <application charm> postgresql-k8s 
@@ -41,6 +33,6 @@ After enabling the needed extensions through the config options, the charm will 
 If the application charm uses the new `postgresql_client` interface, it can use the [is_postgresql_plugin_enabled](https://charmhub.io/data-platform-libs/libraries/data_interfaces#databaserequires-is_postgresql_plugin_enabled) helper method from the data interfaces library to check whether the plugin/extension is already enabled in the database.
 
 ```{note}
-**Note:** Not all PostgreSQL extensions are available. The list of supported extensions is available at [ Supported plugins/extensions](/).
+Not all PostgreSQL extensions are available. The list of supported extensions is available [](/reference/plugins-extensions).
 ```
 

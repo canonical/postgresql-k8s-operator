@@ -5,20 +5,24 @@
 
 This guide will show how to set up [Pushover](https://pushover.net/) to receive alert notifications from the COS Alert Manager with [Awesome Alert Rules](https://samber.github.io/awesome-prometheus-alerts/).
 
-Charmed PostgreSQL VM ships a pre-configured and pre-enabled [list of Awesome Alert Rules].
+Charmed PostgreSQL K8s ships a pre-configured and pre-enabled [list of Awesome Alert Rules].
 
 <details><summary>Screenshot of alert rules in the Grafana web interface</summary>
-![Screenshot from 2024-01-18 20-05-52|690x439](upload://j6WSPQ1BzoFzqIg2jm1mTq79SMo.png)
+
+![Alert rules Grafana web UI|690x439](alert-rules-grafana-ui.png)
 </details>
 
 For information about accessing and managing COS Alert Rules, refer to the [COS documentation](https://charmhub.io/cos-lite).
 
 ## Prerequisites
-* A deployed [Charmed PostgreSQL K8s operator](/tutorial/2-deploy-postgresql)
-* A deployed [`cos-lite` bundle in a Kubernetes environment](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s)
+
+* A deployed Charmed PostgreSQL K8s operator
+  * See: [](/how-to/deploy)
+* A deployed [`cos-lite` bundle](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s)
 * Fully configured [COS Monitoring](/how-to/monitoring-cos/enable-monitoring) 
 
 ## Enable COS alerts for Pushover
+
 The following section is an example of the [Pushover](https://pushover.net/) alerts aggregator.
 
 The first step is to create a new account on Pushover (or use an existing one). The goal is to have the 'user key' and 'token' to authorize alerts for the Pushover application. Follow this straightforward [Pushover guide](https://support.pushover.net/i175-how-to-get-a-pushover-api-or-pushover-application-token).
@@ -54,8 +58,10 @@ receivers:
 templates: []
 EOF
 ```
+
 Upload and apply newly the created alert manager config:
-```
+
+```text
 juju switch <k8s_cos_controller>:<cos_model_name>
 juju config alertmanager config_file=@myalert.yaml
 ```
@@ -72,5 +78,10 @@ The similar way as above, COS alerts can be send to the long [list of supported 
 
 Do you have questions? [Contact us](/reference/contacts)!
 
+<!-- Links -->
+
+[Contact us]: /reference/contacts
+[COS Monitoring]: /how-to/monitoring-cos/enable-monitoring
 [list of Awesome Alert Rules]: /reference/alert-rules
+
 
