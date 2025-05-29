@@ -1,0 +1,52 @@
+
+
+
+# Explanation
+
+This section contains pages with more detailed explanations that provide additional context about some of the key concepts behind the PostgreSQL charm:
+
+## Core concepts and design
+* [Architecture]
+* [Interfaces and endpoints]
+* [Juju]
+* [Legacy charm]
+
+## Operational concepts
+* [Users]
+* [Logs]
+* [Connection pooling]
+
+## Security and hardening
+* [Security hardening guide][Security]
+  * [Cryptography]
+
+## Development
+Charm event flowcharts:
+* [Charm]
+* [Relations]
+* [Backups]
+
+<!-- Links -->
+
+[Architecture]: /explanation/architecture
+[Interfaces and endpoints]: /explanation/interfaces-endpoints
+[Users]: /explanation/users
+[Logs]: /explanation/logs
+[Juju]: /explanation/juju
+[Legacy charm]: /explanation/legacy-charm
+[Connection pooling]: /explanation/connection-pooling
+[Charm]: /explanation/flowcharts/charm
+[Relations]: /explanation/flowcharts/relations
+[Backups]: /explanation/flowcharts/backups
+[Security]: /explanation/security/index
+[Cryptography]: /explanation/security/cryptography
+
+
+```{toctree}
+:titlesonly:
+:maxdepth: 2
+:glob:
+:hidden:
+
+*
+*/index
