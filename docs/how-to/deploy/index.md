@@ -51,20 +51,20 @@ The [Cross-regional async replication] guide goes through the steps to set up cl
 
 [Tutorial]: /tutorial/index
 
-[How to deploy using Terraform]: /how-to-guides/deploy/terraform
+[How to deploy using Terraform]: /how-to/deploy/terraform
 
-[Canonical K8s]: /how-to-guides/deploy/canonical-k8s
-[Google Kubernetes Engine]: /how-to-guides/deploy/gke
-[Amazon Elastic Kubernetes Service]: /how-to-guides/deploy/eks
-[Azure Kubernetes Service]: /how-to-guides/deploy/aks
+[Canonical K8s]: /how-to/deploy/canonical-k8s
+[Google Kubernetes Engine]: /how-to/deploy/gke
+[Amazon Elastic Kubernetes Service]: /how-to/deploy/eks
+[Azure Kubernetes Service]: /how-to/deploy/aks
 
-[How to deploy on multiple availability zones (AZ)]: /how-to-guides/deploy/multi-az
+[How to deploy on multiple availability zones (AZ)]: /how-to/deploy/multi-az
 
-[How to enable TLS]: /how-to-guides/enable-tls
-[How to connect from outside the local network]: /how-to-guides/external-network-access
+[How to enable TLS]: /how-to/enable-tls
+[How to connect from outside the local network]: /how-to/external-network-access
 
-[How to deploy in an offline or air-gapped environment]: /how-to-guides/deploy/air-gapped
-[Cross-regional async replication]: /how-to-guides/cross-regional-async-replication/index
+[How to deploy in an offline or air-gapped environment]: /how-to/deploy/air-gapped
+[Cross-regional async replication]: /how-to/cross-regional-async-replication/index
 
 
 ```{toctree}

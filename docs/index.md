@@ -17,7 +17,7 @@ This modern "Charmed PostgreSQL K8s" operator (in channel `14/stable`) is a new 
 
 | | |
 |--|--|
-|  [**Tutorials**](/tutorial/index)</br>  [Get started](/tutorial/index) - a hands-on introduction to using Charmed PostgreSQL K8s operator for new users </br> |  [**How-to guides**](/how-to-guides/scale-replicas) </br> Step-by-step guides covering key operations such as [scaling](/how-to-guides/scale-replicas), [encryption](/how-to-guides/enable-tls), and [restoring backups](/how-to-guides/back-up-and-restore/restore-a-backup) |
+|  [**Tutorials**](/tutorial/index)</br>  [Get started](/tutorial/index) - a hands-on introduction to using Charmed PostgreSQL K8s operator for new users </br> |  [**How-to guides**](/how-to/scale-replicas) </br> Step-by-step guides covering key operations such as [scaling](/how-to/scale-replicas), [encryption](/how-to/enable-tls), and [restoring backups](/how-to/back-up-and-restore/restore-a-backup) |
 | [**Reference**](/) </br> Technical information such as [requirements](/reference/system-requirements), [release notes](/reference/releases), and [plugins](/reference/plugins-extensions) | [**Explanation**](/explanation/architecture) </br> Concepts - discussion and clarification of key topics such as [architecture](/explanation/architecture), [users](/explanation/users), and [legacy charms](/explanation/legacy-charm)|
 
 ## Project and community

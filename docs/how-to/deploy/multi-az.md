@@ -19,7 +19,7 @@ Multi-availability zones are enabled by default on EC2/GCE and supported by LXD 
 
 ## Set up Kubernetes on Google Cloud
 
-Let's deploy a [PostgreSQL Cluster on GKE (us-east4)](/how-to-guides/deploy/gke) using all 3 zones there (`us-east4-a`, `us-east4-b`, `us-east4-c`) and make sure all pods always sits in the dedicated zones only.
+Let's deploy a [PostgreSQL Cluster on GKE (us-east4)](/how-to/deploy/gke) using all 3 zones there (`us-east4-a`, `us-east4-b`, `us-east4-c`) and make sure all pods always sits in the dedicated zones only.
 
 ```{caution}
 Creating the following GKE resources may cost you money - be sure to monitor your GCloud costs.
@@ -263,7 +263,7 @@ mydatabase/2   active    idle   10.80.1.6
 
 At this point we can relax and enjoy the protection from Cloud Availability zones!
 
-To survive acomplete cloud outage, we recommend setting up [cluster-cluster asynchronous replication](/how-to-guides/cross-regional-async-replication/set-up-clusters).
+To survive acomplete cloud outage, we recommend setting up [cluster-cluster asynchronous replication](/how-to/cross-regional-async-replication/set-up-clusters).
 
 
 ## Remove GKE setup

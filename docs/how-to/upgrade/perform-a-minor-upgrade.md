@@ -12,7 +12,7 @@ If you are using an earlier version, check the [Juju 3.0 Release Notes](https://
 **Example**: PostgreSQL 14.8 -> PostgreSQL 14.9<br/>
 (including simple charm revision bump: from revision 99 to revision 102)
 
-This guide is part of [Charmed PostgreSQL K8s Upgrades](/how-to-guides/upgrade/index). Please refer to this page for more information and an overview of the content.
+This guide is part of [Charmed PostgreSQL K8s Upgrades](/how-to/upgrade/index). Please refer to this page for more information and an overview of the content.
 
 ## Summary
 
@@ -49,7 +49,7 @@ Concurrency with other operations is not supported, and it can lead the cluster 
 ### Backups
 **Make sure to have a backup of your data when running any type of upgrade.**
 
-Guides on how to configure backups with S3-compatible storage can be found [here](/how-to-guides/back-up-and-restore/create-a-backup).
+Guides on how to configure backups with S3-compatible storage can be found [here](/how-to/back-up-and-restore/create-a-backup).
 
 ### Service disruption
 **It is recommended to deploy your application in conjunction with the [Charmed PgBouncer K8s](https://charmhub.io/pgbouncer-k8s) operator.** 
@@ -84,7 +84,7 @@ For this example, the current revision is `145`. Store it safely to use in case 
 
 It is recommended to scale the application up by one unit before starting the upgrade process.
 
-The new unit will be the first one to be updated, and it will assert that the upgrade is possible. In case of failure, having the extra unit will ease the rollback procedure without disrupting service. You can read more about this in the [Minor rollback](/how-to-guides/upgrade/perform-a-minor-rollback) guide.
+The new unit will be the first one to be updated, and it will assert that the upgrade is possible. In case of failure, having the extra unit will ease the rollback procedure without disrupting service. You can read more about this in the [Minor rollback](/how-to/upgrade/perform-a-minor-rollback) guide.
 
 You can scale your application using the following command:
 ```text
@@ -179,7 +179,7 @@ postgresql-k8s/3   maintenance  executing  10.1.12.23         upgrade completed
 
 This step must be skipped if the upgrade went well! 
 
-Although the underlying PostgreSQL Cluster continues to work, it’s important to roll back the charm to a previous revision so that an update can be attempted after further inspection of the failure. Please switch to the dedicated [minor rollback](/how-to-guides/upgrade/perform-a-minor-rollback) guide for more information about this process.
+Although the underlying PostgreSQL Cluster continues to work, it’s important to roll back the charm to a previous revision so that an update can be attempted after further inspection of the failure. Please switch to the dedicated [minor rollback](/how-to/upgrade/perform-a-minor-rollback) guide for more information about this process.
 
 ## Step 7: Scale back (optional)
 

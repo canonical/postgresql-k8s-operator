@@ -11,7 +11,7 @@ If you are using an earlier version, check the [Juju 3.0 Release Notes](https://
 
 A Charmed PostgreSQL K8s backup can be stored on any S3-compatible storage. S3 access and configurations are managed with the [s3-integrator charm](https://charmhub.io/s3-integrator).
 
-This guide will teach you how to deploy and configure the s3-integrator charm on Ceph via [RadosGW](https://docs.ceph.com/en/quincy/man/8/radosgw/), send the configuration to a Charmed PostgreSQL application, and update it. (To configure S3 for AWS, see [this guide](/how-to-guides/back-up-and-restore/configure-s3-aws))
+This guide will teach you how to deploy and configure the s3-integrator charm on Ceph via [RadosGW](https://docs.ceph.com/en/quincy/man/8/radosgw/), send the configuration to a Charmed PostgreSQL application, and update it. (To configure S3 for AWS, see [this guide](/how-to/back-up-and-restore/configure-s3-aws))
 
 ```{note}
 The Charmed PostgreSQL K8s backup tool ([pgBackRest](https://pgbackrest.org/)) can currently only interact with S3-compatible storages if they work with [SSL/TLS](https://github.com/pgbackrest/pgbackrest/issues/2340) (backup via the plain HTTP is currently not supported).

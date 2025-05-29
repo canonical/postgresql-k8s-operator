@@ -12,7 +12,7 @@ If you are using an earlier version, check the [Juju 3.0 Release Notes](https://
 
 This guide shows how to integrate Charmed PostgreSQL K8s with both charmed and non-charmed applications.
 
-> For developer information about how to integrate your own charmed application with PostgreSQL, see [Development > How to integrate with your charm](/how-to-guides/development/integrate-with-your-charm).
+> For developer information about how to integrate your own charmed application with PostgreSQL, see [Development > How to integrate with your charm](/how-to/development/integrate-with-your-charm).
 
 ## Summary
 * [Integrate with a charmed application](#integrate-with-a-charmed-application)

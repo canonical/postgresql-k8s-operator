@@ -61,7 +61,7 @@ postgresql         enabled   active    today at 21:42 UTC
 
 The `postgresql` is a main Pebble service which is normally up and running right after the charm deployment.
 
-All `metrics_server` Pebble service is activated after the relation with [COS Monitoring](/how-to-guides/monitoring-cos/enable-monitoring) only.
+All `metrics_server` Pebble service is activated after the relation with [COS Monitoring](/how-to/monitoring-cos/enable-monitoring) only.
 
 > **:information_source: Note:** it is possible to star/stop/restart pebble services manually but it is NOT recommended to avoid a split brain with a charm state machine! Do it with a caution!!!
 
@@ -101,15 +101,15 @@ GLAuth is a secure, easy-to-use and open-sourced LDAP server which provides capa
 
 ### Grafana
 
-Grafana is an open-source visualization tools that allows to query, visualize, alert on, and visualize metrics from mixed datasources in configurable dashboards for observability. This charms is shipped with its own Grafana dashboard and supports integration with the [Grafana Operator](https://charmhub.io/grafana-k8s) to simplify observability. Please follow [COS Monitoring](/how-to-guides/monitoring-cos/enable-monitoring) setup.
+Grafana is an open-source visualization tools that allows to query, visualize, alert on, and visualize metrics from mixed datasources in configurable dashboards for observability. This charms is shipped with its own Grafana dashboard and supports integration with the [Grafana Operator](https://charmhub.io/grafana-k8s) to simplify observability. Please follow [COS Monitoring](/how-to/monitoring-cos/enable-monitoring) setup.
 
 ### Loki
 
-Loki is an open-source fully-featured logging system. This charms is shipped with support for the [Loki Operator](https://charmhub.io/loki-k8s) to collect the generated logs. Please follow [COS Monitoring](/how-to-guides/monitoring-cos/enable-monitoring) setup.
+Loki is an open-source fully-featured logging system. This charms is shipped with support for the [Loki Operator](https://charmhub.io/loki-k8s) to collect the generated logs. Please follow [COS Monitoring](/how-to/monitoring-cos/enable-monitoring) setup.
 
 ### Prometheus
 
-Prometheus is an open-source systems monitoring and alerting toolkit with a dimensional data model, flexible query language, efficient time series database and modern alerting approach. This charm is shipped with a Prometheus exporters, alerts and support for integrating with the [Prometheus Operator](https://charmhub.io/prometheus-k8s) to automatically scrape the targets. Please follow [COS Monitoring](/how-to-guides/monitoring-cos/enable-monitoring) setup.
+Prometheus is an open-source systems monitoring and alerting toolkit with a dimensional data model, flexible query language, efficient time series database and modern alerting approach. This charm is shipped with a Prometheus exporters, alerts and support for integrating with the [Prometheus Operator](https://charmhub.io/prometheus-k8s) to automatically scrape the targets. Please follow [COS Monitoring](/how-to/monitoring-cos/enable-monitoring) setup.
 
 <a name="lld"></a>
 ## LLD (Low Level Design)

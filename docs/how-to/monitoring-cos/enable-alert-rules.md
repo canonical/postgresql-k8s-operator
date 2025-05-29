@@ -16,7 +16,7 @@ For information about accessing and managing COS Alert Rules, refer to the [COS 
 ## Prerequisites
 * A deployed [Charmed PostgreSQL K8s operator](/tutorial/2-deploy-postgresql)
 * A deployed [`cos-lite` bundle in a Kubernetes environment](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s)
-* Fully configured [COS Monitoring](/how-to-guides/monitoring-cos/enable-monitoring) 
+* Fully configured [COS Monitoring](/how-to/monitoring-cos/enable-monitoring) 
 
 ## Enable COS alerts for Pushover
 The following section is an example of the [Pushover](https://pushover.net/) alerts aggregator.

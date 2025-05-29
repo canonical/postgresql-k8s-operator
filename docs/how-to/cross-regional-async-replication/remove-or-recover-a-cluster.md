@@ -10,7 +10,7 @@ This guide will cover how to manage clusters (switchover, detach, reuse, remove,
 * Make sure your machine(s) fulfill the [system requirements](/reference/system-requirements)
 * See [supported target/source model relationships](t/15413#substrate-dependencies).
 * A cross-regional async replication setup
-  * See [How to set up clusters](/how-to-guides/cross-regional-async-replication/set-up-clusters)
+  * See [How to set up clusters](/how-to/cross-regional-async-replication/set-up-clusters)
 
 ## Summary
 * [Switchover](#switchover)
@@ -62,5 +62,5 @@ juju remove-application -m rome db1 --destroy-storage
 
 **If the integration between clusters was removed** and one side went into a  `blocked` state, integrate both clusters again and call the `promote-cluster` action to restore async replication - similar to the "Reuse a detached cluster" step above.
 
-**If the cluster group lost a member entirely** (e.g. `rome` is suddenly no longer available to the cluster group originally consisting of `rome` and `lisbon`), deploy a new `postgresql-k8s` application and [set up async replication](/how-to-guides/cross-regional-async-replication/set-up-clusters). The data will be copied automatically after the `promote-cluster` action is called, and the new cluster will join the cluster group.
+**If the cluster group lost a member entirely** (e.g. `rome` is suddenly no longer available to the cluster group originally consisting of `rome` and `lisbon`), deploy a new `postgresql-k8s` application and [set up async replication](/how-to/cross-regional-async-replication/set-up-clusters). The data will be copied automatically after the `promote-cluster` action is called, and the new cluster will join the cluster group.
 

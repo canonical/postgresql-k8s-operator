@@ -10,7 +10,7 @@ This guide will show you how to integrate a client application with a cross-regi
 * Make sure your machine(s) fulfill the [system requirements](/reference/system-requirements)
 * See [supported target/source model relationships](t/15413#substrate-dependencies).
 * A cross-regional async replication setup
-  * See [How to set up clusters](/how-to-guides/cross-regional-async-replication/set-up-clusters)
+  * See [How to set up clusters](/how-to/cross-regional-async-replication/set-up-clusters)
 
 ## Summary
 * [Configure database endpoints](#configure-database-endpoints)

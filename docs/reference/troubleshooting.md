@@ -146,7 +146,7 @@ postgres      58  0.0  0.0 216032 10476 ?        Ss   12:30   0:00 postgres: pat
 postgres      60  0.0  0.0 218060 21428 ?        Ss   12:30   0:00 postgres: patroni-postgresql-k8s: operator postgres 127.0.0.1(59528) idle
 ```
 
-The list of running Pebble services will depend on configured (enabled) [COS integration](/how-to-guides/monitoring-cos/enable-monitoring) and/or [backup](/how-to-guides/back-up-and-restore/create-a-backup) functionality. Pebble and its service `postgresql` must always be enabled and currently running (the Linux processes `pebble`, `patroni` and `postgres`).
+The list of running Pebble services will depend on configured (enabled) [COS integration](/how-to/monitoring-cos/enable-monitoring) and/or [backup](/how-to/back-up-and-restore/create-a-backup) functionality. Pebble and its service `postgresql` must always be enabled and currently running (the Linux processes `pebble`, `patroni` and `postgres`).
 
 To ssh into the PostgreSQL unit, check the [charm users concept](/explanation/users) and request admin credentials. Make sure you have `psql` installed.
 ```text
