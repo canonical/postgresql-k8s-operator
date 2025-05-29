@@ -8,7 +8,7 @@ These flowcharts detail the control flow of the hooks in this program. Unless ot
 
 ## On `s3-credentials-changed` hook
 
-```mermaid
+```{mermaid}
 flowchart TD
   hook_fired([s3-credentials-changed Hook]) --> has_cluster_initialised{Has cluster\n initialised?}
   has_cluster_initialised -- no --> defer>defer]
@@ -38,7 +38,7 @@ When certificates are received from TLS certificates operator through the `certi
 
 ## On `create-backup` hook
 
-```mermaid
+```{mermaid}
 flowchart TD
   hook_fired([create-backup Hook]) --> is_blocked{Is unit in\nblocked state?}
   is_blocked -- yes --> fail_action([fail action])
@@ -73,7 +73,7 @@ flowchart TD
 ## On `list-backups` hook
 [Click to navigate the mermaid diagram on GitHub](https://github.com/canonical/postgresql-k8s-operator/blob/main/docs/explanation/e-backups.md).
 
-```mermaid
+```{mermaid}
 flowchart TD
   hook_fired([list-backups Hook]) --> is_s3_relation_established{Is S3 relation\nestablished?}
   is_s3_relation_established -- no --> fail_action([fail action])
@@ -87,7 +87,7 @@ flowchart TD
 ## On `restore` hook
 [Click to navigate the mermaid diagram on GitHub](https://github.com/canonical/postgresql-k8s-operator/blob/main/docs/explanation/e-backups.md).
 
-```mermaid
+```{mermaid}
 flowchart TD
   hook_fired([restore Hook]) --> has_user_provided_backup_id{Has user provided\na backup id?}
   has_user_provided_backup_id -- no --> fail_action([fail action])

@@ -8,7 +8,7 @@ These flowcharts detail the control flow of the hooks in this program. Unless ot
 
 ## `leader-elected` hook
 
-```mermaid
+```{mermaid}
 flowchart TD
   hook_fired([leader-elected Hook]) --> generate_passwords{Generate password for charm users?}
   generate_passwords --> create_k8s_resources[Create k8s resources\n needed by Patroni]
@@ -34,7 +34,7 @@ flowchart TD
 
 ## PostgreSQL Pebble ready hook
 
-```mermaid
+```{mermaid}
 flowchart TD
   hook_fired([leader-elected Hook]) --> create_pgdata{Create data\n directory}
   create_pgdata --> is_leader_or_has_cluster_initialised{Is current unit\n leader or has the \n cluster initialised?}

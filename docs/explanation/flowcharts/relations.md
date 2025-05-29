@@ -12,7 +12,7 @@ These flowcharts detail the control flow of the hooks in this program. Unless ot
 
 ## `peer-relation-changed` hook
 
-```mermaid
+```{mermaid}
 flowchart TD
   hook_fired([peer-relation-changed Hook]) --> has_cluster_initialised{Has cluster\n initialised?}
   has_cluster_initialised -- no --> defer>defer]
@@ -44,7 +44,7 @@ flowchart TD
 
 ## `peer-relation-departed` hook
 
-```mermaid
+```{mermaid}
 flowchart TD
   hook_fired([peer-relation-changed Hook]) --> is_leader_and_is_not_departing{Is leader and \n is not departing?}
   is_leader_and_is_not_departing -- no --> rtn([return])

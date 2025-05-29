@@ -16,7 +16,7 @@ This guide assumes you have:
 
 Install `kubectl`, and Google Cloud command-line tools via snap:
 
-```terminal
+```text
 sudo snap install kubectl --classic
 sudo snap install google-cloud-cli --classic
 ```
@@ -25,24 +25,24 @@ sudo snap install google-cloud-cli --classic
 
 Log in to a Google account with the command
 
-```terminal
+```text
 gcloud auth login
 ```
 This should open a page in your browser starting with  `https://accounts.google.com/o/oauth2/...` where you can complete the login.
 
 If successful, the command prompt will show:
->```terminal
+>```text
 >You are now logged in as [<account>@gmail.com].
 >```
 
 ### Configure project ID
 
 Next, you must associate this installation with GCloud project using "Project ID" from [resource-management](https://console.cloud.google.com/cloud-resource-manager):
-```terminal
+```text
 gcloud config set project <PROJECT_ID>
 ```
 Sample output:
->```terminal
+>```text
 >Updated property [core/project].
 >```
 
@@ -56,13 +56,13 @@ This guide will use high-availability zone `europe-west1` and compute engine typ
 
 The following command will start three [compute engines](https://cloud.google.com/compute/) on Google Cloud and deploy a K8s cluster (you can imagine the compute engines as three physical servers in clouds):
 
-```terminal
+```text
 gcloud container clusters create --zone europe-west1-c $USER-$RANDOM --cluster-version 1.25 --machine-type n1-standard-4 --num-nodes=3 --no-enable-autoupgrade
 ```
 
 Next, assign your account as an admin of the newly created K8s cluster:
 
-```terminal
+```text
 kubectl create clusterrolebinding cluster-admin-binding-$USER --clusterrole=cluster-admin --user=$(gcloud config get-value core/account)
 ```
 
@@ -70,7 +70,7 @@ kubectl create clusterrolebinding cluster-admin-binding-$USER --clusterrole=clus
 
 Bootstrap a new juju controller on the new cluster by running the following commands:
 
-```terminal
+```text
 /snap/juju/current/bin/juju add-k8s gke-jun-9 --storage=standard --client
 juju bootstrap gke-jun-9
 juju add-model welcome-model
@@ -82,7 +82,7 @@ juju add-model welcome-model
 
 At this stage, Juju is ready to use GKE. Check the list of currently running K8s pods with:
 
-```terminal
+```text
 kubectl get pods -n welcome-model
 ```
 
@@ -90,14 +90,14 @@ kubectl get pods -n welcome-model
 
 The following commands deploy PostgreSQL K8s and PgBouncer K8s:
 
-```terminal
+```text
 juju deploy postgresql-k8s --trust
 juju deploy pgbouncer-k8s --trust
 ```
 
 To track the status of the deployment, run
 
-```terminal
+```text
 juju status --watch 1s
 ```
 
@@ -105,13 +105,13 @@ juju status --watch 1s
 
 To list GKE clusters and juju clouds, run:
 
-```terminal
+```text
 gcloud container clusters list
 ```
 
 Sample output:
 
-```terminal
+```text
 >NAME          LOCATION        MASTER_VERSION   MASTER_IP      MACHINE_TYPE   NODE_VERSION     >NUM_NODES  STATUS
 >mykola-18187  europe-west1-c  1.25.9-gke.2300  31.210.22.127  n1-standard-4  1.25.9-gke.2300  3          >RUNNING
 >taurus-7485   europe-west1-c  1.25.9-gke.2300  142.142.21.25  n1-standard-4  1.25.9-gke.2300  3          >RUNNING
@@ -119,13 +119,13 @@ Sample output:
 
 Juju can handle multiple clouds simultaneously. To see a list of clouds with registered credentials on Juju, run:
 
-```terminal
+```text
 juju clouds
 ```
 
 Sample output:
 
-```terminal
+```text
 >Clouds available on the controller:
 >Cloud      Regions  Default       Type
 >gke-jun-9  1        europe-west1  k8s  
@@ -145,7 +145,7 @@ Always clean GKE resources that are no longer necessary -  they could be costly!
 ```
 To clean GKE clusters and juju clouds, use:
 
-```terminal
+```text
 juju destroy-controller gke-jun-9-europe-west1 --yes --destroy-all-models --destroy-storage --force
 juju remove-cloud gke-jun-9
 
@@ -155,13 +155,13 @@ gcloud container clusters delete <cluster_name> --zone europe-west1-c
 
 Revoke the GCloud user credentials:
 
-```terminal
+```text
 gcloud auth revoke your_account@gmail.com
 ```
 
 You should see a confirmation output:
 
-```terminal
+```text
 >Revoked credentials:
  >- your_account@gmail.com
 >

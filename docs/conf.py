@@ -331,6 +331,6 @@ if os.path.exists('./reuse/substitutions.yaml'):
 
 # Add configuration for intersphinx mapping
 
-intersphinx_mapping = {
-    '14': ('https://canonical-charmed-postgresql.readthedocs-hosted.com/en/14/', None)
-}
+# intersphinx_mapping = {
+#     '14': ('https://canonical-charmed-postgresql.readthedocs-hosted.com/en/14/', None)
+# }
