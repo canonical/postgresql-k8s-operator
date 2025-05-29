@@ -1,39 +1,15 @@
-
-
-
-```{note}
-**Note**: All commands are written for `juju >= v.3.1`
-
-If you're using `juju 2.9`, check the [`juju 3.0` Release Notes](https://juju.is/docs/juju/roadmap#juju-3-0-0---22-oct-2022).
-```
-
 # Software testing for charms
 
 Most types of standard [software tests](https://en.wikipedia.org/wiki/Software_testing) are applicable to Charmed PostgreSQL.
 
-This reference addresses the following types:
-
-* [Smoke test](#smoke)
-* [Unit tests](#unit)
-* [Integration tests](#integration)
-* [System test](#system)
-
----
-
-<!--TODO: table with other test types
-Smoke: 
-[u]Complexity[/u]: trivial<br/>
-[u]Speed[/u]: fast<br/>
-
-Unit: ...
--->
-
 ## Smoke test
+
 This type of test ensures that basic functionality works over a short amount of time.
+
 ### Steps
-1. [Set up a `juju v.3.x` environment](/tutorial/1-set-up-environment)
-2. Deploy database with test application
-3. Start "continuous write" test
+
+1. Deploy database with test application
+2. Start "continuous write" test
 
 <details><summary>Example</summary>
 
@@ -68,15 +44,20 @@ watch -n1 -x juju ssh --container postgresql postgresql-k8s/leader "psql postgre
 </details>
 
 ### Expected results
+
 * `postgresql-test-app` continuously inserts records into the database received through the integration (the table `continuous_writes`).
 * The counters (amount of records in table) are growing on all cluster members
 
 ### Tips
+
 To stop the "continuous write" test, run
+
 ```text
 juju run postgresql-test-app/leader stop-continuous-writes
 ```
+
 To truncate the "continuous write" table (i.e. delete all records from database), run
+
 ```text
 juju run postgresql-test-app/leader clear-continuous-writes
 ```

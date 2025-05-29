@@ -1,6 +1,3 @@
-
-
-
 # Contact
 
 Charmed PostgreSQL K8s is an open source project that warmly welcomes community contributions, suggestions, fixes, and constructive feedback:
@@ -12,7 +9,6 @@ Charmed PostgreSQL K8s is an open source project that warmly welcomes community 
 ```{note}
 Our legacy [Mattermost](https://chat.charmhub.io/charmhub/channels/data-platform) channel is read-only until January 31, 2025.
 ```
-
 
 ## Useful links
 

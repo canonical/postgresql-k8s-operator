@@ -1,21 +1,6 @@
-
-
-
 # Reference
 
-The Reference section of our documentation contains pages for technical specifications, APIs, release notes, and other reference material for fast lookup.
-
-* [Releases] - Overview of major revisions of this charm 
-* [System requirements]
-* [Software testing]
-* [Performance and resources] 
-* [Troubleshooting]
-* [Plugins/extensions]
-* [Alert rules] - Pre-configured Prometheus alert rules 
-* [Statuses] - Juju application statuses 
-* [Contacts]
-
-**In the tabs at the top of this charm's Charmhub page**, you can find the following automatically generated API references:
+The following generated API references can be found on [Charmhub](https://charmhub.io/postgresql-k8s):
 
 | Page                                                                       | Description                                             |
 |----------------------------------------------------------------------------|---------------------------------------------------------|
@@ -24,24 +9,20 @@ The Reference section of our documentation contains pages for technical specific
 | [Configuration](https://charmhub.io/postgresql-k8s/configuration) | Application configuration parameters |
 | [Actions](https://charmhub.io/postgresql-k8s/actions) | Juju actions supported by this charm |
 
-<!--Links-->
-
-[Releases]: /reference/releases
-[System requirements]: /reference/system-requirements 
-[Software testing]: /reference/software-testing
-[Performance and resources]: /reference/performance-and-resources
-[Troubleshooting]: /reference/troubleshooting 
-[Plugins/extensions]: /reference/plugins-extensions
-[Alert rules]: /reference/alert-rules
-[Statuses]: /reference/statuses
-[Contacts]: /reference/contacts
-
+The following guides contain technical specifications, APIs, release notes, and other reference material for fast lookup.
 
 ```{toctree}
 :titlesonly:
 :maxdepth: 2
 :glob:
-:hidden:
 
-*
-*/index
+Releases <releases>
+System requirements <system-requirements>
+Software testing <software-testing>
+Performance and resources <performance-and-resources>
+Troubleshooting <troubleshooting/index>
+Plugins/extensions <plugins-extensions>
+Alert rules <alert-rules>
+Statuses <statuses>
+Contacts <contacts>
+

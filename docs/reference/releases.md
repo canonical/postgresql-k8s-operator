@@ -1,6 +1,3 @@
-
-
-
 # Releases
 
 This page provides high-level overviews of the dependencies and features that are supported by each revision in every stable release.
@@ -12,7 +9,7 @@ To see all releases and commits, check the [Charmed PostgreSQL Releases on GitHu
 ## Dependencies and supported features
 
 For a given release, this table shows:
-* The PostgreSQL version packaged inside
+* The PostgreSQL 14 version packaged inside
 * The minimum Juju version required to reliably operate **all** features of the release
    > This charm still supports older versions of Juju down to 2.9. See the [system requirements](/reference/system-requirements) for more details
 * Support for specific features
@@ -29,17 +26,19 @@ For a given release, this table shows:
 | [158] | 14.9 | `3.1.5+` |  | ![check] | ![check] | |
 | [73]  | 14.7 | `2.9.32+` |  |  | |
 
-**TLS encryption***: Support for **`v2` or higher** of the [`tls-certificates` interface](https://charmhub.io/tls-certificates-interface/libraries/tls_certificates). This means that you can integrate with [modern TLS charms](https://charmhub.io/topics/security-with-x-509-certificates).
-
-For more details about a particular revision, refer to its dedicated Release Notes page.
-For more details about each feature/interface, refer to their dedicated How-To guide.
+\* **TLS encryption***: Support for **`v2` or higher** of the [`tls-certificates` interface](https://charmhub.io/tls-certificates-interface/libraries/tls_certificates). This means that you can integrate with [modern TLS charms](https://charmhub.io/topics/security-with-x-509-certificates).
 
 ## Architecture and base
+
 Several [revisions](https://juju.is/docs/sdk/revision) are released simultaneously for different [bases/series](https://juju.is/docs/juju/base) using the same charm code. In other words, one release contains multiple revisions.
 
-> If you do not specify a revision on deploy time, Juju will automatically choose the revision that matches your base and architecture.
+If you do not specify a revision on deploy time, Juju will automatically choose the revision that matches your base and architecture.
 
-> If you deploy a specific revision, **you must make sure it matches your base and architecture** via the tables below or with [`juju info`](https://juju.is/docs/juju/juju-info).
+```{caution}
+If you deploy with the `--revision` flag, **you must make sure the revision matches your base and architecture**. 
+
+Check the tables below, or use [`juju info`](https://juju.is/docs/juju/juju-info).
+```
 
 
 ### Release 494, 495
@@ -49,60 +48,25 @@ Several [revisions](https://juju.is/docs/sdk/revision) are released simultaneous
 |[494]  |   | ![check] |  ![check]  |
 |[495] | ![check] | |  ![check]  |
 
-[details=Older releases]
-### Release 462, 463
+<details>
+<summary>Older releases</summary>
 
 | Revision | amd64 | arm64 | Ubuntu 22.04 LTS
 |:--------:|:-----:|:-----:|:-----:|
-|[462]  | ![check] | |  ![check]  |
-|[463] | | ![check] |  ![check]  |
+|[462] |![check] |          | ![check] |
+|[463] |         | ![check] | ![check] |
+|[445] |         | ![check] | ![check] |
+|[444] |![check] |          | ![check] |
+|[382] |         | ![check] | ![check] |
+|[381] |![check] |          | ![check] |
+|[281] |![check] |          | ![check] |
+|[280] |         |![check]  | ![check] |
+|[193] |![check] |          | ![check] |
+|[177] |![check] |          | ![check] |
+|[158] |![check] |          | ![check] |
+|[73]  |![check] |          | ![check] |
 
-### Release 444-445
-
-| Revision | amd64 | arm64 | Ubuntu 22.04 LTS
-|:--------:|:-----:|:-----:|:-----:|
-|[445] | | ![check] | ![check]  |
-|[444] | ![check] | | ![check] |
-
-### Release 381-382
-
-| Revision | amd64 | arm64 | Ubuntu 22.04 LTS
-|:--------:|:-----:|:-----:|:-----:|
-|[382] | | ![check] | ![check]  |
-|[381] | ![check] | | ![check] |
-
-### Release 280-281
-
-| Revision| amd64 | arm64 | Ubuntu 22.04 LTS
-|:--------:|:-----:|:-----:|:-----:|
-|[281] |![check]| | ![check]   |
-|[280] |  | ![check]| ![check] |
-
-### Release 193
-
-| Revision| amd64 | arm64 | Ubuntu 22.04 LTS
-|:--------:|:-----:|:-----:|:-----:|
-|[193] | ![check]| | ![check]  |
-
-### Release 177
-
-| Revision| amd64 | arm64 | Ubuntu 22.04 LTS
-|:--------:|:-----:|:-----:|:-----:|
-|[177] |![check]| | ![check]   |
-
-### Release 158
-
-| Revision| amd64 | arm64 | Ubuntu 22.04 LTS
-|:--------:|:-----:|:-----:|:-----:|
-|[158] |![check]| | ![check]   |
-
-### Release 73
-
-| Revision| amd64 | arm64 | Ubuntu 22.04 LTS
-|:--------:|:-----:|:-----:|:-----:|
-|[73] |![check]| | ![check]   |
-
-[/details]
+</details>
 
 ## Plugins/extensions
 

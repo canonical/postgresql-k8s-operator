@@ -1,7 +1,4 @@
-
-
-
-# System Requirements
+# System requirements
 
 The following are the minimum software and hardware requirements to run Charmed PostgreSQL on K8s.
 
@@ -46,9 +43,10 @@ The charm is based on the [ROCK OCI](https://github.com/canonical/charmed-postgr
 
 ## Networking
 
-At the moment IPv4 is supported only (see more [info](https://warthogs.atlassian.net/browse/DPE-4695)).
-
-[Contact us](/reference/contacts) if you are interested in IPv6!
+* Access to the internet is required for downloading required snaps and charms
+* Only IPv4 is supported at the moment
+  * See more information about this limitation in [this Jira issue](https://warthogs.atlassian.net/browse/DPE-4695)
+  * [Contact us](/reference/contacts) if you are interested in IPv6!
 
 <!-- BADGES -->
 
@@ -61,9 +59,9 @@ At the moment IPv4 is supported only (see more [info](https://warthogs.atlassian
 [3.6 LTS]: https://img.shields.io/badge/3.6_LTS-%23E95420?label=Juju
 
 <!-- LINKS -->
-[73]: /
-[177]: /
-[193]: /
-[280]: /
-[444/445]: /
+[73]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/73
+[177]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/177
+[193]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/193
+[280]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/280
+[444/445]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/444
 

@@ -1,6 +1,3 @@
-
-
-
 # Alert rules
 
 This page contains a markdown version of the alert rules described in the `postgresql-k8s-operator` repository.  The following file(s) are the source of truth:
@@ -8,7 +5,7 @@ This page contains a markdown version of the alert rules described in the `postg
 * [`src/prometheus_alert_rules/pgbouncer_rules.yaml`](https://github.com/canonical/postgresql-k8s-operator/blob/main/src/prometheus_alert_rules/pgbouncer_rules.yaml)
 * [`src/prometheus_alert_rules/patroni_rules.yaml`](https://github.com/canonical/postgresql-k8s-operator/blob/main/src/prometheus_alert_rules/patroni_rules.yaml)
 
-> This documentation describes the latest alert rule expressions. See the YAML file(s) on listed above if you require an older version.
+> This documentation describes the latest alert rule expressions. See the YAML file(s) listed above if you require an older version.
 
 ## PostgresqlExporterK8s
 

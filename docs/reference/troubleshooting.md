@@ -1,41 +1,28 @@
-
-
-
 # Troubleshooting
 
-```{caution}
-**Warning:** At the moment, there is **no** ability to [pause an operator](https://warthogs.atlassian.net/browse/DPE-2545).
-
-Make sure your activity will not interfere with the operator itself!
-```
-
-```{note}
-**Note**: All commands are written for `juju >= v.3.0`
-
-If you are using an earlier version, be aware that:
-
- - `juju run` replaces `juju run-action --wait` in `juju v.2.9` 
- - `juju integrate` replaces `juju relate` and `juju add-relation` in `juju v.2.9`
-
-For more information, check the [Juju 3.0 Release Notes](https://juju.is/docs/juju/roadmap#juju-3-0-0---22-oct-2022).
-```
-
-## Summary
 This page goes over some recommended tools and approaches to troubleshooting the charm.
 
-This reference goes over how to troubleshoot this charm via:
+Before anything, always run `juju status` to check the [list of charm statuses](/reference/statuses) and the recommended fixes. This alone may already solve your issue. 
+
+Otherwise, this reference goes over how to troubleshoot this charm via:
+
 - [`juju` logs](#logs)
 - [`kubectl`](#kubectl)
 - The [`charm` container](#container-charm)
 - The [`postgresql` workload container](#container-postgresql)
 - [Installing extra software](#install-extra-software)
 
-```{note}
-Before anything, always run `juju status` to check the [list of charm statuses](/reference/statuses) and the recommended fixes. This alone may already solve your issue. 
-```
-## `juju` logs
+```{caution}
+At the moment, there is no support for [pausing an operator](https://warthogs.atlassian.net/browse/DPE-2545).
 
-Ensure you are familiar with [Juju logs concepts](https://juju.is/docs/juju/log) and [how to manage Juju logs](https://juju.is/docs/juju/manage-logs).
+Make sure your activity will not interfere with the operator itself!
+```
+
+## Juju logs
+
+See:
+* [Juju | logs](https://juju.is/docs/juju/log)
+* [Juju | How to manage logs](https://juju.is/docs/juju/manage-logs).
 
 Always check the Juju logs before troubleshooting further:
 ```text
@@ -91,9 +78,9 @@ Containers:
     ...
 ```
 
-## `charm` container
+## Charm container
 
-To enter the `charm` container, use:
+To enter the charm container, use:
 ```text
 juju ssh postgresql-k8s/0 bash
 ```
@@ -163,17 +150,16 @@ password: 3wMQ1jzfuERvTEds
 > >           |          |          |         |         | backup=CTc/operator     +
 > ...
 ```
-Continue troubleshooting your database/SQL related issues from here.<br/>
+Continue troubleshooting your database/SQL related issues from here.
+
 ```{caution}
-**Warning**: Do **NOT** manage users, credentials, databases, schema directly. This avoids a split brain situation with the operator and integrated applications.
+To avoid split-brain scenarios:
+
+* Do not manage users, credentials, databases, and schema directly. 
+* Avoid restarting services directly. If you see the problem with a unit, consider [removing the failing unit and adding a new unit](/how-to/scale-replicas) to recover the cluster state.
 ```
 
-It is NOT recommended to restart services directly as it might create a split brain situation with operator internal state. If you see the problem with a unit, consider [scaling down and re-scaling up](/tutorial/4-scale-replicas) to recover the cluster state.
-
-As a last resort, [contact us](/reference/contacts) if you cannot determine the source of your issue.
-
-Also, feel free to improve this document!
-
+[Contact us](/reference/contacts) if you cannot determine the source of your issue.
 
 ## Install extra software
 
@@ -182,12 +168,15 @@ We recommend you do **not** install any additional software. This may affect sta
 Sometimes, however, it is necessary to install some extra troubleshooting software. 
 
 Use the common approach:
-```console
+
+```text
 root@postgresql-k8s-0:/# apt update && apt install less
 ...
 Setting up less (590-1ubuntu0.22.04.1) ...
 root@postgresql-k8s-0:/#
 ```
 
-**Always remove manually installed components at the end of troubleshooting.** Keep the house clean!
+```{tip}
+Always remove manually installed components at the end of troubleshooting. Keep the house clean!
+```
 
