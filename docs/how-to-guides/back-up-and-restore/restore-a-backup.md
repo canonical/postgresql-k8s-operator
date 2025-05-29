@@ -31,12 +31,12 @@ To restore a backup that was made from a *different* cluster, (i.e. cluster migr
 
 ## List backups
 To view the available backups to restore, use the command `list-backups`:
-```shell
+```text
 juju run postgresql-k8s/leader list-backups
 ```
 
 This should show your available backups like in the sample output below:
-```shell
+```text
 list-backups: |-
   Storage bucket name: canonical-postgres
   Backups base path: /test/backup/

@@ -1,6 +1,3 @@
-
-
-
 # How to deploy using Terraform
 
 [Terraform](https://www.terraform.io/) is an infrastructure automation tool to provision and manage resources in clouds or data centers. To deploy Charmed PostgreSQL K8s using Terraform and Juju, you can use the [Juju Terraform Provider](https://registry.terraform.io/providers/juju/juju/latest). 
@@ -10,38 +7,35 @@ The easiest way is to start from [these examples of terraform modules](https://g
 For an in-depth introduction to the Juju Terraform Provider, read [this Discourse post](https://discourse.charmhub.io/t/6939).
 
 ```{note}
-**Note**: Storage support was added in [Juju Terraform Provider version 0.13+](https://github.com/juju/terraform-provider-juju/releases/tag/v0.13.0).
+Storage support was added in [Juju Terraform Provider version 0.13+](https://github.com/juju/terraform-provider-juju/releases/tag/v0.13.0).
 ```
-
-## Summary
-* [Install Terraform tooling](#install-terraform-tooling)
-* [Verify the deployment](#verify-the-deployment)
-* [Apply the deployment](#apply-the-deployment)
-* [Check deployment status](#check-deployment-status)
-* [Clean up](#clean-up)
----
 
 ## Install Terraform tooling
 
 This guide assumes Juju is installed and you have a K8s controller already bootstrapped. For more information, check the [Set up the environment](/) tutorial page.
 
 Let's install Terraform Provider and example modules:
-```shell
+
+```text
 sudo snap install terraform --classic
 ```
+
 Switch to the K8s provider and create a new model:
-```shell
+
+```text
 juju switch microk8s
 juju add-model my-model
 ```
+
 Clone examples and navigate to the PostgreSQL machine module:
-```shell
+
+```text
 git clone https://github.com/canonical/terraform-modules.git
 cd terraform-modules/modules/k8s/postgresql
 ```
 
 Initialise the Juju Terraform Provider:
-```shell
+```text
 terraform init
 ```
 
@@ -66,7 +60,7 @@ resource "juju_application" "k8s_postgresql" {
 
 Run `terraform plan` to get a preview of the changes that will be made:
 
-```shell
+```text
 terraform plan -var "juju_model_name=my-model"
 ```
 
@@ -74,7 +68,7 @@ terraform plan -var "juju_model_name=my-model"
 
 If everything looks correct, deploy the resources (skip the approval):
 
-```shell
+```text
 terraform apply -auto-approve -var "juju_model_name=my-model"
 ```
 
@@ -82,13 +76,13 @@ terraform apply -auto-approve -var "juju_model_name=my-model"
 
 Check the deployment status with 
 
-```shell
+```text
 juju status --model k8s:my-model --watch 1s
 ```
 
 Sample output:
 
-```shell
+```text
 Model     Controller  Cloud/Region        Version  SLA          Timestamp
 my-model  k8s         microk8s/localhost  3.5.3    unsupported  12:09:38Z
 
@@ -105,12 +99,13 @@ Continue to operate the charm as usual from here or apply further Terraform chan
 ## Clean up
 
 To keep the house clean, remove the newly deployed Charmed PostgreSQL by running
-```shell
+```text
 terraform destroy -var "juju_model_name=my-model"
 ```
 
 Sample output:
-```shell
+
+```text
 juju_application.k8s_postgresql: Refreshing state... [id=my-model:postgresql-k8s]
 
 Terraform used the selected providers to generate the following execution plan. Resource actions are indicated with the following symbols:
@@ -167,5 +162,5 @@ Destroy complete! Resources: 1 destroyed.
 For more examples of Terraform modules for K8s, see the other directories in the [`terraform-modules` repository](https://github.com/canonical/terraform-modules/tree/main/modules/k8s).
 ```
 
-Feel free to [contact us](/) if you have any question and [collaborate with us on GitHub](https://github.com/canonical/terraform-modules)!
+Feel free to [contact us](/reference/contacts) if you have any question and [collaborate with us on GitHub](https://github.com/canonical/terraform-modules)!
 

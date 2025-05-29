@@ -32,13 +32,13 @@ See the [Juju 3.0 release notes](https://juju.is/docs/juju/roadmap#juju-3-0-0---
 Example substitutions:
 
 ### Juju 3.x:
-```shell
+```text
 juju integrate postgresql-k8s:database postgresql-test-app
 
 juju run postgresql-k8s/leader get-password 
 ```
 ### Juju 2.9.x:
-```shell
+```text
 juju relate postgresql-k8s:database postgresql-test-app
 
 juju run-action --wait postgresql-k8s/leader get-password

@@ -65,7 +65,7 @@ If a [local charm](https://juju.is/docs/sdk/deploy-a-charm) is deployed (revisio
 
 The first step is to record the revision of the running application as a safety measure for a rollback action. To accomplish this, simply run the `juju status` command and look for the deployed Charmed PostgreSQL revision in the command output, e.g.:
 
-```shell
+```text
 Model        Controller  Cloud/Region        Version  SLA          Timestamp
 welcome-k8s  microk8s    microk8s/localhost  3.1.6    unsupported  12:23:03+02:00
 
@@ -87,7 +87,7 @@ It is recommended to scale the application up by one unit before starting the up
 The new unit will be the first one to be updated, and it will assert that the upgrade is possible. In case of failure, having the extra unit will ease the rollback procedure without disrupting service. You can read more about this in the [Minor rollback](/how-to-guides/upgrade/perform-a-minor-rollback) guide.
 
 You can scale your application using the following command:
-```shell
+```text
 juju scale-application postgresql-k8s <current_units_count+1>
 ```
 Wait for the new unit to be up and ready.
@@ -96,7 +96,7 @@ Wait for the new unit to be up and ready.
 
 After the application has settled, it’s necessary to run the `pre-upgrade-check` action against the leader unit:
 
-```shell
+```text
 juju run postgresql-k8s/leader pre-upgrade-check
 ```
 
@@ -109,15 +109,15 @@ This action will configure the charm to minimize the amount of primary switchove
 Use the [`juju refresh`](https://juju.is/docs/juju/juju-refresh) command to trigger the charm upgrade process. If using juju version 3 or higher, it is necessary to add the `--trust` option.
 
 Example with channel selection and juju 2.9.x:
-```shell
+```text
 juju refresh postgresql-k8s --channel 14/edge
 ```
 Example with channel selection and juju 3.x:
-```shell
+```text
 juju refresh postgresql-k8s --channel 14/edge --trust
 ```
 Example with specific revision selection (do NOT miss OCI resource!):
-```shell
+```text
 juju refresh postgresql-k8s --revision=189 --resource postgresql-image=...
 ```
 
@@ -126,7 +126,7 @@ juju refresh postgresql-k8s --revision=189 --resource postgresql-image=...
 
 For the running example `postgresql-k8s/3`, the `juju status` will look like:
 
-```shell
+```text
 Model        Controller  Cloud/Region        Version  SLA          Timestamp
 welcome-k8s  microk8s    microk8s/localhost  3.1.6    unsupported  12:26:32+02:00
 
@@ -153,7 +153,7 @@ After the unit is upgraded, the charm will set the unit upgrade state as complet
 
 Given that the unit is healthy within the cluster, the next step is to resume the upgrade process by running:
 
-```shell
+```text
 juju run postgresql-k8s/leader resume-upgrade 
 ```
 
@@ -161,7 +161,7 @@ The `resume-upgrade` command will roll out the upgrade for the following unit, a
 
 Sample `juju status` output:
 
-```shell
+```text
 Model        Controller  Cloud/Region        Version  SLA          Timestamp
 welcome-k8s  microk8s    microk8s/localhost  3.1.6    unsupported  12:28:38+02:00
 
@@ -185,7 +185,7 @@ Although the underlying PostgreSQL Cluster continues to work, it’s important t
 
 If the application scale was changed for the upgrade procedure, it is now safe to scale it back to the desired unit count:
 
-```shell
+```text
 juju scale-application postgresql-k8s <unit_count>
 ```
 

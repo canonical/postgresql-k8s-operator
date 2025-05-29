@@ -20,12 +20,12 @@ For production environments, check the collection of [Charmhub operators](https:
 
 ## Enable TLS
 Deploy the TLS charm:
-```shell
+```text
 juju deploy self-signed-certificates --config ca-common-name="Tutorial CA"
 ```
 
 To enable TLS, integrate (formerly known as "relate") the two applications:
-```shell
+```text
 juju integrate postgresql-k8s:certificates self-signed-certificates:certificates
 ```
 
@@ -35,18 +35,18 @@ Updates to private keys for certificate signing requests (CSR) can be made via t
 With three replicas, this schema should be followed:
 
 Generate a shared internal key:
-```shell
+```text
 openssl genrsa -out internal-key.pem 3072
 ```
 Generate external keys for each unit:
-```shell
+```text
 openssl genrsa -out external-key-0.pem 3072
 openssl genrsa -out external-key-1.pem 3072
 openssl genrsa -out external-key-2.pem 3072
 ```
 Apply both private keys to each unit. The shared internal key will be applied only to the juju leader.
 
-```shell
+```text
 juju run postgresql-k8s/0 set-tls-private-key "external-key=$(base64 -w0 external-key-0.pem)"  "internal-key=$(base64 -w0 internal-key.pem)" 
 juju run postgresql-k8s/1 set-tls-private-key "external-key=$(base64 -w0 external-key-1.pem)"  "internal-key=$(base64 -w0 internal-key.pem)" 
 juju run postgresql-k8s/2 set-tls-private-key "external-key=$(base64 -w0 external-key-2.pem)"  "internal-key=$(base64 -w0 internal-key.pem)" 
@@ -54,7 +54,7 @@ juju run postgresql-k8s/2 set-tls-private-key "external-key=$(base64 -w0 externa
 
 Updates can also be done with auto-generated keys with
 
-```shell
+```text
 juju run postgresql-k8s/0 set-tls-private-key
 juju run postgresql-k8s/1 set-tls-private-key
 juju run postgresql-k8s/2 set-tls-private-key
@@ -62,7 +62,7 @@ juju run postgresql-k8s/2 set-tls-private-key
 
 ## Disable TLS 
 You can disable TLS by removing the integration.
-```shell
+```text
 juju remove-relation postgresql-k8s:certificates self-signed-certificates:certificates
 ```
 

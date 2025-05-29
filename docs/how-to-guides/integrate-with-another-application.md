@@ -32,12 +32,12 @@ Integrations with charmed applications are supported via the modern [`postgresql
 ### Modern `postgresql_client` interface
 
 To integrate, run
-```shell
+```text
 juju integrate postgresql-k8s:database <charm>
 ```
 
 To remove the integration, run
-```shell
+```text
 juju remove-relation postgresql-k8s <charm>
 ```
 
@@ -49,12 +49,12 @@ See more information in [Explanation > Legacy charm](/explanation/legacy-charm).
 ```
 
 Using the `mattermost-k8s` charm as an example, an integration with the legacy interface could be created as follows:
- ```shell
+ ```text
 juju integrate postgresql-k8s:db mattermost-k8s:db
 ```
 
 Extended permissions can be requested using the `db-admin` endpoint:
-```shell
+```text
 juju integrate postgresql-k8s:db-admin mattermost-k8s:db
 ```
 
@@ -63,24 +63,24 @@ juju integrate postgresql-k8s:db-admin mattermost-k8s:db
 To integrate with an application outside of Juju, you must use the [`data-integrator` charm](https://charmhub.io/data-integrator) to create the required credentials and endpoints.
 
 Deploy `data-integrator`:
-```shell
+```text
 juju deploy data-integrator --config database-name=<name>
 ```
 
 Integrate with PostgreSQL K8s:
-```shell
+```text
 juju integrate data-integrator postgresql-k8s
 ```
 
 Use the `get-credentials` action to retrieve credentials from `data-integrator`:
-```shell
+```text
 juju run data-integrator/leader get-credentials
 ```
 
 ## Rotate application passwords
 To rotate the passwords of users created for integrated applications, the integration should be removed and created again. This process will generate a new user and password for the application.
 
-```shell
+```text
 juju remove-relation <charm> postgresql-k8s
 juju integrate <charm> postgresql-k8s
 ```
@@ -90,13 +90,13 @@ juju integrate <charm> postgresql-k8s
 The `operator` user is used internally by the Charmed PostgreSQL K8s Operator. The `set-password` action can be used to rotate its password.
 
 To set a specific password for the `operator `user, run
-```shell
+```text
 juju run postgresql-k8s/leader set-password password=<password>
 ```
 
 To randomly generate a password for the `operator` user, run
 
-```shell
+```text
 juju run postgresql-k8s/leader set-password
 ```
 

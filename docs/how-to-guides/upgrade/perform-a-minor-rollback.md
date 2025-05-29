@@ -32,7 +32,7 @@ To execute a rollback, we use a similar procedure to the upgrade. The difference
 
 It is necessary to re-run `pre-upgrade-check` action on the leader unit to enter the upgrade recovery state:
 
-```shell
+```text
 juju run postgresql-k8s/leader pre-upgrade-check
 ```
 
@@ -40,13 +40,13 @@ juju run postgresql-k8s/leader pre-upgrade-check
 
 When using a charm from charmhub:
 
-```shell
+```text
 juju refresh postgresql-k8s --revision=88
 ```
 
 When deploying from a local charm file, one must have the previous revision charm file and the `postgresql-image` resource, then run
 
-```shell
+```text
 juju refresh postgresql-k8s --path=./postgresql-k8s_ubuntu-22.04-amd64.charm \
        --resource postgresql-image=ghcr.io/canonical/charmed-postgresql:797a2132
 ```
@@ -59,7 +59,7 @@ The first unit will be rolled out and should rejoin the cluster after settling d
 
 We still need to resume the upgrade on the remaining units, which is done with the `resume-upgrade` action.
 
-```shell
+```text
 juju run postgresql-k8s/leader resume-upgrade
 ```
 

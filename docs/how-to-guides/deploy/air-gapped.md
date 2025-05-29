@@ -1,10 +1,7 @@
-
-
-
 # Deploy in an offline or air-gapped environment
 
 An air-gapped environment refers to a system that does not have access to the public internet.
-This guide goes through the special configuration steps for installing Charmed PostgreSQL k8s in an air-gapped environment.
+This guide goes through the special configuration steps for installing Charmed PostgreSQL K8s in an air-gapped environment.
 
 ## Requirements
 
@@ -85,7 +82,7 @@ For manual OCI exports, follow the official Snap Store Proxy documentation: [Off
 
 Transfer the binary blobs using the way of your choice into the air-gapped environment.
 
-```shell
+```text
 cp /home/ubuntu/snap/store-admin/common/export/postgresql-k8s-bundle-20241003T104903.tar.gz /media/usb/
 ...
 cp /media/usb/postgresql-k8s-bundle-20241003T104903.tar.gz /var/snap/snap-store-proxy/common/charms-to-push/
@@ -96,7 +93,7 @@ cp /media/usb/postgresql-k8s-bundle-20241003T104903.tar.gz /var/snap/snap-store-
 
 #### Charms
  Upload the charm blobs into local air-gapped CharmHub:
-```shell
+```text
 sudo snap-store-proxy push-charm-bundle /var/snap/snap-store-proxy/common/charms-to-push/postgresql-k8s-bundle-20241003T104903.tar.gz
 ```
 > **Note**: when [re-importing](https://documentation.ubuntu.com/snap-store-proxy/en/airgap-charmhub/#import-packages) charms or importing other revisions, make sure to provide the `--push-channel-map`.
@@ -114,7 +111,7 @@ For the manual OCI import, please follow [the official CharmHub guide](https://d
 ### 4. Deploy PostgreSQL
 
  Deploy and operate Juju charms normally:
-```shell
+```text
 juju deploy postgresql-k8s --trust
 ```
 ```{note}

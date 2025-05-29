@@ -38,28 +38,28 @@ Before anything, always run `juju status` to check the [list of charm statuses](
 Ensure you are familiar with [Juju logs concepts](https://juju.is/docs/juju/log) and [how to manage Juju logs](https://juju.is/docs/juju/manage-logs).
 
 Always check the Juju logs before troubleshooting further:
-```shell
+```text
 juju debug-log --replay --tail
 ```
 
 Focus on `ERRORS` (normally there should be none):
-```shell
+```text
 juju debug-log --replay | grep -c ERROR
 ```
 
 Consider enabling the `DEBUG` log level if you are troubleshooting unusual charm behaviour:
-```shell
+```text
 juju model-config 'logging-config=<root>=INFO;unit=DEBUG'
 ```
 
 The Patroni/PostgreSQL logs are located in `workload` container:
-```shell
+```text
 > ls -la /var/log/postgresql/
 -rw-r--r-- 1 postgres postgres 23863 Sep 15 13:10 patroni.log
 -rw------- 1 postgres postgres  2215 Sep 15 12:57 postgresql.log
 ```
 If backups are enabled, Pgbackrest logs can also be found in the `workload` container:
-```shell
+```text
 > ls -la /var/log/pgbackrest/
 -rw-r----- 1 postgres postgres 2949 Sep 18 10:42 all-server.log
 -rw-r----- 1 postgres postgres 3219 Sep 18 10:41 test3.patroni-postgresql-k8s-stanza-create.log
@@ -71,7 +71,7 @@ For more information about the `workload` container, see the [Container `postgre
 Check the operator [architecture](/explanation/architecture) first to become familiar with `charm` and `workload` containers. Make sure both containers are `Running` and `Ready` to continue troubleshooting inside the charm. 
 
 To describe the running pod, use the following command (where `0` is a Juju unit id). :
-```shell
+```text
 kubectl describe pod postgresql-k8s-0 -n <juju_model_name>
 ...
 Containers:
@@ -94,12 +94,12 @@ Containers:
 ## `charm` container
 
 To enter the `charm` container, use:
-```shell
+```text
 juju ssh postgresql-k8s/0 bash
 ```
 
 Here you can make sure pebble is running. The Pebble plan is: 
-```shell
+```text
 root@postgresql-k8s-0:/var/lib/juju# /charm/bin/pebble services
 Service          Startup  Current  Since
 container-agent  enabled  active   today at 12:29 UTC
@@ -117,12 +117,12 @@ Additionally, feel free to improve this document!
 ## `postgresql` workload container
 
 To enter the workload container, use:
-```shell
+```text
 juju ssh --container postgresql postgresql-k8s/0 bash
 ```
 You can check the list of running processes and Pebble plan:
 
-```shell
+```text
 root@postgresql-k8s-0:/# /charm/bin/pebble services
 Service            Startup   Current   Since
 metrics_server     enabled   active    today at 12:30 UTC
@@ -149,7 +149,7 @@ postgres      60  0.0  0.0 218060 21428 ?        Ss   12:30   0:00 postgres: pat
 The list of running Pebble services will depend on configured (enabled) [COS integration](/how-to-guides/monitoring-cos/enable-monitoring) and/or [backup](/how-to-guides/back-up-and-restore/create-a-backup) functionality. Pebble and its service `postgresql` must always be enabled and currently running (the Linux processes `pebble`, `patroni` and `postgres`).
 
 To ssh into the PostgreSQL unit, check the [charm users concept](/explanation/users) and request admin credentials. Make sure you have `psql` installed.
-```shell
+```text
 > juju run postgresql-k8s/leader get-password username=operator
 password: 3wMQ1jzfuERvTEds
 

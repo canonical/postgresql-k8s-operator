@@ -14,12 +14,12 @@ This guide will teach you how to deploy and configure the s3-integrator charm fo
 
 ## Configure s3-integrator
 First, deploy and run the charm:
-```shell
+```text
 juju deploy s3-integrator
 juju run s3-integrator/leader sync-s3-credentials access-key=<access-key-here> secret-key=<secret-key-here>
 ```
 Then, use `juju config` to add your configuration parameters. For example:
-```shell
+```text
 juju config s3-integrator \
     endpoint="https://s3.us-west-2.amazonaws.com" \
     bucket="postgresql-test-bucket-1" \
@@ -44,7 +44,7 @@ juju integrate s3-integrator postgresql-k8s
 
 You can create, list, and restore backups now:
 
-```shell
+```text
 juju run postgresql-k8s/leader list-backups
 juju run postgresql-k8s/leader create-backup 
 juju run postgresql-k8s/leader list-backups 
@@ -52,7 +52,7 @@ juju run postgresql-k8s/leader restore backup-id=<backup-id-here>
 ```
 
 You can also update your S3 configuration options after relating using:
-```shell
+```text
 juju config s3-integrator <option>=<value>
 ```
 

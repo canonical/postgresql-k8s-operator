@@ -9,7 +9,7 @@ This document describes database **data** migration only. To migrate charms on n
 
 A database migration is only required if the output of the following command is `latest/stable`:
 
-```shell
+```text
 juju show-application postgresql-k8s | yq '.[] | .channel'
 ```
 Migration is **not** necessary if the output above is `14/stable`.
@@ -44,24 +44,24 @@ A minor difference in commands might be necessary for different revisions and/or
 To obtain credentials for existing databases, execute the following commands for **each** database that will be migrated. Take note of these credentials for future steps.
 
 First, define and tune your application and db (database) names. For example:
-```shell
+```text
 CLIENT_APP=< mattermost-k8s/0 >
 OLD_DB_APP=< legacy-postgresql-k8s/leader | postgresql-k8s/0 >
 NEW_DB_APP=< new-postgresql-k8s/leader | postgresql-k8s/0 >
 DB_NAME=< your_db_name_to_migrate >
 ```
 Then, obtain the username from the existing legacy database vi its relation info:
-```shell
+```text
 OLD_DB_USER=$(juju show-unit ${CLIENT_APP} | yq '.[] | .relation-info | select(.[].endpoint == "db") | .[0].application-data.user')
 ```
 
 ## Deploy new PostgreSQL databases and obtain credentials
 Deploy new PostgreSQL database charm:
-```shell
+```text
 juju deploy postgresql-k8s ${NEW_DB_APP} --trust --channel 14/stable
 ```
 Obtain `operator` user password of new PostgreSQL database from PostgreSQL charm:
-```shell
+```text
 NEW_DB_USER=operator
 NEW_DB_PASS=$(juju run ${NEW_DB_APP} get-password | yq '.password')
 ```
@@ -76,47 +76,47 @@ Make sure no new connections were made and that the database has not been altere
 
 ### Create dump from legacy charm
 Remove the relation between application charm and legacy charm:
-```shell
+```text
 juju remove-relation  ${CLIENT_APP}  ${OLD_DB_APP}
 ```
 Connect the workload container of a legacy charm:
-```shell
+```text
 juju ssh --remote ${OLD_DB_APP} bash
 ```
 Create a dump via Unix socket using credentials from the relation:
-```shell
+```text
 mkdir -p /srv/dump/
 OLD_DB_DUMP="legacy-postgresql-${DB_NAME}.sql"
 pg_dump -Fc -h /var/run/postgresql/ -U ${OLD_DB_USER} -d ${DB_NAME} > "/srv/dump/${OLD_DB_DUMP}"
 ```
 Leave workload container:
-```shell
+```text
 exit
 ```
 ### Upload dump to new charm
 Fetch the dump locally and upload it to the new Charmed PostgreSQL K8s charm:
-```shell
+```text
 juju scp --remote ${OLD_DB_APP}:/srv/dump/${OLD_DB_DUMP}  ./${OLD_DB_DUMP}
 juju scp --container postgresql-k8s ./${OLD_DB_DUMP}  ${NEW_DB_APP}:.
 ```
 `ssh` into new Charmed PostgreSQL K8s charm and create a new database using `${NEW_DB_PASS}`:
-```shell
+```text
 juju ssh --container postgresql-k8s ${NEW_DB_APP} bash
 createdb -h localhost -U ${NEW_DB_USER} --password ${DB_NAME}
 ```
 Restore the dump using `${NEW_DB_PASS}`:
-```shell
+```text
 pg_restore -h localhost -U ${NEW_DB_USER} --password -d ${DB_NAME} --no-owner --clean --if-exists ${OLD_DB_DUMP}
 ```
 
 ## Integrate with modern charm
 Integrate (formerly "relate" in `juju v.2.9`) your application and new PostgreSQL database charm (using the modern `database` endpoint)
-```shell
+```text
 juju integrate ${CLIENT_APP}  ${NEW_DB_APP}:database
 ```
 If the `database` endpoint (from the `postgresql_client` interface) is not yet supported, use instead the `db` endpoint from the legacy `pgsql` interface:
 
-```shell
+```text
 juju integrate ${CLIENT_APP}  ${NEW_DB_APP}:db
 ```
 
@@ -128,7 +128,7 @@ Test your application to make sure the data is available and in a good condition
 
 If you are happy with the data migration, do not forget to remove legacy charms to keep the house clean:
 
-```shell
+```text
 juju remove-application --destroy-storage <legacy_postgresql_k8s>
 ```
 

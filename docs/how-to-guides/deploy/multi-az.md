@@ -1,6 +1,3 @@
-
-
-
 # Deploy on multiple availability zones (AZ) 
 
 During the deployment to Kubernetes, it is important to spread all the
@@ -9,30 +6,27 @@ or even better, to the different cloud [availability zones](https://en.wikipedia
 
 This guide will take you through deploying a PostgreSQL cluster on GKE using 3 available zones. All pods will be set up to sit in their dedicated zones only, which effectively guarantees database copy survival across all available AZs.
 
+## Prerequisites
+
+* A physical or virtual machine running Ubuntu 22.04+
+* Juju 3 (`3.6+` is recommended)
+  * See: [How to install Juju](https://documentation.ubuntu.com/juju/3.6/howto/manage-juju/#install-juju)
+* A cloud service that supports and provides availability zones concepts such as the K8s label `topology.kubernetes.io/zone`. 
+
 ```{note}
-This documentation assumes that your cloud supports and provides availability zones concepts such as the K8s label `topology.kubernetes.io/zone`. This is enabled by default on EKS/GKE/AKS and supported by MicroK8s/Charmed Kubernetes.
-
-See the [Additional resources](#additional-resources) section for more details about AZ on specific clouds.
+Multi-availability zones are enabled by default on EC2/GCE and supported by LXD and MicroCloud.
 ```
-
-## Summary
-* [Set up Kubernetes on Google Cloud](#set-up-kubernetes-on-google-cloud)
-* [Deploy PostgreSQL with anti-affinity rules](#deploy-postgresql-with-anti-affinity-rules)
-  * [Simulation: A node gets drained](#simulation-a-node-gets-drained)
-  * [Simulation: All nodes get cordoned](#simulation-all-nodes-get-cordoned)
-* [Additional resources](#additional-resources)
----
 
 ## Set up Kubernetes on Google Cloud
 
-Let's deploy the [PostgreSQL Cluster on GKE (us-east4)](/how-to-guides/deploy/gke) using all 3 zones there (`us-east4-a`, `us-east4-b`, `us-east4-c`) and make sure all pods always sits in the dedicated zones only.
+Let's deploy a [PostgreSQL Cluster on GKE (us-east4)](/how-to-guides/deploy/gke) using all 3 zones there (`us-east4-a`, `us-east4-b`, `us-east4-c`) and make sure all pods always sits in the dedicated zones only.
 
 ```{caution}
-**Warning**: Creating the following GKE resources may cost you money - be sure to monitor your GCloud costs.
+Creating the following GKE resources may cost you money - be sure to monitor your GCloud costs.
 ```
 
 Log into Google Cloud and bootstrap nine nodes of managed K8s on GCloud:
-```shell
+```text
 gcloud auth login
 gcloud container clusters create --zone us-east4 $USER-$RANDOM --cluster-version 1.29.8 --machine-type n1-standard-4 --num-nodes=2 --total-max-nodes=2 --no-enable-autoupgrade
 
@@ -43,10 +37,12 @@ juju add-model mymodel
 ```
 
 Each node is equally grouped across availability zones (three K8s nodes in each AZ). You can check them with the following `kubectl` commands:
-```shell
+
+```text
 kubectl get nodes
 ```
-```shell
+
+```text
 > NAME                                          STATUS   ROLES    AGE     VERSION
 > gke-default-pool-5c034921-fmtj   Ready    <none>   3h56m   v1.29.8-gke.1278000          
 > gke-default-pool-5c034921-t1sx   Ready    <none>   3h56m   v1.29.8-gke.1278000          
@@ -59,10 +55,10 @@ kubectl get nodes
 > gke-default-pool-d196956a-zm6h   Ready    <none>   3h56m   v1.29.8-gke.1278000
 ```
 
-```shell
+```text
 kubectl get nodes --show-labels | awk 'NR == 1 {next} {print $1,$2,$6}' | awk -F "[ /]" '{print $1" \t"$NF" \t"$2}'
 ```
-```shell
+```text
 gke-default-pool-5c034921-fmtj     zone=us-east4-b         Ready
 gke-default-pool-5c034921-t1sx     zone=us-east4-b         Ready
 gke-default-pool-5c034921-zkzm     zone=us-east4-b         Ready
@@ -79,14 +75,14 @@ Juju provides the support for affinity/anti-affinity rules using **constraints**
 
 The command below demonstrates how to deploy Charmed PostgreSQL K8s with Juju constraints that create a pod anti-affinity rule:
 
-```shell
+```text
 export MYAPP="mydatabase" ; \
 juju deploy postgresql-k8s ${MYAPP} --trust -n 3 \
  --constraints="tags=anti-pod.app.kubernetes.io/name=${MYAPP},anti-pod.topology-key=topology.kubernetes.io/zone"
 ```
 
 This will effectively create a K8s pod anti-affinity rule. Check with the following command:
-```shell
+```text
 kubectl get pod mydatabase-0 -o yaml -n mymodel
 ```
 ```yaml
@@ -109,7 +105,7 @@ This example instructs the K8s scheduler to run K8s pods that match the Juju app
 The selector and affinity/anti-affinity rules are extremely flexible and often require cloud-specific fine-tuning for your specific needs. The rule of thumb is to always check K8s node labels actually available in your environment and choose the appropriate label on your infrastructure. 
 
 The example below shows all available labels on GKE. You may want to run database instances on different virtual machines (`kubernetes.io/hostname` label) or in different Availability Zones (`topology.kubernetes.io/zone` label) :
-```shell
+```text
 kubectl get node gke-default-pool-b33634ac-l0c9 -o yaml
 ```
 ```yaml
@@ -142,7 +138,7 @@ kubectl get node gke-default-pool-b33634ac-l0c9 -o yaml
 ``` 
 
 After a successful deployment, `juju status` will show an active application:
-```shell
+```text
 Model    Controller  Cloud/Region  Version  SLA          Timestamp
 mymodel  gke         gke/us-east4  3.5.3    unsupported  22:02:32+02:00
 
@@ -156,7 +152,7 @@ mydatabase/2   active    idle   10.80.1.6
 ```
 
 and each pod will sit in the separate AZ out of the box:
-```shell
+```text
 kubectl get pods -n mymodel -o wide
 ```
 ```none
@@ -168,10 +164,10 @@ kubectl get pods -n mymodel -o wide
 ```
 ### Simulation: A node gets drained
 Let's drain a node and make sure the rescheduled pod will stay the same AZ:
-```shell
+```text
 kubectl drain  --ignore-daemonsets --delete-emptydir-data  gke-default-pool-b33634ac-l0c9
 ```
-```shell
+```text
 > node/gke-default-pool-b33634ac-l0c9 cordoned                                  
 > ...
 > evicting pod mymodel/mydatabase-0                       
@@ -181,7 +177,7 @@ kubectl drain  --ignore-daemonsets --delete-emptydir-data  gke-default-pool-b336
 ```
 
 As we can see the newly rescheduled pod landed the new node in the same AZ `us-east4-c`:
-```shell
+```text
 kubectl get pods -n mymodel -o wide
 
 > NAME             READY   STATUS    RESTARTS   AGE   IP          NODE                                       
@@ -195,7 +191,7 @@ kubectl get pods -n mymodel -o wide
 
 In case we lose (cordon) all nodes in AZ, the pod will stay pending as K8s scheduler cannot find the proper node.
 Let's simulate it:
-```shell
+```text
 kubectl drain  --ignore-daemonsets --delete-emptydir-data  gke-default-pool-b33634ac-phjx
 kubectl drain  --ignore-daemonsets --delete-emptydir-data  gke-default-pool-b33634ac-w2jv
 
@@ -211,7 +207,7 @@ kubectl get nodes --show-labels | awk 'NR == 1 {next} {print $1,$2,$6}' | awk -F
 > gke-default-pool-d196956a-zm6h     zone=us-east4-a         Ready
 ```
 
-```shell
+```text
 kubectl get pods -n mymodel
 
 > NAME                       READY   STATUS    RESTARTS   AGE
@@ -231,7 +227,7 @@ kubectl describe pod mydatabase-0 -n mymodel  | tail -10
 ```
 
 The `juju status` output will indicate this problem as well:
-```shell
+```text
 Model    Controller  Cloud/Region  Version  SLA          Timestamp
 mymodel  gke         gke/us-east4  3.5.3    unsupported  22:31:00+02:00
 
@@ -245,14 +241,14 @@ mydatabase/2   active    idle   10.80.1.6
 ```
 
 Let's uncordon all nodes to keep the house clean:
-```shell
+```text
 kubectl uncordon gke-default-pool-b33634ac-l0c9
 kubectl uncordon gke-default-pool-b33634ac-phjx
 kubectl uncordon gke-default-pool-b33634ac-w2jv
 ```
 
 The K8s scheduler will return the pod back to AZ `us-east4-c` and Juju will automatically rejoin the database unit back to the cluster:
-```shell
+```text
 Model    Controller  Cloud/Region  Version  SLA          Timestamp
 mymodel  gke         gke/us-east4  3.5.3    unsupported  22:38:23+02:00
 
@@ -273,10 +269,10 @@ To survive acomplete cloud outage, we recommend setting up [cluster-cluster asyn
 ## Remove GKE setup
 
 ```{caution}
-**Warning**: Do not forget to remove your GKE test setup - it can be costly!
+Do not forget to remove your GKE test setup - it can be costly!
 ```
 
-```shell
+```text
 gcloud container clusters list
 gcloud container clusters delete <gke_name> --location <gke_location>
 
@@ -297,5 +293,4 @@ Below you will find specific information about  AZs on specific clouds and more 
  * [Node selector](https://kubernetes.io/docs/tasks/configure-pod-container/assign-pods-nodes/)
  * [Affinity/anti-affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#affinity-and-anti-affinity)
  * [Taint and toleration](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/)
-* ...
 

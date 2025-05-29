@@ -21,12 +21,12 @@ Charmed PostgreSQL K8s resource allocation can be controlled via the charm's `pr
 ```
 
 You can set the profile during deployment using the `--config` flag. For example:
-```shell
+```text
 juju deploy postgresql-k8s --trust --config profile=testing
 ```
 
 You can change the profile using the `juju config` action. For example:
-```shell
+```text
 juju config postgresql-k8s profile=production
 ```
 For a list of all of this charm's config options, see the [Configuration tab](https://charmhub.io/postgresql-k8s/configure#profile).
@@ -35,13 +35,13 @@ For a list of all of this charm's config options, see the [Configuration tab](ht
 
 The Juju [`--constraints`](https://juju.is/docs/juju/constraint) flag sets RAM and CPU limits for Kubernetes pods:
 
-```shell
+```text
 juju deploy postgresql-k8s --trust --constraints cores=8 mem=16G
 ```
 
 Juju constraints can be set together with the charm's profile:
 
-```shell
+```text
 juju deploy postgresql-k8s --trust --constraints cores=8 mem=16G --config profile=testing
 ```
 

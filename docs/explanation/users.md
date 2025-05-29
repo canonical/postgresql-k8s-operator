@@ -24,7 +24,7 @@ The operator uses the following internal DB users:
 
 The full list of internal users is available in charm [source code](https://github.com/canonical/postgresql-operator/blob/main/src/constants.py). The full dump of internal users (on the newly installed charm):
 
-```shell
+```text
 postgres=# \du
                                       List of roles
   Role name  |                         Attributes                         |  Member of   
@@ -39,7 +39,7 @@ postgres=# \du
 **Note**: it is forbidden to use/manage described above users! They are dedicated to the operators logic! Please use [data-integrator](https://charmhub.io/postgresql-k8s/docs/t-integrations) charm to generate/manage/remove an external credentials.
 
 It is allowed to rotate passwords for *internal* users using action 'set-password':
-```shell
+```text
 > juju show-action postgresql set-password
 Change the system user's password, which is used by charm. It is for internal charm users and SHOULD NOT be used by applications.
 
@@ -54,7 +54,7 @@ username:
 
 For example, to generate a new random password for *internal* user:
 
-```shell
+```text
 > juju run-action --wait postgresql-k8s/leader set-password username=operator
 
 unit-postgresql-1:
@@ -66,7 +66,7 @@ unit-postgresql-1:
 ```
 
 To set a predefined password for the specific user, run:
-```shell
+```text
 > juju run-action --wait postgresql-k8s/leader set-password username=operator password=newpassword
 
 unit-postgresql-1:
@@ -83,7 +83,7 @@ unit-postgresql-1:
 
 The operator created a dedicated user for every application related/integrated with database. Those users are removed on the juju relation/integration removal request. However, DB data stays in place and can be reused on re-created relations (using new user credentials):
 
-```shell
+```text
 postgres=# \du
                                       List of roles
   Role name  |                         Attributes                         |  Member of   
@@ -95,7 +95,7 @@ postgres=# \du
 ```
 
 **Note**: If password rotation is needed for users used in relations, it is needed to remove the relation and create it again:
-```shell
+```text
 > juju remove-relation postgresql-k8s myclientapp
 > juju wait-for application postgresql-k8s
 > juju relate postgresql-k8s myclientapp

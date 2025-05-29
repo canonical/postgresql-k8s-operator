@@ -37,7 +37,7 @@ This type of test ensures that basic functionality works over a short amount of 
 
 <details><summary>Example</summary>
 
-```shell
+```text
 juju add-model smoke-test
 
 juju deploy postgresql-k8s --trust --channel 14/edge
@@ -73,11 +73,11 @@ watch -n1 -x juju ssh --container postgresql postgresql-k8s/leader "psql postgre
 
 ### Tips
 To stop the "continuous write" test, run
-```shell
+```text
 juju run postgresql-test-app/leader stop-continuous-writes
 ```
 To truncate the "continuous write" table (i.e. delete all records from database), run
-```shell
+```text
 juju run postgresql-test-app/leader clear-continuous-writes
 ```
 

@@ -35,7 +35,7 @@ Enabling tracing with Tempo requires that you:
 
 First, switch to the Kubernetes controller where the COS model is deployed:
 
-```shell
+```text
 juju switch <k8s_controller_name>:<cos_model_name>
 ```
 Then, deploy the dependencies of Tempo following [this tutorial](https://discourse.charmhub.io/t/tutorial-deploy-tempo-ha-on-top-of-cos-lite/15489). In particular, we would want to:
@@ -52,13 +52,13 @@ Next, offer interfaces for cross-model integrations from the model where Charmed
 
 To offer the Tempo integration, run
 
-```shell
+```text
 juju offer <tempo_coordinator_k8s_application_name>:tracing
 ```
 
 Then, switch to the Charmed PostgreSQL K8s model, find the offers, and integrate (relate) with them:
 
-```shell
+```text
 juju switch <k8s_controller_name>:<postgresql_k8s_model_name>
 
 juju find-offers <k8s_controller_name>:
@@ -67,14 +67,14 @@ juju find-offers <k8s_controller_name>:
 
 Below is a sample output where `k8s` is the K8s controller name and `cos` is the model where `cos-lite` and `tempo-k8s` are deployed:
 
-```shell
+```text
 Store  URL                            Access  Interfaces
 k8s    admin/cos.tempo                admin   tracing:tracing
 ```
 
 Next, consume this offer so that it is reachable from the current model:
 
-```shell
+```text
 juju consume k8s:admin/cos.tempo
 ```
 
@@ -82,23 +82,23 @@ juju consume k8s:admin/cos.tempo
 
 First, deploy [Grafana Agent K8s](https://charmhub.io/grafana-agent-k8s) from the `latest/edge` channel:
 
-```shell
+```text
 juju deploy grafana-agent-k8s --channel latest-edge 
 ```
 
 Then, integrate Grafana Agent K8s with the consumed interface from the previous section:
-```shell
+```text
 juju integrate grafana-agent-k8s:tracing tempo:tracing
 ```
 
 Finally, integrate Charmed PostgreSQL K8s with Grafana Agent K8s:
-```shell
+```text
 juju integrate postgresql-k8s:tracing grafana-agent-k8s:tracing-provider
 ```
 
 Wait until the model settles. The following is an example of the `juju status --relations` on the Charmed PostgreSQL model:
 
-```shell  
+```text  
 Model     Controller  Cloud/Region        Version  SLA          Timestamp
 database  k8s         microk8s/localhost  3.5.4    unsupported  16:52:21Z
 

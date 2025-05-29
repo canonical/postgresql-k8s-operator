@@ -20,7 +20,7 @@ Pebble `services` are configured through [layers](https://github.com/canonical/p
 
 As a result, if you run a `kubectl get pods` on a namespace named for the Juju model you’ve deployed the "Charmed PostgreSQL K8s" charm into, you’ll see something like the following:
 
-```shell
+```text
 NAME                READY   STATUS    RESTARTS   AGE
 postgresql-k8s-0    2/2     Running   0          65m
 ```
@@ -51,7 +51,7 @@ The OCI/Rock ships the following components:
 SNAP-based rock images guarantee the same components versions and functionality between VM and K8s charm flavors.
 
 Pebble runs layers of all the currently enabled services, e.g. monitoring, backups, etc: 
-```shell
+```text
 > juju ssh --container postgresql postgresql-k8s/0  /charm/bin/pebble services
 Service            Startup   Current   Since
 metrics_server     enabled   active    today at 21:42 UTC

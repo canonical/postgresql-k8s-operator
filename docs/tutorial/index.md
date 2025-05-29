@@ -48,13 +48,13 @@ All necessary components have been pre-installed inside VM already, like LXD and
 
 Let's bootstrap Juju to use the local MicroK8s controller. We will call it "overlord", but you can give it any name you'd like:
 
-```shell
+```text
 juju bootstrap microk8s overlord
 ```
 
 A controller can work with different [models](https://juju.is/docs/juju/model). Set up a specific model for Charmed PostgreSQL K8s named `tutorial`:
 
-```shell
+```text
 juju add-model tutorial
 ```
 
@@ -71,7 +71,7 @@ Model "admin/tutorial" is empty.
 
 To deploy Charmed PostgreSQL K8s, run
 
-```shell
+```text
 juju deploy postgresql-k8s --channel=14/stable --trust
 ```
 

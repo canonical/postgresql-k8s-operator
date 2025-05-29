@@ -25,7 +25,7 @@ This guide will show you the basics of initiating a cross-regional async setup u
 
 To deploy two clusters in different servers, create two juju models - one for the `rome` cluster, one for the `lisbon` cluster. In the example below, we use the config flag `profile=testing` to limit memory usage.
 
-```shell
+```text
 juju add-model rome 
 juju add-model lisbon
 
@@ -40,7 +40,7 @@ juju deploy postgresql-k8s db2 --trust --channel=14/edge --config profile=testin
 
 [Offer](https://juju.is/docs/juju/offer) asynchronous replication in one of the clusters.
 
-```shell
+```text
 juju switch rome
 juju offer db1:replication-offer replication-offer
 ``` 
@@ -48,7 +48,7 @@ juju offer db1:replication-offer replication-offer
 ## Consume
 
 Consume asynchronous replication on planned `Standby` cluster (Lisbon):
-```shell
+```text
 juju switch lisbon
 juju consume rome.replication-offer
 juju integrate replication-offer db2:replication
@@ -58,13 +58,13 @@ juju integrate replication-offer db2:replication
 
 To define the primary cluster, use the `create-replication` action.
 
-```shell
+```text
 juju run -m rome db1/leader create-replication
 ```
 
 To switchover and use `lisbon` as the primary instead, run
 
-```shell
+```text
 juju run -m lisbon db2/leader promote-to-primary scope=cluster
 ```
 
@@ -72,7 +72,7 @@ juju run -m lisbon db2/leader promote-to-primary scope=cluster
 
 The two clusters work independently, which means that it’s possible to scale each cluster separately. The `-m` flag defines the target of this action, so it can be performed within any active model. 
 
-```shell
+```text
 juju scale-application db1 3 -m rome
 
 juju scale-application db2 3 -m lisbon

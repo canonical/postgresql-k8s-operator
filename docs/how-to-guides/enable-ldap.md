@@ -23,7 +23,7 @@ For production environments, check the collection of [Charmhub operators](https:
 
 Deploy the [GLAuth charm](https://charmhub.io/glauth-k8s):
 
-```shell
+```text
 juju add-model glauth
 juju deploy self-signed-certificates
 juju deploy postgresql-k8s --channel 14/stable --trust
@@ -32,20 +32,20 @@ juju deploy glauth-k8s --channel edge --trust
 
 Integrate (formerly known as "relate") the three applications:
 
-```shell
+```text
 juju integrate glauth-k8s:certificates self-signed-certificates
 juju integrate glauth-k8s:pg-database postgresql-k8s
 ```
 
 Deploy the [GLAuth-utils charm](https://charmhub.io/glauth-utils), in order to manage LDAP users:
 
-```shell
+```text
 juju deploy glauth-utils --channel edge --trust
 ```
 
 Integrate (formerly known as "relate") the two applications:
 
-```shell
+```text
 juju integrate glauth-k8s glauth-utils
 ```
 
@@ -53,7 +53,7 @@ juju integrate glauth-k8s glauth-utils
 
 To offer the GLAuth interfaces, run:
 
-```shell
+```text
 juju offer glauth-k8s:ldap ldap
 juju offer glauth-k8s:send-ca-cert send-ca-cert
 ```
@@ -62,20 +62,20 @@ juju offer glauth-k8s:send-ca-cert send-ca-cert
 
 Switch to the Kubernetes controller:
 
-```shell
+```text
 juju switch <k8s_controller>:postgresql
 ```
 
 To have LDAP offers consumed:
 
-```shell
+```text
 juju consume admin/glauth.ldap
 juju consume admin/glauth.send-ca-cert
 ```
 
 To have LDAP authentication enabled, relate the PostgreSQL charm with the GLAuth charm:
 
-```shell
+```text
 juju integrate postgresql-k8s:ldap ldap
 juju integrate postgresql-k8s:receive-ca-cert send-ca-cert 
 ```
@@ -84,7 +84,7 @@ juju integrate postgresql-k8s:receive-ca-cert send-ca-cert
 
 To have LDAP users available in PostgreSQL, provide a comma separated list of LDAP groups to already created PostgreSQL authorization groups. To create those groups before hand, refer to the Data Integrator charm [page](https://charmhub.io/data-integrator).
 
-```shell
+```text
 juju config postgresql-k8s ldap_map="<ldap_group>=<psql_group>"
 ```
 
@@ -92,7 +92,7 @@ juju config postgresql-k8s ldap_map="<ldap_group>=<psql_group>"
 
 You can disable LDAP by removing the following relations:
 
-```shell
+```text
 juju remove-relation postgresql-k8s:receive-ca-cert send-ca-cert
 juju remove-relation postgresql-k8s:ldap ldap
 ```

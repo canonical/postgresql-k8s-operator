@@ -1,43 +1,29 @@
-
-
-
-```{note}
-**Note**: All commands are written for `juju >= v.3.0`
-
-If you are using an earlier version,  check the [Juju 3.0 Release Notes](https://juju.is/docs/juju/roadmap#juju-3-0-0---22-oct-2022).
-```
-
 # How to deploy on EKS
 
-[Amazon Elastic Kubernetes Service](https://aws.amazon.com/eks/) (EKS) is a popular, fully automated Kubernetes service. To access the EKS Web interface, go to [console.aws.amazon.com/eks/home](https://console.aws.amazon.com/eks/home).
+The [Amazon Elastic Kubernetes Service](https://aws.amazon.com/eks/) (EKS) is a popular, fully automated Kubernetes service. To access the EKS web interface, go to [console.aws.amazon.com/eks/home](https://console.aws.amazon.com/eks/home).
 
-## Summary
-* [Install EKS and Juju tooling](#install-eks-juju)
-* [Create a new EKS cluster](#create-eks-cluster)
-* [Bootstrap Juju on EKS](#boostrap-juju)
-* [Deploy charms](#deploy-charms)
-* [Display deployment information](#display-information)
-* [Clean up](#clean-up)
+## Prerequisites
 
----
+This guide assumes you have:
 
-## Install EKS and Juju tooling
+* A physical or virtual machine running Ubuntu 22.04+
+* Juju 3 (`3.6+` is recommended)
+  * See: [How to install Juju](https://documentation.ubuntu.com/juju/3.6/howto/manage-juju/#install-juju)
 
-Install [Juju](https://juju.is/docs/juju/install-juju) and the [`kubectl` CLI tools](https://kubernetes.io/docs/tasks/tools/) via snap:
-```shell
-sudo snap install juju
+## Install EKS tooling
+
+Install the [`kubectl` CLI tools](https://kubernetes.io/docs/tasks/tools/) via snap:
+```text
 sudo snap install kubectl --classic
 ```
+
 Follow the installation guides for:
-* [eksctl](https://eksctl.io/installation/) - the Amazon EKS CLI
-* [AWs CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html) - the Amazon Web Services CLI
+* The [Amazon EKS CLI](https://eksctl.io/installation/)
+* The [Amazon Web Services CLI](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 
 To check they are all correctly installed, you can run the commands demonstrated below with sample outputs:
 
-```shell
-> juju version
-3.1.7-ubuntu-amd64
-
+```text
 > kubectl version --client
 Client Version: v1.28.2
 Kustomize Version: v5.0.4-0.20230601165947-6ce0bf390ce3
@@ -51,8 +37,10 @@ aws-cli/2.13.25 Python/3.11.5 Linux/6.2.0-33-generic exe/x86_64.ubuntu.23 prompt
 ```
 
 ### Authenticate
+
 Create an IAM account (or use legacy access keys) and login to AWS:
-```shell
+
+```text
 > aws configure
 AWS Access Key ID [None]: SECRET_ACCESS_KEY_ID
 AWS Secret Access Key [None]: SECRET_ACCESS_KEY_VALUE
@@ -70,7 +58,7 @@ Default output format [None]:
 ## Create a new EKS cluster
 
 Export the deployment name for further use:
-```shell
+```text
 export JUJU_NAME=eks-$USER-$RANDOM
 ```
 
@@ -78,7 +66,7 @@ This following examples in this guide will use the location `eu-west-3` and K8s 
 
 Sample `cluster.yaml`:
 
-```shell
+```text
 ~$ cat <<-EOF > cluster.yaml
 ---
 apiVersion: eksctl.io/v1alpha5
@@ -116,11 +104,11 @@ nodeGroups:
 EOF
 ```
 Bootstrap EKS cluster with the following command:
-```shell
+```text
 eksctl create cluster -f cluster.yaml
 ```
 Sample output:
-```shell
+```text
 ...
 2023-10-12 11:13:58 [ℹ]  using region eu-west-3
 2023-10-12 11:13:59 [ℹ]  using Kubernetes version 1.27
@@ -136,19 +124,19 @@ bugs.launchpad.net/juju/+bug/2007848
 ```
 
 Add Juju k8s clouds:
-```shell
+```text
 juju add-k8s $JUJU_NAME
 ```
 Bootstrap Juju controller:
-```shell
+```text
 juju bootstrap $JUJU_NAME
 ```
 Create a new Juju model (k8s namespace)
-```shell
+```text
 juju add-model welcome
 ```
 [Optional] Increase DEBUG level if you are troubleshooting charms 
-```shell
+```text
 juju model-config logging-config='<root>=INFO;unit=DEBUG'
 ```
 
@@ -156,19 +144,19 @@ juju model-config logging-config='<root>=INFO;unit=DEBUG'
 
 The following command deploys PostgreSQL K8s, PgBouncer K8s, a TLS certificate provider, and the PostgreSQL Test app:
 
-```shell
+```text
 juju deploy postgresql-k8s-bundle --channel 14/edge --trust
 juju deploy postgresql-test-app
 ```
 We then integrate the test app with the `postgresql-k8s` app and check the status:
-```shell
+```text
 juju integrate postgresql-test-app:first-database postgresql-k8s
 juju status --watch 1s
 ```
 ### Display deployment information
 
 Display information about the current deployments with the following commands:
-```shell
+```text
 ~$ kubectl cluster-info 
 Kubernetes control plane is running at https://AAAAAAAAAAAAAAAAAAAAAAA.gr7.eu-west-3.eks.amazonaws.com
 CoreDNS is running at https://AAAAAAAAAAAAAAAAAAAAAAA.gr7.eu-west-3.eks.amazonaws.com/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
@@ -192,22 +180,28 @@ Always clean EKS resources that are no longer necessary -  they could be costly!
 
 To clean the EKS cluster, resources and juju cloud, run the following commands:
 
-```shell
+```text
 juju destroy-controller $JUJU_NAME --yes --destroy-all-models --destroy-storage --force
 juju remove-cloud $JUJU_NAME
 ```
+
 List all services and then delete those that have an associated EXTERNAL-IP value (e.g. load balancers):
-```shell
+
+```text
 kubectl get svc --all-namespaces
 kubectl delete svc <service-name> 
 ```
-Next, delete the EKS cluster  (source: [Deleting an Amazon EKS cluster]((https://docs.aws.amazon.com/eks/latest/userguide/delete-cluster.html) )) 
-```shell
+
+Next, delete the EKS cluster (source: [Deleting an Amazon EKS cluster](https://docs.aws.amazon.com/eks/latest/userguide/delete-cluster.html))
+
+```text
 eksctl get cluster -A
 eksctl delete cluster <cluster_name> --region eu-west-3 --force --disable-nodegroup-eviction
 ```
+
 Finally, remove AWS CLI user credentials (to avoid forgetting and leaking):
-```shell
+
+```text
 rm -f ~/.aws/credentials
 ```
 

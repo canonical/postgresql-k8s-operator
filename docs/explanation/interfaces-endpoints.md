@@ -15,7 +15,7 @@ This charm provides modern ['postgresql_client'](https://github.com/canonical/ch
 
 Adding a relation is accomplished with `juju relate` (or `juju integrate` for Juju 3.x) via endpoint `database`. Example:
 
-```shell
+```text
 # Deploy Charmed PostgreSQL cluster with 3 nodes
 juju deploy postgresql-k8s -n 3 --trust --channel 14
 
@@ -43,7 +43,7 @@ Find all details about default and extra DB user roles in "[Charm Users explanat
 
 This charm supports legacy interface `pgsql` from the previous [PostgreSQL charm](https://launchpad.net/postgresql-charm):
 
-```shell
+```text
 juju deploy postgresql-k8s --trust --channel 14
 juju deploy finos-waltz-k8s --channel edge
 juju relate postgresql-k8s:db finos-waltz-k8s
