@@ -16,7 +16,7 @@ This type of test ensures that basic functionality works over a short amount of 
 ```text
 juju add-model smoke-test
 
-juju deploy postgresql-k8s --trust --channel 14/edge
+juju deploy postgresql-k8s --channel 14/edge --trust
 juju scale-application postgresql-k8s 3 # (optional)
 
 juju deploy postgresql-test-app

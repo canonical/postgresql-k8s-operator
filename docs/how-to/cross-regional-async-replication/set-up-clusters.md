@@ -18,10 +18,10 @@ juju add-model rome
 juju add-model lisbon
 
 juju switch rome # active model must correspond to cluster
-juju deploy postgresql-k8s db1 --trust --channel=14/edge --config profile=testing --base ubuntu@22.04
+juju deploy postgresql-k8s db1 --channel=14/edge --trust --config profile=testing --base ubuntu@22.04
 
 juju switch lisbon
-juju deploy postgresql-k8s db2 --trust --channel=14/edge --config profile=testing --base ubuntu@22.04
+juju deploy postgresql-k8s db2 --channel=14/edge --trust --config profile=testing --base ubuntu@22.04
 ```
 
 ## Offer

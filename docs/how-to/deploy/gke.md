@@ -91,7 +91,7 @@ kubectl get pods -n welcome-model
 The following commands deploy PostgreSQL K8s and PgBouncer K8s:
 
 ```text
-juju deploy postgresql-k8s --trust
+juju deploy postgresql-k8s --channel 14/stable --trust
 juju deploy pgbouncer-k8s --trust
 ```
 

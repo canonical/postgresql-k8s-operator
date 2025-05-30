@@ -49,7 +49,7 @@ juju bootstrap ck8s
 
 ```text
 juju add-model postgresql
-juju deploy postgresql-k8s --trust
+juju deploy postgresql-k8s --channel 14/stable --trust
 ```
 
 follow the deployment progress using:

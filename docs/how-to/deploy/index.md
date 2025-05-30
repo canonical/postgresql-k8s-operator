@@ -16,7 +16,7 @@ Then, either continue with the `juju` client **or** use the `terraform juju` cli
 
 **To deploy with the `juju` client:**
 ```text
-juju deploy postgresql-k8s --trust
+juju deploy postgresql-k8s --channel 14/stable --trust
 ```
 > See also: [`juju deploy` command](https://canonical-juju.readthedocs-hosted.com/en/latest/user/reference/juju-cli/list-of-juju-cli-commands/deploy/)
 
