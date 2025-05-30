@@ -73,7 +73,7 @@ To utilise encryption at transit for all internal and external cluster connectio
 
 Encryption in transit for backups is provided by the storage service (Charmed PostgreSQL K8s is a client for an S3-compatible storage).
 
-For more information on encryption, see the [Cryptography](/) explanation page and [How to enable encryption](https://canonical.com/data/docs/postgresql/k8s/h-enable-tls) guide.
+For more information on encryption, see [](/explanation/security/cryptography) and [](/how-to/enable-tls).
 
 ### Authentication
 
@@ -93,7 +93,7 @@ PostgreSQL logs are stored in `/var/log/postgresql` within the postgresql contai
 
 ## Additional Resources
 
-For details on the cryptography used by Charmed PostgreSQL K8s, see the [Cryptography](/) explanation page.
+For details on the cryptography used by Charmed PostgreSQL K8s, see the [Cryptography](/explanation/security/cryptography) explanation page.
 
 
 ```{toctree}

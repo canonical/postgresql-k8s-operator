@@ -71,7 +71,7 @@ gke-default-pool-d196956a-zm6h     zone=us-east4-a         Ready
 ```
 ## Deploy PostgreSQL with anti-affinity rules
 
-Juju provides the support for affinity/anti-affinity rules using **constraints**. Read more about it in this [forum post](/).
+Juju provides the support for affinity/anti-affinity rules using **constraints**. Read more about it in this [forum post](https://discourse.charmhub.io/t/pod-priority-and-affinity-in-juju-charms/4091).
 
 The command below demonstrates how to deploy Charmed PostgreSQL K8s with Juju constraints that create a pod anti-affinity rule:
 

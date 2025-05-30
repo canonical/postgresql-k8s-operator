@@ -187,15 +187,20 @@ To clean the AKS cluster, resources and juju cloud, run the following commands:
 ```text
 juju destroy-controller aks --destroy-all-models --destroy-storage --force
 ```
+
 List all services and then delete those that have an associated EXTERNAL-IP value (load balancers, ...):
+
 ```text
 kubectl get svc --all-namespaces
 kubectl delete svc <service-name> 
 ```
-Next, delete the AKS resources (source: [Deleting an all Azure VMs]((https://learn.microsoft.com/en-us/cli/azure/delete-azure-resources-at-scale#delete-all-azure-resources-of-a-type) )) 
+
+Next, delete the AKS resources (source: [Deleting an all Azure VMs](https://learn.microsoft.com/en-us/cli/azure/delete-azure-resources-at-scale#delete-all-azure-resources-of-a-type)) 
+
 ```text
 az aks delete -g aks -n ${JUJU_NAME}
 ```
+
 Finally, logout from AKS to clean the local credentials (to avoid forgetting and leaking):
 ```text
 az logout

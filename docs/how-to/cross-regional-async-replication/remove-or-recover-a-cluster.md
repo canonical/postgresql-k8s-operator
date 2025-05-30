@@ -1,6 +1,3 @@
-
-
-
 # Remove or recover a cluster
 
 This guide will cover how to manage clusters (switchover, detach, reuse, remove, recover) using an example PostgreSQL deployment with two servers: one in Rome and one in Lisbon. 
@@ -8,19 +5,9 @@ This guide will cover how to manage clusters (switchover, detach, reuse, remove,
 ## Prerequisites
 * Juju `v.3.4.2+`
 * Make sure your machine(s) fulfill the [system requirements](/reference/system-requirements)
-* See [supported target/source model relationships](t/15413#substrate-dependencies).
+* See [supported target/source model relationships](substrate-dependencies).
 * A cross-regional async replication setup
   * See [How to set up clusters](/how-to/cross-regional-async-replication/set-up-clusters)
-
-## Summary
-* [Switchover](#switchover)
-* [Detach a cluster](#detach-a-cluster)
-  * [Reuse a detached cluster](#reuse-a-detached-cluster)
-  * [Remove a detached cluster](#remove-a-detached-cluster)
-* [Recover a cluster](#recover-a-cluster)
-
-<!-- TODO: Rethink sections, especially "recover" -->
----
 
 ## Switchover
 

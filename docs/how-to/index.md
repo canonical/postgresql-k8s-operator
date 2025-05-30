@@ -6,7 +6,6 @@ The following guides cover key processes and common tasks for managing and using
 
 Installation of different cloud services with Juju:
 * [Canonical K8s]
-* [MicroK8s]
 * [GKE]
 * [EKS]
 * [AKS]
@@ -49,7 +48,6 @@ Other deployment scenarios and configurations:
     * [Set up clusters]
     * [Integrate with a client app]
     * [Remove or recover a cluster]
-    * [Enable plugins/extensions]
 
 ## Development
 
@@ -62,7 +60,6 @@ This section is for charm developers looking to support PostgreSQL integrations 
 <!--Links-->
 
 [Canonical K8s]: /how-to/deploy/canonical-k8s
-[MicroK8s]: /
 [GKE]: /how-to/deploy/gke
 [EKS]: /how-to/deploy/eks
 [AKS]: /how-to/deploy/aks
@@ -114,7 +111,7 @@ External network access <external-network-access>
 Scale <scale-replicas>
 Enable TLS <enable-tls>
 Enable LDAP <enable-ldap>
-Enable plugins/extensions <enable-plugins-extensions/index>
+Enable plugins/extensions <enable-plugins-extensions>
 Back up and restore <back-up-and-restore/index>
 Monitoring (COS) <monitoring-cos/index>
 Upgrade <upgrade/index>

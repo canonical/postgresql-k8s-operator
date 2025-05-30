@@ -6,10 +6,10 @@ Before anything, always run `juju status` to check the [list of charm statuses](
 
 Otherwise, this reference goes over how to troubleshoot this charm via:
 
-- [`juju` logs](#logs)
+- [`juju` logs](#juju-logs)
 - [`kubectl`](#kubectl)
-- The [`charm` container](#container-charm)
-- The [`postgresql` workload container](#container-postgresql)
+- The [`charm` container](#charm-container)
+- The [`postgresql` workload container](#postgresql-workload-container)
 - [Installing extra software](#install-extra-software)
 
 ```{caution}
@@ -51,7 +51,7 @@ If backups are enabled, Pgbackrest logs can also be found in the `workload` cont
 -rw-r----- 1 postgres postgres 2949 Sep 18 10:42 all-server.log
 -rw-r----- 1 postgres postgres 3219 Sep 18 10:41 test3.patroni-postgresql-k8s-stanza-create.log
 ```
-For more information about the `workload` container, see the [Container `postgresql` (workload)]() section below) section below.
+For more information about the `workload` container, see [](#postgresql-workload-container)
 
 ## `kubectl`
 

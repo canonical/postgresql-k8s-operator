@@ -1,6 +1,3 @@
-
-
-
 # Cross-regional async replication
 
 Cross-regional (or multi-server) asynchronous replication focuses on disaster recovery by distributing data across different servers.
@@ -9,6 +6,7 @@ Cross-regional (or multi-server) asynchronous replication focuses on disaster re
 * Juju `v.3.4.2+`
 * Make sure your machine(s) fulfill the [system requirements](/reference/system-requirements)
 
+(substrate-dependencies)=
 ### Substrate dependencies
 
 The following table shows the source and target controller/model combinations that are currently supported:
@@ -19,7 +17,7 @@ The following table shows the source and target controller/model combinations th
 | GCP |  | ![ check ] | ![ check ] |
 | Azure |  | ![ check ] | ![ check ] |
 
-## How-to guides
+## Guides
 
 * [How to set up clusters for cross-regional async replication](/how-to/cross-regional-async-replication/set-up-clusters)
 * [How to integrate with a client application](/how-to/cross-regional-async-replication/integrate-with-a-client-app)
@@ -39,5 +37,6 @@ The following table shows the source and target controller/model combinations th
 :glob:
 :hidden:
 
-*
-*/index
+Set up clusters <set-up-clusters>
+Integrate with a client app <integrate-with-a-client-app>
+Remove or recover a cluster <remove-or-recover-a-cluster>

@@ -1,6 +1,3 @@
-
-
-
 # How to enable COS Alert Rules
 
 This guide will show how to set up [Pushover](https://pushover.net/) to receive alert notifications from the COS Alert Manager with [Awesome Alert Rules](https://samber.github.io/awesome-prometheus-alerts/).
@@ -17,7 +14,7 @@ For information about accessing and managing COS Alert Rules, refer to the [COS 
 ## Prerequisites
 
 * A deployed Charmed PostgreSQL K8s operator
-  * See: [](/how-to/deploy)
+  * See: [](/how-to/deploy/index)
 * A deployed [`cos-lite` bundle](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s)
 * Fully configured [COS Monitoring](/how-to/monitoring-cos/enable-monitoring) 
 

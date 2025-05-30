@@ -418,6 +418,288 @@ unit-postgresql-k8s-0:
 
 Learn more about internal operator users in [](/explanation/users).
 
+## Integrate with other applications
+
+[Integrations](https://juju.is/docs/sdk/integration), known as "relations" in Juju 2.9, are the easiest way to create a user for PostgreSQL in Charmed PostgreSQL VM. 
+
+Integrations automatically create a username, password, and database for the desired user/application. The best practice is to connect to PostgreSQL via a specific user rather than the admin user.
+
+### Deploy data-integrator
+
+In this tutorial, we will relate to the [data integrator charm](https://charmhub.io/data-integrator). This is a bare-bones charm that allows for central management of database users. It automatically provides credentials and endpoints that are needed to connect with a charmed database application.
+
+To deploy `data-integrator`, run
+
+```text
+juju deploy data-integrator --config database-name=test-database
+```
+
+Example output:
+
+```text
+Located charm "data-integrator" in charm-hub, revision 11
+Deploying "data-integrator" from charm-hub charm "data-integrator", revision 11 in channel stable on jammy
+```
+
+Running `juju status` will show you `data-integrator` in a `blocked` state. This state is expected due to not-yet established relation (integration) between applications.
+
+```text
+Model     Controller  Cloud/Region        Version  SLA          Timestamp
+tutorial  charm-dev   microk8s/localhost  2.9.42   unsupported  12:11:53+01:00
+
+App              Version  Status   Scale  Charm            Channel    Rev  Address         Exposed  Message
+data-integrator           waiting      1  data-integrator  edge       6    10.152.183.66   no       installing agent
+postgresql-k8s            active       2  postgresql-k8s   14/stable  56   10.152.183.167  no
+
+Unit                Workload    Agent  Address       Ports  Message
+data-integrator/0*  blocked     idle   10.1.188.211         Please relate the data-integrator with the desired product
+postgresql-k8s/0*   active      idle   10.1.188.206
+postgresql-k8s/1    active      idle   10.1.188.209
+```
+
+### Integrate with PostgreSQL
+
+Now that the `data-integrator` charm has been set up, we can relate it to PostgreSQL. This will automatically create a username, password, and database for `data-integrator`.
+
+Relate the two applications with:
+
+```text
+juju integrate data-integrator postgresql-k8s
+```
+
+Wait for `juju status --watch 1s` to show all applications/units as `active`:
+
+```text
+Model     Controller  Cloud/Region        Version  SLA          Timestamp
+tutorial  charm-dev   microk8s/localhost  2.9.42   unsupported  12:12:12+01:00
+
+App              Version  Status   Scale  Charm            Channel    Rev  Address         Exposed  Message
+data-integrator           waiting      1  data-integrator  edge        6   10.152.183.66   no       installing agent
+postgresql-k8s            active       2  postgresql-k8s   14/stable  56   10.152.183.167  no
+
+Unit                Workload    Agent  Address       Ports  Message
+data-integrator/0*  active      idle   10.1.188.211
+postgresql-k8s/0*   active      idle   10.1.188.206
+postgresql-k8s/1    active      idle   10.1.188.209
+```
+
+To retrieve the username, password and database name, run the command
+
+```text
+juju run data-integrator/leader get-credentials
+```
+
+Example output:
+
+```yaml
+unit-data-integrator-0:
+  UnitId: data-integrator/0
+  id: "12"
+  results:
+    ok: "True"
+    postgresql:
+      database: test-database
+      endpoints: postgresql-k8s-primary.tutorial.svc.cluster.local:5432
+      password: WHnROd8wqzQKzd4F
+      read-only-endpoints: postgresql-k8s-replicas.tutorial.svc.cluster.local:5432
+      username: relation_id_3
+      version: "14.5"
+  status: completed
+  timing:
+    completed: 2023-03-20 11:12:26 +0000 UTC
+    enqueued: 2023-03-20 11:12:25 +0000 UTC
+    started: 2023-03-20 11:12:26 +0000 UTC
+```
+
+Note that your hostnames, usernames, and passwords will likely be different.
+
+### Access the related database
+
+Use `endpoints`, `username`, `password` from above to connect newly created database `test-database` on the PostgreSQL server:
+
+```text
+> psql --host=10.1.188.206 --username=relation_id_3 --password test-database
+Password:
+...
+test-database=> \l
+...
+ test-database | operator | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =Tc/operator              +
+               |          |          |             |             | operator=CTc/operator     +
+               |          |          |             |             | relation_id_3=CTc/operator
+...
+```
+
+The newly created database `test-database` is also available on all other PostgreSQL cluster members:
+
+```text
+> psql --host=10.89.49.209 --username=relation-3 --password --list
+...
+ test-database | operator | UTF8     | en_US.UTF-8 | en_US.UTF-8 | =Tc/operator              +
+               |          |          |             |             | operator=CTc/operator     +
+               |          |          |             |             | relation_id_3=CTc/operator
+...
+```
+
+When you relate two applications, Charmed PostgreSQL K8s automatically sets up a new user and database for you.
+
+Note the database name we specified when we first deployed the `data-integrator` charm: `--config database-name=test-database`.
+
+### Remove the user
+
+Removing the integration automatically removes the user that was created when the integration was created. Enter the following to remove the integration:
+
+```text
+juju remove-relation postgresql-k8s data-integrator
+```
+
+Now try again to connect to the same PostgreSQL you just used in the previous section:
+
+```text
+> psql --host=10.1.188.206 --username=relation_id_3 --password --list
+```
+
+This will output an error message like the one shown below:
+
+```text
+psql: error: connection to server at "10.1.188.206", port 5432 failed: FATAL:  password authentication failed for user "relation_id_3"
+```
+This is because the user no longer exists, as expected. Remember, `juju remove-relation postgresql-k8s data-integrator` also removes the user.
+
+Data remains on the server at this stage.
+
+If you want to create a user again, integrate the applications again:
+
+```text
+juju integrate data-integrator postgresql-k8s
+```
+
+Re-integrating generates a new user and password:
+
+```text
+juju run data-integrator/leader get-credentials
+```
+
+You can then connect to the database with these new credentials.
+
+From here you will see all of your data is still present in the database.
+
+## Enable encryption with TLS
+
+[Transport Layer Security (TLS)](https://en.wikipedia.org/wiki/Transport_Layer_Security) is a protocol used to encrypt data exchanged between two applications. Essentially, it secures data transmitted over a network.
+
+Typically, enabling TLS internally within a highly available database or between a highly available database and client/server applications requires a high level of expertise. This has all been encoded into Charmed PostgreSQL so that configuring TLS requires minimal effort on your end.
+
+TLS is enabled by integrating Charmed PostgreSQL with the [Self-signed certificates charm](https://charmhub.io/self-signed-certificates). This charm centralises TLS certificate management consistently and handles operations like providing, requesting, and renewing TLS certificates.
+
+```{caution}
+**[Self-signed certificates](https://en.wikipedia.org/wiki/Self-signed_certificate) are not recommended for a production environment.**
+
+Check [this guide](https://discourse.charmhub.io/t/security-with-x-509-certificates/11664) for an overview of the TLS certificates charms available. 
+```
+
+### Deploy TLS charm
+
+Before enabling TLS on Charmed PostgreSQL VM, we must deploy the `self-signed-certificates` charm:
+
+```text
+juju deploy self-signed-certificates --config ca-common-name="Tutorial CA"
+```
+
+Wait until the `self-signed-certificates` is up and active, use `juju status --watch 1s` to monitor the progress:
+
+```text
+Model     Controller  Cloud/Region        Version  SLA          Timestamp
+tutorial  charm-dev   microk8s/localhost  3.1.7    unsupported  12:18:05+01:00
+
+App                        Version  Status   Scale  Charm                      Channel    Rev  Address         Exposed  Message
+postgresql-k8s                      active       2  postgresql-k8s             14/stable  56   10.152.183.167  no
+self-signed-certificates            active       1  self-signed-certificates   stable     72   10.152.183.138  no
+
+Unit                          Workload    Agent  Address       Ports  Message
+postgresql-k8s/0*             active      idle   10.1.188.206         Primary
+postgresql-k8s/1              active      idle   10.1.188.209
+self-signed-certificates/0*   active      idle   10.1.188.212
+```
+
+### Integrate with PostgreSQL
+
+To enable TLS on Charmed PostgreSQL K8s, integrate the two applications:
+
+```text
+juju integrate postgresql-k8s:certificates self-signed-certificates:certificates
+```
+
+Use `openssl` to connect to the PostgreSQL and check the TLS certificate in use. Note that your leader unit's IP address will likely be different to the one shown below:
+
+```text
+> openssl s_client -starttls postgres -connect 10.1.188.206:5432 | grep Issuer
+...
+depth=1 C = US, CN = Tutorial CA
+verify error:num=19:self-signed certificate in certificate chain
+...
+```
+
+Congratulations! PostgreSQL is now using TLS certificate generated by the external application `self-signed-certificates`.
+
+### Remove TLS certificate
+
+To remove the external TLS, remove the integration:
+
+```text
+juju remove-relation postgresql-k8s:certificates self-signed-certificates:certificates
+```
+
+If you once again check the TLS certificates in use via the OpenSSL client, you will see something similar to the output below:
+
+```text
+> openssl s_client -starttls postgres -connect 10.1.188.206:5432
+...
+no peer certificate available
+---
+No client certificate CA names sent
+...
+```
+
+The Charmed PostgreSQL K8s application is not using TLS anymore.
+
+## Clean up your environment
+
+In this tutorial we've successfully deployed PostgreSQL on MicroK8s, added and removed cluster members, added and removed database users, and enabled a layer of security with TLS.
+
+You may now keep your Charmed PostgreSQL VM deployment running and write to the database or remove it entirely using the steps in this page. 
+
+### Stop your virtual machine
+
+If you'd like to keep your environment for later, simply stop your VM with
+```text
+multipass stop my-vm
+```
+
+### Delete your virtual machine
+
+If you're done with testing and would like to free up resources on your machine, you can remove the VM entirely.
+
+```{warning}
+When you remove VM as shown below, you will lose all the data in PostgreSQL and any other applications inside Multipass VM! 
+
+For more information, see the docs for [`multipass delete`](https://multipass.run/docs/delete-command).
+```
+
+**Delete your VM and its data** by running:
+
+```text
+multipass delete --purge my-vm
+```
+
+### Next Steps
+
+- Run [Charmed PostgreSQL on VMs](https://github.com/canonical/postgresql-operator).
+- Check out our other other charm offerings, like [MySQL](https://charmhub.io/mysql-k8s) and [Kafka](https://charmhub.io/kafka-k8s?channel=edge).
+- Read about [High Availability Best Practices](https://canonical.com/blog/database-high-availability)
+- [Report](https://github.com/canonical/postgresql-k8s-operator/issues) any problems you encountered.
+- [Give us your feedback](https://chat.charmhub.io/charmhub/channels/data-platform).
+- [Contribute to the code base](https://github.com/canonical/postgresql-k8s-operator)
+
 <!--Links-->
 
 [Charmhub PostgreSQL K8s]: https://charmhub.io/postgresql-k8s?channel=14/stable

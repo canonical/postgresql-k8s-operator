@@ -16,13 +16,6 @@ Canonical does not prescribe how you should set up your specific air-gapped envi
 * An air-gapped container registry (such as [Artifactory](https://jfrog.com/artifactory/)) is reachable from the K8s cluster over HTTPS
   *  **Note**: Secure (HTTPS) OCI access is important, otherwise Juju won’t work!
 
-## Air-gapped setup summary
-
-[1\. Export charms and resources](#1-export-charms-and-resources) <br>
-[2\. Transfer binary blobs](#2-transfer-binary-blobs) <br>
-[3\. Import charms and resources](3-import-charms-and-resources) <br>
-[4\. Deploy PostgreSQL](#4-deploy-postgresql)
-
 ## Air-gapped day-to-day example
 
 ### 1. Export charms and resources

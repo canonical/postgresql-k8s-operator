@@ -14,7 +14,7 @@ For a given release, this table shows:
    > This charm still supports older versions of Juju down to 2.9. See the [system requirements](/reference/system-requirements) for more details
 * Support for specific features
 
-| Revision | PostgreSQL version | Juju version | [TLS encryption](/)* | [COS monitoring](/) | [Minor version upgrades](/how-to/upgrade/index) | [Cross-regional async replication](/how-to/cross-regional-async-replication/index) | [Point-in-time recovery](/how-to/back-up-and-restore/restore-a-backup) | [PITR Timelines](/how-to/back-up-and-restore/restore-a-backup) |
+| Revision | PostgreSQL version | Juju version | [TLS encryption](/how-to/enable-tls)* | [COS monitoring](/how-to/monitoring-cos/index) | [Minor version upgrades](/how-to/upgrade/index) | [Cross-regional async replication](/how-to/cross-regional-async-replication/index) | [Point-in-time recovery](/how-to/back-up-and-restore/restore-a-backup) | [PITR Timelines](/how-to/back-up-and-restore/restore-a-backup) |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
 | [494], [495] | 14.15 | `3.6.1+` | ![check] | ![check] | ![check] | ![check] | ![check] | ![check] |
 | [462], [463] | 14.13 | `3.6.1+` | ![check] | ![check] | ![check] | ![check] | ![check] | ![check] |
@@ -86,7 +86,7 @@ For a list of all plugins supported for each revision, see the reference page [P
 [444]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev444
 
 [382]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev381
-[381]: [/t/15442](https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev381)
+[381]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev381
 
 [281]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev280
 [280]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev280

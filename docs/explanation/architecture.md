@@ -12,8 +12,8 @@ Pebble is a lightweight, API-driven process supervisor that is responsible for c
 
 Pebble `services` are configured through [layers](https://github.com/canonical/pebble#layer-specification), and the following containers represent each one a layer forming the effective Pebble configuration, or `pebble plan`:
 
-1. a [charm]() container runs Juju operator code: `juju ssh postgresql-k8s/0 bash`
-1. a [postgresql](https://www.postgresql.owg/) (workload) container runs the PostgreSQL application along with other services (like monitoring metrics exporters, etc): `juju ssh --container postgresql postgresql-k8s/0 bash`
+* a charm container runs Juju operator code: `juju ssh postgresql-k8s/0 bash`
+* a workload container runs the [PostgreSQL application](https://www.postgresql.org/) along with other services (like monitoring metrics exporters, etc): `juju ssh --container postgresql postgresql-k8s/0 bash`
 
 As a result, if you run a `kubectl get pods` on a namespace named for the Juju model you’ve deployed the "Charmed PostgreSQL K8s" charm into, you’ll see something like the following:
 
@@ -28,7 +28,7 @@ And if you run `kubectl describe pod postgresql-k8s-0`, all the containers will 
 
 ## HLD (High Level Design)
 
-The "Charmed PostgreSQL K8s" (`workload` container) based on `postgresql-image` resource defined in the [charm metadata.yaml](https://github.com/canonical/postgresql-k8s-operator/blob/main/metadata.yaml). It is an official Canonical "[charmed-postgresql](https://github.com/canonical/charmed-postgresql-rock)" [OCI/Rock](https://ubuntu.com/server/docs/rock-images/introduction) image, which is recursively based on Canonical SNAP “[charmed-postgresql](https://snapcraft.io/charmed-postgresql)” (read more about the SNAP details [here](/)).
+The Charmed PostgreSQL K8s (`workload` container) based on `postgresql-image` resource defined in the [charm metadata.yaml](https://github.com/canonical/postgresql-k8s-operator/blob/main/metadata.yaml). It is an official Canonical [charmed-postgresql](https://github.com/canonical/charmed-postgresql-rock) [OCI/Rock](https://ubuntu.com/server/docs/rock-images/introduction) image, which is recursively based on the Canonical [`charmed-postgresql` snap].
 
 [Charmcraft](https://juju.is/docs/sdk/install-charmcraft) uploads an image as a [charm resource](https://charmhub.io/postgresql-k8s/resources/postgresql-image) to [Charmhub](https://charmhub.io/postgresql-k8s) during the [publishing](https://github.com/canonical/postgresql-k8s-operator/blob/main/.github/workflows/release.yaml), as described in the [Juju SDK How-to guides](https://juju.is/docs/sdk/publishing).
 
@@ -36,12 +36,12 @@ The charm supports Juju deploymed to all Kubernetes environments: [MicroK8s](htt
 
 The OCI/Rock ships the following components:
 
-* PostgreSQL Community Edition (based on SNAP "[charmed-postgresql](/)") 
-* Patroni (based on SNAP "[charmed-postgresql](/)") 
-* PgBouncer (based on SNAP "[charmed-postgresql](/)") 
-* pgBackRest (based on SNAP "[charmed-postgresql](/)") 
-* Prometheus PostgreSQL Exporter (based on SNAP "[charmed-postgresql](/)") 
-* Prometheus PgBouncer Exporter (based on SNAP "[charmed-postgresql](/)") 
+* PostgreSQL Community Edition (based on [`charmed-postgresql` snap]) 
+* Patroni (based on [`charmed-postgresql` snap]) 
+* PgBouncer (based on [`charmed-postgresql` snap]) 
+* pgBackRest (based on [`charmed-postgresql` snap]) 
+* Prometheus PostgreSQL Exporter (based on [`charmed-postgresql` snap]) 
+* Prometheus PgBouncer Exporter (based on [`charmed-postgresql` snap]) 
 * Prometheus Grafana dashboards and Loki alert rules are part of the charm revision (and missing in SNAP).
 
 SNAP-based rock images guarantee the same components versions and functionality between VM and K8s charm flavors.
@@ -68,7 +68,6 @@ The rock "charmed-postgresql" also ships list of tools used by charm:
 * `patronictl` - a tool to monitor/manage Patroni.
 * `pgbackrest` - a framework to backup and restore PostgreSQL.
 
-<a name="integrations"></a>
 ## Integrations
 
 ### PgBouncer
@@ -143,3 +142,6 @@ postgresql      0      12
 postgresql_tls  0      7                                  
 ```
 
+<!--Links-->
+
+[`charmed-postgresql` snap]: https://snapcraft.io/charmed-postgresql

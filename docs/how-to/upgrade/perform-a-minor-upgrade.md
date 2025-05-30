@@ -14,7 +14,7 @@
 - [**4. (Optional) Consider a rollback**](#step-6-rollback-optional) in case of disaster. 
   - Please [inform us](/reference/contacts) about your case scenario troubleshooting to trace the source of the issue and prevent it in the future. 
 - [**7. (optional) Scale back**](#step-7-scale-back-optional). Remove no longer necessary K8s pods created in [Step 2: Scale up](#step-2-scale-up-optional) (if any).
-- [**Post-upgrade check**](#step-5-post-upgrade-check). Make sure all units are in their proper state and the cluster is healthy.
+- [**Post-upgrade check**](#post-upgrade-check). Make sure all units are in their proper state and the cluster is healthy.
 
 ## Pre-upgrade checks
 

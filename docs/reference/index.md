@@ -20,7 +20,7 @@ Releases <releases>
 System requirements <system-requirements>
 Software testing <software-testing>
 Performance and resources <performance-and-resources>
-Troubleshooting <troubleshooting/index>
+Troubleshooting <troubleshooting>
 Plugins/extensions <plugins-extensions>
 Alert rules <alert-rules>
 Statuses <statuses>

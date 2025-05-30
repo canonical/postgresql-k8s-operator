@@ -1,6 +1,3 @@
-
-
-
 # Integrate with a client application
 
 This guide will show you how to integrate a client application with a cross-regional async setup using an example PostgreSQL K8s deployment with two servers: one in Rome and one in Lisbon.
@@ -8,16 +5,9 @@ This guide will show you how to integrate a client application with a cross-regi
 ## Prerequisites
 * Juju `v.3.4.2+`
 * Make sure your machine(s) fulfill the [system requirements](/reference/system-requirements)
-* See [supported target/source model relationships](t/15413#substrate-dependencies).
+* See [supported target/source model relationships](substrate-dependencies).
 * A cross-regional async replication setup
   * See [How to set up clusters](/how-to/cross-regional-async-replication/set-up-clusters)
-
-## Summary
-* [Configure database endpoints](#configure-database-endpoints)
-* [Internal client](#internal-client)
-* [External client](#external-client)
-
----
 
 ## Configure database endpoints
 

@@ -46,10 +46,11 @@ Charm event flowcharts:
 :hidden:
 
 Architecture <architecture>
-Interfaces and endpoints <interfaces-and-endpoints>
+Interfaces and endpoints <interfaces-endpoints>
 Juju <juju>
 Legacy charm <legacy-charm>
 Users <users>
 Logs <logs>
 Connection pooling <connection-pooling>
 Security <security/index>
+Flowcharts <flowcharts/index>
