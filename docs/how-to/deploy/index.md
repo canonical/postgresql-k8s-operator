@@ -20,7 +20,7 @@ juju deploy postgresql-k8s --trust
 ```
 > See also: [`juju deploy` command](https://canonical-juju.readthedocs-hosted.com/en/latest/user/reference/juju-cli/list-of-juju-cli-commands/deploy/)
 
-To deploy with `terraform juju`, follow the guide [How to deploy using Terraform].
+**To deploy with `terraform juju`**, follow the guide [How to deploy using Terraform].
 > See also: [Terraform Provider for Juju documentation](https://canonical-terraform-provider-juju.readthedocs-hosted.com/en/latest/)
 
 If you are not sure where to start or would like a more guided walkthrough for setting up your environment, see the [](/tutorial/index).
@@ -43,7 +43,7 @@ How to bootstrap and configure different cloud services:
 
 [How to deploy in an offline or air-gapped environment] goes over the special configuration steps for installing PostgreSQL in an airgapped environment via CharmHub and the Snap Store Proxy.
 
-### Cluster-cluster replication
+## Cluster-cluster replication
 
 Cluster-cluster, cross-regional, or multi-server asynchronous replication focuses on disaster recovery by distributing data across different servers. 
 

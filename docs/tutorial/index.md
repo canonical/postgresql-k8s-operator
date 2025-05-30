@@ -60,7 +60,7 @@ juju add-model tutorial
 
 You can now view the model you created above by running the command `juju status`. You should see something similar to the following example output:
 
-```
+```text
 Model     Controller  Cloud/Region        Version  SLA          Timestamp
 tutorial  overlord    microk8s/localhost  3.1.7    unsupported  11:56:38+01:00
 
@@ -87,7 +87,7 @@ This command is useful for checking the real-time information about the state of
 
 When the application is ready, `juju status` will show something similar to the sample output below:
 
-```
+```text
 Model     Controller  Cloud/Region        Version  SLA          Timestamp
 tutorial  charm-dev   microk8s/localhost  2.9.42   unsupported  12:00:43+01:00
 
@@ -163,7 +163,7 @@ root@postgresql-k8s-0:/#
 If you’d like to leave the unit's shell and return to your local terminal, enter `Ctrl+D` or type `exit`.
 ```
 
-### Access PostgreSQL via `psql`
+### Create a database
 
 The easiest way to interact with PostgreSQL is via [PostgreSQL interactive terminal `psql`](https://www.postgresql.org/docs/14/app-psql.html), which is already installed on the host you're connected to.
 
@@ -220,8 +220,6 @@ postgres=## \l
 ```
 
 The output should be the same as the one obtained before with `psql`, but this time we did not need to specify any parameters since we are already connected to the PostgreSQL application.
-
-#### Create a new database
 
 To create and connect to a new sample database, we can run the following commands:
 
@@ -343,8 +341,6 @@ postgresql-k8s/1   active    idle   10.1.188.209
 
 When we accessed PostgreSQL earlier in this tutorial, we needed to use a password manually. Passwords help to secure our database and are essential for security. Over time, it is a good practice to change the password frequently. 
 
-### Retrieve the operator password
-
 The operator's password can be retrieved by running the `get-password` action on the PostgreSQL application:
 
 ```text
@@ -364,8 +360,6 @@ unit-postgresql-k8s-0:
     enqueued: 2023-03-20 11:10:32 +0000 UTC
     started: 2023-03-20 11:10:33 +0000 UTC
 ```
-
-### Rotate the operator password
 
 You can change the operator's password to a new random password by entering:
 
@@ -390,41 +384,13 @@ unit-postgresql-k8s-0:
 
 The `status: completed` element in the output above indicates that the password has been successfully updated. The new password should be different from the previous password.
 
-### Set a new password
-
-You can set a specific password for any user by running the `set-password` juju action on the leader unit.   
-
-To set a manual password for the `operator` user, run the following command:
-
-```text
-juju run postgresql-k8s/leader set-password password=<password>
-```
-where `<password>` is your password of choice.
-
-Example output:
-
-```yaml
-unit-postgresql-k8s-0:
-  UnitId: postgresql-k8s/0
-  id: "10"
-  results:
-    password: my-password
-  status: completed
-  timing:
-    completed: 2023-03-20 11:11:06 +0000 UTC
-    enqueued: 2023-03-20 11:11:02 +0000 UTC
-    started: 2023-03-20 11:11:05 +0000 UTC
-```
-
-Learn more about internal operator users in [](/explanation/users).
+Learn more about managing user credentials in [](/how-to/manage-passwords) and [](/explanation/users).
 
 ## Integrate with other applications
 
 [Integrations](https://juju.is/docs/sdk/integration), known as "relations" in Juju 2.9, are the easiest way to create a user for PostgreSQL in Charmed PostgreSQL VM. 
 
 Integrations automatically create a username, password, and database for the desired user/application. The best practice is to connect to PostgreSQL via a specific user rather than the admin user.
-
-### Deploy data-integrator
 
 In this tutorial, we will relate to the [data integrator charm](https://charmhub.io/data-integrator). This is a bare-bones charm that allows for central management of database users. It automatically provides credentials and endpoints that are needed to connect with a charmed database application.
 
@@ -456,8 +422,6 @@ data-integrator/0*  blocked     idle   10.1.188.211         Please relate the da
 postgresql-k8s/0*   active      idle   10.1.188.206
 postgresql-k8s/1    active      idle   10.1.188.209
 ```
-
-### Integrate with PostgreSQL
 
 Now that the `data-integrator` charm has been set up, we can relate it to PostgreSQL. This will automatically create a username, password, and database for `data-integrator`.
 
@@ -597,8 +561,6 @@ TLS is enabled by integrating Charmed PostgreSQL with the [Self-signed certifica
 Check [this guide](https://discourse.charmhub.io/t/security-with-x-509-certificates/11664) for an overview of the TLS certificates charms available. 
 ```
 
-### Deploy TLS charm
-
 Before enabling TLS on Charmed PostgreSQL VM, we must deploy the `self-signed-certificates` charm:
 
 ```text
@@ -621,8 +583,6 @@ postgresql-k8s/1              active      idle   10.1.188.209
 self-signed-certificates/0*   active      idle   10.1.188.212
 ```
 
-### Integrate with PostgreSQL
-
 To enable TLS on Charmed PostgreSQL K8s, integrate the two applications:
 
 ```text
@@ -640,8 +600,6 @@ verify error:num=19:self-signed certificate in certificate chain
 ```
 
 Congratulations! PostgreSQL is now using TLS certificate generated by the external application `self-signed-certificates`.
-
-### Remove TLS certificate
 
 To remove the external TLS, remove the integration:
 
@@ -668,14 +626,11 @@ In this tutorial we've successfully deployed PostgreSQL on MicroK8s, added and r
 
 You may now keep your Charmed PostgreSQL VM deployment running and write to the database or remove it entirely using the steps in this page. 
 
-### Stop your virtual machine
-
 If you'd like to keep your environment for later, simply stop your VM with
+
 ```text
 multipass stop my-vm
 ```
-
-### Delete your virtual machine
 
 If you're done with testing and would like to free up resources on your machine, you can remove the VM entirely.
 
