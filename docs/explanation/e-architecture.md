@@ -12,8 +12,8 @@ Pebble is a lightweight, API-driven process supervisor that is responsible for c
 
 Pebble `services` are configured through [layers](https://github.com/canonical/pebble#layer-specification), and the following containers represent each one a layer forming the effective Pebble configuration, or `pebble plan`:
 
-1. a [charm]() container runs Juju operator code: `juju ssh postgresql-k8s/0 bash`
-1. a [postgresql](https://www.postgresql.owg/) (workload) container runs the PostgreSQL application along with other services (like monitoring metrics exporters, etc): `juju ssh --container postgresql postgresql-k8s/0 bash`
+* a charm container runs Juju operator code: `juju ssh postgresql-k8s/0 bash`
+* a workload container runs the [PostgreSQL application](https://www.postgresql.org/) along with other services (like monitoring metrics exporters, etc): `juju ssh --container postgresql postgresql-k8s/0 bash`
 
 As a result, if you run a `kubectl get pods` on a namespace named for the Juju model you’ve deployed the "Charmed PostgreSQL K8s" charm into, you’ll see something like the following:
 
@@ -29,7 +29,7 @@ And if you run `kubectl describe pod postgresql-k8s-0`, all the containers will 
 <a name="hld"></a>
 ## HLD (High Level Design)
 
-The "Charmed PostgreSQL K8s" (`workload` container) based on `postgresql-image` resource defined in the [charm metadata.yaml](https://github.com/canonical/postgresql-k8s-operator/blob/main/metadata.yaml). It is an official Canonical "[charmed-postgresql](https://github.com/canonical/charmed-postgresql-rock)" [OCI/Rock](https://ubuntu.com/server/docs/rock-images/introduction) image, which is recursively based on Canonical SNAP “[charmed-postgresql](https://snapcraft.io/charmed-postgresql)” (read more about the SNAP details [here](/t/11857)).
+The "Charmed PostgreSQL K8s" (`workload` container) based on `postgresql-image` resource defined in the [charm metadata.yaml](https://github.com/canonical/postgresql-k8s-operator/blob/main/metadata.yaml). It is an official Canonical "[charmed-postgresql](https://github.com/canonical/charmed-postgresql-rock)" [OCI/Rock](https://ubuntu.com/server/docs/rock-images/introduction) image, which is recursively based on Canonical SNAP “[charmed-postgresql](https://snapcraft.io/charmed-postgresql)”.
 
 [Charmcraft](https://juju.is/docs/sdk/install-charmcraft) uploads an image as a [charm resource](https://charmhub.io/postgresql-k8s/resources/postgresql-image) to [Charmhub](https://charmhub.io/postgresql-k8s) during the [publishing](https://github.com/canonical/postgresql-k8s-operator/blob/main/.github/workflows/release.yaml), as described in the [Juju SDK How-to guides](https://juju.is/docs/sdk/publishing).
 
