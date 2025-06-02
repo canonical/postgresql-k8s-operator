@@ -456,6 +456,35 @@ class Patroni:
             timeout=PATRONI_TIMEOUT,
         )
 
+    def ensure_slots_controller_by_patroni(self, slots: dict[str, str]) -> None:
+        """Synchronises slots controlled by Patroni with the provided state by removing unneeded slots and creating new ones.
+
+        Args:
+            slots: dictionary of slots in the {slot: database} format.
+        """
+        current_config = requests.get(
+            f"{self._patroni_url}/config",
+            verify=self._verify,
+            timeout=PATRONI_TIMEOUT,
+            auth=self._patroni_auth,
+        )
+        slots_patch: dict[str, dict[str, str] | None] = dict.fromkeys(
+            current_config.json().get("slots", ())
+        )
+        for slot, database in slots.items():
+            slots_patch[slot] = {
+                "database": database,
+                "plugin": "pgoutput",
+                "type": "logical",
+            }
+        requests.patch(
+            f"{self._patroni_url}/config",
+            verify=self._verify,
+            json={"slots": slots_patch},
+            auth=self._patroni_auth,
+            timeout=PATRONI_TIMEOUT,
+        )
+
     def promote_standby_cluster(self) -> None:
         """Promote a standby cluster to be a regular cluster."""
         config_response = requests.get(
@@ -526,6 +555,7 @@ class Patroni:
         restore_to_latest: bool = False,
         parameters: dict[str, str] | None = None,
         user_databases_map: dict[str, str] | None = None,
+        slots: dict[str, str] | None = None,
     ) -> None:
         """Render the Patroni configuration file.
 
@@ -545,6 +575,7 @@ class Patroni:
             restore_to_latest: restore all the WAL transaction logs from the stanza.
             parameters: PostgreSQL parameters to be added to the postgresql.conf file.
             user_databases_map: map of databases to be accessible by each user.
+            slots: replication slots (keys) with assigned database name (values).
         """
         # Open the template patroni.yml file.
         with open("templates/patroni.yml.j2") as file:
@@ -584,6 +615,7 @@ class Patroni:
             ldap_parameters=self._dict_to_hba_string(ldap_params),
             patroni_password=self._patroni_password,
             user_databases_map=user_databases_map,
+            slots=slots,
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 
