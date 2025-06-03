@@ -121,7 +121,7 @@ After this is complete, the Tempo traces will be accessible from Grafana under t
 
 Below is a screenshot demonstrating a Charmed PostgreSQL K8s trace:
 
-![Example PostgreSQL K8s trace with Grafana Tempo|690x382](upload://vweRlTS48WILFxvSdvFVFFeuIe5.jpeg)
+![Example PostgreSQL trace with Grafana Tempo|690x382](trace-grafana-tempo.jpeg)
 
 Feel free to read through the [Tempo HA documentation](https://discourse.charmhub.io/t/charmed-tempo-ha/15531) at your leisure to explore its deployment and its integrations.
 

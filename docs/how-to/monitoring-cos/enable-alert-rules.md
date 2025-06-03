@@ -67,7 +67,7 @@ At this stage, the COS Alert Manager will start sending alert notifications to P
 
 The image below shows an example of the Pushover web client:
 
-![image|690x439](upload://vqUcKpZ5R4wQLmY2HYGV5fz5pNU.jpeg)
+![Pushover web client|690x439](pushover-client.jpeg)
 
 ## Alert receivers
 

@@ -5,7 +5,7 @@ The Lightweight Directory Access Protocol (LDAP) enables centralized authenticat
 This guide goes over the steps to integrate LDAP as an authentication method with the PostgreSQL charm, all within the Juju ecosystem.
 
 ## Prerequisites
-* Charmed PostgreSQL channel `14/edge` or `16/edge` (revision `570` or higher)
+* Charmed PostgreSQL revision `570+`
 * Juju `3.6+`
 
 ## Deploy an LDAP server

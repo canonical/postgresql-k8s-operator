@@ -13,7 +13,7 @@ While this tutorial intends to guide you as you deploy Charmed PostgreSQL for th
 
 ## Set up the environment
 
-First, we will set up a cloud environment using [Multipass](https://multipass.run/) with [LXD](https://documentation.ubuntu.com/lxd/latest/) and [Juju](https://documentation.ubuntu.com/juju/3.6/). This is the quickest and easiest way to get your machine ready for using Charmed PostgreSQL. 
+First, we will set up a cloud environment using [Multipass](https://multipass.run/) with [MicroK8s](https://microk8s.io/docs) and [Juju](https://documentation.ubuntu.com/juju/3.6/). This is the quickest and easiest way to get your machine ready for using Charmed PostgreSQL on Kubernetes. 
 
 To learn about other types of deployment environments and methods (e.g. bootstrapping other clouds, using Terraform), see [](/how-to/deploy/index).
 
@@ -89,7 +89,7 @@ When the application is ready, `juju status` will show something similar to the 
 
 ```text
 Model     Controller  Cloud/Region        Version  SLA          Timestamp
-tutorial  charm-dev   microk8s/localhost  2.9.42   unsupported  12:00:43+01:00
+tutorial  overlord    microk8s/localhost  2.9.42   unsupported  12:00:43+01:00
 
 App             Version  Status  Scale  Charm           Channel    Rev  Address         Exposed  Message
 postgresql-k8s           active      1  postgresql-k8s  14/stable  56   10.152.183.167  no
@@ -301,7 +301,7 @@ You can now watch the scaling process in live using: `juju status --watch 1s`. I
 You’ll know that all three nodes are in sync when `juju status` reports `Workload=active` and `Agent=idle`:
 ```text
 Model     Controller  Cloud/Region        Version  SLA          Timestamp
-tutorial  charm-dev   microk8s/localhost  2.9.42   unsupported  12:09:49+01:00
+tutorial  overlord    microk8s/localhost  2.9.42   unsupported  12:09:49+01:00
 
 App             Version  Status  Scale  Charm           Channel    Rev  Address         Exposed  Message
 postgresql-k8s           active      3  postgresql-k8s  14/stable  56   10.152.183.167  no
@@ -325,9 +325,10 @@ juju scale-application postgresql-k8s 2
 ```
 
 You’ll know that the replica was successfully removed when `juju status --watch 1s` reports:
-```
+
+```text
 Model     Controller  Cloud/Region        Version  SLA          Timestamp
-tutorial  charm-dev   microk8s/localhost  2.9.42   unsupported  12:10:08+01:00
+tutorial  overlord    microk8s/localhost  2.9.42   unsupported  12:10:08+01:00
 
 App             Version  Status  Scale  Charm           Channel    Rev  Address         Exposed  Message
 postgresql-k8s           active      2  postgresql-k8s  14/stable  56   10.152.183.167  no
@@ -411,7 +412,7 @@ Running `juju status` will show you `data-integrator` in a `blocked` state. This
 
 ```text
 Model     Controller  Cloud/Region        Version  SLA          Timestamp
-tutorial  charm-dev   microk8s/localhost  2.9.42   unsupported  12:11:53+01:00
+tutorial  overlord    microk8s/localhost  2.9.42   unsupported  12:11:53+01:00
 
 App              Version  Status   Scale  Charm            Channel    Rev  Address         Exposed  Message
 data-integrator           waiting      1  data-integrator  edge       6    10.152.183.66   no       installing agent
@@ -435,7 +436,7 @@ Wait for `juju status --watch 1s` to show all applications/units as `active`:
 
 ```text
 Model     Controller  Cloud/Region        Version  SLA          Timestamp
-tutorial  charm-dev   microk8s/localhost  2.9.42   unsupported  12:12:12+01:00
+tutorial  overlord    microk8s/localhost  2.9.42   unsupported  12:12:12+01:00
 
 App              Version  Status   Scale  Charm            Channel    Rev  Address         Exposed  Message
 data-integrator           waiting      1  data-integrator  edge        6   10.152.183.66   no       installing agent
@@ -571,7 +572,7 @@ Wait until the `self-signed-certificates` is up and active, use `juju status --w
 
 ```text
 Model     Controller  Cloud/Region        Version  SLA          Timestamp
-tutorial  charm-dev   microk8s/localhost  3.1.7    unsupported  12:18:05+01:00
+tutorial  overlord    microk8s/localhost  3.1.7    unsupported  12:18:05+01:00
 
 App                        Version  Status   Scale  Charm                      Channel    Rev  Address         Exposed  Message
 postgresql-k8s                      active       2  postgresql-k8s             14/stable  56   10.152.183.167  no
@@ -646,7 +647,7 @@ For more information, see the docs for [`multipass delete`](https://multipass.ru
 multipass delete --purge my-vm
 ```
 
-### Next Steps
+## Next steps
 
 - Run [Charmed PostgreSQL on VMs](https://github.com/canonical/postgresql-operator).
 - Check out our other other charm offerings, like [MySQL](https://charmhub.io/mysql-k8s) and [Kafka](https://charmhub.io/kafka-k8s?channel=edge).

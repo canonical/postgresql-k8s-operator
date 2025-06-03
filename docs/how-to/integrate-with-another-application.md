@@ -1,3 +1,8 @@
+---
+relatedlinks: https://documentation.ubuntu.com/juju/3.6/reference/relation/, [postgresql_client&#32-&#32GitHub](https://github.com/canonical/charm-relation-interfaces/tree/main/interfaces/postgresql_client/v0)
+
+---
+
 # How to integrate with another application
 
 [Integrations](https://juju.is/docs/juju/relation), also known as “relations” are connections between two applications with compatible endpoints. These connections simplify the creation and management of users, passwords, and other shared data.
@@ -29,9 +34,7 @@ juju remove-relation postgresql-k8s <charm>
 ### Legacy `pgsql` interface
 
 ```{caution}
-Note that this interface is **deprecated**.
-
-See more information in [](/explanation/legacy-charm).
+Note that this interface is **deprecated**. See [](/explanation/legacy-charm).
 ```
 
 Using the `mattermost-k8s` charm as an example, an integration with the legacy interface could be created as follows:
@@ -64,27 +67,15 @@ juju run data-integrator/leader get-credentials
 ```
 
 ## Rotate application passwords
+
 To rotate the passwords of users created for integrated applications, the integration should be removed and created again. This process will generate a new user and password for the application.
 
 ```text
 juju remove-relation <charm> postgresql-k8s
 juju integrate <charm> postgresql-k8s
 ```
->`<charm>` can be `data-integrator` in the case of connecting with a non-charmed application.
 
-### Internal operator user
+In the case of connecting with a non-charmed application, `<charm>` would be `data-integrator`.
 
-The `operator` user is used internally by the Charmed PostgreSQL K8s Operator. The `set-password` action can be used to rotate its password.
-
-To set a specific password for the `operator `user, run
-```text
-juju run postgresql-k8s/leader set-password password=<password>
-```
-
-To randomly generate a password for the `operator` user, run
-
-```text
-juju run postgresql-k8s/leader set-password
-```
 
 See also: [](/how-to/manage-passwords)

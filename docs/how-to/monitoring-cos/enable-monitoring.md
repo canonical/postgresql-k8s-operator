@@ -79,6 +79,7 @@ After this is complete, Grafana will show the new dashboard `PostgreSQL Exporter
 ### Sample outputs
 
 Below is a sample output of `juju status` on the Charmed PostgreSQL K8s model:
+
 ```text
 Model    Controller  Cloud/Region        Version  SLA          Timestamp
 welcome  microk8s    microk8s/localhost  3.1.6    unsupported  00:21:41+02:00
@@ -101,6 +102,7 @@ postgresql-k8s/2*     active    idle    10.1.142.170         Primary
 ```
 
 Below is a sample output of `juju status` on COS K8s model:
+
 ```text
 Model  Controller  Cloud/Region        Version  SLA          Timestamp
 cos    microk8s    microk8s/localhost  3.1.6    unsupported  00:21:19+02:00

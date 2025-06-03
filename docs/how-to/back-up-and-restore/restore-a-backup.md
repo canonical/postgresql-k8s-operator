@@ -23,7 +23,7 @@ juju run postgresql-k8s/leader list-backups
 
 This should show your available backups like in the sample output below:
 <!--TODO: Update output with any missing parameters (id, repository, etc...) -->
-```text
+```yaml
 list-backups: |-
   Storage bucket name: canonical-postgres
   Backups base path: /test/backup/
