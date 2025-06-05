@@ -15,7 +15,7 @@ Bootstrap a Kubernetes (e.g. [Multipass-based MicroK8s](https://discourse.charmh
 
 ```shell
 juju add-model postgresql-k8s
-juju deploy postgresql-k8s --channel 14/stable --trust
+juju deploy postgresql-k8s --channel 16/stable --trust
 ```
 
 **Note:** the `--trust` flag is required because the charm and Patroni need to create some K8s resources.
@@ -61,7 +61,7 @@ Adding a relation is accomplished with `juju relate` (or `juju integrate` for Ju
 
 ```shell
 # Deploy Charmed PostgreSQL cluster with 3 nodes
-juju deploy postgresql-k8s --channel 14/stable -n 3 --trust --channel 14
+juju deploy postgresql-k8s --channel 16/stable -n 3 --trust
 
 # Deploy the relevant application charms
 juju deploy mycharm
@@ -86,7 +86,7 @@ juju status --relations
 This charm supports legacy interface `pgsql` from the previous [PostgreSQL charm](https://launchpad.net/postgresql-charm):
 
 ```shell
-juju deploy postgresql-k8s --channel 14/stable --trust 
+juju deploy postgresql-k8s --channel 16/stable --trust 
 juju deploy finos-waltz-k8s --channel edge
 juju relate postgresql-k8s:db finos-waltz-k8s
 ```
