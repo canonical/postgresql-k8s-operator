@@ -11,6 +11,8 @@ The legacy charm provided endpoints `db` and `db-admin` (for the interface `pgsq
 Choose one endpoint to use, rather than relating both simultaneously.
 ```
 
+<!--TODO: Explain `latest` in the context of `16`-->
+
 ## The default track "latest" vs "14"
 
 The [default track](https://docs.openstack.org/charm-guide/yoga/project/charm-delivery.html) has been switched from the `latest` to `14` for both VM and K8s PostgreSQL charms. It is [to ensure](https://discourse.charmhub.io/t/request-switch-default-track-from-latest-to-14-for-postgresql-k8s-charms/10314) all new deployments use a modern codebase. We strongly advise against using the latest track due to its implicit nature. In doing so, a future charm upgrade may result in a PostgreSQL version incompatible with an integrated application. Track 14 guarantees PostgreSQL 14 deployment only. The track `latest` will be closed after all applications migrated from Reactive to Ops-based charm.
