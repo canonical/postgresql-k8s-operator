@@ -37,6 +37,24 @@ except ModuleNotFoundError:
         main(WrongArchitectureWarningCharm, use_juju_for_storage=True)
     raise
 
+from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerUnitData
+from charms.data_platform_libs.v0.data_models import TypedCharmBase
+from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
+from charms.loki_k8s.v1.loki_push_api import LogProxyConsumer
+from charms.postgresql_k8s.v0.postgresql import (
+    ACCESS_GROUP_IDENTITY,
+    ACCESS_GROUPS,
+    REQUIRED_PLUGINS,
+    PostgreSQL,
+    PostgreSQLEnableDisableExtensionError,
+    PostgreSQLGetCurrentTimelineError,
+    PostgreSQLUpdateUserPasswordError,
+)
+from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
+from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
+from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
+from charms.tempo_coordinator_k8s.v0.charm_tracing import trace_charm
+from charms.tempo_coordinator_k8s.v0.tracing import TracingEndpointRequirer
 from lightkube import ApiError, Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
@@ -75,24 +93,6 @@ from requests import ConnectionError as RequestsConnectionError
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
 from backups import CANNOT_RESTORE_PITR, S3_BLOCK_MESSAGES, PostgreSQLBackups
-from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerUnitData
-from charms.data_platform_libs.v0.data_models import TypedCharmBase
-from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
-from charms.loki_k8s.v1.loki_push_api import LogProxyConsumer
-from charms.postgresql_k8s.v0.postgresql import (
-    ACCESS_GROUP_IDENTITY,
-    ACCESS_GROUPS,
-    REQUIRED_PLUGINS,
-    PostgreSQL,
-    PostgreSQLEnableDisableExtensionError,
-    PostgreSQLGetCurrentTimelineError,
-    PostgreSQLUpdateUserPasswordError,
-)
-from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
-from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
-from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
-from charms.tempo_coordinator_k8s.v0.charm_tracing import trace_charm
-from charms.tempo_coordinator_k8s.v0.tracing import TracingEndpointRequirer
 from config import CharmConfig
 from constants import (
     APP_SCOPE,
