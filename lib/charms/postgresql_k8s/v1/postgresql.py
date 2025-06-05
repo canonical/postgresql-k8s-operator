@@ -846,6 +846,9 @@ END; $$;"""
 
     def set_up_database(self, temp_location: Optional[str] = None) -> None:
         """Set up postgres database with the right permissions."""
+        if temp_location is not None:
+            self.set_up_temp_tablespace(temp_location)
+
         connection = None
         cursor = None
         try:
@@ -943,6 +946,26 @@ CREATE EVENT TRIGGER update_pg_hba_on_drop_schema
                         extra_user_roles=[ROLE_READ, ROLE_DML],
                     )
                     cursor.execute("GRANT CONNECT ON DATABASE postgres TO admin;")
+        except psycopg2.Error as e:
+            logger.error(f"Failed to set up databases: {e}")
+            raise PostgreSQLDatabasesSetupError() from e
+        finally:
+            if cursor is not None:
+                cursor.close()
+            if connection is not None:
+                connection.close()
+
+    def set_up_temp_tablespace(self, temp_location: str) -> None:
+        """Set up a tablespace for temporary operations."""
+        connection = None
+        cursor = None
+        try:
+            connection = self._connect_to_database()
+            cursor = connection.cursor()
+            cursor.execute("SELECT TRUE FROM pg_tablespace WHERE spcname='temp';")
+            if cursor.fetchone() is None:
+                cursor.execute(f"CREATE TABLESPACE temp LOCATION '{temp_location}';")
+                cursor.execute("GRANT CREATE ON TABLESPACE temp TO public;")
         except psycopg2.Error as e:
             logger.error(f"Failed to set up databases: {e}")
             raise PostgreSQLDatabasesSetupError() from e
