@@ -1,0 +1,65 @@
+# Copyright 2022 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: Tests
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+on:
+  pull_request:
+    paths-ignore:
+      - '.gitignore'
+      - '.jujuignore'
+      - 'LICENSE'
+      - '**.md'
+      - .github/renovate.json5
+      - 'docs/**'
+  schedule:
+    - cron: '53 0 * * *'  # Daily at 00:53 UTC
+  # Triggered on push to branch "main" by .github/workflows/release.yaml
+  workflow_call:
+    outputs:
+      artifact-prefix:
+        description: build_charm.yaml `artifact-prefix` output
+        value: ${{ jobs.build.outputs.artifact-prefix }}
+
+jobs:
+  lint:
+    name: Lint
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v32.0.0
+
+  unit-test:
+    name: Unit test charm
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install tox & poetry
+        run: |
+          pipx install tox
+          pipx install poetry
+      - name: Run tests
+        run: tox run -e unit
+      - name: Upload Coverage to Codecov
+        uses: codecov/codecov-action@v5
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  build:
+    name: Build charm
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v32.0.0
+
+  integration-test:
+    name: Integration test charm
+    needs:
+      - lint
+      - unit-test
+      - build
+    uses: ./.github/workflows/integration_test.yaml
+    with:
+      artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
+    secrets: inherit
+    permissions:
+      contents: write  # Needed for Allure Report
