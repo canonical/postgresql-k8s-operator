@@ -4,6 +4,7 @@
 
 """Charmed Kubernetes Operator for the PostgreSQL database."""
 
+import datetime
 import itertools
 import json
 import logging
@@ -15,6 +16,11 @@ import time
 from pathlib import Path
 from typing import Literal, get_args
 from urllib.parse import urlparse
+
+from authorisation_rules_observer import (
+    AuthorisationRulesChangeCharmEvents,
+    AuthorisationRulesObserver,
+)
 
 # First platform-specific import, will fail on wrong architecture
 try:
@@ -106,6 +112,7 @@ from constants import (
     REPLICATION_PASSWORD_KEY,
     REPLICATION_USER,
     REWIND_PASSWORD_KEY,
+    REWIND_USER,
     SECRET_DELETED_LABEL,
     SECRET_INTERNAL_LABEL,
     SECRET_KEY_OVERRIDES,
@@ -174,6 +181,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     """Charmed Operator for the PostgreSQL database."""
 
     config_type = CharmConfig
+    on = AuthorisationRulesChangeCharmEvents()
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -212,6 +220,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._context = {"namespace": self._namespace, "app_name": self._name}
         self.cluster_name = f"patroni-{self._name}"
 
+        juju_version = JujuVersion.from_environ()
+        run_cmd = "/usr/bin/juju-exec" if juju_version.major > 2 else "/usr/bin/juju-run"
+        self._observer = AuthorisationRulesObserver(self, run_cmd)
+        self.framework.observe(
+            self.on.authorisation_rules_change, self._on_authorisation_rules_change
+        )
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
@@ -245,6 +259,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.restart_manager = RollingOpsManager(
             charm=self, relation="restart", callback=self._restart
         )
+        self._observer.start_authorisation_rules_observer()
         self.grafana_dashboards = GrafanaDashboardProvider(self)
         self.metrics_endpoint = MetricsEndpointProvider(
             self,
@@ -264,6 +279,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.tracing = TracingEndpointRequirer(
             self, relation_name=TRACING_RELATION_NAME, protocols=[TRACING_PROTOCOL]
         )
+
+    def _on_authorisation_rules_change(self, _):
+        """Handle authorisation rules change event."""
+        timestamp = datetime.datetime.now()
+        self._peers.data[self.unit].update({"pg_hba_needs_update_timestamp": str(timestamp)})
+        logger.debug(f"authorisation rules changed at {timestamp}")
 
     @property
     def tracing_endpoint(self) -> str | None:
@@ -2092,6 +2113,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             stanza=self.app_peer_data.get("stanza", self.unit_peer_data.get("stanza")),
             restore_stanza=self.app_peer_data.get("restore-stanza"),
             parameters=postgresql_parameters,
+            user_databases_map=self.relations_user_databases_map,
         )
 
         if not self._is_workload_running:
@@ -2312,6 +2334,27 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def client_relations(self) -> list[Relation]:
         """Return the list of established client relations."""
         return self.model.relations.get("database", [])
+
+    @property
+    def relations_user_databases_map(self) -> dict:
+        """Returns a user->databases map for all relations."""
+        if (
+            not self.is_cluster_initialised
+            or not self._patroni.member_started
+            or self.postgresql.list_access_groups(current_host=self.is_connectivity_enabled)
+            != set(ACCESS_GROUPS)
+        ):
+            return {USER: "all", REPLICATION_USER: "all", REWIND_USER: "all"}
+        user_database_map = {}
+        for user in self.postgresql.list_users_from_relation(
+            current_host=self.is_connectivity_enabled
+        ):
+            user_database_map[user] = ",".join(
+                self.postgresql.list_accessible_databases_for_user(
+                    user, current_host=self.is_connectivity_enabled
+                )
+            )
+        return user_database_map
 
     def override_patroni_on_failure_condition(
         self, new_condition: str, repeat_cause: str | None

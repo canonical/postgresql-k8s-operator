@@ -31,7 +31,7 @@ async def test_audit_plugin(ops_test: OpsTest, charm) -> None:
     await ops_test.model.relate(f"{APPLICATION_NAME}:{RELATION_ENDPOINT}", DATABASE_APP_NAME)
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(
-            apps=[APPLICATION_NAME, DATABASE_APP_NAME], status="active"
+            apps=[APPLICATION_NAME, DATABASE_APP_NAME], status="active", idle_period=30
         )
 
     logger.info("Checking that the audit plugin is enabled")
