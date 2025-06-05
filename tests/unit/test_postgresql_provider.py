@@ -21,7 +21,7 @@ from constants import PEER
 DATABASE = "test_database"
 EXTRA_USER_ROLES = "CREATEDB,CREATEROLE"
 RELATION_NAME = "database"
-POSTGRESQL_VERSION = "14"
+POSTGRESQL_VERSION = "16"
 
 
 @pytest.fixture(autouse=True)

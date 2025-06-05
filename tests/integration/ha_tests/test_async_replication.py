@@ -6,7 +6,6 @@ import logging
 import subprocess
 from asyncio import gather
 
-import psycopg2
 import pytest as pytest
 from juju.model import Model
 from lightkube import Client
@@ -14,22 +13,20 @@ from lightkube.resources.core_v1 import Pod
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from .. import architecture, markers
+from .. import architecture
 from ..helpers import (
     APPLICATION_NAME,
     CHARM_BASE,
     DATABASE_APP_NAME,
     build_and_deploy,
     get_leader_unit,
-    get_password,
-    get_primary,
-    get_unit_address,
     scale_application,
     wait_for_relation_removed_between,
 )
 from .helpers import (
     are_writes_increasing,
     check_writes,
+    clear_continuous_writes,
     get_leader,
     get_standby_leader,
     start_continuous_writes,
@@ -42,6 +39,7 @@ CLUSTER_SIZE = 3
 FAST_INTERVAL = "10s"
 IDLE_PERIOD = 5
 TIMEOUT = 2000
+FIRST_DATABASE_RELATION_NAME = "database"
 
 
 @contextlib.asynccontextmanager
@@ -100,7 +98,6 @@ async def second_model_continuous_writes(second_model) -> None:
             assert action.results["result"] == "True", "Unable to clear up continuous_writes table"
 
 
-@markers.juju3
 @pytest.mark.abort_on_fail
 async def test_deploy_async_replication_setup(
     ops_test: OpsTest, charm, first_model: Model, second_model: Model
@@ -132,7 +129,6 @@ async def test_deploy_async_replication_setup(
         )
 
 
-@markers.juju3
 @pytest.mark.abort_on_fail
 async def test_async_replication(
     ops_test: OpsTest,
@@ -209,7 +205,6 @@ async def test_async_replication(
     await check_writes(ops_test, extra_model=second_model)
 
 
-@markers.juju3
 @pytest.mark.abort_on_fail
 async def test_switchover(
     ops_test: OpsTest,
@@ -263,7 +258,6 @@ async def test_switchover(
     await are_writes_increasing(ops_test, extra_model=second_model)
 
 
-@markers.juju3
 @pytest.mark.abort_on_fail
 async def test_promote_standby(
     ops_test: OpsTest,
@@ -311,24 +305,22 @@ async def test_promote_standby(
             ),
         )
 
+    logger.info("rerelate test app")
+    await ops_test.model.applications[DATABASE_APP_NAME].remove_relation(
+        "database", f"{APPLICATION_NAME}:{FIRST_DATABASE_RELATION_NAME}"
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[DATABASE_APP_NAME, APPLICATION_NAME], status="active", raise_on_blocked=True
+    )
+    await ops_test.model.relate(
+        DATABASE_APP_NAME, f"{APPLICATION_NAME}:{FIRST_DATABASE_RELATION_NAME}"
+    )
+    await ops_test.model.wait_for_idle(
+        apps=[DATABASE_APP_NAME, APPLICATION_NAME], status="active", raise_on_blocked=True
+    )
+
     logger.info("removing the previous data")
-    primary = await get_primary(ops_test)
-    address = await get_unit_address(ops_test, primary)
-    password = await get_password(ops_test)
-    database_name = f"{APPLICATION_NAME.replace('-', '_')}_database"
-    connection = None
-    try:
-        connection = psycopg2.connect(
-            f"dbname={database_name} user=operator password={password} host={address}"
-        )
-        connection.autocommit = True
-        cursor = connection.cursor()
-        cursor.execute("DROP TABLE IF EXISTS continuous_writes;")
-    except psycopg2.Error as e:
-        assert False, f"Failed to drop continuous writes table: {e}"
-    finally:
-        if connection is not None:
-            connection.close()
+    await clear_continuous_writes(ops_test)
 
     logger.info("starting continuous writes to the database")
     await start_continuous_writes(ops_test, DATABASE_APP_NAME)
@@ -337,7 +329,6 @@ async def test_promote_standby(
     await are_writes_increasing(ops_test)
 
 
-@markers.juju3
 @pytest.mark.abort_on_fail
 async def test_reestablish_relation(
     ops_test: OpsTest, first_model: Model, second_model: Model, continuous_writes
@@ -394,7 +385,6 @@ async def test_reestablish_relation(
     await check_writes(ops_test, extra_model=second_model)
 
 
-@markers.juju3
 @pytest.mark.abort_on_fail
 async def test_async_replication_failover_in_main_cluster(
     ops_test: OpsTest, first_model: Model, second_model: Model, continuous_writes
@@ -436,7 +426,6 @@ async def test_async_replication_failover_in_main_cluster(
     await check_writes(ops_test, extra_model=second_model)
 
 
-@markers.juju3
 @pytest.mark.abort_on_fail
 async def test_async_replication_failover_in_secondary_cluster(
     ops_test: OpsTest, first_model: Model, second_model: Model, continuous_writes
@@ -473,7 +462,6 @@ async def test_async_replication_failover_in_secondary_cluster(
     await check_writes(ops_test, extra_model=second_model)
 
 
-@markers.juju3
 @pytest.mark.abort_on_fail
 async def test_scaling(
     ops_test: OpsTest, first_model: Model, second_model: Model, continuous_writes

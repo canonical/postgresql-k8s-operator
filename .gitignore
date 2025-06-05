@@ -6,7 +6,7 @@ build/
 coverage.xml
 __pycache__/
 *.py[cod]
-./requirements.txt
+requirements.txt
 requirements-last-build.txt
 
 # PyCharm project folder.

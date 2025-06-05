@@ -17,18 +17,12 @@ from .helpers import (
     get_unit_address,
     scale_application,
 )
-from .juju_ import juju_major_version
 
 CANNOT_RESTORE_PITR = "cannot restore PITR, juju debug-log for details"
 S3_INTEGRATOR_APP_NAME = "s3-integrator"
-if juju_major_version < 3:
-    tls_certificates_app_name = "tls-certificates-operator"
-    tls_channel = "legacy/stable"
-    tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
-else:
-    tls_certificates_app_name = "self-signed-certificates"
-    tls_channel = "latest/stable"
-    tls_config = {"ca-common-name": "Test CA"}
+tls_certificates_app_name = "self-signed-certificates"
+tls_channel = "latest/stable"
+tls_config = {"ca-common-name": "Test CA"}
 
 logger = logging.getLogger(__name__)
 

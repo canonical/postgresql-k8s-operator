@@ -1,21 +1,22 @@
 # Charmed PostgreSQL K8s operator
-
 [![CharmHub Badge](https://charmhub.io/postgresql-k8s/badge.svg)](https://charmhub.io/postgresql-k8s)
 [![Release](https://github.com/canonical/postgresql-k8s-operator/actions/workflows/release.yaml/badge.svg)](https://github.com/canonical/postgresql-k8s-operator/actions/workflows/release.yaml)
 [![Tests](https://github.com/canonical/postgresql-k8s-operator/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/canonical/postgresql-k8s-operator/actions/workflows/ci.yaml?query=branch%3Amain)
 [![codecov](https://codecov.io/gh/canonical/postgresql-k8s-operator/graph/badge.svg?token=KmBJqV1AM2)](https://codecov.io/gh/canonical/postgresql-k8s-operator)
 
-This repository contains a charmed operator for deploying [PostgreSQL](https://www.postgresql.org/about/) on Kubernetes via the [Juju orchestration engine](https://juju.is/).
+## Description
 
-To learn more about how to deploy and operate Charmed PostgreSQL K8s, see the [official documentation](https://canonical-charmed-postgresql-k8s.readthedocs-hosted.com/).
+This repository contains a [Juju Charm](https://charmhub.io/postgresql-k8s) for deploying [PostgreSQL](https://www.postgresql.org/about/) on Kubernetes.
+
+To deploy on virtual machines, please use [Charmed PostgreSQL operator](https://charmhub.io/postgresql).
 
 ## Usage
 
-Bootstrap a Kubernetes (e.g. [Multipass-based MicroK8s](https://discourse.charmhub.io/t/charmed-environment-charm-dev-with-canonical-multipass/8886)) and create a new model using Juju 3.6+:
+Bootstrap a Kubernetes (e.g. [Multipass-based MicroK8s](https://discourse.charmhub.io/t/charmed-environment-charm-dev-with-canonical-multipass/8886)) and create a new model using Juju 2.9+:
 
 ```shell
 juju add-model postgresql-k8s
-juju deploy postgresql-k8s --channel 16/stable --trust
+juju deploy postgresql-k8s --channel 16/edge --trust
 ```
 
 **Note:** the `--trust` flag is required because the charm and Patroni need to create some K8s resources.
@@ -61,7 +62,7 @@ Adding a relation is accomplished with `juju relate` (or `juju integrate` for Ju
 
 ```shell
 # Deploy Charmed PostgreSQL cluster with 3 nodes
-juju deploy postgresql-k8s --channel 16/stable -n 3 --trust
+juju deploy postgresql-k8s -n 3 --trust --channel 16/edge
 
 # Deploy the relevant application charms
 juju deploy mycharm
@@ -86,7 +87,7 @@ juju status --relations
 This charm supports legacy interface `pgsql` from the previous [PostgreSQL charm](https://launchpad.net/postgresql-charm):
 
 ```shell
-juju deploy postgresql-k8s --channel 16/stable --trust 
+juju deploy postgresql-k8s --trust --channel 16/edge
 juju deploy finos-waltz-k8s --channel edge
 juju relate postgresql-k8s:db finos-waltz-k8s
 ```

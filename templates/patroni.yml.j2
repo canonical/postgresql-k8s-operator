@@ -71,6 +71,7 @@ bootstrap:
   - auth-local: trust
   - encoding: UTF8
   - data-checksums
+  - waldir: /var/lib/postgresql/logs
   {%- endif %}
   pg_hba:
   - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 md5
@@ -106,6 +107,8 @@ ctl:
 {%- endif %}
 pod_ip: '{{ endpoint }}'
 postgresql:
+  basebackup:
+    - waldir: /var/lib/postgresql/logs
   connect_address: '{{ endpoint }}:5432'
   data_dir: {{ storage_path }}/pgdata
   bin_dir: /usr/lib/postgresql/{{ version }}/bin
@@ -123,6 +126,7 @@ postgresql:
     ssl_cert_file: {{ storage_path }}/cert.pem
     ssl_key_file: {{ storage_path }}/key.pem
     {%- endif %}
+    temp_tablespaces: temp
     {%- if pg_parameters %}
     {%- for key, value in pg_parameters.items() %}
     {{key}}: {{value}}
@@ -160,11 +164,26 @@ postgresql:
   authentication:
     replication:
       password: {{ replication_password }}
+      {%- if enable_tls %}
+      sslrootcert: {{ conf_path }}/ca.pem
+      sslcert: {{ conf_path }}/cert.pem
+      sslkey: {{ conf_path }}/key.pem
+      {%- endif %}
     rewind:
       username: {{ rewind_user }}
       password: {{ rewind_password }}
+      {%- if enable_tls %}
+      sslrootcert: {{ conf_path }}/ca.pem
+      sslcert: {{ conf_path }}/cert.pem
+      sslkey: {{ conf_path }}/key.pem
+      {%- endif %}
     superuser:
       password: {{ superuser_password }}
+      {%- if enable_tls %}
+      sslrootcert: {{ conf_path }}/ca.pem
+      sslcert: {{ conf_path }}/cert.pem
+      sslkey: {{ conf_path }}/key.pem
+      {%- endif %}
 use_endpoints: true
 use_unix_socket: true
 {%- if is_no_sync_member or is_creating_backup %}

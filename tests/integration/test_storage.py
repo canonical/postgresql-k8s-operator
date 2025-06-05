@@ -21,14 +21,26 @@ logger = logging.getLogger(__name__)
 INSUFFICIENT_SIZE_WARNING = "<10% free space on pgdata volume."
 
 
-@markers.amd64_only
 @pytest.mark.abort_on_fail
-async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest, charm):
-    """Build and deploy the charm and saturate its pgdata volume."""
-    # Build and deploy the PostgreSQL charm.
+async def test_storage(ops_test: OpsTest, charm):
+    """Build and deploy the charm and check its storage list."""
     async with ops_test.fast_forward():
         await build_and_deploy(ops_test, charm, 1)
 
+        logger.info("Checking charm storages")
+        expected_storages = ["archive", "data", "logs", "temp"]
+        storages = await ops_test.model.list_storage()
+        assert len(storages) == 4, f"Expected 4 storages, got: {len(storages)}"
+        for index, storage in enumerate(storages):
+            assert (
+                storage["attachments"]["unit-postgresql-k8s-0"].__dict__["storage_tag"]
+                == f"storage-{expected_storages[index]}-{index}"
+            ), f"Storage {expected_storages[index]} not found"
+
+
+@markers.amd64_only
+async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest, charm):
+    """Saturate charm's pgdata volume."""
     # Saturate pgdata storage with random data
     primary = await get_primary(ops_test, DATABASE_APP_NAME)
     await run_command_on_unit(

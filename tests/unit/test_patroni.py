@@ -218,7 +218,7 @@ def test_render_patroni_yml_file(harness, patroni):
         ) as _rock_postgresql_version,
         patch("charm.Patroni._render_file") as _render_file,
     ):
-        _rock_postgresql_version.return_value = "14.7"
+        _rock_postgresql_version.return_value = "16.6"
 
         # Get the expected content from a file.
         with open("templates/patroni.yml.j2") as file:
@@ -233,7 +233,7 @@ def test_render_patroni_yml_file(harness, patroni):
             rewind_user=REWIND_USER,
             rewind_password=patroni._rewind_password,
             synchronous_node_count=0,
-            version="14",
+            version="16",
             patroni_password=patroni._patroni_password,
         )
 
@@ -268,7 +268,7 @@ def test_render_patroni_yml_file(harness, patroni):
             rewind_user=REWIND_USER,
             rewind_password=patroni._rewind_password,
             synchronous_node_count=0,
-            version="14",
+            version="16",
             patroni_password=patroni._patroni_password,
         )
         assert expected_content_with_tls != expected_content

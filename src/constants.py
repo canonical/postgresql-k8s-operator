@@ -38,6 +38,7 @@ SECRET_LABEL = "secret"  # noqa: S105
 SECRET_CACHE_LABEL = "cache"  # noqa: S105
 SECRET_INTERNAL_LABEL = "internal-secret"  # noqa: S105
 SECRET_DELETED_LABEL = "None"  # noqa: S105
+SYSTEM_USERS_PASSWORD_CONFIG = "system-users"  # noqa: S105
 
 APP_SCOPE = "app"
 UNIT_SCOPE = "unit"
@@ -52,9 +53,6 @@ TRACING_RELATION_NAME = "tracing"
 TRACING_PROTOCOL = "otlp_http"
 
 DATABASE = "database"
-LEGACY_DB = "db"
-LEGACY_DB_ADMIN = "db-admin"
-ALL_LEGACY_RELATIONS = [LEGACY_DB, LEGACY_DB_ADMIN]
 
 ENDPOINT_SIMULTANEOUSLY_BLOCKING_MESSAGE = (
     "Please choose one endpoint to use. No need to relate all of them simultaneously!"

@@ -1,7 +1,7 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import asyncio
+# import asyncio
 import logging
 
 import pytest
@@ -13,6 +13,7 @@ from tenacity import Retrying, stop_after_attempt, wait_fixed
 from ..helpers import (
     APPLICATION_NAME,
     CHARM_BASE,
+    CHARM_BASE_NOBLE,
     DATABASE_APP_NAME,
     METADATA,
     count_switchovers,
@@ -34,20 +35,24 @@ TIMEOUT = 10 * 60
 @pytest.mark.abort_on_fail
 async def test_deploy_stable(ops_test: OpsTest) -> None:
     """Simple test to ensure that the PostgreSQL and application charms get deployed."""
-    await asyncio.gather(
-        ops_test.model.deploy(
-            DATABASE_APP_NAME,
-            num_units=3,
-            channel="14/stable",
-            trust=True,
-            base=CHARM_BASE,
-        ),
-        ops_test.model.deploy(
-            APPLICATION_NAME,
-            num_units=1,
-            channel="latest/edge",
-            base=CHARM_BASE,
-        ),
+    # TODO: rollback to ops_test.model.deploy syntax when we release to stable.
+    await ops_test.juju(
+        "deploy",
+        DATABASE_APP_NAME,
+        "-n",
+        3,
+        # TODO: move to stable once we release.
+        "--channel",
+        "16/beta/multiple-storages",
+        "--trust",
+        "--base",
+        CHARM_BASE_NOBLE,
+    )
+    await ops_test.model.deploy(
+        APPLICATION_NAME,
+        num_units=1,
+        channel="latest/edge",
+        base=CHARM_BASE,
     )
     logger.info("Wait for applications to become active")
     async with ops_test.fast_forward():
@@ -89,7 +94,7 @@ async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_upgrade_from_stable(ops_test: OpsTest, charm, continuous_writes):
+async def test_upgrade_from_stable(ops_test: OpsTest, charm):
     """Test updating from stable channel."""
     # Start an application that continuously writes data to the database.
     logger.info("starting continuous writes to the database")

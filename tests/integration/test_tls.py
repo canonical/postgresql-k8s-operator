@@ -8,7 +8,6 @@ import requests
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from . import markers
 from .ha_tests.helpers import (
     change_patroni_setting,
 )
@@ -16,13 +15,10 @@ from .helpers import (
     CHARM_BASE,
     DATABASE_APP_NAME,
     build_and_deploy,
-    check_database_creation,
-    check_database_users_existence,
     check_tls,
     check_tls_patroni_api,
     check_tls_replication,
     db_connect,
-    deploy_and_relate_application_with_postgresql,
     get_password,
     get_primary,
     get_unit_address,
@@ -33,15 +29,9 @@ from .juju_ import juju_major_version
 
 logger = logging.getLogger(__name__)
 
-MATTERMOST_APP_NAME = "mattermost"
-if juju_major_version < 3:
-    tls_certificates_app_name = "tls-certificates-operator"
-    tls_channel = "legacy/stable"
-    tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
-else:
-    tls_certificates_app_name = "self-signed-certificates"
-    tls_channel = "latest/stable"
-    tls_config = {"ca-common-name": "Test CA"}
+tls_certificates_app_name = "self-signed-certificates"
+tls_channel = "latest/stable"
+tls_config = {"ca-common-name": "Test CA"}
 APPLICATION_UNITS = 2
 DATABASE_UNITS = 3
 
@@ -123,7 +113,7 @@ async def test_tls(ops_test: OpsTest) -> None:
                 await run_command_on_unit(
                     ops_test,
                     replica,
-                    'su postgres -c "/usr/lib/postgresql/14/bin/pg_ctl -D /var/lib/postgresql/data/pgdata promote"',
+                    'su postgres -c "/usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/data/pgdata promote"',
                 )
 
                 # Check that the replica was promoted.
@@ -171,32 +161,6 @@ async def test_tls(ops_test: OpsTest) -> None:
         await ops_test.model.wait_for_idle(
             apps=[DATABASE_APP_NAME], status="active", idle_period=15
         )
-
-
-@markers.amd64_only  # mattermost-k8s charm not available for arm64
-async def test_mattermost_db(ops_test: OpsTest) -> None:
-    """Deploy Mattermost to test the 'db' relation.
-
-    Mattermost needs TLS enabled on PostgreSQL to correctly connect to it.
-
-    Args:
-        ops_test: The ops test framework
-    """
-    async with ops_test.fast_forward():
-        # Deploy and check Mattermost user and database existence.
-        relation_id = await deploy_and_relate_application_with_postgresql(
-            ops_test,
-            "mattermost-k8s",
-            MATTERMOST_APP_NAME,
-            APPLICATION_UNITS,
-            status="waiting",
-            base="ubuntu@20.04",
-        )
-        await check_database_creation(ops_test, "mattermost")
-
-        mattermost_users = [f"relation_id_{relation_id}"]
-
-        await check_database_users_existence(ops_test, mattermost_users, [])
 
 
 async def test_remove_tls(ops_test: OpsTest) -> None:
