@@ -12,7 +12,7 @@ from charms.data_platform_libs.v0.upgrade import (
     DependencyModel,
     KubernetesClientError,
 )
-from charms.postgresql_k8s.v0.postgresql import (
+from charms.postgresql_k8s.v1.postgresql import (
     ACCESS_GROUPS,
     ROLE_STATS,
     PostgreSQLCreatePredefinedRolesError,

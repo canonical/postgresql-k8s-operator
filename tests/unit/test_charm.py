@@ -652,7 +652,7 @@ def test_on_update_status_after_restore_operation(harness):
         ) as _handle_processes_failures,
         patch("charm.PostgreSQLBackups.can_use_s3_repository") as _can_use_s3_repository,
         patch(
-            "charms.postgresql_k8s.v0.postgresql.PostgreSQL.get_current_timeline"
+            "charms.postgresql_k8s.v1.postgresql.PostgreSQL.get_current_timeline"
         ) as _get_current_timeline,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,

@@ -4,7 +4,7 @@ from unittest.mock import call, patch
 
 import psycopg2
 import pytest
-from charms.postgresql_k8s.v0.postgresql import (
+from charms.postgresql_k8s.v1.postgresql import (
     ACCESS_GROUP_INTERNAL,
     ACCESS_GROUPS,
     PERMISSIONS_GROUP_ADMIN,
@@ -39,7 +39,7 @@ def harness():
 
 def test_create_access_groups(harness):
     with patch(
-        "charms.postgresql_k8s.v0.postgresql.PostgreSQL._connect_to_database"
+        "charms.postgresql_k8s.v1.postgresql.PostgreSQL._connect_to_database"
     ) as _connect_to_database:
         execute = _connect_to_database.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value.execute
         harness.charm.postgresql.create_access_groups()
@@ -55,13 +55,13 @@ def test_create_access_groups(harness):
 def test_create_database(harness):
     with (
         patch(
-            "charms.postgresql_k8s.v0.postgresql.PostgreSQL.enable_disable_extensions"
+            "charms.postgresql_k8s.v1.postgresql.PostgreSQL.enable_disable_extensions"
         ) as _enable_disable_extensions,
         patch(
-            "charms.postgresql_k8s.v0.postgresql.PostgreSQL._generate_database_privileges_statements"
+            "charms.postgresql_k8s.v1.postgresql.PostgreSQL._generate_database_privileges_statements"
         ) as _generate_database_privileges_statements,
         patch(
-            "charms.postgresql_k8s.v0.postgresql.PostgreSQL._connect_to_database"
+            "charms.postgresql_k8s.v1.postgresql.PostgreSQL._connect_to_database"
         ) as _connect_to_database,
     ):
         # Test a successful database creation.
@@ -182,7 +182,7 @@ def test_create_database(harness):
 
 def test_grant_internal_access_group_memberships(harness):
     with patch(
-        "charms.postgresql_k8s.v0.postgresql.PostgreSQL._connect_to_database"
+        "charms.postgresql_k8s.v1.postgresql.PostgreSQL._connect_to_database"
     ) as _connect_to_database:
         execute = _connect_to_database.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value.execute
         harness.charm.postgresql.grant_internal_access_group_memberships()
@@ -199,7 +199,7 @@ def test_grant_internal_access_group_memberships(harness):
 
 def test_grant_relation_access_group_memberships(harness):
     with patch(
-        "charms.postgresql_k8s.v0.postgresql.PostgreSQL._connect_to_database"
+        "charms.postgresql_k8s.v1.postgresql.PostgreSQL._connect_to_database"
     ) as _connect_to_database:
         execute = _connect_to_database.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value.execute
         harness.charm.postgresql.grant_relation_access_group_memberships()
@@ -350,7 +350,7 @@ def test_generate_database_privileges_statements(harness):
 
 def test_get_last_archived_wal(harness):
     with patch(
-        "charms.postgresql_k8s.v0.postgresql.PostgreSQL._connect_to_database"
+        "charms.postgresql_k8s.v1.postgresql.PostgreSQL._connect_to_database"
     ) as _connect_to_database:
         # Test a successful call.
         execute = _connect_to_database.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value.execute
@@ -462,7 +462,7 @@ def test_build_postgresql_parameters(harness):
 
 def test_configure_pgaudit(harness):
     with patch(
-        "charms.postgresql_k8s.v0.postgresql.PostgreSQL._connect_to_database"
+        "charms.postgresql_k8s.v1.postgresql.PostgreSQL._connect_to_database"
     ) as _connect_to_database:
         # Test when pgAudit is enabled.
         execute = (
@@ -489,7 +489,7 @@ def test_configure_pgaudit(harness):
 
 def test_validate_group_map(harness):
     with patch(
-        "charms.postgresql_k8s.v0.postgresql.PostgreSQL._connect_to_database"
+        "charms.postgresql_k8s.v1.postgresql.PostgreSQL._connect_to_database"
     ) as _connect_to_database:
         execute = _connect_to_database.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value.execute
         _connect_to_database.return_value.__enter__.return_value.cursor.return_value.__enter__.return_value.fetchone.return_value = None
