@@ -39,8 +39,7 @@ Other deployment scenarios and configurations:
 * [Enable tracing] with Parca
 
 ## Minor upgrades
-* [Perform a minor upgrade]
-* [Perform a minor rollback]
+* [How to upgrade]
 
 ## Cross-regional (cluster-cluster) async replication
 
@@ -85,8 +84,7 @@ This section is for charm developers looking to support PostgreSQL integrations 
 [Enable alert rules]: /how-to/monitoring-cos/enable-alert-rules
 [Enable tracing]: /how-to/monitoring-cos/enable-tracing
 
-[Perform a minor upgrade]: /how-to/upgrade/perform-a-minor-upgrade
-[Perform a minor rollback]: /how-to/upgrade/perform-a-minor-rollback
+[How to upgrade]: /how-to/upgrade/index
 
 [Cross-regional async replication]: /how-to/cross-regional-async-replication/index
 [Set up clusters]: /how-to/cross-regional-async-replication/set-up-clusters
