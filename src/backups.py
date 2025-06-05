@@ -15,6 +15,7 @@ from io import BytesIO
 import boto3
 import botocore
 from botocore.exceptions import ClientError
+from charms.data_platform_libs.v0.s3 import CredentialsChangedEvent, S3Requirer
 from jinja2 import Template
 from lightkube import ApiError, Client
 from lightkube.resources.core_v1 import Endpoints
@@ -26,7 +27,6 @@ from ops.model import ActiveStatus, MaintenanceStatus
 from ops.pebble import ChangeError, ExecError
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
-from charms.data_platform_libs.v0.s3 import CredentialsChangedEvent, S3Requirer
 from constants import (
     BACKUP_TYPE_OVERRIDES,
     BACKUP_USER,
