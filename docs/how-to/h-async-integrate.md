@@ -5,7 +5,7 @@ This guide will show you how to integrate a client application with a cross-regi
 ## Prerequisites
 * Juju `v.3.4.2+`
 * Make sure your machine(s) fulfill the [system requirements](/t/11744)
-* See [supported target/source model relationships](t/15413#substrate-dependencies).
+* See [supported target/source model relationships](/t/15413#substrate-dependencies).
 * A cross-regional async replication setup
   * See [How to set up clusters](/t/13895)
 
