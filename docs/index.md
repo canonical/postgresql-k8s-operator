@@ -6,8 +6,6 @@ This charmed operator meets the need of simplifying deployment, scaling, configu
  
 Charmed PostgreSQL K8s is made for anyone looking for a comprehensive database management interface, whether for operating a complex production environment or simply as a playground to learn more about databases and charms.
 
-{{Test}}
-
 ```{note}
 This is a **Kubernetes** operator. To deploy on IAAS/VM, see [Charmed PostgreSQL VM](https://canonical-charmed-postgresql.readthedocs-hosted.com/).
 ```
