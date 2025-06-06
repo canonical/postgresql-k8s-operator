@@ -11,12 +11,12 @@ There are three types of users in PostgreSQL:
 
 The operator uses the following internal DB users:
 
-* `postgres` - the [initial/default](https://charmhub.io/postgresql-k8s/docs/t-manage-passwords) PostgreSQL user. Used for very initial bootstrap only.
-* `operator` - the user that charm.py uses to manage database/cluster.
+* `postgres` - the [initial/default](/how-to/manage-passwords) PostgreSQL user. Used for very initial bootstrap only.
+* `operator` - the user that `charm.py` uses to manage database/cluster.
 * `replication` - the user performs replication between database PostgreSQL cluster members.
 * `rewind` - the internal user for synchronizing a PostgreSQL cluster with another copy of the same cluster.
-* `monitoring` - the user for [COS integration](https://charmhub.io/postgresql-k8s/docs/h-enable-monitoring).
-* `backups` - the user to [perform/list/restore backups](https://charmhub.io/postgresql-k8s/docs/h-create-and-list-backups).
+* `monitoring` - the user for [COS integration](/how-to/monitoring-cos/index).
+* `backups` - the user to [perform/list/restore backups](/how-to/back-up-and-restore/create-a-backup).
 
 The full list of internal users is available in charm [source code](https://github.com/canonical/postgresql-operator/blob/main/src/constants.py). The full dump of internal users (on the newly installed charm):
 

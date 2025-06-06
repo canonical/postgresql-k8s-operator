@@ -2,7 +2,7 @@
 
 [Juju](https://juju.is/) is an open source orchestration engine for software operators that enables the deployment, integration and lifecycle management of applications at any scale, on any infrastructure using charms.
 
-> See also: [Juju client documentation](https://juju.is/docs/juju), [Juju blog](https://ubuntu.com/blog/tag/juju)
+> See also: {{juju_documentation_url}}, [Juju blog](https://ubuntu.com/blog/tag/juju)
 
 ## Compatibility with PostgreSQL
 
