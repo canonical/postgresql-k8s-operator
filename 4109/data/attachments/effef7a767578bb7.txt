@@ -1,0 +1,6 @@
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:101 checking garbage storage
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:107 scale to 1
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s (waiting for exactly 1 units, current : 0)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] waiting: awaiting for cluster to start
