@@ -165,24 +165,21 @@ postgresql:
     replication:
       password: {{ replication_password }}
       {%- if enable_tls %}
-      sslrootcert: {{ conf_path }}/ca.pem
-      sslcert: {{ conf_path }}/cert.pem
-      sslkey: {{ conf_path }}/key.pem
+      sslcert: {{ conf_path }}/nonexistent_cert.pem
+      sslkey: {{ conf_path }}/nonexistent_key.pem
       {%- endif %}
     rewind:
       username: {{ rewind_user }}
       password: {{ rewind_password }}
       {%- if enable_tls %}
-      sslrootcert: {{ conf_path }}/ca.pem
-      sslcert: {{ conf_path }}/cert.pem
-      sslkey: {{ conf_path }}/key.pem
+      sslcert: {{ conf_path }}/nonexistent_cert.pem
+      sslkey: {{ conf_path }}/nonexistent_key.pem
       {%- endif %}
     superuser:
       password: {{ superuser_password }}
       {%- if enable_tls %}
-      sslrootcert: {{ conf_path }}/ca.pem
-      sslcert: {{ conf_path }}/cert.pem
-      sslkey: {{ conf_path }}/key.pem
+      sslcert: {{ conf_path }}/nonexistent_cert.pem
+      sslkey: {{ conf_path }}/nonexistent_key.pem
       {%- endif %}
 use_endpoints: true
 use_unix_socket: true
