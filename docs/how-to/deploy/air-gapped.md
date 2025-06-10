@@ -95,11 +95,11 @@ sudo snap-store-proxy push-charm-bundle /var/snap/snap-store-proxy/common/charms
 
 Upload the charm OCI into local Air-gapped OCI registry.
 
-For the manual OCI import, please follow [the official CharmHub guide](https://documentation.ubuntu.com/snap-store-proxy/en/airgap-charmhub/#import-packages).
+For the manual OCI import, please follow [the official CharmHub guide](https://documentation.ubuntu.com/enterprise-store/main/how-to/airgap-charmhub/#import-packages).
 
 > For more details about exporting charms and resources, see:
 >
-> [Snap Store Proxy documentation > Offline Charmhub configuration > Import packages](https://documentation.ubuntu.com/snap-store-proxy/en/airgap-charmhub/#import-packages)
+> [Snap Store Proxy documentation > Offline Charmhub configuration > Import packages](https://documentation.ubuntu.com/enterprise-store/main/how-to/airgap-charmhub/#import-packages)
 
 ### 4. Deploy PostgreSQL
 
@@ -117,7 +117,7 @@ Use [the official release notes](/reference/releases) as a reference.
 
 * https://docs.ubuntu.com/snap-store-proxy/en/airgap
 * https://documentation.ubuntu.com/snap-store-proxy/
-* https://documentation.ubuntu.com/snap-store-proxy/en/airgap-charmhub/
+* https://documentation.ubuntu.com/enterprise-store/main/how-to/airgap-charmhub/
 * https://ubuntu.com/kubernetes/docs/install-offline
 * [Charmed Kubeflow > Install in an airgapped environment](https://charmed-kubeflow.io/docs/install-in-an-airgapped-environment)
 *  [Wikipedia > Air gap (networking)](https://en.wikipedia.org/wiki/Air_gap_(networking))

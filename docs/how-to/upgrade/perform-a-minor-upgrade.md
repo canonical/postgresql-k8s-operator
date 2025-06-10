@@ -47,7 +47,7 @@ This will ensure minimal service disruption, if any.
 ```{note}
 This step is only valid when deploying from [charmhub](https://charmhub.io/). 
 
-If a [local charm](https://juju.is/docs/sdk/deploy-a-charm) is deployed (revision is small, e.g. 0-10), make sure the proper/current local revision of the `.charm` file is available BEFORE going further. You might need it for rollback.
+If a [local charm](https://documentation.ubuntu.com/juju/3.6/howto/manage-charms/#deploy-a-charm-bundle) is deployed (revision is small, e.g. 0-10), make sure the proper/current local revision of the `.charm` file is available BEFORE going further. You might need it for rollback.
 ```
 
 The first step is to record the revision of the running application as a safety measure for a rollback action. To accomplish this, simply run the `juju status` command and look for the deployed Charmed PostgreSQL revision in the command output, e.g.:

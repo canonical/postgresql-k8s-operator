@@ -84,10 +84,6 @@ flowchart TD
 ```
 
 ## On `restore` hook
-<<<<<<< HEAD
-=======
-[Click to navigate the mermaid diagram on GitHub](https://github.com/canonical/postgresql-k8s-operator/blob/main/docs/explanation/e-backups.md).
->>>>>>> main
 
 ```{mermaid}
 flowchart TD

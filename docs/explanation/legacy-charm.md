@@ -1,9 +1,9 @@
 # Legacy charm
 
-There are [two types of charms](https://juju.is/docs/sdk/charm-taxonomy#charm-types-by-generation) stored under the same charm name `postgresql-k8s`:
+There are [two types of charms](https://documentation.ubuntu.com/juju/3.6/reference/charm/#by-generation) stored under the same charm name `postgresql-k8s`:
 
-1. [Reactive](https://juju.is/docs/sdk/charm-taxonomy#reactive)  charm in the channel `latest/stable` (called `legacy`)
-2. [Ops-based](https://juju.is/docs/sdk/ops) charm in the channel `14/stable` (called `modern`)
+1. [Reactive](https://documentation.ubuntu.com/juju/3.6/reference/charm/#reactive)  charm in the channel `latest/stable` (called `legacy`)
+2. [Ops-based](https://documentation.ubuntu.com/juju/3.6/reference/charm/#ops) charm in the channel `14/stable` (called `modern`)
 
 The legacy charm provided endpoints `db` and `db-admin` (for the interface `pgsql`). The modern charm provides old endpoints as well + new endpoint `database` (for the interface `postgresql_client`). Read more details about the available [endpoints/interfaces](/explanation/interfaces-endpoints).
 
@@ -75,7 +75,7 @@ In the legacy charm, the user could request roles by setting the `roles` field t
 ## Supported PostgreSQL versions by modern charm
 
 At the moment, the modern charms support PostgreSQL 14 (based on Jammy/22.04 series) only.
-Please [contact us](https://chat.charmhub.io/charmhub/channels/data-platform) if you need different versions/series.
+Please [contact us](/reference/contacts) if you need different versions/series.
 
 ## Supported architectures: amd64, arm64, ...
 Currently, the charm supports architecture `amd64` (all revisions) and `arm64` (from revision 211+). 
@@ -88,5 +88,5 @@ The "legacy charm" (from `latest/stable`) is stored on [Launchpad](https://git.l
 
 The "modern charm" (from `14/stable`) is stored on [GitHub](https://github.com/canonical/postgresql-k8s-operator), here is the link to report [modern charm issues](https://github.com/canonical/postgresql-k8s-operator/issues/new/choose).
 
-Do you have questions? [Contact us](https://chat.charmhub.io/charmhub/channels/data-platform)!
+Do you have questions? [Contact us](/reference/contacts)!
 

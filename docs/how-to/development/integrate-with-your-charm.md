@@ -14,7 +14,7 @@ Legacy charm details are described [here](/explanation/legacy-charm).
 
 **For an introduction** to the concepts of Juju integrations, see [Juju | Integration](https://documentation.ubuntu.com/juju/3.6/reference/relation/).
 
-**For a detailed tutorial** about integrating your charm with the PostgreSQL charm, refer to [Juju | Integrate your charm with PostgreSQL](https://juju.is/docs/sdk/integrate-your-charm-with-postgresql). 
+**For a detailed tutorial** about integrating your charm with the PostgreSQL charm, refer to [Juju | Integrate your charm with PostgreSQL](https://ops.readthedocs.io/en/latest/tutorial/from-zero-to-hero-write-your-first-kubernetes-charm/integrate-your-charm-with-postgresql.html). 
 
 **For some practical examples**, take a look at the following:
 * [postgresql-test-app](https://github.com/canonical/postgresql-test-app) GitHub repository
@@ -23,7 +23,7 @@ Legacy charm details are described [here](/explanation/legacy-charm).
 
 ## Troubleshooting & testing
 
-* To learn the basics of charm debugging, start with [Juju | How to debug a charm](https://juju.is/docs/sdk/debug-a-charm)
+* To learn the basics of charm debugging, start with [Juju | How to debug a charm](https://documentation.ubuntu.com/juju/3.6/howto/manage-charms/#debug-a-charm)
 * To troubleshoot PostgreSQL on K8s, check the [Troubleshooting](/reference/troubleshooting) reference
 * To test PostgreSQL and other charms, check the [Testing](/reference/software-testing) reference
 

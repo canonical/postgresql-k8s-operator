@@ -60,7 +60,7 @@ First, deploy [grafana-agent-k8s](https://charmhub.io/grafana-agent-k8s):
 juju deploy grafana-agent-k8s --trust
 ```
 
-Then, integrate (previously known as "[relate](https://juju.is/docs/juju/integration)") it with Charmed PostgreSQL K8s:
+Then, integrate (previously known as "[relate](https://documentation.ubuntu.com/juju/3.6/reference/relation/)") it with Charmed PostgreSQL K8s:
 
 ```text
 juju integrate grafana-agent-k8s grafana

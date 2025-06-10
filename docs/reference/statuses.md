@@ -1,10 +1,10 @@
 # Charm statuses
 
 ```{caution}
-This reference is a work in progress and not fit for production. Contact [Canonical Data Platform team](https://chat.charmhub.io/charmhub/channels/data-platform) if you are interested in the topic.
+This reference is a work in progress and not fit for production. [Contact us](/reference/contacts) if you are interested in the topic.
 ```
 
-The charm follows [standard Juju applications statuses](https://juju.is/docs/olm/status-values#application-status). Here you can find the expected end-user reaction on different statuses:
+The charm follows [standard Juju applications statuses](https://documentation.ubuntu.com/juju/3.6/reference/status/). Here you can find the expected end-user reaction on different statuses:
 
 | Juju Status | Message | Expectations | Actions |
 |-------|-------|-------|-------|
@@ -19,7 +19,7 @@ The charm follows [standard Juju applications statuses](https://juju.is/docs/olm
 | **blocked** | failed to start Patroni | TODO: error/retry? | |
 | **blocked** | Failed to create postgres user | The charm couldn't create the default `postgres` database user due to connection problems | Connect to the database using the `operator` user and the password from the `get-password` action, then run `CREATE ROLE postgres WITH LOGIN SUPERUSER;` |
 | **blocked** | Failed to restore backup | The database couldn't start after the restore | The charm needs fix in the code to recover from this status and enable a new restore to be requested |
-| **blocked** | Please choose one endpoint to use. No need to relate all of them simultaneously! | [The modern / legacy interfaces](https://charmhub.io/postgresql-k8s/docs/e-legacy-charm) should not be used simultaneously. | Remove modern or legacy relation. Choose one to use at a time. |
+| **blocked** | Please choose one endpoint to use. No need to relate all of them simultaneously! | [The modern / legacy interfaces](/explanation/legacy-charm) should not be used simultaneously. | Remove modern or legacy relation. Choose one to use at a time. |
 | **error** | any | An unhanded internal error happened | Read the message hint. Execute `juju resolve <error_unit/0>` after addressing the root of the error state |
 | **terminated** | any | The unit is gone and will be cleaned by Juju soon | No actions possible |
 | **unknown** | any | Juju doesn't know the charm app/unit status. Possible reason: K8s charm termination in progress. | Manual investigation required if status is permanent |

@@ -6,7 +6,7 @@
 
 ## Juju K8s concept
 
-The charm design leverages the [sidecar](https://kubernetes.io/blog/2015/06/the-distributed-system-toolkit-patterns/#example-1-sidecar-containers) pattern to allow multiple containers in each pod with [Pebble](https://juju.is/docs/sdk/pebble) running as the workload container’s entrypoint.
+The charm design leverages the [sidecar](https://kubernetes.io/blog/2015/06/the-distributed-system-toolkit-patterns/#example-1-sidecar-containers) pattern to allow multiple containers in each pod with [Pebble](https://documentation.ubuntu.com/juju/3.6/reference/pebble/) running as the workload container’s entrypoint.
 
 Pebble is a lightweight, API-driven process supervisor that is responsible for configuring processes to run in a container and controlling those processes throughout the workload lifecycle.
 
@@ -28,11 +28,11 @@ And if you run `kubectl describe pod postgresql-k8s-0`, all the containers will 
 
 ## HLD (High Level Design)
 
-The Charmed PostgreSQL K8s (`workload` container) based on `postgresql-image` resource defined in the [charm metadata.yaml](https://github.com/canonical/postgresql-k8s-operator/blob/main/metadata.yaml). It is an official Canonical [charmed-postgresql](https://github.com/canonical/charmed-postgresql-rock) [OCI/Rock](https://ubuntu.com/server/docs/rock-images/introduction) image, which is recursively based on the Canonical [`charmed-postgresql` snap].
+The Charmed PostgreSQL K8s (`workload` container) based on `postgresql-image` resource defined in the [charm metadata.yaml](https://github.com/canonical/postgresql-k8s-operator/blob/main/metadata.yaml). It is an official Canonical [charmed-postgresql](https://github.com/canonical/charmed-postgresql-rock) [OCI/Rock](https://documentation.ubuntu.com/rockcraft/en/latest/explanation/rockcraft/) image, which is based on the Canonical [`charmed-postgresql` snap].
 
-[Charmcraft](https://juju.is/docs/sdk/install-charmcraft) uploads an image as a [charm resource](https://charmhub.io/postgresql-k8s/resources/postgresql-image) to [Charmhub](https://charmhub.io/postgresql-k8s) during the [publishing](https://github.com/canonical/postgresql-k8s-operator/blob/main/.github/workflows/release.yaml), as described in the [Juju SDK How-to guides](https://juju.is/docs/sdk/publishing).
+[Charmcraft](https://canonical-charmcraft.readthedocs-hosted.com/stable/) uploads an image as a [charm resource](https://charmhub.io/postgresql-k8s/resources/postgresql-image) to [Charmhub](https://charmhub.io/postgresql-k8s) during the [publishing](https://github.com/canonical/postgresql-k8s-operator/blob/main/.github/workflows/release.yaml).
 
-The charm supports Juju deploymed to all Kubernetes environments: [MicroK8s](https://microk8s.io/), [Charmed Kubernetes](https://ubuntu.com/kubernetes/charmed-k8s), [GKE](https://charmhub.io/postgresql-k8s/docs/h-deploy-gke), [Amazon EKS](https://aws.amazon.com/eks/), ...
+The charm supports Juju deployment on all Kubernetes environments: [MicroK8s](https://microk8s.io/), [Charmed Kubernetes](https://ubuntu.com/kubernetes/charmed-k8s), [GKE](/how-to/deploy/gke), [Amazon EKS](/how-to/deploy/aks)...
 
 The OCI/Rock ships the following components:
 
@@ -112,29 +112,28 @@ Please check the charm state machines displayed on [workflow diagrams](/explanat
 
 <!--- TODO: Describe all possible installations? Cross-model/controller? --->
 
-### Juju Events
+### Juju events
 
-Accordingly to the [Juju SDK](https://juju.is/docs/sdk/event): “an event is a data structure that encapsulates part of the execution context of a charm”.
+An event is a data structure that encapsulates part of the execution context of a charm.
 
 For this charm, the following events are observed:
 
-1. [postgresql_pebble_ready](https://juju.is/docs/sdk/container-name-pebble-ready-event): informs charm about the availability of the rock "charmed-postgresql"-based `workload` K8s container. Also performs basic preparations to bootstrap the cluster on the first leader (or join the already configured cluster). 
-2. [leader-elected](https://juju.is/docs/sdk/leader-elected-event): generate all the secrets to bootstrap the cluster.
-5. [config_changed](https://juju.is/docs/sdk/config-changed-event): usually fired in response to a configuration change using the GUI or CLI. Create and set default cluster and cluster-set names in the peer relation databag (on the leader only).
-6. [update-status](https://juju.is/docs/sdk/update-status-event): Takes care of workload health checks.
+1. [postgresql_pebble_ready](https://documentation.ubuntu.com/juju/3.6/reference/hook/#container-pebble-ready): informs charm about the availability of the rock "charmed-postgresql"-based `workload` K8s container. Also performs basic preparations to bootstrap the cluster on the first leader (or join the already configured cluster). 
+2. [leader-elected](https://documentation.ubuntu.com/juju/3.6/reference/hook/#leader-elected): generate all the secrets to bootstrap the cluster.
+5. [config_changed](https://documentation.ubuntu.com/juju/3.6/reference/hook/#config-changed): usually fired in response to a configuration change using the GUI or CLI. Create and set default cluster and cluster-set names in the peer relation databag (on the leader only).
+6. [update-status](https://documentation.ubuntu.com/juju/3.6/reference/hook/#update-status): Takes care of workload health checks.
 <!--- 7. database_storage_detaching: TODO: ops? event?
-8. TODO: any other events? relation_joined/changed/created/broken
+1. TODO: any other events? relation_joined/changed/created/broken
 --->
 
 ### Charm Code Overview
 
 The "[src/charm.py](https://github.com/canonical/postgresql-k8s-operator/blob/main/src/charm.py)" is the default entry point for a charm and has the `PostgresqlOperatorCharm` Python class which inherits from CharmBase.
 
-CharmBase is the base class from which all Charms are formed, defined by [Ops](https://juju.is/docs/sdk/ops) (Python framework for developing charms). See more information in [Charm](https://juju.is/docs/sdk/constructs#charm).
-
+CharmBase is the base class from which all Charms are formed, defined by [Ops](https://ops.readthedocs.io/en/latest/index.html) (Python framework for developing charms).
 The `__init__` method guarantees that the charm observes all events relevant to its operation and handles them.
 
-The VM and K8s charm flavors shares the codebase via [charm libraries](https://juju.is/docs/sdk/libraries) in [lib/charms/postgresql_k8s/v0/](https://github.com/canonical/postgresql-k8s-operator/blob/main/lib/charms/postgresql_k8s/v0/postgresql.py) (of K8s flavor of the charm!):
+The VM and K8s charm flavors shares the codebase via charm libraries in [lib/charms/postgresql_k8s/v0/](https://github.com/canonical/postgresql-k8s-operator/blob/main/lib/charms/postgresql_k8s/v0/postgresql.py) (of K8s flavor of the charm!):
 ```
 > charmcraft list-lib postgresql-k8s                                                                                                                                                                                                               
 Library name    API    Patch                                                                                                                                                                                                                          
