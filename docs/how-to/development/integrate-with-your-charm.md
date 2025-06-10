@@ -31,10 +31,10 @@ Legacy charm details are described [here](/explanation/legacy-charm).
 **Does the requirer need to set anything in relation data?**
 >It depends on the interface. Check the `postgresql_client` [interface requirements](https://github.com/canonical/charm-relation-interfaces/blob/main/interfaces/postgresql_client/v0/README.md).
 
-**Is there a charm library available, or does my charm need to compile the postgresql relation data on its own?**
+**Is there a charm library available, or does my charm need to compile the PostgreSQL relation data on its own?**
 >Yes, the library is available: [data-platform-libs](https://github.com/canonical/data-platform-libs). The integration is trivial: [example](https://github.com/nextcloud-charmers/nextcloud-charms/pull/78).
 
-**How do I obtain the database url/uri?**
+**How do I obtain the database URL/URI?**
 >This feature is [planned](https://warthogs.atlassian.net/browse/DPE-2278) but currently missing.
 >
 >Meanwhile, use [this](https://github.com/nextcloud-charmers/nextcloud-charms/blob/91f9eebb4d40eaaff9c2f7513f66980df75c2a3b/operator-nextcloud/src/charm.py#L610-L631) example or refer to the function below.

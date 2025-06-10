@@ -54,7 +54,7 @@ juju consume <k8s_cos_controller>:admin/cos.prometheus
 ```
 ## Deploy and integrate Grafana
 
-First, deploy [grafana-agent-k8s](https://charmhub.io/grafana-agent-k8s):
+First, deploy [`grafana-agent-k8s`](https://charmhub.io/grafana-agent-k8s):
 
 ```text
 juju deploy grafana-agent-k8s --trust

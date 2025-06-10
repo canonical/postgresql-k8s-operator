@@ -60,7 +60,7 @@ A common error message is: `cannot deploy application "postgresql": unknown opti
 
 ## Config options supported by modern charm
 
-The legacy charm config options were not moved to the modern charm due to no need. The modern charm applies the best possible configuration automatically. Feel free to [contact us](/reference/contacts) about the DB tuning/config options.
+The legacy charm configuration options were not moved to the modern charm due to no need. The modern charm applies the best possible configuration automatically. Feel free to [contact us](/reference/contacts) about the DB tuning/config options.
 
 ## Extensions supported by modern charm
 

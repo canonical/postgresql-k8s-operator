@@ -16,7 +16,7 @@ The charm supports several Juju releases from [2.9 LTS](https://documentation.ub
 | [![3.4]](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-4) | `3.4.3+` | [280]+  | Know Juju issues with previous minor versions |
 | [![3.3]](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-3) | `3.3.0+` | from [177] to [193]  | No known issues |
 | [![3.2]](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-2) | `3.2.0+` | from [177] to [193] | No known issues |
-| [![3.1]](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-1) | `3.1.7+` | from [177] to [193]| Juju secrets were stabilized in `3.1.7` |
+| [![3.1]](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-1) | `3.1.7+` | from [177] to [193]| Juju secrets were stabilised in `3.1.7` |
 | [![2.9 LTS]](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-2-9) | `2.9.49+` | [73]+ |
 |  | `2.9.32+` | [73] to [193] | No tests for older Juju versions. |
 
@@ -30,14 +30,14 @@ The charm supports several Juju releases from [2.9 LTS](https://documentation.ub
 - 8GB of RAM.
 - 2 CPU threads.
 - At least 20GB of available storage.
-- Access to the internet for downloading the required OCI/ROCKs and charms.
+- Access to the internet for downloading the required OCI/rocks and charms.
 
 ### Supported architectures
 The charm is based on the [charmed-postgresql snap](https://snapcraft.io/charmed-postgresql). It currently supports:
 * `amd64`
 * `arm64` (from revision `211+`)
 
-The charm is based on the [ROCK OCI](https://github.com/canonical/charmed-postgresql-rock) named [`charmed-postgresql`](https://github.com/canonical/charmed-postgresql-rock/pkgs/container/charmed-postgresql).
+The charm is based on the [OCI/rock](https://github.com/canonical/charmed-postgresql-rock) named [`charmed-postgresql`](https://github.com/canonical/charmed-postgresql-rock/pkgs/container/charmed-postgresql).
 
 [Contact us](/reference/contacts) if you are interested in new architectures!
 

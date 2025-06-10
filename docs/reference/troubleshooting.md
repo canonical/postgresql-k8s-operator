@@ -6,11 +6,12 @@ Before anything, always run `juju status` to check the [list of charm statuses](
 
 Otherwise, this reference goes over how to troubleshoot this charm via:
 
-- [`juju` logs](#juju-logs)
-- [`kubectl`](#kubectl)
-- The [`charm` container](#charm-container)
-- The [`postgresql` workload container](#postgresql-workload-container)
-- [Installing extra software](#install-extra-software)
+- [Troubleshooting](#troubleshooting)
+  - [Juju logs](#juju-logs)
+  - [`kubectl`](#kubectl)
+  - [Charm container](#charm-container)
+  - [`postgresql` workload container](#postgresql-workload-container)
+  - [Install extra software](#install-extra-software)
 
 ```{caution}
 At the moment, there is no support for [pausing an operator](https://warthogs.atlassian.net/browse/DPE-2545).
@@ -45,7 +46,7 @@ The Patroni/PostgreSQL logs are located in `workload` container:
 -rw-r--r-- 1 postgres postgres 23863 Sep 15 13:10 patroni.log
 -rw------- 1 postgres postgres  2215 Sep 15 12:57 postgresql.log
 ```
-If backups are enabled, Pgbackrest logs can also be found in the `workload` container:
+If backups are enabled, PgBackRest logs can also be found in the `workload` container:
 ```text
 > ls -la /var/log/pgbackrest/
 -rw-r----- 1 postgres postgres 2949 Sep 18 10:42 all-server.log

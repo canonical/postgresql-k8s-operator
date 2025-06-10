@@ -5,7 +5,7 @@ This guide shows how to enable a plugin/extension for an application charm that 
 
 ## Enable plugin/extension
 
-Enable the plugin/extension by setting `True` as the value of its respective config option, like in the following example:
+Enable the plugin/extension by setting `True` as the value of its respective configuration option, like in the following example:
 
 ```text
 juju config postgresql-k8s plugin_<plugin name>_enable=True

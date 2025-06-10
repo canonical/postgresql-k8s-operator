@@ -12,7 +12,7 @@ juju run postgresql-k8s/leader get-password
 
 ## Set password
 
-To change the operator's password to a new, randomized password:
+To change the operator's password to a new, randomised password:
 ```text
 juju run postgresql-k8s/leader set-password
 ```

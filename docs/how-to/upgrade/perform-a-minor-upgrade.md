@@ -45,7 +45,7 @@ This will ensure minimal service disruption, if any.
 ## Step 1: Collect
 
 ```{note}
-This step is only valid when deploying from [charmhub](https://charmhub.io/). 
+This step is only valid when deploying from [Charmhub](https://charmhub.io/). 
 
 If a [local charm](https://documentation.ubuntu.com/juju/3.6/howto/manage-charms/#deploy-a-charm-bundle) is deployed (revision is small, e.g. 0-10), make sure the proper/current local revision of the `.charm` file is available BEFORE going further. You might need it for rollback.
 ```
@@ -89,7 +89,7 @@ juju run postgresql-k8s/leader pre-upgrade-check
 
 Make sure there are no errors in the Juju output.
 
-This action will configure the charm to minimize the amount of primary switchover, among other preparations for the upgrade process. After successful execution, the charm is ready to be upgraded.
+This action will configure the charm to minimise the amount of primary switchover, among other preparations for the upgrade process. After successful execution, the charm is ready to be upgraded.
 
 ## Step 4: Upgrade
 

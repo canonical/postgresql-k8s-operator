@@ -31,7 +31,7 @@ juju run postgresql-k8s/leader pre-upgrade-check
 
 ## Step 2: Rollback
 
-When using a charm from charmhub:
+When using a charm from Charmhub:
 
 ```text
 juju refresh postgresql-k8s --revision=88

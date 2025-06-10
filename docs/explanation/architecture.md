@@ -39,12 +39,12 @@ The OCI/Rock ships the following components:
 * PostgreSQL Community Edition (based on [`charmed-postgresql` snap]) 
 * Patroni (based on [`charmed-postgresql` snap]) 
 * PgBouncer (based on [`charmed-postgresql` snap]) 
-* pgBackRest (based on [`charmed-postgresql` snap]) 
+* PgBackRest (based on [`charmed-postgresql` snap]) 
 * Prometheus PostgreSQL Exporter (based on [`charmed-postgresql` snap]) 
 * Prometheus PgBouncer Exporter (based on [`charmed-postgresql` snap]) 
 * Prometheus Grafana dashboards and Loki alert rules are part of the charm revision (and missing in SNAP).
 
-SNAP-based rock images guarantee the same components versions and functionality between VM and K8s charm flavors.
+SNAP-based rock images guarantee the same components versions and functionality between VM and K8s charm flavours.
 
 Pebble runs layers of all the currently enabled services, e.g. monitoring, backups, etc: 
 ```text
@@ -84,7 +84,7 @@ The rock "charmed-postgresql" also ships list of tools used by charm:
 
 ### Data Integrator
 
-[Data Integrator](https://charmhub.io/data-integrator) charm is a solution to request DB credentials for non-native Juju applications. Not all applications implement a data_interfaces relation but allow setting credentials via config. Also, some of the applications are run outside of juju. This integrator charm allows receiving credentials which can be passed into application config directly without implementing juju-native relation.
+[Data Integrator](https://charmhub.io/data-integrator) charm is a solution to request DB credentials for non-native Juju applications. Not all applications implement a data_interfaces relation but allow setting credentials via config. Also, some of the applications are run outside of juju. This integrator charm allows receiving credentials which can be passed into application configuration directly without implementing juju-native relation.
 
 ### PostgreSQL Test App
 
@@ -96,7 +96,7 @@ GLAuth is a secure, easy-to-use and open-sourced LDAP server which provides capa
 
 ### Grafana
 
-Grafana is an open-source visualization tools that allows to query, visualize, alert on, and visualize metrics from mixed datasources in configurable dashboards for observability. This charms is shipped with its own Grafana dashboard and supports integration with the [Grafana Operator](https://charmhub.io/grafana-k8s) to simplify observability. Please follow [COS Monitoring](/how-to/monitoring-cos/enable-monitoring) setup.
+Grafana is an open-source visualisation tools that allows to query, visualise, alert on, and visualise metrics from mixed data sources in configurable dashboards for observability. This charms is shipped with its own Grafana dashboard and supports integration with the [Grafana Operator](https://charmhub.io/grafana-k8s) to simplify observability. Please follow [COS Monitoring](/how-to/monitoring-cos/enable-monitoring) setup.
 
 ### Loki
 
@@ -108,7 +108,7 @@ Prometheus is an open-source systems monitoring and alerting toolkit with a dime
 
 ## LLD (Low Level Design)
 
-Please check the charm state machines displayed on [workflow diagrams](/explanation/flowcharts/charm). The low-level logic is mostly common for both VM and K8s charm flavors.
+Please check the charm state machines displayed on [workflow diagrams](/explanation/flowcharts/charm). The low-level logic is mostly common for both VM and K8s charm flavours.
 
 <!--- TODO: Describe all possible installations? Cross-model/controller? --->
 
@@ -133,7 +133,7 @@ The "[src/charm.py](https://github.com/canonical/postgresql-k8s-operator/blob/ma
 CharmBase is the base class from which all Charms are formed, defined by [Ops](https://ops.readthedocs.io/en/latest/index.html) (Python framework for developing charms).
 The `__init__` method guarantees that the charm observes all events relevant to its operation and handles them.
 
-The VM and K8s charm flavors shares the codebase via charm libraries in [lib/charms/postgresql_k8s/v0/](https://github.com/canonical/postgresql-k8s-operator/blob/main/lib/charms/postgresql_k8s/v0/postgresql.py) (of K8s flavor of the charm!):
+The VM and K8s charm flavours shares the codebase via charm libraries in [lib/charms/postgresql_k8s/v0/](https://github.com/canonical/postgresql-k8s-operator/blob/main/lib/charms/postgresql_k8s/v0/postgresql.py) (of K8s flavour of the charm!):
 ```
 > charmcraft list-lib postgresql-k8s                                                                                                                                                                                                               
 Library name    API    Patch                                                                                                                                                                                                                          
