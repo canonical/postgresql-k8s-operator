@@ -3,7 +3,7 @@
 ## What qualifies as a security issue
 
 Credentials leakage, outdated dependencies with known vulnerabilities, and
-other issues that could lead to unprivileged or unauthorized access to the
+other issues that could lead to unprivileged or unauthorised access to the
 database or the system.
 
 ## Reporting a vulnerability
