@@ -7,7 +7,7 @@ The following are the minimum software and hardware requirements to run Charmed 
 
 ### Juju
 
-The charm supports several Juju releases from [2.9 LTS](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-2-9) onwards. The table below shows which minor versions of each major Juju release are supported by Charmed PostgreSQL.
+The charm supports several Juju releases, starting from [2.9 LTS](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-2-9). The table below shows which minor versions of each major Juju release are supported by Charmed PostgreSQL.
 
 | Juju major release | Supported minor versions | Compatible charm revisions |Comment |
 |:--------|:-----|:-----|:-----|
