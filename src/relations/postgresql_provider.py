@@ -9,7 +9,7 @@ from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProvides,
     DatabaseRequestedEvent,
 )
-from charms.postgresql_k8s.v0.postgresql import (
+from charms.postgresql_k8s.v1.postgresql import (
     ACCESS_GROUP_RELATION,
     ACCESS_GROUPS,
     INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE,
@@ -161,7 +161,7 @@ class PostgreSQLProvider(Object):
             self.charm.unit.status = BlockedStatus(
                 e.message
                 if issubclass(type(e), PostgreSQLCreateUserError) and e.message is not None
-                else f"Failed to initialize {self.relation_name} relation"
+                else f"Failed to initialize relation {self.relation_name}"
             )
 
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
@@ -321,6 +321,11 @@ class PostgreSQLProvider(Object):
             self.charm._has_blocked_status
             and self.charm.unit.status.message == INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE
             and not self.check_for_invalid_extra_user_roles(relation.id)
+        ):
+            self.charm.unit.status = ActiveStatus()
+        if (
+            self.charm.is_blocked
+            and "Failed to initialize relation" in self.charm.unit.status.message
         ):
             self.charm.unit.status = ActiveStatus()
 
