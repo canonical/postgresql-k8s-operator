@@ -4,7 +4,7 @@ Charmed PostgreSQL K8s can be integrated with any charmed application that suppo
 
 ## Check supported interfaces
 
-First, we recommend that you check [the supported interfaces](/explanation/interfaces-endpoints) of the current charm. You have options to use modern (preferred) or legacy interfaces. 
+First, we recommend that you check [the supported interfaces](/explanation/interfaces-and-endpoints) of the current charm. You have options to use modern (preferred) or legacy interfaces. 
 
 Most existing charms currently use the [ops-lib-pgsql](https://github.com/canonical/ops-lib-pgsql) interface (legacy). For new charms, **Canonical recommends using [data-platform-libs](https://github.com/canonical/data-platform-libs) instead.** 
 
