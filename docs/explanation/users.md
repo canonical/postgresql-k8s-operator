@@ -111,7 +111,7 @@ When an application charm requests a new user through the relation/integration i
 ```{note}
 `extra-user-roles` is only supported by the modern interface `postgresql_client`. It is not supported for the legacy `pgsql` interface. R
 
-Read more about the supported charm interfaces in [](/explanation/interfaces-endpoints).
+Read more about the supported charm interfaces in [](/explanation/interfaces-and-endpoints).
 ```
 
 ## Identity users

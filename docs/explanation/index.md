@@ -26,7 +26,7 @@ Charm event flowcharts:
 <!-- Links -->
 
 [Architecture]: /explanation/architecture
-[Interfaces and endpoints]: /explanation/interfaces-endpoints
+[Interfaces and endpoints]: /explanation/interfaces-and-endpoints
 [Users]: /explanation/users
 [Logs]: /explanation/logs
 [Juju]: /explanation/juju
@@ -46,7 +46,7 @@ Charm event flowcharts:
 :hidden:
 
 Architecture <architecture>
-Interfaces and endpoints <interfaces-endpoints>
+Interfaces and endpoints <interfaces-and-endpoints>
 Juju <juju>
 Legacy charm <legacy-charm>
 Users <users>
