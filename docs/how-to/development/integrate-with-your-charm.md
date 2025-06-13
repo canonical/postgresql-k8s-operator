@@ -12,9 +12,9 @@ Legacy charm details are described [here](/explanation/legacy-charm).
 
 ## Integrate your charm with PostgreSQL
 
-**For an introduction** to the concepts of Juju integrations, see [Juju | Integration](https://juju.is/docs/juju/integration).
+**For an introduction** to the concepts of Juju integrations, see [Juju | Integration](https://documentation.ubuntu.com/juju/3.6/reference/relation/).
 
-**For a detailed tutorial** about integrating your charm with the PostgreSQL charm, refer to [Juju | Integrate your charm with PostgreSQL](https://juju.is/docs/sdk/integrate-your-charm-with-postgresql). 
+**For a detailed tutorial** about integrating your charm with the PostgreSQL charm, refer to [Juju | Integrate your charm with PostgreSQL](https://ops.readthedocs.io/en/latest/tutorial/from-zero-to-hero-write-your-first-kubernetes-charm/integrate-your-charm-with-postgresql.html). 
 
 **For some practical examples**, take a look at the following:
 * [postgresql-test-app](https://github.com/canonical/postgresql-test-app) GitHub repository
@@ -23,7 +23,7 @@ Legacy charm details are described [here](/explanation/legacy-charm).
 
 ## Troubleshooting & testing
 
-* To learn the basics of charm debugging, start with [Juju | How to debug a charm](https://juju.is/docs/sdk/debug-a-charm)
+* To learn the basics of charm debugging, start with [Juju | How to debug a charm](https://documentation.ubuntu.com/juju/3.6/howto/manage-charms/#debug-a-charm)
 * To troubleshoot PostgreSQL on K8s, check the [Troubleshooting](/reference/troubleshooting) reference
 * To test PostgreSQL and other charms, check the [Testing](/reference/software-testing) reference
 
@@ -31,10 +31,10 @@ Legacy charm details are described [here](/explanation/legacy-charm).
 **Does the requirer need to set anything in relation data?**
 >It depends on the interface. Check the `postgresql_client` [interface requirements](https://github.com/canonical/charm-relation-interfaces/blob/main/interfaces/postgresql_client/v0/README.md).
 
-**Is there a charm library available, or does my charm need to compile the postgresql relation data on its own?**
+**Is there a charm library available, or does my charm need to compile the PostgreSQL relation data on its own?**
 >Yes, the library is available: [data-platform-libs](https://github.com/canonical/data-platform-libs). The integration is trivial: [example](https://github.com/nextcloud-charmers/nextcloud-charms/pull/78).
 
-**How do I obtain the database url/uri?**
+**How do I obtain the database URL/URI?**
 >This feature is [planned](https://warthogs.atlassian.net/browse/DPE-2278) but currently missing.
 >
 >Meanwhile, use [this](https://github.com/nextcloud-charmers/nextcloud-charms/blob/91f9eebb4d40eaaff9c2f7513f66980df75c2a3b/operator-nextcloud/src/charm.py#L610-L631) example or refer to the function below.

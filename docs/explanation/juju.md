@@ -2,7 +2,7 @@
 
 [Juju](https://juju.is/) is an open source orchestration engine for software operators that enables the deployment, integration and lifecycle management of applications at any scale, on any infrastructure using charms.
 
-> See also: [Juju client documentation](https://juju.is/docs/juju), [Juju blog](https://ubuntu.com/blog/tag/juju)
+> See also: {{juju_documentation_url}}, [Juju blog](https://ubuntu.com/blog/tag/juju)
 
 ## Compatibility with PostgreSQL
 
@@ -26,7 +26,7 @@ In the context of this documentation, the pertinent changes are as follows:
 |`run`|`exec`|
 |`run-action --wait`|`run`|
 
-See the [Juju 3.0 release notes](https://juju.is/docs/juju/roadmap#juju-3-0-0---22-oct-2022) for the comprehensive list of changes.
+See the [Juju 3.0 release notes](https://juju.is/docs/juju/roadmap) for the comprehensive list of changes.
 
 Example substitutions:
 

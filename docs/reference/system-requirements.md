@@ -7,17 +7,17 @@ The following are the minimum software and hardware requirements to run Charmed 
 
 ### Juju
 
-The charm supports several Juju releases from [2.9 LTS](https://juju.is/docs/juju/roadmap#juju-juju-29) onwards. The table below shows which minor versions of each major Juju release are supported by Charmed PostgreSQL.
+The charm supports several Juju releases, starting from [2.9 LTS](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-2-9). The table below shows which minor versions of each major Juju release are supported by Charmed PostgreSQL.
 
 | Juju major release | Supported minor versions | Compatible charm revisions |Comment |
 |:--------|:-----|:-----|:-----|
 | ![3.6 LTS] | `3.6.1+` | [444/445]+ | Recommended for production. |
-| [![3.5]](https://juju.is/docs/juju/roadmap#juju-juju-35) | `3.5.1+` | [280]+  | [Known Juju issue](https://bugs.launchpad.net/juju/+bug/2066517) in `3.5.0` |
-| [![3.4]](https://juju.is/docs/juju/roadmap#juju-juju-34) | `3.4.3+` | [280]+  | Know Juju issues with previous minor versions |
-| [![3.3]](https://juju.is/docs/juju/roadmap#juju-juju-33) | `3.3.0+` | from [177] to [193]  | No known issues |
-| [![3.2]](https://juju.is/docs/juju/roadmap#juju-juju-32) | `3.2.0+` | from [177] to [193] | No known issues |
-| [![3.1]](https://juju.is/docs/juju/roadmap#juju-juju-31) | `3.1.7+` | from [177] to [193]| Juju secrets were stabilized in `3.1.7` |
-| [![2.9 LTS]](https://juju.is/docs/juju/roadmap#juju-juju-29) | `2.9.49+` | [73]+ |
+| [![3.5]](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-5) | `3.5.1+` | [280]+  | [Known Juju issue](https://bugs.launchpad.net/juju/+bug/2066517) in `3.5.0` |
+| [![3.4]](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-4) | `3.4.3+` | [280]+  | Know Juju issues with previous minor versions |
+| [![3.3]](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-3) | `3.3.0+` | from [177] to [193]  | No known issues |
+| [![3.2]](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-2) | `3.2.0+` | from [177] to [193] | No known issues |
+| [![3.1]](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-1) | `3.1.7+` | from [177] to [193]| Juju secrets were stabilised in `3.1.7` |
+| [![2.9 LTS]](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-2-9) | `2.9.49+` | [73]+ |
 |  | `2.9.32+` | [73] to [193] | No tests for older Juju versions. |
 
 ### Kubernetes
@@ -30,14 +30,14 @@ The charm supports several Juju releases from [2.9 LTS](https://juju.is/docs/juj
 - 8GB of RAM.
 - 2 CPU threads.
 - At least 20GB of available storage.
-- Access to the internet for downloading the required OCI/ROCKs and charms.
+- Access to the internet for downloading the required OCI/rocks and charms.
 
 ### Supported architectures
 The charm is based on the [charmed-postgresql snap](https://snapcraft.io/charmed-postgresql). It currently supports:
 * `amd64`
 * `arm64` (from revision `211+`)
 
-The charm is based on the [ROCK OCI](https://github.com/canonical/charmed-postgresql-rock) named [`charmed-postgresql`](https://github.com/canonical/charmed-postgresql-rock/pkgs/container/charmed-postgresql).
+The charm is based on the [OCI/rock](https://github.com/canonical/charmed-postgresql-rock) named [`charmed-postgresql`](https://github.com/canonical/charmed-postgresql-rock/pkgs/container/charmed-postgresql).
 
 [Contact us](/reference/contacts) if you are interested in new architectures!
 
@@ -59,9 +59,9 @@ The charm is based on the [ROCK OCI](https://github.com/canonical/charmed-postgr
 [3.6 LTS]: https://img.shields.io/badge/3.6_LTS-%23E95420?label=Juju
 
 <!-- LINKS -->
-[73]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/73
-[177]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/177
-[193]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/193
-[280]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/280
-[444/445]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/444
+[73]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev73
+[177]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev177
+[193]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev193
+[280]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev280
+[444/445]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev444
 

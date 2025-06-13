@@ -1,6 +1,6 @@
 # Relations flowcharts
 
-This reference documentation details the implementation of the `database-peers` peer relation. This is the peer relation for PostgreSQL, used to share user and config information from the leader unit to the follower units. The file implementing these relations can be found here: [src/relations/charm.py](https://github.com/canonical/postgresql-k8s-operator/blob/main/src/charm.py) (it should be moved to a file called `src/relations/peers.py` in the future).
+This reference documentation details the implementation of the `database-peers` peer relation. This is the peer relation for PostgreSQL, used to share user and configuration information from the leader unit to the follower units. The file implementing these relations can be found here: [src/relations/charm.py](https://github.com/canonical/postgresql-k8s-operator/blob/main/src/charm.py) (it should be moved to a file called `src/relations/peers.py` in the future).
 
 ## Expected interface
 

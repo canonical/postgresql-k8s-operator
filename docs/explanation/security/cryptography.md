@@ -9,7 +9,7 @@ Charmed PostgreSQL K8s and Charmed PgBouncer K8s operators use pinned versions o
 
 The rocks are OCI images derived from the respective snaps. Snaps package their workload along with the necessary dependencies and utilities required for the operators’ lifecycle. For more details, see the snaps content in the `snapcraft.yaml` file for [PostgreSQL](https://github.com/canonical/charmed-postgresql-snap/blob/14/edge/snap/snapcraft.yaml) and [PgBouncer](https://github.com/canonical/charmed-pgbouncer-snap/blob/1/edge/snap/snapcraft.yaml).
 
-Every artifact bundled into a snap is verified against its MD5, SHA256, or SHA512 checksum after download. The installation of certified snap into the rock is ensured by snap primitives that verify their squashfs filesystems images GPG signature. For more information on the snap verification process, refer to the [snapcraft.io documentation](https://snapcraft.io/docs/assertions).
+Every artifact bundled into a snap is verified against its MD5, SHA256, or SHA512 checksum after download. The installation of certified snap into the rock is ensured by snap primitives that verify their SquashFS filesystems images GPG signature. For more information on the snap verification process, refer to the [snapcraft.io documentation](https://snapcraft.io/docs/assertions).
 
 ## Sources verification
 
@@ -31,7 +31,7 @@ Charmed PostgreSQL K8s can be used to deploy a secure PostgreSQL cluster on K8s 
 * PgBouncer connections
 * External clients connections
 
-To set up a secure connection Charmed PostgreSQL K8s and Charmed PgBouncer K8s need to be integrated with TLS Certificate Provider charms, e.g. self-signed-certificates operator. Certificate Signing Requests (CSRs) are generated for every unit using the tls_certificates_interface library that uses the cryptography Python library to create X.509 compatible certificates. The CSR is signed by the TLS Certificate Provider, returned to the units, and stored in Juju secret. The relation also provides the CA certificate, which is loaded into Juju secret.
+To set up a secure connection Charmed PostgreSQL K8s and Charmed PgBouncer K8s need to be integrated with TLS Certificate Provider charms, e.g. self-signed-certificates operator. Certificate Signing Requests (CSRs) are generated for every unit using the `tls_certificates_interface` library that uses the cryptography Python library to create X.509 compatible certificates. The CSR is signed by the TLS Certificate Provider, returned to the units, and stored in Juju secret. The relation also provides the CA certificate, which is loaded into Juju secret.
 
 Encryption at rest is currently not supported, although it can be provided by the substrate (cloud or on-premises).
 

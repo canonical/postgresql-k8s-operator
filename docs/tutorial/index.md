@@ -188,7 +188,7 @@ You can see below the output for the list of databases. `postgres` is the defaul
 (3 rows)
 ```
 
-In order to execute queries, we should enter psql's interactive terminal by running the following command, again typing password when requested:
+In order to execute queries, we should enter `psql`'s interactive terminal by running the following command, again typing password when requested:
 
 ```text
  psql --host=10.1.110.80 --username=operator --password postgres
@@ -257,7 +257,7 @@ postgres=## SELECT * FROM mytable;
 (1 row)
 ```
 
-You can try multiple SQL commands inside this environment. Once you're ready, reconnect to the default postgres database and drop the sample database we created:
+You can try multiple SQL commands inside this environment. Once you're ready, reconnect to the default {spellexception}`postgres` database and drop the sample database we created:
 
 ```text
 postgres=## \c postgres
@@ -270,7 +270,7 @@ When you’re ready to leave the PostgreSQL shell, you can just type `exit`. Thi
 
 ## Scale your replicas
 
-The Charmed PostgreSQL VM operator uses a [PostgreSQL Patroni-based cluster](https://patroni.readthedocs.io/en/latest/) for scaling. It provides features such as automatic membership management, fault tolerance, and automatic failover. The charm uses PostgreSQL’s [synchronous replication](https://patroni.readthedocs.io/en/latest/replication_modes.html#postgresql-k8s-synchronous-replication) with Patroni to handle replication.
+The Charmed PostgreSQL operator uses a [PostgreSQL Patroni-based cluster](https://patroni.readthedocs.io/en/latest/) for scaling. It provides features such as automatic membership management, fault tolerance, and automatic failover. The charm uses PostgreSQL’s [synchronous replication](https://patroni.readthedocs.io/en/latest/replication_modes.html) with Patroni to handle replication.
 
 ```{caution}
 This tutorial hosts all replicas on the same machine. 
@@ -293,7 +293,7 @@ juju scale-application postgresql-k8s 3
 ```{note}
 Unlike machine models, Kubernetes models use `juju scale-application` instead of `juju add-unit` and `juju remove-unit`.
 
-For more information about juju's scaling logic for kubernetes, check [this post](https://discourse.charmhub.io/t/adding-removing-units-scale-application-command/153).
+For more information about Juju's scaling logic for Kubernetes, check [this post](https://discourse.charmhub.io/t/adding-removing-units-scale-application-command/153).
 ```
 
 You can now watch the scaling process in live using: `juju status --watch 1s`. It usually takes several minutes for new cluster members to be added. 
@@ -389,7 +389,7 @@ Learn more about managing user credentials in [](/how-to/manage-passwords) and [
 
 ## Integrate with other applications
 
-[Integrations](https://juju.is/docs/sdk/integration), known as "relations" in Juju 2.9, are the easiest way to create a user for PostgreSQL in Charmed PostgreSQL VM. 
+[Integrations](https://documentation.ubuntu.com/juju/3.6/reference/relation/), known as "relations", are the easiest way to create a user for PostgreSQL in Charmed PostgreSQL. 
 
 Integrations automatically create a username, password, and database for the desired user/application. The best practice is to connect to PostgreSQL via a specific user rather than the admin user.
 
@@ -625,7 +625,7 @@ The Charmed PostgreSQL K8s application is not using TLS anymore.
 
 In this tutorial we've successfully deployed PostgreSQL on MicroK8s, added and removed cluster members, added and removed database users, and enabled a layer of security with TLS.
 
-You may now keep your Charmed PostgreSQL VM deployment running and write to the database or remove it entirely using the steps in this page. 
+You may now keep your Charmed PostgreSQL deployment running and write to the database or remove it entirely using the steps in this page. 
 
 If you'd like to keep your environment for later, simply stop your VM with
 
@@ -653,7 +653,7 @@ multipass delete --purge my-vm
 - Check out our other other charm offerings, like [MySQL](https://charmhub.io/mysql-k8s) and [Kafka](https://charmhub.io/kafka-k8s?channel=edge).
 - Read about [High Availability Best Practices](https://canonical.com/blog/database-high-availability)
 - [Report](https://github.com/canonical/postgresql-k8s-operator/issues) any problems you encountered.
-- [Give us your feedback](https://chat.charmhub.io/charmhub/channels/data-platform).
+- [Give us your feedback](/reference/contacts).
 - [Contribute to the code base](https://github.com/canonical/postgresql-k8s-operator)
 
 <!--Links-->
