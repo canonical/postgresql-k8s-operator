@@ -4,6 +4,7 @@
 """Postgres client relation hooks & helpers."""
 
 import logging
+from datetime import datetime
 
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProvides,
@@ -18,9 +19,10 @@ from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQLDeleteUserError,
     PostgreSQLGetPostgreSQLVersionError,
 )
-from ops.charm import CharmBase, RelationBrokenEvent, RelationChangedEvent, RelationDepartedEvent
+from ops.charm import CharmBase, RelationBrokenEvent, RelationDepartedEvent
 from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, Relation
+from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from constants import (
     DATABASE_PORT,
@@ -55,19 +57,12 @@ class PostgreSQLProvider(Object):
         self.framework.observe(
             charm.on[self.relation_name].relation_broken, self._on_relation_broken
         )
-        self.framework.observe(
-            charm.on[self.relation_name].relation_changed,
-            self._on_relation_changed_event,
-        )
         self.charm = charm
 
         # Charm events defined in the database provides charm library.
         self.database_provides = DatabaseProvides(self.charm, relation_name=self.relation_name)
         self.framework.observe(
             self.database_provides.on.database_requested, self._on_database_requested
-        )
-        self.framework.observe(
-            charm.on[self.relation_name].relation_changed, self._on_relation_changed
         )
 
     @staticmethod
@@ -163,26 +158,19 @@ class PostgreSQLProvider(Object):
                 if issubclass(type(e), PostgreSQLCreateUserError) and e.message is not None
                 else f"Failed to initialize {self.relation_name} relation"
             )
-
-    def _on_relation_changed(self, event: RelationChangedEvent) -> None:
-        # Check for some conditions before trying to access the PostgreSQL instance.
-        if not self.charm.is_cluster_initialised:
-            logger.debug(
-                "Deferring on_relation_changed: Cluster must be initialized before configuration can be updated with relation users"
-            )
-            event.defer()
             return
 
-        if (
-            not self.charm._patroni.member_started
-            or f"relation_id_{event.relation.id}"
-            not in self.charm.postgresql.list_users(current_host=True)
-        ):
-            logger.debug("Deferring on_relation_changed: user was not created yet")
-            event.defer()
-            return
-
-        self.charm.update_config()
+        # Try to wait for pg_hba trigger
+        try:
+            for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(1)):
+                with attempt:
+                    if not self.charm.postgresql.is_user_in_hba(user):
+                        raise Exception("pg_hba not ready")
+            self.charm.unit_peer_data.update({
+                "pg_hba_needs_update_timestamp": str(datetime.now())
+            })
+        except RetryError:
+            logger.warning("database requested: Unable to check pg_hba rule update")
 
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Set a flag to avoid deleting database users when not wanted."""
@@ -301,11 +289,6 @@ class PostgreSQLProvider(Object):
                 self.database_provides.set_tls(relation.id, tls)
                 self.database_provides.set_tls_ca(relation.id, ca)
 
-    def _check_multiple_endpoints(self) -> bool:
-        """Checks if there are relations with other endpoints."""
-        relation_names = {relation.name for relation in self.charm.client_relations}
-        return "database" in relation_names and len(relation_names) > 1
-
     def _update_unit_status_on_blocking_endpoint_simultaneously(self):
         """Clean up Blocked status if this is due related of multiple endpoints."""
         if (
@@ -325,16 +308,6 @@ class PostgreSQLProvider(Object):
             self.charm.unit.status = ActiveStatus()
 
         self._update_unit_status_on_blocking_endpoint_simultaneously()
-
-    def _on_relation_changed_event(self, event: RelationChangedEvent) -> None:
-        """Event emitted when the relation has changed."""
-        # Leader only
-        if not self.charm.unit.is_leader():
-            return
-
-        if self._check_multiple_endpoints():
-            self.charm.unit.status = BlockedStatus(ENDPOINT_SIMULTANEOUSLY_BLOCKING_MESSAGE)
-            return
 
     def check_for_invalid_extra_user_roles(self, relation_id: int) -> bool:
         """Checks if there are relations with invalid extra user roles.
