@@ -24,10 +24,7 @@ from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, Relation
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
-from constants import (
-    DATABASE_PORT,
-    ENDPOINT_SIMULTANEOUSLY_BLOCKING_MESSAGE,
-)
+from constants import DATABASE_PORT
 from utils import new_password
 
 logger = logging.getLogger(__name__)
@@ -289,15 +286,6 @@ class PostgreSQLProvider(Object):
                 self.database_provides.set_tls(relation.id, tls)
                 self.database_provides.set_tls_ca(relation.id, ca)
 
-    def _update_unit_status_on_blocking_endpoint_simultaneously(self):
-        """Clean up Blocked status if this is due related of multiple endpoints."""
-        if (
-            self.charm._has_blocked_status
-            and self.charm.unit.status.message == ENDPOINT_SIMULTANEOUSLY_BLOCKING_MESSAGE
-            and not self._check_multiple_endpoints()
-        ):
-            self.charm.unit.status = ActiveStatus()
-
     def _update_unit_status(self, relation: Relation) -> None:
         """# Clean up Blocked status if it's due to extensions request."""
         if (
@@ -306,8 +294,6 @@ class PostgreSQLProvider(Object):
             and not self.check_for_invalid_extra_user_roles(relation.id)
         ):
             self.charm.unit.status = ActiveStatus()
-
-        self._update_unit_status_on_blocking_endpoint_simultaneously()
 
     def check_for_invalid_extra_user_roles(self, relation_id: int) -> bool:
         """Checks if there are relations with invalid extra user roles.
