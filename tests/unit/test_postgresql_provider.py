@@ -76,9 +76,6 @@ def request_database(_harness):
 def test_on_database_requested(harness):
     with (
         patch("charm.PostgresqlOperatorCharm.update_config"),
-        patch(
-            "relations.postgresql_provider.PostgreSQLProvider._on_relation_changed"
-        ) as _on_relation_changed,
         patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock,
         patch.object(EventBase, "defer") as _defer,
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
