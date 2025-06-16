@@ -57,6 +57,10 @@ class PostgreSQLProvider(Object):
         self.framework.observe(
             charm.on[self.relation_name].relation_broken, self._on_relation_broken
         )
+        self.framework.observe(
+            charm.on[self.relation_name].relation_changed,
+            self._on_relation_changed_event,
+        )
         self.charm = charm
 
         # Charm events defined in the database provides charm library.
