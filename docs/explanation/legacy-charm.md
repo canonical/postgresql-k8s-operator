@@ -5,7 +5,7 @@ There are [two types of charms](https://documentation.ubuntu.com/juju/3.6/refere
 1. [Reactive](https://documentation.ubuntu.com/juju/3.6/reference/charm/#reactive)  charm in the channel `latest/stable` (called `legacy`)
 2. [Ops-based](https://documentation.ubuntu.com/juju/3.6/reference/charm/#ops) charm in the channel `14/stable` (called `modern`)
 
-The legacy charm provided endpoints `db` and `db-admin` (for the interface `pgsql`). The modern charm provides old endpoints as well + new endpoint `database` (for the interface `postgresql_client`). Read more details about the available [endpoints/interfaces](/explanation/interfaces-endpoints).
+The legacy charm provided endpoints `db` and `db-admin` (for the interface `pgsql`). The modern charm provides old endpoints as well + new endpoint `database` (for the interface `postgresql_client`). Read more details about the available [endpoints/interfaces](/explanation/interfaces-and-endpoints).
 
 ```{note}
 Choose one endpoint to use, rather than relating both simultaneously.
