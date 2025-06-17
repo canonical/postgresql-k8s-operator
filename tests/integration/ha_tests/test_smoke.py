@@ -2,7 +2,6 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-import asyncio
 import logging
 import os
 
@@ -213,7 +212,7 @@ async def test_app_resources_conflicts(ops_test: OpsTest, charm):
             await ops_test.model.wait_for_idle(
                 apps=[DUP_DATABASE_APP_NAME], timeout=500, status="blocked"
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.info("Application is not in blocked state. Checking logs...")
 
         # Since application have postgresql db in storage from external application it should not be able to connect due to new password

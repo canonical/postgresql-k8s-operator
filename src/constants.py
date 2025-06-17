@@ -54,8 +54,4 @@ TRACING_PROTOCOL = "otlp_http"
 
 DATABASE = "database"
 
-ENDPOINT_SIMULTANEOUSLY_BLOCKING_MESSAGE = (
-    "Please choose one endpoint to use. No need to relate all of them simultaneously!"
-)
-
 PGBACKREST_LOGROTATE_FILE = "/etc/logrotate.d/pgbackrest.logrotate"

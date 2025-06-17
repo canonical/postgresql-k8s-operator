@@ -5,6 +5,7 @@
 
 import json
 import logging
+from typing import override
 
 from charms.data_platform_libs.v0.upgrade import (
     ClusterNotReadyError,
@@ -20,7 +21,6 @@ from ops.charm import UpgradeCharmEvent, WorkloadEvent
 from ops.model import BlockedStatus, MaintenanceStatus, RelationDataContent
 from pydantic import BaseModel
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
-from typing_extensions import override
 
 from constants import APP_SCOPE, MONITORING_PASSWORD_KEY, MONITORING_USER, PATRONI_PASSWORD_KEY
 from patroni import SwitchoverFailedError
