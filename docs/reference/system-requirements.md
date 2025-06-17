@@ -23,14 +23,14 @@ Charmed PostgreSQL 16 supports several Juju releases from 3.6 LTS onwards. The t
 - 8GB of RAM.
 - 2 CPU threads.
 - At least 20GB of available storage.
-- Access to the internet for downloading the required OCI/ROCKs and charms.
+- Access to the internet for downloading the required OCI/rocks and charms.
 
 ### Supported architectures
 The charm is based on the [charmed-postgresql snap](https://snapcraft.io/charmed-postgresql). It currently supports:
 * `amd64`
 * `arm64` (from revision `211+`)
 
-The charm is based on the [ROCK OCI](https://github.com/canonical/charmed-postgresql-rock) named [`charmed-postgresql`](https://github.com/canonical/charmed-postgresql-rock/pkgs/container/charmed-postgresql).
+The charm is based on the [OCI/rock](https://github.com/canonical/charmed-postgresql-rock) named [`charmed-postgresql`](https://github.com/canonical/charmed-postgresql-rock/pkgs/container/charmed-postgresql).
 
 [Contact us](/reference/contacts) if you are interested in new architectures!
 

@@ -1,8 +1,8 @@
 # How to deploy on Canonical Kubernetes
 
-[Canonical Kubernetes](https://ubuntu.com/kubernetes) is a Kubernetes service built on Ubuntu and optimized for most major public clouds. 
+[Canonical Kubernetes](https://ubuntu.com/kubernetes) is a Kubernetes service built on Ubuntu and optimised for most major public clouds. 
 
-The following instructions are a summarized version of the steps for installing Canonical K8s. For more thorough instructions and details, see the official Canonical Kubernetes documentation: [Install Canonical Kubernetes from a snap](https://documentation.ubuntu.com/canonical-kubernetes/latest/src/snap/howto/install/snap/).
+The following instructions are a summarised version of the steps for installing Canonical K8s. For more thorough instructions and details, see the official Canonical Kubernetes documentation: [Install Canonical Kubernetes from a snap](https://documentation.ubuntu.com/canonical-kubernetes/latest/src/snap/howto/install/snap/).
 
 ## Prerequisites
 

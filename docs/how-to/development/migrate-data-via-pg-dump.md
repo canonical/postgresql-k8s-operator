@@ -33,7 +33,7 @@ Always test migration in a safe environment before performing it in production!
 ## Prerequisites
 
 -  **[Your application is compatible](/explanation/legacy-charm) with Charmed PostgreSQL K8s** 
-- A client machine with access to thedeployed legacy charm
+- A client machine with access to the deployed legacy charm
 - `juju v.2.9` or later  (check [Juju 3.0 Release Notes](https://juju.is/docs/juju/roadmap#juju-3-0-0---22-oct-2022) for more information about key differences)
 - Enough storage in the cluster to support backup/restore of the databases.
 

@@ -32,7 +32,7 @@ The Charmed PostgreSQL K8s (`workload` container) based on `postgresql-image` re
 
 [Charmcraft](https://juju.is/docs/sdk/install-charmcraft) uploads an image as a [charm resource](https://charmhub.io/postgresql-k8s/resources/postgresql-image) to [Charmhub](https://charmhub.io/postgresql-k8s) during the [publishing](https://github.com/canonical/postgresql-k8s-operator/blob/main/.github/workflows/release.yaml), as described in the [Juju SDK How-to guides](https://juju.is/docs/sdk/publishing).
 
-The charm supports Juju deploymed to all Kubernetes environments: [MicroK8s](https://microk8s.io/), [Charmed Kubernetes](https://ubuntu.com/kubernetes/charmed-k8s), [GKE](https://charmhub.io/postgresql-k8s/docs/h-deploy-gke), [Amazon EKS](https://aws.amazon.com/eks/), ...
+The charm supports Juju deployment to all Kubernetes environments: [MicroK8s](https://microk8s.io/), [Charmed Kubernetes](https://ubuntu.com/kubernetes/charmed-k8s), [GKE](https://charmhub.io/postgresql-k8s/docs/h-deploy-gke), [Amazon EKS](https://aws.amazon.com/eks/), ...
 
 The OCI/Rock ships the following components:
 
@@ -44,7 +44,7 @@ The OCI/Rock ships the following components:
 * Prometheus PgBouncer Exporter (based on [`charmed-postgresql` snap]) 
 * Prometheus Grafana dashboards and Loki alert rules are part of the charm revision (and missing in SNAP).
 
-SNAP-based rock images guarantee the same components versions and functionality between VM and K8s charm flavors.
+SNAP-based rock images guarantee the same components versions and functionality between VM and K8s charm flavours.
 
 Pebble runs layers of all the currently enabled services, e.g. monitoring, backups, etc: 
 ```text
@@ -96,7 +96,7 @@ GLAuth is a secure, easy-to-use and open-sourced LDAP server which provides capa
 
 ### Grafana
 
-Grafana is an open-source visualization tools that allows to query, visualize, alert on, and visualize metrics from mixed datasources in configurable dashboards for observability. This charms is shipped with its own Grafana dashboard and supports integration with the [Grafana Operator](https://charmhub.io/grafana-k8s) to simplify observability. Please follow [COS Monitoring](/how-to/monitoring-cos/enable-monitoring) setup.
+Grafana is an open-source visualisation tools that allows to query, visualise, alert on, and visualise metrics from mixed data sources in configurable dashboards for observability. This charms is shipped with its own Grafana dashboard and supports integration with the [Grafana Operator](https://charmhub.io/grafana-k8s) to simplify observability. Please follow [COS Monitoring](/how-to/monitoring-cos/enable-monitoring) setup.
 
 ### Loki
 
@@ -108,7 +108,7 @@ Prometheus is an open-source systems monitoring and alerting toolkit with a dime
 
 ## LLD (Low Level Design)
 
-Please check the charm state machines displayed on [workflow diagrams](/explanation/flowcharts/charm). The low-level logic is mostly common for both VM and K8s charm flavors.
+Please check the charm state machines displayed on [workflow diagrams](/explanation/flowcharts/charm). The low-level logic is mostly common for both VM and K8s charm flavours.
 
 <!--- TODO: Describe all possible installations? Cross-model/controller? --->
 
@@ -134,7 +134,7 @@ CharmBase is the base class from which all Charms are formed, defined by [Ops](h
 
 The `__init__` method guarantees that the charm observes all events relevant to its operation and handles them.
 
-The VM and K8s charm flavors shares the codebase via [charm libraries](https://juju.is/docs/sdk/libraries) in [lib/charms/postgresql_k8s/v0/](https://github.com/canonical/postgresql-k8s-operator/blob/main/lib/charms/postgresql_k8s/v0/postgresql.py) (of K8s flavor of the charm!):
+The VM and K8s charm flavours shares the codebase via [charm libraries](https://juju.is/docs/sdk/libraries) in [lib/charms/postgresql_k8s/v0/](https://github.com/canonical/postgresql-k8s-operator/blob/main/lib/charms/postgresql_k8s/v0/postgresql.py) (of K8s flavour of the charm!):
 ```
 > charmcraft list-lib postgresql-k8s                                                                                                                                                                                                               
 Library name    API    Patch                                                                                                                                                                                                                          

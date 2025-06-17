@@ -82,7 +82,7 @@ Sample output:
 ...
 ```
 
-Dump newly bootstraped AKS credentials:
+Dump newly bootstrapped AKS credentials:
 ```text
 az aks get-credentials --resource-group aks --name ${JUJU_NAME} --context aks
 ```

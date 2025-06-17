@@ -41,7 +41,7 @@ How to bootstrap and configure different cloud services:
 
 ## Airgapped
 
-[How to deploy in an offline or air-gapped environment] goes over the special configuration steps for installing PostgreSQL in an airgapped environment via CharmHub and the Snap Store Proxy.
+[How to deploy in an offline or air-gapped environment] goes over the special configuration steps for installing PostgreSQL in an airgapped environment via Charmhub and the Snap Store Proxy.
 
 ## Cluster-cluster replication
 

@@ -9,7 +9,7 @@ This guide will teach you how to deploy and configure the s3-integrator charm on
 ```
 
 ```{caution}
-The Charmed PostgreSQL K8s backup tool [pgBackRest](https://pgbackrest.org/) can currently only interact with S3-compatible storages if they work with [SSL/TLS](https://github.com/pgbackrest/pgbackrest/issues/2340)
+The Charmed PostgreSQL K8s backup tool [pgBackRest](https://pgbackrest.org/) can currently only interact with S3-compatible {spellexception}`storages` if they work with [SSL/TLS](https://github.com/pgbackrest/pgbackrest/issues/2340)
 
 Backup via plain HTTP is currently not supported.
 ```
@@ -70,4 +70,3 @@ The s3-integrator charm accepts many [configurations](https://charmhub.io/s3-int
 ```{note}
 **[MicroCeph](https://github.com/canonical/microceph) tip**: Make sure the `region` for `s3-integrator` matches `"sudo microceph.radosgw-admin zonegroup list"` output (use `region="default"` by default).
 ```
-

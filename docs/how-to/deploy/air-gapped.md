@@ -11,7 +11,7 @@ Canonical does not prescribe how you should set up your specific air-gapped envi
 * DNS is configured to the local nameservers.
 * [Juju is configured](https://documentation.ubuntu.com/snap-store-proxy/en/airgap-charmhub/#configure-juju) to use local air-gapped services.
 * The [`store-admin`](https://snapcraft.io/store-admin) tool is installed and configured.
-* [Air-gapped CharmHub](https://documentation.ubuntu.com/snap-store-proxy/en/airgap-charmhub/) is installed and running.
+* [Air-gapped Charmhub](https://documentation.ubuntu.com/snap-store-proxy/en/airgap-charmhub/) is installed and running.
 * Local APT and LXD Images caches are reachable.
 * An air-gapped container registry (such as [Artifactory](https://jfrog.com/artifactory/)) is reachable from the K8s cluster over HTTPS
   *  **Note**: Secure (HTTPS) OCI access is important, otherwise Juju won’t work!
@@ -21,7 +21,7 @@ Canonical does not prescribe how you should set up your specific air-gapped envi
 ### 1. Export charms and resources
 Exporting K8s Charms and OCI Resources are currently independent processes. The `store-admin` tool is designed to simplify the process. 
 
-Future improvements are planned to the `store-admin` tool so that it could potentially export all necessary OCI resource(s) from the official CharmHub store. Other planned improvements include supporting the export of specific charm and resource revisions ([PF-5369](https://warthogs.atlassian.net/browse/PF-5369), [PF-5185](https://warthogs.atlassian.net/browse/PF-5185)).
+Future improvements are planned to the `store-admin` tool so that it could potentially export all necessary OCI resource(s) from the official Charmhub store. Other planned improvements include supporting the export of specific charm and resource revisions ([PF-5369](https://warthogs.atlassian.net/browse/PF-5369), [PF-5185](https://warthogs.atlassian.net/browse/PF-5185)).
 
 #### Charms
  The necessary charm(s) can be exported as bundle or independently (charm-by-charm). See the Snap Proxy documentation:
@@ -85,7 +85,7 @@ cp /media/usb/postgresql-k8s-bundle-20241003T104903.tar.gz /var/snap/snap-store-
 ### 3. Import charms and resources
 
 #### Charms
- Upload the charm blobs into local air-gapped CharmHub:
+ Upload the charm blobs into local air-gapped Charmhub:
 ```text
 sudo snap-store-proxy push-charm-bundle /var/snap/snap-store-proxy/common/charms-to-push/postgresql-k8s-bundle-20241003T104903.tar.gz
 ```
@@ -95,7 +95,7 @@ sudo snap-store-proxy push-charm-bundle /var/snap/snap-store-proxy/common/charms
 
 Upload the charm OCI into local Air-gapped OCI registry.
 
-For the manual OCI import, please follow [the official CharmHub guide](https://documentation.ubuntu.com/snap-store-proxy/en/airgap-charmhub/#import-packages).
+For the manual OCI import, please follow [the official Charmhub guide](https://documentation.ubuntu.com/snap-store-proxy/en/airgap-charmhub/#import-packages).
 
 > For more details about exporting charms and resources, see:
 >
@@ -108,17 +108,17 @@ For the manual OCI import, please follow [the official CharmHub guide](https://d
 juju deploy postgresql-k8s --channel 16/stable --trust
 ```
 ```{note}
-**Note**: All the charms revisions and OCI resources tags/revisions deployed in the air-gapped environment must match the official CharmHub revisions/tags. 
+**Note**: All the charms revisions and OCI resources tags/revisions deployed in the air-gapped environment must match the official Charmhub revisions/tags. 
 
 Use [the official release notes](/reference/releases) as a reference.
 ```
 
 ## Additional resources
 
-* https://docs.ubuntu.com/snap-store-proxy/en/airgap
-* https://documentation.ubuntu.com/snap-store-proxy/
-* https://documentation.ubuntu.com/snap-store-proxy/en/airgap-charmhub/
-* https://ubuntu.com/kubernetes/docs/install-offline
+* `https://docs.ubuntu.com/snap-store-proxy/en/airgap`
+* `https://documentation.ubuntu.com/snap-store-proxy/`
+* `https://documentation.ubuntu.com/snap-store-proxy/en/airgap-charmhub/`
+* `https://ubuntu.com/kubernetes/docs/install-offline`
 * [Charmed Kubeflow > Install in an airgapped environment](https://charmed-kubeflow.io/docs/install-in-airgapped-environment)
-*  [Wikipedia > Air gap (networking)](https://en.wikipedia.org/wiki/Air_gap_(networking))
+* [Wikipedia > Air gap (networking)](https://en.wikipedia.org/wiki/Air_gap_(networking))
 

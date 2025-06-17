@@ -188,7 +188,7 @@ You can see below the output for the list of databases. `postgres` is the defaul
 (3 rows)
 ```
 
-In order to execute queries, we should enter psql's interactive terminal by running the following command, again typing password when requested:
+In order to execute queries, we should enter PostgreSQL's interactive terminal by running the following command, again typing password when requested:
 
 ```text
  psql --host=10.1.110.80 --username=operator --password postgres
@@ -293,7 +293,7 @@ juju scale-application postgresql-k8s 3
 ```{note}
 Unlike machine models, Kubernetes models use `juju scale-application` instead of `juju add-unit` and `juju remove-unit`.
 
-For more information about juju's scaling logic for kubernetes, check [this post](https://discourse.charmhub.io/t/adding-removing-units-scale-application-command/153).
+For more information about Juju's scaling logic for Kubernetes, check [this post](https://discourse.charmhub.io/t/adding-removing-units-scale-application-command/153).
 ```
 
 You can now watch the scaling process in live using: `juju status --watch 1s`. It usually takes several minutes for new cluster members to be added. 
