@@ -919,7 +919,9 @@ async def start_continuous_writes(ops_test: OpsTest, app: str, model: Model = No
     ]
     if not relations:
         await model.relate(app, f"{APPLICATION_NAME}:database")
-        await model.wait_for_idle(apps=[APPLICATION_NAME, app], status="active", timeout=1000)
+        await model.wait_for_idle(
+            apps=[APPLICATION_NAME, app], status="active", timeout=1000, idle_period=30
+        )
     else:
         action = (
             await model.applications[APPLICATION_NAME]
