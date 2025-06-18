@@ -10,7 +10,7 @@ from pytest_operator.plugin import OpsTest
 
 from integration import markers
 from integration.ha_tests.helpers import get_cluster_roles
-from integration.helpers import CHARM_BASE, get_leader_unit
+from integration.helpers import build_and_deploy, get_leader_unit
 from integration.new_relations.helpers import build_connection_string
 
 DATABASE_APP_NAME = "postgresql"
@@ -31,27 +31,9 @@ TESTING_DATABASE = "testdb"
 @pytest.mark.abort_on_fail
 async def test_deploy(ops_test: OpsTest, charm):
     await gather(
-        ops_test.model.deploy(
-            charm,
-            application_name=DATABASE_APP_NAME,
-            num_units=3,
-            base=CHARM_BASE,
-            config=DATABASE_APP_CONFIG,
-        ),
-        ops_test.model.deploy(
-            charm,
-            application_name=SECOND_DATABASE_APP_NAME,
-            num_units=3,
-            base=CHARM_BASE,
-            config=DATABASE_APP_CONFIG,
-        ),
-        ops_test.model.deploy(
-            charm,
-            application_name=THIRD_DATABASE_APP_NAME,
-            num_units=1,
-            base=CHARM_BASE,
-            config=DATABASE_APP_CONFIG,
-        ),
+        build_and_deploy(ops_test, charm, 3, DATABASE_APP_NAME, wait_for_idle=False),
+        build_and_deploy(ops_test, charm, 3, SECOND_DATABASE_APP_NAME, wait_for_idle=False),
+        build_and_deploy(ops_test, charm, 1, THIRD_DATABASE_APP_NAME, wait_for_idle=False),
         ops_test.model.deploy(
             DATA_INTEGRATOR_APP_NAME,
             application_name=DATA_INTEGRATOR_APP_NAME,

@@ -536,7 +536,6 @@ class PostgreSQL:
                     Identifier(database), Identifier(user)
                 )
             )
-        pass
 
     def enable_disable_extensions(
         self, extensions: Dict[str, bool], database: Optional[str] = None
