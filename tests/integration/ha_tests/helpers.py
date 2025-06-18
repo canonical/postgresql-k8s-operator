@@ -1064,7 +1064,7 @@ async def get_detached_storages(ops_test: OpsTest) -> list[str]:
     detached_storages = []
     for storage_name, storage in parsed_storages_list["storage"].items():
         if (
-            (storage_name.startswith("data"))
+            storage_name.startswith("data")
             and (str(storage["status"]["current"]) == "detached")
             and (str(storage["life"] == "alive"))
         ):
