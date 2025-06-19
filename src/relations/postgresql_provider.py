@@ -173,7 +173,6 @@ class PostgreSQLProvider(Object):
             self.charm.unit_peer_data.update({
                 "pg_hba_needs_update_timestamp": str(datetime.now())
             })
-            self.charm.update_config()
         except RetryError:
             logger.warning("database requested: Unable to check pg_hba rule update")
 
