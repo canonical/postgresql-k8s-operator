@@ -59,7 +59,7 @@ from lightkube import ApiError, Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Endpoints, Node, Pod, Service
-from ops import JujuVersion, main
+from ops import main
 from ops.charm import (
     ActionEvent,
     HookEvent,
@@ -217,8 +217,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._context = {"namespace": self._namespace, "app_name": self._name}
         self.cluster_name = f"patroni-{self._name}"
 
-        juju_version = JujuVersion.from_environ()
-        run_cmd = "/usr/bin/juju-exec" if juju_version.major > 2 else "/usr/bin/juju-run"
+        run_cmd = (
+            "/usr/bin/juju-exec" if self.model.juju_version.major > 2 else "/usr/bin/juju-run"
+        )
         self._observer = AuthorisationRulesObserver(self, run_cmd)
         self.framework.observe(
             self.on.authorisation_rules_change, self._on_authorisation_rules_change
@@ -271,7 +272,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             relation_name="logging",
         )
 
-        if JujuVersion.from_environ().supports_open_port_on_k8s:
+        if self.model.juju_version.supports_open_port_on_k8s:
             try:
                 self.unit.set_ports(5432, 8008)
             except ModelError:
@@ -291,14 +292,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Otlp http endpoint for charm instrumentation."""
         if self.tracing.is_ready():
             return self.tracing.get_endpoint(TRACING_PROTOCOL)
-
-    @property
-    def _pebble_log_forwarding_supported(self) -> bool:
-        # https://github.com/canonical/operator/issues/1230
-        from ops.jujuversion import JujuVersion
-
-        juju_version = JujuVersion.from_environ()
-        return juju_version > JujuVersion(version="3.3")
 
     def _generate_metrics_jobs(self, enable_tls: bool) -> dict:
         """Generate spec for Prometheus scraping."""
@@ -367,7 +360,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _translate_field_to_secret_key(self, key: str) -> str:
         """Change 'key' to secrets-compatible key field."""
-        if not JujuVersion.from_environ().has_secrets:
+        if not self.model.juju_version.has_secrets:
             return key
         key = SECRET_KEY_OVERRIDES.get(key, key)
         new_key = key.replace("_", "-")
