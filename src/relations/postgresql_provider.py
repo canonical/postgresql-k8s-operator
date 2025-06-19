@@ -166,7 +166,7 @@ class PostgreSQLProvider(Object):
 
         # Try to wait for pg_hba trigger
         try:
-            for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(1)):
+            for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(2)):
                 with attempt:
                     if not self.charm.postgresql.is_user_in_hba(user):
                         raise Exception("pg_hba not ready")
