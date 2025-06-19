@@ -481,33 +481,37 @@ class PostgreSQL:
             schematables: list of tables with schema notation to grant SELECT privileges on.
             old_schematables: list of tables with schema notation to revoke all privileges from.
         """
-        with self._connect_to_database(
-            database=database
-        ) as connection, connection.cursor() as cursor:
-            cursor.execute(
-                SQL("GRANT CONNECT ON DATABASE {} TO {};").format(
-                    Identifier(database), Identifier(user)
-                )
-            )
-            if old_schematables:
+        connection = None
+        try:
+            connection = self._connect_to_database(database=database)
+            with connection, connection.cursor() as cursor:
                 cursor.execute(
-                    SQL("REVOKE ALL PRIVILEGES ON TABLE {} FROM {};").format(
+                    SQL("GRANT CONNECT ON DATABASE {} TO {};").format(
+                        Identifier(database), Identifier(user)
+                    )
+                )
+                if old_schematables:
+                    cursor.execute(
+                        SQL("REVOKE ALL PRIVILEGES ON TABLE {} FROM {};").format(
+                            SQL(",").join(
+                                Identifier(schematable.split(".")[0], schematable.split(".")[1])
+                                for schematable in old_schematables
+                            ),
+                            Identifier(user),
+                        )
+                    )
+                cursor.execute(
+                    SQL("GRANT SELECT ON TABLE {} TO {};").format(
                         SQL(",").join(
                             Identifier(schematable.split(".")[0], schematable.split(".")[1])
-                            for schematable in old_schematables
+                            for schematable in schematables
                         ),
                         Identifier(user),
                     )
                 )
-            cursor.execute(
-                SQL("GRANT SELECT ON TABLE {} TO {};").format(
-                    SQL(",").join(
-                        Identifier(schematable.split(".")[0], schematable.split(".")[1])
-                        for schematable in schematables
-                    ),
-                    Identifier(user),
-                )
-            )
+        finally:
+            if connection:
+                connection.close()
 
     def revoke_replication_privileges(
         self, user: str, database: str, schematables: list[str]
@@ -519,23 +523,27 @@ class PostgreSQL:
             database: database to remove all privileges from.
             schematables: list of tables with schema notation to revoke all privileges from.
         """
-        with self._connect_to_database(
-            database=database
-        ) as connection, connection.cursor() as cursor:
-            cursor.execute(
-                SQL("REVOKE ALL PRIVILEGES ON TABLE {} FROM {};").format(
-                    SQL(",").join(
-                        Identifier(schematable.split(".")[0], schematable.split(".")[1])
-                        for schematable in schematables
-                    ),
-                    Identifier(user),
+        connection = None
+        try:
+            connection = self._connect_to_database(database=database)
+            with connection, connection.cursor() as cursor:
+                cursor.execute(
+                    SQL("REVOKE ALL PRIVILEGES ON TABLE {} FROM {};").format(
+                        SQL(",").join(
+                            Identifier(schematable.split(".")[0], schematable.split(".")[1])
+                            for schematable in schematables
+                        ),
+                        Identifier(user),
+                    )
                 )
-            )
-            cursor.execute(
-                SQL("REVOKE ALL PRIVILEGES ON DATABASE {} FROM {};").format(
-                    Identifier(database), Identifier(user)
+                cursor.execute(
+                    SQL("REVOKE ALL PRIVILEGES ON DATABASE {} FROM {};").format(
+                        Identifier(database), Identifier(user)
+                    )
                 )
-            )
+        finally:
+            if connection:
+                connection.close()
 
     def enable_disable_extensions(
         self, extensions: Dict[str, bool], database: Optional[str] = None
@@ -1099,10 +1107,10 @@ CREATE EVENT TRIGGER update_pg_hba_on_drop_schema
 
     def create_publication(self, db: str, name: str, schematables: list[str]) -> None:
         """Create PostgreSQL publication."""
+        connection = None
         try:
-            with self._connect_to_database(
-                database=db
-            ) as connection, connection.cursor() as cursor:
+            connection = self._connect_to_database(database=db)
+            with connection, connection.cursor() as cursor:
                 cursor.execute(
                     SQL("CREATE PUBLICATION {} FOR TABLE {};").format(
                         Identifier(name),
@@ -1115,13 +1123,16 @@ CREATE EVENT TRIGGER update_pg_hba_on_drop_schema
         except psycopg2.Error as e:
             logger.error(f"Failed to create Postgresql publication: {e}")
             raise PostgreSQLCreatePublicationError() from e
+        finally:
+            if connection:
+                connection.close()
 
     def publication_exists(self, db: str, publication: str) -> bool:
         """Check whether specified subscription in database exists."""
+        connection = None
         try:
-            with self._connect_to_database(
-                database=db
-            ) as connection, connection.cursor() as cursor:
+            connection = self._connect_to_database(database=db)
+            with connection, connection.cursor() as cursor:
                 cursor.execute(
                     SQL("SELECT pubname FROM pg_publication WHERE pubname={};").format(
                         Literal(publication)
@@ -1131,13 +1142,16 @@ CREATE EVENT TRIGGER update_pg_hba_on_drop_schema
         except psycopg2.Error as e:
             logger.error(f"Failed to check Postgresql publication existence: {e}")
             raise PostgreSQLPublicationExistsError() from e
+        finally:
+            if connection:
+                connection.close()
 
     def alter_publication(self, db: str, name: str, schematables: list[str]) -> None:
         """Alter PostgreSQL publication."""
+        connection = None
         try:
-            with self._connect_to_database(
-                database=db
-            ) as connection, connection.cursor() as cursor:
+            connection = self._connect_to_database(database=db)
+            with connection, connection.cursor() as cursor:
                 cursor.execute(
                     SQL("ALTER PUBLICATION {} SET TABLE {};").format(
                         Identifier(name),
@@ -1150,13 +1164,16 @@ CREATE EVENT TRIGGER update_pg_hba_on_drop_schema
         except psycopg2.Error as e:
             logger.error(f"Failed to alter Postgresql publication: {e}")
             raise PostgreSQLAlterPublicationError() from e
+        finally:
+            if connection:
+                connection.close()
 
     def drop_publication(self, db: str, publication: str) -> None:
         """Drop PostgreSQL publication."""
+        connection = None
         try:
-            with self._connect_to_database(
-                database=db
-            ) as connection, connection.cursor() as cursor:
+            connection = self._connect_to_database(database=db)
+            with connection, connection.cursor() as cursor:
                 cursor.execute(
                     SQL("DROP PUBLICATION IF EXISTS {};").format(
                         Identifier(publication),
@@ -1165,6 +1182,9 @@ CREATE EVENT TRIGGER update_pg_hba_on_drop_schema
         except psycopg2.Error as e:
             logger.error(f"Failed to drop Postgresql publication: {e}")
             raise PostgreSQLDropPublicationError() from e
+        finally:
+            if connection:
+                connection.close()
 
     def create_subscription(
         self,
@@ -1177,10 +1197,10 @@ CREATE EVENT TRIGGER update_pg_hba_on_drop_schema
         replication_slot: str,
     ) -> None:
         """Create PostgreSQL subscription."""
+        connection = None
         try:
-            with self._connect_to_database(
-                database=db
-            ) as connection, connection.cursor() as cursor:
+            connection = self._connect_to_database(database=db)
+            with connection, connection.cursor() as cursor:
                 cursor.execute(
                     SQL(
                         "CREATE SUBSCRIPTION {} CONNECTION {} PUBLICATION {} WITH (copy_data=true,create_slot=false,enabled=true,slot_name={});"
@@ -1194,13 +1214,16 @@ CREATE EVENT TRIGGER update_pg_hba_on_drop_schema
         except psycopg2.Error as e:
             logger.error(f"Failed to create Postgresql subscription: {e}")
             raise PostgreSQLCreateSubscriptionError() from e
+        finally:
+            if connection:
+                connection.close()
 
     def subscription_exists(self, db: str, subscription: str) -> bool:
         """Check whether specified subscription in database exists."""
+        connection = None
         try:
-            with self._connect_to_database(
-                database=db
-            ) as connection, connection.cursor() as cursor:
+            connection = self._connect_to_database(database=db)
+            with connection, connection.cursor() as cursor:
                 cursor.execute(
                     SQL("SELECT subname FROM pg_subscription WHERE subname={};").format(
                         Literal(subscription)
@@ -1210,13 +1233,16 @@ CREATE EVENT TRIGGER update_pg_hba_on_drop_schema
         except psycopg2.Error as e:
             logger.error(f"Failed to check Postgresql subscription existence: {e}")
             raise PostgreSQLSubscriptionExistsError() from e
+        finally:
+            if connection:
+                connection.close()
 
     def update_subscription(self, db: str, subscription: str, host: str, user: str, password: str):
         """Update PostgreSQL subscription connection details."""
+        connection = None
         try:
-            with self._connect_to_database(
-                database=db
-            ) as connection, connection.cursor() as cursor:
+            connection = self._connect_to_database(database=db)
+            with connection, connection.cursor() as cursor:
                 cursor.execute(
                     SQL("ALTER SUBSCRIPTION {} CONNECTION {}").format(
                         Identifier(subscription),
@@ -1226,6 +1252,9 @@ CREATE EVENT TRIGGER update_pg_hba_on_drop_schema
         except psycopg2.Error as e:
             logger.error(f"Failed to update Postgresql subscription: {e}")
             raise PostgreSQLUpdateSubscriptionError() from e
+        finally:
+            if connection:
+                connection.close()
 
     def refresh_subscription(self, db: str, subscription: str):
         """Refresh PostgreSQL subscription to pull publication changes."""
@@ -1242,15 +1271,15 @@ CREATE EVENT TRIGGER update_pg_hba_on_drop_schema
             logger.error(f"Failed to refresh Postgresql subscription: {e}")
             raise PostgreSQLRefreshSubscriptionError() from e
         finally:
-            if connection is not None:
+            if connection:
                 connection.close()
 
     def drop_subscription(self, db: str, subscription: str) -> None:
         """Drop PostgreSQL subscription."""
+        connection = None
         try:
-            with self._connect_to_database(
-                database=db
-            ) as connection, connection.cursor() as cursor:
+            connection = self._connect_to_database(database=db)
+            with connection, connection.cursor() as cursor:
                 cursor.execute(
                     SQL("ALTER SUBSCRIPTION {} DISABLE;").format(
                         Identifier(subscription),
@@ -1269,6 +1298,9 @@ CREATE EVENT TRIGGER update_pg_hba_on_drop_schema
         except psycopg2.Error as e:
             logger.error(f"Failed to drop Postgresql subscription: {e}")
             raise PostgreSQLDropSubscriptionError() from e
+        finally:
+            if connection:
+                connection.close()
 
     @staticmethod
     def build_postgresql_group_map(group_map: Optional[str]) -> List[Tuple]:
