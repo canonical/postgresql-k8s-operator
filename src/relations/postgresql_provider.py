@@ -166,13 +166,14 @@ class PostgreSQLProvider(Object):
 
         # Try to wait for pg_hba trigger
         try:
-            for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(1)):
+            for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(1)):
                 with attempt:
                     if not self.charm.postgresql.is_user_in_hba(user):
                         raise Exception("pg_hba not ready")
             self.charm.unit_peer_data.update({
                 "pg_hba_needs_update_timestamp": str(datetime.now())
             })
+            self.charm.update_config()
         except RetryError:
             logger.warning("database requested: Unable to check pg_hba rule update")
 
