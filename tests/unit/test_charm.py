@@ -54,10 +54,10 @@ def harness():
 
 def test_set_ports(only_with_juju_secrets):
     with (
-        patch("charm.JujuVersion") as _juju_version,
+        patch("ops.model.Model.juju_version", new_callable=PropertyMock) as _juju_version,
         patch("charm.PostgresqlOperatorCharm.unit") as _unit,
     ):
-        _juju_version.from_environ.return_value.major = 3
+        _juju_version.return_value.major = 3
         harness = Harness(PostgresqlOperatorCharm)
         harness.begin()
         _unit.set_ports.assert_called_once_with(5432, 8008)
