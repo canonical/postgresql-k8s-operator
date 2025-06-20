@@ -22,11 +22,11 @@ from charms.postgresql_k8s.v0.postgresql import (
 from ops.charm import CharmBase, RelationBrokenEvent, RelationChangedEvent, RelationDepartedEvent
 from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, Relation
-from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from constants import (
     DATABASE_PORT,
     ENDPOINT_SIMULTANEOUSLY_BLOCKING_MESSAGE,
+    POSTGRESQL_DATA_PATH,
 )
 from utils import new_password
 
@@ -164,17 +164,16 @@ class PostgreSQLProvider(Object):
             )
             return
 
-        # Try to wait for pg_hba trigger
-        try:
-            for attempt in Retrying(stop=stop_after_attempt(15), wait=wait_fixed(1)):
-                with attempt:
-                    if not self.charm.postgresql.is_user_in_hba(user):
-                        raise Exception("pg_hba not ready")
+        # Try to update pg_hba
+        if not self.charm.postgresql.is_user_in_hba(user):
+            with open(f"{POSTGRESQL_DATA_PATH}/pg_hba.conf", "a") as file:
+                file.write(
+                    f"{'hostssl' if self.charm.is_tls_enabled else 'host'} {database} {user} 0.0.0.0/0 md5"
+                )
+            self.charm.postgresql.reload_config()
             self.charm.unit_peer_data.update({
                 "pg_hba_needs_update_timestamp": str(datetime.now())
             })
-        except RetryError:
-            logger.warning("database requested: Unable to check pg_hba rule update")
 
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Set a flag to avoid deleting database users when not wanted."""
