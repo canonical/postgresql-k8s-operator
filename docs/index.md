@@ -3,7 +3,7 @@
 ```{caution}
 **Charmed PostgreSQL K8s 16 is under development.** Please wait for the upcoming stable release before deploying it in production, or see the documentation for [version 14](https://canonical-charmed-postgresql-k8s.readthedocs-hosted.com/14/).
 
-Meanwhile, you’re welcome to explore the [`16/candidate` track](https://charmhub.io/postgresql-k8s?channel=16/candidate) and share your feedback as we continue to improve.
+Meanwhile, you’re welcome to explore the [`16/edge` track](https://charmhub.io/postgresql-k8s?channel=16/edge) and share your feedback as we continue to improve.
 ```
 
 Charmed PostgreSQL K8s is an open-source software operator designed to deploy and operate object-relational databases on Kubernetes. It packages the powerful database management system [PostgreSQL](https://www.postgresql.org/) into a charmed operator for deployment with [Juju](https://juju.is/docs/juju).

@@ -30,7 +30,7 @@ unit-postgresql-k8s-0: 18:04:51 ERROR unit.postgresql-k8s/0.juju-log db:5: ERROR
 
 After enabling the needed extensions through the config options, the charm will unblock. If you have removed the relation, you can add it back again.
 
-If the application charm uses the new `postgresql_client` interface, it can use the [is_postgresql_plugin_enabled](https://charmhub.io/data-platform-libs/libraries/data_interfaces#databaserequires-is_postgresql_plugin_enabled) helper method from the data interfaces library to check whether the plugin/extension is already enabled in the database.
+If the application charm uses the new `postgresql_client` interface, it can use the [is_postgresql_plugin_enabled](https://charmhub.io/data-platform-libs/libraries/data_interfaces) helper method from the data interfaces library to check whether the plugin/extension is already enabled in the database.
 
 ```{note}
 Not all PostgreSQL extensions are available. The list of supported extensions is available [](/reference/plugins-extensions).

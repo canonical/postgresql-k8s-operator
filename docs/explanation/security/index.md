@@ -17,7 +17,7 @@ Charmed PostgreSQL K8s can be deployed on top of several Kubernetes distribution
 | --- | --- |
 |Canonical Kubernetes|[Security overview](https://ubuntu.com/kubernetes/docs/security), [How to secure a cluster](https://ubuntu.com/kubernetes/docs/how-to-security)|
 |MicroK8s|[CIS compliance](https://microk8s.io/docs/cis-compliance), [Cluster hardening guide](https://microk8s.io/docs/how-to-cis-harden)|
-|AWS EKS|[Best Practices for Security, Identity and Compliance](https://aws.amazon.com/architecture/security-identity-compliance), [AWS security credentials](https://docs.aws.amazon.com/IAM/latest/UserGuide/security-creds.html#access-keys-and-secret-access-keys), [Security in EKS](https://docs.aws.amazon.com/eks/latest/userguide/security.html)|
+|AWS EKS|[Best Practices for Security, Identity and Compliance](https://aws.amazon.com/architecture/security-identity-compliance), [AWS security credentials](https://docs.aws.amazon.com/IAM/latest/UserGuide/security-creds.html), [Security in EKS](https://docs.aws.amazon.com/eks/latest/userguide/security.html)|
 |Azure AKS|[Azure security best practices and patterns](https://learn.microsoft.com/en-us/azure/security/fundamentals/best-practices-and-patterns), [Managed identities for Azure resource](https://learn.microsoft.com/en-us/entra/identity/managed-identities-azure-resources/), [Security in AKS](https://learn.microsoft.com/en-us/azure/aks/concepts-security)|
 |GCP GKE|[Google security overview](https://cloud.google.com/kubernetes-engine/docs/concepts/security-overview), [Harden your cluster’s security](https://cloud.google.com/kubernetes-engine/docs/how-to/hardening-your-cluster)|
 
