@@ -777,7 +777,7 @@ END; $$;"""
                 "superuser",
             }, {role[0] for role in cursor.fetchall() if role[0]}
 
-    def set_up_database(self) -> None:
+    def set_up_database(self, temp_location: Optional[str] = None) -> None:
         """Set up postgres database with the right permissions."""
         connection = None
         cursor = None
