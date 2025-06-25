@@ -580,14 +580,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             if self.unit.is_leader():
                 if self._initialize_cluster(event):
                     logger.debug("Deferring on_peer_relation_changed: Leader initialized cluster")
+                    event.defer()
                 else:
                     logger.debug("_initialized_cluster failed on _peer_relation_changed")
                     return
             else:
                 logger.debug(
-                    "Deferring on_peer_relation_changed: Cluster must be initialized before members can join"
+                    "Early exit on_peer_relation_changed: Cluster must be initialized before members can join"
                 )
-            event.defer()
             return
 
         # If the leader is the one receiving the event, it adds the new members,
