@@ -69,6 +69,7 @@ class PostgreSQLProvider(Object):
             self.database_provides.on.database_requested, self._on_database_requested
         )
 
+    @property
     def generate_hba_hash(self) -> str:
         """Generate expected user and database hash."""
         user_db_pairs = {}
@@ -114,14 +115,14 @@ class PostgreSQLProvider(Object):
             event.defer()
             return
 
-        hba_hash = self.generate_hba_hash()
-        self.charm.app_peer_data.update({"hba_hash": hba_hash})
+        self.charm.app_peer_data.update({"hba_hash": self.generate_hba_hash})
+        self.charm.update_config()
         for key in self.charm._peers.data:
             # We skip the leader so we don't have to wait on the defer
             if (
                 key != self.charm.app
                 and key != self.charm.unit
-                and self.charm._peers.data[key].get("hba_hash", "") != hba_hash
+                and self.charm._peers.data[key].get("hba_hash", "") != self.generate_hba_hash
             ):
                 logger.debug("Not all units have synced configuration")
                 event.defer()
