@@ -10,7 +10,7 @@ from charms.tempo_coordinator_k8s.v0.charm_tracing import charm_tracing_disabled
 # charm.JujuVersion.has_secrets set as True or as False
 @pytest.fixture(params=[True, False], autouse=True)
 def juju_has_secrets(request, monkeypatch):
-    monkeypatch.setattr("charm.JujuVersion.has_secrets", PropertyMock(return_value=request.param))
+    monkeypatch.setattr("ops.JujuVersion.has_secrets", PropertyMock(return_value=request.param))
     return request.param
 
 
