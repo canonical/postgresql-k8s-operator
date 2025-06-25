@@ -1099,15 +1099,3 @@ CREATE EVENT TRIGGER update_pg_hba_on_drop_schema
         finally:
             if connection:
                 connection.close()
-
-    def reload_config(self) -> None:
-        """Reload postgresql's configuration on the local unit."""
-        connection = None
-        try:
-            connection = self._connect_to_database(database_host=self.current_host)
-            connection.autocommit = True
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT pg_reload_conf();")
-        finally:
-            if connection is not None:
-                connection.close()

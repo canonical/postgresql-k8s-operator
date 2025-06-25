@@ -4,7 +4,7 @@
 """Postgres client relation hooks & helpers."""
 
 import logging
-from datetime import datetime
+from hashlib import shake_128
 
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProvides,
@@ -69,6 +69,27 @@ class PostgreSQLProvider(Object):
             self.database_provides.on.database_requested, self._on_database_requested
         )
 
+    def generate_hba_hash(self) -> str:
+        """Generate expected user and database hash."""
+        user_db_pairs = {}
+        for relation in self.model.relations[self.relation_name]:
+            if database := self.database_provides.fetch_relation_field(relation.id, "database"):
+                user = f"relation_id_{relation.id}"
+                user_db_pairs[user] = database
+        return shake_128(str(user_db_pairs).encode()).hexdigest(16)
+
+    def append_to_pg_hba(self) -> None:
+        """Append missing users to pg hba."""
+        with open(f"{POSTGRESQL_DATA_PATH}/pg_hba.conf", "a") as file:
+            for relation in self.model.relations[self.relation_name]:
+                user = f"relation_id_{relation.id}"
+                if database := self.database_provides.fetch_relation_field(
+                    relation.id, "database"
+                ) and not self.charm.postgresql.is_user_in_hba(user):
+                    file.write(
+                        f"{'hostssl' if self.charm.is_tls_enabled else 'host'} {database} {user} 0.0.0.0/0 md5"
+                    )
+
     @staticmethod
     def _sanitize_extra_roles(extra_roles: str | None) -> list[str]:
         """Standardize and sanitize user extra-roles."""
@@ -92,6 +113,19 @@ class PostgreSQLProvider(Object):
             )
             event.defer()
             return
+
+        hba_hash = self.generate_hba_hash()
+        self.charm.app_peer_data.update({"hba_hash": hba_hash})
+        for key in self.charm._peers.data:
+            # We skip the leader so we don't have to wait on the defer
+            if (
+                key != self.charm.app
+                and key != self.charm.unit
+                and self.charm._peers.data[key].get("hba_hash", "") != hba_hash
+            ):
+                logger.debug("Not all units have synced configuration")
+                event.defer()
+                return
 
         # Retrieve the database name and extra user roles using the charm library.
         database = event.database
@@ -163,17 +197,6 @@ class PostgreSQLProvider(Object):
                 else f"Failed to initialize {self.relation_name} relation"
             )
             return
-
-        # Try to update pg_hba
-        if not self.charm.postgresql.is_user_in_hba(user):
-            with open(f"{POSTGRESQL_DATA_PATH}/pg_hba.conf", "a") as file:
-                file.write(
-                    f"{'hostssl' if self.charm.is_tls_enabled else 'host'} {database} {user} 0.0.0.0/0 md5"
-                )
-            self.charm.postgresql.reload_config()
-            self.charm.unit_peer_data.update({
-                "pg_hba_needs_update_timestamp": str(datetime.now())
-            })
 
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Set a flag to avoid deleting database users when not wanted."""
