@@ -2052,10 +2052,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def update_config(self, is_creating_backup: bool = False) -> bool:
         """Updates Patroni config file based on the existence of the TLS files."""
         hba_hash = self.postgresql_client_relation.generate_hba_hash()
-        if self.unit_peer_data.get("hba_hash") != hba_hash:
+        if (
+            self.unit_peer_data.get("hba_hash") != hba_hash
+            or self.app_peer_data.get("hba_hash") != hba_hash
+        ):
             logger.info("Updating hba definitions")
             self.postgresql_client_relation.append_to_pg_hba()
             self.unit_peer_data.update({"hba_hash": hba_hash})
+            if self.unit.is_leader():
+                self.app_peer_data.update({"hba_hash": hba_hash})
+
         # Retrieve PostgreSQL parameters.
         if self.config.profile_limit_memory:
             limit_memory = self.config.profile_limit_memory * 10**6
