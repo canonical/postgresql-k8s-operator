@@ -147,7 +147,7 @@ Model    Controller  Cloud/Region  Version  SLA          Timestamp
 welcome  aks         aks/eastus    3.4.2    unsupported  17:53:35+02:00
 
 App             Version  Status  Scale  Charm           Channel       Rev  Address       Exposed  Message
-postgresql-k8s  14.11    active      3  postgresql-k8s  16/edge       247  10.0.237.223  no       Primary
+postgresql-k8s  14.11    active      3  postgresql-k8s  16/edge       615  10.0.237.223  no       Primary
 
 Unit               Workload  Agent  Address      Ports  Message
 postgresql-k8s/0*  active    idle   10.244.0.19         Primary

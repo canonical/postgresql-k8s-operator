@@ -270,7 +270,7 @@ When you’re ready to leave the PostgreSQL shell, you can just type `exit`. Thi
 
 ## Scale your replicas
 
-The Charmed PostgreSQL VM operator uses a [PostgreSQL Patroni-based cluster](https://patroni.readthedocs.io/en/latest/) for scaling. It provides features such as automatic membership management, fault tolerance, and automatic failover. The charm uses PostgreSQL’s [synchronous replication](https://patroni.readthedocs.io/en/latest/replication_modes.html) with Patroni to handle replication.
+The Charmed PostgreSQL operator uses a [PostgreSQL Patroni-based cluster](https://patroni.readthedocs.io/en/latest/) for scaling. It provides features such as automatic membership management, fault tolerance, and automatic failover. The charm uses PostgreSQL’s [synchronous replication](https://patroni.readthedocs.io/en/latest/replication_modes.html) with Patroni to handle replication.
 
 ```{caution}
 This tutorial hosts all replicas on the same machine. 
@@ -389,7 +389,7 @@ Learn more about managing user credentials in [](/how-to/manage-passwords) and [
 
 ## Integrate with other applications
 
-[Integrations](https://documentation.ubuntu.com/juju/3.6/reference/relation/), known as "relations" in Juju 2.9, are the easiest way to create a user for PostgreSQL in Charmed PostgreSQL VM. 
+[Integrations](https://documentation.ubuntu.com/juju/3.6/reference/relation/), known as "relations" in Juju 2.9, are the easiest way to create a user for PostgreSQL in Charmed PostgreSQL. 
 
 Integrations automatically create a username, password, and database for the desired user/application. The best practice is to connect to PostgreSQL via a specific user rather than the admin user.
 
@@ -562,7 +562,7 @@ TLS is enabled by integrating Charmed PostgreSQL with the [Self-signed certifica
 Check [this guide](https://discourse.charmhub.io/t/security-with-x-509-certificates/11664) for an overview of the TLS certificates charms available. 
 ```
 
-Before enabling TLS on Charmed PostgreSQL VM, we must deploy the `self-signed-certificates` charm:
+Before enabling TLS on Charmed PostgreSQL, we must deploy the `self-signed-certificates` charm:
 
 ```text
 juju deploy self-signed-certificates --config ca-common-name="Tutorial CA"
@@ -625,7 +625,7 @@ The Charmed PostgreSQL K8s application is not using TLS anymore.
 
 In this tutorial we've successfully deployed PostgreSQL on MicroK8s, added and removed cluster members, added and removed database users, and enabled a layer of security with TLS.
 
-You may now keep your Charmed PostgreSQL VM deployment running and write to the database or remove it entirely using the steps in this page. 
+You may now keep your Charmed PostgreSQL deployment running and write to the database or remove it entirely using the steps in this page. 
 
 If you'd like to keep your environment for later, simply stop your VM with
 
