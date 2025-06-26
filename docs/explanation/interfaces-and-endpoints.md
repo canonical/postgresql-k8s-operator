@@ -39,7 +39,7 @@ Find all details about default and extra DB user roles in [](/explanation/users)
 ```{note}
 Legacy relations are deprecated and will be discontinued on future releases. Their usage should be avoided. 
 
-Check the limitations of legacy interfaces implementations in [](/explanation/legacy-charm)
+Check the limitations of legacy interface implementations in [](/explanation/legacy-charm)
 ```
 
 ### Legacy `pgsql` interface (`db` and `db-admin` endpoints):
