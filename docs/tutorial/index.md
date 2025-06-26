@@ -270,7 +270,7 @@ When you’re ready to leave the PostgreSQL shell, you can just type `exit`. Thi
 
 ## Scale your replicas
 
-The Charmed PostgreSQL VM operator uses a [PostgreSQL Patroni-based cluster](https://patroni.readthedocs.io/en/latest/) for scaling. It provides features such as automatic membership management, fault tolerance, and automatic failover. The charm uses PostgreSQL’s [synchronous replication](https://patroni.readthedocs.io/en/latest/replication_modes.html#postgresql-k8s-synchronous-replication) with Patroni to handle replication.
+The Charmed PostgreSQL VM operator uses a [PostgreSQL Patroni-based cluster](https://patroni.readthedocs.io/en/latest/) for scaling. It provides features such as automatic membership management, fault tolerance, and automatic failover. The charm uses PostgreSQL’s [synchronous replication](https://patroni.readthedocs.io/en/latest/replication_modes.html) with Patroni to handle replication.
 
 ```{caution}
 This tutorial hosts all replicas on the same machine. 
@@ -389,7 +389,7 @@ Learn more about managing user credentials in [](/how-to/manage-passwords) and [
 
 ## Integrate with other applications
 
-[Integrations](https://juju.is/docs/sdk/integration), known as "relations" in Juju 2.9, are the easiest way to create a user for PostgreSQL in Charmed PostgreSQL VM. 
+[Integrations](https://documentation.ubuntu.com/juju/3.6/reference/relation/), known as "relations" in Juju 2.9, are the easiest way to create a user for PostgreSQL in Charmed PostgreSQL VM. 
 
 Integrations automatically create a username, password, and database for the desired user/application. The best practice is to connect to PostgreSQL via a specific user rather than the admin user.
 
@@ -653,7 +653,7 @@ multipass delete --purge my-vm
 - Check out our other other charm offerings, like [MySQL](https://charmhub.io/mysql-k8s) and [Kafka](https://charmhub.io/kafka-k8s?channel=edge).
 - Read about [High Availability Best Practices](https://canonical.com/blog/database-high-availability)
 - [Report](https://github.com/canonical/postgresql-k8s-operator/issues) any problems you encountered.
-- [Give us your feedback](https://chat.charmhub.io/charmhub/channels/data-platform).
+- [Give us your feedback](/reference/contacts).
 - [Contribute to the code base](https://github.com/canonical/postgresql-k8s-operator)
 
 <!--Links-->

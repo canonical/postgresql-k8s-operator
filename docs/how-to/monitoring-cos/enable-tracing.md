@@ -28,7 +28,7 @@ Then, deploy the dependencies of Tempo following [this tutorial](https://discour
 - Add a bucket in MinIO using a python script
 - Configure s3 integrator with the MinIO credentials
 
-Finally, deploy and integrate with Tempo HA in [a monolithic setup](https://discourse.charmhub.io/t/tutorial-deploy-tempo-ha-on-top-of-cos-lite/15489#deploy-monolithic-setup).
+Finally, deploy and integrate with Tempo HA in [a monolithic setup](https://discourse.charmhub.io/t/tutorial-deploy-tempo-ha-on-top-of-cos-lite/15489).
 
 ## Offer interfaces
 
