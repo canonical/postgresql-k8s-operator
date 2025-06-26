@@ -580,14 +580,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             if self.unit.is_leader():
                 if self._initialize_cluster(event):
                     logger.debug("Deferring on_peer_relation_changed: Leader initialized cluster")
+                    event.defer()
                 else:
                     logger.debug("_initialized_cluster failed on _peer_relation_changed")
                     return
             else:
                 logger.debug(
-                    "Deferring on_peer_relation_changed: Cluster must be initialized before members can join"
+                    "Early exit on_peer_relation_changed: Cluster must be initialized before members can join"
                 )
-            event.defer()
             return
 
         # If the leader is the one receiving the event, it adds the new members,
@@ -2051,6 +2051,23 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def update_config(self, is_creating_backup: bool = False) -> bool:
         """Updates Patroni config file based on the existence of the TLS files."""
+        # Don't track hba changes until database created sets it
+        if "hba_hash" in self.app_peer_data and (
+            self.unit_peer_data.get("hba_hash")
+            != self.postgresql_client_relation.generate_hba_hash
+            or self.app_peer_data.get("hba_hash")
+            != self.postgresql_client_relation.generate_hba_hash
+        ):
+            logger.info("Updating hba definitions")
+            self.postgresql_client_relation.append_to_pg_hba()
+            self.unit_peer_data.update({
+                "hba_hash": self.postgresql_client_relation.generate_hba_hash
+            })
+            if self.unit.is_leader():
+                self.app_peer_data.update({
+                    "hba_hash": self.postgresql_client_relation.generate_hba_hash
+                })
+
         # Retrieve PostgreSQL parameters.
         if self.config.profile_limit_memory:
             limit_memory = self.config.profile_limit_memory * 10**6

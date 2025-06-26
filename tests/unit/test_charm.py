@@ -1425,7 +1425,7 @@ def test_on_peer_relation_changed(harness):
         harness.set_can_connect(POSTGRESQL_CONTAINER, True)
         relation = harness.model.get_relation(PEER, rel_id)
         harness.charm.on.database_peers_relation_changed.emit(relation)
-        _defer.assert_called_once()
+        assert not _defer.called
         _add_members.assert_not_called()
         _update_config.assert_not_called()
         _coordinate_stanza_fields.assert_not_called()
@@ -1696,6 +1696,7 @@ def test_update_config(harness):
             "charm.PostgresqlOperatorCharm.is_tls_enabled", new_callable=PropertyMock
         ) as _is_tls_enabled,
         patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock,
+        patch("charm.PostgreSQLProvider.append_to_pg_hba"),
     ):
         rel_id = harness.model.get_relation(PEER).id
         # Mock some properties.
