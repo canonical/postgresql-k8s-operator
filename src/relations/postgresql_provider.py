@@ -86,7 +86,7 @@ class PostgreSQLProvider(Object):
                 user = f"relation_id_{relation.id}"
                 if database := self.database_provides.fetch_relation_field(
                     relation.id, "database"
-                ) and not self.charm.postgresql.is_user_in_hba(user, current_host=True):
+                ):
                     file.write(
                         f"{'hostssl' if self.charm.is_tls_enabled else 'host'} {database} {user} 0.0.0.0/0 md5"
                     )
