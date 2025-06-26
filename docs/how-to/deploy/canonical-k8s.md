@@ -63,7 +63,7 @@ Model       Controller  Cloud/Region  Version  SLA          Timestamp
 postgresql  ck8s        ck8s          3.6-rc1  unsupported  17:25:11+01:00
 
 App             Version   Status  Scale  Charm           Channel     Rev  Address         Exposed  Message
-postgresql-k8s  14.12     active      1  postgresql-k8s  14/stable   381  10.152.183.30   no       
+postgresql-k8s  14.12     active      1  postgresql-k8s  16/edge     615  10.152.183.30   no       
 
 Unit               Workload  Agent  Address    Ports  Message
 postgresql-k8s/0*  active    idle   10.1.0.16         Primary

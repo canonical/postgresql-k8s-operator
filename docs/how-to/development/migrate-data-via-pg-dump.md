@@ -9,7 +9,7 @@ A database migration is only required if the output of the following command is 
 ```text
 juju show-application postgresql-k8s | yq '.[] | .channel'
 ```
-Migration is **not** necessary if the output above is `14/stable`.
+Migration is **not** necessary if the output above is `14/stable` or `16/edge`.
 
 This guide can be used to copy data between different installations of the same (modern) charm `postgresql-k8s`, but the [backup/restore](/how-to/development/migrate-data-via-backup-restore) is more recommended for migrations between modern charms.
 
@@ -61,7 +61,7 @@ OLD_DB_USER=$(juju show-unit ${CLIENT_APP} | yq '.[] | .relation-info | select(.
 Deploy new PostgreSQL database charm:
 
 ```text
-juju deploy postgresql-k8s --channel 16/stable ${NEW_DB_APP} --trust --channel 14/stable
+juju deploy postgresql-k8s ${NEW_DB_APP} --channel 16/stable --trust
 ```
 
 Obtain `operator` user password of new PostgreSQL database from PostgreSQL charm:

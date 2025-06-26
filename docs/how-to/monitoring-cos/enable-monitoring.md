@@ -91,7 +91,7 @@ prometheus  active  microk8s  admin/cos.prometheus
 
 App                Version  Status  Scale  Charm              Channel  Rev  Address         Exposed  Message
 grafana-agent-k8s  0.32.1   active      1  grafana-agent-k8s  stable    42  10.152.183.61   no       
-postgresql-k8s     14.9     active      3  postgresql-k8s     14/edge  145  10.152.183.126  no       
+postgresql-k8s     14.9     active      3  postgresql-k8s     16/edge  615  10.152.183.126  no       
 
 Unit                  Workload  Agent   Address       Ports  Message
 grafana-agent-k8s/0*  active    idle    10.1.142.191         

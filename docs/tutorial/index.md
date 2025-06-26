@@ -72,7 +72,7 @@ Model "admin/tutorial" is empty.
 To deploy Charmed PostgreSQL K8s, run
 
 ```text
-juju deploy postgresql-k8s --channel=14/stable --trust
+juju deploy postgresql-k8s --channel=16/edge --trust
 ```
 
 Juju will now fetch Charmed PostgreSQL K8s from [Charmhub][Charmhub PostgreSQL K8s] and deploy it to the local MicroK8s. This process can take several minutes depending on how provisioned (RAM, CPU, etc) your machine is. 
@@ -92,7 +92,7 @@ Model     Controller  Cloud/Region        Version  SLA          Timestamp
 tutorial  overlord    microk8s/localhost  2.9.42   unsupported  12:00:43+01:00
 
 App             Version  Status  Scale  Charm           Channel    Rev  Address         Exposed  Message
-postgresql-k8s           active      1  postgresql-k8s  14/stable  56   10.152.183.167  no
+postgresql-k8s           active      1  postgresql-k8s  16/edge    615   10.152.183.167  no
 
 Unit               Workload  Agent  Address       Ports  Message
 postgresql-k8s/0*  active    idle   10.1.188.206
@@ -304,7 +304,7 @@ Model     Controller  Cloud/Region        Version  SLA          Timestamp
 tutorial  overlord    microk8s/localhost  2.9.42   unsupported  12:09:49+01:00
 
 App             Version  Status  Scale  Charm           Channel    Rev  Address         Exposed  Message
-postgresql-k8s           active      3  postgresql-k8s  14/stable  56   10.152.183.167  no
+postgresql-k8s           active      3  postgresql-k8s  16/edge    615  10.152.183.167  no
 
 Unit               Workload  Agent  Address       Ports  Message
 postgresql-k8s/0*  active    idle   10.1.188.206         Primary
@@ -331,7 +331,7 @@ Model     Controller  Cloud/Region        Version  SLA          Timestamp
 tutorial  overlord    microk8s/localhost  2.9.42   unsupported  12:10:08+01:00
 
 App             Version  Status  Scale  Charm           Channel    Rev  Address         Exposed  Message
-postgresql-k8s           active      2  postgresql-k8s  14/stable  56   10.152.183.167  no
+postgresql-k8s           active      2  postgresql-k8s  16/edge    615   10.152.183.167  no
 
 Unit               Workload  Agent  Address       Ports  Message
 postgresql-k8s/0*  active    idle   10.1.188.206         Primary
@@ -416,7 +416,7 @@ tutorial  overlord    microk8s/localhost  2.9.42   unsupported  12:11:53+01:00
 
 App              Version  Status   Scale  Charm            Channel    Rev  Address         Exposed  Message
 data-integrator           waiting      1  data-integrator  edge       6    10.152.183.66   no       installing agent
-postgresql-k8s            active       2  postgresql-k8s   14/stable  56   10.152.183.167  no
+postgresql-k8s            active       2  postgresql-k8s   16/edge    615   10.152.183.167  no
 
 Unit                Workload    Agent  Address       Ports  Message
 data-integrator/0*  blocked     idle   10.1.188.211         Please relate the data-integrator with the desired product
@@ -439,8 +439,8 @@ Model     Controller  Cloud/Region        Version  SLA          Timestamp
 tutorial  overlord    microk8s/localhost  2.9.42   unsupported  12:12:12+01:00
 
 App              Version  Status   Scale  Charm            Channel    Rev  Address         Exposed  Message
-data-integrator           waiting      1  data-integrator  edge        6   10.152.183.66   no       installing agent
-postgresql-k8s            active       2  postgresql-k8s   14/stable  56   10.152.183.167  no
+data-integrator           waiting      1  data-integrator  edge       6    10.152.183.66   no       installing agent
+postgresql-k8s            active       2  postgresql-k8s   16/edge    615  10.152.183.167  no
 
 Unit                Workload    Agent  Address       Ports  Message
 data-integrator/0*  active      idle   10.1.188.211
@@ -575,7 +575,7 @@ Model     Controller  Cloud/Region        Version  SLA          Timestamp
 tutorial  overlord    microk8s/localhost  3.1.7    unsupported  12:18:05+01:00
 
 App                        Version  Status   Scale  Charm                      Channel    Rev  Address         Exposed  Message
-postgresql-k8s                      active       2  postgresql-k8s             14/stable  56   10.152.183.167  no
+postgresql-k8s                      active       2  postgresql-k8s             16/edge    615  10.152.183.167  no
 self-signed-certificates            active       1  self-signed-certificates   stable     72   10.152.183.138  no
 
 Unit                          Workload    Agent  Address       Ports  Message
@@ -658,4 +658,4 @@ multipass delete --purge my-vm
 
 <!--Links-->
 
-[Charmhub PostgreSQL K8s]: https://charmhub.io/postgresql-k8s?channel=14/stable
+[Charmhub PostgreSQL K8s]: https://charmhub.io/postgresql-k8s?channel=16/edge
