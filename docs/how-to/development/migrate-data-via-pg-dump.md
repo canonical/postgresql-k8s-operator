@@ -9,7 +9,7 @@ A database migration is only required if the output of the following command is 
 ```text
 juju show-application postgresql-k8s | yq '.[] | .channel'
 ```
-Migration is **not** necessary if the output above is `14/stable`.
+Migration is **not** necessary if the output above is `14/stable` or `16/edge`.
 
 This guide can be used to copy data between different installations of the same (modern) charm `postgresql-k8s`, but the [backup/restore](/how-to/development/migrate-data-via-backup-restore) is more recommended for migrations between modern charms.
 
@@ -33,8 +33,8 @@ Always test migration in a safe environment before performing it in production!
 ## Prerequisites
 
 -  **[Your application is compatible](/explanation/legacy-charm) with Charmed PostgreSQL K8s** 
-- A client machine with access to thedeployed legacy charm
-- `juju v.2.9` or later  (check [Juju 3.0 Release Notes](https://juju.is/docs/juju/roadmap#juju-3-0-0---22-oct-2022) for more information about key differences)
+- A client machine with access to the deployed legacy charm
+- `juju v.2.9` or later  (check [Juju 3.0 Release Notes](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-0-0-22-oct-2022) for more information about key differences)
 - Enough storage in the cluster to support backup/restore of the databases.
 
 ## Obtain existing database credentials
@@ -61,7 +61,7 @@ OLD_DB_USER=$(juju show-unit ${CLIENT_APP} | yq '.[] | .relation-info | select(.
 Deploy new PostgreSQL database charm:
 
 ```text
-juju deploy postgresql-k8s --channel 16/stable ${NEW_DB_APP} --trust --channel 14/stable
+juju deploy postgresql-k8s ${NEW_DB_APP} --channel 16/stable --trust
 ```
 
 Obtain `operator` user password of new PostgreSQL database from PostgreSQL charm:

@@ -77,7 +77,7 @@ juju add-model welcome-model
 ```
 
 ```{note}
-[This known issue](https://bugs.launchpad.net/juju/+bug/2007575) forces unSNAPed Juju usage to add-k8s credentials on Juju.
+[This known issue](https://bugs.launchpad.net/juju/+bug/2007575) forces non-snap Juju usage to add-k8s credentials on Juju.
 ```
 
 At this stage, Juju is ready to use GKE. Check the list of currently running K8s pods with:

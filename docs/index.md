@@ -3,7 +3,7 @@
 ```{caution}
 **Charmed PostgreSQL K8s 16 is under development.** Please wait for the upcoming stable release before deploying it in production, or see the documentation for [version 14](https://canonical-charmed-postgresql-k8s.readthedocs-hosted.com/14/).
 
-Meanwhile, you’re welcome to explore the [`16/candidate` track](https://charmhub.io/postgresql-k8s?channel=16/candidate) and share your feedback as we continue to improve.
+Meanwhile, you’re welcome to explore the [`16/edge` track](https://charmhub.io/postgresql-k8s?channel=16/edge) and share your feedback as we continue to improve.
 ```
 
 Charmed PostgreSQL K8s is an open-source software operator designed to deploy and operate object-relational databases on Kubernetes. It packages the powerful database management system [PostgreSQL](https://www.postgresql.org/) into a charmed operator for deployment with [Juju](https://juju.is/docs/juju).
@@ -30,7 +30,7 @@ Charmed PostgreSQL K8s is an official distribution of PostgreSQL. It’s an open
 - Explore [Canonical Data solutions](https://canonical.com/data)
 - [Contact us](/reference/contacts) for all further questions
 
-## Licencing & Trademark
+## Licensing & Trademark
 
 The Charmed PostgreSQL Operator is distributed under the [Apache Software Licence version 2.0](https://github.com/canonical/postgresql-operator/blob/main/LICENSE). It depends on [PostgreSQL](https://www.postgresql.org/ftp/source/), which is licensed under the [PostgreSQL License](https://www.postgresql.org/about/licence/) - a liberal open-source licence similar to the BSD or MIT licences.
 

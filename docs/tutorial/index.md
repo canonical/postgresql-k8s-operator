@@ -72,7 +72,7 @@ Model "admin/tutorial" is empty.
 To deploy Charmed PostgreSQL K8s, run
 
 ```text
-juju deploy postgresql-k8s --channel=14/stable --trust
+juju deploy postgresql-k8s --channel=16/edge --trust
 ```
 
 Juju will now fetch Charmed PostgreSQL K8s from [Charmhub][Charmhub PostgreSQL K8s] and deploy it to the local MicroK8s. This process can take several minutes depending on how provisioned (RAM, CPU, etc) your machine is. 
@@ -92,7 +92,7 @@ Model     Controller  Cloud/Region        Version  SLA          Timestamp
 tutorial  overlord    microk8s/localhost  2.9.42   unsupported  12:00:43+01:00
 
 App             Version  Status  Scale  Charm           Channel    Rev  Address         Exposed  Message
-postgresql-k8s           active      1  postgresql-k8s  14/stable  56   10.152.183.167  no
+postgresql-k8s           active      1  postgresql-k8s  16/edge    615   10.152.183.167  no
 
 Unit               Workload  Agent  Address       Ports  Message
 postgresql-k8s/0*  active    idle   10.1.188.206
@@ -188,7 +188,7 @@ You can see below the output for the list of databases. `postgres` is the defaul
 (3 rows)
 ```
 
-In order to execute queries, we should enter psql's interactive terminal by running the following command, again typing password when requested:
+In order to execute queries, we should enter PostgreSQL's interactive terminal by running the following command, again typing password when requested:
 
 ```text
  psql --host=10.1.110.80 --username=operator --password postgres
@@ -270,7 +270,7 @@ When you’re ready to leave the PostgreSQL shell, you can just type `exit`. Thi
 
 ## Scale your replicas
 
-The Charmed PostgreSQL VM operator uses a [PostgreSQL Patroni-based cluster](https://patroni.readthedocs.io/en/latest/) for scaling. It provides features such as automatic membership management, fault tolerance, and automatic failover. The charm uses PostgreSQL’s [synchronous replication](https://patroni.readthedocs.io/en/latest/replication_modes.html#postgresql-k8s-synchronous-replication) with Patroni to handle replication.
+The Charmed PostgreSQL operator uses a [PostgreSQL Patroni-based cluster](https://patroni.readthedocs.io/en/latest/) for scaling. It provides features such as automatic membership management, fault tolerance, and automatic failover. The charm uses PostgreSQL’s [synchronous replication](https://patroni.readthedocs.io/en/latest/replication_modes.html) with Patroni to handle replication.
 
 ```{caution}
 This tutorial hosts all replicas on the same machine. 
@@ -293,7 +293,7 @@ juju scale-application postgresql-k8s 3
 ```{note}
 Unlike machine models, Kubernetes models use `juju scale-application` instead of `juju add-unit` and `juju remove-unit`.
 
-For more information about juju's scaling logic for kubernetes, check [this post](https://discourse.charmhub.io/t/adding-removing-units-scale-application-command/153).
+For more information about Juju's scaling logic for Kubernetes, check [this post](https://discourse.charmhub.io/t/adding-removing-units-scale-application-command/153).
 ```
 
 You can now watch the scaling process in live using: `juju status --watch 1s`. It usually takes several minutes for new cluster members to be added. 
@@ -304,7 +304,7 @@ Model     Controller  Cloud/Region        Version  SLA          Timestamp
 tutorial  overlord    microk8s/localhost  2.9.42   unsupported  12:09:49+01:00
 
 App             Version  Status  Scale  Charm           Channel    Rev  Address         Exposed  Message
-postgresql-k8s           active      3  postgresql-k8s  14/stable  56   10.152.183.167  no
+postgresql-k8s           active      3  postgresql-k8s  16/edge    615  10.152.183.167  no
 
 Unit               Workload  Agent  Address       Ports  Message
 postgresql-k8s/0*  active    idle   10.1.188.206         Primary
@@ -331,7 +331,7 @@ Model     Controller  Cloud/Region        Version  SLA          Timestamp
 tutorial  overlord    microk8s/localhost  2.9.42   unsupported  12:10:08+01:00
 
 App             Version  Status  Scale  Charm           Channel    Rev  Address         Exposed  Message
-postgresql-k8s           active      2  postgresql-k8s  14/stable  56   10.152.183.167  no
+postgresql-k8s           active      2  postgresql-k8s  16/edge    615   10.152.183.167  no
 
 Unit               Workload  Agent  Address       Ports  Message
 postgresql-k8s/0*  active    idle   10.1.188.206         Primary
@@ -389,7 +389,7 @@ Learn more about managing user credentials in [](/how-to/manage-passwords) and [
 
 ## Integrate with other applications
 
-[Integrations](https://juju.is/docs/sdk/integration), known as "relations" in Juju 2.9, are the easiest way to create a user for PostgreSQL in Charmed PostgreSQL VM. 
+[Integrations](https://documentation.ubuntu.com/juju/3.6/reference/relation/), known as "relations" in Juju 2.9, are the easiest way to create a user for PostgreSQL in Charmed PostgreSQL. 
 
 Integrations automatically create a username, password, and database for the desired user/application. The best practice is to connect to PostgreSQL via a specific user rather than the admin user.
 
@@ -416,7 +416,7 @@ tutorial  overlord    microk8s/localhost  2.9.42   unsupported  12:11:53+01:00
 
 App              Version  Status   Scale  Charm            Channel    Rev  Address         Exposed  Message
 data-integrator           waiting      1  data-integrator  edge       6    10.152.183.66   no       installing agent
-postgresql-k8s            active       2  postgresql-k8s   14/stable  56   10.152.183.167  no
+postgresql-k8s            active       2  postgresql-k8s   16/edge    615   10.152.183.167  no
 
 Unit                Workload    Agent  Address       Ports  Message
 data-integrator/0*  blocked     idle   10.1.188.211         Please relate the data-integrator with the desired product
@@ -439,8 +439,8 @@ Model     Controller  Cloud/Region        Version  SLA          Timestamp
 tutorial  overlord    microk8s/localhost  2.9.42   unsupported  12:12:12+01:00
 
 App              Version  Status   Scale  Charm            Channel    Rev  Address         Exposed  Message
-data-integrator           waiting      1  data-integrator  edge        6   10.152.183.66   no       installing agent
-postgresql-k8s            active       2  postgresql-k8s   14/stable  56   10.152.183.167  no
+data-integrator           waiting      1  data-integrator  edge       6    10.152.183.66   no       installing agent
+postgresql-k8s            active       2  postgresql-k8s   16/edge    615  10.152.183.167  no
 
 Unit                Workload    Agent  Address       Ports  Message
 data-integrator/0*  active      idle   10.1.188.211
@@ -562,7 +562,7 @@ TLS is enabled by integrating Charmed PostgreSQL with the [Self-signed certifica
 Check [this guide](https://discourse.charmhub.io/t/security-with-x-509-certificates/11664) for an overview of the TLS certificates charms available. 
 ```
 
-Before enabling TLS on Charmed PostgreSQL VM, we must deploy the `self-signed-certificates` charm:
+Before enabling TLS on Charmed PostgreSQL, we must deploy the `self-signed-certificates` charm:
 
 ```text
 juju deploy self-signed-certificates --config ca-common-name="Tutorial CA"
@@ -575,7 +575,7 @@ Model     Controller  Cloud/Region        Version  SLA          Timestamp
 tutorial  overlord    microk8s/localhost  3.1.7    unsupported  12:18:05+01:00
 
 App                        Version  Status   Scale  Charm                      Channel    Rev  Address         Exposed  Message
-postgresql-k8s                      active       2  postgresql-k8s             14/stable  56   10.152.183.167  no
+postgresql-k8s                      active       2  postgresql-k8s             16/edge    615  10.152.183.167  no
 self-signed-certificates            active       1  self-signed-certificates   stable     72   10.152.183.138  no
 
 Unit                          Workload    Agent  Address       Ports  Message
@@ -625,7 +625,7 @@ The Charmed PostgreSQL K8s application is not using TLS anymore.
 
 In this tutorial we've successfully deployed PostgreSQL on MicroK8s, added and removed cluster members, added and removed database users, and enabled a layer of security with TLS.
 
-You may now keep your Charmed PostgreSQL VM deployment running and write to the database or remove it entirely using the steps in this page. 
+You may now keep your Charmed PostgreSQL deployment running and write to the database or remove it entirely using the steps in this page. 
 
 If you'd like to keep your environment for later, simply stop your VM with
 
@@ -653,9 +653,9 @@ multipass delete --purge my-vm
 - Check out our other other charm offerings, like [MySQL](https://charmhub.io/mysql-k8s) and [Kafka](https://charmhub.io/kafka-k8s?channel=edge).
 - Read about [High Availability Best Practices](https://canonical.com/blog/database-high-availability)
 - [Report](https://github.com/canonical/postgresql-k8s-operator/issues) any problems you encountered.
-- [Give us your feedback](https://chat.charmhub.io/charmhub/channels/data-platform).
+- [Give us your feedback](/reference/contacts).
 - [Contribute to the code base](https://github.com/canonical/postgresql-k8s-operator)
 
 <!--Links-->
 
-[Charmhub PostgreSQL K8s]: https://charmhub.io/postgresql-k8s?channel=14/stable
+[Charmhub PostgreSQL K8s]: https://charmhub.io/postgresql-k8s?channel=16/edge

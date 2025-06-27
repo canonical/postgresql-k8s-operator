@@ -1,8 +1,8 @@
 # How to deploy on Canonical Kubernetes
 
-[Canonical Kubernetes](https://ubuntu.com/kubernetes) is a Kubernetes service built on Ubuntu and optimized for most major public clouds. 
+[Canonical Kubernetes](https://ubuntu.com/kubernetes) is a Kubernetes service built on Ubuntu and optimised for most major public clouds. 
 
-The following instructions are a summarized version of the steps for installing Canonical K8s. For more thorough instructions and details, see the official Canonical Kubernetes documentation: [Install Canonical Kubernetes from a snap](https://documentation.ubuntu.com/canonical-kubernetes/latest/src/snap/howto/install/snap/).
+The following instructions are a summarised version of the steps for installing Canonical K8s. For more thorough instructions and details, see the official Canonical Kubernetes documentation: [Install Canonical Kubernetes from a snap](https://documentation.ubuntu.com/canonical-kubernetes/latest/src/snap/howto/install/snap/).
 
 ## Prerequisites
 
@@ -63,7 +63,7 @@ Model       Controller  Cloud/Region  Version  SLA          Timestamp
 postgresql  ck8s        ck8s          3.6-rc1  unsupported  17:25:11+01:00
 
 App             Version   Status  Scale  Charm           Channel     Rev  Address         Exposed  Message
-postgresql-k8s  14.12     active      1  postgresql-k8s  14/stable   381  10.152.183.30   no       
+postgresql-k8s  14.12     active      1  postgresql-k8s  16/edge     615  10.152.183.30   no       
 
 Unit               Workload  Agent  Address    Ports  Message
 postgresql-k8s/0*  active    idle   10.1.0.16         Primary

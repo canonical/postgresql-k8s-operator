@@ -143,7 +143,7 @@ Model    Controller  Cloud/Region  Version  SLA          Timestamp
 mymodel  gke         gke/us-east4  3.5.3    unsupported  22:02:32+02:00
 
 App         Version  Status  Scale  Charm           Channel    Rev  Address         Exposed  Message
-mydatabase  14.13    active      3  postgresql-k8s  14/stable  382  34.118.235.169  no       
+mydatabase  14.13    active      3  postgresql-k8s  16/edge    615  34.118.235.169  no       
 
 Unit           Workload  Agent  Address    Ports  Message
 mydatabase/0   active    idle   10.80.5.9         
@@ -232,7 +232,7 @@ Model    Controller  Cloud/Region  Version  SLA          Timestamp
 mymodel  gke         gke/us-east4  3.5.3    unsupported  22:31:00+02:00
 
 App         Version  Status   Scale  Charm           Channel    Rev  Address         Exposed  Message
-mydatabase  14.13    waiting    2/3  postgresql-k8s  14/stable  382  34.118.235.169  no       installing agent
+mydatabase  14.13    waiting    2/3  postgresql-k8s  16/edge    615  34.118.235.169  no       installing agent
 
 Unit           Workload  Agent  Address    Ports  Message
 mydatabase/0   unknown   lost                     agent lost, see 'juju show-status-log mydatabase/0'
@@ -253,7 +253,7 @@ Model    Controller  Cloud/Region  Version  SLA          Timestamp
 mymodel  gke         gke/us-east4  3.5.3    unsupported  22:38:23+02:00
 
 App         Version  Status  Scale  Charm           Channel    Rev  Address         Exposed  Message
-mydatabase  14.13    active      3  postgresql-k8s  14/stable  382  34.118.235.169  no       
+mydatabase  14.13    active      3  postgresql-k8s  16/edge    615  34.118.235.169  no       
 
 Unit           Workload  Agent  Address     Ports  Message
 mydatabase/0   active    idle   10.80.5.10         
@@ -263,7 +263,7 @@ mydatabase/2   active    idle   10.80.1.6
 
 At this point we can relax and enjoy the protection from Cloud Availability zones!
 
-To survive acomplete cloud outage, we recommend setting up [cluster-cluster asynchronous replication](/how-to/cross-regional-async-replication/set-up-clusters).
+To survive a complete cloud outage, we recommend setting up [cluster-cluster asynchronous replication](/how-to/cross-regional-async-replication/set-up-clusters).
 
 
 ## Remove GKE setup

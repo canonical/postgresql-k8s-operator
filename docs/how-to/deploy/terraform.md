@@ -1,6 +1,6 @@
 # How to deploy using Terraform
 
-[Terraform](https://www.terraform.io/) is an infrastructure automation tool to provision and manage resources in clouds or data centers. To deploy Charmed PostgreSQL K8s using Terraform and Juju, you can use the [Juju Terraform Provider](https://registry.terraform.io/providers/juju/juju/latest). 
+[Terraform](https://www.terraform.io/) is an infrastructure automation tool to provision and manage resources in clouds or data centres. To deploy Charmed PostgreSQL K8s using Terraform and Juju, you can use the [Juju Terraform Provider](https://registry.terraform.io/providers/juju/juju/latest). 
 
 The easiest way is to start from [these examples of terraform modules](https://github.com/canonical/terraform-modules) prepared by Canonical. This page will guide you through a deployment using an example module for PostgreSQL on Kubernetes.
 
@@ -87,7 +87,7 @@ Model     Controller  Cloud/Region        Version  SLA          Timestamp
 my-model  k8s         microk8s/localhost  3.5.3    unsupported  12:09:38Z
 
 App             Version  Status  Scale  Charm           Channel    Rev  Address         Exposed  Message     
-postgresql-k8s  14.11    active      1  postgresql-k8s  14/stable  281  10.152.183.137  no                                     
+postgresql-k8s  14.11    active      1  postgresql-k8s  16/edge    615  10.152.183.137  no                                     
 
 Unit               Workload  Agent  Address     Ports  Message       
 postgresql-k8s/0*  active    idle   10.1.77.74         Primary                                           

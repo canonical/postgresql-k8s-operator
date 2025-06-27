@@ -54,13 +54,13 @@ juju consume <k8s_cos_controller>:admin/cos.prometheus
 ```
 ## Deploy and integrate Grafana
 
-First, deploy [grafana-agent-k8s](https://charmhub.io/grafana-agent-k8s):
+First, deploy [`grafana-agent-k8s`](https://charmhub.io/grafana-agent-k8s):
 
 ```text
 juju deploy grafana-agent-k8s --trust
 ```
 
-Then, integrate (previously known as "[relate](https://juju.is/docs/juju/integration)") it with Charmed PostgreSQL K8s:
+Then, integrate (previously known as "[relate](https://documentation.ubuntu.com/juju/3.6/reference/relation/)") it with Charmed PostgreSQL K8s:
 
 ```text
 juju integrate grafana-agent-k8s grafana
@@ -91,7 +91,7 @@ prometheus  active  microk8s  admin/cos.prometheus
 
 App                Version  Status  Scale  Charm              Channel  Rev  Address         Exposed  Message
 grafana-agent-k8s  0.32.1   active      1  grafana-agent-k8s  stable    42  10.152.183.61   no       
-postgresql-k8s     14.9     active      3  postgresql-k8s     14/edge  145  10.152.183.126  no       
+postgresql-k8s     14.9     active      3  postgresql-k8s     16/edge  615  10.152.183.126  no       
 
 Unit                  Workload  Agent   Address       Ports  Message
 grafana-agent-k8s/0*  active    idle    10.1.142.191         
@@ -131,7 +131,7 @@ prometheus  prometheus   prometheus-k8s  149  1/1        receive-remote-write  p
 ```
 ### Connect Grafana web interface
 
-To connect to the Grafana web interface, follow the [Browse dashboards](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s?_ga=2.201254254.1948444620.1704703837-757109492.1701777558#browse-dashboards) section of the MicroK8s "Getting started" guide.
+To connect to the Grafana web interface, follow the [Browse dashboards](https://charmhub.io/topics/canonical-observability-stack/tutorials/install-microk8s) section of the MicroK8s "Getting started" guide.
 
 ```text
 juju run grafana/leader get-admin-password --model <k8s_cos_controller>:<cos_model_name>
@@ -140,4 +140,3 @@ juju run grafana/leader get-admin-password --model <k8s_cos_controller>:<cos_mod
 Below is a sample screenshot of Charmed PostgreSQL on the Grafana web UI:
 
 ![Charmed PostgreSQL Grafana web UI|690x353](postgresql-grafana-ui.png)
-
