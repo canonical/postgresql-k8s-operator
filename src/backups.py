@@ -1202,6 +1202,7 @@ Stderr:
             storage_path=self.charm._storage_path,
             user=BACKUP_USER,
             retention_full=s3_parameters["delete-older-than-days"],
+            process_max=max(os.cpu_count() - 2, 1),
         )
         # Delete the original file and render the one with the right info.
         filename = "/etc/pgbackrest.conf"
