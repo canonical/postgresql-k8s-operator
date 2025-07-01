@@ -23,11 +23,7 @@ from ops.charm import CharmBase, RelationBrokenEvent, RelationChangedEvent, Rela
 from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, Relation
 
-from constants import (
-    DATABASE_PORT,
-    ENDPOINT_SIMULTANEOUSLY_BLOCKING_MESSAGE,
-    POSTGRESQL_DATA_PATH,
-)
+from constants import DATABASE_PORT, ENDPOINT_SIMULTANEOUSLY_BLOCKING_MESSAGE
 from utils import new_password
 
 logger = logging.getLogger(__name__)
@@ -70,7 +66,7 @@ class PostgreSQLProvider(Object):
         )
 
     @property
-    def generate_hba_hash(self) -> str:
+    def generate_user_hash(self) -> str:
         """Generate expected user and database hash."""
         user_db_pairs = {}
         for relation in self.model.relations[self.relation_name]:
@@ -78,18 +74,6 @@ class PostgreSQLProvider(Object):
                 user = f"relation_id_{relation.id}"
                 user_db_pairs[user] = database
         return shake_128(str(user_db_pairs).encode()).hexdigest(16)
-
-    def append_to_pg_hba(self) -> None:
-        """Append missing users to pg hba."""
-        with open(f"{POSTGRESQL_DATA_PATH}/pg_hba.conf", "a") as file:
-            for relation in self.model.relations[self.relation_name]:
-                user = f"relation_id_{relation.id}"
-                if database := self.database_provides.fetch_relation_field(
-                    relation.id, "database"
-                ):
-                    file.write(
-                        f"{'hostssl' if self.charm.is_tls_enabled else 'host'} {database} {user} 0.0.0.0/0 md5"
-                    )
 
     @staticmethod
     def _sanitize_extra_roles(extra_roles: str | None) -> list[str]:
@@ -115,14 +99,14 @@ class PostgreSQLProvider(Object):
             event.defer()
             return
 
-        self.charm.app_peer_data.update({"hba_hash": self.generate_hba_hash})
+        self.charm.app_peer_data.update({"user_hash": self.generate_user_hash})
         self.charm.update_config()
         for key in self.charm._peers.data:
             # We skip the leader so we don't have to wait on the defer
             if (
                 key != self.charm.app
                 and key != self.charm.unit
-                and self.charm._peers.data[key].get("hba_hash", "") != self.generate_hba_hash
+                and self.charm._peers.data[key].get("user_hash", "") != self.generate_user_hash
             ):
                 logger.debug("Not all units have synced configuration")
                 event.defer()

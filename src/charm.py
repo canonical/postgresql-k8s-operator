@@ -2051,23 +2051,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def update_config(self, is_creating_backup: bool = False) -> bool:
         """Updates Patroni config file based on the existence of the TLS files."""
-        # Don't track hba changes until database created sets it
-        if "hba_hash" in self.app_peer_data and (
-            self.unit_peer_data.get("hba_hash")
-            != self.postgresql_client_relation.generate_hba_hash
-            or self.app_peer_data.get("hba_hash")
-            != self.postgresql_client_relation.generate_hba_hash
-        ):
-            logger.info("Updating hba definitions")
-            self.postgresql_client_relation.append_to_pg_hba()
-            self.unit_peer_data.update({
-                "hba_hash": self.postgresql_client_relation.generate_hba_hash
-            })
-            if self.unit.is_leader():
-                self.app_peer_data.update({
-                    "hba_hash": self.postgresql_client_relation.generate_hba_hash
-                })
-
         # Retrieve PostgreSQL parameters.
         if self.config.profile_limit_memory:
             limit_memory = self.config.profile_limit_memory * 10**6
@@ -2136,6 +2119,21 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._restart_metrics_service()
         self._restart_ldap_sync_service()
 
+        # Don't track hba changes until database created sets it
+        if "user_hash" in self.app_peer_data and (
+            self.unit_peer_data.get("user_hash")
+            != self.postgresql_client_relation.generate_user_hash
+            or self.app_peer_data.get("user_hash")
+            != self.postgresql_client_relation.generate_user_hash
+        ):
+            logger.info("Updating user hash")
+            self.unit_peer_data.update({
+                "user_hash": self.postgresql_client_relation.generate_user_hash
+            })
+            if self.unit.is_leader():
+                self.app_peer_data.update({
+                    "user_hash": self.postgresql_client_relation.generate_user_hash
+                })
         return True
 
     def _validate_config_options(self) -> None:
@@ -2333,6 +2331,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     user, current_host=self.is_connectivity_enabled
                 )
             )
+
+        # Copy relations users directly instead of waiting for them to be created
+        for relation in self.model.relations[self.postgresql_client_relation.relation_name]:
+            user = f"relation_id_{relation.id}"
+            if user not in user_database_map and (
+                database := self.postgresql_client_relation.database_provides.fetch_relation_field(
+                    relation.id, "database"
+                )
+            ):
+                user_database_map[user] = database
         return user_database_map
 
     def override_patroni_on_failure_condition(

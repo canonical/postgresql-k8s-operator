@@ -1696,7 +1696,6 @@ def test_update_config(harness):
             "charm.PostgresqlOperatorCharm.is_tls_enabled", new_callable=PropertyMock
         ) as _is_tls_enabled,
         patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock,
-        patch("charm.PostgreSQLProvider.append_to_pg_hba"),
     ):
         rel_id = harness.model.get_relation(PEER).id
         # Mock some properties.
