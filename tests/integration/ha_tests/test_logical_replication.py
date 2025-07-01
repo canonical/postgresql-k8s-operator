@@ -87,7 +87,6 @@ async def test_pg2_publisher_error(ops_test: OpsTest):
     await _wait_for_leader_on_blocked(ops_test, SECOND_DATABASE_APP_NAME)
 
 
-@markers.juju3
 @pytest.mark.abort_on_fail
 async def test_pg3_local_error(ops_test: OpsTest):
     pg3_config = DATABASE_APP_CONFIG.copy()
