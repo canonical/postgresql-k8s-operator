@@ -1186,6 +1186,7 @@ Stderr:
         # Open the template pgbackrest.conf file.
         with open("templates/pgbackrest.conf.j2") as file:
             template = Template(file.read())
+        cpu_count, _ = self.charm.get_available_resources()
         # Render the template file with the correct values.
         rendered = template.render(
             enable_tls=self.charm.is_tls_enabled and len(self.charm.peer_members_endpoints) > 0,
@@ -1202,7 +1203,7 @@ Stderr:
             storage_path=self.charm._storage_path,
             user=BACKUP_USER,
             retention_full=s3_parameters["delete-older-than-days"],
-            process_max=max(os.cpu_count() - 2, 1),
+            process_max=max(cpu_count - 2, 1),
         )
         # Delete the original file and render the one with the right info.
         filename = "/etc/pgbackrest.conf"

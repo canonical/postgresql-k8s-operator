@@ -1,7 +1,6 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 import datetime
-from os import cpu_count
 from unittest.mock import MagicMock, PropertyMock, call, mock_open, patch
 
 import pytest
@@ -1762,6 +1761,7 @@ def test_render_pgbackrest_conf_file(harness, tls_ca_chain_filename):
             new_callable=PropertyMock(return_value=tls_ca_chain_filename),
         ) as _tls_ca_chain_filename,
         patch("charm.PostgreSQLBackups._retrieve_s3_parameters") as _retrieve_s3_parameters,
+        patch("charm.PostgresqlOperatorCharm.get_available_resources", return_value=(4, 1024)),
     ):
         # Set up a mock for the `open` method, set returned data to postgresql.conf template.
         with open("templates/pgbackrest.conf.j2") as f:
@@ -1813,7 +1813,7 @@ def test_render_pgbackrest_conf_file(harness, tls_ca_chain_filename):
             storage_path=harness.charm._storage_path,
             user="backup",
             retention_full=30,
-            process_max=max(cpu_count() - 2, 1),
+            process_max=2,
         )
 
         # Patch the `open` method with our mock.
