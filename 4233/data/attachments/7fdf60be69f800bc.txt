@@ -1,0 +1,253 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  untrusted-postgresql-k8s/0 [executing] maintenance: installing charm software
+  untrusted-postgresql-k8s/1 [executing] blocked: Insufficient permissions, try: `juju trust untrusted-postgresql-k8s --scope=cluster`
+  untrusted-postgresql-k8s/2 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  untrusted-postgresql-k8s/0 [executing] unknown: 
+  untrusted-postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+  untrusted-postgresql-k8s/2 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+  untrusted-postgresql-k8s/1 [idle] active: Primary (degraded)
+  untrusted-postgresql-k8s/2 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+  untrusted-postgresql-k8s/1 [idle] maintenance: reconfiguring cluster
+  untrusted-postgresql-k8s/2 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] waiting: awaiting for member to start
+  untrusted-postgresql-k8s/1 [idle] active: Primary (degraded)
+  untrusted-postgresql-k8s/2 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] waiting: awaiting for member to start
+  untrusted-postgresql-k8s/1 [executing] active: Primary (degraded)
+  untrusted-postgresql-k8s/2 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] active: 
+  untrusted-postgresql-k8s/1 [idle] active: Primary
+  untrusted-postgresql-k8s/2 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  untrusted-postgresql-k8s/0 [executing] active: 
+  untrusted-postgresql-k8s/1 [executing] active: Primary
+  untrusted-postgresql-k8s/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.7    unsupported  01:36:21Z
+
+App                       Version  Status   Scale  Charm           Channel  Rev  Address        Exposed  Message
+untrusted-postgresql-k8s  14.18    waiting      3  postgresql-k8s             0  10.152.183.82  no       installing agent
+
+Unit                         Workload  Agent  Address     Ports  Message
+untrusted-postgresql-k8s/0   error     idle   10.1.32.75         hook failed: "database-peers-relation-changed"
+untrusted-postgresql-k8s/1*  error     idle   10.1.32.77         hook failed: "database-peers-relation-changed"
+untrusted-postgresql-k8s/2   error     idle   10.1.32.76         hook failed: "database-peers-relation-changed"
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+unit-untrusted-postgresql-k8s-1: 01:32:19 ERROR unit.untrusted-postgresql-k8s/1.juju-log 
+            Access to k8s cluster resources is not authorized. This happens when RBAC is enabled and the deployed application was not trusted by the juju admin.
+            To fix this issue, run `juju trust untrusted-postgresql-k8s --scope=cluster` (or remove & re-deploy untrusted-postgresql-k8s with `--trust`)
+            
+unit-untrusted-postgresql-k8s-1: 01:32:19 ERROR unit.untrusted-postgresql-k8s/1.juju-log 
+            Access to k8s cluster resources is not authorized. This happens when RBAC is enabled and the deployed application was not trusted by the juju admin.
+            To fix this issue, run `juju trust untrusted-postgresql-k8s --scope=cluster` (or remove & re-deploy untrusted-postgresql-k8s with `--trust`)
+            
+unit-untrusted-postgresql-k8s-0: 01:36:11 ERROR unit.untrusted-postgresql-k8s/0.juju-log database-peers:0: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 300, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/untrusted-postgresql-k8s-0'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/src/charm.py", line 2513, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 356, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 475, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 459, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 403, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 438, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1116, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/src/charm.py", line 611, in _on_peer_relation_changed
+    self.update_config()
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1116, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/src/charm.py", line 2065, in update_config
+    raise e
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/src/charm.py", line 2060, in update_config
+    available_cpu_cores, available_memory = self.get_available_resources()
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1116, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/src/charm.py", line 2261, in get_available_resources
+    cpu_cores = self.get_node_cpu_cores()
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1116, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/src/charm.py", line 2256, in get_node_cpu_cores
+    node = client.get(Node, name=self._get_node_name_for_pod(), namespace=self._namespace)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1116, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/src/charm.py", line 2226, in _get_node_name_for_pod
+    pod = client.get(
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 233, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 384, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 316, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 302, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: rpc error: code = Unavailable desc = error reading from server: read unix @->/var/snap/microk8s/8155/var/kubernetes/backend/kine.sock:12379: read: connection reset by peer
+unit-untrusted-postgresql-k8s-2: 01:36:11 ERROR unit.untrusted-postgresql-k8s/2.juju-log database-peers:0: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 300, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Server error '500 Internal Server Error' for url 'https://10.152.183.1/api/v1/namespaces/testing/pods/untrusted-postgresql-k8s-2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/500
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/src/charm.py", line 2513, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 356, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 475, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 459, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 403, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 438, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1116, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/src/charm.py", line 611, in _on_peer_relation_changed
+    self.update_config()
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1116, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/src/charm.py", line 2065, in update_config
+    raise e
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/src/charm.py", line 2060, in update_config
+    available_cpu_cores, available_memory = self.get_available_resources()
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1116, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/src/charm.py", line 2263, in get_available_resources
+    container_limits = self.get_resources_limits(container_name="postgresql")
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1116, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/src/charm.py", line 2238, in get_resources_limits
+    pod = client.get(
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 233, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 384, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 316, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 302, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: rpc error: code = Unavailable desc = error reading from server: read unix @->/var/snap/microk8s/8155/var/kubernetes/backend/kine.sock:12379: read: connection reset by peer
+unit-untrusted-postgresql-k8s-1: 01:36:11 ERROR unit.untrusted-postgresql-k8s/1.juju-log database-peers:0: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3422, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-untrusted-postgresql-k8s-1/secret-get', '--label', 'database-peers.untrusted-postgresql-k8s.app', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/src/charm.py", line 2513, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 356, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 475, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 459, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 403, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 438, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1116, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/src/charm.py", line 596, in _on_peer_relation_changed
+    self._add_members(event)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1116, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/src/charm.py", line 840, in _add_members
+    if self._patroni.cluster_members == self._hosts:
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/src/charm.py", line 1676, in _patroni
+    self.get_secret(APP_SCOPE, USER_PASSWORD_KEY),
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1116, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/src/charm.py", line 379, in get_secret
+    if result := self.peer_relation_data(scope).fetch_my_relation_field(peers.id, key):
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1610, in fetch_my_relation_field
+    if relation_data := self.fetch_my_relation_data([relation_id], [field], relation_name):
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1599, in fetch_my_relation_data
+    data[relation.id] = self._fetch_my_specific_relation_data(relation, fields)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 537, in wrapper
+    return f(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2367, in _fetch_my_specific_relation_data
+    self.component, self.local_secret_fields, relation, fields
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1990, in local_secret_fields
+    self.static_secret_fields if self.static_secret_fields else self.current_secret_fields
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2013, in current_secret_fields
+    if content := self._get_group_secret_contents(relation, group):
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2354, in _get_group_secret_contents
+    result = super()._get_group_secret_contents(relation, group, secret_fields)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1330, in _get_group_secret_contents
+    if (secret := self._get_relation_secret(relation.id, group)) and (
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 509, in wrapper
+    return f(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2341, in _get_relation_secret
+    return self.secrets.get(
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 814, in get
+    if secret.meta:
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 644, in meta
+    self._secret_meta = self._model.get_secret(label=self.label)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 313, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3808, in secret_get
+    result = self._run('secret-get', *args, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3424, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR rpc error: code = Unavailable desc = error reading from server: read unix @->/var/snap/microk8s/8155/var/kubernetes/backend/kine.sock:12379: read: connection reset by peer
+
+unit-untrusted-postgresql-k8s-1: 01:36:12 ERROR juju.worker.uniter.operation hook "database-peers-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-untrusted-postgresql-k8s-0: 01:36:12 ERROR juju.worker.uniter.operation hook "database-peers-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-untrusted-postgresql-k8s-2: 01:36:12 ERROR juju.worker.uniter.operation hook "database-peers-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
