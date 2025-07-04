@@ -1,0 +1,48 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] blocked: Failed to initialize db relation
+  postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] active: 
+  postgresql-k8s/1 [executing] active: 
+  postgresql-k8s/2 [executing] waiting: Awaiting restart operation
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [executing] maintenance: Executing restart operation
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.7    unsupported  01:45:23Z
+
+App                       Version                         Status  Scale  Charm                     Channel        Rev  Address         Exposed  Message
+mattermost                .../mattermost:v8.1.3-20.04...  active      2  mattermost-k8s            latest/stable   27  10.152.183.158  no       
+postgresql-k8s            14.18                           active      3  postgresql-k8s                             0  10.152.183.166  no       
+self-signed-certificates                                  active      1  self-signed-certificates  latest/stable  264  10.152.183.180  no       
+
+Unit                         Workload  Agent  Address     Ports     Message
+mattermost/0*                active    idle   10.1.32.81  8065/TCP  
+mattermost/1                 active    idle   10.1.32.80  8065/TCP  
+postgresql-k8s/0             active    idle   10.1.32.76            
+postgresql-k8s/1*            active    idle   10.1.32.77            
+postgresql-k8s/2             active    idle   10.1.32.78            Primary
+self-signed-certificates/0*  active    idle   10.1.32.75            
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+unit-postgresql-k8s-2: 01:35:24 ERROR unit.postgresql-k8s/2.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-postgresql-k8s-2: 01:35:39 ERROR unit.postgresql-k8s/2.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-postgresql-k8s-2: 01:36:17 ERROR unit.postgresql-k8s/2.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-postgresql-k8s-2: 01:36:27 ERROR unit.postgresql-k8s/2.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-postgresql-k8s-1: 01:42:33 ERROR unit.postgresql-k8s/1.juju-log db:4: Failed to create database: deadlock detected
+DETAIL:  Process 44528 waits for ShareLock on transaction 2086; blocked by process 44304.
+Process 44304 waits for ShareLock on transaction 2124; blocked by process 44528.
+HINT:  See server log for query details.
+CONTEXT:  while updating tuple (21,45) in relation "pg_class"
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
