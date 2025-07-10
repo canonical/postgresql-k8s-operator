@@ -1,0 +1,47 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [executing] active: Primary
+  postgresql-test-app/0 [executing] active: 
+  postgresql-test-app2/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Primary
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m integration.test_db:test_db.py:226 Verify that the charm remains blocked if there are other blocking relations
+[32mINFO    [0m integration.test_db:test_db.py:237 Verify that active status is restored when all blocking relations are gone
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] active: 
+  postgresql-k8s/1 [executing] active: 
+  postgresql-k8s/2 [executing] blocked: roles requested through relation, use postgresql_client interface instead
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [executing] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.8    unsupported  01:50:03Z
+
+App                   Version  Status  Scale  Charm                Channel      Rev  Address         Exposed  Message
+postgresql-k8s        14.18    active      3  postgresql-k8s                      0  10.152.183.226  no       
+postgresql-test-app            active      1  postgresql-test-app  latest/edge  392  10.152.183.67   no       
+postgresql-test-app2           active      1  postgresql-test-app  latest/edge  392  10.152.183.50   no       
+
+Unit                     Workload  Agent  Address       Ports  Message
+postgresql-k8s/0         active    idle   10.1.169.139         
+postgresql-k8s/1         active    idle   10.1.169.141         
+postgresql-k8s/2*        active    idle   10.1.169.140         
+postgresql-test-app2/0*  active    idle   10.1.169.145         
+postgresql-test-app/0*   active    idle   10.1.169.144         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+unit-postgresql-k8s-2: 01:46:02 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-k8s-0: 01:46:02 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-k8s-1: 01:46:02 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-k8s-2: 01:46:40 ERROR unit.postgresql-k8s/2.juju-log db:10: ERROR - `extensions` (unaccent, pg_trgm) cannot be requested through relations - Please enable extensions through `juju config` and add the relation again.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
