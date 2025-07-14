@@ -25,6 +25,7 @@ from ops import (
     SecretChangedEvent,
     SecretNotFoundError,
 )
+from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from utils import new_password
 
@@ -218,15 +219,19 @@ class PostgreSQLLogicalReplication(Object):
                 )
             else:
                 publication_name = publication["publication-name"]
-                self.charm.postgresql.create_subscription(
-                    subscription_name,
-                    secret_content["primary"],
-                    database,
-                    secret_content["username"],
-                    secret_content["password"],
-                    publication_name,
-                    publication["replication-slot-name"],
-                )
+                for attempt in Retrying(
+                    stop=stop_after_delay(120), wait=wait_fixed(3), reraise=True
+                ):
+                    with attempt:
+                        self.charm.postgresql.create_subscription(
+                            subscription_name,
+                            secret_content["primary"],
+                            database,
+                            secret_content["username"],
+                            secret_content["password"],
+                            publication_name,
+                            publication["replication-slot-name"],
+                        )
                 logger.info(
                     f"Created new subscription {subscription_name} for publication {publication_name} in database {database}"
                 )
