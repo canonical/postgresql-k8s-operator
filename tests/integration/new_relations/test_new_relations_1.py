@@ -14,11 +14,7 @@ from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from constants import DATABASE_DEFAULT_NAME
 
-from ..helpers import (
-    CHARM_BASE,
-    check_database_users_existence,
-    scale_application,
-)
+from ..helpers import CHARM_BASE, check_database_users_existence, scale_application
 from .helpers import (
     build_connection_string,
     get_application_relation_data,
@@ -454,7 +450,9 @@ async def test_admin_role(ops_test: OpsTest):
     all_app_names = [DATA_INTEGRATOR_APP_NAME]
     all_app_names.extend(APP_NAMES)
     async with ops_test.fast_forward():
-        await ops_test.model.deploy(DATA_INTEGRATOR_APP_NAME, base=CHARM_BASE)
+        await ops_test.model.deploy(
+            DATA_INTEGRATOR_APP_NAME, channel="latest/edge", series="jammy"
+        )
         await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR_APP_NAME], status="blocked")
         await ops_test.model.applications[DATA_INTEGRATOR_APP_NAME].set_config({
             "database-name": DATA_INTEGRATOR_APP_NAME.replace("-", "_"),
@@ -546,7 +544,8 @@ async def test_invalid_extra_user_roles(ops_test: OpsTest):
         await ops_test.model.deploy(
             DATA_INTEGRATOR_APP_NAME,
             application_name=another_data_integrator_app_name,
-            base=CHARM_BASE,
+            channel="latest/edge",
+            series="jammy",
         )
         await ops_test.model.wait_for_idle(
             apps=[another_data_integrator_app_name], status="blocked"
