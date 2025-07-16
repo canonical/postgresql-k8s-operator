@@ -26,8 +26,8 @@ FIRST_RELATION_USER = "relation_id_0"
 SECOND_RELATION_USER = "relation_id_1"
 PASSWORD = "test-password"
 
-# Topology observer period * 1.5
-SLEEP_TIME = 45
+# Topology observer period * 2
+SLEEP_TIME = 60
 
 
 @pytest.mark.abort_on_fail
