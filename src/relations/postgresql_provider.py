@@ -99,7 +99,6 @@ class PostgreSQLProvider(Object):
             event.defer()
             return
 
-        self.charm.app_peer_data.update({"user_hash": self.generate_user_hash})
         self.charm.update_config()
         for key in self.charm._peers.data:
             # We skip the leader so we don't have to wait on the defer

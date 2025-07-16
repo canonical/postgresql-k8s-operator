@@ -2119,21 +2119,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._restart_metrics_service()
         self._restart_ldap_sync_service()
 
-        # Don't track hba changes until database created sets it
-        if "user_hash" in self.app_peer_data and (
-            self.unit_peer_data.get("user_hash")
-            != self.postgresql_client_relation.generate_user_hash
-            or self.app_peer_data.get("user_hash")
-            != self.postgresql_client_relation.generate_user_hash
-        ):
-            logger.info("Updating user hash")
-            self.unit_peer_data.update({
+        self.unit_peer_data.update({
+            "user_hash": self.postgresql_client_relation.generate_user_hash
+        })
+        if self.unit.is_leader():
+            self.app_peer_data.update({
                 "user_hash": self.postgresql_client_relation.generate_user_hash
             })
-            if self.unit.is_leader():
-                self.app_peer_data.update({
-                    "user_hash": self.postgresql_client_relation.generate_user_hash
-                })
         return True
 
     def _validate_config_options(self) -> None:
