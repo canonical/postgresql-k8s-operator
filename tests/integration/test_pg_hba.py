@@ -26,9 +26,6 @@ FIRST_RELATION_USER = "relation_id_0"
 SECOND_RELATION_USER = "relation_id_1"
 PASSWORD = "test-password"
 
-# Topology observer period * 2
-SLEEP_TIME = 60
-
 
 @pytest.mark.abort_on_fail
 async def test_pg_hba(ops_test: OpsTest, charm):
@@ -102,7 +99,7 @@ async def test_pg_hba(ops_test: OpsTest, charm):
             if connection:
                 connection.close()
 
-        sleep(SLEEP_TIME)
+        sleep(30)
 
         for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
             try:
