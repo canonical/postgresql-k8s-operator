@@ -55,6 +55,8 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest, charm):
                 num_units=2,
                 base=CHARM_BASE,
                 channel="latest/edge",
+                # TODO remove when setting predefined roles
+                config={"extra_user_roles": "CREATEDB,CREATEROLE"},
             ),
             ops_test.model.deploy(
                 charm,
