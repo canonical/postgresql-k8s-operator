@@ -13,6 +13,7 @@ import re
 import shutil
 import sys
 import time
+from hashlib import shake_128
 from pathlib import Path
 from typing import Literal, get_args
 from urllib.parse import urlparse
@@ -2119,13 +2120,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._restart_metrics_service()
         self._restart_ldap_sync_service()
 
-        self.unit_peer_data.update({
-            "user_hash": self.postgresql_client_relation.generate_user_hash
-        })
+        self.unit_peer_data.update({"user_hash": self.generate_user_hash})
         if self.unit.is_leader():
-            self.app_peer_data.update({
-                "user_hash": self.postgresql_client_relation.generate_user_hash
-            })
+            self.app_peer_data.update({"user_hash": self.generate_user_hash})
         return True
 
     def _validate_config_options(self) -> None:
@@ -2334,6 +2331,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             ):
                 user_database_map[user] = database
         return user_database_map
+
+    @property
+    def generate_user_hash(self) -> str:
+        """Generate expected user and database hash."""
+        return shake_128(str(self.relations_user_databases_map).encode()).hexdigest(16)
 
     def override_patroni_on_failure_condition(
         self, new_condition: str, repeat_cause: str | None
