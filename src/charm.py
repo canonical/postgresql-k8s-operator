@@ -2120,8 +2120,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._restart_metrics_service()
         self._restart_ldap_sync_service()
 
-        self.unit_peer_data.update({"user_hash": self.generate_user_hash})
-        if self.unit.is_leader():
+        if self.unit_peer_data.get("user_hash") != self.generate_user_hash:
+            self.unit_peer_data.update({"user_hash": self.generate_user_hash})
+        if (
+            self.unit.is_leader()
+            and self.app_peer_data.get("user_hash") != self.generate_user_hash
+        ):
             self.app_peer_data.update({"user_hash": self.generate_user_hash})
         return True
 
