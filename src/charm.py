@@ -2339,7 +2339,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @property
     def generate_user_hash(self) -> str:
         """Generate expected user and database hash."""
-        return shake_128(str(self.relations_user_databases_map).encode()).hexdigest(16)
+        return shake_128(
+            str(sorted(self.relations_user_databases_map.items())).encode()
+        ).hexdigest(16)
 
     def override_patroni_on_failure_condition(
         self, new_condition: str, repeat_cause: str | None
