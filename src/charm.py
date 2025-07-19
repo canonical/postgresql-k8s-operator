@@ -2339,9 +2339,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @property
     def generate_user_hash(self) -> str:
         """Generate expected user and database hash."""
-        return shake_128(
-            str(sorted(self.relations_user_databases_map.items())).encode()
-        ).hexdigest(16)
+        user_db_pairs = {}
+        for relation in self.model.relations[self.postgresql_client_relation.relation_name]:
+            if database := self.postgresql_client_relation.database_provides.fetch_relation_field(
+                relation.id, "database"
+            ):
+                user = f"relation_id_{relation.id}"
+                user_db_pairs[user] = database
+        return shake_128(str(user_db_pairs).encode()).hexdigest(16)
 
     def override_patroni_on_failure_condition(
         self, new_condition: str, repeat_cause: str | None
