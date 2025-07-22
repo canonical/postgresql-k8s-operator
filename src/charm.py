@@ -4,7 +4,6 @@
 
 """Charmed Kubernetes Operator for the PostgreSQL database."""
 
-import datetime
 import itertools
 import json
 import logging
@@ -13,6 +12,7 @@ import re
 import shutil
 import sys
 import time
+from datetime import datetime
 from hashlib import shake_128
 from pathlib import Path
 from typing import Literal, get_args
@@ -222,9 +222,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             "/usr/bin/juju-exec" if self.model.juju_version.major > 2 else "/usr/bin/juju-run"
         )
         self._observer = AuthorisationRulesObserver(self, run_cmd)
-        self.framework.observe(
-            self.on.authorisation_rules_change, self._on_authorisation_rules_change
-        )
+        self.framework.observe(self.on.databases_change, self._on_databases_change)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
@@ -282,9 +280,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self, relation_name=TRACING_RELATION_NAME, protocols=[TRACING_PROTOCOL]
         )
 
-    def _on_authorisation_rules_change(self, _):
-        """Handle authorisation rules change event."""
-        timestamp = datetime.datetime.now()
+    def _on_databases_change(self, _):
+        """Handle databases change event."""
+        self.update_config()
+        logger.debug("databases changed")
+        timestamp = datetime.now()
         self._peers.data[self.unit].update({"pg_hba_needs_update_timestamp": str(timestamp)})
         logger.debug(f"authorisation rules changed at {timestamp}")
 
