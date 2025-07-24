@@ -145,7 +145,7 @@ async def test_app_garbage_ignorance(ops_test: OpsTest):
         logger.info("remove application")
         await ops_test.model.remove_application(DATABASE_APP_NAME, block_until_done=True)
 
-        for primary_pvc in primary_pvcs:
+        for _, primary_pvc in primary_pvcs.items():
             logger.info(f"delete pvc {primary_pvc.metadata.name}")
             delete_pvc(ops_test, primary_pvc)
 
@@ -186,21 +186,21 @@ async def test_app_resources_conflicts(ops_test: OpsTest, charm):
         logger.info("scale to 0")
         await scale_application(ops_test, DUP_DATABASE_APP_NAME, 0)
 
-        for pvc_index, pvc in enumerate(dup_primary_pvcs):
+        for pvc_storage_name, pvc in dup_primary_pvcs.items():
             logger.info(f"load and change pv-name config for pvc {pvc.metadata.name}")
-            dup_primary_pvcs[pvc_index] = change_pvc_pv_name(
-                pvc, primary_pvs[pvc_index].metadata.name
+            dup_primary_pvcs[pvc_storage_name] = change_pvc_pv_name(
+                pvc, primary_pvs[pvc_storage_name].metadata.name
             )
 
-        for dup_primary_pvc in dup_primary_pvcs:
+        for _, dup_primary_pvc in dup_primary_pvcs.items():
             logger.info(f"delete pvc {dup_primary_pvc.metadata.name}")
             delete_pvc(ops_test, dup_primary_pvc)
 
-        for primary_pv in primary_pvs:
+        for _, primary_pv in primary_pvs.items():
             logger.info(f"remove claimref from pv {primary_pv.metadata.name}")
             remove_pv_claimref(ops_test, primary_pv)
 
-        for dup_primary_pvc in dup_primary_pvcs:
+        for _, dup_primary_pvc in dup_primary_pvcs.items():
             logger.info(f"apply pvc {dup_primary_pvc.metadata.name}")
             apply_pvc_config(ops_test, dup_primary_pvc)
 
