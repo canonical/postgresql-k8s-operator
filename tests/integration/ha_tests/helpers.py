@@ -1118,13 +1118,17 @@ def get_pvs(ops_test: OpsTest, unit_name: str):
     pv_list = client.list(PersistentVolume, namespace=ops_test.model.name)
     for pv in pv_list:
         if unit_name.replace("/", "-") in str(pv.spec.hostPath.path):
-            pvc_storage_name = pv.spec.claimRef.name.replace(unit_name.split("/")[0], "").split("-")[1]
+            pvc_storage_name = pv.spec.claimRef.name.replace(unit_name.split("/")[0], "").split(
+                "-"
+            )[1]
             logger.info(f"got pv for {pvc_storage_name} storage: {pv.metadata.name}")
             pvs[pvc_storage_name] = pv
     return pvs
 
 
-def change_pvs_reclaim_policy(ops_test: OpsTest, pvs_configs: dict[str, PersistentVolume], policy: str):
+def change_pvs_reclaim_policy(
+    ops_test: OpsTest, pvs_configs: dict[str, PersistentVolume], policy: str
+):
     """Change PersistentVolume reclaim policy config value."""
     client = Client(namespace=ops_test.model.name)
     results = {}
