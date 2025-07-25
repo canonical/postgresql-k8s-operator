@@ -81,6 +81,7 @@ async def are_all_db_processes_down(ops_test: OpsTest, process: str, signal: str
     try:
         for attempt in Retrying(stop=stop_after_delay(400), wait=wait_fixed(3)):
             with attempt:
+                running_process = False
                 for unit in ops_test.model.applications[app].units:
                     pod_name = unit.name.replace("/", "-")
                     call = subprocess.run(
@@ -93,7 +94,9 @@ async def are_all_db_processes_down(ops_test: OpsTest, process: str, signal: str
                         logger.info(f"Unit {unit.name} not yet down")
                         # Try to rekill the unit
                         await send_signal_to_process(ops_test, unit.name, process, signal)
-                        raise ProcessRunningError
+                        running_process = True
+                if running_process:
+                    raise ProcessRunningError
     except RetryError:
         return False
 
