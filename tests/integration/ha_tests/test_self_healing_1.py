@@ -12,6 +12,7 @@ from .. import markers
 from ..helpers import (
     APPLICATION_NAME,
     CHARM_BASE,
+    DATABASE_APP_NAME,
     METADATA,
     app_name,
     build_and_deploy,
@@ -71,8 +72,16 @@ async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
             )
 
     if wait_for_apps:
-        async with ops_test.fast_forward():
-            await ops_test.model.wait_for_idle(status="active", timeout=1000, raise_on_error=False)
+        await ops_test.model.relate(DATABASE_APP_NAME, f"{APPLICATION_NAME}:database")
+        await ops_test.model.wait_for_idle(
+            apps=[
+                APPLICATION_NAME,
+                DATABASE_APP_NAME,
+            ],
+            status="active",
+            timeout=1000,
+            idle_period=30,
+        )
 
 
 @pytest.mark.abort_on_fail

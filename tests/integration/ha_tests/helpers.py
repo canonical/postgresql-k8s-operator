@@ -81,6 +81,7 @@ async def are_all_db_processes_down(ops_test: OpsTest, process: str, signal: str
     try:
         for attempt in Retrying(stop=stop_after_delay(400), wait=wait_fixed(3)):
             with attempt:
+                running_process = False
                 for unit in ops_test.model.applications[app].units:
                     pod_name = unit.name.replace("/", "-")
                     call = subprocess.run(
@@ -93,7 +94,9 @@ async def are_all_db_processes_down(ops_test: OpsTest, process: str, signal: str
                         logger.info(f"Unit {unit.name} not yet down")
                         # Try to rekill the unit
                         await send_signal_to_process(ops_test, unit.name, process, signal)
-                        raise ProcessRunningError
+                        running_process = True
+                if running_process:
+                    raise ProcessRunningError
     except RetryError:
         return False
 
@@ -919,14 +922,9 @@ async def start_continuous_writes(ops_test: OpsTest, app: str, model: Model = No
     ]
     if not relations:
         await model.relate(app, f"{APPLICATION_NAME}:database")
-        await model.wait_for_idle(status="active", timeout=1000)
-    else:
-        action = (
-            await model.applications[APPLICATION_NAME]
-            .units[0]
-            .run_action("start-continuous-writes")
+        await model.wait_for_idle(
+            apps=[APPLICATION_NAME, app], status="active", timeout=1000, idle_period=30
         )
-        await action.wait()
     for attempt in Retrying(stop=stop_after_delay(60 * 5), wait=wait_fixed(3), reraise=True):
         with attempt:
             action = (
@@ -1100,38 +1098,44 @@ def delete_pvc(ops_test: OpsTest, pvc: GlobalResource):
 
 def get_pvcs(ops_test: OpsTest, unit_name: str):
     """Get PersistentVolumeClaims for unit."""
-    pvcs = []
+    pvcs = {}
     client = Client(namespace=ops_test.model.name)
     pvc_list = client.list(PersistentVolumeClaim, namespace=ops_test.model.name)
     for pvc in pvc_list:
         if unit_name.replace("/", "-") in pvc.metadata.name:
-            pvcs.append(pvc)
+            pvc_storage_name = pvc.metadata.name.replace(unit_name.split("/")[0], "").split("-")[1]
+            logger.info(f"got pvc for {pvc_storage_name} storage: {pvc.metadata.name}")
+            pvcs[pvc_storage_name] = pvc
     return pvcs
 
 
 def get_pvs(ops_test: OpsTest, unit_name: str):
     """Get PersistentVolumes for unit."""
-    pvs = []
+    pvs = {}
     client = Client(namespace=ops_test.model.name)
     pv_list = client.list(PersistentVolume, namespace=ops_test.model.name)
     for pv in pv_list:
         if unit_name.replace("/", "-") in str(pv.spec.hostPath.path):
-            pvs.append(pv)
+            pvc_storage_name = pv.spec.claimRef.name.replace(unit_name.split("/")[0], "").split(
+                "-"
+            )[1]
+            logger.info(f"got pv for {pvc_storage_name} storage: {pv.metadata.name}")
+            pvs[pvc_storage_name] = pv
     return pvs
 
 
-def change_pvs_reclaim_policy(ops_test: OpsTest, pvs_configs: list[PersistentVolume], policy: str):
+def change_pvs_reclaim_policy(
+    ops_test: OpsTest, pvs_configs: dict[str, PersistentVolume], policy: str
+):
     """Change PersistentVolume reclaim policy config value."""
     client = Client(namespace=ops_test.model.name)
-    results = []
-    for pv_config in pvs_configs:
-        results.append(
-            client.patch(
-                PersistentVolume,
-                pv_config.metadata.name,
-                {"spec": {"persistentVolumeReclaimPolicy": f"{policy}"}},
-                namespace=ops_test.model.name,
-            )
+    results = {}
+    for pvc_storage_name, pv_config in pvs_configs.items():
+        results[pvc_storage_name] = client.patch(
+            PersistentVolume,
+            pv_config.metadata.name,
+            {"spec": {"persistentVolumeReclaimPolicy": f"{policy}"}},
+            namespace=ops_test.model.name,
         )
     return results
 

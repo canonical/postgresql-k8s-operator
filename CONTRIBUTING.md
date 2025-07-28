@@ -8,9 +8,9 @@ this operator.
 - Generally, before developing enhancements to this charm, you should consider [opening an issue
   ](https://github.com/canonical/postgresql-k8s-operator/issues) explaining your use case.
 - If you would like to chat with us about your use-cases or proposed implementation, you can reach
-  us at [public Canonical Data Platform channel](https://chat.charmhub.io/charmhub/channels/data-platform)
+  us at [our public Mattermost channel](https://matrix.to/#/#charmhub-data-platform:ubuntu.com)
   or [Discourse](https://discourse.charmhub.io/).
-- Familiarising yourself with the [Charmed Operator Framework](https://juju.is/docs/sdk) library
+- Familiarising yourself with the [Charmed Operator Framework](https://ops.readthedocs.io/en/latest/index.html) library
   will help you a lot when working on new features or bug fixes.
 - All enhancements require review before being merged. Code review typically examines
   - code quality

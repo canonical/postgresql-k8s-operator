@@ -14,11 +14,7 @@ from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from constants import DATABASE_DEFAULT_NAME
 
-from ..helpers import (
-    CHARM_BASE,
-    check_database_users_existence,
-    scale_application,
-)
+from ..helpers import CHARM_BASE, check_database_users_existence, scale_application
 from .helpers import (
     build_connection_string,
     get_application_relation_data,
@@ -54,7 +50,9 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest, charm):
                 application_name=APPLICATION_APP_NAME,
                 num_units=2,
                 base=CHARM_BASE,
-                channel="edge",
+                channel="latest/edge",
+                # TODO remove when setting predefined roles
+                config={"extra_user_roles": "CREATEDB,CREATEROLE"},
             ),
             ops_test.model.deploy(
                 charm,
@@ -192,9 +190,8 @@ async def test_two_applications_doesnt_share_the_same_relation_data(ops_test: Op
         APPLICATION_APP_NAME,
         application_name=another_application_app_name,
         base=CHARM_BASE,
-        channel="edge",
+        channel="latest/edge",
     )
-    await ops_test.model.wait_for_idle(apps=all_app_names, status="active")
 
     # Relate the new application with the database
     # and wait for them exchanging some connection data.
@@ -247,7 +244,7 @@ async def test_an_application_can_connect_to_multiple_database_clusters(ops_test
         f"{APPLICATION_APP_NAME}:{MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME}",
         ANOTHER_DATABASE_APP_NAME,
     )
-    await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active")
+    await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active", idle_period=30)
 
     # Retrieve the connection string to both database clusters using the relation aliases
     # and assert they are different.
@@ -310,7 +307,9 @@ async def test_an_application_can_request_multiple_databases(ops_test: OpsTest):
     await ops_test.model.add_relation(
         f"{APPLICATION_APP_NAME}:{SECOND_DATABASE_RELATION_NAME}", DATABASE_APP_NAME
     )
-    await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active", timeout=15 * 60)
+    await ops_test.model.wait_for_idle(
+        apps=APP_NAMES, status="active", timeout=15 * 60, idle_period=30
+    )
 
     # Get the connection strings to connect to both databases.
     for attempt in Retrying(stop=stop_after_attempt(15), wait=wait_fixed(3), reraise=True):
@@ -452,7 +451,9 @@ async def test_admin_role(ops_test: OpsTest):
     all_app_names = [DATA_INTEGRATOR_APP_NAME]
     all_app_names.extend(APP_NAMES)
     async with ops_test.fast_forward():
-        await ops_test.model.deploy(DATA_INTEGRATOR_APP_NAME, base=CHARM_BASE)
+        await ops_test.model.deploy(
+            DATA_INTEGRATOR_APP_NAME, channel="latest/edge", series="noble"
+        )
         await ops_test.model.wait_for_idle(apps=[DATA_INTEGRATOR_APP_NAME], status="blocked")
         await ops_test.model.applications[DATA_INTEGRATOR_APP_NAME].set_config({
             "database-name": DATA_INTEGRATOR_APP_NAME.replace("-", "_"),
@@ -544,7 +545,8 @@ async def test_invalid_extra_user_roles(ops_test: OpsTest):
         await ops_test.model.deploy(
             DATA_INTEGRATOR_APP_NAME,
             application_name=another_data_integrator_app_name,
-            base=CHARM_BASE,
+            channel="latest/edge",
+            series="noble",
         )
         await ops_test.model.wait_for_idle(
             apps=[another_data_integrator_app_name], status="blocked"
