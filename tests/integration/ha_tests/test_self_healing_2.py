@@ -53,6 +53,7 @@ async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
             )
 
     if wait_for_apps:
+        await ops_test.model.relate(DATABASE_APP_NAME, f"{APPLICATION_NAME}:database")
         await ops_test.model.wait_for_idle(
             apps=[
                 APPLICATION_NAME,
