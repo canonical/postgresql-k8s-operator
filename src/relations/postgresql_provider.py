@@ -4,7 +4,6 @@
 """Postgres client relation hooks & helpers."""
 
 import logging
-from datetime import datetime
 
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProvides,
@@ -22,12 +21,8 @@ from charms.postgresql_k8s.v0.postgresql import (
 from ops.charm import CharmBase, RelationBrokenEvent, RelationChangedEvent, RelationDepartedEvent
 from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, Relation
-from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
-from constants import (
-    DATABASE_PORT,
-    ENDPOINT_SIMULTANEOUSLY_BLOCKING_MESSAGE,
-)
+from constants import DATABASE_PORT, ENDPOINT_SIMULTANEOUSLY_BLOCKING_MESSAGE
 from utils import new_password
 
 logger = logging.getLogger(__name__)
@@ -92,6 +87,19 @@ class PostgreSQLProvider(Object):
             )
             event.defer()
             return
+
+        self.charm.update_config()
+        for key in self.charm._peers.data:
+            # We skip the leader so we don't have to wait on the defer
+            if (
+                key != self.charm.app
+                and key != self.charm.unit
+                and self.charm._peers.data[key].get("user_hash", "")
+                != self.charm.generate_user_hash
+            ):
+                logger.debug("Not all units have synced configuration")
+                event.defer()
+                return
 
         # Retrieve the database name and extra user roles using the charm library.
         database = event.database
@@ -163,18 +171,6 @@ class PostgreSQLProvider(Object):
                 else f"Failed to initialize {self.relation_name} relation"
             )
             return
-
-        # Try to wait for pg_hba trigger
-        try:
-            for attempt in Retrying(stop=stop_after_attempt(3), wait=wait_fixed(1)):
-                with attempt:
-                    if not self.charm.postgresql.is_user_in_hba(user):
-                        raise Exception("pg_hba not ready")
-            self.charm.unit_peer_data.update({
-                "pg_hba_needs_update_timestamp": str(datetime.now())
-            })
-        except RetryError:
-            logger.warning("database requested: Unable to check pg_hba rule update")
 
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Set a flag to avoid deleting database users when not wanted."""

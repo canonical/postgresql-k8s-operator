@@ -122,8 +122,8 @@ async def test_extensions_blocking(ops_test: OpsTest) -> None:
     )
 
     await ops_test.model.wait_for_idle(
-        apps=[DATABASE_APP_NAME, APPLICATION_NAME, f"{APPLICATION_NAME}2"],
-        status="active",
+        apps=[APPLICATION_NAME, f"{APPLICATION_NAME}2"],
+        status="blocked",
         timeout=1000,
     )
 
@@ -166,11 +166,8 @@ async def test_extensions_blocking(ops_test: OpsTest) -> None:
     await ops_test.model.applications[DATABASE_APP_NAME].set_config(config)
     await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active")
     await ops_test.model.relate(f"{DATABASE_APP_NAME}:db", f"{APPLICATION_NAME}:db")
-    await ops_test.model.wait_for_idle(
-        apps=[DATABASE_APP_NAME, APPLICATION_NAME],
-        status="active",
-        timeout=2000,
-    )
+    await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked")
+    await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=2000)
 
     logger.info("Verifying that the charm unblocks when the extensions are enabled")
     config = {"plugin_pg_trgm_enable": "False", "plugin_unaccent_enable": "False"}
@@ -179,7 +176,7 @@ async def test_extensions_blocking(ops_test: OpsTest) -> None:
         f"{DATABASE_APP_NAME}:db", f"{APPLICATION_NAME}:db"
     )
     wait_for_relation_removed_between(ops_test, DATABASE_APP_NAME, APPLICATION_NAME)
-    await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME, APPLICATION_NAME], status="active")
+    await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active")
 
     await ops_test.model.relate(f"{DATABASE_APP_NAME}:db", f"{APPLICATION_NAME}:db")
     await ops_test.model.block_until(
@@ -188,12 +185,8 @@ async def test_extensions_blocking(ops_test: OpsTest) -> None:
 
     config = {"plugin_pg_trgm_enable": "True", "plugin_unaccent_enable": "True"}
     await ops_test.model.applications[DATABASE_APP_NAME].set_config(config)
-    await ops_test.model.wait_for_idle(
-        apps=[DATABASE_APP_NAME, APPLICATION_NAME],
-        status="active",
-        raise_on_blocked=False,
-        timeout=2000,
-    )
+    await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked")
+    await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=2000)
     # removing relation to test roles
     await ops_test.model.applications[DATABASE_APP_NAME].destroy_relation(
         f"{DATABASE_APP_NAME}:db", f"{APPLICATION_NAME}:db"
@@ -207,9 +200,9 @@ async def test_roles_blocking(ops_test: OpsTest) -> None:
     await ops_test.model.applications[APPLICATION_NAME].set_config(config)
     await ops_test.model.applications[f"{APPLICATION_NAME}2"].set_config(config)
     await ops_test.model.wait_for_idle(
-        apps=[DATABASE_APP_NAME, APPLICATION_NAME, f"{APPLICATION_NAME}2"],
-        status="active",
+        apps=[APPLICATION_NAME, f"{APPLICATION_NAME}2"], status="blocked"
     )
+    await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active")
 
     await gather(
         ops_test.model.relate(f"{DATABASE_APP_NAME}:db", f"{APPLICATION_NAME}:db"),
