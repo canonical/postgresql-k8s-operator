@@ -34,7 +34,7 @@ async def test_deploy_charms(ops_test: OpsTest, charm):
                 application_name=APPLICATION_APP_NAME,
                 num_units=1,
                 base=CHARM_BASE,
-                channel="edge",
+                channel="latest/edge",
             ),
             ops_test.model.deploy(
                 charm,
@@ -55,18 +55,13 @@ async def test_deploy_charms(ops_test: OpsTest, charm):
             ),
         )
 
-        await ops_test.model.wait_for_idle(
-            apps=[APP_NAME, APPLICATION_APP_NAME], status="active", timeout=3000
-        )
+        await ops_test.model.wait_for_idle(apps=[APPLICATION_APP_NAME], status="blocked")
+        await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=2000)
 
 
 async def test_legacy_and_modern_endpoints_simultaneously(ops_test: OpsTest):
     await ops_test.model.relate(APPLICATION_APP_NAME, f"{APP_NAME}:{DB_RELATION}")
-    await ops_test.model.wait_for_idle(
-        status="active",
-        timeout=1500,
-        raise_on_error=False,
-    )
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1500)
 
     logger.info(" add relation with modern endpoints")
     app = ops_test.model.applications[APP_NAME]
@@ -81,7 +76,7 @@ async def test_legacy_and_modern_endpoints_simultaneously(ops_test: OpsTest):
     await ops_test.model.applications[APP_NAME].destroy_relation(
         f"{APP_NAME}:{DB_RELATION}", f"{APPLICATION_APP_NAME}:{DB_RELATION}"
     )
-    await ops_test.model.wait_for_idle(status="active", timeout=1500)
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1500)
 
     logger.info(" add relation with legacy endpoints")
     async with ops_test.fast_forward():
@@ -95,14 +90,16 @@ async def test_legacy_and_modern_endpoints_simultaneously(ops_test: OpsTest):
     await ops_test.model.applications[APP_NAME].destroy_relation(
         f"{APP_NAME}:{DATABASE_RELATION}", f"{APPLICATION_APP_NAME}:{FIRST_DATABASE_RELATION}"
     )
-    await ops_test.model.wait_for_idle(status="active", timeout=1500)
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1500)
 
     logger.info(" remove relation with legacy endpoints")
     await ops_test.model.applications[APP_NAME].destroy_relation(
         f"{APP_NAME}:{DB_RELATION}", f"{APPLICATION_APP_NAME}:{DB_RELATION}"
     )
-    await ops_test.model.wait_for_idle(status="active", timeout=1500)
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1500)
 
     logger.info(" add relation with modern endpoints")
     await ops_test.model.relate(APP_NAME, f"{APPLICATION_APP_NAME}:{FIRST_DATABASE_RELATION}")
-    await ops_test.model.wait_for_idle(status="active", timeout=1500)
+    await ops_test.model.wait_for_idle(
+        apps=[APP_NAME, APPLICATION_APP_NAME], status="active", timeout=1500
+    )
