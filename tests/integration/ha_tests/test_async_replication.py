@@ -303,15 +303,12 @@ async def test_promote_standby(
     await ops_test.model.applications[DATABASE_APP_NAME].remove_relation(
         "database", f"{APPLICATION_NAME}:{FIRST_DATABASE_RELATION_NAME}"
     )
-    await ops_test.model.wait_for_idle(
-        apps=[DATABASE_APP_NAME, APPLICATION_NAME], status="active", raise_on_blocked=True
-    )
+    await ops_test.model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked")
+    await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active")
     await ops_test.model.relate(
         DATABASE_APP_NAME, f"{APPLICATION_NAME}:{FIRST_DATABASE_RELATION_NAME}"
     )
-    await ops_test.model.wait_for_idle(
-        apps=[DATABASE_APP_NAME, APPLICATION_NAME], status="active", raise_on_blocked=True
-    )
+    await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME, APPLICATION_NAME], status="active")
 
     logger.info("removing the previous data")
     await clear_continuous_writes(ops_test)
