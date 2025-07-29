@@ -4,7 +4,6 @@
 
 """Charmed Kubernetes Operator for the PostgreSQL database."""
 
-import datetime
 import itertools
 import json
 import logging
@@ -13,6 +12,8 @@ import re
 import shutil
 import sys
 import time
+from datetime import datetime
+from hashlib import shake_128
 from pathlib import Path
 from typing import Literal, get_args
 from urllib.parse import urlparse
@@ -59,7 +60,7 @@ from lightkube import ApiError, Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Endpoints, Node, Pod, Service
-from ops import JujuVersion, main
+from ops import main
 from ops.charm import (
     ActionEvent,
     HookEvent,
@@ -217,12 +218,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._context = {"namespace": self._namespace, "app_name": self._name}
         self.cluster_name = f"patroni-{self._name}"
 
-        juju_version = JujuVersion.from_environ()
-        run_cmd = "/usr/bin/juju-exec" if juju_version.major > 2 else "/usr/bin/juju-run"
-        self._observer = AuthorisationRulesObserver(self, run_cmd)
-        self.framework.observe(
-            self.on.authorisation_rules_change, self._on_authorisation_rules_change
-        )
+        self._observer = AuthorisationRulesObserver(self, "/usr/bin/juju-exec")
+        self.framework.observe(self.on.databases_change, self._on_databases_change)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
@@ -269,17 +266,20 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             relation_name="logging",
         )
 
-        try:
-            self.unit.set_ports(5432, 8008)
-        except ModelError:
-            logger.exception("failed to open port")
+        if self.model.juju_version.supports_open_port_on_k8s:
+            try:
+                self.unit.set_ports(5432, 8008)
+            except ModelError:
+                logger.exception("failed to open port")
         self.tracing = TracingEndpointRequirer(
             self, relation_name=TRACING_RELATION_NAME, protocols=[TRACING_PROTOCOL]
         )
 
-    def _on_authorisation_rules_change(self, _):
-        """Handle authorisation rules change event."""
-        timestamp = datetime.datetime.now()
+    def _on_databases_change(self, _):
+        """Handle databases change event."""
+        self.update_config()
+        logger.debug("databases changed")
+        timestamp = datetime.now()
         self._peers.data[self.unit].update({"pg_hba_needs_update_timestamp": str(timestamp)})
         logger.debug(f"authorisation rules changed at {timestamp}")
 
@@ -288,12 +288,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Otlp http endpoint for charm instrumentation."""
         if self.tracing.is_ready():
             return self.tracing.get_endpoint(TRACING_PROTOCOL)
-
-    @property
-    def _pebble_log_forwarding_supported(self) -> bool:
-        # https://github.com/canonical/operator/issues/1230
-        juju_version = JujuVersion.from_environ()
-        return juju_version > JujuVersion(version="3.3")
 
     def _generate_metrics_jobs(self, enable_tls: bool) -> dict:
         """Generate spec for Prometheus scraping."""
@@ -593,14 +587,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             if self.unit.is_leader():
                 if self._initialize_cluster(event):
                     logger.debug("Deferring on_peer_relation_changed: Leader initialized cluster")
+                    event.defer()
                 else:
                     logger.debug("_initialized_cluster failed on _peer_relation_changed")
                     return
             else:
                 logger.debug(
-                    "Deferring on_peer_relation_changed: Cluster must be initialized before members can join"
+                    "Early exit on_peer_relation_changed: Cluster must be initialized before members can join"
                 )
-            event.defer()
             return
 
         # If the leader is the one receiving the event, it adds the new members,
@@ -2143,6 +2137,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._restart_metrics_service()
         self._restart_ldap_sync_service()
 
+        self.unit_peer_data.update({"user_hash": self.generate_user_hash})
+        if self.unit.is_leader():
+            self.app_peer_data.update({"user_hash": self.generate_user_hash})
         return True
 
     def _validate_config_options(self) -> None:
@@ -2342,7 +2339,29 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     user, current_host=self.is_connectivity_enabled
                 )
             )
+
+        # Copy relations users directly instead of waiting for them to be created
+        for relation in self.model.relations[self.postgresql_client_relation.relation_name]:
+            user = f"relation_id_{relation.id}"
+            if user not in user_database_map and (
+                database := self.postgresql_client_relation.database_provides.fetch_relation_field(
+                    relation.id, "database"
+                )
+            ):
+                user_database_map[user] = database
         return user_database_map
+
+    @property
+    def generate_user_hash(self) -> str:
+        """Generate expected user and database hash."""
+        user_db_pairs = {}
+        for relation in self.model.relations[self.postgresql_client_relation.relation_name]:
+            if database := self.postgresql_client_relation.database_provides.fetch_relation_field(
+                relation.id, "database"
+            ):
+                user = f"relation_id_{relation.id}"
+                user_db_pairs[user] = database
+        return shake_128(str(user_db_pairs).encode()).hexdigest(16)
 
     def override_patroni_on_failure_condition(
         self, new_condition: str, repeat_cause: str | None
