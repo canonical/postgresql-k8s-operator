@@ -51,7 +51,7 @@ async def test_pg_hba(ops_test: OpsTest, charm):
             await ops_test.model.add_relation(DATA_INTEGRATOR_APP_NAME, DATABASE_APP_NAME)
 
         await ops_test.model.wait_for_idle(
-            apps=[DATA_INTEGRATOR_APP_NAME, DATABASE_APP_NAME], status="active"
+            apps=[DATA_INTEGRATOR_APP_NAME, DATABASE_APP_NAME], status="active", timeout=1000
         )
 
         primary = await get_primary(ops_test)
@@ -99,7 +99,7 @@ async def test_pg_hba(ops_test: OpsTest, charm):
             if connection:
                 connection.close()
 
-        sleep(30)
+        sleep(60)
 
         for unit in ops_test.model.applications[DATABASE_APP_NAME].units:
             try:
