@@ -8,6 +8,8 @@ import os
 import signal
 import subprocess
 import typing
+from pathlib import Path
+from sys import version_info
 
 from ops.charm import CharmEvents
 from ops.framework import EventBase, EventSource, Object
@@ -22,17 +24,17 @@ logger = logging.getLogger(__name__)
 LOG_FILE_PATH = "/var/log/authorisation_rules_observer.log"
 
 
-class AuthorisationRulesChangeEvent(EventBase):
-    """A custom event for authorisation rules changes."""
+class DatabasesChangeEvent(EventBase):
+    """A custom event for databases changes."""
 
 
 class AuthorisationRulesChangeCharmEvents(CharmEvents):
     """A CharmEvents extension for authorisation rules changes.
 
-    Includes :class:`AuthorisationRulesChangeEvent` in those that can be handled.
+    Includes :class:`DatabasesChangeEventt` in those that can be handled.
     """
 
-    authorisation_rules_change = EventSource(AuthorisationRulesChangeEvent)
+    databases_change = EventSource(DatabasesChangeEvent)
 
 
 class AuthorisationRulesObserver(Object):
@@ -74,6 +76,20 @@ class AuthorisationRulesObserver(Object):
         # in a hook context, as Juju will disallow use of juju-run.
         new_env = os.environ.copy()
         new_env.pop("JUJU_CONTEXT_ID", None)
+        # Generate the venv path based on the existing lib path
+        for loc in new_env["PYTHONPATH"].split(":"):
+            path = Path(loc)
+            venv_path = (
+                path
+                / ".."
+                / "venv"
+                / "lib"
+                / f"python{version_info.major}.{version_info.minor}"
+                / "site-packages"
+            )
+            if path.stem == "lib":
+                new_env["PYTHONPATH"] = f"{venv_path.resolve()}:{new_env['PYTHONPATH']}"
+                break
 
         urls = [
             self._charm._patroni._patroni_url.replace(self._charm.endpoint, endpoint)
