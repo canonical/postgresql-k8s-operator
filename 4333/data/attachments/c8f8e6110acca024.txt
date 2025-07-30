@@ -1,0 +1,69 @@
+[32mINFO    [0m integration.conftest:conftest.py:54 deleting the previously created backups
+[32mINFO    [0m pytest_operator.plugin:plugin.py:937 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.8    unsupported  02:00:13Z
+
+App                 Version  Status   Scale  Charm           Channel        Rev  Address        Exposed  Message
+new-postgresql-k8s  14.18    blocked      1  postgresql-k8s                   2  10.152.183.77  no       the S3 repository has backups from another cluster
+s3-integrator                active       1  s3-integrator   latest/stable  145  10.152.183.53  no       
+
+Unit                   Workload  Agent  Address       Ports  Message
+new-postgresql-k8s/0*  blocked   idle   10.1.112.209         the S3 repository has backups from another cluster
+s3-integrator/0*       active    idle   10.1.112.200         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:943 Juju error logs:
+
+unit-self-signed-certificates-0: 01:48:10 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-k8s-gcp-0: 01:48:13 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-s3-integrator-0: 01:48:17 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-k8s-gcp-0: 01:53:27 ERROR unit.postgresql-k8s-gcp/0.juju-log Failed to list PostgreSQL database access groups: connection to server at "postgresql-k8s-gcp-primary.testing.svc.cluster.local" (10.152.183.182), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-k8s-gcp-0: 01:53:27 ERROR unit.postgresql-k8s-gcp/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 647, in list_access_groups
+    with self._connect_to_database(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1116, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 184, in _connect_to_database
+    connection = psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-gcp-primary.testing.svc.cluster.local" (10.152.183.182), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/src/charm.py", line 2539, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 356, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 475, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 459, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 400, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 934, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1116, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/src/charm.py", line 1036, in _on_postgresql_pebble_ready
+    if self.unit.is_leader() and not self._initialize_cluster(event):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1116, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/src/charm.py", line 1128, in _initialize_cluster
+    access_groups = self.postgresql.list_access_groups()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1116, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 657, in list_access_groups
+    raise PostgreSQLListGroupsError() from e
+charms.postgresql_k8s.v0.postgresql.PostgreSQLListGroupsError
+unit-postgresql-k8s-gcp-0: 01:53:27 ERROR juju.worker.uniter.operation hook "config-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1025 Forgetting model main...
