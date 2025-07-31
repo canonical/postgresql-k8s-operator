@@ -11,10 +11,10 @@ labels: bug
 <!-- Please enable debug logging by running `juju model-config logging-config="<root>=INFO;unit=DEBUG"` (if possible) -->
 1. 
 
-## Expected behavior
+## Expected behaviour
 
 
-## Actual behavior
+## Actual behaviour
 <!-- If applicable, add screenshots -->
 
 

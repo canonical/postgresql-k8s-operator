@@ -53,10 +53,10 @@ def harness():
 
 def test_set_ports():
     with (
-        patch("charm.JujuVersion") as _juju_version,
+        patch("ops.model.Model.juju_version", new_callable=PropertyMock) as _juju_version,
         patch("charm.PostgresqlOperatorCharm.unit") as _unit,
     ):
-        _juju_version.from_environ.return_value.major = 3
+        _juju_version.return_value.major = 3
         harness = Harness(PostgresqlOperatorCharm)
         harness.begin()
         _unit.set_ports.assert_called_once_with(5432, 8008)
@@ -1203,7 +1203,7 @@ def test_on_peer_relation_changed(harness):
         harness.set_can_connect(POSTGRESQL_CONTAINER, True)
         relation = harness.model.get_relation(PEER, rel_id)
         harness.charm.on.database_peers_relation_changed.emit(relation)
-        _defer.assert_called_once()
+        assert not _defer.called
         _add_members.assert_not_called()
         _update_config.assert_not_called()
         _coordinate_stanza_fields.assert_not_called()
