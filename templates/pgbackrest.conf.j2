@@ -1,5 +1,6 @@
 [global]
 backup-standby=y
+compress-type=zst
 repo1-retention-full-type=time
 repo1-retention-full={{ retention_full }}
 repo1-retention-history=365
@@ -43,3 +44,6 @@ pg{{ ns.count }}-user={{ user }}
 {% set ns.count = ns.count + 1 %}
 {%- endfor %}
 {%- endif %}
+
+[global:restore]
+process-max={{process_max}}
