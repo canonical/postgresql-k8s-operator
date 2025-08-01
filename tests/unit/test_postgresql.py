@@ -227,7 +227,8 @@ def test_grant_relation_access_group_memberships(harness):
                 "SELECT usename "
                 "FROM pg_catalog.pg_user "
                 "WHERE usename LIKE 'relation_id_%' OR usename LIKE 'relation-%' "
-                "OR usename LIKE 'pgbouncer_auth_relation_%' OR usename LIKE '%_user_%_%';"
+                "OR usename LIKE 'pgbouncer_auth_relation_%' OR usename LIKE '%_user_%_%' "
+                "OR usename LIKE 'logical_replication_relation_%';"
             ),
         ])
 

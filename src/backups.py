@@ -35,6 +35,10 @@ from constants import (
     WORKLOAD_OS_USER,
 )
 from relations.async_replication import REPLICATION_CONSUMER_RELATION, REPLICATION_OFFER_RELATION
+from relations.logical_replication import (
+    LOGICAL_REPLICATION_OFFER_RELATION,
+    LOGICAL_REPLICATION_RELATION,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -1088,7 +1092,7 @@ Stderr:
 
         return None
 
-    def _pre_restore_checks(self, event: ActionEvent) -> bool:
+    def _pre_restore_checks(self, event: ActionEvent) -> bool:  # noqa: C901
         """Run some checks before starting the restore.
 
         Returns:
@@ -1143,14 +1147,25 @@ Stderr:
             event.fail(error_message)
             return False
 
-        logger.info("Checking that the cluster is not replicating data to a standby cluster")
+        logger.info("Checking that cluster does not have an active async replication relation")
         for relation in [
             self.model.get_relation(REPLICATION_CONSUMER_RELATION),
             self.model.get_relation(REPLICATION_OFFER_RELATION),
         ]:
             if not relation:
                 continue
-            error_message = "Unit cannot restore backup as the cluster is replicating data to a standby cluster"
+            error_message = "Unit cannot restore backup with an active async replication relation"
+            logger.error(f"Restore failed: {error_message}")
+            event.fail(error_message)
+            return False
+
+        logger.info("Checking that cluster does not have an active logical replication relation")
+        if self.model.get_relation(LOGICAL_REPLICATION_RELATION) or len(
+            self.model.relations.get(LOGICAL_REPLICATION_OFFER_RELATION, ())
+        ):
+            error_message = (
+                "Unit cannot restore backup with an active logical replication connection"
+            )
             logger.error(f"Restore failed: {error_message}")
             event.fail(error_message)
             return False
