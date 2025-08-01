@@ -49,6 +49,7 @@ from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQL,
     PostgreSQLEnableDisableExtensionError,
     PostgreSQLGetCurrentTimelineError,
+    PostgreSQLListUsersError,
     PostgreSQLUpdateUserPasswordError,
 )
 from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
@@ -2304,33 +2305,47 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @property
     def relations_user_databases_map(self) -> dict:
         """Returns a user->databases map for all relations."""
+        user_database_map = {}
+        # Copy relations users directly instead of waiting for them to be created
+        for relation in self.model.relations[self.postgresql_client_relation.relation_name]:
+            user = f"relation_id_{relation.id}"
+            if database := self.postgresql_client_relation.database_provides.fetch_relation_field(
+                relation.id, "database"
+            ):
+                user_database_map[user] = database
         if (
             not self.is_cluster_initialised
             or not self._patroni.member_started
             or self.postgresql.list_access_groups(current_host=self.is_connectivity_enabled)
             != set(ACCESS_GROUPS)
         ):
-            return {USER: "all", REPLICATION_USER: "all", REWIND_USER: "all"}
-        user_database_map = {}
-        for user in self.postgresql.list_users_from_relation(
-            current_host=self.is_connectivity_enabled
-        ):
-            user_database_map[user] = ",".join(
-                self.postgresql.list_accessible_databases_for_user(
-                    user, current_host=self.is_connectivity_enabled
-                )
-            )
-
-        # Copy relations users directly instead of waiting for them to be created
-        for relation in self.model.relations[self.postgresql_client_relation.relation_name]:
-            user = f"relation_id_{relation.id}"
-            if user not in user_database_map and (
-                database := self.postgresql_client_relation.database_provides.fetch_relation_field(
-                    relation.id, "database"
-                )
+            user_database_map.update({
+                USER: "all",
+                REPLICATION_USER: "all",
+                REWIND_USER: "all",
+            })
+            return user_database_map
+        try:
+            for user in sorted(
+                self.postgresql.list_users_from_relation(current_host=self.is_connectivity_enabled)
             ):
-                user_database_map[user] = database
-        return user_database_map
+                user_database_map[user] = ",".join(
+                    self.postgresql.list_accessible_databases_for_user(
+                        user, current_host=self.is_connectivity_enabled
+                    )
+                )
+            if self.postgresql.list_access_groups(
+                current_host=self.is_connectivity_enabled
+            ) != set(ACCESS_GROUPS):
+                user_database_map.update({
+                    USER: "all",
+                    REPLICATION_USER: "all",
+                    REWIND_USER: "all",
+                })
+            return user_database_map
+        except PostgreSQLListUsersError:
+            logger.debug("relations_user_databases_map: Unable to get users")
+            return {USER: "all", REPLICATION_USER: "all", REWIND_USER: "all"}
 
     @property
     def generate_user_hash(self) -> str:
