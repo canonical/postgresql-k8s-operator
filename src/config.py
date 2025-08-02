@@ -35,6 +35,7 @@ class CharmConfig(BaseConfigModel):
     logging_log_lock_waits: bool | None
     logging_log_min_duration_statement: int | None
     logging_track_functions: str | None
+    logical_replication_subscription_request: str | None
     memory_maintenance_work_mem: int | None
     memory_max_prepared_transactions: int | None
     memory_shared_buffers: int | None
