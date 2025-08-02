@@ -2359,15 +2359,21 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.warning(f"Failed to list access groups: {e}")
             return {USER: "all", REPLICATION_USER: "all", REWIND_USER: "all"}
         user_database_map = {}
-        for user in self.postgresql.list_users_from_relation(
-            current_host=self.is_connectivity_enabled
-        ):
-            databases = ",".join(
+        for user in self.postgresql.list_users(current_host=self.is_connectivity_enabled):
+            if user in (
+                "backup",
+                "monitoring",
+                "operator",
+                "postgres",
+                "replication",
+                "rewind",
+            ):
+                continue
+            if databases := ",".join(
                 self.postgresql.list_accessible_databases_for_user(
                     user, current_host=self.is_connectivity_enabled
                 )
-            )
-            if databases:
+            ):
                 user_database_map[user] = databases
             else:
                 logger.debug(f"User {user} has no databases to connect to")
