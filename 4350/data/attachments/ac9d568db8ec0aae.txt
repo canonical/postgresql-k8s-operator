@@ -1,0 +1,39 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-3
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [idle] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.8    unsupported  02:11:10Z
+
+App                          Version  Status  Scale  Charm           Channel  Rev  Address        Exposed  Message
+postgresql-k8s               14.18    active      3  postgresql-k8s             2  10.152.183.83  no       
+test-storage-postgresql-k8s  14.18    active      1  postgresql-k8s             3  10.152.183.98  no       Primary
+
+Unit                            Workload  Agent  Address       Ports  Message
+postgresql-k8s/0*               active    idle   10.1.112.220         Primary
+postgresql-k8s/1                active    idle   10.1.112.221         
+postgresql-k8s/2                active    idle   10.1.112.222         
+test-storage-postgresql-k8s/0*  active    idle   10.1.112.224         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-1: 01:34:09 ERROR unit.postgresql-k8s/1.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-postgresql-k8s-1: 01:35:11 ERROR unit.postgresql-k8s/1.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-postgresql-k8s-2: 01:38:19 ERROR unit.postgresql-k8s/2.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-postgresql-k8s-0: 01:49:38 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-k8s-1: 01:49:40 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-k8s-1: 01:51:25 ERROR unit.postgresql-k8s/1.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-postgresql-k8s-1: 02:01:06 ERROR unit.postgresql-k8s/1.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-postgresql-k8s-2: 02:01:06 ERROR unit.postgresql-k8s/2.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-postgresql-k8s-2: 02:01:44 ERROR unit.postgresql-k8s/2.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+controller-0: 02:04:04 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql-k8s": cannot scale dying application to 0: application "postgresql-k8s" not found
+controller-0: 02:04:16 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql-k8s": finding filesystem info for postgresql-k8s-pgdata-38ba2e12: unable to get persistent volume claim: k8s: persistentvolumeclaims "postgresql-k8s-pgdata-38ba2e12-postgresql-k8s-2" not found
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...

@@ -1,0 +1,113 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.8    unsupported  02:04:35Z
+
+App                  Version  Status   Scale  Charm                Channel      Rev  Address         Exposed  Message
+another-application           active       1  postgresql-test-app  latest/edge  396  10.152.183.237  no       received database credentials of the first database
+another-database     14.18    active       3  postgresql-k8s                      1  10.152.183.205  no       
+database             14.18    active       3  postgresql-k8s                      0  10.152.183.212  no       
+postgresql-test-app           blocked      2  postgresql-test-app  latest/edge  396  10.152.183.138  no       No database integration available
+
+Unit                    Workload  Agent      Address       Ports  Message
+another-application/0*  active    idle       10.1.112.214         received database credentials of the first database
+another-database/0*     active    idle       10.1.112.207         Primary
+another-database/1      active    idle       10.1.112.210         
+another-database/2      active    idle       10.1.112.209         
+database/0*             active    executing  10.1.112.211         Primary
+database/1              active    executing  10.1.112.216         
+database/2              active    executing  10.1.112.215         
+postgresql-test-app/0   blocked   executing  10.1.112.200         No database integration available
+postgresql-test-app/1*  active    executing  10.1.112.201         received database credentials of the second database
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-database-1: 01:33:04 ERROR unit.database/1.juju-log restart:5: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/websocket/_socket.py", line 118, in recv
+    bytes_ = _recv()
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/websocket/_socket.py", line 97, in _recv
+    return sock.recv(bufsize)
+TimeoutError: timed out
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 3132, in exec
+    control_ws = self._connect_websocket(task_id, 'control')
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 3224, in _connect_websocket
+    ws.connect(url, socket=sock)
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/websocket/_core.py", line 261, in connect
+    self.handshake_response = handshake(self.sock, url, *addrs, **options)
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/websocket/_handshake.py", line 65, in handshake
+    status, resp = _get_resp_headers(sock)
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/websocket/_handshake.py", line 141, in _get_resp_headers
+    status, resp_headers, status_message = read_headers(sock)
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/websocket/_http.py", line 351, in read_headers
+    line = recv_line(sock)
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/websocket/_socket.py", line 140, in recv_line
+    c = recv(sock, 1)
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/websocket/_socket.py", line 120, in recv
+    raise WebSocketTimeoutException("Connection timed out")
+websocket._exceptions.WebSocketTimeoutException: Connection timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-1/charm/src/charm.py", line 2539, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 356, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 502, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 486, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 418, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 934, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-database-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1116, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-database-1/charm/src/charm.py", line 999, in _on_postgresql_pebble_ready
+    self._create_pgdata(container)
+  File "/var/lib/juju/agents/unit-database-1/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1116, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-database-1/charm/src/charm.py", line 975, in _create_pgdata
+    container.exec([
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3289, in exec
+    return self._pebble.exec(
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 3141, in exec
+    raise ChangeError(change.err, change) from e
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Execute command "chown" (exec 11: timeout waiting for websocket connections: context deadline exceeded)
+----- Logs from task 0 -----
+2025-08-03T01:33:04Z ERROR exec 11: timeout waiting for websocket connections: context deadline exceeded
+-----
+unit-database-1: 01:33:05 ERROR juju.worker.uniter.operation hook "restart-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-database-2: 01:35:15 ERROR unit.database/2.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-database-2: 01:35:20 ERROR unit.database/2.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-database-2: 01:35:30 ERROR unit.database/2.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-database-1: 01:35:47 ERROR unit.database/1.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-another-database-2: 01:35:49 ERROR unit.another-database/2.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-another-database-2: 01:35:55 ERROR unit.another-database/2.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-another-database-2: 01:36:06 ERROR unit.another-database/2.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-another-database-2: 01:36:14 ERROR unit.another-database/2.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-another-database-2: 01:58:49 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-0: 01:58:49 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-application-0: 01:58:51 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-0: 01:58:53 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-1: 01:58:53 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-1: 01:58:56 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 01:58:57 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-2: 02:02:32 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-0: 02:02:32 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-0: 02:03:48 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-1: 02:03:48 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 02:03:49 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-2: 02:03:49 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-1: 02:03:49 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-1: 02:03:53 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
