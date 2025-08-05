@@ -258,7 +258,7 @@ def test_operations(juju: jubilant.Juju, predefined_roles) -> None:  # noqa: C90
                 ):
                     logger.info(f"{message_prefix} can connect to {database_to_test} database")
                     connection = db_connect(
-                        host, password, username=user, database=database_to_test
+                        host, password, user=user, database=database_to_test
                     )
                     connection.autocommit = True
                     with connection.cursor() as cursor:
@@ -267,7 +267,7 @@ def test_operations(juju: jubilant.Juju, predefined_roles) -> None:  # noqa: C90
                 else:
                     logger.info(f"{message_prefix} can't connect to {database_to_test} database")
                     with pytest.raises(psycopg2.OperationalError):
-                        db_connect(host, password, username=user, database=database_to_test)
+                        db_connect(host, password, user=user, database=database_to_test)
 
                 if connection is not None:
                     auto_escalate_to_database_owner = attributes["auto-escalate-to-database-owner"]

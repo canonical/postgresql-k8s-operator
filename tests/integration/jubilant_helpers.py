@@ -106,7 +106,7 @@ def get_unit_address(juju: jubilant.Juju, unit_name: str) -> str:
     Returns:
         IP address of the unit
     """
-    return juju.status().get_units(unit_name.split("/")[0]).get(unit_name).public_address
+    return juju.status().get_units(unit_name.split("/")[0]).get(unit_name).address
 
 
 def relations(juju: jubilant.Juju, provider_app: str, requirer_app: str) -> list:
