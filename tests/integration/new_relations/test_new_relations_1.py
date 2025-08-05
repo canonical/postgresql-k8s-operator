@@ -14,7 +14,12 @@ from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from constants import DATABASE_DEFAULT_NAME
 
-from ..helpers import CHARM_BASE, check_database_users_existence, scale_application
+from ..helpers import (
+    CHARM_BASE,
+    DATA_INTEGRATOR_APP_NAME,
+    check_database_users_existence,
+    scale_application,
+)
 from .helpers import (
     build_connection_string,
     get_application_relation_data,
@@ -25,7 +30,6 @@ logger = logging.getLogger(__name__)
 APPLICATION_APP_NAME = "postgresql-test-app"
 DATABASE_APP_NAME = "database"
 ANOTHER_DATABASE_APP_NAME = "another-database"
-DATA_INTEGRATOR_APP_NAME = "data-integrator"
 DISCOURSE_APP_NAME = "discourse-k8s"
 REDIS_APP_NAME = "redis-k8s"
 APP_NAMES = [APPLICATION_APP_NAME, DATABASE_APP_NAME, ANOTHER_DATABASE_APP_NAME]
