@@ -48,9 +48,10 @@ Other deployment scenarios and configurations:
     * [Integrate with a client app]
     * [Remove or recover a cluster]
 
-[Logical replication]: /how-to/logical-replication/index
-[Set up two clusters]: /how-to/logical-replication/set-up-clusters
-[Re-enable logical replication]: /how-to/logical-replication/re-enable
+## Logical replication
+* [Logical replication]
+    * [Set up two clusters]
+    * [Re-enable logical replication]
 
 ## Development
 
