@@ -48,6 +48,10 @@ Other deployment scenarios and configurations:
     * [Integrate with a client app]
     * [Remove or recover a cluster]
 
+[Logical replication]: /how-to/logical-replication/index
+[Set up two clusters]: /how-to/logical-replication/set-up-clusters
+[Re-enable logical replication]: /how-to/logical-replication/re-enable
+
 ## Development
 
 This section is for charm developers looking to support PostgreSQL integrations with their charm.
@@ -91,6 +95,10 @@ This section is for charm developers looking to support PostgreSQL integrations 
 [Integrate with a client app]: /how-to/cross-regional-async-replication/integrate-with-a-client-app
 [Remove or recover a cluster]: /how-to/cross-regional-async-replication/remove-or-recover-a-cluster
 
+[Logical replication]: /how-to/logical-replication/index
+[Set up two clusters]: /how-to/logical-replication/set-up-clusters
+[Re-enable logical replication]: /how-to/logical-replication/re-enable
+
 [Integrate with your charm]: /how-to/development/integrate-with-your-charm
 [Migrate data via pg_dump]: /how-to/development/migrate-data-via-pg-dump
 [Migrate data via backup/restore]: /how-to/development/migrate-data-via-backup-restore
@@ -114,4 +122,5 @@ Back up and restore <back-up-and-restore/index>
 Monitoring (COS) <monitoring-cos/index>
 Upgrade <upgrade/index>
 Cross-regional async replication <cross-regional-async-replication/index>
+Logical replication <logical-replication/index>
 Development <development/index>
