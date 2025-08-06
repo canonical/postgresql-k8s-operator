@@ -119,7 +119,7 @@ def test_operations(juju: jubilant.Juju, predefined_roles) -> None:  # noqa: C90
                         sub_cursor.execute("SELECT schema_name FROM information_schema.schemata;")
                         for schema in sub_cursor.fetchall():
                             schema_name = schema[0]
-                            if schema_name.startswith("relation-") and schema_name.endswith(
+                            if schema_name.startswith("relation_id_") and schema_name.endswith(
                                 "_schema"
                             ):
                                 logger.info(f"Dropping schema {schema_name} created by the test")
@@ -257,9 +257,7 @@ def test_operations(juju: jubilant.Juju, predefined_roles) -> None:  # noqa: C90
                     or database_to_test == OTHER_DATABASE_NAME
                 ):
                     logger.info(f"{message_prefix} can connect to {database_to_test} database")
-                    connection = db_connect(
-                        host, password, user=user, database=database_to_test
-                    )
+                    connection = db_connect(host, password, user=user, database=database_to_test)
                     connection.autocommit = True
                     with connection.cursor() as cursor:
                         cursor.execute("SELECT current_database();")
