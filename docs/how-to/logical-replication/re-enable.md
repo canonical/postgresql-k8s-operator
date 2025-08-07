@@ -14,11 +14,15 @@ CREATE TABLE
 ```
 
 If the table is not dropped and re-created, the second cluster will get into a blocked state like in the following example:
-```sh
-# Juju status.
-postgresql2/0*  blocked   idle  10.1.176.92         Logical replication setup is invalid. Check logs
+Output from `juju status`:
 
-# Juju debug logs.
+```text
+postgresql2/0*  blocked   idle  10.1.176.92         Logical replication setup is invalid. Check logs
+```
+
+Output from Juju debug logs:
+
+```text
 unit-postgresql2-0: 15:42:34 ERROR unit.postgresql2/0.juju-log Logical replication validation: table public.asd in database testdb isn't empty
 ```
 
