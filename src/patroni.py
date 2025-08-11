@@ -478,6 +478,16 @@ class Patroni:
                 if self.get_primary() is None:
                     raise ClusterNotPromotedError("cluster not promoted")
 
+    def set_failsafe_mode(self) -> None:
+        """Patch the DCS with failsafe mode on."""
+        requests.patch(
+            f"{self._patroni_url}/config",
+            verify=self._verify,
+            json={"failsafe_mode": True},
+            auth=self._patroni_auth,
+            timeout=PATRONI_TIMEOUT,
+        )
+
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def reinitialize_postgresql(self) -> None:
         """Reinitialize PostgreSQL."""

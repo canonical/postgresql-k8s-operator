@@ -435,7 +435,9 @@ async def fetch_cluster_members(ops_test: OpsTest):
     return member_ips
 
 
-async def get_patroni_setting(ops_test: OpsTest, setting: str, tls: bool = False) -> int | None:
+async def get_patroni_setting(
+    ops_test: OpsTest, setting: str, tls: bool = False
+) -> int | str | None:
     """Get the value of one of the integer Patroni settings.
 
     Args:
@@ -453,8 +455,10 @@ async def get_patroni_setting(ops_test: OpsTest, setting: str, tls: bool = False
             primary_name = await get_primary(ops_test, app)
             unit_ip = await get_unit_address(ops_test, primary_name)
             configuration_info = requests.get(f"{schema}://{unit_ip}:8008/config", verify=not tls)
-            primary_start_timeout = configuration_info.json().get(setting)
-            return int(primary_start_timeout) if primary_start_timeout is not None else None
+            value = configuration_info.json().get(setting)
+            with contextlib.suppress(ValueError, TypeError):
+                value = int(value)
+            return value
 
 
 async def get_instances_roles(ops_test: OpsTest):

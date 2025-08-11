@@ -123,6 +123,7 @@ class PostgreSQLUpgrade(DataUpgrade):
                 return
             self._set_up_new_credentials_for_legacy()
             self._set_up_new_access_roles_for_legacy()
+            self._patch_failsafe_mode()
 
         try:
             for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(10)):
@@ -296,6 +297,12 @@ class PostgreSQLUpgrade(DataUpgrade):
                 self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY),
                 extra_user_roles="pg_monitor",
             )
+
+    def _patch_failsafe_mode(self):
+        try:
+            self.charm._patroni.set_failsafe_mode()
+        except Exception:
+            logger.warning("Unable to patch in failsafe mode")
 
     @property
     def unit_upgrade_data(self) -> RelationDataContent:
