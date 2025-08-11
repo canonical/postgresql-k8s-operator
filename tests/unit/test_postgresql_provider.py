@@ -78,7 +78,9 @@ def test_on_database_requested(harness):
         patch("charm.PostgresqlOperatorCharm.update_config"),
         patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock,
         patch.object(EventBase, "defer") as _defer,
-        patch("charm.Patroni.primary_endpoint_ready", new_callable=PropertyMock) as _primary_endpoint_ready,
+        patch(
+            "charm.Patroni.primary_endpoint_ready", new_callable=PropertyMock
+        ) as _primary_endpoint_ready,
         patch(
             "relations.postgresql_provider.new_password", return_value="test-password"
         ) as _new_password,
