@@ -1,0 +1,26 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1180 Cluster members are: [{'name': 'postgresql-k8s-0', 'role': 'sync_standby', 'state': 'streaming', 'api_url': 'http://postgresql-k8s-0.postgresql-k8s-endpoints:8008/patroni', 'host': 'postgresql-k8s-0.postgresql-k8s-endpoints', 'port': 5432, 'timeline': 1, 'lag': 0}, {'name': 'postgresql-k8s-1', 'role': 'leader', 'state': 'running', 'api_url': 'http://postgresql-k8s-1.postgresql-k8s-endpoints:8008/patroni', 'host': 'postgresql-k8s-1.postgresql-k8s-endpoints', 'port': 5432, 'timeline': 1}, {'name': 'postgresql-k8s-2', 'role': 'sync_standby', 'state': 'streaming', 'api_url': 'http://postgresql-k8s-2.postgresql-k8s-endpoints:8008/patroni', 'host': 'postgresql-k8s-2.postgresql-k8s-endpoints', 'port': 5432, 'timeline': 1, 'lag': 0}]
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.8    unsupported  01:37:24Z
+
+App             Version  Status  Scale  Charm           Channel  Rev  Address        Exposed  Message
+postgresql-k8s  14.18    active      3  postgresql-k8s             0  10.152.183.60  no       
+
+Unit               Workload  Agent  Address      Ports  Message
+postgresql-k8s/0   active    idle   10.1.52.203         
+postgresql-k8s/1*  active    idle   10.1.52.205         Primary
+postgresql-k8s/2   active    idle   10.1.52.204         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
