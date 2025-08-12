@@ -18,14 +18,18 @@ from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQLDeleteUserError,
     PostgreSQLGetPostgreSQLVersionError,
 )
+from ops import ActiveStatus, BlockedStatus, ModelError, Relation
 from ops.charm import CharmBase, RelationBrokenEvent, RelationDepartedEvent
 from ops.framework import Object
-from ops.model import ActiveStatus, BlockedStatus, Relation
 
 from constants import DATABASE_PORT
 from utils import new_password
 
 logger = logging.getLogger(__name__)
+
+
+# Label not a secret
+NO_ACCESS_TO_SECRET_MSG = "Missing grant to requested entity secret."  # noqa: S105
 
 
 class PostgreSQLProvider(Object):
@@ -71,6 +75,15 @@ class PostgreSQLProvider(Object):
         extra_roles_list = [role for role in extra_roles_list if role not in ACCESS_GROUPS]
         return extra_roles_list
 
+    def clear_no_access_block(self):
+        """Clear no access to secret blocking message."""
+        # TODO Actually implement
+        if (
+            isinstance(self.charm.unit.status, BlockedStatus)
+            and self.charm.unit.status.message == NO_ACCESS_TO_SECRET_MSG
+        ):
+            self.charm.unit.status = ActiveStatus()
+
     def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:
         """Handle the legacy postgresql-client relation changed event.
 
@@ -83,6 +96,21 @@ class PostgreSQLProvider(Object):
             )
             event.defer()
             return
+
+        user = None
+        password = None
+        try:
+            if requested_entities := event.requested_entity_secret_content:
+                for key, val in requested_entities.items():
+                    user = key
+                    password = val
+                    break
+        except ModelError:
+            self.charm.unit.status = BlockedStatus(NO_ACCESS_TO_SECRET_MSG)
+            event.defer()
+            return
+
+        self.clear_no_access_block()
 
         self.charm.update_config()
         for key in self.charm._peers.data:
@@ -106,8 +134,8 @@ class PostgreSQLProvider(Object):
 
         try:
             # Creates the user and the database for this specific relation.
-            user = f"relation_id_{event.relation.id}"
-            password = new_password()
+            user = user or f"relation_id_{event.relation.id}"
+            password = password or new_password()
             self.charm.postgresql.create_user(user, password, extra_user_roles=extra_user_roles)
             plugins = self.charm.get_plugins()
 
@@ -254,7 +282,7 @@ class PostgreSQLProvider(Object):
                 )
             ) and "read-only-uris" in secret_fields:
                 if not user or not password or not database:
-                    user = f"relation_id_{relation.id}"
+                    user = self.database_provides.fetch_my_relation_field(relation.id, "username")
                     database = self.database_provides.fetch_relation_field(relation.id, "database")
                     password = self.database_provides.fetch_my_relation_field(
                         relation.id, "password"
