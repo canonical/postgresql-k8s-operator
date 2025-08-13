@@ -511,3 +511,18 @@ def test_update_synchronous_node_count(harness, patroni):
         with pytest.raises(RetryError):
             patroni.update_synchronous_node_count()
             assert False
+
+
+def test_set_failsafe_mode(harness, patroni):
+    with (
+        patch("requests.patch") as _patch,
+    ):
+        patroni.set_failsafe_mode()
+
+        _patch.assert_called_once_with(
+            "http://postgresql-k8s-0:8008/config",
+            json={"failsafe_mode": True},
+            verify=True,
+            auth=patroni._patroni_auth,
+            timeout=10,
+        )
