@@ -1538,7 +1538,7 @@ optional = false
 python-versions = "<4.0,>=3.8"
 groups = ["main"]
 files = [
-    {file = "test1.tar.gz", hash = "sha256:f82c75c4143f0e3591fb91f1e693daf2b884971339ee5fa379f37d92851ed83f"},
+    {file = "c1ef734fd749b360e14fdb5a24c55315cb0a9000.zip", hash = "sha256:7db514446a2ae18294b1215f3ea3e3f81211970a904e45f17b60bc4a0d4bdc05"},
 ]
 
 [package.dependencies]
@@ -1548,7 +1548,7 @@ pytest = ">=8.3.5"
 
 [package.source]
 type = "url"
-url = "https://github.com/marceloneppel/postgresql-single-kernel-library/archive/refs/tags/test1.tar.gz"
+url = "https://github.com/marceloneppel/postgresql-single-kernel-library/archive/c1ef734fd749b360e14fdb5a24c55315cb0a9000.zip"
 
 [[package]]
 name = "prompt-toolkit"
@@ -2668,4 +2668,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "5095552c4099ccf5576729495c2eaf3c075711577029175dc569bb7f674d4cfc"
+content-hash = "0a82a680e0354f4a27284a7c59a94ae890dab107b4cb08e579006382d4a8cb3b"

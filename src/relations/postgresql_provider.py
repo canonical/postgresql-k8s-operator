@@ -9,7 +9,10 @@ from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProvides,
     DatabaseRequestedEvent,
 )
-from charms.postgresql_k8s.v0.postgresql import (
+from ops.charm import CharmBase, RelationBrokenEvent, RelationDepartedEvent
+from ops.framework import Object
+from ops.model import ActiveStatus, BlockedStatus, Relation
+from single_kernel_postgresql.utils.postgresql import (
     ACCESS_GROUP_RELATION,
     ACCESS_GROUPS,
     INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE,
@@ -18,9 +21,6 @@ from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQLDeleteUserError,
     PostgreSQLGetPostgreSQLVersionError,
 )
-from ops.charm import CharmBase, RelationBrokenEvent, RelationDepartedEvent
-from ops.framework import Object
-from ops.model import ActiveStatus, BlockedStatus, Relation
 
 from constants import DATABASE_PORT
 from utils import new_password

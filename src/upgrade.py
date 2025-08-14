@@ -13,13 +13,13 @@ from charms.data_platform_libs.v0.upgrade import (
     DependencyModel,
     KubernetesClientError,
 )
-from charms.postgresql_k8s.v0.postgresql import ACCESS_GROUPS
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
 from lightkube.resources.apps_v1 import StatefulSet
 from ops.charm import UpgradeCharmEvent, WorkloadEvent
 from ops.model import BlockedStatus, MaintenanceStatus, RelationDataContent
 from pydantic import BaseModel
+from single_kernel_postgresql.utils.postgresql import ACCESS_GROUPS
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from constants import APP_SCOPE, MONITORING_PASSWORD_KEY, MONITORING_USER, PATRONI_PASSWORD_KEY

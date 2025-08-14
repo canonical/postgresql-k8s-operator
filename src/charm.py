@@ -18,12 +18,19 @@ from pathlib import Path
 from typing import Literal, get_args
 from urllib.parse import urlparse
 
-from single_kernel_postgresql.utils.postgresql_connection import (
-    PostgreSQLConnection,
+from single_kernel_postgresql.utils.postgresql import (
+    ACCESS_GROUP_IDENTITY,
+    ACCESS_GROUPS,
+    REQUIRED_PLUGINS,
+    PostgreSQL,
     PostgreSQLCreatePredefinedRolesError,
     PostgreSQLCreateUserError,
+    PostgreSQLEnableDisableExtensionError,
+    PostgreSQLGetCurrentTimelineError,
     PostgreSQLGrantDatabasePrivilegesToUserError,
+    PostgreSQLListGroupsError,
     PostgreSQLListUsersError,
+    PostgreSQLUpdateUserPasswordError,
 )
 
 from authorisation_rules_observer import (
@@ -50,16 +57,6 @@ from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerU
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v1.loki_push_api import LogProxyConsumer
-from charms.postgresql_k8s.v0.postgresql import (
-    ACCESS_GROUP_IDENTITY,
-    ACCESS_GROUPS,
-    REQUIRED_PLUGINS,
-    PostgreSQL,
-    PostgreSQLEnableDisableExtensionError,
-    PostgreSQLGetCurrentTimelineError,
-    PostgreSQLListGroupsError,
-    PostgreSQLUpdateUserPasswordError,
-)
 from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
@@ -458,7 +455,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @property
     def postgresql(self) -> PostgreSQL:
         """Returns an instance of the object used to interact with the database."""
-        return PostgreSQLConnection(
+        return PostgreSQL(
             primary_host=self.primary_endpoint,
             current_host=self.endpoint,
             user=USER,
