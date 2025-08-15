@@ -1945,8 +1945,13 @@ class RequirerData(Data):
         ) and not self.secrets_enabled:
             raise SecretsUnavailableError("Secrets unavailable on current Juju version")
 
-        if self.requested_entity_secret and self.requested_entity_name:
+        if self.requested_entity_secret and (
+            self.requested_entity_name or self.requested_entity_password
+        ):
             raise IllegalOperationError("Unable to use provided and automated entity name secret")
+
+        if self.requested_entity_password and not self.requested_entity_name:
+            raise IllegalOperationError("Unable to set entity password without an entity name")
 
         self._validate_entity_type()
         self._validate_entity_permissions()
@@ -3009,10 +3014,12 @@ class DatabaseRequestedEvent(DatabaseProvidesEvent):
         )
 
     @property
-    def requested_entity_secret_content(self) -> Optional[dict[str, Optional[str]]]:
+    def requested_entity_secret_content(self) -> Optional[Dict[str, Optional[str]]]:
         """Returns the content of the requested entity secret."""
         names = None
-        if secret_uri := self.relation.data[self.relation.app].get("requested-entity-secret"):
+        if secret_uri := self.relation.data.get(self.relation.app, {}).get(
+            "requested-entity-secret"
+        ):
             secret = self.framework.model.get_secret(id=secret_uri)
             if content := secret.get_content(refresh=True):
                 names = {key: val if val != "None" else None for key, val in content.items()}
@@ -3550,7 +3557,7 @@ class DatabaseRequirerEventHandlers(RequirerEventHandlers):
         # Create helper secret if needed
         if (
             self.relation_data.requested_entity_name
-            and "requested-entity-secret" not in event_data
+            and not self.relation_data.requested_entity_secret
         ):
             secret = self.charm.app.add_secret(
                 {
@@ -3558,7 +3565,7 @@ class DatabaseRequirerEventHandlers(RequirerEventHandlers):
                         self.relation_data.requested_entity_password
                     )
                 },
-                label=f"{self.charm.app}-requested-entity",
+                label=f"{self.model.uuid}-{event.relation.id}-requested-entity",
             )
             secret.grant(event.relation)
             if not secret.id:
