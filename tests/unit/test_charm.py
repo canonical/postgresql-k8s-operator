@@ -655,6 +655,7 @@ def test_on_update_status_after_restore_operation(harness):
         patch(
             "single_kernel_postgresql.utils.postgresql.PostgreSQL.get_current_timeline"
         ) as _get_current_timeline,
+        patch("charm.PostgresqlOperatorCharm._setup_users") as _setup_users,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
         patch("ops.model.Container.pebble") as _pebble,

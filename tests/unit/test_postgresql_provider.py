@@ -87,10 +87,10 @@ def test_on_database_requested(harness):
         # Set some side effects to test multiple situations.
         _member_started.side_effect = [False, True, True, True, True, True]
         postgresql_mock.create_user = PropertyMock(
-            side_effect=[None, PostgreSQLCreateUserError, None, None]
+            side_effect=[None, PostgreSQLCreateUserError, None]
         )
         postgresql_mock.create_database = PropertyMock(
-            side_effect=[None, PostgreSQLCreateDatabaseError, None]
+            side_effect=[None, PostgreSQLCreateDatabaseError, None, None]
         )
         postgresql_mock.get_postgresql_version = PropertyMock(
             side_effect=[
@@ -114,15 +114,9 @@ def test_on_database_requested(harness):
             user,
             "test-password",
             extra_user_roles=expected_user_roles,
+            database=DATABASE,
         )
-        database_relation = harness.model.get_relation(RELATION_NAME)
-        client_relations = [database_relation]
-        postgresql_mock.create_database.assert_called_once_with(
-            DATABASE,
-            user,
-            plugins=["pgaudit"],
-            client_relations=client_relations,
-        )
+        postgresql_mock.create_database.assert_called_once_with(DATABASE, plugins=["pgaudit"])
         postgresql_mock.get_postgresql_version.assert_called_once()
 
         # Assert that the relation data was updated correctly.
