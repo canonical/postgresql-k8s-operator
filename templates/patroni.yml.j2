@@ -96,6 +96,7 @@ log:
   format: "%(asctime)s [%(process)d]: %(levelname)s: %(message)s "
   file_num: 10080
   file_size: 600
+  level: DEBUG
 restapi:
   connect_address: '{{ endpoint }}:8008'
   listen: 0.0.0.0:8008
@@ -191,6 +192,12 @@ postgresql:
       sslcert: {{ conf_path }}/nonexistent_cert.pem
       sslkey: {{ conf_path }}/nonexistent_key.pem
       {%- endif %}
+  callbacks:
+    on_reload: /home/postgres/role_change.py
+    on_restart: /home/postgres/role_change.py
+    on_role_change: /home/postgres/role_change.py
+    on_start: /home/postgres/role_change.py
+    on_stop: /home/postgres/role_change.py
 use_endpoints: true
 use_unix_socket: true
 {%- if is_no_sync_member or is_creating_backup %}
