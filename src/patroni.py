@@ -616,6 +616,7 @@ class Patroni:
             patroni_password=self._patroni_password,
             user_databases_map=user_databases_map,
             slots=slots,
+            instance_password_encryption=self._charm.config.instance_password_encryption,
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 
