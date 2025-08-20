@@ -47,6 +47,9 @@ async def test_config_parameters(ops_test: OpsTest, charm) -> None:
         {
             "instance_password_encryption": [test_string, "scram-sha-256"]
         },  # config option is one of `md5` or `scram-sha-256`
+        {
+            "instance_password_encryption": [test_string, "md5"]
+        },  # config option is one of `md5` or `scram-sha-256`
         {"logging_client_min_messages": [test_string, "notice"]},
         # config option is one of 'debug5', 'debug4', 'debug3', 'debug2', 'debug1', 'log', 'notice', 'warning' or 'error'.
         {
