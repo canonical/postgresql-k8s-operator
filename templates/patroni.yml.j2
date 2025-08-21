@@ -46,7 +46,11 @@ bootstrap:
         log_truncate_on_rotation: 'on'
         logging_collector: 'on'
         wal_level: logical
-        shared_preload_libraries: 'timescaledb,pgaudit'
+        shared_preload_libraries: 'timescaledb,pgaudit,set_user'
+        session_preload_libraries: 'login_hook'
+        set_user.block_log_statement: 'on'
+        set_user.exit_on_error: 'on'
+        set_user.superuser_allowlist: '+charmed_dba'
     {%- if slots %}
     slots:
     {%- for slot, database in slots.items() %}
@@ -124,7 +128,11 @@ postgresql:
   bin_dir: /usr/lib/postgresql/{{ version }}/bin
   listen: 0.0.0.0:5432
   parameters:
-    shared_preload_libraries: 'timescaledb,pgaudit'
+    shared_preload_libraries: 'timescaledb,pgaudit,set_user'
+    session_preload_libraries: 'login_hook'
+    set_user.block_log_statement: 'on'
+    set_user.exit_on_error: 'on'
+    set_user.superuser_allowlist: '+charmed_dba'
     {%- if enable_pgbackrest_archiving %}
     archive_command: 'pgbackrest --stanza={{ stanza }} archive-push %p'
     {% else %}
@@ -146,6 +154,13 @@ postgresql:
   pg_hba:
   - local all backup peer map=operator
   - local all monitoring password
+  - {{ 'hostssl' if enable_tls else 'host' }} all +charmed_stats 0.0.0.0/0 scram-sha-256
+  - {{ 'hostssl' if enable_tls else 'host' }} all +charmed_read 0.0.0.0/0 scram-sha-256
+  - {{ 'hostssl' if enable_tls else 'host' }} all +charmed_dml 0.0.0.0/0 scram-sha-256
+  - {{ 'hostssl' if enable_tls else 'host' }} all +charmed_backup 0.0.0.0/0 scram-sha-256
+  - {{ 'hostssl' if enable_tls else 'host' }} all +charmed_dba 0.0.0.0/0 scram-sha-256
+  - {{ 'hostssl' if enable_tls else 'host' }} all +charmed_admin 0.0.0.0/0 scram-sha-256
+  - {{ 'hostssl' if enable_tls else 'host' }} all +charmed_databases_owner 0.0.0.0/0 scram-sha-256
   {%- if not connectivity %}
   - {{ 'hostssl' if enable_tls else 'host' }} all all {{ endpoint }}.{{ namespace }}.svc.cluster.local {{ instance_password_encryption }}
   - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 reject
