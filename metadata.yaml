@@ -3,17 +3,23 @@
 
 name: postgresql-k8s
 display-name: Charmed PostgreSQL K8s
-summary: Charmed PostgreSQL K8s operator
+summary: Charmed PostgreSQL 14 for Kubernetes
 description: |
-  Charm to operate the PostgreSQL database on Kubernetes clusters
-docs: https://discourse.charmhub.io/t/charmed-postgresql-k8s-documenation/9307
+   PostgreSQL is an open-source relational database management system
+   built to handle a wide range of workloads. This charmed operator deploys 
+   and operates PostgreSQL on Kubernetes.
+
+   For deployment on virtual machines, see [Charmed PostgreSQL VM](https://charmhub.io/postgresql).
+
+   To learn more about how to deploy and manage this charm, see the 
+   [official documentation](https://canonical-charmed-postgresql-k8s.readthedocs-hosted.com/14/).
+docs: https://canonical-charmed-postgresql-k8s.readthedocs-hosted.com/14/
 source: https://github.com/canonical/postgresql-k8s-operator
 issues: https://github.com/canonical/postgresql-k8s-operator/issues
 website:
   - https://ubuntu.com/data/postgresql
   - https://charmhub.io/postgresql-k8s
   - https://github.com/canonical/postgresql-k8s-operator
-  - https://chat.charmhub.io/charmhub/channels/data-platform
 maintainers:
   - Canonical Data Platform <data-platform@lists.launchpad.net>
 
