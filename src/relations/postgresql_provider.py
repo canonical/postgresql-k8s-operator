@@ -3,6 +3,7 @@
 
 """Postgres client relation hooks & helpers."""
 
+import json
 import logging
 
 from charms.data_platform_libs.v0.data_interfaces import (
@@ -18,11 +19,18 @@ from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQLDeleteUserError,
     PostgreSQLGetPostgreSQLVersionError,
 )
-from ops import ActiveStatus, BlockedStatus, ModelError, Relation
-from ops.charm import CharmBase, RelationBrokenEvent, RelationDepartedEvent
-from ops.framework import Object
+from ops import (
+    ActiveStatus,
+    BlockedStatus,
+    CharmBase,
+    ModelError,
+    Object,
+    Relation,
+    RelationBrokenEvent,
+    RelationDepartedEvent,
+)
 
-from constants import DATABASE_PORT, SYSTEM_USERS
+from constants import APP_SCOPE, DATABASE_PORT, SYSTEM_USERS, USERNAME_MAPPING_LABEL
 from utils import new_password
 
 logger = logging.getLogger(__name__)
@@ -76,6 +84,27 @@ class PostgreSQLProvider(Object):
         extra_roles_list = [role for role in extra_roles_list if role not in ACCESS_GROUPS]
         return extra_roles_list
 
+    def get_username_mapping(self) -> dict[str, str]:
+        """Get a mapping of custom usernames by a relation ID."""
+        if username_mapping := self.charm.get_secret(APP_SCOPE, USERNAME_MAPPING_LABEL):
+            return json.loads(username_mapping)
+        return {}
+
+    def update_username_mapping(self, relation_id: int, username: str | None) -> None:
+        """Update a mapping of custom usernames in the application peer secret."""
+        if username == f"relation_id_{relation_id}":
+            return
+
+        username_mapping = self.get_username_mapping()
+        if username and username_mapping.get(str(relation_id)) != username:
+            username_mapping[str(relation_id)] = username
+        elif not username and username_mapping.get(str(relation_id)):
+            del username_mapping[str(relation_id)]
+        else:
+            # Cache is up to date
+            return
+        self.charm.set_secret(APP_SCOPE, USERNAME_MAPPING_LABEL, json.dumps(username_mapping))
+
     def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:
         """Handle the legacy postgresql-client relation changed event.
 
@@ -104,6 +133,7 @@ class PostgreSQLProvider(Object):
             self.charm.unit.status = BlockedStatus(NO_ACCESS_TO_SECRET_MSG)
             return
 
+        self.update_username_mapping(event.relation.id, user)
         self.charm.update_config()
         for key in self.charm._peers.data:
             # We skip the leader so we don't have to wait on the defer
@@ -216,7 +246,9 @@ class PostgreSQLProvider(Object):
             logger.debug("Early exit on_relation_broken: Skipping departing unit")
             return
 
-        user = f"relation_id_{event.relation.id}"
+        user = self.get_username_mapping().get(
+            str(event.relation.id), f"relation_id_{event.relation.id}"
+        )
         if not self.charm.unit.is_leader():
             if user in self.charm.postgresql.list_users():
                 logger.debug("Deferring on_relation_broken: user was not deleted yet")
@@ -234,6 +266,7 @@ class PostgreSQLProvider(Object):
                 f"Failed to delete user during {self.relation_name} relation broken event"
             )
 
+        self.update_username_mapping(event.relation.id, None)
         self.charm.update_config()
 
     def update_read_only_endpoint(
@@ -280,10 +313,11 @@ class PostgreSQLProvider(Object):
                         relation.id, "password"
                     )
 
-                self.database_provides.set_read_only_uris(
-                    relation.id,
-                    f"postgresql://{user}:{password}@{endpoints}/{database}",
-                )
+                if user and password:
+                    self.database_provides.set_read_only_uris(
+                        relation.id,
+                        f"postgresql://{user}:{password}@{endpoints}/{database}",
+                    )
             # Reset the creds for the next iteration
             user = None
             password = None
