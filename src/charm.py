@@ -1041,6 +1041,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             event.defer()
             return
 
+        with open("scripts/role_change.py") as f:
+            container.push(
+                "/home/postgres/role_change.py",
+                f.read(),
+                permissions=0o770,
+                user="postgres",
+                group="postgres",
+            )
+
         # Create the PostgreSQL data directory. This is needed on cloud environments
         # where the volume is mounted with more restrictive permissions.
         self._create_pgdata(container)
