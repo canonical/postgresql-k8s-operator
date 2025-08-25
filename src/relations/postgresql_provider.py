@@ -264,10 +264,11 @@ class PostgreSQLProvider(Object):
                         relation.id, "password"
                     )
 
-                self.database_provides.set_read_only_uris(
-                    relation.id,
-                    f"postgresql://{user}:{password}@{endpoints}/{database}",
-                )
+                if user and password:
+                    self.database_provides.set_read_only_uris(
+                        relation.id,
+                        f"postgresql://{user}:{password}@{endpoints}/{database}",
+                    )
             # Reset the creds for the next iteration
             user = None
             password = None
