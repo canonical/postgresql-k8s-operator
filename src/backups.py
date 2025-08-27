@@ -12,9 +12,11 @@ import time
 from datetime import UTC, datetime
 from io import BytesIO
 
-import boto3
-import botocore
+from boto3.session import Session
+from botocore.client import Config
 from botocore.exceptions import ClientError
+from botocore.loaders import create_loader
+from botocore.regions import EndpointResolver
 from charms.data_platform_libs.v0.s3 import CredentialsChangedEvent, S3Requirer
 from jinja2 import Template
 from lightkube import ApiError, Client
@@ -93,7 +95,7 @@ class PostgreSQLBackups(Object):
         return ""
 
     def _get_s3_session_resource(self, s3_parameters: dict):
-        session = boto3.session.Session(
+        session = Session(
             aws_access_key_id=s3_parameters["access-key"],
             aws_secret_access_key=s3_parameters["secret-key"],
             region_name=s3_parameters["region"],
@@ -102,14 +104,14 @@ class PostgreSQLBackups(Object):
             "s3",
             endpoint_url=self._construct_endpoint(s3_parameters),
             verify=(self._tls_ca_chain_filename or None),
-            config=botocore.client.Config(
+            config=Config(
                 # https://github.com/boto/boto3/issues/4400#issuecomment-2600742103
                 request_checksum_calculation="when_required",
                 response_checksum_validation="when_required",
             ),
         )
 
-    def _are_backup_settings_ok(self) -> tuple[bool, str | None]:
+    def _are_backup_settings_ok(self) -> tuple[bool, str]:
         """Validates whether backup settings are OK."""
         if self.model.get_relation(self.relation_name) is None:
             return (
@@ -121,7 +123,7 @@ class PostgreSQLBackups(Object):
         if missing_parameters:
             return False, f"Missing S3 parameters: {missing_parameters}"
 
-        return True, None
+        return True, ""
 
     @property
     def _can_initialise_stanza(self) -> bool:
@@ -172,7 +174,7 @@ class PostgreSQLBackups(Object):
 
         return self._are_backup_settings_ok()
 
-    def can_use_s3_repository(self) -> tuple[bool, str | None]:
+    def can_use_s3_repository(self) -> tuple[bool, str]:
         """Returns whether the charm was configured to use another cluster repository."""
         # Check model uuid
         s3_parameters, _ = self._retrieve_s3_parameters()
@@ -217,7 +219,7 @@ class PostgreSQLBackups(Object):
                     f"can_use_s3_repository: incompatible system identifier s3={system_identifier_from_stanza}, local={system_identifier_from_instance}"
                 )
                 return False, ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE
-        return True, None
+        return True, ""
 
     def _construct_endpoint(self, s3_parameters: dict) -> str:
         """Construct the S3 service endpoint using the region.
@@ -228,11 +230,11 @@ class PostgreSQLBackups(Object):
         endpoint = s3_parameters["endpoint"]
 
         # Load endpoints data.
-        loader = botocore.loaders.create_loader()
+        loader = create_loader()
         data = loader.load_data("endpoints")
 
         # Construct the endpoint using the region.
-        resolver = botocore.regions.EndpointResolver(data)
+        resolver = EndpointResolver(data)
         endpoint_data = resolver.construct_endpoint("s3", s3_parameters["region"])
 
         # Use the built endpoint if it is an AWS endpoint.
@@ -254,7 +256,8 @@ class PostgreSQLBackups(Object):
         except ValueError as e:
             logger.exception("Failed to create a session '%s' in region=%s.", bucket_name, region)
             raise e
-        bucket = s3.Bucket(bucket_name)
+        # Boto3 doesn't have typedefs
+        bucket = s3.Bucket(bucket_name)  # type: ignore
         try:
             bucket.meta.client.head_bucket(Bucket=bucket_name)
             logger.info("Bucket %s exists.", bucket_name)
@@ -280,7 +283,7 @@ class PostgreSQLBackups(Object):
             self.container.exec(["rm", "-r", "/var/lib/postgresql/data/pgdata"]).wait_output()
         except ExecError as e:
             # If previous PITR restore was unsuccessful, there is no such directory.
-            if "No such file or directory" not in e.stderr:
+            if "No such file or directory" not in str(e.stderr):
                 logger.exception(
                     "Failed to empty data directory in prep for backup restore", exc_info=e
                 )
@@ -366,39 +369,40 @@ class PostgreSQLBackups(Object):
         """
         backup_list = []
         output, _ = self._execute_command(["pgbackrest", "info", "--output=json"])
-        backups = json.loads(output)[0]["backup"]
-        for backup in backups:
-            backup_id, backup_type = self._parse_backup_id(backup["label"])
-            backup_action = f"{backup_type} backup"
-            backup_reference = "None"
-            if backup["reference"]:
-                backup_reference, _ = self._parse_backup_id(backup["reference"][-1])
-            lsn_start_stop = f"{backup['lsn']['start']} / {backup['lsn']['stop']}"
-            time_start, time_stop = (
-                datetime.strftime(datetime.fromtimestamp(stamp, UTC), "%Y-%m-%dT%H:%M:%SZ")
-                for stamp in backup["timestamp"].values()
-            )
-            backup_timeline = (
-                backup["archive"]["start"][:8].lstrip("0")
-                if backup["archive"] and backup["archive"]["start"]
-                else ""
-            )
-            backup_path = f"/{self.stanza_name}/{backup['label']}"
-            error = backup["error"]
-            backup_status = "finished"
-            if error:
-                backup_status = f"failed: {error}"
-            backup_list.append((
-                backup_id,
-                backup_action,
-                backup_status,
-                backup_reference,
-                lsn_start_stop,
-                time_start,
-                time_stop,
-                backup_timeline,
-                backup_path,
-            ))
+        if output:
+            backups = json.loads(output)[0]["backup"]
+            for backup in backups:
+                backup_id, backup_type = self._parse_backup_id(backup["label"])
+                backup_action = f"{backup_type} backup"
+                backup_reference = "None"
+                if backup["reference"]:
+                    backup_reference, _ = self._parse_backup_id(backup["reference"][-1])
+                lsn_start_stop = f"{backup['lsn']['start']} / {backup['lsn']['stop']}"
+                time_start, time_stop = (
+                    datetime.strftime(datetime.fromtimestamp(stamp, UTC), "%Y-%m-%dT%H:%M:%SZ")
+                    for stamp in backup["timestamp"].values()
+                )
+                backup_timeline = (
+                    backup["archive"]["start"][:8].lstrip("0")
+                    if backup["archive"] and backup["archive"]["start"]
+                    else ""
+                )
+                backup_path = f"/{self.stanza_name}/{backup['label']}"
+                error = backup["error"]
+                backup_status = "finished"
+                if error:
+                    backup_status = f"failed: {error}"
+                backup_list.append((
+                    backup_id,
+                    backup_action,
+                    backup_status,
+                    backup_reference,
+                    lsn_start_stop,
+                    time_start,
+                    time_stop,
+                    backup_timeline,
+                    backup_path,
+                ))
 
         for timeline, (_, timeline_id) in self._list_timelines().items():
             backup_list.append((
@@ -429,7 +433,7 @@ class PostgreSQLBackups(Object):
                 the S3 bucket.
         """
         output, _ = self._execute_command(["pgbackrest", "info", "--output=json"])
-        repository_info = next(iter(json.loads(output)), None)
+        repository_info = next(iter(json.loads(output)), None) if output else None
 
         # If there are no backups, returns an empty dict.
         if repository_info is None:
@@ -461,7 +465,7 @@ class PostgreSQLBackups(Object):
             "--output=json",
         ])
 
-        repository = json.loads(output).items()
+        repository = json.loads(output).items() if output else None
         if repository is None:
             return dict[str, tuple[str, str]]()
 
@@ -709,7 +713,7 @@ class PostgreSQLBackups(Object):
             return False
         return True
 
-    def _on_s3_credential_changed(self, event: CredentialsChangedEvent) -> bool | None:
+    def _on_s3_credential_changed(self, event: CredentialsChangedEvent) -> None:
         """Call the stanza initialization when the credentials or the connection info change."""
         if not self._on_s3_credentials_checks(event):
             return
@@ -843,7 +847,7 @@ Juju Version: {juju_version!s}
 
             # Recover the backup id from the logs.
             backup_label_stdout_line = re.findall(
-                r"(new backup label = )([0-9]{8}[-][0-9]{6}[F])$", e.stdout, re.MULTILINE
+                r"(new backup label = )([0-9]{8}[-][0-9]{6}[F])$", str(e.stdout), re.MULTILINE
             )
             if len(backup_label_stdout_line) > 0:
                 backup_id = backup_label_stdout_line[0][1]
@@ -1066,7 +1070,7 @@ Stderr:
         if backup_type == "full":
             return datetime.strftime(datetime.now(), "%Y%m%d-%H%M%SF")
         if backup_type == "differential":
-            backups = self._list_backups(show_failed=False, parse=False).keys()
+            backups = list(self._list_backups(show_failed=False, parse=False).keys())
             last_full_backup = None
             for label in backups[::-1]:
                 if label.endswith("F"):
@@ -1077,12 +1081,14 @@ Stderr:
                 raise TypeError("Differential backup requested but no previous full backup")
             return f"{last_full_backup}_{datetime.strftime(datetime.now(), '%Y%m%d-%H%M%SD')}"
         if backup_type == "incremental":
-            backups = self._list_backups(show_failed=False, parse=False).keys()
+            backups = list(self._list_backups(show_failed=False, parse=False).keys())
             if not backups:
                 raise TypeError("Incremental backup requested but no previous successful backup")
             return f"{backups[-1]}_{datetime.strftime(datetime.now(), '%Y%m%d-%H%M%SI')}"
+        else:
+            raise Exception("Invalid backup type")
 
-    def _fetch_backup_from_id(self, backup_id: str) -> str:
+    def _fetch_backup_from_id(self, backup_id: str) -> str | None:
         """Fetches backup's pgbackrest label from backup id."""
         timestamp = f"{datetime.strftime(datetime.strptime(backup_id, '%Y-%m-%dT%H:%M:%SZ'), '%Y%m%d-%H%M%S')}"
         backups = self._list_backups(show_failed=False, parse=False).keys()
@@ -1196,6 +1202,8 @@ Stderr:
                 group=WORKLOAD_OS_GROUP,
             )
 
+        cpu_count, _ = self.charm.get_available_resources()
+
         # Open the template pgbackrest.conf file.
         with open("templates/pgbackrest.conf.j2") as file:
             template = Template(file.read())
@@ -1215,7 +1223,7 @@ Stderr:
             storage_path=self.charm._storage_path,
             user=BACKUP_USER,
             retention_full=s3_parameters["delete-older-than-days"],
-            process_max=max(os.cpu_count() - 2, 1),
+            process_max=max(cpu_count - 2, 1),
         )
         # Delete the original file and render the one with the right info.
         filename = "/etc/pgbackrest.conf"
@@ -1264,7 +1272,7 @@ Stderr:
 
         # Add some sensible defaults (as expected by the code) for missing optional parameters
         s3_parameters.setdefault("endpoint", "https://s3.amazonaws.com")
-        s3_parameters.setdefault("region")
+        s3_parameters.setdefault("region")  # type: ignore
         s3_parameters.setdefault("path", "")
         s3_parameters.setdefault("s3-uri-style", "host")
         s3_parameters.setdefault("delete-older-than-days", "9999999")
@@ -1340,7 +1348,8 @@ Stderr:
             logger.info(f"Uploading content to bucket={bucket_name}, path={processed_s3_path}")
 
             s3 = self._get_s3_session_resource(s3_parameters)
-            bucket = s3.Bucket(bucket_name)
+            # Boto3 doesn't have typedefs
+            bucket = s3.Bucket(bucket_name)  # type: ignore
 
             with tempfile.NamedTemporaryFile() as temp_file:
                 temp_file.write(content.encode("utf-8"))
@@ -1373,11 +1382,12 @@ Stderr:
         try:
             logger.info(f"Reading content from bucket={bucket_name}, path={processed_s3_path}")
             s3 = self._get_s3_session_resource(s3_parameters)
-            bucket = s3.Bucket(bucket_name)
+            # Boto3 doesn't have typedefs
+            bucket = s3.Bucket(bucket_name)  # type: ignore
             with BytesIO() as buf:
                 bucket.download_fileobj(processed_s3_path, buf)
                 return buf.getvalue().decode("utf-8")
-        except botocore.exceptions.ClientError as e:
+        except ClientError as e:
             if e.response["Error"]["Code"] == "404":
                 logger.info(
                     f"No such object to read from S3 bucket={bucket_name}, path={processed_s3_path}"

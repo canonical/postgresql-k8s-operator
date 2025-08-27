@@ -69,19 +69,29 @@ for dependencies in REQUIRED_PLUGINS.values():
 logger = logging.getLogger(__name__)
 
 
-class PostgreSQLAssignGroupError(Exception):
+class PostgreSQLBaseError(Exception):
+    """Base lib exception."""
+
+    message = None
+
+
+class PostgreSQLAssignGroupError(PostgreSQLBaseError):
     """Exception raised when assigning to a group fails."""
 
 
-class PostgreSQLCreateDatabaseError(Exception):
+class PostgreSQLCreateDatabaseError(PostgreSQLBaseError):
     """Exception raised when creating a database fails."""
 
+    def __init__(self, message: Optional[str] = None):
+        super().__init__(message)
+        self.message = message
 
-class PostgreSQLCreateGroupError(Exception):
+
+class PostgreSQLCreateGroupError(PostgreSQLBaseError):
     """Exception raised when creating a group fails."""
 
 
-class PostgreSQLCreateUserError(Exception):
+class PostgreSQLCreateUserError(PostgreSQLBaseError):
     """Exception raised when creating a user fails."""
 
     def __init__(self, message: Optional[str] = None):
@@ -89,92 +99,108 @@ class PostgreSQLCreateUserError(Exception):
         self.message = message
 
 
-class PostgreSQLDatabasesSetupError(Exception):
+class PostgreSQLUndefinedHostError(PostgreSQLBaseError):
+    """Exception when host is not set."""
+
+
+class PostgreSQLUndefinedPasswordError(PostgreSQLBaseError):
+    """Exception when password is not set."""
+
+
+class PostgreSQLDatabasesSetupError(PostgreSQLBaseError):
     """Exception raised when the databases setup fails."""
 
 
-class PostgreSQLDeleteUserError(Exception):
+class PostgreSQLDeleteUserError(PostgreSQLBaseError):
     """Exception raised when deleting a user fails."""
 
 
-class PostgreSQLEnableDisableExtensionError(Exception):
+class PostgreSQLEnableDisableExtensionError(PostgreSQLBaseError):
     """Exception raised when enabling/disabling an extension fails."""
 
 
-class PostgreSQLGetLastArchivedWALError(Exception):
+class PostgreSQLGetLastArchivedWALError(PostgreSQLBaseError):
     """Exception raised when retrieving last archived WAL fails."""
 
 
-class PostgreSQLGetCurrentTimelineError(Exception):
+class PostgreSQLGetCurrentTimelineError(PostgreSQLBaseError):
     """Exception raised when retrieving current timeline id for the PostgreSQL unit fails."""
 
 
-class PostgreSQLGetPostgreSQLVersionError(Exception):
+class PostgreSQLGetPostgreSQLVersionError(PostgreSQLBaseError):
     """Exception raised when retrieving PostgreSQL version fails."""
 
 
-class PostgreSQLListAccessibleDatabasesForUserError(Exception):
+class PostgreSQLListAccessibleDatabasesForUserError(PostgreSQLBaseError):
     """Exception raised when retrieving the accessible databases for a user fails."""
 
 
-class PostgreSQLListGroupsError(Exception):
+class PostgreSQLListGroupsError(PostgreSQLBaseError):
     """Exception raised when retrieving PostgreSQL groups list fails."""
 
 
-class PostgreSQLListUsersError(Exception):
+class PostgreSQLListUsersError(PostgreSQLBaseError):
     """Exception raised when retrieving PostgreSQL users list fails."""
 
 
-class PostgreSQLUpdateUserPasswordError(Exception):
+class PostgreSQLUpdateUserPasswordError(PostgreSQLBaseError):
     """Exception raised when updating a user password fails."""
 
 
-class PostgreSQLDatabaseExistsError(Exception):
+class PostgreSQLCreatePredefinedRolesError(PostgreSQLBaseError):
+    """Exception raised when creating predefined roles."""
+
+
+class PostgreSQLDatabaseExistsError(PostgreSQLBaseError):
     """Exception raised during database existence check."""
 
 
-class PostgreSQLTableExistsError(Exception):
+class PostgreSQLTableExistsError(PostgreSQLBaseError):
     """Exception raised during table existence check."""
 
 
-class PostgreSQLIsTableEmptyError(Exception):
+class PostgreSQLIsTableEmptyError(PostgreSQLBaseError):
     """Exception raised during table emptiness check."""
 
 
-class PostgreSQLCreatePublicationError(Exception):
+class PostgreSQLCreatePublicationError(PostgreSQLBaseError):
     """Exception raised when creating PostgreSQL publication."""
 
 
-class PostgreSQLPublicationExistsError(Exception):
+class PostgreSQLPublicationExistsError(PostgreSQLBaseError):
     """Exception raised during PostgreSQL publication existence check."""
 
 
-class PostgreSQLAlterPublicationError(Exception):
+class PostgreSQLAlterPublicationError(PostgreSQLBaseError):
     """Exception raised when altering PostgreSQL publication."""
 
 
-class PostgreSQLDropPublicationError(Exception):
+class PostgreSQLDropPublicationError(PostgreSQLBaseError):
     """Exception raised when dropping PostgreSQL publication."""
 
 
-class PostgreSQLCreateSubscriptionError(Exception):
+class PostgreSQLCreateSubscriptionError(PostgreSQLBaseError):
     """Exception raised when creating PostgreSQL subscription."""
 
 
-class PostgreSQLSubscriptionExistsError(Exception):
+class PostgreSQLSubscriptionExistsError(PostgreSQLBaseError):
     """Exception raised during PostgreSQL subscription existence check."""
 
 
-class PostgreSQLUpdateSubscriptionError(Exception):
+class PostgreSQLUpdateSubscriptionError(PostgreSQLBaseError):
     """Exception raised when updating PostgreSQL subscription."""
 
 
-class PostgreSQLRefreshSubscriptionError(Exception):
+class PostgreSQLRefreshSubscriptionError(PostgreSQLBaseError):
     """Exception raised when refreshing PostgreSQL subscription."""
 
 
-class PostgreSQLDropSubscriptionError(Exception):
+class PostgreSQLDropSubscriptionError(PostgreSQLBaseError):
     """Exception raised when dropping PostgreSQL subscription."""
+
+
+class PostgreSQLGrantDatabasePrivilegesToUserError(PostgreSQLBaseError):
+    """Exception raised when granting database privileges to user."""
 
 
 class PostgreSQL:

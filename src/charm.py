@@ -61,26 +61,25 @@ from lightkube import ApiError, Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Endpoints, Node, Pod, Service
-from ops import main
-from ops.charm import (
+from ops import (
     ActionEvent,
-    HookEvent,
-    LeaderElectedEvent,
-    RelationDepartedEvent,
-    SecretChangedEvent,
-    WorkloadEvent,
-)
-from ops.model import (
     ActiveStatus,
     BlockedStatus,
+    CharmEvents,
     Container,
+    HookEvent,
+    LeaderElectedEvent,
     MaintenanceStatus,
     ModelError,
     Relation,
+    RelationDepartedEvent,
+    SecretChangedEvent,
     SecretNotFoundError,
     Unit,
     UnknownStatus,
     WaitingStatus,
+    WorkloadEvent,
+    main,
 )
 from ops.pebble import (
     ChangeError,
@@ -155,7 +154,7 @@ ORIGINAL_PATRONI_ON_FAILURE_CONDITION = "restart"
 logging.getLogger("httpcore").setLevel(logging.ERROR)
 logging.getLogger("httpx").setLevel(logging.ERROR)
 
-Scopes = Literal[APP_SCOPE, UNIT_SCOPE]
+Scopes = Literal["app", "unit"]
 PASSWORD_USERS = [*SYSTEM_USERS, "patroni"]
 
 
@@ -184,7 +183,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     """Charmed Operator for the PostgreSQL database."""
 
     config_type = CharmConfig
-    on = AuthorisationRulesChangeCharmEvents()
+    on: "CharmEvents" = AuthorisationRulesChangeCharmEvents()
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -240,7 +239,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.framework.observe(self.on.update_status, self._on_update_status)
 
         self._certs_path = "/usr/local/share/ca-certificates"
-        self._storage_path = self.meta.storages["data"].location
+        self._storage_path = str(self.meta.storages["data"].location)
         self.pgdata_path = f"{self._storage_path}/pgdata"
 
         self.upgrade = PostgreSQLUpgrade(
@@ -286,7 +285,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.update_config()
         logger.debug("databases changed")
         timestamp = datetime.now()
-        self._peers.data[self.unit].update({"pg_hba_needs_update_timestamp": str(timestamp)})
+        self.unit_peer_data.update({"pg_hba_needs_update_timestamp": str(timestamp)})
         logger.debug(f"authorisation rules changed at {timestamp}")
 
     @property
@@ -295,7 +294,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if self.tracing.is_ready():
             return self.tracing.get_endpoint(TRACING_PROTOCOL)
 
-    def _generate_metrics_jobs(self, enable_tls: bool) -> dict:
+    def _generate_metrics_jobs(self, enable_tls: bool) -> list[dict]:
         """Generate spec for Prometheus scraping."""
         return [
             {"static_configs": [{"targets": [f"*:{METRICS_PORT}"]}]},
@@ -324,20 +323,21 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @property
     def app_peer_data(self) -> dict:
         """Application peer relation data object."""
-        relation = self.model.get_relation(PEER)
-        if relation is None:
-            return {}
-
-        return relation.data[self.app]
+        return self.all_peer_data.get(self.app, {})
 
     @property
     def unit_peer_data(self) -> dict:
         """Unit peer relation data object."""
-        relation = self.model.get_relation(PEER)
-        if relation is None:
+        return self.all_peer_data.get(self.unit, {})
+
+    @property
+    def all_peer_data(self) -> dict:
+        """Return all peer data if available."""
+        if self._peers is None:
             return {}
 
-        return relation.data[self.unit]
+        # RelationData has dict like API
+        return self._peers.data  # type: ignore
 
     def _peer_data(self, scope: Scopes) -> dict:
         """Return corresponding databag for app/unit."""
@@ -1184,7 +1184,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.postgresql.grant_internal_access_group_memberships()
 
         # Mark the cluster as initialised.
-        self._peers.data[self.app]["cluster_initialised"] = "True"
+        self.app_peer_data["cluster_initialised"] = "True"
 
         return True
 
@@ -1918,7 +1918,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         return Layer(layer_config)
 
     @property
-    def _peers(self) -> Relation:
+    def _peers(self) -> Relation | None:
         """Fetch the peer relation.
 
         Returns:
@@ -2090,7 +2090,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         except ApiError as e:
             if e.status.code == 403:
                 self.on_deployed_without_trust()
-                return
+                return False
             raise e
 
         postgresql_parameters = self.postgresql.build_postgresql_parameters(
@@ -2277,7 +2277,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         pod = client.get(
             Pod, name=self._unit_name_to_pod_name(self.unit.name), namespace=self._namespace
         )
-        return pod.spec.nodeName
+        if pod.spec and pod.spec.nodeName:
+            return pod.spec.nodeName
+        else:
+            raise Exception("Pod doesn't exist")
 
     def get_resources_limits(self, container_name: str) -> dict:
         """Return resources limits for a given container.
@@ -2290,21 +2293,22 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             Pod, self._unit_name_to_pod_name(self.unit.name), namespace=self._namespace
         )
 
-        for container in pod.spec.containers:
-            if container.name == container_name:
-                return container.resources.limits or {}
+        if pod.spec:
+            for container in pod.spec.containers:
+                if container.name == container_name and container.resources:
+                    return container.resources.limits or {}
         return {}
 
     def get_node_allocable_memory(self) -> int:
         """Return the allocable memory in bytes for the current K8S node."""
         client = Client()
-        node = client.get(Node, name=self._get_node_name_for_pod(), namespace=self._namespace)
+        node = client.get(Node, name=self._get_node_name_for_pod(), namespace=self._namespace)  # type: ignore
         return any_memory_to_bytes(node.status.allocatable["memory"])
 
     def get_node_cpu_cores(self) -> int:
         """Return the number of CPU cores for the current K8S node."""
         client = Client()
-        node = client.get(Node, name=self._get_node_name_for_pod(), namespace=self._namespace)
+        node = client.get(Node, name=self._get_node_name_for_pod(), namespace=self._namespace)  # type: ignore
         return any_cpu_to_cores(node.status.allocatable["cpu"])
 
     def get_available_resources(self) -> tuple[int, int]:

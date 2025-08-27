@@ -4,6 +4,7 @@
 """Postgres client relation hooks & helpers."""
 
 import logging
+from typing import TYPE_CHECKING
 
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProvides,
@@ -18,7 +19,7 @@ from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQLDeleteUserError,
     PostgreSQLGetPostgreSQLVersionError,
 )
-from ops.charm import CharmBase, RelationBrokenEvent, RelationDepartedEvent
+from ops.charm import RelationBrokenEvent, RelationDepartedEvent
 from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, Relation
 
@@ -26,6 +27,9 @@ from constants import DATABASE_PORT
 from utils import new_password
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from charm import PostgresqlOperatorCharm
 
 
 class PostgreSQLProvider(Object):
@@ -36,7 +40,7 @@ class PostgreSQLProvider(Object):
         - relation-broken
     """
 
-    def __init__(self, charm: CharmBase, relation_name: str = "database") -> None:
+    def __init__(self, charm: "PostgresqlOperatorCharm", relation_name: str = "database") -> None:
         """Constructor for PostgreSQLClientProvides object.
 
         Args:
@@ -85,12 +89,12 @@ class PostgreSQLProvider(Object):
             return
 
         self.charm.update_config()
-        for key in self.charm._peers.data:
+        for key in self.charm.all_peer_data:
             # We skip the leader so we don't have to wait on the defer
             if (
                 key != self.charm.app
                 and key != self.charm.unit
-                and self.charm._peers.data[key].get("user_hash", "")
+                and self.charm.all_peer_data[key].get("user_hash", "")
                 != self.charm.generate_user_hash
             ):
                 logger.debug("Not all units have synced configuration")
@@ -98,7 +102,7 @@ class PostgreSQLProvider(Object):
                 return
 
         # Retrieve the database name and extra user roles using the charm library.
-        database = event.database
+        database = event.database or ""
 
         # Make sure the relation access-group is added to the list
         extra_user_roles = self._sanitize_extra_roles(event.extra_user_roles)

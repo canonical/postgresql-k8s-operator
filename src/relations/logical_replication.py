@@ -100,8 +100,8 @@ class PostgreSQLLogicalReplication(Object):
         )
         secret.grant(event.relation)
 
-        self._save_published_resources_info(str(event.relation.id), secret.id, {})
-        event.relation.data[self.model.app]["secret-id"] = secret.id
+        self._save_published_resources_info(str(event.relation.id), secret.id, {})  # type: ignore
+        event.relation.data[self.model.app]["secret-id"] = secret.id  # type: ignore
 
     def _on_offer_relation_changed(self, event: RelationChangedEvent) -> None:
         if not self.charm.unit.is_leader():
@@ -292,7 +292,7 @@ class PostgreSQLLogicalReplication(Object):
 
         if (
             relation := self.model.get_relation(LOGICAL_REPLICATION_RELATION)
-        ) and event.secret.label.startswith(SECRET_LABEL):
+        ) and event.secret.label.startswith(SECRET_LABEL):  # type: ignore
             logger.info("Logical replication secret changed, updating subscriptions")
             secret_content = self.model.get_secret(
                 id=relation.data[relation.app]["secret-id"], label=SECRET_LABEL
@@ -369,7 +369,7 @@ class PostgreSQLLogicalReplication(Object):
             self.charm.config.logical_replication_subscription_request or "{}"
         )
         subscriptions = self._subscriptions_info()
-        relation.data[self.model.app]["subscription-request"] = (
+        relation.data[self.model.app]["subscription-request"] = (  # type: ignore
             self.charm.config.logical_replication_subscription_request
         )
         for database, subscription in subscriptions.copy().items():
@@ -551,10 +551,10 @@ class PostgreSQLLogicalReplication(Object):
                 )
                 self.charm.postgresql.alter_publication(database, publication_name, tables)
                 publications[database]["tables"] = tables
-            self._save_published_resources_info(str(relation.id), secret.id, publications)
+            self._save_published_resources_info(str(relation.id), secret.id, publications)  # type: ignore
             relation.data[self.model.app]["publications"] = json.dumps(publications)
 
-        self._save_published_resources_info(str(relation.id), secret.id, publications)
+        self._save_published_resources_info(str(relation.id), secret.id, publications)  # type: ignore
         relation.data[self.model.app].update({
             "errors": json.dumps(errors),
             "publications": json.dumps(publications),
