@@ -1,7 +1,6 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 import datetime
-from os import cpu_count
 from unittest.mock import MagicMock, PropertyMock, call, mock_open, patch
 
 import pytest
@@ -224,7 +223,7 @@ def test_can_use_s3_repository(harness):
 
         # Test when nothing is returned from the pgBackRest info command.
         _read_content_from_s3.return_value = harness.model.uuid
-        _execute_command.return_value = (None, None)
+        _execute_command.side_effect = Exception
         assert harness.charm.backup.can_use_s3_repository() == (
             False,
             FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE,
@@ -455,35 +454,16 @@ def test_change_connectivity_to_database(harness):
 
 def test_execute_command(harness):
     with patch("ops.model.Container.exec") as _exec:
-        # Test when the command fails.
         command = ["rm", "-r", "/var/lib/postgresql/data/pgdata"]
-        _exec.side_effect = ChangeError(
-            err="fake error",
-            change=Change(
-                ChangeID("1"),
-                "fake kind",
-                "fake summary",
-                "fake status",
-                [],
-                True,
-                "fake error",
-                datetime.datetime.now(),
-                datetime.datetime.now(),
-            ),
-        )
         _exec.return_value.wait_output.return_value = ("fake stdout", "")
-        assert harness.charm.backup._execute_command(command) == (None, None)
-        _exec.assert_called_once_with(command, user="postgres", group="postgres", timeout=None)
 
         # Test when the command runs successfully.
         _exec.reset_mock()
-        _exec.side_effect = None
         assert harness.charm.backup._execute_command(command, timeout=5) == ("fake stdout", "")
         _exec.assert_called_once_with(command, user="postgres", group="postgres", timeout=5)
 
         # Test when streaming is enabled
         _exec.reset_mock()
-        _exec.side_effect = None
         _exec.return_value = MagicMock()
         _exec.return_value.stdout = ["fake stdout 1\n", "fake stdout 2\n"]
         _exec.return_value.stderr = ["fake stderr 1\n", "fake stderr 2\n"]

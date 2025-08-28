@@ -188,8 +188,10 @@ class PostgreSQLBackups(Object):
             )
             return False, ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE
 
-        output, _ = self._execute_command(["pgbackrest", "info", "--output=json"], timeout=30)
-        if output is None:
+        try:
+            output, _ = self._execute_command(["pgbackrest", "info", "--output=json"], timeout=30)
+        except Exception:
+            logger.error("Failed to execute pgbackrest info")
             return False, FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE
 
         for stanza in json.loads(output):
@@ -299,33 +301,29 @@ class PostgreSQLBackups(Object):
         command: list[str],
         timeout: float | None = None,
         stream: bool = False,
-    ) -> tuple[str | None, str | None]:
+    ) -> tuple[str, str]:
         """Execute a command in the workload container."""
-        try:
-            logger.debug("Running command %s", " ".join(command))
-            process = self.container.exec(
-                command,
-                user=WORKLOAD_OS_USER,
-                group=WORKLOAD_OS_GROUP,
-                timeout=timeout,
-            )
-            if not stream:
-                return process.wait_output()
+        logger.debug("Running command %s", " ".join(command))
+        process = self.container.exec(
+            command,
+            user=WORKLOAD_OS_USER,
+            group=WORKLOAD_OS_GROUP,
+            timeout=timeout,
+        )
+        if not stream:
+            return process.wait_output()
 
-            stdout = stderr = ""
-            # Read from stdout's IO stream directly, unbuffered
-            for line in process.stdout:
-                logger.debug("Captured stdout: \n%s", repr(line))
-                stdout += line
-            # Fetch from stderr afterwards (not in real time)
-            for line in process.stderr:
-                logger.debug("Captured stderr: \n%s", repr(line))
-                stderr += line
-            process.wait()
-            return stdout, stderr
-
-        except ChangeError:
-            return None, None
+        stdout = stderr = ""
+        # Read from stdout's IO stream directly, unbuffered
+        for line in process.stdout:
+            logger.debug("Captured stdout: \n%s", repr(line))
+            stdout += line
+        # Fetch from stderr afterwards (not in real time)
+        for line in process.stderr:
+            logger.debug("Captured stderr: \n%s", repr(line))
+            stderr += line
+        process.wait()
+        return stdout, stderr
 
     def _format_backup_list(self, backup_list) -> str:
         """Formats provided list of backups as a table."""
@@ -369,40 +367,39 @@ class PostgreSQLBackups(Object):
         """
         backup_list = []
         output, _ = self._execute_command(["pgbackrest", "info", "--output=json"])
-        if output:
-            backups = json.loads(output)[0]["backup"]
-            for backup in backups:
-                backup_id, backup_type = self._parse_backup_id(backup["label"])
-                backup_action = f"{backup_type} backup"
-                backup_reference = "None"
-                if backup["reference"]:
-                    backup_reference, _ = self._parse_backup_id(backup["reference"][-1])
-                lsn_start_stop = f"{backup['lsn']['start']} / {backup['lsn']['stop']}"
-                time_start, time_stop = (
-                    datetime.strftime(datetime.fromtimestamp(stamp, UTC), "%Y-%m-%dT%H:%M:%SZ")
-                    for stamp in backup["timestamp"].values()
-                )
-                backup_timeline = (
-                    backup["archive"]["start"][:8].lstrip("0")
-                    if backup["archive"] and backup["archive"]["start"]
-                    else ""
-                )
-                backup_path = f"/{self.stanza_name}/{backup['label']}"
-                error = backup["error"]
-                backup_status = "finished"
-                if error:
-                    backup_status = f"failed: {error}"
-                backup_list.append((
-                    backup_id,
-                    backup_action,
-                    backup_status,
-                    backup_reference,
-                    lsn_start_stop,
-                    time_start,
-                    time_stop,
-                    backup_timeline,
-                    backup_path,
-                ))
+        backups = json.loads(output)[0]["backup"]
+        for backup in backups:
+            backup_id, backup_type = self._parse_backup_id(backup["label"])
+            backup_action = f"{backup_type} backup"
+            backup_reference = "None"
+            if backup["reference"]:
+                backup_reference, _ = self._parse_backup_id(backup["reference"][-1])
+            lsn_start_stop = f"{backup['lsn']['start']} / {backup['lsn']['stop']}"
+            time_start, time_stop = (
+                datetime.strftime(datetime.fromtimestamp(stamp, UTC), "%Y-%m-%dT%H:%M:%SZ")
+                for stamp in backup["timestamp"].values()
+            )
+            backup_timeline = (
+                backup["archive"]["start"][:8].lstrip("0")
+                if backup["archive"] and backup["archive"]["start"]
+                else ""
+            )
+            backup_path = f"/{self.stanza_name}/{backup['label']}"
+            error = backup["error"]
+            backup_status = "finished"
+            if error:
+                backup_status = f"failed: {error}"
+            backup_list.append((
+                backup_id,
+                backup_action,
+                backup_status,
+                backup_reference,
+                lsn_start_stop,
+                time_start,
+                time_stop,
+                backup_timeline,
+                backup_path,
+            ))
 
         for timeline, (_, timeline_id) in self._list_timelines().items():
             backup_list.append((
