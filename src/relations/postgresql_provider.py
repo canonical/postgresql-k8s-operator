@@ -357,7 +357,9 @@ class PostgreSQLProvider(Object):
                     ):
                         content = self.framework.model.get_secret(id=secret_uri).get_content()
                         for key in content:
-                            if key in SYSTEM_USERS or key in existing_users:
+                            if not self.database_provides.fetch_my_relation_field(
+                                relation.id, "username"
+                            ) and (key in SYSTEM_USERS or key in existing_users):
                                 logger.warning(
                                     f"Relation {relation.id} is still requesting a forbidden user"
                                 )
