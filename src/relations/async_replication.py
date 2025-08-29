@@ -253,7 +253,6 @@ class PostgreSQLAsyncReplication(Object):
 
     def get_all_primary_cluster_endpoints(self) -> list[str]:
         """Return all the primary cluster endpoints."""
-        relation = self._relation
         if not (relation := self._relation):
             raise AsyncReplicationError("No relation in get all primary endpoints")
 
