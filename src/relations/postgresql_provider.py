@@ -3,6 +3,7 @@
 
 """Postgres client relation hooks & helpers."""
 
+import json
 import logging
 from typing import TYPE_CHECKING
 
@@ -19,17 +20,28 @@ from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQLDeleteUserError,
     PostgreSQLGetPostgreSQLVersionError,
 )
-from ops.charm import RelationBrokenEvent, RelationDepartedEvent
-from ops.framework import Object
-from ops.model import ActiveStatus, BlockedStatus, Relation
+from ops import (
+    ActiveStatus,
+    BlockedStatus,
+    ModelError,
+    Object,
+    Relation,
+    RelationBrokenEvent,
+    RelationDepartedEvent,
+)
 
-from constants import DATABASE_PORT
+from constants import APP_SCOPE, DATABASE_PORT, SYSTEM_USERS, USERNAME_MAPPING_LABEL
 from utils import new_password
 
 logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from charm import PostgresqlOperatorCharm
+
+
+# Label not a secret
+NO_ACCESS_TO_SECRET_MSG = "Missing grant to requested entity secret"  # noqa: S105
+FORBIDDEN_USER_MSG = "Requesting an existing username"
 
 
 class PostgreSQLProvider(Object):
@@ -75,6 +87,27 @@ class PostgreSQLProvider(Object):
         extra_roles_list = [role for role in extra_roles_list if role not in ACCESS_GROUPS]
         return extra_roles_list
 
+    def get_username_mapping(self) -> dict[str, str]:
+        """Get a mapping of custom usernames by a relation ID."""
+        if username_mapping := self.charm.get_secret(APP_SCOPE, USERNAME_MAPPING_LABEL):
+            return json.loads(username_mapping)
+        return {}
+
+    def update_username_mapping(self, relation_id: int, username: str | None) -> None:
+        """Update a mapping of custom usernames in the application peer secret."""
+        if username == f"relation_id_{relation_id}":
+            return
+
+        username_mapping = self.get_username_mapping()
+        if username and username_mapping.get(str(relation_id)) != username:
+            username_mapping[str(relation_id)] = username
+        elif not username and username_mapping.get(str(relation_id)):
+            del username_mapping[str(relation_id)]
+        else:
+            # Cache is up to date
+            return
+        self.charm.set_secret(APP_SCOPE, USERNAME_MAPPING_LABEL, json.dumps(username_mapping))
+
     def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:
         """Handle the legacy postgresql-client relation changed event.
 
@@ -88,6 +121,22 @@ class PostgreSQLProvider(Object):
             event.defer()
             return
 
+        user = None
+        password = None
+        try:
+            if requested_entities := event.requested_entity_secret_content:
+                for key, val in requested_entities.items():
+                    user = key
+                    password = val
+                    break
+                if user in SYSTEM_USERS or user in self.charm.postgresql.list_users():
+                    self.charm.unit.status = BlockedStatus(FORBIDDEN_USER_MSG)
+                    return
+        except ModelError:
+            self.charm.unit.status = BlockedStatus(NO_ACCESS_TO_SECRET_MSG)
+            return
+
+        self.update_username_mapping(event.relation.id, user)
         self.charm.update_config()
         for key in self.charm.all_peer_data:
             # We skip the leader so we don't have to wait on the defer
@@ -110,8 +159,8 @@ class PostgreSQLProvider(Object):
 
         try:
             # Creates the user and the database for this specific relation.
-            user = f"relation_id_{event.relation.id}"
-            password = new_password()
+            user = user or f"relation_id_{event.relation.id}"
+            password = password or new_password()
             self.charm.postgresql.create_user(user, password, extra_user_roles=extra_user_roles)
             plugins = self.charm.get_plugins()
 
@@ -200,7 +249,9 @@ class PostgreSQLProvider(Object):
             logger.debug("Early exit on_relation_broken: Skipping departing unit")
             return
 
-        user = f"relation_id_{event.relation.id}"
+        user = self.get_username_mapping().get(
+            str(event.relation.id), f"relation_id_{event.relation.id}"
+        )
         if not self.charm.unit.is_leader():
             if user in self.charm.postgresql.list_users():
                 logger.debug("Deferring on_relation_broken: user was not deleted yet")
@@ -218,6 +269,7 @@ class PostgreSQLProvider(Object):
                 f"Failed to delete user during {self.relation_name} relation broken event"
             )
 
+        self.update_username_mapping(event.relation.id, None)
         self.charm.update_config()
 
     def update_read_only_endpoint(
@@ -258,16 +310,17 @@ class PostgreSQLProvider(Object):
                 )
             ) and "read-only-uris" in secret_fields:
                 if not user or not password or not database:
-                    user = f"relation_id_{relation.id}"
+                    user = self.database_provides.fetch_my_relation_field(relation.id, "username")
                     database = self.database_provides.fetch_relation_field(relation.id, "database")
                     password = self.database_provides.fetch_my_relation_field(
                         relation.id, "password"
                     )
 
-                self.database_provides.set_read_only_uris(
-                    relation.id,
-                    f"postgresql://{user}:{password}@{endpoints}/{database}",
-                )
+                if user and password:
+                    self.database_provides.set_read_only_uris(
+                        relation.id,
+                        f"postgresql://{user}:{password}@{endpoints}/{database}",
+                    )
             # Reset the creds for the next iteration
             user = None
             password = None
@@ -290,12 +343,40 @@ class PostgreSQLProvider(Object):
                 self.database_provides.set_tls_ca(relation.id, ca)
 
     def _update_unit_status(self, relation: Relation) -> None:
-        """# Clean up Blocked status if it's due to extensions request."""
-        if (
-            self.charm._has_blocked_status
-            and self.charm.unit.status.message == INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE
-            and not self.check_for_invalid_extra_user_roles(relation.id)
-        ):
+        """Clean up Blocked status if it's due to extensions request."""
+        if self.charm._has_blocked_status and self.charm.unit.status.message in [
+            INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE,
+            NO_ACCESS_TO_SECRET_MSG,
+            FORBIDDEN_USER_MSG,
+        ]:
+            if self.check_for_invalid_extra_user_roles(relation.id):
+                self.charm.unit.status = BlockedStatus(INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE)
+                return
+            existing_users = self.charm.postgresql.list_users()
+            for relation in self.charm.model.relations.get(self.relation_name, []):
+                try:
+                    # Relation is not established and custom user was requested
+                    if not self.database_provides.fetch_my_relation_field(
+                        relation.id, "secret-user"
+                    ) and (
+                        secret_uri := self.database_provides.fetch_relation_field(
+                            relation.id, "requested-entity-secret"
+                        )
+                    ):
+                        content = self.framework.model.get_secret(id=secret_uri).get_content()
+                        for key in content:
+                            if not self.database_provides.fetch_my_relation_field(
+                                relation.id, "username"
+                            ) and (key in SYSTEM_USERS or key in existing_users):
+                                logger.warning(
+                                    f"Relation {relation.id} is still requesting a forbidden user"
+                                )
+                                self.charm.unit.status = BlockedStatus(FORBIDDEN_USER_MSG)
+                                return
+                except ModelError:
+                    logger.warning(f"Relation {relation.id} still cannot access the set secret")
+                    self.charm.unit.status = BlockedStatus(NO_ACCESS_TO_SECRET_MSG)
+                    return
             self.charm.unit.status = ActiveStatus()
 
     def check_for_invalid_extra_user_roles(self, relation_id: int) -> bool:
