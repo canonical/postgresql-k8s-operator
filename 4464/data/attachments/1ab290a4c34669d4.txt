@@ -1,0 +1,22 @@
+[32mINFO    [0m integration.conftest:conftest.py:54 deleting the previously created backups
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.9    unsupported  01:58:18Z
+
+App                 Version  Status   Scale  Charm           Channel        Rev  Address         Exposed  Message
+new-postgresql-k8s  14.18    blocked      1  postgresql-k8s                   2  10.152.183.194  no       the S3 repository has backups from another cluster
+s3-integrator                active       1  s3-integrator   latest/stable  145  10.152.183.85   no       
+
+Unit                   Workload  Agent  Address       Ports  Message
+new-postgresql-k8s/0*  blocked   idle   10.1.248.145         the S3 repository has backups from another cluster
+s3-integrator/0*       active    idle   10.1.248.136         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-gcp-0: 01:33:36 ERROR unit.postgresql-k8s-gcp/0.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-postgresql-k8s-gcp-0: 01:46:42 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-self-signed-certificates-0: 01:46:43 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-s3-integrator-0: 01:46:44 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
