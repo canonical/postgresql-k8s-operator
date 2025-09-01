@@ -62,33 +62,34 @@ from lightkube import ApiError, Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Endpoints, Node, Pod, Service
-from ops import main
-from ops.charm import (
+from ops import (
     ActionEvent,
-    HookEvent,
-    LeaderElectedEvent,
-    RelationDepartedEvent,
-    SecretChangedEvent,
-    WorkloadEvent,
-)
-from ops.model import (
     ActiveStatus,
     BlockedStatus,
+    CharmEvents,
     Container,
+    HookEvent,
+    LeaderElectedEvent,
     MaintenanceStatus,
     ModelError,
     Relation,
+    RelationDepartedEvent,
+    SecretChangedEvent,
     SecretNotFoundError,
     Unit,
     UnknownStatus,
     WaitingStatus,
+    WorkloadEvent,
+    main,
 )
 from ops.pebble import (
     ChangeError,
     ExecError,
     Layer,
+    LayerDict,
     PathError,
     ProtocolError,
+    ServiceDict,
     ServiceInfo,
     ServiceStatus,
 )
@@ -156,7 +157,7 @@ ORIGINAL_PATRONI_ON_FAILURE_CONDITION = "restart"
 logging.getLogger("httpcore").setLevel(logging.ERROR)
 logging.getLogger("httpx").setLevel(logging.ERROR)
 
-Scopes = Literal[APP_SCOPE, UNIT_SCOPE]
+Scopes = Literal["app", "unit"]
 PASSWORD_USERS = [*SYSTEM_USERS, "patroni"]
 
 
@@ -185,7 +186,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     """Charmed Operator for the PostgreSQL database."""
 
     config_type = CharmConfig
-    on = AuthorisationRulesChangeCharmEvents()
+    on: "CharmEvents" = AuthorisationRulesChangeCharmEvents()
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -241,7 +242,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.framework.observe(self.on.update_status, self._on_update_status)
 
         self._certs_path = "/usr/local/share/ca-certificates"
-        self._storage_path = self.meta.storages["data"].location
+        self._storage_path = str(self.meta.storages["data"].location)
         self.pgdata_path = f"{self._storage_path}/pgdata"
 
         self.upgrade = PostgreSQLUpgrade(
@@ -287,7 +288,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.update_config()
         logger.debug("databases changed")
         timestamp = datetime.now()
-        self._peers.data[self.unit].update({"pg_hba_needs_update_timestamp": str(timestamp)})
+        self.unit_peer_data.update({"pg_hba_needs_update_timestamp": str(timestamp)})
         logger.debug(f"authorisation rules changed at {timestamp}")
 
     @property
@@ -296,7 +297,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if self.tracing.is_ready():
             return self.tracing.get_endpoint(TRACING_PROTOCOL)
 
-    def _generate_metrics_jobs(self, enable_tls: bool) -> dict:
+    def _generate_metrics_jobs(self, enable_tls: bool) -> list[dict]:
         """Generate spec for Prometheus scraping."""
         return [
             {"static_configs": [{"targets": [f"*:{METRICS_PORT}"]}]},
@@ -325,28 +326,21 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @property
     def app_peer_data(self) -> dict:
         """Application peer relation data object."""
-        relation = self.model.get_relation(PEER)
-        if relation is None:
-            return {}
-
-        return relation.data[self.app]
+        return self.all_peer_data.get(self.app, {})
 
     @property
     def unit_peer_data(self) -> dict:
         """Unit peer relation data object."""
-        relation = self.model.get_relation(PEER)
-        if relation is None:
+        return self.all_peer_data.get(self.unit, {})
+
+    @property
+    def all_peer_data(self) -> dict:
+        """Return all peer data if available."""
+        if self._peers is None:
             return {}
 
-        return relation.data[self.unit]
-
-    def _peer_data(self, scope: Scopes) -> dict:
-        """Return corresponding databag for app/unit."""
-        relation = self.model.get_relation(PEER)
-        if relation is None:
-            return {}
-
-        return relation.data[self._scope_obj(scope)]
+        # RelationData has dict like API
+        return self._peers.data  # type: ignore
 
     def _scope_obj(self, scope: Scopes):
         if scope == APP_SCOPE:
@@ -455,7 +449,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             primary_host=self.primary_endpoint,
             current_host=self.endpoint,
             user=USER,
-            password=self.get_secret(APP_SCOPE, f"{USER}-password"),
+            # TODO switching to the new lib will expect None
+            password=self.get_secret(APP_SCOPE, f"{USER}-password"),  # type: ignore
             database=DATABASE_DEFAULT_NAME,
             system_users=SYSTEM_USERS,
         )
@@ -502,13 +497,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Get the IP address of a specific unit."""
         # Check if host is current host.
         if unit == self.unit:
-            return str(self.model.get_binding(PEER).network.bind_address)
+            if binding := self.model.get_binding(PEER):
+                return str(binding.network.bind_address)
         # Check if host is a peer.
-        elif unit in self._peers.data:
-            return str(self._peers.data[unit].get("private-address"))
+        elif unit in self.all_peer_data and (
+            addr := self.all_peer_data[unit].get("private-address")
+        ):
+            return str(addr)
         # Return None if the unit is not a peer neither the current unit.
-        else:
-            return None
+        return None
 
     def updated_synchronous_node_count(self) -> bool:
         """Tries to update synchronous_node_count configuration and reports the result."""
@@ -550,6 +547,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("Early exit on_pgdata_storage_detaching: primary cannot be retrieved")
             return
 
+        if not primary:
+            logger.debug("Early exit on_pgdata_storage_detaching: primary cannot be retrieved")
+            return
+
         if self.unit.name != primary:
             return
 
@@ -563,14 +564,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Try to switchover to another member and raise an exception if it doesn't succeed.
         # If it doesn't happen on time, Patroni will automatically run a fail-over.
         try:
-            # Get the current primary to check if it has changed later.
-            current_primary = self._patroni.get_primary()
-
             # Trigger the switchover.
             self._patroni.switchover()
 
             # Wait for the switchover to complete.
-            self._patroni.primary_changed(current_primary)
+            self._patroni.primary_changed(primary)
 
             logger.info("successful switchover")
         except (RetryError, SwitchoverFailedError) as e:
@@ -901,10 +899,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             a set containing the current Juju hosts
                 with the names in the k8s pod name format
         """
-        peers = self.model.get_relation(PEER)
-        hosts = [self._unit_name_to_pod_name(self.unit.name)] + [
-            self._unit_name_to_pod_name(unit.name) for unit in peers.units
-        ]
+        hosts = [self._unit_name_to_pod_name(self.unit.name)]
+        if self._peers:
+            for unit in self._peers.units:
+                hosts.append(self._unit_name_to_pod_name(unit.name))
         return set(hosts)
 
     def _get_hostname_from_unit(self, member: str) -> str:
@@ -978,7 +976,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         client = Client()
         try:
             endpoint = client.get(Endpoints, name=self.cluster_name, namespace=self._namespace)
-            if "leader" not in endpoint.metadata.annotations:
+            if (
+                endpoint.metadata
+                and endpoint.metadata.annotations is not None
+                and "leader" not in endpoint.metadata.annotations
+            ):
                 patch = {
                     "metadata": {
                         "annotations": {"leader": self._unit_name_to_pod_name(self._unit)}
@@ -1128,7 +1130,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         except (RetryError, RequestsConnectionError) as e:
             logger.error(f"failed to get primary with error {e}")
 
-    def _initialize_cluster(self, event: WorkloadEvent) -> bool:
+    def _initialize_cluster(self, event: HookEvent) -> bool:
         # Add the labels needed for replication in this pod.
         # This also enables the member as part of the cluster.
         try:
@@ -1185,7 +1187,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.postgresql.grant_internal_access_group_memberships()
 
         # Mark the cluster as initialised.
-        self._peers.data[self.app]["cluster_initialised"] = "True"
+        self.app_peer_data["cluster_initialised"] = "True"
 
         return True
 
@@ -1226,15 +1228,18 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             name=f"{self.app.name}-0",
             namespace=self.model.name,
         )
+        if not pod0 or not pod0.metadata:
+            raise Exception("Unable to get pod0")
 
         services = {
             "primary": "primary",
             "replicas": "replica",
         }
         for service_name_suffix, role_selector in services.items():
+            name = f"{self._name}-{service_name_suffix}"
             service = Service(
                 metadata=ObjectMeta(
-                    name=f"{self._name}-{service_name_suffix}",
+                    name=name,
                     namespace=self.model.name,
                     ownerReferences=pod0.metadata.ownerReferences,
                     labels={
@@ -1262,9 +1267,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 ),
             )
             client.apply(
-                obj=service,
-                name=service.metadata.name,
-                namespace=service.metadata.namespace,
+                obj=service,  # type: ignore
+                name=name,
+                namespace=self.model.name,
                 force=True,
                 field_manager=self.model.app.name,
             )
@@ -1446,6 +1451,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.exception("failed to get first pod info")
             return
 
+        if not pod0 or not pod0.metadata:
+            logger.error("Failed to get pod0 details")
+            return
+
         try:
             # Get the k8s resources created by the charm and Patroni.
             resources_to_patch = []
@@ -1466,22 +1475,28 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             # Ignore resources created by Juju or the charm
             # (which are already patched).
             if (
-                type(resource) is Service
-                and resource.metadata.name
-                in [
-                    self._name,
-                    f"{self._name}-endpoints",
-                    f"{self._name}-primary",
-                    f"{self._name}-replicas",
-                ]
-            ) or resource.metadata.ownerReferences == pod0.metadata.ownerReferences:
+                not resource.metadata
+                or not resource.metadata.name
+                or not resource.metadata.namespace
+                or (
+                    type(resource) is Service
+                    and resource.metadata.name
+                    in [
+                        self._name,
+                        f"{self._name}-endpoints",
+                        f"{self._name}-primary",
+                        f"{self._name}-replicas",
+                    ]
+                )
+                or resource.metadata.ownerReferences == pod0.metadata.ownerReferences
+            ):
                 continue
             # Patch the resource.
             try:
                 resource.metadata.ownerReferences = pod0.metadata.ownerReferences
                 resource.metadata.managedFields = None
                 client.apply(
-                    obj=resource,
+                    obj=resource,  # type: ignore
                     name=resource.metadata.name,
                     namespace=resource.metadata.namespace,
                     force=True,
@@ -1790,15 +1805,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if not self.unit.is_leader():
             return
 
-        endpoints = json.loads(self._peers.data[self.app].get("endpoints", "[]"))
+        endpoints = json.loads(self.app_peer_data.get("endpoints", "[]"))
         if endpoint_to_add:
             endpoints.append(endpoint_to_add)
         elif endpoints_to_remove:
             for endpoint in endpoints_to_remove:
                 endpoints.remove(endpoint)
-        self._peers.data[self.app]["endpoints"] = json.dumps(endpoints)
+        self.app_peer_data["endpoints"] = json.dumps(endpoints)
 
-    def _generate_ldap_service(self) -> dict:
+    def _generate_ldap_service(self) -> ServiceDict:
         """Generate the LDAP service definition."""
         ldap_params = self.get_ldap_parameters()
 
@@ -1810,6 +1825,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         ldap_bind_username = ldap_params["ldapbinddn"]
         ldap_bind_password = ldap_params["ldapbindpasswd"]
         ldap_group_mappings = self.postgresql.build_postgresql_group_map(self.config.ldap_map)
+
+        if not (password := self.get_secret(APP_SCOPE, USER_PASSWORD_KEY)):
+            raise Exception("No password generated yet")
 
         return {
             "override": "replace",
@@ -1828,11 +1846,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 "POSTGRES_PORT": DATABASE_PORT,
                 "POSTGRES_DATABASE": DATABASE_DEFAULT_NAME,
                 "POSTGRES_USERNAME": USER,
-                "POSTGRES_PASSWORD": self.get_secret(APP_SCOPE, USER_PASSWORD_KEY),
+                "POSTGRES_PASSWORD": password,
             },
         }
 
-    def _generate_metrics_service(self) -> dict:
+    def _generate_metrics_service(self) -> ServiceDict:
         """Generate the metrics service definition."""
         return {
             "override": "replace",
@@ -1858,7 +1876,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def _postgresql_layer(self) -> Layer:
         """Returns a Pebble configuration layer for PostgreSQL."""
         pod_name = self._unit_name_to_pod_name(self._unit)
-        layer_config = {
+        layer_config = LayerDict({
             "summary": "postgresql + patroni layer",
             "description": "pebble config layer for postgresql + patroni",
             "services": {
@@ -1915,11 +1933,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     },
                 }
             },
-        }
+        })
         return Layer(layer_config)
 
     @property
-    def _peers(self) -> Relation:
+    def _peers(self) -> Relation | None:
         """Fetch the peer relation.
 
         Returns:
@@ -2091,11 +2109,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         except ApiError as e:
             if e.status.code == 403:
                 self.on_deployed_without_trust()
-                return
+                return False
             raise e
 
+        # TODO Updating the lib should accept ConfigData
         postgresql_parameters = self.postgresql.build_postgresql_parameters(
-            self.model.config, available_memory, limit_memory
+            self.model.config,  # type: ignore
+            available_memory,
+            limit_memory,
         )
 
         replication_slots = self.logical_replication.replication_slots()
@@ -2180,7 +2201,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if not self.postgresql.validate_group_map(self.config.ldap_map):
             raise ValueError("ldap_map config option has an invalid value")
 
-        if not self.postgresql.validate_date_style(self.config.request_date_style):
+        if self.config.request_date_style and not self.postgresql.validate_date_style(
+            self.config.request_date_style
+        ):
             raise ValueError("request_date_style config option has an invalid value")
 
         if self.config.request_time_zone not in self.postgresql.get_postgresql_timezones():
@@ -2236,7 +2259,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.metrics_endpoint.update_scrape_job_spec(
                 self._generate_metrics_jobs(self.is_tls_enabled)
             )
-            self.on[self.restart_manager.name].acquire_lock.emit()
+            self.on[str(self.restart_manager.name)].acquire_lock.emit()
 
     def _update_pebble_layers(self, replan: bool = True) -> None:
         """Update the pebble layers to keep the health check URL up-to-date."""
@@ -2278,7 +2301,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         pod = client.get(
             Pod, name=self._unit_name_to_pod_name(self.unit.name), namespace=self._namespace
         )
-        return pod.spec.nodeName
+        if pod.spec and pod.spec.nodeName:
+            return pod.spec.nodeName
+        else:
+            raise Exception("Pod doesn't exist")
 
     def get_resources_limits(self, container_name: str) -> dict:
         """Return resources limits for a given container.
@@ -2291,21 +2317,22 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             Pod, self._unit_name_to_pod_name(self.unit.name), namespace=self._namespace
         )
 
-        for container in pod.spec.containers:
-            if container.name == container_name:
-                return container.resources.limits or {}
+        if pod.spec:
+            for container in pod.spec.containers:
+                if container.name == container_name and container.resources:
+                    return container.resources.limits or {}
         return {}
 
     def get_node_allocable_memory(self) -> int:
         """Return the allocable memory in bytes for the current K8S node."""
         client = Client()
-        node = client.get(Node, name=self._get_node_name_for_pod(), namespace=self._namespace)
+        node = client.get(Node, name=self._get_node_name_for_pod(), namespace=self._namespace)  # type: ignore
         return any_memory_to_bytes(node.status.allocatable["memory"])
 
     def get_node_cpu_cores(self) -> int:
         """Return the number of CPU cores for the current K8S node."""
         client = Client()
-        node = client.get(Node, name=self._get_node_name_for_pod(), namespace=self._namespace)
+        node = client.get(Node, name=self._get_node_name_for_pod(), namespace=self._namespace)  # type: ignore
         return any_cpu_to_cores(node.status.allocatable["cpu"])
 
     def get_available_resources(self) -> tuple[int, int]:

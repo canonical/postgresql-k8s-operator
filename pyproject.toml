@@ -47,6 +47,7 @@ optional = true
 
 [tool.poetry.group.lint.dependencies]
 codespell = "^2.4.1"
+pyright = "^1.1.404"
 
 [tool.poetry.group.unit]
 optional = true
@@ -138,3 +139,14 @@ max-complexity = 10
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
+
+[tool.pyright]
+include = ["src", "scripts"]
+extraPaths = ["./lib"]
+pythonVersion = "3.12"
+pythonPlatform = "All"
+typeCheckingMode = "basic"
+reportIncompatibleMethodOverride = false
+reportImportCycles = false
+reportMissingModuleSource = true
+stubPath = ""

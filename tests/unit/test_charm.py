@@ -639,10 +639,10 @@ def test_on_pgdata_storage_detaching(harness):
         harness.charm._on_pgdata_storage_detaching(event)
         assert not _member_started.called
 
-        _get_primary.side_effect = [harness.charm.unit.name, "primary"]
+        _get_primary.return_value = harness.charm.unit.name
         harness.charm._on_pgdata_storage_detaching(event)
         _switchover.assert_called_once_with()
-        _primary_changed.assert_called_once_with("primary")
+        _primary_changed.assert_called_once_with(harness.charm.unit.name)
 
 
 def test_on_update_status_after_restore_operation(harness):

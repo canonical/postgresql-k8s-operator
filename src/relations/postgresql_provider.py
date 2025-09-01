@@ -5,6 +5,7 @@
 
 import json
 import logging
+from typing import TYPE_CHECKING
 
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProvides,
@@ -22,7 +23,6 @@ from charms.postgresql_k8s.v0.postgresql import (
 from ops import (
     ActiveStatus,
     BlockedStatus,
-    CharmBase,
     ModelError,
     Object,
     Relation,
@@ -34,6 +34,9 @@ from constants import APP_SCOPE, DATABASE_PORT, SYSTEM_USERS, USERNAME_MAPPING_L
 from utils import new_password
 
 logger = logging.getLogger(__name__)
+
+if TYPE_CHECKING:
+    from charm import PostgresqlOperatorCharm
 
 
 # Label not a secret
@@ -49,7 +52,7 @@ class PostgreSQLProvider(Object):
         - relation-broken
     """
 
-    def __init__(self, charm: CharmBase, relation_name: str = "database") -> None:
+    def __init__(self, charm: "PostgresqlOperatorCharm", relation_name: str = "database") -> None:
         """Constructor for PostgreSQLClientProvides object.
 
         Args:
@@ -135,12 +138,12 @@ class PostgreSQLProvider(Object):
 
         self.update_username_mapping(event.relation.id, user)
         self.charm.update_config()
-        for key in self.charm._peers.data:
+        for key in self.charm.all_peer_data:
             # We skip the leader so we don't have to wait on the defer
             if (
                 key != self.charm.app
                 and key != self.charm.unit
-                and self.charm._peers.data[key].get("user_hash", "")
+                and self.charm.all_peer_data[key].get("user_hash", "")
                 != self.charm.generate_user_hash
             ):
                 logger.debug("Not all units have synced configuration")
@@ -148,7 +151,7 @@ class PostgreSQLProvider(Object):
                 return
 
         # Retrieve the database name and extra user roles using the charm library.
-        database = event.database
+        database = event.database or ""
 
         # Make sure the relation access-group is added to the list
         extra_user_roles = self._sanitize_extra_roles(event.extra_user_roles)
@@ -283,7 +286,7 @@ class PostgreSQLProvider(Object):
         # If there are no replicas, remove the read-only endpoint.
         endpoints = (
             f"{self.charm.replicas_endpoint}:{DATABASE_PORT}"
-            if len(self.charm._peers.units) > 0
+            if self.charm._peers and len(self.charm._peers.units) > 0
             else f"{self.charm.primary_endpoint}:{DATABASE_PORT}"
         )
 
