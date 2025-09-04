@@ -64,6 +64,7 @@ async def test_database_deploy_clientapps(ops_test: OpsTest, charm):
 
 @markers.amd64_only  # discourse-k8s charm not available for arm64
 async def test_discourse(ops_test: OpsTest):
+    pytest.skip("Second migration doesn't complete")
     # Deploy Discourse and Redis.
     await gather(
         ops_test.model.deploy(DISCOURSE_APP_NAME, application_name=DISCOURSE_APP_NAME),

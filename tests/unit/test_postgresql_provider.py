@@ -78,14 +78,16 @@ def test_on_database_requested(harness):
         patch("charm.PostgresqlOperatorCharm.update_config"),
         patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock,
         patch.object(EventBase, "defer") as _defer,
-        patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
+        patch(
+            "charm.Patroni.primary_endpoint_ready", new_callable=PropertyMock
+        ) as _primary_endpoint_ready,
         patch(
             "relations.postgresql_provider.new_password", return_value="test-password"
         ) as _new_password,
     ):
         rel_id = harness.model.get_relation(RELATION_NAME).id
         # Set some side effects to test multiple situations.
-        _member_started.side_effect = [False, True, True, True, True, True]
+        _primary_endpoint_ready.side_effect = [False, True, True, True, True, True]
         postgresql_mock.create_user = PropertyMock(
             side_effect=[None, PostgreSQLCreateUserError, None]
         )

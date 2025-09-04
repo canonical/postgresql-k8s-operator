@@ -7,12 +7,13 @@
 import logging
 import os
 import pwd
-from typing import Any
+from typing import Any, TypedDict
 
 import requests
 import yaml
 from jinja2 import Template
 from ops.pebble import Error
+from requests.auth import HTTPBasicAuth
 from tenacity import (
     AttemptManager,
     RetryError,
@@ -61,6 +62,19 @@ class UpdateSyncNodeCountError(Exception):
     """Raised when updating synchronous_node_count failed for some reason."""
 
 
+class ClusterMember(TypedDict):
+    """Type for cluster member."""
+
+    name: str
+    role: str
+    state: str
+    api_url: str
+    host: str
+    port: int
+    timeline: int
+    lag: int
+
+
 class Patroni:
     """This class handles the communication with Patroni API and configuration files."""
 
@@ -72,11 +86,11 @@ class Patroni:
         primary_endpoint: str,
         namespace: str,
         storage_path: str,
-        superuser_password: str,
-        replication_password: str,
-        rewind_password: str,
+        superuser_password: str | None,
+        replication_password: str | None,
+        rewind_password: str | None,
         tls_enabled: bool,
-        patroni_password: str,
+        patroni_password: str | None,
     ):
         self._charm = charm
         self._endpoint = endpoint
@@ -96,8 +110,9 @@ class Patroni:
         self._verify = f"{self._storage_path}/{TLS_CA_FILE}" if tls_enabled else True
 
     @property
-    def _patroni_auth(self) -> requests.auth.HTTPBasicAuth:
-        return requests.auth.HTTPBasicAuth("patroni", self._patroni_password)
+    def _patroni_auth(self) -> HTTPBasicAuth | None:
+        if self._patroni_password:
+            return HTTPBasicAuth("patroni", self._patroni_password)
 
     @property
     def _patroni_url(self) -> str:
@@ -105,12 +120,13 @@ class Patroni:
         return f"{'https' if self._tls_enabled else 'http'}://{self._endpoint}:8008"
 
     @property
-    def rock_postgresql_version(self) -> str | None:
+    def rock_postgresql_version(self) -> str:
         """Version of Postgresql installed in the Rock image."""
         container = self._charm.unit.get_container("postgresql")
         if not container.can_connect():
             logger.debug("Cannot get Postgresql version from Rock. Container inaccessible")
-            return
+            # TODO replace with refresh v3 manifest
+            return ""
         snap_meta = container.pull("/meta.charmed-postgresql/snap.yaml")
         return yaml.safe_load(snap_meta)["version"]
 
@@ -177,7 +193,7 @@ class Patroni:
 
     def get_cluster(
         self, attempt: AttemptManager, alternative_endpoints: list[str] | None = None
-    ) -> dict[str, str | int]:
+    ) -> dict[str, Any]:
         """Call the cluster endpoint."""
         url = self._get_alternative_patroni_url(attempt, alternative_endpoints)
         r = requests.get(
@@ -190,7 +206,7 @@ class Patroni:
 
     def get_primary(
         self, unit_name_pattern=False, alternative_endpoints: list[str] | None = None
-    ) -> str:
+    ) -> str | None:
         """Get primary instance.
 
         Args:
@@ -261,6 +277,7 @@ class Patroni:
         ):
             with attempt:
                 return {member["name"] for member in self.get_cluster(attempt)["members"]}
+        return set()
 
     def get_running_cluster_members(self) -> list[str]:
         """List running patroni members."""
@@ -274,6 +291,7 @@ class Patroni:
                     ]
         except Exception:
             return []
+        return []
 
     def are_all_members_ready(self) -> bool:
         """Check if all members are correctly running Patroni and PostgreSQL.
@@ -293,6 +311,7 @@ class Patroni:
                     )
         except RetryError:
             return False
+        return False
 
     @property
     def is_creating_backup(self) -> bool:
@@ -309,6 +328,7 @@ class Patroni:
                     )
         except RetryError:
             return False
+        return False
 
     @property
     def is_replication_healthy(self) -> bool:
@@ -316,7 +336,10 @@ class Patroni:
         try:
             for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
                 with attempt:
-                    primary = self.get_primary()
+                    if not (primary := self.get_primary()):
+                        logger.debug("Failed replication check no primary reported")
+                        raise Exception
+
                     unit_id = primary.split("-")[-1]
                     primary_endpoint = (
                         f"{self._charm.app.name}-{unit_id}.{self._charm.app.name}-endpoints"
@@ -616,6 +639,7 @@ class Patroni:
             patroni_password=self._patroni_password,
             user_databases_map=user_databases_map,
             slots=slots,
+            instance_password_encryption=self._charm.config.instance_password_encryption,
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 

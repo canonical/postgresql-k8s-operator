@@ -235,6 +235,7 @@ def test_render_patroni_yml_file(harness, patroni):
             synchronous_node_count=0,
             version="16",
             patroni_password=patroni._patroni_password,
+            instance_password_encryption="scram-sha-256",
         )
 
         # Setup a mock for the `open` method, set returned data to postgresql.conf template.
@@ -270,6 +271,7 @@ def test_render_patroni_yml_file(harness, patroni):
             synchronous_node_count=0,
             version="16",
             patroni_password=patroni._patroni_password,
+            instance_password_encryption="scram-sha-256",
         )
         assert expected_content_with_tls != expected_content
 
