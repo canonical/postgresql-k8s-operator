@@ -1006,27 +1006,23 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             container.make_dir(
                 self.pgdata_path, permissions=0o700, user=WORKLOAD_OS_USER, group=WORKLOAD_OS_GROUP
             )
-        # Also, fix the permissions from the parent directory.
-        container.exec([
-            "chown",
-            f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
+        # Also, fix the permissions from the parent directory and from the other storage directories.
+        for directory in [
             "/var/lib/postgresql/archive",
-        ]).wait()
-        container.exec([
-            "chown",
-            f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
             self._storage_path,
-        ]).wait()
-        container.exec([
-            "chown",
-            f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
             "/var/lib/postgresql/logs",
-        ]).wait()
-        container.exec([
-            "chown",
-            f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
             "/var/lib/postgresql/temp",
-        ]).wait()
+        ]:
+            container.exec([
+                "chown",
+                f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
+                directory,
+            ]).wait()
+            container.exec([
+                "chmod",
+                "700",
+                directory,
+            ]).wait()
 
     def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
         """Event handler for PostgreSQL container on PebbleReadyEvent."""

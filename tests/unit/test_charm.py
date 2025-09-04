@@ -1675,11 +1675,19 @@ def test_create_pgdata(harness):
     container.exec.assert_has_calls([
         call(["chown", "postgres:postgres", "/var/lib/postgresql/archive"]),
         call().wait(),
+        call(["chmod", "700", "/var/lib/postgresql/archive"]),
+        call().wait(),
         call(["chown", "postgres:postgres", "/var/lib/postgresql/data"]),
+        call().wait(),
+        call(["chmod", "700", "/var/lib/postgresql/data"]),
         call().wait(),
         call(["chown", "postgres:postgres", "/var/lib/postgresql/logs"]),
         call().wait(),
+        call(["chmod", "700", "/var/lib/postgresql/logs"]),
+        call().wait(),
         call(["chown", "postgres:postgres", "/var/lib/postgresql/temp"]),
+        call().wait(),
+        call(["chmod", "700", "/var/lib/postgresql/temp"]),
         call().wait(),
     ])
 
@@ -1691,11 +1699,19 @@ def test_create_pgdata(harness):
     container.exec.assert_has_calls([
         call(["chown", "postgres:postgres", "/var/lib/postgresql/archive"]),
         call().wait(),
+        call(["chmod", "700", "/var/lib/postgresql/archive"]),
+        call().wait(),
         call(["chown", "postgres:postgres", "/var/lib/postgresql/data"]),
+        call().wait(),
+        call(["chmod", "700", "/var/lib/postgresql/data"]),
         call().wait(),
         call(["chown", "postgres:postgres", "/var/lib/postgresql/logs"]),
         call().wait(),
+        call(["chmod", "700", "/var/lib/postgresql/logs"]),
+        call().wait(),
         call(["chown", "postgres:postgres", "/var/lib/postgresql/temp"]),
+        call().wait(),
+        call(["chmod", "700", "/var/lib/postgresql/temp"]),
         call().wait(),
     ])
 
