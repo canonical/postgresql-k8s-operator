@@ -19,6 +19,21 @@ from pathlib import Path
 from typing import Literal, get_args
 from urllib.parse import urlparse
 
+from single_kernel_postgresql.utils.postgresql import (
+    ACCESS_GROUP_IDENTITY,
+    ACCESS_GROUPS,
+    REQUIRED_PLUGINS,
+    PostgreSQL,
+    PostgreSQLCreatePredefinedRolesError,
+    PostgreSQLCreateUserError,
+    PostgreSQLEnableDisableExtensionError,
+    PostgreSQLGetCurrentTimelineError,
+    PostgreSQLGrantDatabasePrivilegesToUserError,
+    PostgreSQLListGroupsError,
+    PostgreSQLListUsersError,
+    PostgreSQLUpdateUserPasswordError,
+)
+
 from authorisation_rules_observer import (
     AuthorisationRulesChangeCharmEvents,
     AuthorisationRulesObserver,
@@ -43,16 +58,6 @@ from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerU
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v1.loki_push_api import LogProxyConsumer
-from charms.postgresql_k8s.v0.postgresql import (
-    ACCESS_GROUP_IDENTITY,
-    ACCESS_GROUPS,
-    REQUIRED_PLUGINS,
-    PostgreSQL,
-    PostgreSQLEnableDisableExtensionError,
-    PostgreSQLGetCurrentTimelineError,
-    PostgreSQLListGroupsError,
-    PostgreSQLUpdateUserPasswordError,
-)
 from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
@@ -1167,6 +1172,33 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             event.defer()
             return False
 
+        try:
+            self._setup_users()
+        except PostgreSQLCreatePredefinedRolesError as e:
+            logger.exception(e)
+            self.unit.status = BlockedStatus("Failed to create pre-defined roles")
+            return False
+        except PostgreSQLGrantDatabasePrivilegesToUserError as e:
+            logger.exception(e)
+            self.unit.status = BlockedStatus("Failed to grant database privileges to user")
+            return False
+        except PostgreSQLCreateUserError as e:
+            logger.exception(e)
+            self.set_unit_status(BlockedStatus("Failed to create postgres user"))
+            return False
+        except PostgreSQLListUsersError:
+            logger.warning("Deferring on_start: Unable to list users")
+            event.defer()
+            return False
+
+        # Mark the cluster as initialised.
+        self._peers.data[self.app]["cluster_initialised"] = "True"
+
+        return True
+
+    def _setup_users(self) -> None:
+        self.postgresql.create_predefined_instance_roles()
+
         pg_users = self.postgresql.list_users()
         # Create the backup user.
         if BACKUP_USER not in pg_users:
@@ -1623,6 +1655,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         if not self._patroni.member_started:
             logger.debug("Restore check early exit: Patroni has not started yet")
+            return False
+
+        try:
+            self._setup_users()
+        except Exception as e:
+            logger.exception(e)
             return False
 
         restoring_backup = self.app_peer_data.get("restoring-backup")
