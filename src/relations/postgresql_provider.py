@@ -159,7 +159,6 @@ class PostgreSQLProvider(Object):
 
             self.charm.postgresql.create_database(database, plugins=plugins)
 
-            password = new_password()
             self.charm.postgresql.create_user(
                 user, password, extra_user_roles=extra_user_roles, database=database
             )
