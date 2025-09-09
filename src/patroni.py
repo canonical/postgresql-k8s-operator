@@ -364,6 +364,23 @@ class Patroni:
         logger.debug("replication is healthy")
         return True
 
+    def is_restart_pending(self) -> bool:
+        """Returns whether the Patroni/PostgreSQL restart pending."""
+        patroni_status = requests.get(
+            f"{self._patroni_url}/patroni",
+            verify=self._verify,
+            timeout=PATRONI_TIMEOUT,
+            auth=self._patroni_auth,
+        )
+        try:
+            pending_restart = patroni_status.json()["pending_restart"]
+        except KeyError:
+            pending_restart = False
+            pass
+        logger.debug(f"Patroni API is_restart_pending: {pending_restart}")
+
+        return pending_restart
+
     @property
     def primary_endpoint_ready(self) -> bool:
         """Is the primary endpoint redirecting connections to the primary pod.
