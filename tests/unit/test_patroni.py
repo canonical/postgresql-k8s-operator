@@ -224,6 +224,7 @@ def test_render_patroni_yml_file(harness, patroni):
         with open("templates/patroni.yml.j2") as file:
             template = Template(file.read())
         expected_content = template.render(
+            slots={},
             endpoint=patroni._endpoint,
             endpoints=patroni._endpoints,
             namespace=patroni._namespace,
@@ -259,6 +260,7 @@ def test_render_patroni_yml_file(harness, patroni):
         # Then test the rendering of the file with TLS enabled.
         _render_file.reset_mock()
         expected_content_with_tls = template.render(
+            slots={},
             enable_tls=True,
             endpoint=patroni._endpoint,
             endpoints=patroni._endpoints,
