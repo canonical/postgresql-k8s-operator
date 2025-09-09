@@ -2137,7 +2137,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             restore_stanza=self.app_peer_data.get("restore-stanza"),
             parameters=postgresql_parameters,
             user_databases_map=self.relations_user_databases_map,
-            slots=replication_slots or None,
+            slots=replication_slots,
         )
 
         if not self._is_workload_running:

@@ -7,6 +7,7 @@
 import logging
 import os
 import pwd
+from time import sleep
 from typing import Any, TypedDict
 
 import requests
@@ -366,18 +367,32 @@ class Patroni:
 
     def is_restart_pending(self) -> bool:
         """Returns whether the Patroni/PostgreSQL restart pending."""
-        patroni_status = requests.get(
+        pending_restart = self._get_patroni_restart_pending()
+        if pending_restart:
+            # The current Patroni 3.2.2 has wired behaviour: it temporarily flags pending_restart=True
+            # on any changes to REST API, which is gone within a second but long enough to be
+            # caught by charm. Sleep 2 seconds as a protection here until Patroni 3.3.0 upgrade.
+            # Repeat the request to make sure pending_restart flag is still here
+            logger.debug("Enduring restart is pending (to avoid unnecessary rolling restarts)")
+            sleep(2)
+            pending_restart = self._get_patroni_restart_pending()
+
+        return pending_restart
+
+    def _get_patroni_restart_pending(self) -> bool:
+        """Returns whether the Patroni flag pending_restart on REST API."""
+        r = requests.get(
             f"{self._patroni_url}/patroni",
             verify=self._verify,
             timeout=PATRONI_TIMEOUT,
             auth=self._patroni_auth,
         )
-        try:
-            pending_restart = patroni_status.json()["pending_restart"]
-        except KeyError:
-            pending_restart = False
-            pass
-        logger.debug(f"Patroni API is_restart_pending: {pending_restart}")
+        pending_restart = r.json().get("pending_restart", False)
+        logger.debug(
+            f"API _get_patroni_restart_pending ({pending_restart}): %s (%s)",
+            r,
+            r.elapsed.total_seconds(),
+        )
 
         return pending_restart
 
@@ -509,7 +524,7 @@ class Patroni:
             auth=self._patroni_auth,
         )
         slots_patch: dict[str, dict[str, str] | None] = dict.fromkeys(
-            current_config.json().get("slots", ())
+            current_config.json().get("slots") or {}
         )
         for slot, database in slots.items():
             slots_patch[slot] = {
@@ -617,6 +632,8 @@ class Patroni:
             user_databases_map: map of databases to be accessible by each user.
             slots: replication slots (keys) with assigned database name (values).
         """
+        slots = slots or {}
+
         # Open the template patroni.yml file.
         with open("templates/patroni.yml.j2") as file:
             template = Template(file.read())
