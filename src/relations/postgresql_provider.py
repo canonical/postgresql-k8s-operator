@@ -155,7 +155,6 @@ class PostgreSQLProvider(Object):
             # Creates the user and the database for this specific relation.
             user = user or f"relation_id_{event.relation.id}"
             password = password or new_password()
-            self.charm.postgresql.create_user(user, password, extra_user_roles=extra_user_roles)
             plugins = self.charm.get_plugins()
 
             self.charm.postgresql.create_database(database, plugins=plugins)

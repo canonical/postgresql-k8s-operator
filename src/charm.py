@@ -1184,7 +1184,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return False
         except PostgreSQLCreateUserError as e:
             logger.exception(e)
-            self.set_unit_status(BlockedStatus("Failed to create postgres user"))
+            self.unit.status = BlockedStatus("Failed to create postgres user")
             return False
         except PostgreSQLListUsersError:
             logger.warning("Deferring on_start: Unable to list users")
@@ -1192,7 +1192,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return False
 
         # Mark the cluster as initialised.
-        self._peers.data[self.app]["cluster_initialised"] = "True"
+        self.app_peer_data["cluster_initialised"] = "True"
 
         return True
 
@@ -1217,11 +1217,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if access_groups != set(ACCESS_GROUPS):
             self.postgresql.create_access_groups()
             self.postgresql.grant_internal_access_group_memberships()
-
-        # Mark the cluster as initialised.
-        self.app_peer_data["cluster_initialised"] = "True"
-
-        return True
 
     @property
     def is_blocked(self) -> bool:
@@ -2281,7 +2276,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         try:
             for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3)):
                 with attempt:
-                    restart_postgresql = restart_postgresql or self.postgresql.is_restart_pending()
+                    restart_postgresql = restart_postgresql or self.is_restart_pending()
                     if not restart_postgresql:
                         raise Exception
         except RetryError:
@@ -2658,6 +2653,30 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         })
 
         return params
+
+    def is_restart_pending(self) -> bool:
+        """Query pg_settings for pending restart."""
+        connection = None
+        try:
+            with (
+                self.postgresql._connect_to_database() as connection,
+                connection.cursor() as cursor,
+            ):
+                cursor.execute("SELECT COUNT(*) FROM pg_settings WHERE pending_restart=True;")
+                result = cursor.fetchone()
+                if result is not None:
+                    return result[0] > 0
+                else:
+                    return False
+        except psycopg2.OperationalError:
+            logger.warning("Failed to connect to PostgreSQL.")
+            return False
+        except psycopg2.Error as e:
+            logger.error(f"Failed to check if restart is pending: {e}")
+            return False
+        finally:
+            if connection:
+                connection.close()
 
 
 if __name__ == "__main__":
