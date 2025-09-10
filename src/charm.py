@@ -19,21 +19,6 @@ from pathlib import Path
 from typing import Literal, get_args
 from urllib.parse import urlparse
 
-from single_kernel_postgresql.utils.postgresql import (
-    ACCESS_GROUP_IDENTITY,
-    ACCESS_GROUPS,
-    REQUIRED_PLUGINS,
-    PostgreSQL,
-    PostgreSQLCreatePredefinedRolesError,
-    PostgreSQLCreateUserError,
-    PostgreSQLEnableDisableExtensionError,
-    PostgreSQLGetCurrentTimelineError,
-    PostgreSQLGrantDatabasePrivilegesToUserError,
-    PostgreSQLListGroupsError,
-    PostgreSQLListUsersError,
-    PostgreSQLUpdateUserPasswordError,
-)
-
 from authorisation_rules_observer import (
     AuthorisationRulesChangeCharmEvents,
     AuthorisationRulesObserver,
@@ -99,6 +84,20 @@ from ops.pebble import (
     ServiceStatus,
 )
 from requests import ConnectionError as RequestsConnectionError
+from single_kernel_postgresql.utils.postgresql import (
+    ACCESS_GROUP_IDENTITY,
+    ACCESS_GROUPS,
+    REQUIRED_PLUGINS,
+    PostgreSQL,
+    PostgreSQLCreatePredefinedRolesError,
+    PostgreSQLCreateUserError,
+    PostgreSQLEnableDisableExtensionError,
+    PostgreSQLGetCurrentTimelineError,
+    PostgreSQLGrantDatabasePrivilegesToUserError,
+    PostgreSQLListGroupsError,
+    PostgreSQLListUsersError,
+    PostgreSQLUpdateUserPasswordError,
+)
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
 from backups import CANNOT_RESTORE_PITR, S3_BLOCK_MESSAGES, PostgreSQLBackups
