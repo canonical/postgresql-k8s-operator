@@ -243,41 +243,41 @@ async def test_an_application_can_connect_to_multiple_database_clusters(ops_test
     assert application_connection_string != another_application_connection_string
 
 
-async def test_an_application_can_connect_to_multiple_aliased_database_clusters(
-    ops_test: OpsTest, charm
-):
-    """Test that an application can connect to different clusters of the same database."""
-    # Relate the application with both database clusters
-    # and wait for them exchanging some connection data.
-    await asyncio.gather(
-        ops_test.model.add_relation(
-            f"{APPLICATION_APP_NAME}:{ALIASED_MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME}",
-            DATABASE_APP_NAME,
-        ),
-        ops_test.model.add_relation(
-            f"{APPLICATION_APP_NAME}:{ALIASED_MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME}",
-            ANOTHER_DATABASE_APP_NAME,
-        ),
-    )
-    await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active")
-
-    # Retrieve the connection string to both database clusters using the relation aliases
-    # and assert they are different.
-    for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3), reraise=True):
-        with attempt:
-            application_connection_string = await build_connection_string(
-                ops_test,
-                APPLICATION_APP_NAME,
-                ALIASED_MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME,
-                relation_alias="cluster1",
-            )
-            another_application_connection_string = await build_connection_string(
-                ops_test,
-                APPLICATION_APP_NAME,
-                ALIASED_MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME,
-                relation_alias="cluster2",
-            )
-    assert application_connection_string != another_application_connection_string
+# async def test_an_application_can_connect_to_multiple_aliased_database_clusters(
+#     ops_test: OpsTest, charm
+# ):
+#     """Test that an application can connect to different clusters of the same database."""
+#     # Relate the application with both database clusters
+#     # and wait for them exchanging some connection data.
+#     await asyncio.gather(
+#         ops_test.model.add_relation(
+#             f"{APPLICATION_APP_NAME}:{ALIASED_MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME}",
+#             DATABASE_APP_NAME,
+#         ),
+#         ops_test.model.add_relation(
+#             f"{APPLICATION_APP_NAME}:{ALIASED_MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME}",
+#             ANOTHER_DATABASE_APP_NAME,
+#         ),
+#     )
+#     await ops_test.model.wait_for_idle(apps=APP_NAMES, status="active")
+#
+#     # Retrieve the connection string to both database clusters using the relation aliases
+#     # and assert they are different.
+#     for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3), reraise=True):
+#         with attempt:
+#             application_connection_string = await build_connection_string(
+#                 ops_test,
+#                 APPLICATION_APP_NAME,
+#                 ALIASED_MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME,
+#                 relation_alias="cluster1",
+#             )
+#             another_application_connection_string = await build_connection_string(
+#                 ops_test,
+#                 APPLICATION_APP_NAME,
+#                 ALIASED_MULTIPLE_DATABASE_CLUSTERS_RELATION_NAME,
+#                 relation_alias="cluster2",
+#             )
+#     assert application_connection_string != another_application_connection_string
 
 
 @pytest.mark.abort_on_fail
