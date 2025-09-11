@@ -40,7 +40,6 @@ CHARM_BASE_NOBLE = "ubuntu@24.04"
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 DATABASE_APP_NAME = METADATA["name"]
 APPLICATION_NAME = "postgresql-test-app"
-DATA_INTEGRATOR_APP_NAME = "data-integrator"
 STORAGE_PATH = METADATA["storage"]["data"]["location"]
 
 
@@ -119,23 +118,6 @@ async def build_and_deploy(
             timeout=1000,
             wait_for_exact_units=num_units,
         )
-
-
-def check_connected_user(
-    cursor, session_user: str, current_user: str, primary: bool = True
-) -> None:
-    cursor.execute("SELECT session_user,current_user;")
-    result = cursor.fetchone()
-    if result is not None:
-        instance = "primary" if primary else "replica"
-        assert result[0] == session_user, (
-            f"The session user should be the {session_user} user in the {instance} (it's currently {result[0]})"
-        )
-        assert result[1] == current_user, (
-            f"The current user should be the {current_user} user in the {instance} (it's currently {result[1]})"
-        )
-    else:
-        assert False, "No result returned from the query"
 
 
 async def check_database_users_existence(

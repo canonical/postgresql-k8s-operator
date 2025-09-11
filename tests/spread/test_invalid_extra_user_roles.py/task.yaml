@@ -1,7 +1,0 @@
-summary: test_invalid_extra_user_roles.py
-environment:
-  TEST_MODULE: test_invalid_extra_user_roles.py
-execute: |
-  tox run -e integration -- "tests/integration/$TEST_MODULE" --model testing --alluredir="$SPREAD_TASK/allure-results"
-artifacts:
-  - allure-results
