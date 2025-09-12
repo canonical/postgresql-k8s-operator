@@ -36,11 +36,11 @@ async def test_deploy(ops_test: OpsTest, charm) -> None:
     """Build and deploy a PostgreSQL cluster and a test application."""
     await build_and_deploy(ops_test, charm, CLUSTER_SIZE, wait_for_idle=False)
     if not await app_name(ops_test, APPLICATION_NAME):
-        await ops_test.model.deploy(APPLICATION_NAME, num_units=1)
+        await ops_test.model.deploy(APPLICATION_NAME, num_units=1, channel="edge")
 
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME, APPLICATION_NAME],
+            apps=[DATABASE_APP_NAME],
             status="active",
             timeout=1000,
             raise_on_error=False,

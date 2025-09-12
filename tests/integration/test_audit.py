@@ -26,7 +26,8 @@ RELATION_ENDPOINT = "database"
 async def test_audit_plugin(ops_test: OpsTest, charm) -> None:
     """Test the audit plugin."""
     await asyncio.gather(
-        build_and_deploy(ops_test, charm, 1), ops_test.model.deploy(APPLICATION_NAME)
+        build_and_deploy(ops_test, charm, 1),
+        ops_test.model.deploy(APPLICATION_NAME, channel="edge"),
     )
     await ops_test.model.relate(f"{APPLICATION_NAME}:{RELATION_ENDPOINT}", DATABASE_APP_NAME)
     async with ops_test.fast_forward():
