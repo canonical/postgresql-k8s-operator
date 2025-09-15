@@ -248,3 +248,18 @@ async def test_delete_pod(ops_test: OpsTest, gcp_cloud_configs: tuple[dict, dict
         ops_test, "/etc/pgbackrest.conf", f"{database_app_name}/0"
     )
     assert original_pgbackrest_config == new_pgbackrest_config, "Pgbackrest config not rerendered"
+
+
+async def test_block_on_missing_region(
+    ops_test: OpsTest, gcp_cloud_configs: tuple[dict, dict]
+) -> None:
+    await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config({
+        **gcp_cloud_configs[0],
+        "region": "",
+    })
+    database_app_name = f"new-{DATABASE_APP_NAME}"
+    logger.info("waiting for the database charm to become blocked")
+    unit = ops_test.model.units.get(f"{database_app_name}/0")
+    await ops_test.model.block_until(
+        lambda: unit.workload_status_message == FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE
+    )
