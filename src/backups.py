@@ -95,11 +95,13 @@ class PostgreSQLBackups(Object):
         return ""
 
     def _get_s3_session_resource(self, s3_parameters: dict):
-        session = Session(
-            aws_access_key_id=s3_parameters["access-key"],
-            aws_secret_access_key=s3_parameters["secret-key"],
-            region_name=s3_parameters["region"],
-        )
+        kwargs = {
+            "aws_access_key_id": s3_parameters["access-key"],
+            "aws_secret_access_key": s3_parameters["secret-key"],
+        }
+        if "region" in s3_parameters:
+            kwargs["region_name"] = s3_parameters["region"]
+        session = Session(**kwargs)
         return session.resource(
             "s3",
             endpoint_url=self._construct_endpoint(s3_parameters),
@@ -195,9 +197,12 @@ class PostgreSQLBackups(Object):
             return False, FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE
 
         for stanza in json.loads(output):
-            if stanza.get("name") != self.stanza_name:
+            if (stanza_name := stanza.get("name")) and stanza_name == "[invalid]":
+                logger.error("Invalid stanza name from s3")
+                return False, FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE
+            if stanza_name != self.stanza_name:
                 logger.debug(
-                    f"can_use_s3_repository: incompatible stanza name s3={stanza.get('name', '')}, local={self.stanza_name}"
+                    f"can_use_s3_repository: incompatible stanza name s3={stanza_name or ''}, local={self.stanza_name}"
                 )
                 return False, ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE
 
@@ -237,7 +242,7 @@ class PostgreSQLBackups(Object):
 
         # Construct the endpoint using the region.
         resolver = EndpointResolver(data)
-        endpoint_data = resolver.construct_endpoint("s3", s3_parameters["region"])
+        endpoint_data = resolver.construct_endpoint("s3", s3_parameters.get("region"))
 
         # Use the built endpoint if it is an AWS endpoint.
         if endpoint_data and endpoint.endswith(endpoint_data["dnsSuffix"]):
@@ -251,7 +256,7 @@ class PostgreSQLBackups(Object):
             return
 
         bucket_name = s3_parameters["bucket"]
-        region = s3_parameters.get("region")
+        region = s3_parameters.get("region", "")
 
         try:
             s3 = self._get_s3_session_resource(s3_parameters)
@@ -570,8 +575,8 @@ class PostgreSQLBackups(Object):
                         f"--stanza={self.stanza_name}",
                         "stanza-create",
                     ])
-        except ExecError as e:
-            logger.exception(e)
+        except ExecError:
+            logger.exception("Failed to initialise stanza:")
             self._s3_initialization_set_failure(FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE)
             return False
 
@@ -610,8 +615,8 @@ class PostgreSQLBackups(Object):
                 with attempt:
                     self._execute_command(["pgbackrest", f"--stanza={self.stanza_name}", "check"])
             self.charm._set_active_status()
-        except Exception as e:
-            logger.exception(e)
+        except Exception:
+            logger.exception("Failed to check stanza:")
             self._s3_initialization_set_failure(FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE)
             return False
 
@@ -1269,7 +1274,6 @@ Stderr:
 
         # Add some sensible defaults (as expected by the code) for missing optional parameters
         s3_parameters.setdefault("endpoint", "https://s3.amazonaws.com")
-        s3_parameters.setdefault("region")  # type: ignore
         s3_parameters.setdefault("path", "")
         s3_parameters.setdefault("s3-uri-style", "host")
         s3_parameters.setdefault("delete-older-than-days", "9999999")
