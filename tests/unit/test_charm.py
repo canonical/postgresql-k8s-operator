@@ -1504,7 +1504,7 @@ def test_update_config(harness):
             restore_to_latest=False,
             parameters={"test": "test"},
             user_databases_map={"operator": "all", "replication": "all", "rewind": "all"},
-            slots=None,
+            slots={},
         )
         _handle_postgresql_restart_need.assert_called_once()
         _restart_metrics_service.assert_called_once()
@@ -1535,7 +1535,7 @@ def test_update_config(harness):
             restore_to_latest=False,
             parameters={"test": "test"},
             user_databases_map={"operator": "all", "replication": "all", "rewind": "all"},
-            slots=None,
+            slots={},
         )
         _handle_postgresql_restart_need.assert_called_once()
         _restart_metrics_service.assert_called_once()
@@ -1590,20 +1590,19 @@ def test_handle_postgresql_restart_need(harness):
 
             _is_tls_enabled.return_value = values[0]
             postgresql_mock.is_tls_enabled = PropertyMock(return_value=values[1])
-            postgresql_mock.is_restart_pending = PropertyMock(return_value=values[2])
-
-            harness.charm._handle_postgresql_restart_need()
-            _reload_patroni_configuration.assert_called_once()
-            if values[0]:
-                assert "tls" in harness.get_relation_data(rel_id, harness.charm.unit)
-            else:
-                assert "tls" not in harness.get_relation_data(rel_id, harness.charm.unit)
-            if (values[0] != values[1]) or values[2]:
-                _generate_metrics_jobs.assert_called_once_with(values[0])
-                _restart.assert_called_once()
-            else:
-                _generate_metrics_jobs.assert_not_called()
-                _restart.assert_not_called()
+            with patch("charm.Patroni.is_restart_pending", return_value=values[2]):
+                harness.charm._handle_postgresql_restart_need()
+                _reload_patroni_configuration.assert_called_once()
+                if values[0]:
+                    assert "tls" in harness.get_relation_data(rel_id, harness.charm.unit)
+                else:
+                    assert "tls" not in harness.get_relation_data(rel_id, harness.charm.unit)
+                if (values[0] != values[1]) or values[2]:
+                    _generate_metrics_jobs.assert_called_once_with(values[0])
+                    _restart.assert_called_once()
+                else:
+                    _generate_metrics_jobs.assert_not_called()
+                    _restart.assert_not_called()
 
 
 def test_set_active_status(harness):
