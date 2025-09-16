@@ -43,16 +43,6 @@ from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerU
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v1.loki_push_api import LogProxyConsumer
-from charms.postgresql_k8s.v0.postgresql import (
-    ACCESS_GROUP_IDENTITY,
-    ACCESS_GROUPS,
-    REQUIRED_PLUGINS,
-    PostgreSQL,
-    PostgreSQLEnableDisableExtensionError,
-    PostgreSQLGetCurrentTimelineError,
-    PostgreSQLListGroupsError,
-    PostgreSQLUpdateUserPasswordError,
-)
 from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
@@ -94,6 +84,20 @@ from ops.pebble import (
     ServiceStatus,
 )
 from requests import ConnectionError as RequestsConnectionError
+from single_kernel_postgresql.utils.postgresql import (
+    ACCESS_GROUP_IDENTITY,
+    ACCESS_GROUPS,
+    REQUIRED_PLUGINS,
+    PostgreSQL,
+    PostgreSQLCreatePredefinedRolesError,
+    PostgreSQLCreateUserError,
+    PostgreSQLEnableDisableExtensionError,
+    PostgreSQLGetCurrentTimelineError,
+    PostgreSQLGrantDatabasePrivilegesToUserError,
+    PostgreSQLListGroupsError,
+    PostgreSQLListUsersError,
+    PostgreSQLUpdateUserPasswordError,
+)
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
 from backups import CANNOT_RESTORE_PITR, S3_BLOCK_MESSAGES, PostgreSQLBackups
@@ -1167,6 +1171,36 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             event.defer()
             return False
 
+        try:
+            self._setup_users()
+        except PostgreSQLCreatePredefinedRolesError:
+            message = "Failed to create pre-defined roles"
+            logger.exception(message)
+            self.unit.status = BlockedStatus(message)
+            return False
+        except PostgreSQLGrantDatabasePrivilegesToUserError:
+            message = "Failed to grant database privileges to user"
+            logger.exception(message)
+            self.unit.status = BlockedStatus(message)
+            return False
+        except PostgreSQLCreateUserError:
+            message = "Failed to create postgres user"
+            logger.exception(message)
+            self.unit.status = BlockedStatus(message)
+            return False
+        except PostgreSQLListUsersError:
+            logger.warning("Deferring on_start: Unable to list users")
+            event.defer()
+            return False
+
+        # Mark the cluster as initialised.
+        self.app_peer_data["cluster_initialised"] = "True"
+
+        return True
+
+    def _setup_users(self) -> None:
+        self.postgresql.create_predefined_instance_roles()
+
         pg_users = self.postgresql.list_users()
         # Create the backup user.
         if BACKUP_USER not in pg_users:
@@ -1185,11 +1219,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if access_groups != set(ACCESS_GROUPS):
             self.postgresql.create_access_groups()
             self.postgresql.grant_internal_access_group_memberships()
-
-        # Mark the cluster as initialised.
-        self.app_peer_data["cluster_initialised"] = "True"
-
-        return True
 
     @property
     def is_blocked(self) -> bool:
@@ -1623,6 +1652,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         if not self._patroni.member_started:
             logger.debug("Restore check early exit: Patroni has not started yet")
+            return False
+
+        try:
+            self._setup_users()
+        except Exception:
+            logger.exception("Failed to set up users after restore")
             return False
 
         restoring_backup = self.app_peer_data.get("restoring-backup")
@@ -2243,7 +2278,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         try:
             for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3)):
                 with attempt:
-                    restart_postgresql = restart_postgresql or self.postgresql.is_restart_pending()
+                    restart_postgresql = restart_postgresql or self.is_restart_pending()
                     if not restart_postgresql:
                         raise Exception
         except RetryError:
@@ -2620,6 +2655,30 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         })
 
         return params
+
+    def is_restart_pending(self) -> bool:
+        """Query pg_settings for pending restart."""
+        connection = None
+        try:
+            with (
+                self.postgresql._connect_to_database() as connection,
+                connection.cursor() as cursor,
+            ):
+                cursor.execute("SELECT COUNT(*) FROM pg_settings WHERE pending_restart=True;")
+                result = cursor.fetchone()
+                if result is not None:
+                    return result[0] > 0
+                else:
+                    return False
+        except psycopg2.OperationalError:
+            logger.warning("Failed to connect to PostgreSQL.")
+            return False
+        except psycopg2.Error as e:
+            logger.error(f"Failed to check if restart is pending: {e}")
+            return False
+        finally:
+            if connection:
+                connection.close()
 
 
 if __name__ == "__main__":

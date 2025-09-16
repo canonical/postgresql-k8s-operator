@@ -11,23 +11,18 @@ from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProvides,
     DatabaseRequestedEvent,
 )
-from charms.postgresql_k8s.v0.postgresql import (
+from ops.charm import RelationBrokenEvent, RelationDepartedEvent
+from ops.framework import Object
+from ops.model import ActiveStatus, BlockedStatus, ModelError, Relation
+from single_kernel_postgresql.utils.postgresql import (
     ACCESS_GROUP_RELATION,
     ACCESS_GROUPS,
+    INVALID_DATABASE_NAME_BLOCKING_MESSAGE,
     INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE,
     PostgreSQLCreateDatabaseError,
     PostgreSQLCreateUserError,
     PostgreSQLDeleteUserError,
     PostgreSQLGetPostgreSQLVersionError,
-)
-from ops import (
-    ActiveStatus,
-    BlockedStatus,
-    ModelError,
-    Object,
-    Relation,
-    RelationBrokenEvent,
-    RelationDepartedEvent,
 )
 
 from constants import APP_SCOPE, DATABASE_PORT, SYSTEM_USERS, USERNAME_MAPPING_LABEL
@@ -161,11 +156,12 @@ class PostgreSQLProvider(Object):
             # Creates the user and the database for this specific relation.
             user = user or f"relation_id_{event.relation.id}"
             password = password or new_password()
-            self.charm.postgresql.create_user(user, password, extra_user_roles=extra_user_roles)
             plugins = self.charm.get_plugins()
 
-            self.charm.postgresql.create_database(
-                database, user, plugins=plugins, client_relations=self.charm.client_relations
+            self.charm.postgresql.create_database(database, plugins=plugins)
+
+            self.charm.postgresql.create_user(
+                user, password, extra_user_roles=extra_user_roles, database=database
             )
 
             # Share the credentials with the application.
@@ -216,7 +212,11 @@ class PostgreSQLProvider(Object):
             logger.exception(e)
             self.charm.unit.status = BlockedStatus(
                 e.message
-                if issubclass(type(e), PostgreSQLCreateUserError) and e.message is not None
+                if (
+                    issubclass(type(e), PostgreSQLCreateDatabaseError)
+                    or issubclass(type(e), PostgreSQLCreateUserError)
+                )
+                and e.message is not None
                 else f"Failed to initialize {self.relation_name} relation"
             )
             return
@@ -344,6 +344,23 @@ class PostgreSQLProvider(Object):
 
     def _update_unit_status(self, relation: Relation) -> None:
         """Clean up Blocked status if it's due to extensions request."""
+        if (
+            (
+                self.charm._has_blocked_status
+                and (
+                    self.charm.unit.status.message == INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE
+                    or self.charm.unit.status.message == INVALID_DATABASE_NAME_BLOCKING_MESSAGE
+                )
+            )
+            and not self.check_for_invalid_extra_user_roles(relation.id)
+            and not self.check_for_invalid_database_name(relation.id)
+        ):
+            self.charm.unit.status = ActiveStatus()
+        if (
+            self.charm._has_blocked_status
+            and "Failed to initialize relation" in self.charm.unit.status.message
+        ):
+            self.charm.unit.status = ActiveStatus()
         if self.charm._has_blocked_status and self.charm.unit.status.message in [
             INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE,
             NO_ACCESS_TO_SECRET_MSG,
@@ -398,4 +415,21 @@ class PostgreSQLProvider(Object):
                         and extra_user_role not in valid_roles
                     ):
                         return True
+        return False
+
+    def check_for_invalid_database_name(self, relation_id: int) -> bool:
+        """Checks if there are relations with invalid database names.
+
+        Args:
+            relation_id: current relation to be skipped.
+        """
+        for relation in self.charm.model.relations.get(self.relation_name, []):
+            if relation.id == relation_id:
+                continue
+            for data in relation.data.values():
+                database = data.get("database")
+                if database is not None and (
+                    len(database) > 49 or database in ["postgres", "template0", "template1"]
+                ):
+                    return True
         return False
