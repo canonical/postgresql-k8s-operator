@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 import json
+import logging
 import subprocess
 
 import jubilant
@@ -25,6 +26,8 @@ DATABASE_APP_CONFIG = {"profile": "testing"}
 
 TESTING_DATABASE = "testdb"
 TIMEOUT = 2500
+
+logger = logging.getLogger(__name__)
 
 
 def _all_active(status: jubilant.Status, apps: list[str]) -> bool:
@@ -95,7 +98,7 @@ def test_cycle_detection_three_clusters(juju: jubilant.Juju, charm):
             num_units=1,
             resources=resources,
             trust=True,
-            config={"profile": "testing"},
+            config=DATABASE_APP_CONFIG.copy(),
         )
     if SECOND_DATABASE_APP_NAME not in juju.status().apps:
         juju.deploy(
@@ -104,7 +107,7 @@ def test_cycle_detection_three_clusters(juju: jubilant.Juju, charm):
             num_units=1,
             resources=resources,
             trust=True,
-            config={"profile": "testing"},
+            config=DATABASE_APP_CONFIG.copy(),
         )
     if THIRD_DATABASE_APP_NAME not in juju.status().apps:
         juju.deploy(
@@ -113,7 +116,7 @@ def test_cycle_detection_three_clusters(juju: jubilant.Juju, charm):
             num_units=1,
             resources=resources,
             trust=True,
-            config={"profile": "testing"},
+            config=DATABASE_APP_CONFIG.copy(),
         )
 
     for app_name in [
@@ -201,6 +204,7 @@ def test_cycle_detection_three_clusters(juju: jubilant.Juju, charm):
         f"{THIRD_DATABASE_APP_NAME}:logical-replication-offer",
         f"{DATABASE_APP_NAME}:logical-replication",
     )
+    juju.wait(lambda status: jubilant.all_active(status, DATABASE_APP_NAME), timeout=600)
 
     pg1_config = DATABASE_APP_CONFIG.copy()
     pg1_config["logical_replication_subscription_request"] = json.dumps({
@@ -213,7 +217,29 @@ def test_cycle_detection_three_clusters(juju: jubilant.Juju, charm):
         unit = status.get_units(DATABASE_APP_NAME).get(f"{DATABASE_APP_NAME}/0")
         return unit.workload_status.current == "blocked"
 
-    juju.wait(unit_blocked, timeout=900)
+    juju.wait(unit_blocked, timeout=180)
+
+    logger.info("Success in test_cycle_detection_three_clusters")
+
+
+def test_cycle_unblocks_with_different_table(juju: jubilant.Juju, charm):
+    # Create a different table to be replicated that is not part of the A->B->C chain
+    other_table = "public.test_cycle_2"
+    _create_test_table(DATA_INTEGRATOR_APP_NAME, TESTING_DATABASE, other_table)
+    _create_test_table(SECOND_DATA_INTEGRATOR_APP_NAME, TESTING_DATABASE, other_table)
+    _create_test_table(THIRD_DATA_INTEGRATOR_APP_NAME, TESTING_DATABASE, other_table)
+
+    # Update A's subscription request to use the different table; this should clear the blocked status
+    pg1_config = DATABASE_APP_CONFIG.copy()
+    pg1_config["logical_replication_subscription_request"] = json.dumps({
+        TESTING_DATABASE: [other_table],
+    })
+    juju.config(app=DATABASE_APP_NAME, values=pg1_config)
+
+    # Wait for A to become active (unblocked)
+    juju.wait(lambda status: jubilant.all_active(status, DATABASE_APP_NAME), timeout=180)
+
+    logger.info("Success in test_cycle_unblocks_with_different_table")
 
 
 def _create_test_table(data_integrator_app_name: str, database: str, qualified_table: str) -> None:
