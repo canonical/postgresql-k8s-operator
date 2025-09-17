@@ -1173,17 +1173,20 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         try:
             self._setup_users()
-        except PostgreSQLCreatePredefinedRolesError as e:
-            logger.exception(e)
-            self.unit.status = BlockedStatus("Failed to create pre-defined roles")
+        except PostgreSQLCreatePredefinedRolesError:
+            message = "Failed to create pre-defined roles"
+            logger.exception(message)
+            self.unit.status = BlockedStatus(message)
             return False
-        except PostgreSQLGrantDatabasePrivilegesToUserError as e:
-            logger.exception(e)
-            self.unit.status = BlockedStatus("Failed to grant database privileges to user")
+        except PostgreSQLGrantDatabasePrivilegesToUserError:
+            message = "Failed to grant database privileges to user"
+            logger.exception(message)
+            self.unit.status = BlockedStatus(message)
             return False
-        except PostgreSQLCreateUserError as e:
-            logger.exception(e)
-            self.unit.status = BlockedStatus("Failed to create postgres user")
+        except PostgreSQLCreateUserError:
+            message = "Failed to create postgres user"
+            logger.exception(message)
+            self.unit.status = BlockedStatus(message)
             return False
         except PostgreSQLListUsersError:
             logger.warning("Deferring on_start: Unable to list users")
@@ -1653,8 +1656,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         try:
             self._setup_users()
-        except Exception as e:
-            logger.exception(e)
+        except Exception:
+            logger.exception("Failed to set up users after restore")
             return False
 
         restoring_backup = self.app_peer_data.get("restoring-backup")
