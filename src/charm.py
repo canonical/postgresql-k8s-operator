@@ -13,6 +13,7 @@ import shutil
 import sys
 import time
 from datetime import datetime
+from functools import cached_property
 from hashlib import shake_128
 from pathlib import Path
 from typing import Literal, get_args
@@ -436,7 +437,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Returns whether the unit is stopped."""
         return "stopped" in self.unit_peer_data
 
-    @property
+    @cached_property
     def postgresql(self) -> PostgreSQL:
         """Returns an instance of the object used to interact with the database."""
         return PostgreSQL(
@@ -448,17 +449,17 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             system_users=SYSTEM_USERS,
         )
 
-    @property
+    @cached_property
     def endpoint(self) -> str:
         """Returns the endpoint of this instance's pod."""
         return f"{self._unit.replace('/', '-')}.{self._build_service_name('endpoints')}"
 
-    @property
+    @cached_property
     def primary_endpoint(self) -> str:
         """Returns the endpoint of the primary instance's service."""
         return self._build_service_name("primary")
 
-    @property
+    @cached_property
     def replicas_endpoint(self) -> str:
         """Returns the endpoint of the replicas instances' service."""
         return self._build_service_name("replicas")
@@ -1640,29 +1641,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 return False
             return True
 
-        try:
-            is_primary = self.is_primary
-            is_standby_leader = self.is_standby_leader
-        except RetryError:
-            return False
-
-        if (
-            not is_primary
-            and not is_standby_leader
-            and self._patroni.member_started
-            and not self._patroni.member_streaming
-        ):
-            try:
-                logger.warning("Degraded member detected: reinitialising unit")
-                self.unit.status = MaintenanceStatus("reinitialising replica")
-                self._patroni.reinitialize_postgresql()
-            except RetryError:
-                logger.error(
-                    "failed to reinitialise replica after checking that it was not streaming from primary"
-                )
-                return False
-            return True
-
         return False
 
     @property
@@ -2042,12 +2020,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @property
     def _can_connect_to_postgresql(self) -> bool:
         try:
-            for attempt in Retrying(stop=stop_after_delay(30), wait=wait_fixed(3)):
+            for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(3)):
                 with attempt:
                     if not self.postgresql.get_postgresql_timezones():
+                        logger.debug("Cannot connect to database (CannotConnectError)")
                         raise CannotConnectError
         except RetryError:
-            logger.debug("Cannot connect to database")
+            logger.debug("Cannot connect to database (RetryError)")
             return False
         return True
 
@@ -2117,11 +2096,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             "wal_keep_size": self.config.durability_wal_keep_size,
         })
 
-        self._handle_postgresql_restart_need()
+        self._handle_postgresql_restart_need(
+            self.unit_peer_data.get("config_hash") != self.generate_config_hash
+        )
         self._restart_metrics_service()
         self._restart_ldap_sync_service()
 
-        self.unit_peer_data.update({"user_hash": self.generate_user_hash})
+        self.unit_peer_data.update({
+            "user_hash": self.generate_user_hash,
+            "config_hash": self.generate_config_hash,
+        })
         if self.unit.is_leader():
             self.app_peer_data.update({"user_hash": self.generate_user_hash})
         return True
@@ -2163,22 +2147,28 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     f"Value for {parameter} not one of the locales available in the system"
                 )
 
-    def _handle_postgresql_restart_need(self):
+    def _handle_postgresql_restart_need(self, config_changed: bool):
         """Handle PostgreSQL restart need based on the TLS configuration and configuration changes."""
         restart_postgresql = self.is_tls_enabled != self.postgresql.is_tls_enabled()
-        self._patroni.reload_patroni_configuration()
-        # Wait for some more time than the Patroni's loop_wait default value (10 seconds),
-        # which tells how much time Patroni will wait before checking the configuration
-        # file again to reload it.
         try:
-            for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3)):
-                with attempt:
-                    restart_postgresql = restart_postgresql or self.postgresql.is_restart_pending()
-                    if not restart_postgresql:
-                        raise Exception
-        except RetryError:
-            # Ignore the error, as it happens only to indicate that the configuration has not changed.
-            pass
+            self._patroni.reload_patroni_configuration()
+        except Exception as e:
+            logger.error(f"Reload patroni call failed! error: {e!s}")
+        if config_changed and not restart_postgresql:
+            # Wait for some more time than the Patroni's loop_wait default value (10 seconds),
+            # which tells how much time Patroni will wait before checking the configuration
+            # file again to reload it.
+            try:
+                for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3)):
+                    with attempt:
+                        restart_postgresql = (
+                            restart_postgresql or self.postgresql.is_restart_pending()
+                        )
+                        if not restart_postgresql:
+                            raise Exception
+            except RetryError:
+                # Ignore the error, as it happens only to indicate that the configuration has not changed.
+                pass
         self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
         self.postgresql_client_relation.update_tls_flag("True" if self.is_tls_enabled else "False")
 
@@ -2305,14 +2295,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @property
     def relations_user_databases_map(self) -> dict:
         """Returns a user->databases map for all relations."""
-        user_database_map = {}
         # Copy relations users directly instead of waiting for them to be created
-        for relation in self.model.relations[self.postgresql_client_relation.relation_name]:
-            user = f"relation_id_{relation.id}"
-            if database := self.postgresql_client_relation.database_provides.fetch_relation_field(
-                relation.id, "database"
-            ):
-                user_database_map[user] = database
+        user_database_map = self._collect_user_relations()
         if (
             not self.is_cluster_initialised
             or not self._patroni.member_started
@@ -2354,17 +2338,32 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("relations_user_databases_map: Unable to get users")
             return {USER: "all", REPLICATION_USER: "all", REWIND_USER: "all"}
 
-    @property
+    def _collect_user_relations(self) -> dict[str, str]:
+        user_db_pairs = {}
+        for relation in self.client_relations:
+            user = f"relation_id_{relation.id}"
+            if relation.name == "database":
+                if (
+                    database
+                    := self.postgresql_client_relation.database_provides.fetch_relation_field(
+                        relation.id, "database"
+                    )
+                ):
+                    user_db_pairs[user] = database
+            else:
+                if database := relation.data.get(self.charm.unit, {}).get("database"):
+                    user_db_pairs[user] = database
+        return user_db_pairs
+
+    @cached_property
     def generate_user_hash(self) -> str:
         """Generate expected user and database hash."""
-        user_db_pairs = {}
-        for relation in self.model.relations[self.postgresql_client_relation.relation_name]:
-            if database := self.postgresql_client_relation.database_provides.fetch_relation_field(
-                relation.id, "database"
-            ):
-                user = f"relation_id_{relation.id}"
-                user_db_pairs[user] = database
-        return shake_128(str(user_db_pairs).encode()).hexdigest(16)
+        return shake_128(str(self._collect_user_relations()).encode()).hexdigest(16)
+
+    @cached_property
+    def generate_config_hash(self) -> str:
+        """Generate current configuration hash."""
+        return shake_128(str(self.config.dict()).encode()).hexdigest(16)
 
     def override_patroni_on_failure_condition(
         self, new_condition: str, repeat_cause: str | None
