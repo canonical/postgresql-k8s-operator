@@ -2351,7 +2351,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 ):
                     user_db_pairs[user] = database
             else:
-                if database := relation.data.get(self.charm.unit, {}).get("database"):
+                if database := relation.data.get(self.unit, {}).get("database"):
                     user_db_pairs[user] = database
         return user_db_pairs
 
