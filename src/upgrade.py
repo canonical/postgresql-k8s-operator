@@ -13,13 +13,13 @@ from charms.data_platform_libs.v0.upgrade import (
     DependencyModel,
     KubernetesClientError,
 )
-from charms.postgresql_k8s.v0.postgresql import ACCESS_GROUPS
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
 from lightkube.resources.apps_v1 import StatefulSet
 from ops.charm import UpgradeCharmEvent, WorkloadEvent
 from ops.model import BlockedStatus, MaintenanceStatus, RelationDataContent
 from pydantic import BaseModel
+from single_kernel_postgresql.utils.postgresql import ACCESS_GROUPS
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from constants import APP_SCOPE, MONITORING_PASSWORD_KEY, MONITORING_USER, PATRONI_PASSWORD_KEY
@@ -204,7 +204,8 @@ class PostgreSQLUpgrade(DataUpgrade):
         primary_unit_name = self.charm._patroni.get_primary(unit_name_pattern=True)
         unit_zero_name = f"{self.charm.app.name}/0"
         if primary_unit_name == unit_zero_name:
-            self.peer_relation.data[self.charm.app].update({"sync-standbys": ""})
+            # Should be replaced with refresh v3
+            self.peer_relation.data[self.charm.app].update({"sync-standbys": ""})  # type: ignore
             self._set_first_rolling_update_partition()
             return
 
@@ -215,7 +216,8 @@ class PostgreSQLUpgrade(DataUpgrade):
         # If the first unit is a sync-standby we can switchover to it.
         if unit_zero_name in sync_standby_names:
             try:
-                self.peer_relation.data[self.charm.app].update({"sync-standbys": ""})
+                # Should be replaced with refresh v3
+                self.peer_relation.data[self.charm.app].update({"sync-standbys": ""})  # type: ignore
                 self.charm._patroni.switchover(unit_zero_name)
             except SwitchoverFailedError as e:
                 raise ClusterNotReadyError(
@@ -244,7 +246,8 @@ class PostgreSQLUpgrade(DataUpgrade):
                 if len(sync_standbys) > 0:
                     sync_standbys.pop()
                 sync_standbys.append(unit_to_become_sync_standby)
-            self.peer_relation.data[self.charm.app].update({
+            # Should be replaced with refresh v3
+            self.peer_relation.data[self.charm.app].update({  # type: ignore
                 "sync-standbys": json.dumps(sync_standbys)
             })
             logger.debug(f"sync-standbys changed to: {sync_standbys}")
@@ -300,4 +303,5 @@ class PostgreSQLUpgrade(DataUpgrade):
     @property
     def unit_upgrade_data(self) -> RelationDataContent:
         """Return the application upgrade data."""
-        return self.peer_relation.data[self.charm.unit]
+        # Should be replaced with refresh v3
+        return self.peer_relation.data[self.charm.unit]  # type: ignore

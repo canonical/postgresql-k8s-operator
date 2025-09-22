@@ -58,6 +58,10 @@ REPLICATION_OFFER_RELATION = "replication-offer"
 SECRET_LABEL = "async-replication-secret"  # noqa: S105
 
 
+class AsyncReplicationError(Exception):
+    """Exception class for Async replication."""
+
+
 class PostgreSQLAsyncReplication(Object):
     """Defines the async-replication management logic."""
 
@@ -176,7 +180,9 @@ class PostgreSQLAsyncReplication(Object):
 
     def _configure_standby_cluster(self, event: RelationChangedEvent) -> bool:
         """Configure the standby cluster."""
-        relation = self._relation
+        if not (relation := self._relation):
+            raise AsyncReplicationError("No relation in configure standby cluster")
+
         if relation.name == REPLICATION_CONSUMER_RELATION and not self._update_internal_secret():
             logger.debug("Secret not found, deferring event")
             event.defer()
@@ -240,20 +246,22 @@ class PostgreSQLAsyncReplication(Object):
         if primary_cluster is None or self.charm.app == primary_cluster:
             return None
         relation = self._relation
-        primary_cluster_data = relation.data[relation.app].get("primary-cluster-data")
+        primary_cluster_data = relation.data[relation.app].get("primary-cluster-data")  # type: ignore
         if primary_cluster_data is None:
             return None
         return json.loads(primary_cluster_data).get("endpoint")
 
     def get_all_primary_cluster_endpoints(self) -> list[str]:
         """Return all the primary cluster endpoints."""
-        relation = self._relation
+        if not (relation := self._relation):
+            raise AsyncReplicationError("No relation in get all primary endpoints")
+
         primary_cluster = self.get_primary_cluster()
         # List the primary endpoints only for the standby cluster.
         if relation is None or primary_cluster is None or self.charm.app == primary_cluster:
             return []
         return [
-            relation.data[unit].get("unit-address")
+            relation.data[unit]["unit-address"]
             for relation in [
                 self.model.get_relation(REPLICATION_OFFER_RELATION),
                 self.model.get_relation(REPLICATION_CONSUMER_RELATION),
@@ -289,13 +297,15 @@ class PostgreSQLAsyncReplication(Object):
 
     def get_standby_endpoints(self) -> list[str]:
         """Return the standby endpoints."""
-        relation = self._relation
+        if not (relation := self._relation):
+            return []
+
         primary_cluster = self.get_primary_cluster()
         # List the standby endpoints only for the primary cluster.
         if relation is None or primary_cluster is None or self.charm.app != primary_cluster:
             return []
         return [
-            relation.data[unit].get("unit-address")
+            relation.data[unit]["unit-address"]
             for relation in [
                 self.model.get_relation(REPLICATION_OFFER_RELATION),
                 self.model.get_relation(REPLICATION_CONSUMER_RELATION),
@@ -396,7 +406,7 @@ class PostgreSQLAsyncReplication(Object):
                     pass
                 if not primary_cluster_reachable:
                     event.fail(
-                        f"{self._relation.app.name} isn't reachable. Pass `force=true` to promote anyway."
+                        f"{self._relation.app.name} isn't reachable. Pass `force=true` to promote anyway."  # type: ignore
                     )
                     return False
         else:
@@ -423,8 +433,8 @@ class PostgreSQLAsyncReplication(Object):
         # Check if all units from the other cluster  published their pod IPs in the relation data.
         # If not, fail the action telling that all units must publish their pod addresses in the
         # relation data.
-        for unit in relation.units:
-            if "unit-address" not in relation.data[unit]:
+        for unit in relation.units:  # type: ignore
+            if "unit-address" not in relation.data[unit]:  # type: ignore
                 event.fail(
                     "All units from the other cluster must publish their pod addresses in the relation data."
                 )
@@ -538,7 +548,7 @@ class PostgreSQLAsyncReplication(Object):
 
     def _on_async_relation_created(self, _) -> None:
         """Publish this unit address in the relation data."""
-        self._relation.data[self.charm.unit].update({"unit-address": self._get_unit_ip()})
+        self._relation.data[self.charm.unit].update({"unit-address": self._get_unit_ip()})  # type: ignore
 
         # Set the counter for new units.
         highest_promoted_cluster_counter = self._get_highest_promoted_cluster_counter_value()
@@ -559,7 +569,7 @@ class PostgreSQLAsyncReplication(Object):
             event.fail("There is already a replication set up.")
             return
 
-        if self._relation.name == REPLICATION_CONSUMER_RELATION:
+        if self._relation.name == REPLICATION_CONSUMER_RELATION:  # type: ignore
             event.fail("This action must be run in the cluster where the offer was created.")
             return
 
@@ -567,7 +577,7 @@ class PostgreSQLAsyncReplication(Object):
             return
 
         # Set the replication name in the relation data.
-        self._relation.data[self.charm.app].update({"name": event.params["name"]})
+        self._relation.data[self.charm.app].update({"name": event.params["name"]})  # type: ignore
 
         # Set the status.
         self.charm.unit.status = MaintenanceStatus("Creating replication...")
@@ -624,21 +634,20 @@ class PostgreSQLAsyncReplication(Object):
         sync_standby_names = self.charm._patroni.get_sync_standby_names()
         if len(sync_standby_names) > 0:
             unit = self.model.get_unit(sync_standby_names[0])
-            return self.charm.get_unit_ip(unit)
-        else:
-            return self.charm.get_unit_ip(self.charm.unit)
+            return self.charm.get_unit_ip(unit)  # type: ignore
+        return self.charm.get_unit_ip(self.charm.unit)  # type: ignore
 
     def _re_emit_async_relation_changed_event(self) -> None:
         """Re-emit the async relation changed event."""
-        relation = self._relation
-        getattr(self.charm.on, f"{relation.name.replace('-', '_')}_relation_changed").emit(
-            relation,
-            app=relation.app,
-            unit=next(unit for unit in relation.units if unit.app == relation.app),
-        )
+        if relation := self._relation:
+            getattr(self.charm.on, f"{relation.name.replace('-', '_')}_relation_changed").emit(
+                relation,
+                app=relation.app,
+                unit=next(unit for unit in relation.units if unit.app == relation.app),
+            )
 
     @property
-    def _relation(self) -> Relation:
+    def _relation(self) -> Relation | None:
         """Return the relation object."""
         for relation in [
             self.model.get_relation(REPLICATION_OFFER_RELATION),
@@ -733,7 +742,7 @@ class PostgreSQLAsyncReplication(Object):
     def _update_internal_secret(self) -> bool:
         # Update the secrets between the clusters.
         relation = self._relation
-        primary_cluster_info = relation.data[relation.app].get("primary-cluster-data")
+        primary_cluster_info = relation.data[relation.app].get("primary-cluster-data")  # type: ignore
         secret_id = (
             None
             if primary_cluster_info is None
@@ -767,15 +776,15 @@ class PostgreSQLAsyncReplication(Object):
         primary_cluster_data = {"endpoint": self._primary_cluster_endpoint}
 
         # Retrieve the secrets that will be shared between the clusters.
-        if async_relation.name == REPLICATION_OFFER_RELATION:
+        if async_relation.name == REPLICATION_OFFER_RELATION:  # type: ignore
             secret = self._get_secret()
-            secret.grant(async_relation)
-            primary_cluster_data["secret-id"] = secret.id
+            secret.grant(async_relation)  # type: ignore
+            primary_cluster_data["secret-id"] = secret.id  # type: ignore
 
         if system_identifier is not None:
             primary_cluster_data["system-id"] = system_identifier
 
-        async_relation.data[self.charm.app]["primary-cluster-data"] = json.dumps(
+        async_relation.data[self.charm.app]["primary-cluster-data"] = json.dumps(  # type: ignore
             primary_cluster_data
         )
 

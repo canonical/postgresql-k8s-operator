@@ -639,10 +639,10 @@ def test_on_pgdata_storage_detaching(harness):
         harness.charm._on_pgdata_storage_detaching(event)
         assert not _member_started.called
 
-        _get_primary.side_effect = [harness.charm.unit.name, "primary"]
+        _get_primary.return_value = harness.charm.unit.name
         harness.charm._on_pgdata_storage_detaching(event)
         _switchover.assert_called_once_with()
-        _primary_changed.assert_called_once_with("primary")
+        _primary_changed.assert_called_once_with(harness.charm.unit.name)
 
 
 def test_on_update_status_after_restore_operation(harness):
@@ -653,8 +653,9 @@ def test_on_update_status_after_restore_operation(harness):
         ) as _handle_processes_failures,
         patch("charm.PostgreSQLBackups.can_use_s3_repository") as _can_use_s3_repository,
         patch(
-            "charms.postgresql_k8s.v0.postgresql.PostgreSQL.get_current_timeline"
+            "single_kernel_postgresql.utils.postgresql.PostgreSQL.get_current_timeline"
         ) as _get_current_timeline,
+        patch("charm.PostgresqlOperatorCharm._setup_users") as _setup_users,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
         patch("ops.model.Container.pebble") as _pebble,
@@ -1576,6 +1577,7 @@ def test_handle_postgresql_restart_need(harness):
         patch("charm.PostgresqlOperatorCharm._generate_metrics_jobs") as _generate_metrics_jobs,
         patch("charm.wait_fixed", return_value=wait_fixed(0)),
         patch("charm.Patroni.reload_patroni_configuration") as _reload_patroni_configuration,
+        patch("charm.PostgresqlOperatorCharm.is_restart_pending") as _is_restart_pending,
         patch(
             "charm.PostgresqlOperatorCharm.is_tls_enabled", new_callable=PropertyMock
         ) as _is_tls_enabled,
@@ -1590,7 +1592,7 @@ def test_handle_postgresql_restart_need(harness):
 
             _is_tls_enabled.return_value = values[0]
             postgresql_mock.is_tls_enabled = PropertyMock(return_value=values[1])
-            postgresql_mock.is_restart_pending = PropertyMock(return_value=values[2])
+            _is_restart_pending.return_value = values[2]
 
             harness.charm._handle_postgresql_restart_need()
             _reload_patroni_configuration.assert_called_once()
