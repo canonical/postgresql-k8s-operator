@@ -40,7 +40,7 @@ except ModuleNotFoundError:
     raise
 
 from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerUnitData
-from charms.data_platform_libs.v0.data_models import TypedCharmBase
+from charms.data_platform_libs.v1.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v1.loki_push_api import LogProxyConsumer
 from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
@@ -2251,16 +2251,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             raise ValueError(
                 "storage_default_table_access_method config option has an invalid value"
             )
-
-        container = self.unit.get_container("postgresql")
-        output, _ = container.exec(["locale", "-a"]).wait_output()
-        locales = list(output.splitlines())
-        for parameter in ["response_lc_monetary", "response_lc_numeric", "response_lc_time"]:
-            value = self.model.config.get(parameter)
-            if value is not None and value not in locales:
-                raise ValueError(
-                    f"Value for {parameter} not one of the locales available in the system"
-                )
 
     def _handle_postgresql_restart_need(self):
         """Handle PostgreSQL restart need based on the TLS configuration and configuration changes."""
