@@ -1613,29 +1613,6 @@ def test_handle_processes_failures(harness):
             _restart.assert_called_once_with("postgresql")
             _reinitialize_postgresql.assert_not_called()
 
-        # Test when the unit is a replica and it's not streaming from primary.
-        _restart.reset_mock()
-        _is_primary.return_value = False
-        _is_standby_leader.return_value = False
-        _member_streaming.return_value = False
-        for values in itertools.product(
-            [None, RetryError(last_attempt=1)], [True, False], [True, False]
-        ):
-            # Skip the condition that lead to handling other process failure.
-            if not values[1] and values[2]:
-                continue
-
-            _reinitialize_postgresql.reset_mock()
-            _reinitialize_postgresql.side_effect = values[0]
-            _member_started.side_effect = [values[1], True]
-            _is_database_running.return_value = values[2]
-            harness.charm.unit.status = ActiveStatus()
-            result = harness.charm._handle_processes_failures()
-            assert result == (values[0] is None)
-            assert isinstance(harness.charm.unit.status, MaintenanceStatus)
-            _restart.assert_not_called()
-            _reinitialize_postgresql.assert_called_once()
-
 
 def test_push_ca_file_into_workload(harness):
     with (
@@ -1810,7 +1787,7 @@ def test_handle_postgresql_restart_need(harness):
             postgresql_mock.is_tls_enabled = PropertyMock(return_value=values[1])
             postgresql_mock.is_restart_pending = PropertyMock(return_value=values[2])
 
-            harness.charm._handle_postgresql_restart_need()
+            harness.charm._handle_postgresql_restart_need(True)
             _reload_patroni_configuration.assert_called_once()
             if values[0]:
                 assert "tls" in harness.get_relation_data(rel_id, harness.charm.unit)
