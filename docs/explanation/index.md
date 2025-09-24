@@ -10,6 +10,7 @@ Additional context about key concepts behind the PostgreSQL charm, including des
 
 ## Operational concepts
 * [Users]
+* [Roles]
 * [Logs]
 * [Connection pooling]
 
@@ -28,6 +29,7 @@ Charm event flowcharts:
 [Architecture]: /explanation/architecture
 [Interfaces and endpoints]: /explanation/interfaces-and-endpoints
 [Users]: /explanation/users
+[/Roles]: /explanation/roles
 [Logs]: /explanation/logs
 [Juju]: /explanation/juju
 [Legacy charm]: /explanation/legacy-charm
