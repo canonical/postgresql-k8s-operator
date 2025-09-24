@@ -2297,12 +2297,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Returns a user->databases map for all relations."""
         # Copy relations users directly instead of waiting for them to be created
         user_database_map = self._collect_user_relations()
-        if (
-            not self.is_cluster_initialised
-            or not self._patroni.member_started
-            or self.postgresql.list_access_groups(current_host=self.is_connectivity_enabled)
-            != set(ACCESS_GROUPS)
-        ):
+
+        if not self.is_cluster_initialised or not self._patroni.member_started:
             user_database_map.update({
                 USER: "all",
                 REPLICATION_USER: "all",
@@ -2321,8 +2317,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 ):
                     continue
                 user_database_map[user] = ",".join(
-                    self.postgresql.list_accessible_databases_for_user(
-                        user, current_host=self.is_connectivity_enabled
+                    sorted(
+                        self.postgresql.list_accessible_databases_for_user(
+                            user, current_host=self.is_connectivity_enabled
+                        )
                     )
                 )
             if self.postgresql.list_access_groups(
