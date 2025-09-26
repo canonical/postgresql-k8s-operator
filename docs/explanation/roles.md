@@ -7,7 +7,7 @@ There are several definitions of roles in Charmed PostgreSQL:
 * Extra user roles relation flag
 
 ```{seealso}
-[](/explanation/users)
+For details on how users relate to roles, see [](/explanation/users).
 ```
 
 ## PostgreSQL 16 roles
