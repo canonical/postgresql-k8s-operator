@@ -17,7 +17,7 @@ jinja2 = "^3.1.6"
 lightkube = "^0.17.2"
 lightkube-models = "^1.28.1.4"
 psycopg2 = "^2.9.10"
-postgresql-charms-single-kernel = "0.0.1"
+postgresql-charms-single-kernel = {url = "https://github.com/canonical/postgresql-single-kernel-library/archive/d0c4ddcf83d5147bb8f147b47ccf642839175e09.zip"}
 
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py

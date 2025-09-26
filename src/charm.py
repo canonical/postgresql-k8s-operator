@@ -84,6 +84,7 @@ from ops.pebble import (
     ServiceStatus,
 )
 from requests import ConnectionError as RequestsConnectionError
+from single_kernel_postgresql.config.literals import Substrates
 from single_kernel_postgresql.utils.postgresql import (
     ACCESS_GROUP_IDENTITY,
     ACCESS_GROUPS,
@@ -446,10 +447,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Returns whether the unit is stopped."""
         return "stopped" in self.unit_peer_data
 
+    @cached_property
+    def _container(self) -> Container:
+        """Returns the postgresql container."""
+        return self.unit.get_container("postgresql")
+
     @property
     def postgresql(self) -> PostgreSQL:
         """Returns an instance of the object used to interact with the database."""
         return PostgreSQL(
+            substrate=Substrates.K8S,
             primary_host=self.primary_endpoint,
             current_host=self.endpoint,
             user=USER,
@@ -457,6 +464,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             password=self.get_secret(APP_SCOPE, f"{USER}-password"),  # type: ignore
             database=DATABASE_DEFAULT_NAME,
             system_users=SYSTEM_USERS,
+            container=self._container,
         )
 
     @property
@@ -617,8 +625,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         # Update the list of the cluster members in the replicas to make them know each other.
         # Update the cluster members in this unit (updating patroni configuration).
-        container = self.unit.get_container("postgresql")
-        if not container.can_connect():
+        if not self._container.can_connect():
             logger.debug(
                 "Early exit on_peer_relation_changed: Waiting for container to become available"
             )
@@ -635,11 +642,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("on_peer_relation_changed early exit: Unit in blocked status")
             return
 
-        services = container.pebble.get_services(names=[self.postgresql_service])
+        services = self._container.pebble.get_services(names=[self.postgresql_service])
         if (
             (self.is_cluster_restoring_backup or self.is_cluster_restoring_to_time)
             and len(services) > 0
-            and not self._was_restore_successful(container, services[0])
+            and not self._was_restore_successful(self._container, services[0])
         ):
             logger.debug("on_peer_relation_changed early exit: Backup restore check failed")
             return
@@ -1586,11 +1593,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _on_update_status(self, _) -> None:
         """Update the unit status message."""
-        container = self.unit.get_container("postgresql")
-        if not self._on_update_status_early_exit_checks(container):
+        if not self._on_update_status_early_exit_checks(self._container):
             return
 
-        services = container.pebble.get_services(names=[self.postgresql_service])
+        services = self._container.pebble.get_services(names=[self.postgresql_service])
         if len(services) == 0:
             # Service has not been added nor started yet, so don't try to check Patroni API.
             logger.debug("on_update_status early exit: Service has not been added nor started yet")
@@ -1606,7 +1612,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 f"{self.postgresql_service} pebble service inactive, restarting service"
             )
             try:
-                container.restart(self.postgresql_service)
+                self._container.restart(self.postgresql_service)
             except ChangeError:
                 logger.exception("Failed to restart patroni")
             # If service doesn't recover fast, exit and wait for next hook run to re-check
@@ -1616,7 +1622,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         if (
             self.is_cluster_restoring_backup or self.is_cluster_restoring_to_time
-        ) and not self._was_restore_successful(container, services[0]):
+        ) and not self._was_restore_successful(self._container, services[0]):
             return
 
         if self._handle_processes_failures():
@@ -1704,14 +1710,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         Returns:
             a bool indicating whether the charm performed any action.
         """
-        container = self.unit.get_container("postgresql")
-
         # Restart the Patroni process if it was killed (in that case, the PostgreSQL
         # process is still running). This is needed until
         # https://github.com/canonical/pebble/issues/149 is resolved.
         if not self._patroni.member_started and self._patroni.is_database_running:
             try:
-                container.restart(self.postgresql_service)
+                self._container.restart(self.postgresql_service)
                 logger.info("restarted Patroni because it was not running")
             except ChangeError:
                 logger.error("failed to restart Patroni after checking that it was not running")
@@ -1994,41 +1998,41 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def push_tls_files_to_workload(self) -> bool:
         """Uploads TLS files to the workload container."""
-        container = self.unit.get_container("postgresql")
-
         key, ca, cert = self.tls.get_tls_files()
 
         if key is not None:
-            self._push_file_to_workload(container, f"{self._storage_path}/{TLS_KEY_FILE}", key)
+            self._push_file_to_workload(
+                self._container, f"{self._storage_path}/{TLS_KEY_FILE}", key
+            )
         if ca is not None:
-            self._push_file_to_workload(container, f"{self._storage_path}/{TLS_CA_FILE}", ca)
-            self._push_file_to_workload(container, f"{self._certs_path}/ca.crt", ca)
-            container.exec(["update-ca-certificates"]).wait()
+            self._push_file_to_workload(self._container, f"{self._storage_path}/{TLS_CA_FILE}", ca)
+            self._push_file_to_workload(self._container, f"{self._certs_path}/ca.crt", ca)
+            self._container.exec(["update-ca-certificates"]).wait()
         if cert is not None:
-            self._push_file_to_workload(container, f"{self._storage_path}/{TLS_CERT_FILE}", cert)
+            self._push_file_to_workload(
+                self._container, f"{self._storage_path}/{TLS_CERT_FILE}", cert
+            )
 
         return self.update_config()
 
     def push_ca_file_into_workload(self, secret_name: str) -> bool:
         """Uploads CA certificate into the workload container."""
-        container = self.unit.get_container("postgresql")
         certificates = self.get_secret(UNIT_SCOPE, secret_name)
 
         if certificates is not None:
             self._push_file_to_workload(
-                container=container,
+                container=self._container,
                 file_path=f"{self._certs_path}/{secret_name}.crt",
                 file_data=certificates,
             )
-            container.exec(["update-ca-certificates"]).wait()
+            self._container.exec(["update-ca-certificates"]).wait()
 
         return self.update_config()
 
     def clean_ca_file_from_workload(self, secret_name: str) -> bool:
         """Cleans up CA certificate from the workload container."""
-        container = self.unit.get_container("postgresql")
-        container.remove_path(f"{self._certs_path}/{secret_name}.crt")
-        container.exec(["update-ca-certificates"]).wait()
+        self._container.remove_path(f"{self._certs_path}/{secret_name}.crt")
+        self._container.exec(["update-ca-certificates"]).wait()
 
         return self.update_config()
 
@@ -2064,8 +2068,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _restart_metrics_service(self) -> None:
         """Restart the monitoring service if the password was rotated."""
-        container = self.unit.get_container("postgresql")
-        current_layer = container.get_plan()
+        current_layer = self._container.get_plan()
 
         metrics_service = current_layer.services[self.metrics_service]
         data_source_name = metrics_service.environment.get("DATA_SOURCE_NAME", "")
@@ -2073,12 +2076,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if metrics_service and not data_source_name.startswith(
             f"user={MONITORING_USER} password={self.get_secret('app', MONITORING_PASSWORD_KEY)} "
         ):
-            container.add_layer(
+            self._container.add_layer(
                 self.metrics_service,
                 Layer({"services": {self.metrics_service: self._generate_metrics_service()}}),
                 combine=True,
             )
-            container.restart(self.metrics_service)
+            self._container.restart(self.metrics_service)
 
     def _restart_ldap_sync_service(self) -> None:
         """Restart the LDAP sync service in case any configuration changed."""
@@ -2086,35 +2089,33 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("Restart LDAP sync early exit: Patroni has not started yet")
             return
 
-        container = self.unit.get_container("postgresql")
-        sync_service = container.pebble.get_services(names=[self.ldap_sync_service])
+        sync_service = self._container.pebble.get_services(names=[self.ldap_sync_service])
 
         if not self.is_primary and sync_service[0].is_running():
             logger.debug("Stopping LDAP sync service. It must only run in the primary")
-            container.stop(self.ldap_sync_service)
+            self._container.stop(self.ldap_sync_service)
 
         if self.is_primary and not self.is_ldap_enabled:
             logger.debug("Stopping LDAP sync service")
-            container.stop(self.ldap_sync_service)
+            self._container.stop(self.ldap_sync_service)
             return
 
         if self.is_primary and self.is_ldap_enabled:
-            container.add_layer(
+            self._container.add_layer(
                 self.ldap_sync_service,
                 Layer({"services": {self.ldap_sync_service: self._generate_ldap_service()}}),
                 combine=True,
             )
             logger.debug("Starting LDAP sync service")
-            container.restart(self.ldap_sync_service)
+            self._container.restart(self.ldap_sync_service)
 
     @property
     def _is_workload_running(self) -> bool:
         """Returns whether the workload is running (in an active state)."""
-        container = self.unit.get_container("postgresql")
-        if not container.can_connect():
+        if not self._container.can_connect():
             return False
 
-        services = container.pebble.get_services(names=[self.postgresql_service])
+        services = self._container.pebble.get_services(names=[self.postgresql_service])
         if len(services) == 0:
             return False
 
@@ -2252,8 +2253,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 "storage_default_table_access_method config option has an invalid value"
             )
 
-        container = self.unit.get_container("postgresql")
-        output, _ = container.exec(["locale", "-a"]).wait_output()
+        output, _ = self._container.exec(["locale", "-a"]).wait_output()
         locales = list(output.splitlines())
         for parameter in ["response_lc_monetary", "response_lc_numeric", "response_lc_time"]:
             value = self.model.config.get(parameter)
@@ -2298,10 +2298,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _update_pebble_layers(self, replan: bool = True) -> None:
         """Update the pebble layers to keep the health check URL up-to-date."""
-        container = self.unit.get_container("postgresql")
-
         # Get the current layer.
-        current_layer = container.get_plan()
+        current_layer = self._container.get_plan()
 
         # Create a new config layer.
         new_layer = self._postgresql_layer()
@@ -2309,14 +2307,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Check if there are any changes to layer services.
         if current_layer.services != new_layer.services:
             # Changes were made, add the new layer.
-            container.add_layer(self.postgresql_service, new_layer, combine=True)
+            self._container.add_layer(self.postgresql_service, new_layer, combine=True)
             logging.info("Added updated layer 'postgresql' to Pebble plan")
             if replan:
-                container.replan()
+                self._container.replan()
                 logging.info("Restarted postgresql service")
         if current_layer.checks != new_layer.checks:
             # Changes were made, add the new layer.
-            container.add_layer(self.postgresql_service, new_layer, combine=True)
+            self._container.add_layer(self.postgresql_service, new_layer, combine=True)
             logging.info("Updated health checks")
 
     def _unit_name_to_pod_name(self, unit_name: str) -> str:
