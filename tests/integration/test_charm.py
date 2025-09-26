@@ -167,8 +167,8 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
 
     # Validate configuration exposed by Patroni.
     assert settings["postgresql"]["use_pg_rewind"] is True
-    assert settings["postgresql"]["remove_data_directory_on_rewind_failure"] is True
-    assert settings["postgresql"]["remove_data_directory_on_diverged_timelines"] is True
+    assert settings["postgresql"]["remove_data_directory_on_rewind_failure"] is False
+    assert settings["postgresql"]["remove_data_directory_on_diverged_timelines"] is False
 
 
 async def test_postgresql_locales(ops_test: OpsTest) -> None:
