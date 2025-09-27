@@ -57,7 +57,7 @@ jobs:
       - name: Install prometheus snap
         run: sudo snap install prometheus
       - name: Check validity of prometheus alert rules
-        run: promtool check rules src/alert_rules/prometheus/*
+        run: promtool check rules src/prometheus_alert_rules/*
       - name: Run unit tests for prometheus alert rules
         run: promtool test rules tests/alerts/*.yaml
 
