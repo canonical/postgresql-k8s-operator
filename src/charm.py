@@ -214,7 +214,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.pgbackrest_server_service = "pgbackrest server"
         self.ldap_sync_service = "ldap-sync"
         self.metrics_service = "metrics_server"
-        self.pgbackrest_metrics_service = "pgbackrest_metrics_exporter"
+        self.pgbackrest_metrics_service = "pgbackrest_metrics_service"
         self._unit = self.model.unit.name
         self._name = self.model.app.name
         self._namespace = self.model.name
