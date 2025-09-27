@@ -104,6 +104,7 @@ from constants import (
     MONITORING_USER,
     PATRONI_PASSWORD_KEY,
     PEER,
+    PGBACKREST_METRICS_PORT,
     PLUGIN_OVERRIDES,
     POSTGRES_LOG_FILES,
     REPLICATION_PASSWORD_KEY,
@@ -213,6 +214,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.pgbackrest_server_service = "pgbackrest server"
         self.ldap_sync_service = "ldap-sync"
         self.metrics_service = "metrics_server"
+        self.pgbackrest_metrics_service = "pgbackrest_metrics_exporter"
         self._unit = self.model.unit.name
         self._name = self.model.app.name
         self._namespace = self.model.name
@@ -299,6 +301,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Generate spec for Prometheus scraping."""
         return [
             {"static_configs": [{"targets": [f"*:{METRICS_PORT}"]}]},
+            {"static_configs": [{"targets": [f"*:{PGBACKREST_METRICS_PORT}"]}]},
             {
                 "static_configs": [{"targets": ["*:8008"]}],
                 "scheme": "https" if enable_tls else "http",
@@ -1805,7 +1808,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         }
 
     def _generate_metrics_service(self) -> dict:
-        """Generate the metrics service definition."""
+        """Generate the postgresql metrics service definition."""
         return {
             "override": "replace",
             "summary": "postgresql metrics exporter",
@@ -1825,6 +1828,18 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     "host=/var/run/postgresql port=5432 database=postgres"
                 ),
             },
+        }
+
+    def _generate_pgbackrest_metrics_service(self) -> dict:
+        """Generate the pgbackrest metrics service definition."""
+        return {
+            "override": "replace",
+            "summary": "pgbackrest metrics exporter",
+            "command": "/usr/bin/pgbackrest_exporter",
+            "startup": "enabled",
+            "after": [self.postgresql_service],
+            "user": WORKLOAD_OS_USER,
+            "group": WORKLOAD_OS_GROUP,
         }
 
     def _postgresql_layer(self) -> Layer:
@@ -1871,6 +1886,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     "startup": "disabled",
                 },
                 self.metrics_service: self._generate_metrics_service(),
+                self.pgbackrest_metrics_service: self._generate_pgbackrest_metrics_service(),
                 self.rotate_logs_service: {
                     "override": "replace",
                     "summary": "rotate logs",
