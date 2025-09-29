@@ -275,7 +275,11 @@ from ops.charm import (
 )
 from ops.framework import EventBase, EventSource, Object
 from ops.model import ActiveStatus, BlockedStatus, MaintenanceStatus, Relation, Unit, WaitingStatus
-from pydantic import BaseModel, root_validator, validator
+
+try:
+    from pydantic.v1 import BaseModel, root_validator, validator
+except ModuleNotFoundError:
+    from pydantic import BaseModel, root_validator, validator
 
 # The unique Charmhub library identifier, never change it
 LIBID = "156258aefb79435a93d933409a8c8684"
@@ -769,9 +773,9 @@ class DataUpgrade(Object, ABC):
 
         if self.charm.unit.is_leader():
             logger.debug("Persisting dependencies to upgrade relation data...")
-            self.peer_relation.data[self.charm.app].update(
-                {"dependencies": json.dumps(self.dependency_model.dict())}
-            )
+            self.peer_relation.data[self.charm.app].update({
+                "dependencies": json.dumps(self.dependency_model.dict())
+            })
 
     def _on_pre_upgrade_check_action(self, event: ActionEvent) -> None:
         """Handler for `pre-upgrade-check-action` events."""
@@ -801,9 +805,9 @@ class DataUpgrade(Object, ABC):
 
             if self.substrate == "k8s":
                 logger.info("Building upgrade-stack for K8s...")
-                built_upgrade_stack = sorted(
-                    [int(unit.name.split("/")[1]) for unit in self.app_units]
-                )
+                built_upgrade_stack = sorted([
+                    int(unit.name.split("/")[1]) for unit in self.app_units
+                ])
             else:
                 logger.info("Building upgrade-stack for VMs...")
                 built_upgrade_stack = self.build_upgrade_stack()
@@ -869,9 +873,12 @@ class DataUpgrade(Object, ABC):
 
             if not old_dep.can_upgrade(dependency=new_dep):
                 compatible = False
-                incompatibilities.append(
-                    (key, old_dep.version, new_dep.version, new_dep.upgrade_supported)
-                )
+                incompatibilities.append((
+                    key,
+                    old_dep.version,
+                    new_dep.version,
+                    new_dep.upgrade_supported,
+                ))
 
         base_message = "Versions incompatible"
         base_cause = "Upgrades only supported for specific versions"
@@ -965,9 +972,9 @@ class DataUpgrade(Object, ABC):
 
                 if self.charm.unit.is_leader():
                     logger.debug("Persisting new dependencies to upgrade relation data...")
-                    self.peer_relation.data[self.charm.app].update(
-                        {"dependencies": json.dumps(self.dependency_model.dict())}
-                    )
+                    self.peer_relation.data[self.charm.app].update({
+                        "dependencies": json.dumps(self.dependency_model.dict())
+                    })
                 return
 
             if self.cluster_state == "idle":
@@ -991,9 +998,9 @@ class DataUpgrade(Object, ABC):
             logger.debug(f"{top_unit} has finished upgrading, updating stack...")
 
             # writes the mutated attr back to rel data
-            self.peer_relation.data[self.charm.app].update(
-                {"upgrade-stack": json.dumps(self.upgrade_stack)}
-            )
+            self.peer_relation.data[self.charm.app].update({
+                "upgrade-stack": json.dumps(self.upgrade_stack)
+            })
 
             # recurse on leader to ensure relation changed event not lost
             # in case leader is next or the last unit to complete

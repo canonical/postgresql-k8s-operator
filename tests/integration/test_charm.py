@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import logging
+from typing import get_args
 
 import psycopg2
 import pytest
@@ -12,6 +13,8 @@ from lightkube.resources.core_v1 import Pod
 from psycopg2 import sql
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
+
+from locales import ROCK_LOCALES
 
 from .ha_tests.helpers import get_cluster_roles
 from .helpers import (
@@ -28,6 +31,7 @@ from .helpers import (
     get_password,
     get_primary,
     get_unit_address,
+    run_command_on_unit,
     scale_application,
 )
 
@@ -165,6 +169,21 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
     assert settings["postgresql"]["use_pg_rewind"] is True
     assert settings["postgresql"]["remove_data_directory_on_rewind_failure"] is False
     assert settings["postgresql"]["remove_data_directory_on_diverged_timelines"] is False
+
+
+async def test_postgresql_locales(ops_test: OpsTest) -> None:
+    raw_locales = await run_command_on_unit(
+        ops_test,
+        ops_test.model.applications[APP_NAME].units[0].name,
+        "locale -a",
+    )
+    locales = raw_locales.splitlines()
+    locales.sort()
+
+    # Juju 2 has an extra empty element
+    if "" in locales:
+        locales.remove("")
+    assert locales == list(get_args(ROCK_LOCALES))
 
 
 async def test_postgresql_parameters_change(ops_test: OpsTest) -> None:
