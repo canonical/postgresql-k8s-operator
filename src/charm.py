@@ -43,7 +43,6 @@ from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerU
 from charms.data_platform_libs.v1.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v1.loki_push_api import LogProxyConsumer
-from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
 from charms.tempo_coordinator_k8s.v0.charm_tracing import trace_charm
@@ -123,6 +122,7 @@ from constants import (
     SECRET_KEY_OVERRIDES,
     SPI_MODULE,
     SYSTEM_USERS,
+    TLS_CA_BUNDLE_FILE,
     TLS_CA_FILE,
     TLS_CERT_FILE,
     TLS_KEY_FILE,
@@ -146,6 +146,8 @@ from relations.logical_replication import (
     PostgreSQLLogicalReplication,
 )
 from relations.postgresql_provider import PostgreSQLProvider
+from relations.tls import TLS
+from relations.tls_transfer import TLSTransfer
 from upgrade import PostgreSQLUpgrade, get_postgresql_k8s_dependencies_model
 from utils import any_cpu_to_cores, any_memory_to_bytes, new_password
 
@@ -181,7 +183,7 @@ class CannotConnectError(Exception):
         PostgreSQLBackups,
         PostgreSQLLDAP,
         PostgreSQLProvider,
-        PostgreSQLTLS,
+        TLS,
         PostgreSQLUpgrade,
         RollingOpsManager,
     ),
@@ -259,7 +261,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.postgresql_client_relation = PostgreSQLProvider(self)
         self.backup = PostgreSQLBackups(self, "s3-parameters")
         self.ldap = PostgreSQLLDAP(self, "ldap")
-        self.tls = PostgreSQLTLS(self, PEER, [self.primary_endpoint, self.replicas_endpoint])
+        self.tls = TLS(self, PEER)
+        self.tls_transfer = TLSTransfer(self, PEER)
         self.async_replication = PostgreSQLAsyncReplication(self)
         self.logical_replication = PostgreSQLLogicalReplication(self)
         self.restart_manager = RollingOpsManager(
@@ -307,7 +310,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             {"static_configs": [{"targets": [f"*:{METRICS_PORT}"]}]},
             {
                 "static_configs": [{"targets": ["*:8008"]}],
-                "scheme": "https" if enable_tls else "http",
+                "scheme": "https",
                 "tls_config": {"insecure_skip_verify": True},
             },
         ]
@@ -1068,7 +1071,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         try:
             self.push_tls_files_to_workload()
-            for ca_secret_name in self.tls.get_ca_secret_names():
+            for ca_secret_name in self.tls_transfer.get_ca_secret_names():
                 self.push_ca_file_into_workload(ca_secret_name)
         except (PathError, ProtocolError) as e:
             logger.error(
@@ -1788,9 +1791,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @property
     def is_tls_enabled(self) -> bool:
         """Return whether TLS is enabled."""
-        if not self.model.get_relation(PEER):
-            return False
-        return all(self.tls.get_tls_files())
+        return all(self.tls.get_client_tls_files())
 
     @property
     def _endpoint(self) -> str:
@@ -1996,8 +1997,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Uploads TLS files to the workload container."""
         container = self.unit.get_container("postgresql")
 
-        key, ca, cert = self.tls.get_tls_files()
-
+        key, ca, cert = self.tls.get_client_tls_files()
         if key is not None:
             self._push_file_to_workload(container, f"{self._storage_path}/{TLS_KEY_FILE}", key)
         if ca is not None:
@@ -2006,6 +2006,22 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             container.exec(["update-ca-certificates"]).wait()
         if cert is not None:
             self._push_file_to_workload(container, f"{self._storage_path}/{TLS_CERT_FILE}", cert)
+
+        key, ca, cert = self.tls.get_peer_tls_files()
+        if key is not None:
+            self._push_file_to_workload(
+                container, f"{self._storage_path}/peer_{TLS_KEY_FILE}", key
+            )
+        if ca is not None:
+            self._push_file_to_workload(container, f"{self._storage_path}/peer_{TLS_CA_FILE}", ca)
+        if cert is not None:
+            self._push_file_to_workload(
+                container, f"{self._storage_path}/peer_{TLS_CERT_FILE}", cert
+            )
+
+        self._push_file_to_workload(
+            container, f"{self._storage_path}/{TLS_CA_BUNDLE_FILE}", self.tls.get_peer_ca_bundle()
+        )
 
         return self.update_config()
 

@@ -103,7 +103,7 @@ class PostgreSQLProvider(Object):
             return
         self.charm.set_secret(APP_SCOPE, USERNAME_MAPPING_LABEL, json.dumps(username_mapping))
 
-    def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:
+    def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:  # noqa: C901
         """Handle the legacy postgresql-client relation changed event.
 
         Generate password and handle user and database creation for the related application.
@@ -187,7 +187,9 @@ class PostgreSQLProvider(Object):
 
             # Set TLS CA
             if self.charm.is_tls_enabled:
-                _, ca, _ = self.charm.tls.get_tls_files()
+                _, ca, _ = self.charm.tls.get_client_tls_files()
+                if not ca:
+                    ca = ""
                 self.database_provides.set_tls_ca(event.relation.id, ca)
 
             # Update the read-only endpoint.
@@ -332,9 +334,10 @@ class PostgreSQLProvider(Object):
             return
 
         relations = self.model.relations[self.relation_name]
+        ca = None
         if tls == "True":
-            _, ca, _ = self.charm.tls.get_tls_files()
-        else:
+            _, ca, _ = self.charm.tls.get_client_tls_files()
+        if not ca:
             ca = ""
 
         for relation in relations:
