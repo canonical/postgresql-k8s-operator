@@ -466,7 +466,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             password=self.get_secret(APP_SCOPE, f"{USER}-password"),  # type: ignore
             database=DATABASE_DEFAULT_NAME,
             system_users=SYSTEM_USERS,
-            container=self._container,
         )
 
     @property
