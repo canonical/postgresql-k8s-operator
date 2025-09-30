@@ -3,7 +3,6 @@
 import itertools
 import json
 import logging
-from datetime import datetime
 from unittest import TestCase
 from unittest.mock import MagicMock, Mock, PropertyMock, call, patch, sentinel
 
@@ -18,7 +17,7 @@ from ops.model import (
     RelationDataTypeError,
     WaitingStatus,
 )
-from ops.pebble import Change, ChangeError, ChangeID, ServiceStatus
+from ops.pebble import ChangeError, ServiceStatus
 from ops.testing import Harness
 from requests import ConnectionError as RequestsConnectionError
 from tenacity import RetryError, wait_fixed
