@@ -72,10 +72,11 @@ class TLS(Object):
         return peer_addrs
 
     def _get_common_name(self) -> str:
-        return self.charm.unit_peer_data.get("database-address") or self.host
+        unit_id = self.charm.unit.name.split("/")[1]
+        return f"{self.charm.app.name}-{unit_id}.{self.charm.app.name}-endpoints"
 
     def _get_peer_common_name(self) -> str:
-        return self.charm.unit_peer_data.get("database-peers-address") or self.host
+        return self._get_common_name()
 
     def __init__(self, charm: "PostgresqlOperatorCharm", peer_relation: str):
         super().__init__(charm, "client-relations")

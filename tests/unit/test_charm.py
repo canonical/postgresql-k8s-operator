@@ -210,6 +210,7 @@ def test_on_postgresql_pebble_ready(harness):
         patch("charm.PostgresqlOperatorCharm._patch_pod_labels"),
         patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
         patch("charm.PostgresqlOperatorCharm._create_pgdata") as _create_pgdata,
+        patch("charm.PostgresqlOperatorCharm.get_secret", return_value="secret"),
     ):
         _rock_postgresql_version.return_value = "16.6"
 

@@ -48,7 +48,7 @@ def test_generate_internal_peer_cert(harness):
 
         _generate_csr.assert_called_once_with(
             sentinel.cert_key,
-            common_name="postgresql-k8s-0",
+            common_name="postgresql-k8s-0.postgresql-k8s-endpoints",
             sans_ip=frozenset(),
             sans_dns=frozenset({"postgresql-k8s-0", "fqdn"}),
         )

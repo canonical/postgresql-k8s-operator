@@ -1069,6 +1069,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             event.defer()
             return
 
+        if not self.get_secret(APP_SCOPE, "internal-ca"):
+            logger.info("leader not elected and/or internal CA not yet generated")
+            event.defer()
+            return
+        if not self.get_secret(UNIT_SCOPE, "internal-cert"):
+            self.tls.generate_internal_peer_cert()
+
         try:
             self.push_tls_files_to_workload()
             for ca_secret_name in self.tls_transfer.get_ca_secret_names():
