@@ -909,7 +909,7 @@ def test_postgresql_layer(harness):
                     "override": "replace",
                     "level": "ready",
                     "http": {
-                        "url": "http://postgresql-k8s-0.postgresql-k8s-endpoints:8008/health",
+                        "url": "https://postgresql-k8s-0.postgresql-k8s-endpoints:8008/health",
                     },
                 }
             },

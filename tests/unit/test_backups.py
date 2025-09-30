@@ -98,18 +98,6 @@ def test_can_initialise_stanza(harness):
         _member_started.return_value = False
         assert harness.charm.backup._can_initialise_stanza is False
 
-        # Test when the unit hasn't configured TLS yet while other unit already has TLS enabled.
-        harness.add_relation_unit(
-            harness.model.get_relation(PEER).id, f"{harness.charm.app.name}/1"
-        )
-        with harness.hooks_disabled():
-            harness.update_relation_data(
-                harness.model.get_relation(PEER).id,
-                f"{harness.charm.app.name}/1",
-                {"tls": "enabled"},
-            )
-        assert harness.charm.backup._can_initialise_stanza is False
-
         # Test when everything is ok to initialise the stanza.
         _member_started.return_value = True
         assert harness.charm.backup._can_initialise_stanza is True
@@ -144,32 +132,13 @@ def test_can_unit_perform_backup(harness):
         harness.charm.unit.status = ActiveStatus()
         _is_primary.return_value = True
         _planned_units.return_value = 2
-        with harness.hooks_disabled():
-            harness.update_relation_data(
-                peer_rel_id,
-                harness.charm.unit.name,
-                {"tls": "True"},
-            )
         assert harness.charm.backup._can_unit_perform_backup() == (
             False,
             "Unit cannot perform backups as it is the cluster primary",
         )
 
-        # Test when running the check in a replica and TLS is disabled.
-        _is_primary.return_value = False
-        with harness.hooks_disabled():
-            harness.update_relation_data(
-                peer_rel_id,
-                harness.charm.unit.name,
-                {"tls": ""},
-            )
-        assert harness.charm.backup._can_unit_perform_backup() == (
-            False,
-            "Unit cannot perform backups as TLS is not enabled",
-        )
-
         # Test when Patroni or PostgreSQL hasn't started yet.
-        _is_primary.return_value = True
+        _is_primary.return_value = False
         _member_started.return_value = False
         assert harness.charm.backup._can_unit_perform_backup() == (
             False,

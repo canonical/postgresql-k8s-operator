@@ -1759,7 +1759,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.get_secret(APP_SCOPE, USER_PASSWORD_KEY),
             self.get_secret(APP_SCOPE, REPLICATION_PASSWORD_KEY),
             self.get_secret(APP_SCOPE, REWIND_PASSWORD_KEY),
-            bool(self.unit_peer_data.get("tls")),
             self.get_secret(APP_SCOPE, PATRONI_PASSWORD_KEY),
         )
 
