@@ -660,23 +660,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             event.defer()
             return
 
-        # Restart the workload if it's stuck on the starting state after a timeline divergence
-        # due to a backup that was restored.
-        if (
-            not self.is_primary
-            and not self.is_standby_leader
-            and (
-                self._patroni.member_replication_lag == "unknown"
-                or int(self._patroni.member_replication_lag) > 1000
-            )
-        ):
-            logger.warning("Workload failure detected. Reinitialising unit.")
-            self.unit.status = MaintenanceStatus("reinitialising replica")
-            self._patroni.reinitialize_postgresql()
-            logger.debug("Deferring on_peer_relation_changed: reinitialising replica")
-            event.defer()
-            return
-
         try:
             self.postgresql_client_relation.update_read_only_endpoint()
         except ModelError as e:
@@ -1627,9 +1610,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         ) and not self._was_restore_successful(self._container, services[0]):
             return
 
-        if self._handle_processes_failures():
-            return
-
         # Update the sync-standby endpoint in the async replication data.
         self.async_replication.update_async_replication_data()
 
@@ -1705,49 +1685,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             })
 
         return True
-
-    def _handle_processes_failures(self) -> bool:
-        """Handle Patroni and PostgreSQL OS processes failures.
-
-        Returns:
-            a bool indicating whether the charm performed any action.
-        """
-        # Restart the Patroni process if it was killed (in that case, the PostgreSQL
-        # process is still running). This is needed until
-        # https://github.com/canonical/pebble/issues/149 is resolved.
-        if not self._patroni.member_started and self._patroni.is_database_running:
-            try:
-                self._container.restart(self.postgresql_service)
-                logger.info("restarted Patroni because it was not running")
-            except ChangeError:
-                logger.error("failed to restart Patroni after checking that it was not running")
-                return False
-            return True
-
-        try:
-            is_primary = self.is_primary
-            is_standby_leader = self.is_standby_leader
-        except RetryError:
-            return False
-
-        if (
-            not is_primary
-            and not is_standby_leader
-            and self._patroni.member_started
-            and not self._patroni.member_streaming
-        ):
-            try:
-                logger.warning("Degraded member detected: reinitialising unit")
-                self.unit.status = MaintenanceStatus("reinitialising replica")
-                self._patroni.reinitialize_postgresql()
-            except RetryError:
-                logger.error(
-                    "failed to reinitialise replica after checking that it was not streaming from primary"
-                )
-                return False
-            return True
-
-        return False
 
     @property
     def _patroni(self):
