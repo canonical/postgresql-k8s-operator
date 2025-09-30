@@ -907,7 +907,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         unit_id = member.split("-")[-1]
         return f"{self.app.name}-{unit_id}.{self.app.name}-endpoints"
 
-    def _on_leader_elected(self, event: LeaderElectedEvent) -> None:
+    def _on_leader_elected(self, event: LeaderElectedEvent) -> None:  # noqa: C901
         """Handle the leader-elected event."""
         # consider configured system user passwords
         system_user_passwords = {}
@@ -941,6 +941,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # (the cluster should start with only this member).
         if self._endpoint not in self._endpoints:
             self._add_to_endpoints(self._endpoint)
+
+        if not self.get_secret(APP_SCOPE, "internal-ca"):
+            self.tls.generate_internal_peer_ca()
 
         self._cleanup_old_cluster_resources()
 

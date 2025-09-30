@@ -75,6 +75,7 @@ def test_on_leader_elected(harness):
         patch("charm.PostgresqlOperatorCharm._create_services") as _create_services,
         patch("charm.PostgreSQLUpgrade.idle", new_callable=PropertyMock) as _idle,
         patch("charm.PostgresqlOperatorCharm.get_secret_from_id", return_value={}),
+        patch("charm.PostgresqlOperatorCharm.get_secret_from_id", return_value={}),
     ):
         rel_id = harness.model.get_relation(PEER).id
         # Check that a new password was generated on leader election and nothing is done
@@ -92,7 +93,7 @@ def test_on_leader_elected(harness):
             [MagicMock(metadata=MagicMock(name="fakeName2", namespace="fakeNamespace"))],
         ]
         harness.set_leader()
-        assert _set_secret.call_count == 5
+        assert _set_secret.call_count == 7
         _set_secret.assert_any_call("app", "operator-password", "sekr1t")
         _set_secret.assert_any_call("app", "replication-password", "sekr1t")
         _set_secret.assert_any_call("app", "rewind-password", "sekr1t")
