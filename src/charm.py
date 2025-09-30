@@ -84,7 +84,9 @@ from ops.pebble import (
     ServiceStatus,
 )
 from requests import ConnectionError as RequestsConnectionError
-from single_kernel_postgresql.config.literals import Substrates
+from single_kernel_postgresql.config.literals import (
+    Substrates,
+)
 from single_kernel_postgresql.utils.postgresql import (
     ACCESS_GROUP_IDENTITY,
     ACCESS_GROUPS,
@@ -1015,7 +1017,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Create the PostgreSQL data directory."""
         if not container.exists(self.pgdata_path):
             container.make_dir(
-                self.pgdata_path, permissions=0o750, user=WORKLOAD_OS_USER, group=WORKLOAD_OS_GROUP
+                self.pgdata_path, permissions=0o700, user=WORKLOAD_OS_USER, group=WORKLOAD_OS_GROUP
             )
         # Also, fix the permissions from the parent directory.
         container.exec([
