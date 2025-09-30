@@ -430,19 +430,6 @@ class Patroni:
 
         return r.json().get("replication_state") == "streaming"
 
-    @property
-    def is_database_running(self) -> bool:
-        """Returns whether the PostgreSQL database process is running (and isn't frozen)."""
-        container = self._charm.unit.get_container("postgresql")
-        output = container.exec(["ps", "aux"]).wait_output()
-        postgresql_processes = [
-            process
-            for process in output[0].split("/n")
-            if "/usr/lib/postgresql/14/bin/postgres" in process
-        ]
-        # Check whether the PostgreSQL process has a state equal to T (frozen).
-        return any(process for process in postgresql_processes if process.split()[7] != "T")
-
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def bulk_update_parameters_controller_by_patroni(self, parameters: dict[str, Any]) -> None:
         """Update the value of a parameter controller by Patroni.
