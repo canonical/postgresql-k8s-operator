@@ -18,6 +18,7 @@ lightkube = "^0.17.2"
 lightkube-models = "^1.28.1.4"
 psycopg2 = "^2.9.10"
 postgresql-charms-single-kernel = "0.0.1"
+charm-refresh = "^3.1.0.2"
 
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py
@@ -72,6 +73,12 @@ boto3 = "*"
 tenacity = "^9.1.2"
 allure-pytest = "^2.15.0"
 jubilant = "^1.4.0"
+
+[tool.poetry.group.build-refresh-version]
+optional = true
+
+[tool.poetry.group.build-refresh-version.dependencies]
+charm-refresh-build-version = "^0.4.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

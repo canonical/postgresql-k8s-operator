@@ -72,6 +72,7 @@ from ops import (
     WorkloadEvent,
     main,
 )
+from ops.log import JujuLogHandler
 from ops.pebble import (
     ChangeError,
     ExecError,
@@ -150,6 +151,8 @@ from upgrade import PostgreSQLUpgrade, get_postgresql_k8s_dependencies_model
 from utils import any_cpu_to_cores, any_memory_to_bytes, new_password
 
 logger = logging.getLogger(__name__)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
 
 EXTENSIONS_DEPENDENCY_MESSAGE = "Unsatisfied plugin dependencies. Please check the logs"
 EXTENSION_OBJECT_MESSAGE = "Cannot disable plugins: Existing objects depend on it. See logs"
@@ -194,6 +197,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def __init__(self, *args):
         super().__init__(*args)
+
+        # Show logger name (module name) in logs
+        root_logger = logging.getLogger()
+        for handler in root_logger.handlers:
+            if isinstance(handler, JujuLogHandler):
+                handler.setFormatter(logging.Formatter("{name}:{message}", style="{"))
 
         # Support for disabling the operator.
         disable_file = Path(f"{os.environ.get('CHARM_DIR')}/disable")
@@ -1034,8 +1043,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Create the PostgreSQL data directory. This is needed on cloud environments
         # where the volume is mounted with more restrictive permissions.
         self._create_pgdata(container)
-
-        self.unit.set_workload_version(self._patroni.rock_postgresql_version)
 
         # Defer the initialization of the workload in the replicas
         # if the cluster hasn't been bootstrap on the primary yet.

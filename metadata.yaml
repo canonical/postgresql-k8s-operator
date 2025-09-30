@@ -46,6 +46,8 @@ resources:
 peers:
   database-peers:
     interface: postgresql_peers
+  refresh-v-three:
+    interface: refresh
   restart:
     interface: rolling_op
   upgrade:
