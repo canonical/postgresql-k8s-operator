@@ -82,6 +82,9 @@ backends:
       sudo passwd -d runner
 
       ADDRESS localhost
+
+      sudo mkdir -p /var/snap/microk8s/common/default-storage
+      sudo mount --bind /mnt /var/snap/microk8s/common/default-storage
     # HACK: spread does not pass environment variables set on runner
     # Manually pass specific environment variables
     environment:
