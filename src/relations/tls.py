@@ -90,7 +90,12 @@ class TLS(Object):
         else:
             client_addresses = set()
             peer_addresses = set()
-        self.common_hosts = {self.host}
+        self.common_hosts = {
+            self.host,
+            self._get_common_name(),
+            self.charm.primary_endpoint,
+            self.charm.replicas_endpoint,
+        }
         if fqdn := socket.getfqdn():
             self.common_hosts.add(fqdn)
 

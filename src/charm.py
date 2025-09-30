@@ -1963,9 +1963,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 container, f"{self._storage_path}/peer_{TLS_CERT_FILE}", cert
             )
 
-        self._push_file_to_workload(
-            container, f"{self._storage_path}/{TLS_CA_BUNDLE_FILE}", self.tls.get_peer_ca_bundle()
-        )
+        # CA bundle is not secret
+        with open(f"/tmp/{TLS_CA_BUNDLE_FILE}", "w") as fp:  # noqa: S108
+            fp.write(self.tls.get_peer_ca_bundle())
 
         return self.update_config()
 

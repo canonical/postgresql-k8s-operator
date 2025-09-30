@@ -108,11 +108,11 @@ restapi:
     username: patroni
     password: {{ patroni_password }}
   {%- endif %}
-  cafile: {{ conf_path }}/peer_ca.pem
-  certfile: {{ conf_path }}/peer_cert.pem
-  keyfile: {{ conf_path }}/peer_key.pem
+  cafile: {{ storage_path }}/peer_ca.pem
+  certfile: {{ storage_path }}/peer_cert.pem
+  keyfile: {{ storage_path }}/peer_key.pem
 ctl:
-  cacert: {{ conf_path }}/peer_ca.pem
+  cacert: {{ storage_path }}/peer_ca.pem
 pod_ip: '{{ endpoint }}'
 postgresql:
   basebackup:
