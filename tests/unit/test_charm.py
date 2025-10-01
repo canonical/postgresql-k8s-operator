@@ -209,6 +209,7 @@ def test_on_postgresql_pebble_ready(harness):
         patch("charm.PostgreSQLUpgrade.idle", new_callable=PropertyMock) as _idle,
         patch("charm.PostgresqlOperatorCharm._patch_pod_labels"),
         patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
+        patch("charm.PostgresqlOperatorCharm._push_file_to_workload"),
         patch("charm.PostgresqlOperatorCharm._create_pgdata") as _create_pgdata,
         patch("charm.PostgresqlOperatorCharm.get_secret", return_value="secret"),
     ):
@@ -888,8 +889,12 @@ def test_postgresql_layer(harness):
                 POSTGRESQL_SERVICE: {
                     "override": "replace",
                     "level": "ready",
-                    "http": {
-                        "url": "https://postgresql-k8s-0.postgresql-k8s-endpoints:8008/health",
+                    "exec": {
+                        "command": "python3 /self_signed_checker.py",
+                        "user": "postgres",
+                        "environment": {
+                            "ENDPOINT": "https://postgresql-k8s-0.postgresql-k8s-endpoints:8008/health",
+                        },
                     },
                 }
             },

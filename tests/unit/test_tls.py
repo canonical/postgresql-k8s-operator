@@ -50,7 +50,13 @@ def test_generate_internal_peer_cert(harness):
             sentinel.cert_key,
             common_name="postgresql-k8s-0.postgresql-k8s-endpoints",
             sans_ip=frozenset(),
-            sans_dns=frozenset({"postgresql-k8s-0", "fqdn"}),
+            sans_dns=frozenset({
+                "postgresql-k8s-0",
+                "postgresql-k8s-0.postgresql-k8s-endpoints",
+                "postgresql-k8s-primary.None.svc.cluster.local",
+                "fqdn",
+                "postgresql-k8s-replicas.None.svc.cluster.local",
+            }),
         )
         _generate_certificate.assert_called_once_with(
             sentinel.cert_csr, sentinel.ca_cert, sentinel.ca_key, validity=timedelta(days=7300)
