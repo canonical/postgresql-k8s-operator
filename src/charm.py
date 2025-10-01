@@ -240,6 +240,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # add specific handler for updated system-user secrets
         self.framework.observe(self.on.secret_changed, self._on_secret_changed)
         self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
+        self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
         self.framework.observe(self.on.data_storage_detaching, self._on_pgdata_storage_detaching)
         self.framework.observe(self.on.stop, self._on_stop)
@@ -1021,12 +1022,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             "/var/lib/postgresql/temp",
         ]).wait()
 
-    def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
-        """Event handler for PostgreSQL container on PebbleReadyEvent."""
+    def _on_start(self, _) -> None:
         # Make sure the CA bubdle file exists
         # Bundle is not secret
         Path(f"/tmp/{TLS_CA_BUNDLE_FILE}").touch()  # noqa: S108
 
+    def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
+        """Event handler for PostgreSQL container on PebbleReadyEvent."""
         if self._endpoint in self._endpoints:
             self._fix_pod()
 
