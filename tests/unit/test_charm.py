@@ -186,6 +186,7 @@ def test_get_unit_ip(harness):
 
 def test_on_postgresql_pebble_ready(harness):
     with (
+        patch("charm.Path"),
         patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
         patch(
             "charm.Patroni.rock_postgresql_version", new_callable=PropertyMock

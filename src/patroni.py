@@ -478,15 +478,12 @@ class Patroni:
         Args:
             slots: dictionary of slots in the {slot: database} format.
         """
-        try:
-            current_config = requests.get(
-                f"{self._patroni_url}/config",
-                verify=self._verify,
-                timeout=PATRONI_TIMEOUT,
-                auth=self._patroni_auth,
-            )
-        except Exception as e:
-            logger.warning(f"Ensure slots: unable to call Patroni API {e}")
+        current_config = requests.get(
+            f"{self._patroni_url}/config",
+            verify=self._verify,
+            timeout=PATRONI_TIMEOUT,
+            auth=self._patroni_auth,
+        )
         slots_patch: dict[str, dict[str, str] | None] = dict.fromkeys(
             current_config.json().get("slots", ())
         )

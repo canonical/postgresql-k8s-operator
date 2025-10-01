@@ -1023,6 +1023,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
         """Event handler for PostgreSQL container on PebbleReadyEvent."""
+        # Make sure the CA bubdle file exists
+        # Bundle is not secret
+        Path(f"/tmp/{TLS_CA_BUNDLE_FILE}").touch()  # noqa: S108
+
         if self._endpoint in self._endpoints:
             self._fix_pod()
 
