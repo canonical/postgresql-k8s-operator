@@ -235,7 +235,7 @@ async def check_patroni(ops_test: OpsTest, unit_name: str, restart_time: float) 
         whether Patroni is running correctly.
     """
     unit_ip = await get_unit_address(ops_test, unit_name)
-    health_info = requests.get(f"http://{unit_ip}:8008/health").json()
+    health_info = requests.get(f"https://{unit_ip}:8008/health", verify=False).json()
     postmaster_start_time = datetime.strptime(
         health_info["postmaster_start_time"], "%Y-%m-%d %H:%M:%S.%f%z"
     ).timestamp()
@@ -274,7 +274,7 @@ def convert_records_to_dict(records: list[tuple]) -> dict:
 async def count_switchovers(ops_test: OpsTest, unit_name: str) -> int:
     """Return the number of performed switchovers."""
     unit_address = await get_unit_address(ops_test, unit_name)
-    switchover_history_info = requests.get(f"http://{unit_address}:8008/history")
+    switchover_history_info = requests.get(f"https://{unit_address}:8008/history", verify=False)
     return len(switchover_history_info.json())
 
 
@@ -394,7 +394,7 @@ def get_cluster_members(endpoint: str) -> list[str]:
     Returns:
         list of Patroni cluster members
     """
-    r = requests.get(f"http://{endpoint}:8008/cluster")
+    r = requests.get(f"https://{endpoint}:8008/cluster", verify=False)
     return [member["name"] for member in r.json()["members"]]
 
 
@@ -639,7 +639,7 @@ async def check_tls_patroni_api(ops_test: OpsTest, unit_name: str, enabled: bool
                 # 'verify=False' is used here because the unit IP that is used in the test
                 # doesn't match the certificate hostname (that is a k8s hostname).
                 health_info = requests.get(
-                    f"{'https' if enabled else 'http'}://{unit_address}:8008/health",
+                    f"https://{unit_address}:8008/health",
                     verify=False,
                 )
                 return health_info.status_code == 200
@@ -686,7 +686,9 @@ async def restart_patroni(ops_test: OpsTest, unit_name: str, password: str) -> N
     """
     unit_ip = await get_unit_address(ops_test, unit_name)
     requests.post(
-        f"http://{unit_ip}:8008/restart", auth=requests.auth.HTTPBasicAuth("patroni", password)
+        f"https://{unit_ip}:8008/restart",
+        verify=False,
+        auth=requests.auth.HTTPBasicAuth("patroni", password),
     )
 
 
@@ -798,18 +800,19 @@ async def switchover(
     for attempt in Retrying(stop=stop_after_attempt(60), wait=wait_fixed(3), reraise=True):
         with attempt:
             response = requests.post(
-                f"http://{primary_ip}:8008/switchover",
+                f"https://{primary_ip}:8008/switchover",
                 json={
                     "leader": current_primary.replace("/", "-"),
                     "candidate": candidate.replace("/", "-") if candidate else None,
                 },
+                verify=False,
                 auth=requests.auth.HTTPBasicAuth("patroni", password),
             )
             assert response.status_code == 200, f"Switchover status code is {response.status_code}"
     app_name = current_primary.split("/")[0]
     for attempt in Retrying(stop=stop_after_attempt(30), wait=wait_fixed(2), reraise=True):
         with attempt:
-            response = requests.get(f"http://{primary_ip}:8008/cluster")
+            response = requests.get(f"https://{primary_ip}:8008/cluster", verify=False)
             assert response.status_code == 200
             standbys = len([
                 member for member in response.json()["members"] if member["role"] == "sync_standby"

@@ -79,7 +79,7 @@ async def test_database_is_up(ops_test: OpsTest, unit_id: int):
     # Query Patroni REST API and check the status that indicates
     # both Patroni and PostgreSQL are up and running.
     host = await get_unit_address(ops_test, f"{APP_NAME}/{unit_id}")
-    result = requests.get(f"http://{host}:8008/health")
+    result = requests.get(f"https://{host}:8008/health", verify=False)
     assert result.status_code == 200
 
 
@@ -88,7 +88,7 @@ async def test_exporter_is_up(ops_test: OpsTest, unit_id: int):
     # Query exporter metrics endpoint and check the status that indicates
     # metrics are available for scraping.
     host = await get_unit_address(ops_test, f"{APP_NAME}/{unit_id}")
-    result = requests.get(f"http://{host}:9187/metrics")
+    result = requests.get(f"https://{host}:9187/metrics", verify=False)
     assert result.status_code == 200
     assert "pg_exporter_last_scrape_error 0" in result.content.decode("utf8"), (
         "Scrape error in postgresql_prometheus_exporter"
@@ -162,7 +162,7 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
     assert settings["wal_level"] == "logical"
 
     # Retrieve settings from Patroni REST API.
-    result = requests.get(f"http://{host}:8008/config")
+    result = requests.get(f"https://{host}:8008/config", verify=False)
     settings = result.json()
 
     # Validate configuration exposed by Patroni.
