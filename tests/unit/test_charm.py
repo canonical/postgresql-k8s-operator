@@ -73,7 +73,6 @@ def test_on_leader_elected(harness):
         patch("charm.Patroni.reload_patroni_configuration"),
         patch("charm.PostgresqlOperatorCharm._patch_pod_labels"),
         patch("charm.PostgresqlOperatorCharm._create_services") as _create_services,
-        patch("charm.PostgreSQLUpgrade.idle", new_callable=PropertyMock) as _idle,
         patch("charm.PostgresqlOperatorCharm.get_secret_from_id", return_value={}),
     ):
         rel_id = harness.model.get_relation(PEER).id
@@ -142,19 +141,11 @@ def test_on_leader_elected(harness):
         response = Mock()
         response.json.return_value = {"code": 403}
         _create_services.side_effect = ApiError(response=response)
-        _idle.return_value = True
         harness.set_leader(False)
         harness.set_leader()
 
         assert isinstance(harness.charm.unit.status, BlockedStatus)
         assert harness.charm.unit.status.message == "failed to create k8s services"
-
-        # No error when upgrading the cluster.
-        harness.charm.unit.status = ActiveStatus()
-        _idle.return_value = False
-        harness.set_leader(False)
-        harness.set_leader()
-        assert isinstance(harness.charm.unit.status, ActiveStatus)
 
         # No trust when annotating
         _client.return_value.get.side_effect = ApiError(response=response)
@@ -187,9 +178,6 @@ def test_on_postgresql_pebble_ready(harness):
     with (
         patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
         patch(
-            "charm.Patroni.rock_postgresql_version", new_callable=PropertyMock
-        ) as _rock_postgresql_version,
-        patch(
             "charm.Patroni.primary_endpoint_ready", new_callable=PropertyMock
         ) as _primary_endpoint_ready,
         patch(
@@ -199,19 +187,16 @@ def test_on_postgresql_pebble_ready(harness):
         patch("charm.PostgresqlOperatorCharm.postgresql") as _postgresql,
         patch(
             "charm.PostgresqlOperatorCharm._create_services",
-            side_effect=[None, _FakeApiError, _FakeApiError, None],
+            side_effect=[None, _FakeApiError, None],
         ) as _create_services,
         patch("charm.Patroni.member_started") as _member_started,
         patch(
             "charm.PostgresqlOperatorCharm.push_tls_files_to_workload"
         ) as _push_tls_files_to_workload,
-        patch("charm.PostgreSQLUpgrade.idle", new_callable=PropertyMock) as _idle,
         patch("charm.PostgresqlOperatorCharm._patch_pod_labels"),
         patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
         patch("charm.PostgresqlOperatorCharm._create_pgdata") as _create_pgdata,
     ):
-        _rock_postgresql_version.return_value = "16.6"
-
         # Mock the primary endpoint ready property values.
         _primary_endpoint_ready.side_effect = [False, True, True]
 
@@ -232,15 +217,9 @@ def test_on_postgresql_pebble_ready(harness):
         _set_active_status.assert_not_called()
 
         # Check for a Blocked status when a failure happens.
-        _idle.return_value = True
         harness.container_pebble_ready(POSTGRESQL_CONTAINER)
         assert isinstance(harness.model.unit.status, BlockedStatus)
         _set_active_status.assert_not_called()
-
-        # No error when upgrading the cluster.
-        _idle.return_value = False
-        harness.container_pebble_ready(POSTGRESQL_CONTAINER)
-        _set_active_status.assert_called_once()
 
         # Check for the Active status.
         _set_active_status.reset_mock()
@@ -260,14 +239,10 @@ def test_on_postgresql_pebble_ready(harness):
 
 def test_on_postgresql_pebble_ready_no_connection(harness):
     with (
-        patch(
-            "charm.Patroni.rock_postgresql_version", new_callable=PropertyMock
-        ) as _rock_postgresql_version,
         patch("charm.PostgresqlOperatorCharm._create_pgdata"),
     ):
         mock_event = MagicMock()
         mock_event.workload = harness.model.unit.get_container(POSTGRESQL_CONTAINER)
-        _rock_postgresql_version.return_value = "16.6"
 
         harness.charm._on_postgresql_pebble_ready(mock_event)
 
@@ -287,9 +262,6 @@ def test_on_config_changed(harness):
         patch(
             "charm.PostgresqlOperatorCharm._validate_config_options"
         ) as _validate_config_options,
-        patch(
-            "charm.PostgreSQLUpgrade.idle", return_value=False, new_callable=PropertyMock
-        ) as _idle,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
         patch(
             "charm.PostgresqlOperatorCharm.updated_synchronous_node_count", return_value=True
@@ -313,15 +285,8 @@ def test_on_config_changed(harness):
         mock_event.defer.assert_called_once_with()
         mock_event.defer.reset_mock()
 
-        # Defers if upgrade is not idle
+        # Defers on db connection error
         _is_cluster_initialised.return_value = True
-        mock_event = Mock()
-        harness.charm._on_config_changed(mock_event)
-        mock_event.defer.assert_called_once_with()
-        mock_event.defer.reset_mock()
-
-        # Deferst on db connection error
-        _idle.return_value = True
         _validate_config_options.side_effect = psycopg2.OperationalError
         harness.charm._on_config_changed(mock_event)
         mock_event.defer.assert_called_once_with()
@@ -383,7 +348,6 @@ def test_on_update_status(harness):
         patch("charm.Patroni.get_primary") as _get_primary,
         patch("ops.model.Container.pebble") as _pebble,
         patch("ops.model.Container.restart") as _restart,
-        patch("upgrade.PostgreSQLUpgrade.idle", return_value="idle"),
         patch(
             "charm.PostgresqlOperatorCharm.is_standby_leader",
             new_callable=PropertyMock,
@@ -467,7 +431,6 @@ def test_on_update_status_with_error_on_get_primary(harness):
         patch("charm.Patroni.member_started") as _member_started,
         patch("charm.Patroni.get_primary") as _get_primary,
         patch("ops.model.Container.pebble") as _pebble,
-        patch("upgrade.PostgreSQLUpgrade.idle", return_value=True),
     ):
         # Mock the access to the list of Pebble services.
         _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.ACTIVE)]
@@ -641,7 +604,6 @@ def test_on_update_status_after_restore_operation(harness):
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
         patch("ops.model.Container.pebble") as _pebble,
-        patch("upgrade.PostgreSQLUpgrade.idle", return_value=True),
     ):
         rel_id = harness.model.get_relation(PEER).id
         # Mock the access to the list of Pebble services to test a failed restore.
@@ -710,29 +672,17 @@ def test_on_update_status_after_restore_operation(harness):
 def test_on_upgrade_charm(harness):
     with (
         patch(
-            "charms.data_platform_libs.v0.upgrade.DataUpgrade._upgrade_supported_check"
-        ) as _upgrade_supported_check,
-        patch(
             "charm.PostgresqlOperatorCharm._patch_pod_labels",
-            side_effect=[None, _FakeApiError, None],
+            side_effect=[_FakeApiError, None],
         ) as _patch_pod_labels,
         patch(
             "charm.PostgresqlOperatorCharm._create_services",
             side_effect=[_FakeApiError, None, None],
         ) as _create_services,
-        patch("charm.PostgreSQLUpgrade.idle", new_callable=PropertyMock) as _idle,
     ):
-        # Test when the cluster is being upgraded.
-        harness.charm.unit.status = ActiveStatus()
-        _idle.return_value = False
-        harness.charm.on.upgrade_charm.emit()
-        _create_services.assert_not_called()
-        _patch_pod_labels.assert_called_once()
-        assert isinstance(harness.charm.unit.status, ActiveStatus)
-
         # Test with a problem happening when trying to create the k8s resources.
+        harness.charm.unit.status = ActiveStatus()
         _patch_pod_labels.reset_mock()
-        _idle.return_value = True
         harness.charm.on.upgrade_charm.emit()
         _create_services.assert_called_once()
         _patch_pod_labels.assert_not_called()
@@ -1355,7 +1305,6 @@ def test_update_config(harness):
             "charm.PostgresqlOperatorCharm._is_workload_running", new_callable=PropertyMock
         ) as _is_workload_running,
         patch("charm.Patroni.render_patroni_yml_file") as _render_patroni_yml_file,
-        patch("charm.PostgreSQLUpgrade") as _upgrade,
         patch("charm.PostgresqlOperatorCharm.is_primary", return_value=False),
         patch(
             "charm.PostgresqlOperatorCharm.is_tls_enabled", new_callable=PropertyMock
@@ -1365,7 +1314,6 @@ def test_update_config(harness):
         rel_id = harness.model.get_relation(PEER).id
         # Mock some properties.
         harness.set_can_connect(POSTGRESQL_CONTAINER, True)
-        harness.add_relation("upgrade", harness.charm.app.name)
         postgresql_mock.is_tls_enabled = PropertyMock(side_effect=[False, False, False, False])
         _is_workload_running.side_effect = [True, True, False, True]
         _member_started.side_effect = [True, True, False]
@@ -1381,7 +1329,7 @@ def test_update_config(harness):
             is_creating_backup=False,
             enable_ldap=False,
             enable_tls=False,
-            is_no_sync_member=False,
+            # is_no_sync_member=False,
             backup_id=None,
             stanza=None,
             restore_stanza=None,
@@ -1412,7 +1360,7 @@ def test_update_config(harness):
             is_creating_backup=False,
             enable_ldap=False,
             enable_tls=True,
-            is_no_sync_member=False,
+            # is_no_sync_member=False,
             backup_id=None,
             stanza=None,
             restore_stanza=None,

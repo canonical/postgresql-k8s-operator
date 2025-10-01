@@ -50,8 +50,6 @@ peers:
     interface: refresh
   restart:
     interface: rolling_op
-  upgrade:
-    interface: upgrade
 
 provides:
   replication-offer:
