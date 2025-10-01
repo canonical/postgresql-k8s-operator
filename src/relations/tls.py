@@ -95,7 +95,7 @@ class TLS(Object):
             peer_addresses = set()
         self.common_hosts = {
             self.host,
-            self._get_common_name(),
+            f"{self.charm.app.name}-{unit_id}.{self.charm.app.name}-endpoints",
             self.charm.primary_endpoint,
             self.charm.replicas_endpoint,
         }
