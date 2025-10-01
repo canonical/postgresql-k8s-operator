@@ -73,7 +73,10 @@ class TLS(Object):
 
     def _get_common_name(self) -> str:
         unit_id = self.charm.unit.name.split("/")[1]
-        return f"{self.charm.app.name}-{unit_id}.{self.charm.app.name}-endpoints"
+        full_name = f"{self.charm.app.name}-{unit_id}.{self.charm.app.name}-endpoints"
+        if len(full_name) > 64:
+            return f"*.{self.charm.app.name}-endpoints"
+        return full_name
 
     def _get_peer_common_name(self) -> str:
         return self._get_common_name()
