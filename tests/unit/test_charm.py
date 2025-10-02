@@ -724,6 +724,7 @@ def test_on_upgrade_charm(harness):
             "charm.PostgresqlOperatorCharm._create_services",
             side_effect=[_FakeApiError, None, None],
         ) as _create_services,
+        patch("charm.PostgresqlOperatorCharm.push_tls_files_to_workload"),
         patch("charm.PostgreSQLUpgrade.idle", new_callable=PropertyMock) as _idle,
     ):
         # Test when the cluster is being upgraded.

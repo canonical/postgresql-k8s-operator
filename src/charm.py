@@ -1450,6 +1450,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def _fix_pod(self) -> None:
         # Recreate k8s resources and add labels required for replication
         # when the pod loses them (like when it's deleted).
+        self.push_tls_files_to_workload()
         if self.upgrade.idle:
             try:
                 self._create_services()
