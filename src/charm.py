@@ -1230,8 +1230,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Returns whether the unit is in a blocked state."""
         return isinstance(self.unit.status, BlockedStatus)
 
-    def _on_upgrade_charm(self, _) -> None:
-        self._fix_pod()
+    def _on_upgrade_charm(self, event) -> None:
+        try:
+            self._fix_pod()
+        except Exception as e:
+            logger.debug(f"Defer _on_upgrade charm: failed to fix pod: {e}")
+            event.defer()
 
     def _patch_pod_labels(self, member: str) -> None:
         """Add labels required for replication to the current pod.
