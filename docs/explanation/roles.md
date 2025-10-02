@@ -122,6 +122,67 @@ In this case, there are  several records created to:
  * `relation-14` - for relation between PgBouncer and PostgreSQL
  * `pgbouncer_auth_relation_14` - to authenticate end-users, which connects PgBouncer
 
+## Escalation and switching identity
+
+Regular relation users can temporarily escalate their privileges to other predefined roles using PostgreSQL's role-switching features. There are two approaches:
+
+- SET ROLE / RESET ROLE (standard, built-in)
+- The `set_user`
+
+Both approaches are enabled by default in the charm.
+
+Below they are explained in more details, including some examples.
+
+### 1) Using SET ROLE and RESET ROLE
+
+This is the standard PostgreSQL mechanism. A session can switch its current role to any role of which the current role is a member. Use the `SET ROLE` command to switch to a predefined role. Use RESET ROLE to return to the original role.
+
+Example: escalate to `charmed_dml`:
+
+```sql
+-- In the application/session for the relation user, escalate to the predefined role.
+SET ROLE charmed_dml;
+
+-- Perform privileged operations that charmed_dml allows.
+
+-- Then switch back to the original role.
+RESET ROLE;
+```
+
+Notes:
+- `SET ROLE` only works if the current role is a member of the target role (i.e. the target role was requested through the `extra-user-roles` relation field).
+
+### 2) Using the set_user and reset_user to switch identity to another user
+
+In some deployments you may want a member of `charmed_admin` to be able to become a different PostgreSQL user (either a non-superuser or the cluster superuser) for the duration of a session. The `set_user` extension provides functions that allow a caller to change the session's effective user identity.
+
+Example: switch identity to a non-superuser role:
+
+```sql
+-- Called in a session where the relation user is a member of charmed_admin.
+SELECT set_user('another_user'::TEXT);
+
+-- Perform actions as another_user.
+
+-- Then switch back to the previous identity. 
+SELECT reset_user(); 
+```
+
+Example: switch identity to the (cluster) superuser `operator`:
+
+```sql
+-- Called in a session where the relation user is a member of charmed_admin.
+SELECT set_user_u('operator'::TEXT);
+
+-- Perform superuser operations.
+
+-- Then switch back to the previous identity. 
+SELECT reset_user();
+```
+
+Important security considerations:
+- Prefer using `SET ROLE` when possible; use the `set_user` identity switching approach only when you need to assume an identity that cannot be achieved via role membership.
+
 ### Charmed PostgreSQL LDAP roles
 
 To map LDAP users to PostgreSQL users, the dedicated LDAP groups have to be created before hand using [Data Integrator](https://charmhub.io/data-integrator) charm.
