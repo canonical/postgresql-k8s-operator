@@ -1,0 +1,24 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.9    unsupported  01:42:22Z
+
+App                       Version  Status       Scale  Charm                     Channel        Rev  Address         Exposed  Message
+postgresql-k8s            14.19    maintenance      3  postgresql-k8s                             0  10.152.183.21   no       Beginning rolling restart
+self-signed-certificates           active           1  self-signed-certificates  latest/stable  264  10.152.183.150  no       
+
+Unit                         Workload     Agent  Address     Ports  Message
+postgresql-k8s/0             maintenance  idle   10.1.72.78         reinitialising replica
+postgresql-k8s/1             maintenance  idle   10.1.72.77         Executing restart operation
+postgresql-k8s/2*            active       idle   10.1.72.76         Primary
+self-signed-certificates/0*  active       idle   10.1.72.75         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-0: 01:34:26 ERROR unit.postgresql-k8s/0.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-postgresql-k8s-1: 01:34:26 ERROR unit.postgresql-k8s/1.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-postgresql-k8s-0: 01:34:34 ERROR unit.postgresql-k8s/0.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-postgresql-k8s-1: 01:34:34 ERROR unit.postgresql-k8s/1.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-postgresql-k8s-1: 01:34:50 ERROR unit.postgresql-k8s/1.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...

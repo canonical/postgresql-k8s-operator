@@ -1,0 +1,73 @@
+[32mINFO    [0m integration.test_backups_gcp:test_backups_gcp.py:261 waiting for the database charm to become blocked
+[32mINFO    [0m integration.conftest:conftest.py:54 deleting the previously created backups
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.9    unsupported  01:59:36Z
+
+App                 Version  Status   Scale  Charm           Channel        Rev  Address         Exposed  Message
+new-postgresql-k8s  14.19    waiting      1  postgresql-k8s                   2  10.152.183.87   no       waiting for units to settle down
+s3-integrator                active       1  s3-integrator   latest/stable  145  10.152.183.143  no       
+
+Unit                   Workload  Agent      Address     Ports  Message
+new-postgresql-k8s/0*  blocked   executing  10.1.72.82         failed to initialize stanza, check your S3 settings
+s3-integrator/0*       active    idle       10.1.72.72         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-gcp-0: 01:47:52 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-s3-integrator-0: 01:47:55 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-self-signed-certificates-0: 01:47:55 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-k8s-gcp-0: 01:50:22 ERROR unit.postgresql-k8s-gcp/0.juju-log failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 438, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1146, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 184, in _connect_to_database
+    connection = psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-gcp-primary.testing.svc.cluster.local" (10.152.183.169), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/src/charm.py", line 792, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1146, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 467, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+charms.postgresql_k8s.v0.postgresql.PostgreSQLEnableDisableExtensionError
+unit-postgresql-k8s-gcp-0: 01:50:35 ERROR unit.postgresql-k8s-gcp/0.juju-log failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 438, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1146, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 184, in _connect_to_database
+    connection = psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-gcp-primary.testing.svc.cluster.local" (10.152.183.169), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/src/charm.py", line 792, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1146, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 467, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+charms.postgresql_k8s.v0.postgresql.PostgreSQLEnableDisableExtensionError
+unit-new-postgresql-k8s-0: 01:56:25 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-new-postgresql-k8s-0: 01:57:51 ERROR unit.new-postgresql-k8s/0.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-new-postgresql-k8s-0: 01:59:29 ERROR unit.new-postgresql-k8s/0.juju-log s3-parameters:13: Invalid stanza name from s3
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
