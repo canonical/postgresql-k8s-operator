@@ -103,19 +103,10 @@ class PostgreSQLProvider(Object):
             return
         self.charm.set_secret(APP_SCOPE, USERNAME_MAPPING_LABEL, json.dumps(username_mapping))
 
-    def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:  # noqa: C901
-        """Handle the legacy postgresql-client relation changed event.
-
-        Generate password and handle user and database creation for the related application.
-        """
-        # Check for some conditions before trying to access the PostgreSQL instance.
-        if not self.charm.is_cluster_initialised or not self.charm._patroni.primary_endpoint_ready:
-            logger.debug(
-                "Deferring on_database_requested: Cluster must be initialized before database can be requested"
-            )
-            event.defer()
-            return
-
+    def _get_custom_credentials(
+        self, event: DatabaseRequestedEvent
+    ) -> tuple[str | None, str | None] | None:
+        """Check for secret with custom credentials and get values."""
         user = None
         password = None
         try:
@@ -130,6 +121,24 @@ class PostgreSQLProvider(Object):
         except ModelError:
             self.charm.unit.status = BlockedStatus(NO_ACCESS_TO_SECRET_MSG)
             return
+        return user, password
+
+    def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:
+        """Handle the legacy postgresql-client relation changed event.
+
+        Generate password and handle user and database creation for the related application.
+        """
+        # Check for some conditions before trying to access the PostgreSQL instance.
+        if not self.charm.is_cluster_initialised or not self.charm._patroni.primary_endpoint_ready:
+            logger.debug(
+                "Deferring on_database_requested: Cluster must be initialized before database can be requested"
+            )
+            event.defer()
+            return
+
+        if not (credentials := self._get_custom_credentials(event)):
+            return
+        user, password = credentials
 
         self.update_username_mapping(event.relation.id, user)
         self.charm.update_config()

@@ -204,9 +204,6 @@ def test_on_postgresql_pebble_ready(harness):
             side_effect=[None, _FakeApiError, _FakeApiError, None],
         ) as _create_services,
         patch("charm.Patroni.member_started") as _member_started,
-        patch(
-            "charm.PostgresqlOperatorCharm.push_tls_files_to_workload"
-        ) as _push_tls_files_to_workload,
         patch("charm.PostgreSQLUpgrade.idle", new_callable=PropertyMock) as _idle,
         patch("charm.PostgresqlOperatorCharm._patch_pod_labels"),
         patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
@@ -248,7 +245,6 @@ def test_on_postgresql_pebble_ready(harness):
 
         # Check for the Active status.
         _set_active_status.reset_mock()
-        _push_tls_files_to_workload.reset_mock()
         harness.container_pebble_ready(POSTGRESQL_CONTAINER)
         plan = harness.get_container_pebble_plan(POSTGRESQL_CONTAINER)
         expected = harness.charm._postgresql_layer().to_dict()
@@ -259,7 +255,6 @@ def test_on_postgresql_pebble_ready(harness):
         _set_active_status.assert_called_once()
         container = harness.model.unit.get_container(POSTGRESQL_CONTAINER)
         assert container.get_service("postgresql").is_running()
-        _push_tls_files_to_workload.assert_called_once()
 
 
 def test_on_postgresql_pebble_ready_no_connection(harness):

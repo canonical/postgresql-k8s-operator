@@ -908,8 +908,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         unit_id = member.split("-")[-1]
         return f"{self.app.name}-{unit_id}.{self.app.name}-endpoints"
 
-    def _on_leader_elected(self, event: LeaderElectedEvent) -> None:  # noqa: C901
-        """Handle the leader-elected event."""
+    def _setup_passwords(self, event: LeaderElectedEvent) -> None:
+        """Setup system users' passwords."""
         # consider configured system user passwords
         system_user_passwords = {}
         if admin_secret_id := self.config.system_users:
@@ -937,6 +937,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     # generate a password for this user if not provided
                     self.set_secret(APP_SCOPE, password, new_password())
                     logger.info(f"Generated new password for {password}")
+
+    def _on_leader_elected(self, event: LeaderElectedEvent) -> None:
+        """Handle the leader-elected event."""
+        self._setup_passwords(event)
 
         # Add this unit to the list of cluster members
         # (the cluster should start with only this member).
@@ -1072,7 +1076,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.tls.generate_internal_peer_cert()
 
         try:
-            self.push_tls_files_to_workload()
             for ca_secret_name in self.tls_transfer.get_ca_secret_names():
                 self.push_ca_file_into_workload(ca_secret_name)
         except (PathError, ProtocolError) as e:
