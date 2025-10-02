@@ -116,6 +116,11 @@ class DbProvides(Object):
             event.defer()
             return
 
+        if not self.charm.postgresql.is_user_in_hba(f"relation-{event.relation.id}"):
+            logger.debug("Deferring on_relation_changed: User not in pg_hba yet.")
+            event.defer()
+            return
+
     def _check_exist_current_relation(self) -> bool:
         return any(r in ALL_LEGACY_RELATIONS for r in self.charm.client_relations)
 

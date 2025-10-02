@@ -7,6 +7,7 @@
 import logging
 import os
 import pwd
+from functools import cached_property
 from typing import Any
 
 import requests
@@ -95,11 +96,11 @@ class Patroni:
         # TLS is enabled, otherwise True is set because it's the default value.
         self._verify = f"{self._storage_path}/{TLS_CA_FILE}" if tls_enabled else True
 
-    @property
+    @cached_property
     def _patroni_auth(self) -> requests.auth.HTTPBasicAuth:
         return requests.auth.HTTPBasicAuth("patroni", self._patroni_password)
 
-    @property
+    @cached_property
     def _patroni_url(self) -> str:
         """Patroni REST API URL."""
         return f"{'https' if self._tls_enabled else 'http'}://{self._endpoint}:8008"
@@ -145,7 +146,7 @@ class Patroni:
             url = self._patroni_url
         return url
 
-    @property
+    @cached_property
     def _synchronous_node_count(self) -> int:
         planned_units = self._charm.app.planned_units()
         if self._charm.config.synchronous_node_count == "all":
@@ -252,7 +253,7 @@ class Patroni:
                         sync_standbys.append("/".join(member["name"].rsplit("-", 1)))
         return sync_standbys
 
-    @property
+    @cached_property
     def cluster_members(self) -> set:
         """Get the current cluster members."""
         # Request info from cluster endpoint (which returns all members of the cluster).
@@ -428,19 +429,6 @@ class Patroni:
             return False
 
         return r.json().get("replication_state") == "streaming"
-
-    @property
-    def is_database_running(self) -> bool:
-        """Returns whether the PostgreSQL database process is running (and isn't frozen)."""
-        container = self._charm.unit.get_container("postgresql")
-        output = container.exec(["ps", "aux"]).wait_output()
-        postgresql_processes = [
-            process
-            for process in output[0].split("/n")
-            if "/usr/lib/postgresql/14/bin/postgres" in process
-        ]
-        # Check whether the PostgreSQL process has a state equal to T (frozen).
-        return any(process for process in postgresql_processes if process.split()[7] != "T")
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def bulk_update_parameters_controller_by_patroni(self, parameters: dict[str, Any]) -> None:

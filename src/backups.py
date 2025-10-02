@@ -10,6 +10,7 @@ import re
 import tempfile
 import time
 from datetime import datetime, timezone
+from functools import cached_property
 from io import BytesIO
 
 from boto3.session import Session
@@ -77,7 +78,7 @@ class PostgreSQLBackups(Object):
         self.framework.observe(self.charm.on.list_backups_action, self._on_list_backups_action)
         self.framework.observe(self.charm.on.restore_action, self._on_restore_action)
 
-    @property
+    @cached_property
     def stanza_name(self) -> str:
         """Stanza name, composed by model and cluster name."""
         return f"{self.model.name}.{self.charm.cluster_name}"
