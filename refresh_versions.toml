@@ -1,0 +1,5 @@
+# https://canonical-charm-refresh.readthedocs-hosted.com/latest/refresh-versions-toml/
+
+charm = "16/1.0.0"
+charm_major = 1
+workload = "16.10"
