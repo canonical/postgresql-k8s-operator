@@ -54,7 +54,11 @@ async def test_backup_aws(ops_test: OpsTest, charm, aws_cloud_configs: tuple[dic
     async with ops_test.fast_forward():
         logger.info("removing the TLS relation")
         await ops_test.model.applications[database_app_name].remove_relation(
-            f"{database_app_name}:certificates",
+            f"{database_app_name}:peer-certificates",
+            f"{tls_certificates_app_name}:certificates",
+        )
+        await ops_test.model.applications[database_app_name].remove_relation(
+            f"{database_app_name}:client-certificates",
             f"{tls_certificates_app_name}:certificates",
         )
 
