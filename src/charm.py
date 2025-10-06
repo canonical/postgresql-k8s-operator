@@ -1047,9 +1047,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             event.defer()
             return
 
-        # TODO move to the rock
-        with open("scripts/self_signed_checker.py") as fp:
-            self._push_file_to_workload(container, "/self_signed_checker.py", fp.read())
         # Create the PostgreSQL data directory. This is needed on cloud environments
         # where the volume is mounted with more restrictive permissions.
         self._create_pgdata(container)
@@ -1926,7 +1923,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     "override": "replace",
                     "level": "ready",
                     "exec": {
-                        "command": "python3 /self_signed_checker.py",
+                        "command": "python3 /scripts/self-signed-checker.py",
                         "user": WORKLOAD_OS_USER,
                         "environment": {
                             "ENDPOINT": f"{self._patroni._patroni_url}/health",
