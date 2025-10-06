@@ -43,7 +43,6 @@ from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerU
 from charms.data_platform_libs.v1.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v1.loki_push_api import LogProxyConsumer
-from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
 from charms.tempo_coordinator_k8s.v0.charm_tracing import trace_charm
@@ -126,6 +125,7 @@ from constants import (
     SECRET_KEY_OVERRIDES,
     SPI_MODULE,
     SYSTEM_USERS,
+    TLS_CA_BUNDLE_FILE,
     TLS_CA_FILE,
     TLS_CERT_FILE,
     TLS_KEY_FILE,
@@ -149,6 +149,8 @@ from relations.logical_replication import (
     PostgreSQLLogicalReplication,
 )
 from relations.postgresql_provider import PostgreSQLProvider
+from relations.tls import TLS
+from relations.tls_transfer import TLSTransfer
 from upgrade import PostgreSQLUpgrade, get_postgresql_k8s_dependencies_model
 from utils import any_cpu_to_cores, any_memory_to_bytes, new_password
 
@@ -184,7 +186,7 @@ class CannotConnectError(Exception):
         PostgreSQLBackups,
         PostgreSQLLDAP,
         PostgreSQLProvider,
-        PostgreSQLTLS,
+        TLS,
         PostgreSQLUpgrade,
         RollingOpsManager,
     ),
@@ -241,6 +243,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # add specific handler for updated system-user secrets
         self.framework.observe(self.on.secret_changed, self._on_secret_changed)
         self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
+        self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
         self.framework.observe(self.on.data_storage_detaching, self._on_pgdata_storage_detaching)
         self.framework.observe(self.on.stop, self._on_stop)
@@ -262,7 +265,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.postgresql_client_relation = PostgreSQLProvider(self)
         self.backup = PostgreSQLBackups(self, "s3-parameters")
         self.ldap = PostgreSQLLDAP(self, "ldap")
-        self.tls = PostgreSQLTLS(self, PEER, [self.primary_endpoint, self.replicas_endpoint])
+        self.tls = TLS(self, PEER)
+        self.tls_transfer = TLSTransfer(self, PEER)
         self.async_replication = PostgreSQLAsyncReplication(self)
         self.logical_replication = PostgreSQLLogicalReplication(self)
         self.restart_manager = RollingOpsManager(
@@ -310,7 +314,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             {"static_configs": [{"targets": [f"*:{METRICS_PORT}"]}]},
             {
                 "static_configs": [{"targets": ["*:8008"]}],
-                "scheme": "https" if enable_tls else "http",
+                "scheme": "https",
                 "tls_config": {"insecure_skip_verify": True},
             },
         ]
@@ -912,8 +916,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         unit_id = member.split("-")[-1]
         return f"{self.app.name}-{unit_id}.{self.app.name}-endpoints"
 
-    def _on_leader_elected(self, event: LeaderElectedEvent) -> None:
-        """Handle the leader-elected event."""
+    def _setup_passwords(self, event: LeaderElectedEvent) -> None:
+        """Setup system users' passwords."""
         # consider configured system user passwords
         system_user_passwords = {}
         if admin_secret_id := self.config.system_users:
@@ -942,10 +946,17 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     self.set_secret(APP_SCOPE, password, new_password())
                     logger.info(f"Generated new password for {password}")
 
+    def _on_leader_elected(self, event: LeaderElectedEvent) -> None:
+        """Handle the leader-elected event."""
+        self._setup_passwords(event)
+
         # Add this unit to the list of cluster members
         # (the cluster should start with only this member).
         if self._endpoint not in self._endpoints:
             self._add_to_endpoints(self._endpoint)
+
+        if not self.get_secret(APP_SCOPE, "internal-ca"):
+            self.tls.generate_internal_peer_ca()
 
         self._cleanup_old_cluster_resources()
 
@@ -1023,6 +1034,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             "/var/lib/postgresql/temp",
         ]).wait()
 
+    def _on_start(self, _) -> None:
+        # Make sure the CA bubdle file exists
+        # Bundle is not secret
+        Path(f"/tmp/{TLS_CA_BUNDLE_FILE}").touch()  # noqa: S108
+
     def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
         """Event handler for PostgreSQL container on PebbleReadyEvent."""
         if self._endpoint in self._endpoints:
@@ -1039,6 +1055,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             event.defer()
             return
 
+        # TODO move to the rock
+        with open("scripts/self_signed_checker.py") as fp:
+            self._push_file_to_workload(container, "/self_signed_checker.py", fp.read())
         # Create the PostgreSQL data directory. This is needed on cloud environments
         # where the volume is mounted with more restrictive permissions.
         self._create_pgdata(container)
@@ -1057,9 +1076,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             event.defer()
             return
 
+        if not self.get_secret(APP_SCOPE, "internal-ca"):
+            logger.info("leader not elected and/or internal CA not yet generated")
+            event.defer()
+            return
+        if not self.get_secret(UNIT_SCOPE, "internal-cert"):
+            self.tls.generate_internal_peer_cert()
+
         try:
-            self.push_tls_files_to_workload()
-            for ca_secret_name in self.tls.get_ca_secret_names():
+            for ca_secret_name in self.tls_transfer.get_ca_secret_names():
                 self.push_ca_file_into_workload(ca_secret_name)
         except (PathError, ProtocolError) as e:
             logger.error(
@@ -1216,8 +1241,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Returns whether the unit is in a blocked state."""
         return isinstance(self.unit.status, BlockedStatus)
 
-    def _on_upgrade_charm(self, _) -> None:
-        self._fix_pod()
+    def _on_upgrade_charm(self, event) -> None:
+        try:
+            self._fix_pod()
+        except Exception as e:
+            logger.debug(f"Defer _on_upgrade charm: failed to fix pod: {e}")
+            event.defer()
 
     def _patch_pod_labels(self, member: str) -> None:
         """Add labels required for replication to the current pod.
@@ -1432,6 +1461,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def _fix_pod(self) -> None:
         # Recreate k8s resources and add labels required for replication
         # when the pod loses them (like when it's deleted).
+        self.push_tls_files_to_workload()
         if self.upgrade.idle:
             try:
                 self._create_services()
@@ -1698,7 +1728,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.get_secret(APP_SCOPE, USER_PASSWORD_KEY),
             self.get_secret(APP_SCOPE, REPLICATION_PASSWORD_KEY),
             self.get_secret(APP_SCOPE, REWIND_PASSWORD_KEY),
-            bool(self.unit_peer_data.get("tls")),
             self.get_secret(APP_SCOPE, PATRONI_PASSWORD_KEY),
         )
 
@@ -1730,9 +1759,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @property
     def is_tls_enabled(self) -> bool:
         """Return whether TLS is enabled."""
-        if not self.model.get_relation(PEER):
-            return False
-        return all(self.tls.get_tls_files())
+        return all(self.tls.get_client_tls_files())
 
     @property
     def _endpoint(self) -> str:
@@ -1905,8 +1932,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self.postgresql_service: {
                     "override": "replace",
                     "level": "ready",
-                    "http": {
-                        "url": f"{self._patroni._patroni_url}/health",
+                    "exec": {
+                        "command": "python3 /self_signed_checker.py",
+                        "user": WORKLOAD_OS_USER,
+                        "environment": {
+                            "ENDPOINT": f"{self._patroni._patroni_url}/health",
+                        },
                     },
                 }
             },
@@ -1936,8 +1967,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def push_tls_files_to_workload(self) -> bool:
         """Uploads TLS files to the workload container."""
-        key, ca, cert = self.tls.get_tls_files()
-
+        key, ca, cert = self.tls.get_client_tls_files()
         if key is not None:
             self._push_file_to_workload(
                 self._container, f"{self._storage_path}/{TLS_KEY_FILE}", key
@@ -1950,6 +1980,24 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self._push_file_to_workload(
                 self._container, f"{self._storage_path}/{TLS_CERT_FILE}", cert
             )
+
+        key, ca, cert = self.tls.get_peer_tls_files()
+        if key is not None:
+            self._push_file_to_workload(
+                self._container, f"{self._storage_path}/peer_{TLS_KEY_FILE}", key
+            )
+        if ca is not None:
+            self._push_file_to_workload(
+                self._container, f"{self._storage_path}/peer_{TLS_CA_FILE}", ca
+            )
+        if cert is not None:
+            self._push_file_to_workload(
+                self._container, f"{self._storage_path}/peer_{TLS_CERT_FILE}", cert
+            )
+
+        # CA bundle is not secret
+        with open(f"/tmp/{TLS_CA_BUNDLE_FILE}", "w") as fp:  # noqa: S108
+            fp.write(self.tls.get_peer_ca_bundle())
 
         return self.update_config()
 
