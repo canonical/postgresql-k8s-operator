@@ -887,7 +887,7 @@ def test_postgresql_layer(harness):
                     "override": "replace",
                     "level": "ready",
                     "exec": {
-                        "command": "python3 /self_signed_checker.py",
+                        "command": "python3 /scripts/self-signed-checker.py",
                         "user": "postgres",
                         "environment": {
                             "ENDPOINT": "https://postgresql-k8s-0.postgresql-k8s-endpoints:8008/health",
