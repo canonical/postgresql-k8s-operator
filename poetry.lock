@@ -1515,25 +1515,24 @@ files = [
 
 [[package]]
 name = "ops"
-version = "2.23.1"
+version = "3.3.0"
 description = "The Python library behind great charms"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.10"
 groups = ["main", "charm-libs"]
 files = [
-    {file = "ops-2.23.1-py3-none-any.whl", hash = "sha256:fdf58163beafd25180c12a4c7efaf1e76e5f8710508a97840c07055bb78b0c77"},
-    {file = "ops-2.23.1.tar.gz", hash = "sha256:aecacd67ef7ca913f63f397e0330bfa93d70529a3ef71ed2d99e2bc232564ae3"},
+    {file = "ops-3.3.0-py3-none-any.whl", hash = "sha256:4f03013dfe325690add181f989b571259cc4add8a8a5cafbd380ffcc2bbd7c1d"},
+    {file = "ops-3.3.0.tar.gz", hash = "sha256:f89613def8b4a231218038ba5656927c522532e42b2dd8c06e12ff7a45bc647a"},
 ]
 
 [package.dependencies]
-importlib-metadata = "*"
 opentelemetry-api = ">=1.0,<2.0"
 PyYAML = "==6.*"
 websocket-client = "==1.*"
 
 [package.extras]
-testing = ["ops-scenario (==7.23.1)"]
-tracing = ["ops-tracing (==2.23.1)"]
+testing = ["ops-scenario (==8.3.0)"]
+tracing = ["ops-tracing (==3.3.0)"]
 
 [[package]]
 name = "packaging"
@@ -1642,14 +1641,14 @@ files = [
 
 [[package]]
 name = "postgresql-charms-single-kernel"
-version = "0.0.1"
+version = "16.1.0"
 description = "Shared and reusable code for PostgreSQL-related charms"
 optional = false
 python-versions = "<4.0,>=3.8"
 groups = ["main"]
 files = [
-    {file = "postgresql_charms_single_kernel-0.0.1-py3-none-any.whl", hash = "sha256:9696cbe8ca2ac5b766ae4ca135f813d08f83894d387a9be9640ca4dd0027d5eb"},
-    {file = "postgresql_charms_single_kernel-0.0.1.tar.gz", hash = "sha256:cc6b921445ed41abf8ebf1550adcc6486908be4dddab7bf010f8798e3a7f500b"},
+    {file = "postgresql_charms_single_kernel-16.1.0-py3-none-any.whl", hash = "sha256:945e35437a0c94377cda90e4d75caef6bf88e7f6fc84ea95d2c620fa492e2129"},
+    {file = "postgresql_charms_single_kernel-16.1.0.tar.gz", hash = "sha256:4ef477046bdc2262c6736b90df522e549dcff73f8a8e2a47eab6e2b7e3d92086"},
 ]
 
 [[package]]
@@ -2929,4 +2928,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "e577f9e5c9f874127c8060472fb98a28b5d4aa3250e3f3cf99899c67551823f9"
+content-hash = "25f762ced706465b51f58dd211e75ca62cbc0815f55de5f654b7a9639fd662eb"
