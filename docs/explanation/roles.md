@@ -127,7 +127,7 @@ In this case, there are  several records created to:
 Regular relation users can temporarily escalate their privileges to other predefined roles using PostgreSQL's role-switching features. There are two approaches:
 
 - SET ROLE / RESET ROLE (standard, built-in)
-- The `set_user`
+- The `set_user` / `reset_user`
 
 Both approaches are enabled by default in the charm.
 
