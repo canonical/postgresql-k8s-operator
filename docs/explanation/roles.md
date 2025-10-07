@@ -154,12 +154,12 @@ Notes:
 
 ### 2) Using the set_user and reset_user to switch identity to another user
 
-In some deployments you may want a member of `charmed_admin` to be able to become a different PostgreSQL user (either a non-superuser or the cluster superuser) for the duration of a session. The `set_user` extension provides functions that allow a caller to change the session's effective user identity.
+In some deployments you may want a member of `charmed_dba` to be able to become a different PostgreSQL user (either a non-superuser or the cluster superuser) for the duration of a session. The `set_user` extension provides functions that allow a caller to change the session's effective user identity.
 
 Example: switch identity to a non-superuser role:
 
 ```sql
--- Called in a session where the relation user is a member of charmed_admin.
+-- Called in a session where the relation user is a member of charmed_dba.
 SELECT set_user('another_user'::TEXT);
 
 -- Perform actions as another_user.
@@ -171,7 +171,7 @@ SELECT reset_user();
 Example: switch identity to the (cluster) superuser `operator`:
 
 ```sql
--- Called in a session where the relation user is a member of charmed_admin.
+-- Called in a session where the relation user is a member of charmed_dba.
 SELECT set_user_u('operator'::TEXT);
 
 -- Perform superuser operations.
