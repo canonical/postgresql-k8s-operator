@@ -18,6 +18,7 @@ from single_kernel_postgresql.utils.postgresql import (
     ACCESS_GROUP_RELATION,
     ACCESS_GROUPS,
     INVALID_DATABASE_NAME_BLOCKING_MESSAGE,
+    INVALID_DATABASE_NAMES,
     INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE,
     PostgreSQLCreateDatabaseError,
     PostgreSQLCreateUserError,
@@ -441,7 +442,7 @@ class PostgreSQLProvider(Object):
             for data in relation.data.values():
                 database = data.get("database")
                 if database is not None and (
-                    len(database) > 49 or database in ["postgres", "template0", "template1"]
+                    len(database) > 49 or database in INVALID_DATABASE_NAMES
                 ):
                     return True
         return False

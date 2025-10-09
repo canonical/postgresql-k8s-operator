@@ -1561,7 +1561,7 @@ def test_create_pgdata(harness):
     container.exists.return_value = False
     harness.charm._create_pgdata(container)
     container.make_dir.assert_called_once_with(
-        "/var/lib/postgresql/data/pgdata", permissions=488, user="postgres", group="postgres"
+        "/var/lib/postgresql/data/pgdata", permissions=448, user="postgres", group="postgres"
     )
     container.exec.assert_has_calls([
         call(["chown", "postgres:postgres", "/var/lib/postgresql/archive"]),
