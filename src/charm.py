@@ -68,6 +68,7 @@ from ops.charm import (
     HookEvent,
     LeaderElectedEvent,
     RelationDepartedEvent,
+    SecretRemoveEvent,
     WorkloadEvent,
 )
 from ops.model import (
@@ -238,6 +239,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.framework.observe(self.on.promote_to_primary_action, self._on_promote_to_primary)
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
         self.framework.observe(self.on.update_status, self._on_update_status)
+        self.framework.observe(self.on.secret_remove, self._on_secret_remove)
 
         self._certs_path = "/usr/local/share/ca-certificates"
         self._storage_path = self.meta.storages["pgdata"].location
@@ -1358,6 +1360,17 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 event.fail("Unit is not sync standby")
             except SwitchoverFailedError:
                 event.fail("Switchover failed or timed out, check the logs for details")
+
+    def _on_secret_remove(self, event: SecretRemoveEvent) -> None:
+        # A secret removal (entire removal, not just a revision removal) causes
+        # https://github.com/juju/juju/issues/20794. This check is to avoid the
+        # errors that would happen if we tried to remove the revision in that case
+        # (in the revision removal, the label is present).
+        if event.secret.label is None:
+            logger.debug("Secret with no label cannot be removed")
+            return
+        logger.debug(f"Removing secret with label {event.secret.label} revision {event.revision}")
+        event.remove_revision()
 
     def _on_get_primary(self, event: ActionEvent) -> None:
         """Get primary instance."""

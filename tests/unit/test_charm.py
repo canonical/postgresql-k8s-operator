@@ -1893,3 +1893,15 @@ def test_get_ldap_parameters(harness):
         harness.charm.get_ldap_parameters()
         _get_relation_data.assert_called_once()
         _get_relation_data.reset_mock()
+
+
+def test_on_secret_remove(harness):
+    event = Mock()
+    harness.charm._on_secret_remove(event)
+    event.remove_revision.assert_called_once_with()
+    event.reset_mock()
+
+    # No secret
+    event.secret.label = None
+    harness.charm._on_secret_remove(event)
+    assert not event.remove_revision.called
