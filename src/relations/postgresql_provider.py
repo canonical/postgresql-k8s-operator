@@ -7,13 +7,19 @@ import json
 import logging
 from typing import TYPE_CHECKING
 
-from charms.data_platform_libs.v0.data_interfaces import (
-    DatabaseProvides,
-    DatabaseRequestedEvent,
+from charms.data_platform_libs.v1.data_interfaces import (
+    DataContractV1,
+    RequirerCommonModel,
+    ResourceProviderEventHandler,
+    ResourceProviderModel,
+    ResourceRequestedEvent,
+    SecretBool,
+    SecretStr,
 )
 from ops.charm import RelationBrokenEvent, RelationDepartedEvent
 from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, ModelError, Relation
+from pydantic.types import _SecretBase
 from single_kernel_postgresql.utils.postgresql import (
     ACCESS_GROUP_RELATION,
     ACCESS_GROUPS,
@@ -66,10 +72,10 @@ class PostgreSQLProvider(Object):
         self.charm = charm
 
         # Charm events defined in the database provides charm library.
-        self.database_provides = DatabaseProvides(self.charm, relation_name=self.relation_name)
-        self.framework.observe(
-            self.database_provides.on.database_requested, self._on_database_requested
+        self.database = ResourceProviderEventHandler(
+            self.charm, self.relation_name, RequirerCommonModel
         )
+        self.framework.observe(self.database.on.resource_requested, self._on_resource_requested)
 
     @staticmethod
     def _sanitize_extra_roles(extra_roles: str | None) -> list[str]:
@@ -104,17 +110,17 @@ class PostgreSQLProvider(Object):
         self.charm.set_secret(APP_SCOPE, USERNAME_MAPPING_LABEL, json.dumps(username_mapping))
 
     def _get_custom_credentials(
-        self, event: DatabaseRequestedEvent
+        self, event: ResourceRequestedEvent
     ) -> tuple[str | None, str | None] | None:
         """Check for secret with custom credentials and get values."""
         user = None
         password = None
         try:
-            if requested_entities := event.requested_entity_secret_content:
-                for key, val in requested_entities.items():
-                    user = key
-                    password = val
-                    break
+            request = event.request
+            if request.entity_type == "USER":
+                entity_secret = self.charm.model.get_secret(id=request.entity_secret)
+                user = entity_secret.get_content().get("username")
+                password = entity_secret.get_content().get("password")
                 if user in SYSTEM_USERS or user in self.charm.postgresql.list_users():
                     self.charm.unit.status = BlockedStatus(FORBIDDEN_USER_MSG)
                     return
@@ -123,7 +129,7 @@ class PostgreSQLProvider(Object):
             return
         return user, password
 
-    def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:
+    def _on_resource_requested(self, event: ResourceRequestedEvent) -> None:
         """Handle the legacy postgresql-client relation changed event.
 
         Generate password and handle user and database creation for the related application.
@@ -154,11 +160,14 @@ class PostgreSQLProvider(Object):
                 event.defer()
                 return
 
+        logger.error(type(event))
+        request = event.request
+
         # Retrieve the database name and extra user roles using the charm library.
-        database = event.database or ""
+        database = request.resource or ""
 
         # Make sure the relation access-group is added to the list
-        extra_user_roles = self._sanitize_extra_roles(event.extra_user_roles)
+        extra_user_roles = self._sanitize_extra_roles(request.extra_user_roles)
         extra_user_roles.append(ACCESS_GROUP_RELATION)
 
         try:
@@ -173,44 +182,26 @@ class PostgreSQLProvider(Object):
                 user, password, extra_user_roles=extra_user_roles, database=database
             )
 
-            # Share the credentials with the application.
-            self.database_provides.set_credentials(event.relation.id, user, password)
-
-            # Set the read/write endpoint.
-            self.database_provides.set_endpoints(
-                event.relation.id,
-                f"{self.charm.primary_endpoint}:{DATABASE_PORT}",
+            _, ca, _ = self.charm.tls.get_client_tls_files()
+            if not ca:
+                ca = ""
+            response = ResourceProviderModel(
+                salt=event.request.salt,
+                request_id=event.request.request_id,
+                resource=database,
+                username=SecretStr(user),
+                password=SecretStr(password),
+                endpoints=f"{self.charm.primary_endpoint}:{DATABASE_PORT}",
+                uris=SecretStr(
+                    f"postgresql://{user}:{password}@{self.charm.primary_endpoint}:{DATABASE_PORT}/{database}"
+                ),
+                tls=SecretBool(self.charm.is_tls_enabled),
+                tls_ca=SecretStr(ca if self.charm.is_tls_enabled else ""),
+                version=self.charm.postgresql.get_postgresql_version(),
             )
-
-            # Set connection string URI.
-            self.database_provides.set_uris(
-                event.relation.id,
-                f"postgresql://{user}:{password}@{self.charm.primary_endpoint}:{DATABASE_PORT}/{database}",
-            )
-
-            # Set TLS flag
-            self.database_provides.set_tls(
-                event.relation.id,
-                "True" if self.charm.is_tls_enabled else "False",
-            )
-
-            # Set TLS CA
-            if self.charm.is_tls_enabled:
-                _, ca, _ = self.charm.tls.get_client_tls_files()
-                if not ca:
-                    ca = ""
-                self.database_provides.set_tls_ca(event.relation.id, ca)
 
             # Update the read-only endpoint.
-            self.update_read_only_endpoint(event, user, password)
-
-            # Set the database version.
-            self.database_provides.set_version(
-                event.relation.id, self.charm.postgresql.get_postgresql_version()
-            )
-
-            # Set the database name
-            self.database_provides.set_database(event.relation.id, database)
+            self.update_read_only_endpoint(event, response, user, password)
 
             self._update_unit_status(event.relation)
 
@@ -285,7 +276,8 @@ class PostgreSQLProvider(Object):
 
     def update_read_only_endpoint(
         self,
-        event: DatabaseRequestedEvent | None = None,
+        event: ResourceRequestedEvent | None = None,
+        response: ResourceProviderModel | None = None,
         user: str | None = None,
         password: str | None = None,
         database: str | None = None,
@@ -310,32 +302,31 @@ class PostgreSQLProvider(Object):
             database = None
 
         for relation in relations:
-            self.database_provides.set_read_only_endpoints(
-                relation.id,
-                endpoints,
-            )
-            # Make sure that the URI will be a secret
-            if (
-                secret_fields := self.database_provides.fetch_relation_field(
-                    relation.id, "requested-secrets"
-                )
-            ) and "read-only-uris" in secret_fields:
-                if not user or not password or not database:
-                    user = self.database_provides.fetch_my_relation_field(relation.id, "username")
-                    database = self.database_provides.fetch_relation_field(relation.id, "database")
-                    password = self.database_provides.fetch_my_relation_field(
-                        relation.id, "password"
+            if len(relations) > 1:
+                response = ResourceProviderModel()
+            if response is not None:
+                response.read_only_endpoints = endpoints
+                # Make sure that the URI will be a secret
+                if (
+                    secret_fields := self.get_other_app_relation_field(
+                        relation.id, "requested-secrets"
                     )
+                ) and "read-only-uris" in secret_fields:
+                    if not user or not password or not database:
+                        user = self.get_this_app_relation_field(relation.id, "username")
+                        database = self.get_other_app_relation_field(relation.id, "database")
+                        password = self.get_this_app_relation_field(relation.id, "password")
 
-                if user and password:
-                    self.database_provides.set_read_only_uris(
-                        relation.id,
-                        f"postgresql://{user}:{password}@{endpoints}/{database}",
-                    )
-            # Reset the creds for the next iteration
-            user = None
-            password = None
-            database = None
+                    if user and password:
+                        response.read_only_uris = SecretStr(
+                            f"postgresql://{user}:{password}@{endpoints}/{database}"
+                        )
+                # Reset the creds for the next iteration
+                user = None
+                password = None
+                database = None
+
+                self.database.set_response(relation.id, response)
 
     def update_tls_flag(self, tls: str) -> None:
         """Update TLS flag and CA in relation databag."""
@@ -350,9 +341,12 @@ class PostgreSQLProvider(Object):
             ca = ""
 
         for relation in relations:
-            if self.database_provides.fetch_relation_field(relation.id, "database"):
-                self.database_provides.set_tls(relation.id, tls)
-                self.database_provides.set_tls_ca(relation.id, ca)
+            if self.get_other_app_relation_field(relation.id, "database"):
+                response = ResourceProviderModel(
+                    tls=SecretBool(tls == "True"),
+                    tls_ca=SecretStr(ca),
+                )
+                self.database.set_response(relation.id, response)
 
     def _update_unit_status(self, relation: Relation) -> None:
         """Clean up Blocked status if it's due to extensions request."""
@@ -385,18 +379,16 @@ class PostgreSQLProvider(Object):
             for relation in self.charm.model.relations.get(self.relation_name, []):
                 try:
                     # Relation is not established and custom user was requested
-                    if not self.database_provides.fetch_my_relation_field(
-                        relation.id, "secret-user"
-                    ) and (
-                        secret_uri := self.database_provides.fetch_relation_field(
+                    if not self.get_this_app_relation_field(relation.id, "secret-user") and (
+                        secret_uri := self.get_other_app_relation_field(
                             relation.id, "requested-entity-secret"
                         )
                     ):
                         content = self.framework.model.get_secret(id=secret_uri).get_content()
                         for key in content:
-                            if not self.database_provides.fetch_my_relation_field(
-                                relation.id, "username"
-                            ) and (key in SYSTEM_USERS or key in existing_users):
+                            if not self.get_this_app_relation_field(relation.id, "username") and (
+                                key in SYSTEM_USERS or key in existing_users
+                            ):
                                 logger.warning(
                                     f"Relation {relation.id} is still requesting a forbidden user"
                                 )
@@ -445,3 +437,32 @@ class PostgreSQLProvider(Object):
                 ):
                     return True
         return False
+
+    def get_other_app_relation_field(self, relation_id: int, field: str) -> str | None:
+        """Get a field from the other application in the specified relation."""
+        relation = self.charm.model.get_relation(self.relation_name, relation_id)
+        if relation is None:
+            return None
+        model = self.database.interface.build_model(
+            relation_id, DataContractV1, component=relation.app
+        )
+        value = None
+        for request in model.requests:
+            value = getattr(request, field)
+            break
+        if value is None:
+            return value
+        value = value.get_secret_value() if issubclass(value.__class__, _SecretBase) else value
+        return value
+
+    def get_this_app_relation_field(self, relation_id: int, field: str) -> str | None:
+        """Get a field from this application in the specifier relation."""
+        model = self.database.interface.build_model(relation_id, DataContractV1)
+        value = None
+        for request in model.requests:
+            value = getattr(request, field)
+            break
+        if value is None:
+            return value
+        value = value.get_secret_value() if issubclass(value.__class__, _SecretBase) else value
+        return value

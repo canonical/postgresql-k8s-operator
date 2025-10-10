@@ -39,7 +39,11 @@ except ModuleNotFoundError:
         main(WrongArchitectureWarningCharm, use_juju_for_storage=True)
     raise
 
-from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerUnitData
+from charms.data_platform_libs.v1.data_interfaces import (
+    OpsPeerRepository,
+    OpsPeerUnitRepository,
+    SecretGroup,
+)
 from charms.data_platform_libs.v1.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v1.loki_push_api import LogProxyConsumer
@@ -117,8 +121,6 @@ from constants import (
     REPLICATION_USER,
     REWIND_PASSWORD_KEY,
     REWIND_USER,
-    SECRET_DELETED_LABEL,
-    SECRET_INTERNAL_LABEL,
     SECRET_KEY_OVERRIDES,
     SPI_MODULE,
     SYSTEM_USERS,
@@ -207,17 +209,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.unit.status = BlockedStatus("Disabled")
             sys.exit(0)
 
-        self.peer_relation_app = DataPeerData(
+        self.peer_relation_app = OpsPeerRepository(
             self.model,
-            relation_name=PEER,
-            secret_field_name=SECRET_INTERNAL_LABEL,
-            deleted_label=SECRET_DELETED_LABEL,
+            self._peers,
+            self.app,
         )
-        self.peer_relation_unit = DataPeerUnitData(
+        self.peer_relation_unit = OpsPeerUnitRepository(
             self.model,
-            relation_name=PEER,
-            secret_field_name=SECRET_INTERNAL_LABEL,
-            deleted_label=SECRET_DELETED_LABEL,
+            self._peers,
+            self.unit,
         )
 
         self.postgresql_service = "postgresql"
@@ -356,7 +356,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if scope == UNIT_SCOPE:
             return self.unit
 
-    def peer_relation_data(self, scope: Scopes) -> DataPeerData:
+    def peer_relation_data(self, scope: Scopes) -> OpsPeerRepository:
         """Returns the peer relation data per scope."""
         if scope == APP_SCOPE:
             return self.peer_relation_app
@@ -374,37 +374,26 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if scope not in get_args(Scopes):
             raise RuntimeError("Unknown secret scope.")
 
-        if not (peers := self.model.get_relation(PEER)):
-            return None
-
         secret_key = self._translate_field_to_secret_key(key)
-        return self.peer_relation_data(scope).get_secret(peers.id, secret_key)
+        return self.peer_relation_data(scope).get_secret_field(secret_key, SecretGroup("extra"))
 
     def set_secret(self, scope: Scopes, key: str, value: str | None) -> str | None:
         """Set secret from the secret storage."""
         if scope not in get_args(Scopes):
             raise RuntimeError("Unknown secret scope.")
 
-        if not value:
-            return self.remove_secret(scope, key)
-
-        if not (peers := self.model.get_relation(PEER)):
-            return None
-
         secret_key = self._translate_field_to_secret_key(key)
-        self.peer_relation_data(scope).set_secret(peers.id, secret_key, value)
+        self.peer_relation_data(scope).write_secret_field(
+            secret_key, value if value is not None else "", SecretGroup("extra")
+        )
 
     def remove_secret(self, scope: Scopes, key: str) -> None:
         """Removing a secret."""
         if scope not in get_args(Scopes):
             raise RuntimeError("Unknown secret scope.")
 
-        if not (peers := self.model.get_relation(PEER)):
-            return None
-
         secret_key = self._translate_field_to_secret_key(key)
-
-        self.peer_relation_data(scope).delete_relation_data(peers.id, [secret_key])
+        self.peer_relation_data(scope).delete_secret_field(secret_key, SecretGroup("extra"))
 
     def get_secret_from_id(self, secret_id: str) -> dict[str, str]:
         """Resolve the given id of a Juju secret and return the content as a dict.
@@ -2414,10 +2403,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         for relation in self.model.relations[self.postgresql_client_relation.relation_name]:
             user = custom_username_mapping.get(str(relation.id), f"relation_id_{relation.id}")
             if user not in user_database_map and (
-                database := self.postgresql_client_relation.database_provides.fetch_relation_field(
+                database := self.postgresql_client_relation.get_other_app_relation_field(
                     relation.id, "database"
                 )
             ):
+                logger.error(
+                    f"database: {database} for user: {user} not found in user_database_map, adding it"
+                )
                 user_database_map[user] = database
         return user_database_map
 
@@ -2427,10 +2419,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         user_db_pairs = {}
         custom_username_mapping = self.postgresql_client_relation.get_username_mapping()
         for relation in self.model.relations[self.postgresql_client_relation.relation_name]:
-            if database := self.postgresql_client_relation.database_provides.fetch_relation_field(
+            if database := self.postgresql_client_relation.get_other_app_relation_field(
                 relation.id, "database"
             ):
                 user = custom_username_mapping.get(str(relation.id), f"relation_id_{relation.id}")
+                logger.error(f"database: {database} for user: {user} added to user_db_pairs")
                 user_db_pairs[user] = database
         return shake_128(str(user_db_pairs).encode()).hexdigest(16)
 

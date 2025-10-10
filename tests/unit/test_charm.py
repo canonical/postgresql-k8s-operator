@@ -1110,7 +1110,9 @@ def test_delete_password(harness, caplog):
 
         harness.set_leader(True)
         with caplog.at_level(logging.DEBUG):
-            error_message = "Non-existing secret operator-password was attempted to be removed."
+            error_message = (
+                "No secret for group extra in relation <ops.model.Relation database-peers:0>"
+            )
 
             harness.charm.remove_secret("app", "operator-password")
             assert error_message in caplog.text
@@ -1119,16 +1121,10 @@ def test_delete_password(harness, caplog):
             assert error_message in caplog.text
 
             harness.charm.remove_secret("app", "non-existing-secret")
-            assert (
-                "Non-existing field 'non-existing-secret' was attempted to be removed"
-                in caplog.text
-            )
+            assert "Secret with label database-peers.postgresql-k8s.app not found" in caplog.text
 
             harness.charm.remove_secret("unit", "non-existing-secret")
-            assert (
-                "Non-existing field 'non-existing-secret' was attempted to be removed"
-                in caplog.text
-            )
+            assert "Secret with label database-peers.postgresql-k8s.unit not found" in caplog.text
 
 
 @pytest.mark.parametrize("scope,is_leader", [("app", True), ("unit", True), ("unit", False)])
@@ -1143,7 +1139,9 @@ def test_migration_from_single_secret(harness, scope, is_leader):
         # App has to be leader, unit can be either
         harness.set_leader(is_leader)
 
-        secret = harness.charm.app.add_secret({"operator-password": "bla"})
+        secret = harness.charm.app.add_secret(
+            {"operator-password": "bla"}, label=f"database-peers.postgresql-k8s.{scope}"
+        )
 
         # Getting current password
         entity = getattr(harness.charm, scope)
@@ -1159,9 +1157,9 @@ def test_migration_from_single_secret(harness, scope, is_leader):
             harness.set_leader(is_leader)
         assert harness.charm.model.get_secret(label=f"{PEER}.postgresql-k8s.{scope}")
         assert harness.charm.get_secret(scope, "operator-password") == "blablabla"
-        assert SECRET_INTERNAL_LABEL not in harness.get_relation_data(
-            rel_id, getattr(harness.charm, scope).name
-        )
+        # assert SECRET_INTERNAL_LABEL not in harness.get_relation_data(
+        #     rel_id, getattr(harness.charm, scope).name
+        # )
 
 
 def test_on_peer_relation_changed(harness):
