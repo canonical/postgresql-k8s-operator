@@ -7107,7 +7107,7 @@
   },
   "timepicker": {},
   "timezone": "",
-  "title": "PgBackrest K8s",
+  "title": "pgBackRest K8s",
   "tags": [
     "postgres",
     "pgbackrest",
