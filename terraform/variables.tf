@@ -1,5 +1,5 @@
-variable "juju_model_name" {
-  description = "Juju model name"
+variable "juju_model" {
+  description = "Juju model uuid"
   type        = string
 }
 
@@ -39,10 +39,10 @@ variable "constraints" {
   default     = "arch=amd64"
 }
 
-variable "storage_size" {
-  description = "Storage size"
-  type        = string
-  default     = "10G"
+variable "storage_directives" {
+  description = "Storage directives to apply for this application"
+  type        = map(string)
+  default     = {}
 }
 
 variable "config" {
