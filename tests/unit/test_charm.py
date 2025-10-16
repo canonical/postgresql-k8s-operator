@@ -32,6 +32,7 @@ POSTGRESQL_CONTAINER = "postgresql"
 POSTGRESQL_SERVICE = "postgresql"
 LDAP_SYNC_SERVICE = "ldap-sync"
 METRICS_SERVICE = "metrics_server"
+PGBACKREST_METRICS_SERVICE = "pgbackrest_metrics_service"
 PGBACKREST_SERVER_SERVICE = "pgbackrest server"
 ROTATE_LOGS_SERVICE = "rotate-logs"
 
@@ -972,6 +973,15 @@ def test_postgresql_layer(harness):
                             "host=/var/run/postgresql port=5432 database=postgres"
                         ),
                     },
+                },
+                PGBACKREST_METRICS_SERVICE: {
+                    "override": "replace",
+                    "summary": "pgbackrest metrics exporter",
+                    "command": "/usr/bin/pgbackrest_exporter",
+                    "startup": "enabled",
+                    "after": [POSTGRESQL_SERVICE],
+                    "user": "postgres",
+                    "group": "postgres",
                 },
                 ROTATE_LOGS_SERVICE: {
                     "override": "replace",
