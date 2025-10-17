@@ -74,6 +74,7 @@ def test_on_leader_elected(harness):
         patch("charm.PostgresqlOperatorCharm._patch_pod_labels"),
         patch("charm.PostgresqlOperatorCharm._create_services") as _create_services,
         patch("charm.PostgresqlOperatorCharm.get_secret_from_id", return_value={}),
+        patch("charm.PostgresqlOperatorCharm.get_secret_from_id", return_value={}),
     ):
         rel_id = harness.model.get_relation(PEER).id
         # Check that a new password was generated on leader election and nothing is done
@@ -91,7 +92,7 @@ def test_on_leader_elected(harness):
             [MagicMock(metadata=MagicMock(name="fakeName2", namespace="fakeNamespace"))],
         ]
         harness.set_leader()
-        assert _set_secret.call_count == 5
+        assert _set_secret.call_count == 7
         _set_secret.assert_any_call("app", "operator-password", "sekr1t")
         _set_secret.assert_any_call("app", "replication-password", "sekr1t")
         _set_secret.assert_any_call("app", "rewind-password", "sekr1t")
@@ -176,6 +177,7 @@ def test_get_unit_ip(harness):
 
 def test_on_postgresql_pebble_ready(harness):
     with (
+        patch("charm.Path"),
         patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
         patch(
             "charm.Patroni.primary_endpoint_ready", new_callable=PropertyMock
@@ -190,12 +192,11 @@ def test_on_postgresql_pebble_ready(harness):
             side_effect=[None, _FakeApiError, None],
         ) as _create_services,
         patch("charm.Patroni.member_started") as _member_started,
-        patch(
-            "charm.PostgresqlOperatorCharm.push_tls_files_to_workload"
-        ) as _push_tls_files_to_workload,
         patch("charm.PostgresqlOperatorCharm._patch_pod_labels"),
         patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
+        patch("charm.PostgresqlOperatorCharm._push_file_to_workload"),
         patch("charm.PostgresqlOperatorCharm._create_pgdata") as _create_pgdata,
+        patch("charm.PostgresqlOperatorCharm.get_secret", return_value="secret"),
     ):
         # Mock the primary endpoint ready property values.
         _primary_endpoint_ready.side_effect = [False, True, True]
@@ -223,7 +224,6 @@ def test_on_postgresql_pebble_ready(harness):
 
         # Check for the Active status.
         _set_active_status.reset_mock()
-        _push_tls_files_to_workload.reset_mock()
         harness.container_pebble_ready(POSTGRESQL_CONTAINER)
         plan = harness.get_container_pebble_plan(POSTGRESQL_CONTAINER)
         expected = harness.charm._postgresql_layer().to_dict()
@@ -234,7 +234,6 @@ def test_on_postgresql_pebble_ready(harness):
         _set_active_status.assert_called_once()
         container = harness.model.unit.get_container(POSTGRESQL_CONTAINER)
         assert container.get_service("postgresql").is_running()
-        _push_tls_files_to_workload.assert_called_once()
 
 
 def test_on_postgresql_pebble_ready_no_connection(harness):
@@ -679,6 +678,7 @@ def test_on_upgrade_charm(harness):
             "charm.PostgresqlOperatorCharm._create_services",
             side_effect=[_FakeApiError, None, None],
         ) as _create_services,
+        patch("charm.PostgresqlOperatorCharm.push_tls_files_to_workload"),
     ):
         # Test with a problem happening when trying to create the k8s resources.
         harness.charm.unit.status = ActiveStatus()
@@ -836,8 +836,12 @@ def test_postgresql_layer(harness):
                 POSTGRESQL_SERVICE: {
                     "override": "replace",
                     "level": "ready",
-                    "http": {
-                        "url": "http://postgresql-k8s-0.postgresql-k8s-endpoints:8008/health",
+                    "exec": {
+                        "command": "python3 /scripts/self-signed-checker.py",
+                        "user": "postgres",
+                        "environment": {
+                            "ENDPOINT": "https://postgresql-k8s-0.postgresql-k8s-endpoints:8008/health",
+                        },
                     },
                 }
             },
@@ -1505,7 +1509,7 @@ def test_create_pgdata(harness):
     container.exists.return_value = False
     harness.charm._create_pgdata(container)
     container.make_dir.assert_called_once_with(
-        "/var/lib/postgresql/data/pgdata", permissions=488, user="postgres", group="postgres"
+        "/var/lib/postgresql/data/pgdata", permissions=448, user="postgres", group="postgres"
     )
     container.exec.assert_has_calls([
         call(["chown", "postgres:postgres", "/var/lib/postgresql/archive"]),
@@ -1635,3 +1639,15 @@ def test_get_ldap_parameters(harness):
         harness.charm.get_ldap_parameters()
         _get_relation_data.assert_called_once()
         _get_relation_data.reset_mock()
+
+
+def test_on_secret_remove(harness):
+    event = Mock()
+    harness.charm._on_secret_remove(event)
+    event.remove_revision.assert_called_once_with()
+    event.reset_mock()
+
+    # No secret
+    event.secret.label = None
+    harness.charm._on_secret_remove(event)
+    assert not event.remove_revision.called

@@ -106,7 +106,7 @@ async def are_all_db_processes_down(ops_test: OpsTest, process: str, signal: str
 def get_patroni_cluster(unit_ip: str) -> dict[str, str]:
     for attempt in Retrying(stop=stop_after_delay(30), wait=wait_fixed(3)):
         with attempt:
-            resp = requests.get(f"http://{unit_ip}:8008/cluster")
+            resp = requests.get(f"https://{unit_ip}:8008/cluster", verify=False)
     return resp.json()
 
 
@@ -122,16 +122,15 @@ async def change_patroni_setting(
         password: Patroni password.
         tls: if Patroni is serving using tls.
     """
-    schema = "https" if tls else "http"
     for attempt in Retrying(stop=stop_after_delay(30 * 2), wait=wait_fixed(3)):
         with attempt:
             app = await app_name(ops_test)
             primary_name = await get_primary(ops_test, app)
             unit_ip = await get_unit_address(ops_test, primary_name)
             requests.patch(
-                f"{schema}://{unit_ip}:8008/config",
+                f"https://{unit_ip}:8008/config",
                 json={setting: value},
-                verify=not tls,
+                verify=False,
                 auth=requests.auth.HTTPBasicAuth("patroni", password),
             )
 
@@ -158,7 +157,7 @@ async def change_wal_settings(
         with attempt:
             unit_ip = await get_unit_address(ops_test, unit_name)
             requests.patch(
-                f"http://{unit_ip}:8008/config",
+                f"https://{unit_ip}:8008/config",
                 json={
                     "postgresql": {
                         "parameters": {
@@ -168,6 +167,7 @@ async def change_wal_settings(
                         }
                     }
                 },
+                verify=False,
                 auth=requests.auth.HTTPBasicAuth("patroni", password),
             )
 
@@ -426,7 +426,7 @@ async def fetch_cluster_members(ops_test: OpsTest):
     member_ips = {}
     for unit in ops_test.model.applications[app].units:
         unit_address = await get_unit_address(ops_test, unit.name)
-        cluster_info = requests.get(f"http://{unit_address}:8008/cluster")
+        cluster_info = requests.get(f"https://{unit_address}:8008/cluster", verify=False)
         if len(member_ips) > 0:
             # If the list of members IPs was already fetched, also compare the
             # list provided by other members.
@@ -449,13 +449,12 @@ async def get_patroni_setting(ops_test: OpsTest, setting: str, tls: bool = False
     Returns:
         the value of the configuration or None if it's using the default value.
     """
-    schema = "https" if tls else "http"
     for attempt in Retrying(stop=stop_after_delay(30 * 2), wait=wait_fixed(3)):
         with attempt:
             app = await app_name(ops_test)
             primary_name = await get_primary(ops_test, app)
             unit_ip = await get_unit_address(ops_test, primary_name)
-            configuration_info = requests.get(f"{schema}://{unit_ip}:8008/config", verify=not tls)
+            configuration_info = requests.get(f"https://{unit_ip}:8008/config", verify=False)
             primary_start_timeout = configuration_info.json().get(setting)
             return int(primary_start_timeout) if primary_start_timeout is not None else None
 
@@ -494,7 +493,7 @@ async def get_postgresql_parameter(ops_test: OpsTest, parameter_name: str) -> in
             app = await app_name(ops_test)
             primary_name = await get_primary(ops_test, app)
             unit_ip = await get_unit_address(ops_test, primary_name)
-            configuration_info = requests.get(f"http://{unit_ip}:8008/config")
+            configuration_info = requests.get(f"https://{unit_ip}:8008/config", verify=False)
             postgresql_dict = configuration_info.json().get("postgresql")
             if postgresql_dict is None:
                 return None
@@ -617,7 +616,7 @@ async def is_replica(ops_test: OpsTest, unit_name: str) -> bool:
     try:
         for attempt in Retrying(stop=stop_after_delay(60 * 3), wait=wait_fixed(3)):
             with attempt:
-                cluster_info = requests.get(f"http://{unit_ip}:8008/cluster")
+                cluster_info = requests.get(f"https://{unit_ip}:8008/cluster", verify=False)
 
                 # The unit may take some time to be listed on Patroni REST API cluster endpoint.
                 if member_name not in {
@@ -761,7 +760,7 @@ async def is_postgresql_ready(ops_test, unit_name: str) -> bool:
     try:
         for attempt in Retrying(stop=stop_after_delay(60 * 10), wait=wait_fixed(3)):
             with attempt:
-                instance_health_info = requests.get(f"http://{unit_ip}:8008/health")
+                instance_health_info = requests.get(f"https://{unit_ip}:8008/health", verify=False)
                 assert instance_health_info.status_code == 200
     except RetryError:
         return False

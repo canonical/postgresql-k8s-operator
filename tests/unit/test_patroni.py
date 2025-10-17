@@ -38,7 +38,6 @@ def patroni(harness):
         "superuser-password",
         "replication-password",
         "rewind-password",
-        False,
         "patroni-password",
     )
     root = harness.get_filesystem_root("postgresql")
@@ -104,8 +103,8 @@ def test_get_primary(harness, patroni):
         primary = patroni.get_primary()
         assert primary == "postgresql-k8s-1"
         _get.assert_called_once_with(
-            "http://postgresql-k8s-0:8008/cluster",
-            verify=True,
+            "https://postgresql-k8s-0:8008/cluster",
+            verify=patroni._verify,
             timeout=10,
             auth=patroni._patroni_auth,
         )
@@ -115,8 +114,8 @@ def test_get_primary(harness, patroni):
         primary = patroni.get_primary(unit_name_pattern=True)
         assert primary == "postgresql-k8s/1"
         _get.assert_called_once_with(
-            "http://postgresql-k8s-0:8008/cluster",
-            verify=True,
+            "https://postgresql-k8s-0:8008/cluster",
+            verify=patroni._verify,
             timeout=10,
             auth=patroni._patroni_auth,
         )
@@ -329,9 +328,9 @@ def test_switchover(harness, patroni):
         response.status_code = 200
         patroni.switchover()
         _post.assert_called_once_with(
-            "http://postgresql-k8s-0:8008/switchover",
+            "https://postgresql-k8s-0:8008/switchover",
             json={"leader": "postgresql-k8s-0", "candidate": None},
-            verify=True,
+            verify=patroni._verify,
             auth=patroni._patroni_auth,
             timeout=PATRONI_TIMEOUT,
         )
@@ -341,9 +340,9 @@ def test_switchover(harness, patroni):
         _get_primary.side_effect = ["postgresql-k8s-0", "postgresql-k8s-2"]
         patroni.switchover("postgresql-k8s/2")
         _post.assert_called_once_with(
-            "http://postgresql-k8s-0:8008/switchover",
+            "https://postgresql-k8s-0:8008/switchover",
             json={"leader": "postgresql-k8s-0", "candidate": "postgresql-k8s-2"},
-            verify=True,
+            verify=patroni._verify,
             auth=patroni._patroni_auth,
             timeout=PATRONI_TIMEOUT,
         )
@@ -355,9 +354,9 @@ def test_switchover(harness, patroni):
             patroni.switchover("postgresql-k8s/2")
             assert False
         _post.assert_called_once_with(
-            "http://postgresql-k8s-0:8008/switchover",
+            "https://postgresql-k8s-0:8008/switchover",
             json={"leader": "postgresql-k8s-0", "candidate": "postgresql-k8s-2"},
-            verify=True,
+            verify=patroni._verify,
             auth=patroni._patroni_auth,
             timeout=PATRONI_TIMEOUT,
         )
@@ -369,9 +368,9 @@ def test_switchover(harness, patroni):
             patroni.switchover("postgresql-k8s/2")
             assert False
         _post.assert_called_once_with(
-            "http://postgresql-k8s-0:8008/switchover",
+            "https://postgresql-k8s-0:8008/switchover",
             json={"leader": "postgresql-k8s-0", "candidate": "postgresql-k8s-2"},
-            verify=True,
+            verify=patroni._verify,
             auth=patroni._patroni_auth,
             timeout=PATRONI_TIMEOUT,
         )
@@ -418,8 +417,8 @@ def test_member_started_true(patroni):
         assert patroni.member_started
 
         _get.assert_called_once_with(
-            "http://postgresql-k8s-0:8008/health",
-            verify=True,
+            "https://postgresql-k8s-0:8008/health",
+            verify=patroni._verify,
             auth=patroni._patroni_auth,
             timeout=PATRONI_TIMEOUT,
         )
@@ -436,8 +435,8 @@ def test_member_started_false(patroni):
         assert not patroni.member_started
 
         _get.assert_called_once_with(
-            "http://postgresql-k8s-0:8008/health",
-            verify=True,
+            "https://postgresql-k8s-0:8008/health",
+            verify=patroni._verify,
             auth=patroni._patroni_auth,
             timeout=PATRONI_TIMEOUT,
         )
@@ -454,8 +453,8 @@ def test_member_started_error(patroni):
         assert not patroni.member_started
 
         _get.assert_called_once_with(
-            "http://postgresql-k8s-0:8008/health",
-            verify=True,
+            "https://postgresql-k8s-0:8008/health",
+            verify=patroni._verify,
             auth=patroni._patroni_auth,
             timeout=PATRONI_TIMEOUT,
         )
@@ -501,9 +500,9 @@ def test_update_synchronous_node_count(harness, patroni):
         patroni.update_synchronous_node_count()
 
         _patch.assert_called_once_with(
-            "http://postgresql-k8s-0:8008/config",
+            "https://postgresql-k8s-0:8008/config",
             json={"synchronous_node_count": 0},
-            verify=True,
+            verify=patroni._verify,
             auth=patroni._patroni_auth,
             timeout=10,
         )
