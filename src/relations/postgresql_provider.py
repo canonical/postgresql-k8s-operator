@@ -117,10 +117,10 @@ class PostgreSQLProvider(Object):
                     password = val
                     break
                 if user in SYSTEM_USERS or user in self.charm.postgresql.list_users():
-                    self.charm.unit.status = BlockedStatus(FORBIDDEN_USER_MSG)
+                    self.charm.set_unit_status(BlockedStatus(FORBIDDEN_USER_MSG))
                     return
         except ModelError:
-            self.charm.unit.status = BlockedStatus(NO_ACCESS_TO_SECRET_MSG)
+            self.charm.set_unit_status(BlockedStatus(NO_ACCESS_TO_SECRET_MSG))
             return
         return user, password
 
@@ -222,14 +222,16 @@ class PostgreSQLProvider(Object):
             PostgreSQLGetPostgreSQLVersionError,
         ) as e:
             logger.exception(e)
-            self.charm.unit.status = BlockedStatus(
-                e.message
-                if (
-                    issubclass(type(e), PostgreSQLCreateDatabaseError)
-                    or issubclass(type(e), PostgreSQLCreateUserError)
+            self.charm.set_unit_status(
+                BlockedStatus(
+                    e.message
+                    if (
+                        issubclass(type(e), PostgreSQLCreateDatabaseError)
+                        or issubclass(type(e), PostgreSQLCreateUserError)
+                    )
+                    and e.message is not None
+                    else f"Failed to initialize {self.relation_name} relation"
                 )
-                and e.message is not None
-                else f"Failed to initialize {self.relation_name} relation"
             )
             return
 
@@ -277,8 +279,10 @@ class PostgreSQLProvider(Object):
             self.charm.postgresql.delete_user(user)
         except PostgreSQLDeleteUserError as e:
             logger.exception(e)
-            self.charm.unit.status = BlockedStatus(
-                f"Failed to delete user during {self.relation_name} relation broken event"
+            self.charm.set_unit_status(
+                BlockedStatus(
+                    f"Failed to delete user during {self.relation_name} relation broken event"
+                )
             )
 
         self.update_username_mapping(event.relation.id, None)
@@ -368,19 +372,19 @@ class PostgreSQLProvider(Object):
             and not self.check_for_invalid_extra_user_roles(relation.id)
             and not self.check_for_invalid_database_name(relation.id)
         ):
-            self.charm.unit.status = ActiveStatus()
+            self.charm.set_unit_status(ActiveStatus())
         if (
             self.charm._has_blocked_status
             and "Failed to initialize relation" in self.charm.unit.status.message
         ):
-            self.charm.unit.status = ActiveStatus()
+            self.charm.set_unit_status(ActiveStatus())
         if self.charm._has_blocked_status and self.charm.unit.status.message in [
             INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE,
             NO_ACCESS_TO_SECRET_MSG,
             FORBIDDEN_USER_MSG,
         ]:
             if self.check_for_invalid_extra_user_roles(relation.id):
-                self.charm.unit.status = BlockedStatus(INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE)
+                self.charm.set_unit_status(BlockedStatus(INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE))
                 return
             existing_users = self.charm.postgresql.list_users()
             for relation in self.charm.model.relations.get(self.relation_name, []):
@@ -401,13 +405,13 @@ class PostgreSQLProvider(Object):
                                 logger.warning(
                                     f"Relation {relation.id} is still requesting a forbidden user"
                                 )
-                                self.charm.unit.status = BlockedStatus(FORBIDDEN_USER_MSG)
+                                self.charm.set_unit_status(BlockedStatus(FORBIDDEN_USER_MSG))
                                 return
                 except ModelError:
                     logger.warning(f"Relation {relation.id} still cannot access the set secret")
-                    self.charm.unit.status = BlockedStatus(NO_ACCESS_TO_SECRET_MSG)
+                    self.charm.set_unit_status(BlockedStatus(NO_ACCESS_TO_SECRET_MSG))
                     return
-            self.charm.unit.status = ActiveStatus()
+            self.charm.set_unit_status(ActiveStatus())
 
     def check_for_invalid_extra_user_roles(self, relation_id: int) -> bool:
         """Checks if there are relations with invalid extra user roles.

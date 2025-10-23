@@ -545,7 +545,7 @@ class PostgreSQLBackups(Object):
             event.defer()
             return False
 
-        self.charm.unit.status = MaintenanceStatus("initialising stanza")
+        self.charm.set_unit_status(MaintenanceStatus("initialising stanza"))
 
         # Create the stanza.
         try:
@@ -589,7 +589,7 @@ class PostgreSQLBackups(Object):
         # Update the configuration to use pgBackRest as the archiving mechanism.
         self.charm.update_config()
 
-        self.charm.unit.status = MaintenanceStatus("checking stanza")
+        self.charm.set_unit_status(MaintenanceStatus("checking stanza"))
 
         try:
             # If the tls is enabled, it requires all the units in the cluster to run the pgBackRest service to
@@ -754,7 +754,7 @@ class PostgreSQLBackups(Object):
 
         return True
 
-    def _on_create_backup_action(self, event) -> None:  # noqa: C901
+    def _on_create_backup_action(self, event) -> None:
         """Request that pgBackRest creates a backup."""
         backup_type = event.params.get("type", "full")
         if backup_type not in BACKUP_TYPE_OVERRIDES:
@@ -810,7 +810,7 @@ Juju Version: {juju_version!s}
             self._change_connectivity_to_database(connectivity=False)
             disabled_connectivity = True
 
-        self.charm.unit.status = MaintenanceStatus("creating backup")
+        self.charm.set_unit_status(MaintenanceStatus("creating backup"))
         # Set flag due to missing in progress backups on JSON output
         # (reference: https://github.com/pgbackrest/pgbackrest/issues/2007)
         self.charm.update_config(is_creating_backup=True)
@@ -884,7 +884,7 @@ Stderr:
             self._change_connectivity_to_database(connectivity=True)
 
         self.charm.update_config(is_creating_backup=False)
-        self.charm.unit.status = ActiveStatus()
+        self.charm.set_unit_status(ActiveStatus())
 
     def _on_s3_credential_gone(self, _) -> None:
         self.container.stop(self.charm.rotate_logs_service)
@@ -974,7 +974,7 @@ Stderr:
                 f"Chosen timeline {restore_stanza_timeline[1]} as nearest for the specified timestamp {restore_to_time}"
             )
 
-        self.charm.unit.status = MaintenanceStatus("restoring backup")
+        self.charm.set_unit_status(MaintenanceStatus("restoring backup"))
 
         # Temporarily disabling patroni (postgresql) pebble service auto-restart on failures. This is required
         # as point-in-time-recovery can fail on restore, therefore during cluster bootstrapping process. In this
@@ -1085,7 +1085,7 @@ Stderr:
 
         return None
 
-    def _pre_restore_checks(self, event: ActionEvent) -> bool:  # noqa: C901
+    def _pre_restore_checks(self, event: ActionEvent) -> bool:
         """Run some checks before starting the restore.
 
         Returns:
