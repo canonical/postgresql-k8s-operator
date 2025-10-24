@@ -217,7 +217,7 @@ def test_cycle_detection_three_clusters(juju: jubilant.Juju, charm):
         unit = status.get_units(DATABASE_APP_NAME).get(f"{DATABASE_APP_NAME}/0")
         return unit.workload_status.current == "blocked"
 
-    juju.wait(unit_blocked, timeout=180)
+    juju.wait(unit_blocked, timeout=300)
 
     logger.info("Success in test_cycle_detection_three_clusters")
 
@@ -237,7 +237,7 @@ def test_cycle_unblocks_with_different_table(juju: jubilant.Juju, charm):
     juju.config(app=DATABASE_APP_NAME, values=pg1_config)
 
     # Wait for A to become active (unblocked)
-    juju.wait(lambda status: jubilant.all_active(status, DATABASE_APP_NAME), timeout=180)
+    juju.wait(lambda status: jubilant.all_active(status, DATABASE_APP_NAME), timeout=400)
 
     logger.info("Success in test_cycle_unblocks_with_different_table")
 

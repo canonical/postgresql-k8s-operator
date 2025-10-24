@@ -11,6 +11,7 @@ import logging
 from typing import (
     TYPE_CHECKING,
 )
+from datetime import datetime, timezone
 
 from ops import (
     BlockedStatus,
@@ -42,6 +43,36 @@ LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS = "Logical replication setup is inva
 
 class PostgreSQLLogicalReplication(Object):
     """Defines the logical-replication logic."""
+
+    @staticmethod
+    def _now_iso() -> str:
+        """Return current UTC time in ISO 8601 format."""
+        return datetime.now(timezone.utc).isoformat()
+
+    def _parse_iso(self, value: str | None) -> float:
+        """Parse ISO8601 string to POSIX timestamp seconds; return 0 on error/empty."""
+        if not value:
+            return 0.0
+        try:
+            # Support values with or without timezone; assume UTC if absent
+            dt = datetime.fromisoformat(value)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt.timestamp()
+        except Exception:
+            return 0.0
+
+    def _other_configured_time_ts(self) -> float:
+        """Get the latest configured-time published by remote publishers we subscribe to.
+
+        Looks at remote application data on LOGICAL_REPLICATION_RELATION and collects
+        any 'configured-time' fields; returns the maximum timestamp in seconds.
+        """
+        ts = 0.0
+        for rel in self.model.relations.get(LOGICAL_REPLICATION_RELATION, ()):  # remote app bag
+            other_ct = rel.data[rel.app].get("configured-time")
+            ts = max(ts, self._parse_iso(other_ct))
+        return ts
 
     def _identity(self) -> str:
         """Return unique identity of this application in the model."""
@@ -106,6 +137,8 @@ class PostgreSQLLogicalReplication(Object):
 
         self._save_published_resources_info(str(event.relation.id), secret.id, {})  # type: ignore
         event.relation.data[self.model.app]["secret-id"] = secret.id  # type: ignore
+        # Clear provenance as subscriptions are gone
+        self._rebuild_subscribed_upstream(True)
 
     def _on_offer_relation_changed(self, event: RelationChangedEvent) -> None:
         if not self.charm.unit.is_leader():
@@ -192,12 +225,21 @@ class PostgreSQLLogicalReplication(Object):
                 f"{LOGICAL_REPLICATION_RELATION} #{event.relation.id} join early exit due to validation error"
             )
             return
+        # Defer until publisher provides upstream info for all requested tables
+        if self._subscriber_should_wait_for_upstream():
+            logger.error(
+                f"Deferring {LOGICAL_REPLICATION_RELATION} #{event.relation.id} join awaiting publisher upstream info"
+            )
+            event.defer()
+            return
         if not self._validate_subscription_request():
             return
         event.relation.data[self.model.app]["subscription-request"] = (
             self.charm.config.logical_replication_subscription_request or ""
         )
-        # Share our identity with the publisher to prevent cyclic replication
+        # Record our configured-time for coordination logic
+        event.relation.data[self.model.app]["configured-time"] = self._now_iso()
+        # Share our identity with the publisher (informational)
         event.relation.data[self.model.app]["requester-id"] = self._identity()
 
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
@@ -287,24 +329,56 @@ class PostgreSQLLogicalReplication(Object):
 
     # endregion
 
-    def _rebuild_subscribed_upstream(self) -> None:
-        """Aggregate upstream provenance for all subscribed tables.
+    def _rebuild_subscribed_upstream(self, set_configured_time: bool = False) -> None:
+        """Aggregate upstream provenance for all subscribed tables and propagate.
 
         Stores mapping in app peer data as logical-replication-subscribed-upstream
         with keys formatted as "<database>:<schema>.<table>" and values equal to
         the upstream identity "<model_uuid>:<app_name>".
+
+        Additionally, recompute and update root-level "upstream" map on all
+        offer relations using the current subscribed-upstream so that if this
+        application later subscribes to a new upstream, its offers immediately
+        reflect the new provenance without requiring a subscription-request
+        change from the remote.
         """
         mapping: dict[str, str] = {}
         for relation in self.model.relations.get(LOGICAL_REPLICATION_RELATION, ()):
             pubs = json.loads(relation.data[relation.app].get("publications", "{}"))
+            # Root-level upstream provided by publisher for each db:schematable
+            try:
+                root_upstream = json.loads(relation.data[relation.app].get("upstream", "{}"))
+            except json.JSONDecodeError:
+                root_upstream = {}
+            # Root-level publisher-id provided by publisher (single identity)
+            root_publisher_id = relation.data[relation.app].get("publisher-id", "")
             for database, pub in pubs.items():
-                upstream_by_table = pub.get("upstream", {}) if isinstance(pub, dict) else {}
-                publisher_id = pub.get("publisher-id", "") if isinstance(pub, dict) else ""
                 for schematable in pub.get("tables", []):
-                    upstream = upstream_by_table.get(schematable) or publisher_id
+                    key = f"{database}:{schematable}"
+                    upstream = root_upstream.get(key) or root_publisher_id
                     if upstream:
-                        mapping[f"{database}:{schematable}"] = upstream
+                        mapping[key] = upstream
+        # Save aggregated subscribed upstream
         self.charm.app_peer_data["logical-replication-subscribed-upstream"] = json.dumps(mapping)
+
+        # Propagate updated provenance to all offers at root level.
+        # Compute per-offer, per-requested table upstream map based on current mapping
+        for offer in self.model.relations.get(LOGICAL_REPLICATION_OFFER_RELATION, () ):
+            try:
+                subs_req = json.loads(offer.data[offer.app].get("subscription-request", "{}"))
+            except json.JSONDecodeError:
+                subs_req = {}
+            root_map: dict[str, str] = {}
+            for database, tables in subs_req.items():
+                for schematable in tables:
+                    key = f"{database}:{schematable}"
+                    if key in mapping:
+                        root_map[key] = mapping[key]
+            # Only write if we have something or if upstream key was previously set (to allow clearing/refresh)
+            offer.data[self.model.app]["upstream"] = json.dumps(root_map)
+            # Update configured-time whenever we refresh the upstream map
+            if set_configured_time:
+                offer.data[self.model.app]["configured-time"] = self._now_iso()
 
     def _get_subscribed_upstream(self) -> dict[str, str]:
         try:
@@ -356,6 +430,13 @@ class PostgreSQLLogicalReplication(Object):
             self.charm.app_peer_data["logical-replication-validation"] = "ongoing"
             event.defer()
             return False
+        if self._subscriber_should_wait_for_upstream():
+            logger.error(
+                "Marking logical replication config validation as ongoing and deferring until publisher upstream is available"
+            )
+            self.charm.app_peer_data["logical-replication-validation"] = "ongoing"
+            event.defer()
+            return False
         if self._validate_subscription_request():
             self._apply_updated_subscription_request()
         return True
@@ -370,6 +451,7 @@ class PostgreSQLLogicalReplication(Object):
             return
         if (
             self.charm.app_peer_data.get("logical-replication-validation") == "error"
+            and not self._subscriber_should_wait_for_upstream()
             and self._validate_subscription_request()
         ):
             self._apply_updated_subscription_request()
@@ -409,6 +491,8 @@ class PostgreSQLLogicalReplication(Object):
         relation.data[self.model.app]["subscription-request"] = (  # type: ignore
             self.charm.config.logical_replication_subscription_request
         )
+        # Record our configured-time whenever we update the request
+        relation.data[self.model.app]["configured-time"] = self._now_iso()
         for database, subscription in subscriptions.copy().items():
             if database in subscription_request_config:
                 continue
@@ -420,6 +504,7 @@ class PostgreSQLLogicalReplication(Object):
         })
 
     def _validate_subscription_request(self) -> bool:
+        logger.error("Calling _validate_subscription_request")
         try:
             subscription_request_config = json.loads(
                 self.charm.config.logical_replication_subscription_request or "{}"
@@ -433,7 +518,17 @@ class PostgreSQLLogicalReplication(Object):
             if relation
             else {}
         )
+        # Publisher-provided upstream provenance (root-level)
+        publisher_upstream = {}
+        if relation:
+            try:
+                publisher_upstream = json.loads(
+                    relation.data[relation.app].get("upstream", "{}")
+                )
+            except json.JSONDecodeError:
+                publisher_upstream = {}
 
+        logger.error(f"subscription_request_config: {subscription_request_config}")
         for database, schematables in subscription_request_config.items():
             if not self.charm.postgresql.database_exists(database):
                 return self._fail_validation(f"database {database} doesn't exist")
@@ -445,6 +540,13 @@ class PostgreSQLLogicalReplication(Object):
                 if not self.charm.postgresql.table_exists(database, schema, table):
                     return self._fail_validation(
                         f"table {schematable} in database {database} doesn't exist"
+                    )
+                # Cycle detection: if publisher says this table's upstream is us, subscribing would create a loop
+                upstream_key = f"{database}:{schematable}"
+                logger.error(f"publisher_upstream.get(upstream_key): {publisher_upstream.get(upstream_key)}, self._identity(): {self._identity()}")
+                if publisher_upstream.get(upstream_key) == self._identity():
+                    return self._fail_validation(
+                        f"cyclic logical replication detected for {upstream_key}: upstream equals subscriber"
                     )
                 already_subscribed = (
                     database in subscription_request_relation
@@ -458,6 +560,7 @@ class PostgreSQLLogicalReplication(Object):
                     )
 
         self.charm.app_peer_data["logical-replication-validation"] = ""
+        self.charm._set_active_status()
         return True
 
     def _fail_validation(self, message: str | None = None) -> bool:
@@ -502,6 +605,58 @@ class PostgreSQLLogicalReplication(Object):
             return False
         return True
 
+    def _subscriber_should_wait_for_upstream(self) -> bool:
+        """Return True if publisher hasn't provided upstream for all requested tables yet.
+
+        We defer validation and config-application until the other side (publisher)
+        publishes the root-level upstream map entries for every requested
+        <database>:<schema>.<table> key in our logical_replication_subscription_request.
+
+        Exception: if this unit's configured-time is earlier than the configured-time
+        observed from the other unit(s) on the logical-replication relation, do not wait
+        (return False) to allow progress and break potential cycles.
+        """
+        relation = self.model.get_relation(LOGICAL_REPLICATION_RELATION)
+        if not relation:
+            # No relation: nothing to wait for.
+            return False
+        # Our desired subscription config
+        try:
+            subscription_request_config = json.loads(
+                self.charm.config.logical_replication_subscription_request or "{}"
+            )
+        except json.JSONDecodeError:
+            # Let validation handle JSON errors
+            return False
+        if not subscription_request_config:
+            return False
+        # Publisher's root-level upstream map
+        try:
+            publisher_upstream = json.loads(relation.data[relation.app].get("upstream", "{}"))
+        except json.JSONDecodeError:
+            publisher_upstream = {}
+        # If any requested key is missing in publisher_upstream, we should wait,
+        # unless our configured-time is earlier than the remote one.
+        for database, tables in subscription_request_config.items():
+            for schematable in tables:
+                key = f"{database}:{schematable}"
+                if key not in publisher_upstream:
+                    # Compare configured-time values to decide whether to wait
+                    our_ct_ts = self._parse_iso(relation.data[self.model.app].get("configured-time"))
+                    other_ct_ts = self._other_configured_time_ts()
+                    if our_ct_ts == 0 or our_ct_ts < other_ct_ts:
+                        logger.error(
+                            "Not waiting for publisher upstream because our configured-time (%s) is earlier than remote (%s)",
+                            relation.data[self.model.app].get("configured-time"),
+                            max((rel.data[rel.app].get("configured-time") or "") for rel in self.model.relations.get(LOGICAL_REPLICATION_RELATION, ())),
+                        )
+                        return False
+                    logger.error(
+                        f"Waiting for publisher upstream for {key} before validating subscription request"
+                    )
+                    return True
+        return False
+
     def _process_offer(self, relation: Relation) -> None:  # noqa: C901
         logger.debug(
             f"Started processing offer for {LOGICAL_REPLICATION_OFFER_RELATION} #{relation.id}"
@@ -532,27 +687,29 @@ class PostgreSQLLogicalReplication(Object):
                 user, database, publication["tables"]
             )
 
+        # Build a root-level upstream provenance map for requested tables
+        root_upstream_map: dict[str, str] = {}
+        # Determine if we have any active subscriptions; if none, we are the origin
+        has_subscriptions = bool(self.model.relations.get(LOGICAL_REPLICATION_RELATION, ()))
         for database, tables in subscriptions_request.items():
-            # Cycle detection: if our local upstream for any requested table equals requester, reject
-            cycle_detected = False
-            upstream_map: dict[str, str] = {}
+            db_table_upstream: dict[str, str] = {}
             for schematable in tables:
                 key = f"{database}:{schematable}"
-                local_upstream = subscribed_upstream.get(key) or self._identity()
-                upstream_map[schematable] = local_upstream
-                if requester_id and requester_id == local_upstream:
-                    cycle_detected = True
-            if cycle_detected:
-                error = (
-                    f"cyclic logical replication detected for database {database}: "
-                    f"requested tables would replicate back to their upstream ({requester_id})"
-                )
-                errors.append(error)
-                logger.error(
-                    f"Cannot create/alter publication for {LOGICAL_REPLICATION_OFFER_RELATION} #{relation.id}: {error}"
-                )
-                # Skip creating/altering this publication to avoid loop
-                continue
+                if key in subscribed_upstream:
+                    local_upstream = subscribed_upstream[key]
+                    db_table_upstream[schematable] = local_upstream
+                    root_upstream_map[key] = local_upstream
+                    logger.error(f"Using subscribed upstream {local_upstream} for {key} and {schematable}")
+                elif not has_subscriptions:
+                    # No upstream subscriptions at all: we are the origin for this table
+                    local_upstream = self._identity()
+                    db_table_upstream[schematable] = local_upstream
+                    root_upstream_map[key] = local_upstream
+                    logger.error(f"Using unsubscribed upstream {local_upstream} for {key} and {schematable}")
+                else:
+                    # Upstream not yet known and we do have subscriptions; leave unset (we deferred earlier)
+                    logger.error(f"Cannot determine upstream for {key} and {schematable}")
+                    continue
 
             if database not in publications:
                 if validation_error := self._validate_new_publication(database, tables):
@@ -581,8 +738,6 @@ class PostgreSQLLogicalReplication(Object):
                     "publication-name": publication_name,
                     "replication-slot-name": self._replication_slot_name(relation.id, database),
                     "tables": tables,
-                    "publisher-id": self._identity(),
-                    "upstream": upstream_map,
                 }
             elif sorted(publication_tables := publications[database]["tables"]) != sorted(tables):
                 publication_name = publications[database]["publication-name"]
@@ -613,14 +768,18 @@ class PostgreSQLLogicalReplication(Object):
                 )
                 self.charm.postgresql.alter_publication(database, publication_name, tables)
                 publications[database]["tables"] = tables
-                publications[database]["publisher-id"] = self._identity()
-                publications[database]["upstream"] = upstream_map
             else:
-                # Tables unchanged; still update provenance and publisher id to propagate upstream
-                publications[database]["publisher-id"] = self._identity()
-                publications[database]["upstream"] = upstream_map
+                # Tables unchanged; nothing to do for publications metadata
+                pass
             self._save_published_resources_info(str(relation.id), secret.id, publications)  # type: ignore
             relation.data[self.model.app]["publications"] = json.dumps(publications)
+
+        # Publish root-level upstream provenance map for all requested tables
+        relation.data[self.model.app]["upstream"] = json.dumps(root_upstream_map)
+        # Publish root-level publisher identity as well
+        relation.data[self.model.app]["publisher-id"] = self._identity()
+        # Publish configuration timestamp to allow coordination with peer
+        relation.data[self.model.app]["configured-time"] = self._now_iso()
 
         self._save_published_resources_info(str(relation.id), secret.id, publications)  # type: ignore
         relation.data[self.model.app].update({
