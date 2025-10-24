@@ -3,7 +3,6 @@
 import itertools
 import json
 import logging
-from datetime import datetime
 from unittest import TestCase
 from unittest.mock import MagicMock, Mock, PropertyMock, call, patch, sentinel
 
@@ -18,7 +17,7 @@ from ops.model import (
     RelationDataTypeError,
     WaitingStatus,
 )
-from ops.pebble import Change, ChangeError, ChangeID, ServiceStatus
+from ops.pebble import ChangeError, ServiceStatus
 from ops.testing import Harness
 from requests import ConnectionError as RequestsConnectionError
 from tenacity import RetryError, wait_fixed
@@ -76,6 +75,7 @@ def test_on_leader_elected(harness):
         patch("charm.PostgresqlOperatorCharm._create_services") as _create_services,
         patch("charm.PostgreSQLUpgrade.idle", new_callable=PropertyMock) as _idle,
         patch("charm.PostgresqlOperatorCharm.get_secret_from_id", return_value={}),
+        patch("charm.PostgresqlOperatorCharm.get_secret_from_id", return_value={}),
     ):
         rel_id = harness.model.get_relation(PEER).id
         # Check that a new password was generated on leader election and nothing is done
@@ -93,7 +93,7 @@ def test_on_leader_elected(harness):
             [MagicMock(metadata=MagicMock(name="fakeName2", namespace="fakeNamespace"))],
         ]
         harness.set_leader()
-        assert _set_secret.call_count == 5
+        assert _set_secret.call_count == 7
         _set_secret.assert_any_call("app", "operator-password", "sekr1t")
         _set_secret.assert_any_call("app", "replication-password", "sekr1t")
         _set_secret.assert_any_call("app", "rewind-password", "sekr1t")
@@ -186,6 +186,7 @@ def test_get_unit_ip(harness):
 
 def test_on_postgresql_pebble_ready(harness):
     with (
+        patch("charm.Path"),
         patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
         patch(
             "charm.Patroni.rock_postgresql_version", new_callable=PropertyMock
@@ -203,13 +204,12 @@ def test_on_postgresql_pebble_ready(harness):
             side_effect=[None, _FakeApiError, _FakeApiError, None],
         ) as _create_services,
         patch("charm.Patroni.member_started") as _member_started,
-        patch(
-            "charm.PostgresqlOperatorCharm.push_tls_files_to_workload"
-        ) as _push_tls_files_to_workload,
         patch("charm.PostgreSQLUpgrade.idle", new_callable=PropertyMock) as _idle,
         patch("charm.PostgresqlOperatorCharm._patch_pod_labels"),
         patch("charm.PostgresqlOperatorCharm._on_leader_elected"),
+        patch("charm.PostgresqlOperatorCharm._push_file_to_workload"),
         patch("charm.PostgresqlOperatorCharm._create_pgdata") as _create_pgdata,
+        patch("charm.PostgresqlOperatorCharm.get_secret", return_value="secret"),
     ):
         _rock_postgresql_version.return_value = "16.6"
 
@@ -245,7 +245,6 @@ def test_on_postgresql_pebble_ready(harness):
 
         # Check for the Active status.
         _set_active_status.reset_mock()
-        _push_tls_files_to_workload.reset_mock()
         harness.container_pebble_ready(POSTGRESQL_CONTAINER)
         plan = harness.get_container_pebble_plan(POSTGRESQL_CONTAINER)
         expected = harness.charm._postgresql_layer().to_dict()
@@ -256,7 +255,6 @@ def test_on_postgresql_pebble_ready(harness):
         _set_active_status.assert_called_once()
         container = harness.model.unit.get_container(POSTGRESQL_CONTAINER)
         assert container.get_service("postgresql").is_running()
-        _push_tls_files_to_workload.assert_called_once()
 
 
 def test_on_postgresql_pebble_ready_no_connection(harness):
@@ -378,12 +376,9 @@ def test_on_update_status(harness):
     with (
         patch("charm.logger") as _logger,
         patch(
-            "charm.PostgresqlOperatorCharm._handle_processes_failures"
-        ) as _handle_processes_failures,
-        patch(
             "charm.PostgresqlOperatorCharm.enable_disable_extensions"
         ) as _enable_disable_extensions,
-        patch("charm.Patroni.member_started") as _member_started,
+        patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
         patch("charm.Patroni.get_primary") as _get_primary,
         patch("ops.model.Container.pebble") as _pebble,
         patch("ops.model.Container.restart") as _restart,
@@ -423,23 +418,17 @@ def test_on_update_status(harness):
         _pebble.get_services.assert_called_once()
 
         # Test when a failure need to be handled.
-        _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.ACTIVE)]
-        _handle_processes_failures.return_value = True
-        harness.charm.on.update_status.emit()
-        _get_primary.assert_not_called()
-
-        # Test when a failure need to be handled.
         _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.INACTIVE)]
         harness.charm.on.update_status.emit()
-        _get_primary.assert_not_called()
         _restart.assert_called_once_with("postgresql")
         _restart.reset_mock()
+        _get_primary.assert_called_once_with(unit_name_pattern=True)
+        _get_primary.reset_mock()
 
         # Test restart failed
         _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.INACTIVE)]
         _restart.side_effect = ChangeError(err=None, change=None)
         harness.charm.on.update_status.emit()
-        _get_primary.assert_not_called()
         _restart.assert_called_once_with("postgresql")
         _logger.exception.assert_called_once_with("Failed to restart patroni")
         _restart.reset_mock()
@@ -448,13 +437,11 @@ def test_on_update_status(harness):
 
         # Check primary message not being set (current unit is not the primary).
         _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.ACTIVE)]
-        _handle_processes_failures.return_value = False
         _get_primary.side_effect = [
             "postgresql-k8s/1",
             harness.charm.unit.name,
         ]
         harness.charm.on.update_status.emit()
-        _get_primary.assert_called_once()
         assert harness.model.unit.status != ActiveStatus("Primary")
 
         # Test again and check primary message being set (current unit is the primary).
@@ -476,9 +463,6 @@ def test_on_update_status_no_connection(harness):
 
 def test_on_update_status_with_error_on_get_primary(harness):
     with (
-        patch(
-            "charm.PostgresqlOperatorCharm._handle_processes_failures", return_value=False
-        ) as _handle_processes_failures,
         patch("charm.Patroni.member_started") as _member_started,
         patch("charm.Patroni.get_primary") as _get_primary,
         patch("ops.model.Container.pebble") as _pebble,
@@ -648,9 +632,6 @@ def test_on_pgdata_storage_detaching(harness):
 def test_on_update_status_after_restore_operation(harness):
     with (
         patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
-        patch(
-            "charm.PostgresqlOperatorCharm._handle_processes_failures"
-        ) as _handle_processes_failures,
         patch("charm.PostgreSQLBackups.can_use_s3_repository") as _can_use_s3_repository,
         patch(
             "single_kernel_postgresql.utils.postgresql.PostgreSQL.get_current_timeline"
@@ -677,7 +658,6 @@ def test_on_update_status_after_restore_operation(harness):
         harness.set_can_connect(POSTGRESQL_CONTAINER, True)
         harness.charm.on.update_status.emit()
         _update_config.assert_not_called()
-        _handle_processes_failures.assert_not_called()
         _set_active_status.assert_not_called()
         assert isinstance(harness.charm.unit.status, BlockedStatus)
 
@@ -687,7 +667,6 @@ def test_on_update_status_after_restore_operation(harness):
         _member_started.return_value = False
         harness.charm.on.update_status.emit()
         _update_config.assert_not_called()
-        _handle_processes_failures.assert_not_called()
         _set_active_status.assert_not_called()
         tc.assertIsInstance(harness.charm.unit.status, ActiveStatus)
 
@@ -700,10 +679,8 @@ def test_on_update_status_after_restore_operation(harness):
         # Test when the restore operation finished successfully.
         _member_started.return_value = True
         _can_use_s3_repository.return_value = (True, None)
-        _handle_processes_failures.return_value = False
         harness.charm.on.update_status.emit()
         _update_config.assert_called_once()
-        _handle_processes_failures.assert_called_once()
         _set_active_status.assert_called_once()
         assert isinstance(harness.charm.unit.status, ActiveStatus)
 
@@ -742,6 +719,7 @@ def test_on_upgrade_charm(harness):
             "charm.PostgresqlOperatorCharm._create_services",
             side_effect=[_FakeApiError, None, None],
         ) as _create_services,
+        patch("charm.PostgresqlOperatorCharm.push_tls_files_to_workload"),
         patch("charm.PostgreSQLUpgrade.idle", new_callable=PropertyMock) as _idle,
     ):
         # Test when the cluster is being upgraded.
@@ -908,8 +886,12 @@ def test_postgresql_layer(harness):
                 POSTGRESQL_SERVICE: {
                     "override": "replace",
                     "level": "ready",
-                    "http": {
-                        "url": "http://postgresql-k8s-0.postgresql-k8s-endpoints:8008/health",
+                    "exec": {
+                        "command": "python3 /scripts/self-signed-checker.py",
+                        "user": "postgres",
+                        "environment": {
+                            "ENDPOINT": "https://postgresql-k8s-0.postgresql-k8s-endpoints:8008/health",
+                        },
                     },
                 }
             },
@@ -1323,99 +1305,6 @@ def test_on_peer_relation_changed(harness):
         _set_active_status.assert_not_called()
 
 
-def test_handle_processes_failures(harness):
-    with (
-        patch("charm.Patroni.reinitialize_postgresql") as _reinitialize_postgresql,
-        patch("charm.Patroni.member_streaming", new_callable=PropertyMock) as _member_streaming,
-        patch(
-            "charm.PostgresqlOperatorCharm.is_standby_leader", new_callable=PropertyMock
-        ) as _is_standby_leader,
-        patch(
-            "charm.PostgresqlOperatorCharm.is_primary", new_callable=PropertyMock
-        ) as _is_primary,
-        patch(
-            "charm.Patroni.is_database_running", new_callable=PropertyMock
-        ) as _is_database_running,
-        patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
-        patch("ops.model.Container.restart") as _restart,
-    ):
-        # Test when there are no processes failures to handle.
-        harness.set_can_connect(POSTGRESQL_CONTAINER, True)
-        for values in itertools.product(
-            [True, False], [True, False], [True, False], [True, False], [True, False]
-        ):
-            # Skip conditions that lead to handling a process failure.
-            if (not values[0] and values[2]) or (not values[3] and values[1] and not values[4]):
-                continue
-
-            _member_started.side_effect = [values[0], values[1]]
-            _is_database_running.return_value = values[2]
-            _is_primary.return_value = values[3]
-            _member_streaming.return_value = values[4]
-            assert not harness.charm._handle_processes_failures()
-            _restart.assert_not_called()
-            _reinitialize_postgresql.assert_not_called()
-
-        # Test when the Patroni process is not running.
-        _is_database_running.return_value = True
-        for values in itertools.product(
-            [
-                None,
-                ChangeError(
-                    err="fake error",
-                    change=Change(
-                        ChangeID("1"),
-                        "fake kind",
-                        "fake summary",
-                        "fake status",
-                        [],
-                        True,
-                        "fake error",
-                        datetime.now(),
-                        datetime.now(),
-                    ),
-                ),
-            ],
-            [True, False],
-            [True, False],
-            [True, False],
-        ):
-            _restart.reset_mock()
-            _restart.side_effect = values[0]
-            _is_primary.return_value = values[1]
-            _member_started.side_effect = [False, values[2]]
-            _member_streaming.return_value = values[3]
-            harness.charm.unit.status = ActiveStatus()
-            result = harness.charm._handle_processes_failures()
-            assert result == (values[0] is None)
-            assert isinstance(harness.charm.unit.status, ActiveStatus)
-            _restart.assert_called_once_with("postgresql")
-            _reinitialize_postgresql.assert_not_called()
-
-        # Test when the unit is a replica and it's not streaming from primary.
-        _restart.reset_mock()
-        _is_primary.return_value = False
-        _is_standby_leader.return_value = False
-        _member_streaming.return_value = False
-        for values in itertools.product(
-            [None, RetryError(last_attempt=1)], [True, False], [True, False]
-        ):
-            # Skip the condition that lead to handling other process failure.
-            if not values[1] and values[2]:
-                continue
-
-            _reinitialize_postgresql.reset_mock()
-            _reinitialize_postgresql.side_effect = values[0]
-            _member_started.side_effect = [values[1], True]
-            _is_database_running.return_value = values[2]
-            harness.charm.unit.status = ActiveStatus()
-            result = harness.charm._handle_processes_failures()
-            assert result == (values[0] is None)
-            assert isinstance(harness.charm.unit.status, MaintenanceStatus)
-            _restart.assert_not_called()
-            _reinitialize_postgresql.assert_called_once()
-
-
 def test_push_ca_file_into_workload(harness):
     with (
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
@@ -1672,7 +1561,7 @@ def test_create_pgdata(harness):
     container.exists.return_value = False
     harness.charm._create_pgdata(container)
     container.make_dir.assert_called_once_with(
-        "/var/lib/postgresql/data/pgdata", permissions=488, user="postgres", group="postgres"
+        "/var/lib/postgresql/data/pgdata", permissions=448, user="postgres", group="postgres"
     )
     container.exec.assert_has_calls([
         call(["chown", "postgres:postgres", "/var/lib/postgresql/archive"]),
@@ -1802,3 +1691,15 @@ def test_get_ldap_parameters(harness):
         harness.charm.get_ldap_parameters()
         _get_relation_data.assert_called_once()
         _get_relation_data.reset_mock()
+
+
+def test_on_secret_remove(harness):
+    event = Mock()
+    harness.charm._on_secret_remove(event)
+    event.remove_revision.assert_called_once_with()
+    event.reset_mock()
+
+    # No secret
+    event.secret.label = None
+    harness.charm._on_secret_remove(event)
+    assert not event.remove_revision.called

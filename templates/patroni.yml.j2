@@ -5,8 +5,8 @@ bootstrap:
     synchronous_node_count: {{ synchronous_node_count }}
     postgresql:
       use_pg_rewind: true
-      remove_data_directory_on_rewind_failure: true
-      remove_data_directory_on_diverged_timelines: true
+      remove_data_directory_on_rewind_failure: false
+      remove_data_directory_on_diverged_timelines: false
       bin_dir: /usr/lib/postgresql/{{ version }}/bin
       parameters:
         synchronous_standby_names: "*"
@@ -108,17 +108,11 @@ restapi:
     username: patroni
     password: {{ patroni_password }}
   {%- endif %}
-  {%- if enable_tls %}
-  cafile: {{ storage_path }}/ca.pem
-  certfile: {{ storage_path }}/cert.pem
-  keyfile: {{ storage_path }}/key.pem
-  {%- endif %}
-{%- if enable_tls %}
+  cafile: {{ storage_path }}/peer_ca.pem
+  certfile: {{ storage_path }}/peer_cert.pem
+  keyfile: {{ storage_path }}/peer_key.pem
 ctl:
-  cacert: {{ storage_path }}/ca.pem
-  certfile: {{ storage_path }}/cert.pem
-  keyfile: {{ storage_path }}/key.pem
-{%- endif %}
+  cacert: {{ storage_path }}/peer_ca.pem
 pod_ip: '{{ endpoint }}'
 postgresql:
   basebackup:

@@ -121,6 +121,23 @@ async def build_and_deploy(
         )
 
 
+def check_connected_user(
+    cursor, session_user: str, current_user: str, primary: bool = True
+) -> None:
+    cursor.execute("SELECT session_user,current_user;")
+    result = cursor.fetchone()
+    if result is not None:
+        instance = "primary" if primary else "replica"
+        assert result[0] == session_user, (
+            f"The session user should be the {session_user} user in the {instance} (it's currently {result[0]})"
+        )
+        assert result[1] == current_user, (
+            f"The current user should be the {current_user} user in the {instance} (it's currently {result[1]})"
+        )
+    else:
+        assert False, "No result returned from the query"
+
+
 async def check_database_users_existence(
     ops_test: OpsTest,
     users_that_should_exist: list[str],
@@ -218,7 +235,7 @@ async def check_patroni(ops_test: OpsTest, unit_name: str, restart_time: float) 
         whether Patroni is running correctly.
     """
     unit_ip = await get_unit_address(ops_test, unit_name)
-    health_info = requests.get(f"http://{unit_ip}:8008/health").json()
+    health_info = requests.get(f"https://{unit_ip}:8008/health", verify=False).json()
     postmaster_start_time = datetime.strptime(
         health_info["postmaster_start_time"], "%Y-%m-%d %H:%M:%S.%f%z"
     ).timestamp()
@@ -257,7 +274,7 @@ def convert_records_to_dict(records: list[tuple]) -> dict:
 async def count_switchovers(ops_test: OpsTest, unit_name: str) -> int:
     """Return the number of performed switchovers."""
     unit_address = await get_unit_address(ops_test, unit_name)
-    switchover_history_info = requests.get(f"http://{unit_address}:8008/history")
+    switchover_history_info = requests.get(f"https://{unit_address}:8008/history", verify=False)
     return len(switchover_history_info.json())
 
 
@@ -377,7 +394,7 @@ def get_cluster_members(endpoint: str) -> list[str]:
     Returns:
         list of Patroni cluster members
     """
-    r = requests.get(f"http://{endpoint}:8008/cluster")
+    r = requests.get(f"https://{endpoint}:8008/cluster", verify=False)
     return [member["name"] for member in r.json()["members"]]
 
 
@@ -622,7 +639,7 @@ async def check_tls_patroni_api(ops_test: OpsTest, unit_name: str, enabled: bool
                 # 'verify=False' is used here because the unit IP that is used in the test
                 # doesn't match the certificate hostname (that is a k8s hostname).
                 health_info = requests.get(
-                    f"{'https' if enabled else 'http'}://{unit_address}:8008/health",
+                    f"https://{unit_address}:8008/health",
                     verify=False,
                 )
                 return health_info.status_code == 200
@@ -669,7 +686,9 @@ async def restart_patroni(ops_test: OpsTest, unit_name: str, password: str) -> N
     """
     unit_ip = await get_unit_address(ops_test, unit_name)
     requests.post(
-        f"http://{unit_ip}:8008/restart", auth=requests.auth.HTTPBasicAuth("patroni", password)
+        f"https://{unit_ip}:8008/restart",
+        verify=False,
+        auth=requests.auth.HTTPBasicAuth("patroni", password),
     )
 
 
@@ -781,18 +800,19 @@ async def switchover(
     for attempt in Retrying(stop=stop_after_attempt(60), wait=wait_fixed(3), reraise=True):
         with attempt:
             response = requests.post(
-                f"http://{primary_ip}:8008/switchover",
+                f"https://{primary_ip}:8008/switchover",
                 json={
                     "leader": current_primary.replace("/", "-"),
                     "candidate": candidate.replace("/", "-") if candidate else None,
                 },
+                verify=False,
                 auth=requests.auth.HTTPBasicAuth("patroni", password),
             )
             assert response.status_code == 200, f"Switchover status code is {response.status_code}"
     app_name = current_primary.split("/")[0]
     for attempt in Retrying(stop=stop_after_attempt(30), wait=wait_fixed(2), reraise=True):
         with attempt:
-            response = requests.get(f"http://{primary_ip}:8008/cluster")
+            response = requests.get(f"https://{primary_ip}:8008/cluster", verify=False)
             assert response.status_code == 200
             standbys = len([
                 member for member in response.json()["members"] if member["role"] == "sync_standby"
@@ -862,10 +882,12 @@ async def backup_operations(
 ) -> None:
     """Basic set of operations for backup testing in different cloud providers."""
     # Deploy S3 Integrator and TLS Certificates Operator.
+    use_tls = all([tls_certificates_app_name, tls_config, tls_channel])
     await ops_test.model.deploy(s3_integrator_app_name, base=CHARM_BASE)
-    await ops_test.model.deploy(
-        tls_certificates_app_name, config=tls_config, channel=tls_channel, base=CHARM_BASE
-    )
+    if use_tls:
+        await ops_test.model.deploy(
+            tls_certificates_app_name, config=tls_config, channel=tls_channel, base=CHARM_BASE
+        )
     # Deploy and relate PostgreSQL to S3 integrator (one database app for each cloud for now
     # as archivo_mode is disabled after restoring the backup) and to TLS Certificates Operator
     # (to be able to create backups from replicas).
@@ -874,9 +896,13 @@ async def backup_operations(
         ops_test, charm, 2, database_app_name=database_app_name, wait_for_idle=False
     )
 
-    await ops_test.model.relate(
-        f"{database_app_name}:certificates", f"{tls_certificates_app_name}:certificates"
-    )
+    if use_tls:
+        await ops_test.model.relate(
+            f"{database_app_name}:peer-certificates", f"{tls_certificates_app_name}:certificates"
+        )
+        await ops_test.model.relate(
+            f"{database_app_name}:client-certificates", f"{tls_certificates_app_name}:certificates"
+        )
     async with ops_test.fast_forward(fast_interval="60s"):
         await ops_test.model.wait_for_idle(
             apps=[database_app_name], status="active", timeout=1000, raise_on_error=False

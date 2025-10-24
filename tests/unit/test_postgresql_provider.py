@@ -218,7 +218,7 @@ def test_on_relation_broken(harness):
 
 def test_update_tls_flag(harness):
     with (
-        patch("charm.PostgreSQLTLS.get_tls_files", return_value=(None, sentinel.ca, None)),
+        patch("charm.TLS.get_client_tls_files", return_value=(None, sentinel.ca, None)),
         patch(
             "relations.postgresql_provider.new_password", return_value="test-password"
         ) as _new_password,

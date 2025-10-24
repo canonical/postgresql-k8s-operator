@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import logging
+from typing import get_args
 
 import psycopg2
 import pytest
@@ -12,6 +13,8 @@ from lightkube.resources.core_v1 import Pod
 from psycopg2 import sql
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
+
+from locales import ROCK_LOCALES
 
 from .ha_tests.helpers import get_cluster_roles
 from .helpers import (
@@ -28,6 +31,7 @@ from .helpers import (
     get_password,
     get_primary,
     get_unit_address,
+    run_command_on_unit,
     scale_application,
 )
 
@@ -75,7 +79,7 @@ async def test_database_is_up(ops_test: OpsTest, unit_id: int):
     # Query Patroni REST API and check the status that indicates
     # both Patroni and PostgreSQL are up and running.
     host = await get_unit_address(ops_test, f"{APP_NAME}/{unit_id}")
-    result = requests.get(f"http://{host}:8008/health")
+    result = requests.get(f"https://{host}:8008/health", verify=False)
     assert result.status_code == 200
 
 
@@ -158,13 +162,28 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
     assert settings["wal_level"] == "logical"
 
     # Retrieve settings from Patroni REST API.
-    result = requests.get(f"http://{host}:8008/config")
+    result = requests.get(f"https://{host}:8008/config", verify=False)
     settings = result.json()
 
     # Validate configuration exposed by Patroni.
     assert settings["postgresql"]["use_pg_rewind"] is True
-    assert settings["postgresql"]["remove_data_directory_on_rewind_failure"] is True
-    assert settings["postgresql"]["remove_data_directory_on_diverged_timelines"] is True
+    assert settings["postgresql"]["remove_data_directory_on_rewind_failure"] is False
+    assert settings["postgresql"]["remove_data_directory_on_diverged_timelines"] is False
+
+
+async def test_postgresql_locales(ops_test: OpsTest) -> None:
+    raw_locales = await run_command_on_unit(
+        ops_test,
+        ops_test.model.applications[APP_NAME].units[0].name,
+        "locale -a",
+    )
+    locales = raw_locales.splitlines()
+    locales.sort()
+
+    # Juju 2 has an extra empty element
+    if "" in locales:
+        locales.remove("")
+    assert locales == list(get_args(ROCK_LOCALES))
 
 
 async def test_postgresql_parameters_change(ops_test: OpsTest) -> None:

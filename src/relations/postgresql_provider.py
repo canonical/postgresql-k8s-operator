@@ -18,6 +18,7 @@ from single_kernel_postgresql.utils.postgresql import (
     ACCESS_GROUP_RELATION,
     ACCESS_GROUPS,
     INVALID_DATABASE_NAME_BLOCKING_MESSAGE,
+    INVALID_DATABASE_NAMES,
     INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE,
     PostgreSQLCreateDatabaseError,
     PostgreSQLCreateUserError,
@@ -103,19 +104,10 @@ class PostgreSQLProvider(Object):
             return
         self.charm.set_secret(APP_SCOPE, USERNAME_MAPPING_LABEL, json.dumps(username_mapping))
 
-    def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:
-        """Handle the legacy postgresql-client relation changed event.
-
-        Generate password and handle user and database creation for the related application.
-        """
-        # Check for some conditions before trying to access the PostgreSQL instance.
-        if not self.charm.is_cluster_initialised or not self.charm._patroni.primary_endpoint_ready:
-            logger.debug(
-                "Deferring on_database_requested: Cluster must be initialized before database can be requested"
-            )
-            event.defer()
-            return
-
+    def _get_custom_credentials(
+        self, event: DatabaseRequestedEvent
+    ) -> tuple[str | None, str | None] | None:
+        """Check for secret with custom credentials and get values."""
         user = None
         password = None
         try:
@@ -130,6 +122,24 @@ class PostgreSQLProvider(Object):
         except ModelError:
             self.charm.unit.status = BlockedStatus(NO_ACCESS_TO_SECRET_MSG)
             return
+        return user, password
+
+    def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:
+        """Handle the legacy postgresql-client relation changed event.
+
+        Generate password and handle user and database creation for the related application.
+        """
+        # Check for some conditions before trying to access the PostgreSQL instance.
+        if not self.charm.is_cluster_initialised or not self.charm._patroni.primary_endpoint_ready:
+            logger.debug(
+                "Deferring on_database_requested: Cluster must be initialized before database can be requested"
+            )
+            event.defer()
+            return
+
+        if not (credentials := self._get_custom_credentials(event)):
+            return
+        user, password = credentials
 
         self.update_username_mapping(event.relation.id, user)
         self.charm.update_config()
@@ -187,7 +197,9 @@ class PostgreSQLProvider(Object):
 
             # Set TLS CA
             if self.charm.is_tls_enabled:
-                _, ca, _ = self.charm.tls.get_tls_files()
+                _, ca, _ = self.charm.tls.get_client_tls_files()
+                if not ca:
+                    ca = ""
                 self.database_provides.set_tls_ca(event.relation.id, ca)
 
             # Update the read-only endpoint.
@@ -332,9 +344,10 @@ class PostgreSQLProvider(Object):
             return
 
         relations = self.model.relations[self.relation_name]
+        ca = None
         if tls == "True":
-            _, ca, _ = self.charm.tls.get_tls_files()
-        else:
+            _, ca, _ = self.charm.tls.get_client_tls_files()
+        if not ca:
             ca = ""
 
         for relation in relations:
@@ -429,7 +442,7 @@ class PostgreSQLProvider(Object):
             for data in relation.data.values():
                 database = data.get("database")
                 if database is not None and (
-                    len(database) > 49 or database in ["postgres", "template0", "template1"]
+                    len(database) > 49 or database in INVALID_DATABASE_NAMES
                 ):
                     return True
         return False

@@ -26,7 +26,12 @@ from tenacity import (
     wait_fixed,
 )
 
-from constants import POSTGRESQL_LOGS_PATH, POSTGRESQL_LOGS_PATTERN, REWIND_USER, TLS_CA_FILE
+from constants import (
+    POSTGRESQL_LOGS_PATH,
+    POSTGRESQL_LOGS_PATTERN,
+    REWIND_USER,
+    TLS_CA_BUNDLE_FILE,
+)
 
 RUNNING_STATES = ["running", "streaming"]
 PATRONI_TIMEOUT = 10
@@ -89,7 +94,6 @@ class Patroni:
         superuser_password: str | None,
         replication_password: str | None,
         rewind_password: str | None,
-        tls_enabled: bool,
         patroni_password: str | None,
     ):
         self._charm = charm
@@ -102,12 +106,12 @@ class Patroni:
         self._superuser_password = superuser_password
         self._replication_password = replication_password
         self._rewind_password = rewind_password
-        self._tls_enabled = tls_enabled
         self._patroni_password = patroni_password
         # Variable mapping to requests library verify parameter.
         # The CA bundle file is used to validate the server certificate when
         # TLS is enabled, otherwise True is set because it's the default value.
-        self._verify = f"{self._storage_path}/{TLS_CA_FILE}" if tls_enabled else True
+        # CA bundle is not secret
+        self._verify = f"/tmp/{TLS_CA_BUNDLE_FILE}"  # noqa: S108
 
     @property
     def _patroni_auth(self) -> HTTPBasicAuth | None:
@@ -117,7 +121,7 @@ class Patroni:
     @property
     def _patroni_url(self) -> str:
         """Patroni REST API URL."""
-        return f"{'https' if self._tls_enabled else 'http'}://{self._endpoint}:8008"
+        return f"https://{self._endpoint}:8008"
 
     @property
     def rock_postgresql_version(self) -> str:
@@ -196,9 +200,11 @@ class Patroni:
     ) -> dict[str, Any]:
         """Call the cluster endpoint."""
         url = self._get_alternative_patroni_url(attempt, alternative_endpoints)
+        # TODO we don't know the other cluster's ca
+        verify = self._verify if not alternative_endpoints else False
         r = requests.get(
             f"{url}/cluster",
-            verify=self._verify,
+            verify=verify,
             auth=self._patroni_auth,
             timeout=PATRONI_TIMEOUT,
         )
@@ -375,7 +381,7 @@ class Patroni:
             for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(1)):
                 with attempt:
                     r = requests.get(
-                        f"{'https' if self._tls_enabled else 'http'}://{self._primary_endpoint}:8008/health",
+                        f"https://{self._primary_endpoint}:8008/health",
                         verify=self._verify,
                         auth=self._patroni_auth,
                         timeout=PATRONI_TIMEOUT,
@@ -452,19 +458,6 @@ class Patroni:
 
         return r.json().get("replication_state") == "streaming"
 
-    @property
-    def is_database_running(self) -> bool:
-        """Returns whether the PostgreSQL database process is running (and isn't frozen)."""
-        container = self._charm.unit.get_container("postgresql")
-        output = container.exec(["ps", "aux"]).wait_output()
-        postgresql_processes = [
-            process
-            for process in output[0].split("/n")
-            if "/usr/lib/postgresql/14/bin/postgres" in process
-        ]
-        # Check whether the PostgreSQL process has a state equal to T (frozen).
-        return any(process for process in postgresql_processes if process.split()[7] != "T")
-
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def bulk_update_parameters_controller_by_patroni(self, parameters: dict[str, Any]) -> None:
         """Update the value of a parameter controller by Patroni.
@@ -485,12 +478,17 @@ class Patroni:
         Args:
             slots: dictionary of slots in the {slot: database} format.
         """
-        current_config = requests.get(
-            f"{self._patroni_url}/config",
-            verify=self._verify,
-            timeout=PATRONI_TIMEOUT,
-            auth=self._patroni_auth,
-        )
+        try:
+            current_config = requests.get(
+                f"{self._patroni_url}/config",
+                verify=self._verify,
+                timeout=PATRONI_TIMEOUT,
+                auth=self._patroni_auth,
+            )
+        except Exception as e:
+            logger.debug(f"Ensure slots early exit: unable to call Patroni API. {e}")
+            return
+
         slots_patch: dict[str, dict[str, str] | None] = dict.fromkeys(
             current_config.json().get("slots", ())
         )

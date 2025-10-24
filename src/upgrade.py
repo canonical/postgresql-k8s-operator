@@ -18,7 +18,7 @@ from lightkube.core.exceptions import ApiError
 from lightkube.resources.apps_v1 import StatefulSet
 from ops.charm import UpgradeCharmEvent, WorkloadEvent
 from ops.model import BlockedStatus, MaintenanceStatus, RelationDataContent
-from pydantic import BaseModel
+from pydantic.v1 import BaseModel
 from single_kernel_postgresql.utils.postgresql import ACCESS_GROUPS
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
