@@ -5,12 +5,9 @@
 
 import json
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypedDict
 
-from charms.data_platform_libs.v0.data_interfaces import (
-    DatabaseProvides,
-    DatabaseRequestedEvent,
-)
+from charms.data_platform_libs.v0.data_interfaces import DatabaseProvides, DatabaseRequestedEvent
 from ops.charm import RelationBrokenEvent, RelationDepartedEvent
 from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, ModelError, Relation
@@ -26,7 +23,13 @@ from single_kernel_postgresql.utils.postgresql import (
     PostgreSQLGetPostgreSQLVersionError,
 )
 
-from constants import APP_SCOPE, DATABASE_PORT, SYSTEM_USERS, USERNAME_MAPPING_LABEL
+from constants import (
+    APP_SCOPE,
+    DATABASE_MAPPING_LABEL,
+    DATABASE_PORT,
+    SYSTEM_USERS,
+    USERNAME_MAPPING_LABEL,
+)
 from utils import new_password
 
 logger = logging.getLogger(__name__)
@@ -38,6 +41,15 @@ if TYPE_CHECKING:
 # Label not a secret
 NO_ACCESS_TO_SECRET_MSG = "Missing grant to requested entity secret"  # noqa: S105
 FORBIDDEN_USER_MSG = "Requesting an existing username"
+PREFIX_TOO_SHORT_MSG = "Prefix too short"
+
+
+class PrefixDatabaseCacheType(TypedDict):
+    """Type definition for the prefix database cached mapping."""
+
+    username: str
+    prefix: str
+    databases: list[str]
 
 
 class PostgreSQLProvider(Object):
@@ -97,32 +109,131 @@ class PostgreSQLProvider(Object):
         username_mapping = self.get_username_mapping()
         if username and username_mapping.get(str(relation_id)) != username:
             username_mapping[str(relation_id)] = username
-        elif not username and username_mapping.get(str(relation_id)):
+        elif not username and str(relation_id) in username_mapping:
             del username_mapping[str(relation_id)]
         else:
             # Cache is up to date
             return
         self.charm.set_secret(APP_SCOPE, USERNAME_MAPPING_LABEL, json.dumps(username_mapping))
 
-    def _get_custom_credentials(
-        self, event: DatabaseRequestedEvent
-    ) -> tuple[str | None, str | None] | None:
-        """Check for secret with custom credentials and get values."""
-        user = None
-        password = None
+    def get_databases_prefix_mapping(self) -> dict[str, PrefixDatabaseCacheType]:
+        """Get a mapping of prefixed databases by relation ID."""
+        if database_mapping := self.charm.get_secret(APP_SCOPE, DATABASE_MAPPING_LABEL):
+            return json.loads(database_mapping)
+        return {}
+
+    def set_databases_prefix_mapping(
+        self,
+        relation_id: int,
+        username: str | None,
+        prefix: str | None,
+        databases: list[str] | None,
+    ) -> None:
+        """Set the initial mapping of prefix databases."""
+        database_mapping = self.get_databases_prefix_mapping()
+        # Empty databases is valid
+        if prefix and username and databases is not None:
+            database_mapping[str(relation_id)] = {
+                "prefix": prefix,
+                "username": username,
+                "databases": databases,
+            }
+        elif not prefix and str(relation_id) in database_mapping:
+            del database_mapping[str(relation_id)]
+        else:
+            # Cache is up to date
+            return
+        self.charm.set_secret(APP_SCOPE, DATABASE_MAPPING_LABEL, json.dumps(database_mapping))
+
+    def add_database_to_prefix_mapping(self, database: str) -> list[str]:
+        """Add a new database to all fitting prefixes."""
+        usernames = []
+        dirty = False
+        database_mapping = self.get_databases_prefix_mapping()
+        for value in database_mapping.values():
+            if database.startswith(value["prefix"]):
+                if database not in value["databases"]:
+                    value["databases"].append(database)
+                    value["databases"].sort()
+                    dirty = True
+                usernames.append(value["username"])
+        if dirty:
+            self.charm.set_secret(APP_SCOPE, DATABASE_MAPPING_LABEL, json.dumps(database_mapping))
+        return usernames
+
+    def remove_database_from_prefix_mapping(self, database: str) -> list[str]:
+        """Remove a database from all fitting prefixes."""
+        usernames = []
+        database_mapping = self.get_databases_prefix_mapping()
+        for value in database_mapping.values():
+            if database in value["databases"]:
+                value["databases"].remove(database)
+                usernames.append(value["username"])
+        if usernames:
+            self.charm.set_secret(APP_SCOPE, DATABASE_MAPPING_LABEL, json.dumps(database_mapping))
+        return usernames
+
+    def set_rel_to_db_mapping(self) -> None:
+        """Set mapping between relation and database."""
+        if self.charm.unit.is_leader():
+            self.charm.app_peer_data["rel_databases"] = json.dumps({
+                key: val["database"]
+                for key, val in self.database_provides.fetch_relation_data(
+                    None, ["database"]
+                ).items()
+                if val.get("database")
+            })
+
+    def get_rel_to_db_mapping(self) -> dict[str, str] | None:
+        """Set mapping between relation and database."""
+        if self.charm.unit.is_leader():
+            return json.loads(self.charm.app_peer_data.get("rel_databases", "{}"))
+
+    def _get_credentials(self, event: DatabaseRequestedEvent) -> tuple[str, str] | None:
         try:
             if requested_entities := event.requested_entity_secret_content:
                 for key, val in requested_entities.items():
-                    user = key
-                    password = val
-                    break
-                if user in SYSTEM_USERS or user in self.charm.postgresql.list_users():
-                    self.charm.set_unit_status(BlockedStatus(FORBIDDEN_USER_MSG))
-                    return
+                    if not val:
+                        val = new_password()
+                    if key in SYSTEM_USERS or key in self.charm.postgresql.list_users():
+                        self.charm.set_unit_status(BlockedStatus(FORBIDDEN_USER_MSG))
+                        return
+                    return key, val
         except ModelError:
             self.charm.set_unit_status(BlockedStatus(NO_ACCESS_TO_SECRET_MSG))
             return
-        return user, password
+        return f"relation_id_{event.relation.id}", new_password()
+
+    def _collect_databases(
+        self, user: str, event: DatabaseRequestedEvent
+    ) -> tuple[str, list[str]] | None:
+        # Retrieve the database name and extra user roles using the charm library.
+        database = event.database or ""
+        if database and database[-1] == "*":
+            if len(database) < 4:
+                self.charm.unit.status = BlockedStatus(PREFIX_TOO_SHORT_MSG)
+                return
+            if event.prefix_matching and event.prefix_matching != "all":
+                logger.warning("Only all prefix matching is supported")
+            databases = sorted(self.charm.postgresql.list_databases(database[:-1]))
+            self.set_databases_prefix_mapping(event.relation.id, user, database[:-1], databases)
+        else:
+            databases = [database]
+            # Add to cached field to be able to generate hba rules
+            self.add_database_to_prefix_mapping(database)
+        return database, databases
+
+    def _are_units_in_sync(self) -> bool:
+        for key in self.charm.all_peer_data:
+            # We skip the leader so we don't have to wait on the defer
+            if (
+                key != self.charm.app
+                and key != self.charm.unit
+                and self.charm.all_peer_data[key].get("user_hash", "")
+                != self.charm.generate_user_hash
+            ):
+                return False
+        return True
 
     def _on_database_requested(self, event: DatabaseRequestedEvent) -> None:
         """Handle the legacy postgresql-client relation changed event.
@@ -137,26 +248,22 @@ class PostgreSQLProvider(Object):
             event.defer()
             return
 
-        if not (credentials := self._get_custom_credentials(event)):
+        if creds := self._get_credentials(event):
+            user, password = creds
+        else:
             return
-        user, password = credentials
+
+        if databases_setup := self._collect_databases(user, event):
+            database, databases = databases_setup
+        else:
+            return
 
         self.update_username_mapping(event.relation.id, user)
         self.charm.update_config()
-        for key in self.charm.all_peer_data:
-            # We skip the leader so we don't have to wait on the defer
-            if (
-                key != self.charm.app
-                and key != self.charm.unit
-                and self.charm.all_peer_data[key].get("user_hash", "")
-                != self.charm.generate_user_hash
-            ):
-                logger.debug("Not all units have synced configuration")
-                event.defer()
-                return
-
-        # Retrieve the database name and extra user roles using the charm library.
-        database = event.database or ""
+        if not self._are_units_in_sync():
+            logger.debug("Not all units have synced configuration")
+            event.defer()
+            return
 
         # Make sure the relation access-group is added to the list
         extra_user_roles = self._sanitize_extra_roles(event.extra_user_roles)
@@ -164,15 +271,25 @@ class PostgreSQLProvider(Object):
 
         try:
             # Creates the user and the database for this specific relation.
-            user = user or f"relation_id_{event.relation.id}"
-            password = password or new_password()
             plugins = self.charm.get_plugins()
 
-            self.charm.postgresql.create_database(database, plugins=plugins)
+            if database[-1] != "*":
+                self.charm.postgresql.create_database(database, plugins=plugins)
 
-            self.charm.postgresql.create_user(
-                user, password, extra_user_roles=extra_user_roles, database=database
-            )
+                self.charm.postgresql.create_user(
+                    user, password, extra_user_roles=extra_user_roles, database=database
+                )
+                # Get the prefixed users again, to add db level grants
+                for prefixed_user in self.add_database_to_prefix_mapping(database):
+                    self.charm.postgresql.add_user_to_databases(
+                        prefixed_user, databases, extra_user_roles
+                    )
+            else:
+                self.charm.postgresql.create_user(
+                    user, password, extra_user_roles=extra_user_roles
+                )
+
+                self.charm.postgresql.add_user_to_databases(user, databases, extra_user_roles)
 
             # Share the credentials with the application.
             self.database_provides.set_credentials(event.relation.id, user, password)
@@ -286,6 +403,7 @@ class PostgreSQLProvider(Object):
             )
 
         self.update_username_mapping(event.relation.id, None)
+        self.set_databases_prefix_mapping(event.relation.id, None, None, None)
         self.charm.update_config()
 
     def update_read_only_endpoint(
@@ -306,6 +424,8 @@ class PostgreSQLProvider(Object):
             else f"{self.charm.primary_endpoint}:{DATABASE_PORT}"
         )
 
+        prefix_database_mapping = self.get_databases_prefix_mapping()
+
         # Get the current relation or all the relations
         # if this is triggered by another type of event.
         relations = [event.relation] if event else self.model.relations[self.relation_name]
@@ -315,10 +435,7 @@ class PostgreSQLProvider(Object):
             database = None
 
         for relation in relations:
-            self.database_provides.set_read_only_endpoints(
-                relation.id,
-                endpoints,
-            )
+            self.database_provides.set_read_only_endpoints(relation.id, endpoints)
             # Make sure that the URI will be a secret
             if (
                 secret_fields := self.database_provides.fetch_relation_field(
@@ -331,6 +448,12 @@ class PostgreSQLProvider(Object):
                     password = self.database_provides.fetch_my_relation_field(
                         relation.id, "password"
                     )
+                    databases = None
+                    prefix_def = prefix_database_mapping.get(str(relation.id))
+                    if prefix_def is not None:
+                        databases = prefix_def["databases"]
+                        self.database_provides.set_prefix_databases(relation.id, databases)
+                        database = databases[0] if len(databases) else database
 
                 if user and password:
                     self.database_provides.set_read_only_uris(

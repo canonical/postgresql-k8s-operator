@@ -18,6 +18,7 @@ lightkube = "^0.17.2"
 lightkube-models = "^1.28.1.4"
 psycopg2 = "^2.9.10"
 httpx = "^0.28.1"
+charmlibs-interfaces-tls-certificates = "^1.0.0.post1"
 postgresql-charms-single-kernel = "16.1.3"
 charm-refresh = "^3.1.1.2"
 
@@ -33,10 +34,7 @@ pydantic = "*"
 cosl = ">=0.0.50"
 # tempo_coordinator_k8s/v0/charm_tracing.py
 opentelemetry-exporter-otlp-proto-http = "1.21.0"
-# tls_certificates_interface/v2/tls_certificates.py
-cryptography = "*"
 # certificate_transfer_interface/v0/certificate_transfer.py
-# tls_certificates_interface/v2/tls_certificates.py
 jsonschema = "*"
 
 [tool.poetry.group.format]

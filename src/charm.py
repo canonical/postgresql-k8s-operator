@@ -2549,7 +2549,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         except PostgreSQLListGroupsError as e:
             logger.warning(f"Failed to list access groups: {e}")
             return {USER: "all", REPLICATION_USER: "all", REWIND_USER: "all"}
-        user_database_map = {}
+
+        user_database_map = self._collect_user_relations()
         for user in self.postgresql.list_users(current_host=self.is_connectivity_enabled):
             if user in (
                 "backup",
@@ -2569,30 +2570,26 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             else:
                 logger.debug(f"User {user} has no databases to connect to")
 
-        # Copy relations users directly instead of waiting for them to be created
-        custom_username_mapping = self.postgresql_client_relation.get_username_mapping()
-        for relation in self.model.relations[self.postgresql_client_relation.relation_name]:
-            user = custom_username_mapping.get(str(relation.id), f"relation_id_{relation.id}")
-            if user not in user_database_map and (
-                database := self.postgresql_client_relation.database_provides.fetch_relation_field(
-                    relation.id, "database"
-                )
-            ):
-                user_database_map[user] = database
         return user_database_map
 
-    @cached_property
-    def generate_user_hash(self) -> str:
-        """Generate expected user and database hash."""
+    def _collect_user_relations(self) -> dict[str, str]:
         user_db_pairs = {}
         custom_username_mapping = self.postgresql_client_relation.get_username_mapping()
+        prefix_database_mapping = self.postgresql_client_relation.get_databases_prefix_mapping()
+
         for relation in self.model.relations[self.postgresql_client_relation.relation_name]:
             if database := self.postgresql_client_relation.database_provides.fetch_relation_field(
                 relation.id, "database"
             ):
                 user = custom_username_mapping.get(str(relation.id), f"relation_id_{relation.id}")
+                database = ",".join(prefix_database_mapping.get(str(relation.id), [database]))
                 user_db_pairs[user] = database
-        return shake_128(str(user_db_pairs).encode()).hexdigest(16)
+        return user_db_pairs
+
+    @cached_property
+    def generate_user_hash(self) -> str:
+        """Generate expected user and database hash."""
+        return shake_128(str(self._collect_user_relations()).encode()).hexdigest(16)
 
     @cached_property
     def generate_config_hash(self) -> str:
