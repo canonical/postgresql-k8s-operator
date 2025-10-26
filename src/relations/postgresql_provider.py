@@ -319,9 +319,6 @@ class PostgreSQLProvider(Object):
                     ca = ""
                 self.database_provides.set_tls_ca(event.relation.id, ca)
 
-            # Update the read-only endpoint.
-            self.update_read_only_endpoint(event, user, password)
-
             # Set the database version.
             self.database_provides.set_version(
                 event.relation.id, self.charm.postgresql.get_postgresql_version()
@@ -329,6 +326,9 @@ class PostgreSQLProvider(Object):
 
             # Set the database name
             self.database_provides.set_database(event.relation.id, database)
+
+            # Update the read/write and read-only endpoints.
+            self.update_endpoints(event)
 
             self._update_unit_status(event.relation)
 
@@ -403,84 +403,126 @@ class PostgreSQLProvider(Object):
             )
 
         self.update_username_mapping(event.relation.id, None)
+        if (
+            (dbs := self.get_rel_to_db_mapping())
+            and (database := dbs.get(str(event.relation.id)))
+            and database[-1] != "*"
+        ):
+            for prefixed_user in self.remove_database_from_prefix_mapping(database):
+                self.charm.postgresql.remove_user_from_databases(prefixed_user, [database])
         self.set_databases_prefix_mapping(event.relation.id, None, None, None)
         self.charm.update_config()
 
-    def update_read_only_endpoint(
-        self,
-        event: DatabaseRequestedEvent | None = None,
-        user: str | None = None,
-        password: str | None = None,
-        database: str | None = None,
-    ) -> None:
-        """Set the read-only endpoint only if there are replicas."""
+    def update_endpoints(self, event: DatabaseRequestedEvent | None = None) -> None:
+        """Set the read/write and read-only endpoints."""
         if not self.charm.unit.is_leader():
             return
 
-        # If there are no replicas, remove the read-only endpoint.
-        endpoints = (
+        # Get the current relation or all the relations
+        # if this is triggered by another type of event.
+        relations_ids = [event.relation.id] if event else None
+        rel_data = self.database_provides.fetch_relation_data(
+            relations_ids, ["external-node-connectivity", "database"]
+        )
+
+        # skip if no relation data
+        if not rel_data:
+            return
+
+        secret_data = (
+            self.database_provides.fetch_my_relation_data(relations_ids, ["username", "password"])
+            or {}
+        )
+
+        # populate rw/ro endpoints
+        rw_endpoint = f"{self.charm.primary_endpoint}:{DATABASE_PORT}"
+        ro_endpoints = (
             f"{self.charm.replicas_endpoint}:{DATABASE_PORT}"
             if self.charm._peers and len(self.charm._peers.units) > 0
             else f"{self.charm.primary_endpoint}:{DATABASE_PORT}"
         )
 
-        prefix_database_mapping = self.get_databases_prefix_mapping()
-
-        # Get the current relation or all the relations
-        # if this is triggered by another type of event.
-        relations = [event.relation] if event else self.model.relations[self.relation_name]
-        if not event:
-            user = None
-            password = None
-            database = None
-
-        for relation in relations:
-            self.database_provides.set_read_only_endpoints(relation.id, endpoints)
-            # Make sure that the URI will be a secret
-            if (
-                secret_fields := self.database_provides.fetch_relation_field(
-                    relation.id, "requested-secrets"
-                )
-            ) and "read-only-uris" in secret_fields:
-                if not user or not password or not database:
-                    user = self.database_provides.fetch_my_relation_field(relation.id, "username")
-                    database = self.database_provides.fetch_relation_field(relation.id, "database")
-                    password = self.database_provides.fetch_my_relation_field(
-                        relation.id, "password"
-                    )
-                    databases = None
-                    prefix_def = prefix_database_mapping.get(str(relation.id))
-                    if prefix_def is not None:
-                        databases = prefix_def["databases"]
-                        self.database_provides.set_prefix_databases(relation.id, databases)
-                        database = databases[0] if len(databases) else database
-
-                if user and password:
-                    self.database_provides.set_read_only_uris(
-                        relation.id,
-                        f"postgresql://{user}:{password}@{endpoints}/{database}",
-                    )
-            # Reset the creds for the next iteration
-            user = None
-            password = None
-            database = None
-
-    def update_tls_flag(self, tls: str) -> None:
-        """Update TLS flag and CA in relation databag."""
-        if not self.charm.unit.is_leader():
-            return
-
-        relations = self.model.relations[self.relation_name]
+        tls = "True" if self.charm.is_tls_enabled else "False"
         ca = None
         if tls == "True":
             _, ca, _ = self.charm.tls.get_client_tls_files()
         if not ca:
             ca = ""
 
-        for relation in relations:
-            if self.database_provides.fetch_relation_field(relation.id, "database"):
-                self.database_provides.set_tls(relation.id, tls)
-                self.database_provides.set_tls_ca(relation.id, ca)
+        prefix_database_mapping = self.get_databases_prefix_mapping()
+
+        for relation_id in rel_data:
+            database = rel_data[relation_id].get("database")
+            databases = None
+            prefix_def = prefix_database_mapping.get(str(relation_id))
+            if prefix_def is not None:
+                databases = prefix_def["databases"]
+                self.database_provides.set_prefix_databases(relation_id, databases)
+                database = databases[0] if len(databases) else database
+            user = secret_data.get(relation_id, {}).get("username")
+            password = secret_data.get(relation_id, {}).get("password")
+            if not database or not password:
+                continue
+
+            # Set the read/write endpoint.
+            self.database_provides.set_endpoints(relation_id, rw_endpoint)
+
+            # Set the read-only endpoint.
+            self.database_provides.set_read_only_endpoints(relation_id, ro_endpoints)
+
+            self.database_provides.set_tls(relation_id, tls)
+            self.database_provides.set_tls_ca(relation_id, ca)
+            if databases is None or len(databases):
+                # Set connection string URI.
+                self.database_provides.set_uris(
+                    relation_id,
+                    f"postgresql://{user}:{password}@{rw_endpoint}/{database}",
+                )
+                # Make sure that the URI will be a secret
+                if (
+                    secret_fields := self.database_provides.fetch_relation_field(
+                        relation_id, "requested-secrets"
+                    )
+                ) and "read-only-uris" in secret_fields:
+                    self.database_provides.set_read_only_uris(
+                        relation_id,
+                        f"postgresql://{user}:{password}@{ro_endpoints}:{DATABASE_PORT}/{database}",
+                    )
+            else:
+                # No database matches prefix, no valid URI
+                self.database_provides.delete_relation_data(
+                    relation_id, ["uris", "read-only-uris"]
+                )
+            self.set_rel_to_db_mapping()
+
+    def _unblock_custom_user_errors(self, relation: Relation) -> None:
+        if self.check_for_invalid_extra_user_roles(relation.id):
+            self.charm.unit.status = BlockedStatus(INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE)
+            return
+        existing_users = self.charm.postgresql.list_users()
+        for relation in self.charm.model.relations.get(self.relation_name, []):
+            try:
+                # Relation is not established and custom user was requested
+                if not self.database_provides.fetch_my_relation_field(
+                    relation.id, "secret-user"
+                ) and (
+                    secret_uri := self.database_provides.fetch_relation_field(
+                        relation.id, "requested-entity-secret"
+                    )
+                ):
+                    content = self.framework.model.get_secret(id=secret_uri).get_content()
+                    for key in content:
+                        if key in SYSTEM_USERS or key in existing_users:
+                            logger.warning(
+                                f"Relation {relation.id} is still requesting a forbidden user"
+                            )
+                            self.charm.unit.status = BlockedStatus(FORBIDDEN_USER_MSG)
+                            return
+            except ModelError:
+                logger.warning(f"Relation {relation.id} still cannot access the set secret")
+                self.charm.unit.status = BlockedStatus(NO_ACCESS_TO_SECRET_MSG)
+                return
+        self.charm.unit.status = ActiveStatus()
 
     def _update_unit_status(self, relation: Relation) -> None:
         """Clean up Blocked status if it's due to extensions request."""
@@ -501,40 +543,27 @@ class PostgreSQLProvider(Object):
             and "Failed to initialize relation" in self.charm.unit.status.message
         ):
             self.charm.set_unit_status(ActiveStatus())
+        if self.charm.is_blocked and self.charm.unit.status.message == PREFIX_TOO_SHORT_MSG:
+            for relation in self.charm.model.relations.get(self.relation_name, []):
+                # Relation is not established and custom user was requested
+                if (
+                    (
+                        database := self.database_provides.fetch_relation_field(
+                            relation.id, "database"
+                        )
+                    )
+                    and database[-1] == "*"
+                    and len(database) < 4
+                ):
+                    return
+                self.charm.set_unit_status(ActiveStatus())
+                return
         if self.charm._has_blocked_status and self.charm.unit.status.message in [
             INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE,
             NO_ACCESS_TO_SECRET_MSG,
             FORBIDDEN_USER_MSG,
         ]:
-            if self.check_for_invalid_extra_user_roles(relation.id):
-                self.charm.set_unit_status(BlockedStatus(INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE))
-                return
-            existing_users = self.charm.postgresql.list_users()
-            for relation in self.charm.model.relations.get(self.relation_name, []):
-                try:
-                    # Relation is not established and custom user was requested
-                    if not self.database_provides.fetch_my_relation_field(
-                        relation.id, "secret-user"
-                    ) and (
-                        secret_uri := self.database_provides.fetch_relation_field(
-                            relation.id, "requested-entity-secret"
-                        )
-                    ):
-                        content = self.framework.model.get_secret(id=secret_uri).get_content()
-                        for key in content:
-                            if not self.database_provides.fetch_my_relation_field(
-                                relation.id, "username"
-                            ) and (key in SYSTEM_USERS or key in existing_users):
-                                logger.warning(
-                                    f"Relation {relation.id} is still requesting a forbidden user"
-                                )
-                                self.charm.set_unit_status(BlockedStatus(FORBIDDEN_USER_MSG))
-                                return
-                except ModelError:
-                    logger.warning(f"Relation {relation.id} still cannot access the set secret")
-                    self.charm.set_unit_status(BlockedStatus(NO_ACCESS_TO_SECRET_MSG))
-                    return
-            self.charm.set_unit_status(ActiveStatus())
+            self._unblock_custom_user_errors(relation)
 
     def check_for_invalid_extra_user_roles(self, relation_id: int) -> bool:
         """Checks if there are relations with invalid extra user roles.
