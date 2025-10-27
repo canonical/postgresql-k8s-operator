@@ -3,6 +3,7 @@
 
 import asyncio
 import logging
+from time import sleep
 
 import pytest
 from pytest_operator.plugin import OpsTest
@@ -134,10 +135,13 @@ async def test_upgrade_from_stable(ops_test: OpsTest, charm):
             timeout=60 * 3,
         )
 
-    logger.info("Run resume-refresh action")
+    sleep(60)
+
     leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
+    logger.info(f"Run resume-refresh action on {leader_unit.name}")
     action = await leader_unit.run_action("resume-refresh")
     await action.wait()
+    logger.info(f"Results from the action: {action.results}")
 
     logger.info("Wait for upgrade to complete")
     async with ops_test.fast_forward("60s"):
