@@ -26,7 +26,7 @@ from authorisation_rules_observer import (
     AuthorisationRulesChangeCharmEvents,
     AuthorisationRulesObserver,
 )
-from refresh import _PostgreSQLRefresh
+from refresh import PostgreSQLRefresh
 
 # First platform-specific import, will fail on wrong architecture
 try:
@@ -263,6 +263,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.framework.observe(self.on.promote_to_primary_action, self._on_promote_to_primary)
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
         self.framework.observe(self.on.update_status, self._on_update_status)
+        self.framework.observe(self.on.collect_unit_status, self._reconcile_refresh_status)
         self.framework.observe(self.on.secret_remove, self._on_secret_remove)
 
         self._certs_path = "/usr/local/share/ca-certificates"
@@ -304,7 +305,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         try:
             self.refresh = charm_refresh.Kubernetes(
-                _PostgreSQLRefresh(
+                PostgreSQLRefresh(
                     workload_name="PostgreSQL",
                     charm_name="postgresql-k8s",
                     oci_resource_name="postgresql-image",
@@ -321,26 +322,61 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         except charm_refresh.UnitTearingDown:
             self.set_unit_status(MaintenanceStatus("Tearing down"))
             sys.exit()
+        self._reconcile_refresh_status()
 
-    def reconcile(self, event):
+        # Observe all events (except custom events)
+        # for bound_event in self.on.events().values():
+        #     if bound_event.event_type == CollectStatusEvent:
+        #         continue
+        #     self.framework.observe(bound_event, self.reconcile)
+
+        if (
+            self.refresh is not None
+            and not self.refresh.next_unit_allowed_to_refresh
+            and int(self.unit.name.split("/")[1]) >= self.refresh._get_partition()
+        ):
+            if self.refresh.in_progress:
+                self.reconcile()
+            else:
+                self.refresh.next_unit_allowed_to_refresh = True
+
+    def reconcile(self):
         """Reconcile the charm state."""
         # Don't mark the upgrade of this unit as completed until Patroni reports the
         # workload is ready.
-        if not self.refresh.workload_allowed_to_start or self.refresh.next_unit_allowed_to_refresh:
-            return
+        # if (
+        #     isinstance(event, StopEvent)
+        #     or not self.is_cluster_initialised
+        #     or not self.refresh.in_progress
+        #     or not self.refresh.workload_allowed_to_start
+        #     or self.refresh.next_unit_allowed_to_refresh
+        # ):
+        #     logger.error(
+        #         f"{self.refresh.workload_allowed_to_start} - {self.refresh.next_unit_allowed_to_refresh}"
+        #     )
+        #     return
+        #
+        # if int(self.unit.name.split("/")[1]) < self.refresh._get_partition():
+        #     logger.error(f"{int(self.unit.name.split('/')[1])} < {self.refresh._get_partition()}")
+        #     self.set_unit_status(ActiveStatus())
+        #     return
+
+        self.set_unit_status(MaintenanceStatus("starting services"))
+        self._update_pebble_layers(replan=True)
 
         if not self._patroni.member_started:
-            logger.debug("Deferring reconcile: Patroni has not started yet")
-            event.defer()
+            logger.error("Early exit reconcile: Patroni has not started yet")
+            # event.defer()
             return
 
         if self.unit.is_leader() and not self._patroni.primary_endpoint_ready:
-            logger.debug(
-                "Deferring reconcile: current unit is leader but primary endpoint is not ready yet"
+            logger.error(
+                "Early exit reconcile: current unit is leader but primary endpoint is not ready yet"
             )
-            event.defer()
+            # event.defer()
             return
 
+        self.set_unit_status(WaitingStatus("waiting for database initialisation"))
         try:
             for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(10)):
                 with attempt:
@@ -348,7 +384,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                         self.unit.name.replace("/", "-") in self._patroni.cluster_members
                         and self._patroni.is_replication_healthy
                     ):
-                        logger.debug(
+                        logger.error(
                             "Instance not yet back in the cluster or not healthy."
                             f" Retry {attempt.retry_state.attempt_number}/6"
                         )
@@ -361,6 +397,40 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         else:
             # self._handle_label_change()
             self.refresh.next_unit_allowed_to_refresh = True
+            self.set_unit_status(ActiveStatus())
+
+    def _reconcile_refresh_status(self, _=None):
+        if self.unit.is_leader():
+            self.async_replication.set_app_status()
+
+        # Workaround for other unit statuses being set in a stateful way (i.e. unable to recompute
+        # status on every event)
+        path = pathlib.Path(".last_refresh_unit_status.json")
+        try:
+            last_refresh_unit_status = json.loads(path.read_text())
+        except FileNotFoundError:
+            last_refresh_unit_status = None
+        new_refresh_unit_status = None
+        if self.refresh is not None and self.refresh.unit_status_higher_priority:
+            self.unit.status = self.refresh.unit_status_higher_priority
+            new_refresh_unit_status = self.refresh.unit_status_higher_priority.message
+        elif self.unit.status.message == last_refresh_unit_status:
+            if self.refresh is not None and (
+                refresh_status := self.refresh.unit_status_lower_priority()
+            ):
+                self.unit.status = refresh_status
+                new_refresh_unit_status = refresh_status.message
+            else:
+                # Clear refresh status from unit status
+                self._set_active_status()
+        elif (
+            isinstance(self.unit.status, ActiveStatus)
+            and self.refresh is not None
+            and (refresh_status := self.refresh.unit_status_lower_priority())
+        ):
+            self.unit.status = refresh_status
+            new_refresh_unit_status = refresh_status.message
+        path.write_text(json.dumps(new_refresh_unit_status))
 
     def set_unit_status(
         self, status: StatusBase, /, *, refresh: charm_refresh.Kubernetes | None = None

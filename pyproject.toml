@@ -73,6 +73,14 @@ boto3 = "*"
 tenacity = "^9.1.2"
 allure-pytest = "^2.15.0"
 jubilant = "^1.4.0"
+tomli-w = "^1.2.0"
+tomli = "^2.3.0"
+
+[tool.poetry.group.build-refresh-version]
+optional = true
+
+[tool.poetry.group.build-refresh-version.dependencies]
+charm-refresh-build-version = "^0.4.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

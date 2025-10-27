@@ -131,7 +131,7 @@ class PostgreSQLAsyncReplication(Object):
                         self.charm._peers.data[self.charm.app].update({
                             "promoted-cluster-counter": ""
                         })
-                        self._set_app_status()
+                        self.set_app_status()
                         self.charm._set_active_status()
                 except (StandbyClusterAlreadyPromotedError, ClusterNotPromotedError) as e:
                     event.fail(str(e))
@@ -422,7 +422,7 @@ class PostgreSQLAsyncReplication(Object):
             self.charm._set_active_status()
 
         if self.charm.unit.is_leader():
-            self._set_app_status()
+            self.set_app_status()
 
     def _handle_replication_change(self, event: ActionEvent) -> bool:
         if not self._can_promote_cluster(event):
@@ -488,7 +488,7 @@ class PostgreSQLAsyncReplication(Object):
         if self.charm._patroni.get_standby_leader() is not None:
             if self.charm.unit.is_leader():
                 self.charm._peers.data[self.charm.app].update({"promoted-cluster-counter": "0"})
-                self._set_app_status()
+                self.set_app_status()
         else:
             if self.charm.unit.is_leader():
                 self.charm._peers.data[self.charm.app].update({"promoted-cluster-counter": ""})
@@ -497,7 +497,7 @@ class PostgreSQLAsyncReplication(Object):
     def _on_async_relation_changed(self, event: RelationChangedEvent) -> None:
         """Update the Patroni configuration if one of the clusters was already promoted."""
         if self.charm.unit.is_leader():
-            self._set_app_status()
+            self.set_app_status()
 
         primary_cluster = self.get_primary_cluster()
         logger.debug("Primary cluster: %s", primary_cluster)
@@ -680,8 +680,14 @@ class PostgreSQLAsyncReplication(Object):
                     raise e
                 logger.debug(f"{values[0]} {values[1]} not found")
 
-    def _set_app_status(self) -> None:
+    def set_app_status(self) -> None:
         """Set the app status."""
+        if self.charm.refresh is not None and self.charm.refresh.app_status_higher_priority:
+            self.charm.app.status = self.charm.refresh.app_status_higher_priority
+            return
+        if self.charm._peers is None:
+            # TODO set active status?
+            return
         if self.charm._peers.data[self.charm.app].get("promoted-cluster-counter") == "0":
             self.charm.app.status = BlockedStatus(READ_ONLY_MODE_BLOCKING_MESSAGE)
             return

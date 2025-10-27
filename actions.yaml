@@ -55,8 +55,6 @@ list-backups:
 pre-refresh-check:
   description: Check if charm is ready to refresh
   additionalProperties: false
-pre-upgrade-check:
-  description: Run necessary pre-upgrade checks and preparations before executing a charm refresh.
 promote-to-primary:
   description: Promotes the cluster of choice to a primary cluster. Must be ran against the leader unit when promoting a cluster
    or against the unit to be promoted within the cluster.
