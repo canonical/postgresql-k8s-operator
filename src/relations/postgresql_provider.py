@@ -328,7 +328,7 @@ class PostgreSQLProvider(Object):
             self.database_provides.set_database(event.relation.id, database)
 
             # Update the read/write and read-only endpoints.
-            self.update_endpoints(event)
+            self.update_endpoints()
 
             self._update_unit_status(event.relation)
 
@@ -403,6 +403,7 @@ class PostgreSQLProvider(Object):
             )
 
         self.update_username_mapping(event.relation.id, None)
+        self.set_databases_prefix_mapping(event.relation.id, None, None, None)
         if (
             (dbs := self.get_rel_to_db_mapping())
             and (database := dbs.get(str(event.relation.id)))
@@ -410,7 +411,6 @@ class PostgreSQLProvider(Object):
         ):
             for prefixed_user in self.remove_database_from_prefix_mapping(database):
                 self.charm.postgresql.remove_user_from_databases(prefixed_user, [database])
-        self.set_databases_prefix_mapping(event.relation.id, None, None, None)
         self.charm.update_config()
 
     def update_endpoints(self, event: DatabaseRequestedEvent | None = None) -> None:

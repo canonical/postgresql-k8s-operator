@@ -98,7 +98,7 @@ def get_unit_ip(juju: Juju, app_name: str, unit_name: str) -> str:
     app_status = model_status.apps[app_name]
     for name, status in app_status.units.items():
         if name == unit_name:
-            return status.public_address
+            return status.address
 
     raise Exception("No application unit found")
 

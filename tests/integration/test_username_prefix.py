@@ -84,11 +84,12 @@ def test_prefix_too_short(juju: jubilant.Juju) -> None:
         timeout=5 * MINUTE_SECS,
     )
 
-    juju.remove_relation(f"{DATABASE_APP_NAME}", "di3")
+    juju.remove_relation(DATABASE_APP_NAME, "di3")
     juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
 
 
 def test_get_prefix(juju: jubilant.Juju) -> None:
+    primary_endpoint = f"postgresql-k8s-primary.{juju.model}.svc.cluster.local"
     db_ip = get_unit_ip(juju, DATABASE_APP_NAME, get_app_leader(juju, DATABASE_APP_NAME))
 
     logging.info("Setting prefix")
@@ -113,7 +114,7 @@ def test_get_prefix(juju: jubilant.Juju) -> None:
     assert pg_data["prefix-databases"] == "postgre1,postgre2"
     assert pg_data["username"] == "tester"
     assert pg_data["password"] == "password"
-    assert pg_data["uris"] == f"postgresql://tester:password@{db_ip}:5432/postgre1"
+    assert pg_data["uris"] == f"postgresql://tester:password@{primary_endpoint}:5432/postgre1"
 
     # Connect to database
     psycopg2.connect(f"postgresql://tester:password@{db_ip}:5432/postgre1")
@@ -121,6 +122,7 @@ def test_get_prefix(juju: jubilant.Juju) -> None:
 
 
 def test_remove_db_from_prefix(juju: jubilant.Juju) -> None:
+    primary_endpoint = f"postgresql-k8s-primary.{juju.model}.svc.cluster.local"
     db_ip = get_unit_ip(juju, DATABASE_APP_NAME, get_app_leader(juju, DATABASE_APP_NAME))
 
     juju.remove_relation(f"{DATABASE_APP_NAME}", "di1")
@@ -133,7 +135,7 @@ def test_remove_db_from_prefix(juju: jubilant.Juju) -> None:
     pg_data = result.results["postgresql"]
     assert "postgres" not in pg_data["prefix-databases"]
     assert pg_data["prefix-databases"] == "postgre2"
-    assert pg_data["uris"] == f"postgresql://tester:password@{db_ip}:5432/postgre2"
+    assert pg_data["uris"] == f"postgresql://tester:password@{primary_endpoint}:5432/postgre2"
 
     # Connect to database
     with pytest.raises(psycopg2.OperationalError):
@@ -143,6 +145,7 @@ def test_remove_db_from_prefix(juju: jubilant.Juju) -> None:
 
 
 def test_readd_db_from_prefix(juju: jubilant.Juju) -> None:
+    primary_endpoint = f"postgresql-k8s-primary.{juju.model}.svc.cluster.local"
     db_ip = get_unit_ip(juju, DATABASE_APP_NAME, get_app_leader(juju, DATABASE_APP_NAME))
 
     juju.integrate(f"{DATABASE_APP_NAME}", "di1")
@@ -155,7 +158,7 @@ def test_readd_db_from_prefix(juju: jubilant.Juju) -> None:
     pg_data = result.results["postgresql"]
     assert "postgres" not in pg_data["prefix-databases"]
     assert pg_data["prefix-databases"] == "postgre1,postgre2"
-    assert pg_data["uris"] == f"postgresql://tester:password@{db_ip}:5432/postgre1"
+    assert pg_data["uris"] == f"postgresql://tester:password@{primary_endpoint}:5432/postgre1"
 
     # Connect to database
     psycopg2.connect(f"postgresql://tester:password@{db_ip}:5432/postgre1")

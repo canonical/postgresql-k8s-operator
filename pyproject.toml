@@ -72,7 +72,7 @@ psycopg2-binary = "^2.9.10"
 boto3 = "*"
 tenacity = "^9.1.2"
 allure-pytest = "^2.15.0"
-jubilant = "^1.4.0"
+jubilant = "^1.5.0"
 tomli-w = "^1.2.0"
 tomli = "^2.3.0"
 
