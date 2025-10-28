@@ -25,6 +25,7 @@ def test_on_module_not_found_error(monkeypatch):
         # If psycopg2 not there, charm should check architecture
         monkeypatch.delitem(sys.modules, "psycopg2", raising=False)
         monkeypatch.delitem(sys.modules, "charm", raising=False)
+        monkeypatch.delitem(sys.modules, "charm_refresh", raising=False)
         monkeypatch.setattr(builtins, "__import__", psycopg2_not_found)
         with pytest.raises(ModuleNotFoundError):
             import charm

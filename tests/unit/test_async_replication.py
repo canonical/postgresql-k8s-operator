@@ -49,7 +49,7 @@ def test_on_async_relation_broken(harness, is_leader, relation_name):
     with (
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
         patch(
-            "relations.async_replication.PostgreSQLAsyncReplication._set_app_status"
+            "relations.async_replication.PostgreSQLAsyncReplication.set_app_status"
         ) as _set_app_status,
         patch("charm.Patroni.get_standby_leader") as _get_standby_leader,
         patch(

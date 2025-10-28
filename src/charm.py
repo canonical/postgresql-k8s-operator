@@ -20,13 +20,10 @@ from pathlib import Path
 from typing import Literal, get_args
 from urllib.parse import urlparse
 
-import charm_refresh
-
 from authorisation_rules_observer import (
     AuthorisationRulesChangeCharmEvents,
     AuthorisationRulesObserver,
 )
-from refresh import PostgreSQLRefresh
 
 # First platform-specific import, will fail on wrong architecture
 try:
@@ -43,6 +40,7 @@ except ModuleNotFoundError:
         main(WrongArchitectureWarningCharm, use_juju_for_storage=True)
     raise
 
+import charm_refresh
 from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerUnitData
 from charms.data_platform_libs.v1.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
@@ -146,6 +144,7 @@ from constants import (
 )
 from ldap import PostgreSQLLDAP
 from patroni import NotReadyError, Patroni, SwitchoverFailedError, SwitchoverNotSyncError
+from refresh import PostgreSQLRefresh
 from relations.async_replication import (
     REPLICATION_CONSUMER_RELATION,
     REPLICATION_OFFER_RELATION,
