@@ -333,7 +333,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.refresh is not None
             and self.refresh.workload_allowed_to_start
             and not self.refresh.next_unit_allowed_to_refresh
-            and int(self.unit.name.split("/")[1]) >= self.refresh._get_partition()
         ):
             if self.refresh.in_progress:
                 self.reconcile()
