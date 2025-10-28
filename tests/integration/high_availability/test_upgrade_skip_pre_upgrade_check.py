@@ -32,6 +32,7 @@ def test_deploy_stable(juju: Juju) -> None:
         channel="16/stable",
         config={"profile": "testing"},
         num_units=3,
+        trust=True,
     )
     juju.deploy(
         charm=DB_TEST_APP_NAME,

@@ -97,6 +97,7 @@ def test_deploy(first_model: str, second_model: str, charm: str) -> None:
         constraints=constraints,
         resources=resources,
         num_units=3,
+        trust=True,
     )
     model_2 = Juju(model=second_model)
     model_2.deploy(
@@ -107,6 +108,7 @@ def test_deploy(first_model: str, second_model: str, charm: str) -> None:
         constraints=constraints,
         resources=resources,
         num_units=3,
+        trust=True,
     )
 
     logging.info("Deploying the test application")

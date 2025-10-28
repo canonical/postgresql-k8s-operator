@@ -459,15 +459,26 @@ class Patroni:
         return r.json().get("replication_state") == "streaming"
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-    def bulk_update_parameters_controller_by_patroni(self, parameters: dict[str, Any]) -> None:
+    def bulk_update_parameters_controller_by_patroni(
+        self, parameters: dict[str, Any], base_parameters: dict[str, Any] | None
+    ) -> None:
         """Update the value of a parameter controller by Patroni.
 
         For more information, check https://patroni.readthedocs.io/en/latest/patroni_configuration.html#postgresql-parameters-controlled-by-patroni.
         """
+        if not base_parameters:
+            base_parameters = {}
         requests.patch(
             f"{self._patroni_url}/config",
             verify=self._verify,
-            json={"postgresql": {"parameters": parameters}},
+            json={
+                "postgresql": {
+                    "remove_data_directory_on_rewind_failure": False,
+                    "remove_data_directory_on_diverged_timelines": False,
+                    "parameters": parameters,
+                },
+                **base_parameters,
+            },
             auth=self._patroni_auth,
             timeout=PATRONI_TIMEOUT,
         )
@@ -685,7 +696,9 @@ class Patroni:
             timeout=PATRONI_TIMEOUT,
         )
 
-    def switchover(self, candidate: str | None = None, wait: bool = True) -> None:
+    def switchover(
+        self, candidate: str | None = None, wait: bool = True, async_cluster: bool = False
+    ) -> None:
         """Trigger a switchover."""
         # Try to trigger the switchover.
         if candidate is not None:
@@ -693,7 +706,10 @@ class Patroni:
 
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
             with attempt:
-                primary = self.get_primary()
+                primary = self.get_primary() if not async_cluster else self.get_standby_leader()
+                if primary == candidate:
+                    logger.info("Candidate and leader are the same")
+                    return
                 r = requests.post(
                     f"{self._patroni_url}/switchover",
                     json={"leader": primary, "candidate": candidate},
