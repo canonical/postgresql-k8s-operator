@@ -56,8 +56,6 @@ Deploy PostgreSQL and automate your infrastructure with the Juju Terraform Provi
 Terraform <terraform>
 ```
 
-Air-gapped <air-gapped>
-
 ## Airgapped
 
 Install PostgreSQL in an airgapped environment via Charmhub and the Snap Store Proxy:
