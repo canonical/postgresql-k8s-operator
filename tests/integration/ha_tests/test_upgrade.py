@@ -6,6 +6,7 @@ import logging
 import shutil
 import zipfile
 from pathlib import Path
+from time import sleep
 
 import pytest
 import tomli
@@ -128,10 +129,6 @@ async def test_upgrade_from_edge(ops_test: OpsTest, charm, continuous_writes) ->
     await application.refresh(path=charm, resources=resources)
 
     logger.info("Wait for upgrade to start")
-
-    # Blocked status is expected due to:
-    # (on PR) compatibility checks (on PR charm revision is '16/1.25.0+dirty...')
-    # (non-PR) the first unit upgraded and paused (pause-after-unit-refresh=first)
     await ops_test.model.block_until(lambda: application.status == "blocked", timeout=60 * 3)
 
     logger.info("Wait for refresh to block as paused or incompatible")
@@ -144,7 +141,8 @@ async def test_upgrade_from_edge(ops_test: OpsTest, charm, continuous_writes) ->
     refresh_order = sorted(
         application.units, key=lambda unit: int(unit.name.split("/")[1]), reverse=True
     )
-    if "Refresh incompatible" in application.status_message:
+
+    if "Refresh incompatible" in refresh_order[0].workload_status_message:
         logger.info("Application refresh is blocked due to incompatibility")
 
         action = await refresh_order[0].run_action(
@@ -152,15 +150,25 @@ async def test_upgrade_from_edge(ops_test: OpsTest, charm, continuous_writes) ->
         )
         await action.wait()
 
-    logger.info("Wait for first incompatible unit to upgrade")
-    async with ops_test.fast_forward("60s"):
-        await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME], idle_period=30, timeout=TIMEOUT
-        )
+        logger.info("Wait for first incompatible unit to upgrade")
+        async with ops_test.fast_forward("60s"):
+            await ops_test.model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], idle_period=30, timeout=TIMEOUT
+            )
+    else:
+        async with ops_test.fast_forward("60s"):
+            await ops_test.model.block_until(
+                lambda: all(unit.workload_status == "active" for unit in application.units),
+                timeout=60 * 3,
+            )
 
-    logger.info("Run resume-refresh action")
-    action = await refresh_order[1].run_action("resume-refresh")
+    sleep(60)
+
+    leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
+    logger.info(f"Run resume-refresh action on {leader_unit.name}")
+    action = await leader_unit.run_action("resume-refresh")
     await action.wait()
+    logger.info(f"Results from the action: {action.results}")
 
     logger.info("Wait for upgrade to complete")
     async with ops_test.fast_forward("60s"):
@@ -227,9 +235,14 @@ async def test_fail_and_rollback(ops_test, charm, continuous_writes) -> None:
 
     logger.info("Wait for upgrade to fail")
 
+    # Highest to lowest unit number
+    refresh_order = sorted(
+        application.units, key=lambda unit: int(unit.name.split("/")[1]), reverse=True
+    )
+
     await ops_test.model.block_until(
         lambda: application.status == "blocked"
-        and "incompatible" in application.status_message.lower(),
+        and "Refresh incompatible" in refresh_order[0].workload_status_message,
         timeout=TIMEOUT,
     )
 
@@ -245,8 +258,23 @@ async def test_fail_and_rollback(ops_test, charm, continuous_writes) -> None:
 
     logger.info("Wait for application to recover")
     async with ops_test.fast_forward("60s"):
+        await ops_test.model.block_until(
+            lambda: all(unit.workload_status == "active" for unit in application.units),
+            timeout=60 * 3,
+        )
+
+    sleep(60)
+
+    leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
+    logger.info(f"Run resume-refresh action on {leader_unit.name}")
+    action = await leader_unit.run_action("resume-refresh")
+    await action.wait()
+    logger.info(f"Results from the action: {action.results}")
+
+    logger.info("Wait for upgrade to complete")
+    async with ops_test.fast_forward("60s"):
         await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME], status="active", timeout=TIMEOUT
+            apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
         )
 
     logger.info("Ensure continuous_writes after rollback procedure")

@@ -38,7 +38,9 @@ class PostgreSQLRefresh(CharmSpecificKubernetes):
             old_workload_version=old_workload_version,
             new_workload_version=new_workload_version,
         ):
-            logger.error("Charm version is not compatible 1")
+            logger.error(
+                f"Charm version is not compatible 1 - old_charm_version: {old_charm_version}, new_charm_version: {new_charm_version}, old_workload_version: {old_workload_version}, new_workload_version: {new_workload_version}"
+            )
             return False
 
         # Check workload version compatibility

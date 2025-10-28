@@ -123,17 +123,36 @@ async def test_upgrade_from_stable(ops_test: OpsTest, charm):
     logger.info("Wait for upgrade to start")
     await ops_test.model.block_until(lambda: application.status == "blocked", timeout=60 * 3)
 
-    logger.info("Wait for refresh to block as paused")
+    logger.info("Wait for refresh to block as paused or incompatible")
     async with ops_test.fast_forward("60s"):
         await ops_test.model.wait_for_idle(
             apps=[DATABASE_APP_NAME], idle_period=30, timeout=TIMEOUT
         )
 
-    async with ops_test.fast_forward("60s"):
-        await ops_test.model.block_until(
-            lambda: all(unit.workload_status == "active" for unit in application.units),
-            timeout=60 * 3,
+    # Highest to lowest unit number
+    refresh_order = sorted(
+        application.units, key=lambda unit: int(unit.name.split("/")[1]), reverse=True
+    )
+
+    if "Refresh incompatible" in application.status_message:
+        logger.info("Application refresh is blocked due to incompatibility")
+
+        action = await refresh_order[0].run_action(
+            "force-refresh-start", **{"check-compatibility": False}
         )
+        await action.wait()
+
+        logger.info("Wait for first incompatible unit to upgrade")
+        async with ops_test.fast_forward("60s"):
+            await ops_test.model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], idle_period=30, timeout=TIMEOUT
+            )
+    else:
+        async with ops_test.fast_forward("60s"):
+            await ops_test.model.block_until(
+                lambda: all(unit.workload_status == "active" for unit in application.units),
+                timeout=60 * 3,
+            )
 
     sleep(60)
 
