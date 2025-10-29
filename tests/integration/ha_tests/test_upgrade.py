@@ -105,9 +105,7 @@ async def test_upgrade_from_edge(ops_test: OpsTest, charm, continuous_writes) ->
     primary_name = await get_primary(ops_test, DATABASE_APP_NAME)
     initial_number_of_switchovers = await count_switchovers(ops_test, primary_name)
 
-    # logger.info(f"resource: {METADATA['resources']['postgresql-image']['upstream-source']}")
     resources = {"postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]}
-    # resources = {"postgresql-image": "ghcr.io/canonical/charmed-postgresql@sha256:bc3562872eaef679d0fb2bb8999f1008019980e0fe8a410fb190da3a862cfb79"}
     application = ops_test.model.applications[DATABASE_APP_NAME]
 
     logger.info("Refresh the charm")
