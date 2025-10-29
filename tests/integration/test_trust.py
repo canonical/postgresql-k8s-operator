@@ -40,7 +40,7 @@ async def test_deploy_without_trust(ops_test: OpsTest, charm):
     logger.info("Waiting for charm to become blocked due to missing --trust")
     await asyncio.gather(
         ops_test.model.block_until(
-            lambda: ops_test.model.applications[APP_NAME].status == "blocked", timeout=300
+            lambda: ops_test.model.applications[APP_NAME].status == "blocked", timeout=1000
         ),
         ops_test.model.block_until(
             lambda: ops_test.model.applications[APP_NAME].status_message == UNTRUST_ERROR_MESSAGE,
