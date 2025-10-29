@@ -338,11 +338,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._update_pebble_layers(replan=True)
 
         if not self._patroni.member_started:
-            logger.error("Early exit reconcile: Patroni has not started yet")
+            logger.debug("Early exit reconcile: Patroni has not started yet")
             return
 
         if self.unit.is_leader() and not self._patroni.primary_endpoint_ready:
-            logger.error(
+            logger.debug(
                 "Early exit reconcile: current unit is leader but primary endpoint is not ready yet"
             )
             return
@@ -361,12 +361,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                         )
                         raise Exception
         except RetryError:
-            logger.error("Upgraded unit is not part of the cluster or not healthy")
+            logger.debug("Upgraded unit is not part of the cluster or not healthy")
             self.set_unit_status(
                 BlockedStatus("upgrade failed. Check logs for rollback instruction")
             )
         else:
-            # self._handle_label_change()
             self.refresh.next_unit_allowed_to_refresh = True
             self.set_unit_status(ActiveStatus())
 
@@ -1176,7 +1175,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if self.refresh is None:
             logger.warning("Warning on_postgresql_pebble_ready: Refresh could be in progress")
         elif self.refresh.in_progress:
-            # TODO: we should probably start workload if scale up while refresh in progress
             logger.debug("Defer on_postgresql_pebble_ready: Refresh in progress")
             event.defer()
             return
@@ -2301,7 +2299,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             is_creating_backup=is_creating_backup,
             enable_ldap=self.is_ldap_enabled,
             enable_tls=self.is_tls_enabled,
-            # is_no_sync_member=self.upgrade.is_no_sync_member,
             backup_id=self.app_peer_data.get("restoring-backup"),
             pitr_target=self.app_peer_data.get("restore-to-time"),
             restore_timeline=self.app_peer_data.get("restore-timeline"),
