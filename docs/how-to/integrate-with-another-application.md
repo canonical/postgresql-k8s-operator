@@ -9,7 +9,7 @@ relatedlinks: https://documentation.ubuntu.com/juju/3.6/reference/relation/, [po
 
 This guide shows how to integrate Charmed PostgreSQL with both charmed and non-charmed applications.
 
-For developer information about how to integrate your own charmed application with PostgreSQL, see [](/how-to/development/integrate-with-your-charm).
+For developer information about how to integrate your own charmed application with PostgreSQL, see [](/how-to/integrate-with-your-charm).
 
 ## Integrate with a charmed application
 
