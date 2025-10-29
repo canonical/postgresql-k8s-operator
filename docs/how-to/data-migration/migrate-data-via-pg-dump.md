@@ -1,21 +1,8 @@
-# Migrate database data using `pg_dump` / `pg_restore`
+(migrate-data-via-pg-dump)=
+# Migrate database data using `pg_dump`
 
-This document describes database **data** migration only. To migrate charms on new juju interfaces, refer to the guide [How to integrate a database with my charm](/how-to/development/integrate-with-your-charm). 
+This document describes database **data** migration only. To migrate charms on new juju interfaces, refer to the guide [How to integrate a database with my charm](/how-to/integrate-with-your-charm). 
 
-## Do you need to migrate?
-
-A database migration is only required if the output of the following command is `latest/stable`:
-
-```text
-juju show-application postgresql-k8s | yq '.[] | .channel'
-```
-Migration is **not** necessary if the output above is `14/stable` or `16/edge`.
-
-This guide can be used to copy data between different installations of the same (modern) charm `postgresql-k8s`, but the [backup/restore](/how-to/development/migrate-data-via-backup-restore) is more recommended for migrations between modern charms.
-
-## Summary
-
-The legacy K8s charm are archived in the `latest/stable` channel (read more [here](/explanation/legacy-charm)).
 A minor difference in commands might be necessary for different revisions and/or Juju versions, but the general logic remains:
 
 * Deploy the modern charm nearby
