@@ -38,18 +38,13 @@ class PostgreSQLRefresh(CharmSpecificKubernetes):
             old_workload_version=old_workload_version,
             new_workload_version=new_workload_version,
         ):
-            logger.error(
-                f"Charm version is not compatible 1 - old_charm_version: {old_charm_version}, new_charm_version: {new_charm_version}, old_workload_version: {old_workload_version}, new_workload_version: {new_workload_version}"
-            )
             return False
 
         # Check workload version compatibility
         old_major, old_minor = (int(component) for component in old_workload_version.split("."))
         new_major, new_minor = (int(component) for component in new_workload_version.split("."))
         if old_major != new_major:
-            logger.error(f"Charm version is not compatible 2: {old_major} != {new_major}")
             return False
-        logger.error(f"old_minor: {old_minor}, new_minor: {new_minor}")
         return new_minor >= old_minor
 
     def run_pre_refresh_checks_after_1_unit_refreshed(self) -> None:
