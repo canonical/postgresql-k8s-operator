@@ -1,8 +1,6 @@
 # Migrate data from PostgreSQL 14 to 16
 
-# Migrate data from PostgreSQL 14 to 16
-
-There are two possible ways to migrate data from PostgreSQL 14 to 16 depending on how {ref}`roles` are managed:
+There are two possible ways to migrate data from PostgreSQL 14 to 16 depending on how roles are managed:
 
 **In case of admin roles management**, all database objects ownership are handled manually by the user. In this case, see the more general guide {ref}`migrate-data-via-pg-dump`. Note that you must set `extra-user-roles` to `charmed-admin` once a Juju relation is requested the new database.
 
