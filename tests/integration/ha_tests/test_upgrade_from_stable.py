@@ -16,6 +16,7 @@ from ..helpers import (
     count_switchovers,
     get_leader_unit,
     get_primary,
+    switchover_to_unit_zero,
 )
 from .helpers import (
     are_writes_increasing,
@@ -81,23 +82,7 @@ async def test_pre_refresh_check(ops_test: OpsTest) -> None:
     action = await leader_unit.run_action("pre-refresh-check")
     await action.wait()
 
-    # for attempt in Retrying(stop=stop_after_attempt(2), wait=wait_fixed(30), reraise=True):
-    #     with attempt:
-    #         logger.info("Run pre-upgrade-check action")
-    #         action = await leader_unit.run_action("pre-upgrade-check")
-    #         await action.wait()
-    #
-    #         # Ensure the primary has changed to the first unit.
-    #         primary_name = await get_primary(ops_test, DATABASE_APP_NAME)
-    #         assert primary_name == f"{DATABASE_APP_NAME}/0", "Primary unit not set to unit 0"
-    #
-    # logger.info("Assert partition is set to 2")
-    # client = Client()
-    # stateful_set = client.get(
-    #     res=StatefulSet, namespace=ops_test.model.info.name, name=DATABASE_APP_NAME
-    # )
-    #
-    # assert stateful_set.spec.updateStrategy.rollingUpdate.partition == 2, "Partition not set to 2"
+    await switchover_to_unit_zero(ops_test)
 
 
 @pytest.mark.abort_on_fail
