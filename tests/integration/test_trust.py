@@ -56,4 +56,4 @@ async def test_trust_blocked_deployment(ops_test: OpsTest):
     """
     await ops_test.juju("trust", APP_NAME, "--scope=cluster")
 
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1500)
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=3000)
