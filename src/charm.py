@@ -62,7 +62,7 @@ from lightkube import ApiError, Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Endpoints, Node, Pod, Service
-from ops import main
+from ops import JujuVersion, main
 from ops.charm import (
     ActionEvent,
     HookEvent,
@@ -1365,6 +1365,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 event.fail("Switchover failed or timed out, check the logs for details")
 
     def _on_secret_remove(self, event: SecretRemoveEvent) -> None:
+        if self.model.juju_version < JujuVersion("3.6.11"):
+            logger.warning(
+                "Skipping secret revision removal due to https://github.com/juju/juju/issues/20782"
+            )
+            return
+
         # A secret removal (entire removal, not just a revision removal) causes
         # https://github.com/juju/juju/issues/20794. This check is to avoid the
         # errors that would happen if we tried to remove the revision in that case
