@@ -314,7 +314,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         except charm_refresh.KubernetesJujuAppNotTrusted:
             sys.exit()
         except charm_refresh.PeerRelationNotReady:
-            # self.set_unit_status(MaintenanceStatus("Waiting for peer relation"))
             if self.unit.is_leader():
                 self.app.status = MaintenanceStatus("Waiting for peer relation")
             sys.exit()
@@ -322,12 +321,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.set_unit_status(MaintenanceStatus("Tearing down"))
             sys.exit()
         self._reconcile_refresh_status()
-
-        # Observe all events (except custom events)
-        # for bound_event in self.on.events().values():
-        #     if bound_event.event_type == CollectStatusEvent:
-        #         continue
-        #     self.framework.observe(bound_event, self.reconcile)
 
         if (
             self.refresh is not None
@@ -340,39 +333,18 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self.refresh.next_unit_allowed_to_refresh = True
 
     def reconcile(self):
-        """Reconcile the charm state."""
-        # Don't mark the upgrade of this unit as completed until Patroni reports the
-        # workload is ready.
-        # if (
-        #     isinstance(event, StopEvent)
-        #     or not self.is_cluster_initialised
-        #     or not self.refresh.in_progress
-        #     or not self.refresh.workload_allowed_to_start
-        #     or self.refresh.next_unit_allowed_to_refresh
-        # ):
-        #     logger.error(
-        #         f"{self.refresh.workload_allowed_to_start} - {self.refresh.next_unit_allowed_to_refresh}"
-        #     )
-        #     return
-        #
-        # if int(self.unit.name.split("/")[1]) < self.refresh._get_partition():
-        #     logger.error(f"{int(self.unit.name.split('/')[1])} < {self.refresh._get_partition()}")
-        #     self.set_unit_status(ActiveStatus())
-        #     return
-
+        """Reconcile the unit state on refresh."""
         self.set_unit_status(MaintenanceStatus("starting services"))
         self._update_pebble_layers(replan=True)
 
         if not self._patroni.member_started:
             logger.error("Early exit reconcile: Patroni has not started yet")
-            # event.defer()
             return
 
         if self.unit.is_leader() and not self._patroni.primary_endpoint_ready:
             logger.error(
                 "Early exit reconcile: current unit is leader but primary endpoint is not ready yet"
             )
-            # event.defer()
             return
 
         self.set_unit_status(WaitingStatus("waiting for database initialisation"))
@@ -436,7 +408,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     ):
         """Set unit status without overriding higher priority refresh status."""
         if refresh is None:
-            refresh = self.refresh
+            refresh = getattr(self, "refresh", None)
         if refresh is not None and refresh.unit_status_higher_priority:
             return
         if (
@@ -450,22 +422,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             )
             return
         self.unit.status = status
-
-    # def _handle_label_change(self) -> None:
-    #     """Handle the label change from `master` to `primary`."""
-    #     unit_number = int(self.unit.name.split("/")[1])
-    #     if unit_number == 1:
-    #         # If the unit is the last to be upgraded before unit zero,
-    #         # trigger a switchover, so one of the upgraded units becomes
-    #         # the primary.
-    #         try:
-    #             self._patroni.switchover()
-    #         except SwitchoverFailedError as e:
-    #             logger.warning(f"Switchover failed: {e}")
-    #     if len(self._peers.units) == 0 or unit_number == 1:
-    #         # If the unit is the last to be upgraded before unit zero
-    #         # or the only unit in the cluster, update the label.
-    #         self._create_services()
 
     def _on_databases_change(self, _):
         """Handle databases change event."""
