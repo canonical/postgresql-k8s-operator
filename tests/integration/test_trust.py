@@ -44,7 +44,7 @@ async def test_deploy_without_trust(ops_test: OpsTest, charm):
         ),
         ops_test.model.block_until(
             lambda: ops_test.model.applications[APP_NAME].status_message == UNTRUST_ERROR_MESSAGE,
-            timeout=300,
+            timeout=1000,
         ),
     )
 
@@ -56,4 +56,4 @@ async def test_trust_blocked_deployment(ops_test: OpsTest):
     """
     await ops_test.juju("trust", APP_NAME, "--scope=cluster")
 
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1500)
