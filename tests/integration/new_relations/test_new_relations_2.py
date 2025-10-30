@@ -151,10 +151,10 @@ async def test_indico_datatabase(ops_test: OpsTest) -> None:
             series="focal",
         )
         await ops_test.model.deploy(
-            "redis-k8s", channel="stable", application_name="redis-broker", base="ubuntu@20.04"
+            "redis-k8s", channel="edge", application_name="redis-broker", base="ubuntu@22.04"
         )
         await ops_test.model.deploy(
-            "redis-k8s", channel="stable", application_name="redis-cache", base="ubuntu@20.04"
+            "redis-k8s", channel="edge", application_name="redis-cache", base="ubuntu@22.04"
         )
         await asyncio.gather(
             ops_test.model.relate("redis-broker", "indico:redis-broker"),
