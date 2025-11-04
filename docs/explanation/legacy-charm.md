@@ -2,8 +2,8 @@
 
 There are [two types of charms](https://documentation.ubuntu.com/juju/3.6/reference/charm/#by-generation) stored under the same charm name `postgresql-k8s`:
 
-1. [Reactive](https://documentation.ubuntu.com/juju/3.6/reference/charm/#reactive)  charm in the channel `latest/stable` (called `legacy`)
-2. [Ops-based](https://documentation.ubuntu.com/juju/3.6/reference/charm/#ops) charm in the channel `14/stable` (called `modern`)
+1. [Reactive](https://documentation.ubuntu.com/juju/3.6/reference/charm/#reactive-charm)  charm in the channel `latest/stable` (called `legacy`)
+2. [Ops-based](https://documentation.ubuntu.com/juju/3.6/reference/charm/#ops-charm) charm in the channel `14/stable` (called `modern`)
 
 The legacy charm provided endpoints `db` and `db-admin` (for the interface `pgsql`). The modern charm provides old endpoints as well + new endpoint `database` (for the interface `postgresql_client`). Read more details about the available [endpoints/interfaces](/explanation/interfaces-and-endpoints).
 
@@ -72,7 +72,7 @@ Please find the list of supported PostgreSQL [Extensions](/reference/plugins-ext
 
 ## Roles supported by modern charm
 
-In the legacy charm, the user could request roles by setting the `roles` field to a comma separated list of desired roles. It is NOT supported by the modern charm implementation of the legacy `pgsql` interface. The same functionality is provided via the modern `postgresql_client` using "[extra-user-roles](/explanation/users)". Please check how to [migrate on the new interface](/how-to/development/integrate-with-your-charm).
+In the legacy charm, the user could request roles by setting the `roles` field to a comma separated list of desired roles. It is NOT supported by the modern charm implementation of the legacy `pgsql` interface. The same functionality is provided via the modern `postgresql_client` using "[extra-user-roles](/explanation/users)". Please check how to [migrate on the new interface](/how-to/integrate-with-your-charm).
 
 ## Supported PostgreSQL versions by modern charm
 
