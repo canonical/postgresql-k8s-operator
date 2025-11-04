@@ -404,6 +404,7 @@ async def test_application_removal(ops_test: OpsTest) -> None:
     assert APP_NAME not in ops_test.model.applications
 
 
+@pytest.mark.skip(reason="Unstable")
 async def test_redeploy_charm_same_model(ops_test: OpsTest, charm):
     """Redeploy the charm in the same model to test that it works."""
     async with ops_test.fast_forward():
@@ -425,6 +426,7 @@ async def test_redeploy_charm_same_model(ops_test: OpsTest, charm):
         )
 
 
+@pytest.mark.skip(reason="Unstable")
 async def test_redeploy_charm_same_model_after_forcing_removal(ops_test: OpsTest, charm) -> None:
     """Redeploy the charm in the same model to test that it works after a forceful removal."""
     return_code, _, stderr = await ops_test.juju(

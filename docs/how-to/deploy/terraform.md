@@ -12,7 +12,7 @@ Storage support was added in [Juju Terraform Provider version 0.13+](https://git
 
 ## Install Terraform tooling
 
-This guide assumes Juju is installed and you have a K8s controller already bootstrapped. For more information, check the [](/tutorial/index).
+This guide assumes Juju is installed and you have a K8s controller already bootstrapped. For more information, check the {ref}`tutorial`.
 
 Let's install Terraform Provider and example modules:
 

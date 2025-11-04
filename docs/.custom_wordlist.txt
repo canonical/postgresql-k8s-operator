@@ -31,6 +31,7 @@ CSR
 CSRs
 databag
 databags
+DDL
 dev
 dvipng
 eks
@@ -81,6 +82,7 @@ otf
 Parca
 Patroni
 Patroni*
+pgAudit
 pgbackrest
 pgBackRest
 pgbouncer
