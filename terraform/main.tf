@@ -1,6 +1,6 @@
 resource "juju_application" "k8s_postgresql" {
   name  = var.app_name
-  model = var.juju_model_name
+  model_uuid = var.juju_model_uuid
   trust = true
 
   charm {
