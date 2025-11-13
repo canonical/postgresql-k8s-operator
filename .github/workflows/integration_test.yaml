@@ -31,7 +31,7 @@ jobs:
 
           spread_jobs = (
               subprocess.run(
-                  ["charmcraft", "test", "--list", "github-ci"], capture_output=True, check=True, text=True
+                  ["spread", "-list", "github-ci"], capture_output=True, check=True, text=True
               )
               .stdout.strip()
               .split("\n")
