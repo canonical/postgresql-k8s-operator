@@ -69,7 +69,7 @@ async def test_discourse(ops_test: OpsTest):
     await gather(
         ops_test.model.deploy(DISCOURSE_APP_NAME, application_name=DISCOURSE_APP_NAME),
         ops_test.model.deploy(
-            REDIS_APP_NAME, application_name=REDIS_APP_NAME, channel="latest/edge", base=CHARM_BASE
+            REDIS_APP_NAME, application_name=REDIS_APP_NAME, channel="latest/edge", series="jammy"
         ),
     )
 
