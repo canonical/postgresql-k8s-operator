@@ -72,7 +72,7 @@ Please find the list of supported PostgreSQL [Extensions](/reference/plugins-ext
 
 ## Roles supported by modern charm
 
-In the legacy charm, the user could request roles by setting the `roles` field to a comma separated list of desired roles. It is NOT supported by the modern charm implementation of the legacy `pgsql` interface. The same functionality is provided via the modern `postgresql_client` using "[extra-user-roles](/explanation/users)". Please check how to [migrate on the new interface](/how-to/development/integrate-with-your-charm).
+In the legacy charm, the user could request roles by setting the `roles` field to a comma separated list of desired roles. It is NOT supported by the modern charm implementation of the legacy `pgsql` interface. The same functionality is provided via the modern `postgresql_client` using "[extra-user-roles](/explanation/users)". Please check how to [migrate on the new interface](/how-to/integrate-with-your-charm).
 
 ## Supported PostgreSQL versions by modern charm
 
