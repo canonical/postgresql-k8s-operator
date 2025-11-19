@@ -1894,6 +1894,12 @@ def test_retrieve_s3_parameters(
 
 
 def test_start_stop_pgbackrest_service(harness):
+    # Enable Pebble connectivity
+    harness.set_can_connect("postgresql", True)
+
+    # Get the container to set up pebble mocking
+    container = harness.model.unit.get_container("postgresql")
+
     with (
         patch(
             "charm.PostgreSQLBackups._is_primary_pgbackrest_service_running",
@@ -1915,6 +1921,7 @@ def test_start_stop_pgbackrest_service(harness):
             "charm.PostgreSQLBackups._render_pgbackrest_conf_file"
         ) as _render_pgbackrest_conf_file,
         patch("charm.PostgreSQLBackups._are_backup_settings_ok") as _are_backup_settings_ok,
+        patch.object(container.pebble, "send_signal") as _send_signal,
     ):
         # Test when S3 parameters are not ok (no operation, but returns success).
         _are_backup_settings_ok.return_value = (False, "fake error message")
@@ -1961,18 +1968,49 @@ def test_start_stop_pgbackrest_service(harness):
         _stop.assert_not_called()
         _restart.assert_not_called()
 
-        # Test when the service has already started in the primary.
+        # Test when the service has already started in the primary and is ACTIVE.
+        # This should send SIGHUP signal to reload configuration.
         _is_primary_pgbackrest_service_running.return_value = True
+
+        # Add pgbackrest service to Pebble plan using the container's pebble client
+        container.pebble.add_layer(
+            "pgbackrest",
+            {
+                "services": {
+                    harness.charm.pgbackrest_server_service: {
+                        "override": "replace",
+                        "summary": "pgbackrest server",
+                        "command": "/bin/true",
+                        "startup": "enabled",
+                    }
+                }
+            },
+        )
+
+        # Start the service to make it ACTIVE
+        container.start(harness.charm.pgbackrest_server_service)
+
         assert harness.charm.backup.start_stop_pgbackrest_service() is True
         _stop.assert_not_called()
-        _restart.assert_called_once()
+        _restart.assert_not_called()
+        _send_signal.assert_called_once()
 
-        # Test when this unit is the primary.
+        # Test when this unit is the primary and service is NOT ACTIVE (INACTIVE).
+        # This should restart the service.
         _restart.reset_mock()
+        _send_signal.reset_mock()
         _is_primary.return_value = True
         _is_primary_pgbackrest_service_running.return_value = False
+
+        # Stop the service using the Testing Pebble Client's stop_services method
+        container.pebble.stop_services([harness.charm.pgbackrest_server_service])
+
+        # Reset the stop mock (it was called by the testing framework when stopping)
+        _stop.reset_mock()
+
         assert harness.charm.backup.start_stop_pgbackrest_service() is True
         _stop.assert_not_called()
+        _send_signal.assert_not_called()
         _restart.assert_called_once()
 
 

@@ -7,6 +7,7 @@ import json
 import logging
 import os
 import re
+import signal
 import tempfile
 import time
 from datetime import UTC, datetime
@@ -26,7 +27,7 @@ from ops.charm import ActionEvent
 from ops.framework import Object
 from ops.jujuversion import JujuVersion
 from ops.model import ActiveStatus, MaintenanceStatus
-from ops.pebble import ChangeError, ExecError
+from ops.pebble import ChangeError, ExecError, ServiceStatus
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from constants import (
@@ -820,6 +821,8 @@ Juju Version: {juju_version!s}
                 "pgbackrest",
                 f"--stanza={self.stanza_name}",
                 "--log-level-console=debug",
+                "--log-level-file=debug",
+                "--log-subprocess",
                 f"--type={BACKUP_TYPE_OVERRIDES[backup_type]}",
                 "backup",
             ]
@@ -1303,7 +1306,18 @@ Stderr:
             return False
 
         # Start the service.
-        self.container.restart(self.charm.pgbackrest_server_service)
+        services = self.container.pebble.get_services(names=[self.charm.pgbackrest_server_service])
+        if len(services) == 0:
+            return False
+
+        if services[0].current == ServiceStatus.ACTIVE:
+            logger.debug("Sending SIGHUP to pgBackRest TLS server to reload configuration")
+            self.container.pebble.send_signal(
+                signal.SIGHUP, services=[self.charm.pgbackrest_server_service]
+            )
+        else:
+            logger.debug("Starting pgBackRest TLS server service")
+            self.container.restart(self.charm.pgbackrest_server_service)
         return True
 
     def _upload_content_to_s3(

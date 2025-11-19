@@ -24,6 +24,7 @@ from authorisation_rules_observer import (
     AuthorisationRulesChangeCharmEvents,
     AuthorisationRulesObserver,
 )
+from refresh import PostgreSQLRefresh
 
 # First platform-specific import, will fail on wrong architecture
 try:
@@ -144,7 +145,6 @@ from constants import (
 )
 from ldap import PostgreSQLLDAP
 from patroni import NotReadyError, Patroni, SwitchoverFailedError, SwitchoverNotSyncError
-from refresh import PostgreSQLRefresh
 from relations.async_replication import (
     REPLICATION_CONSUMER_RELATION,
     REPLICATION_OFFER_RELATION,
@@ -212,16 +212,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             if isinstance(handler, JujuLogHandler):
                 handler.setFormatter(logging.Formatter("{name}:{message}", style="{"))
 
-        # Support for disabling the operator.
-        disable_file = Path(f"{os.environ.get('CHARM_DIR')}/disable")
-        if disable_file.exists():
-            logger.warning(
-                f"\n\tDisable file `{disable_file.resolve()}` found, the charm will skip all events."
-                "\n\tTo resume normal operations, please remove the file."
-            )
-            self.set_unit_status(BlockedStatus("Disabled"))
-            sys.exit(0)
-
         self.peer_relation_app = DataPeerData(
             self.model,
             relation_name=PEER,
@@ -280,6 +270,50 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.restart_manager = RollingOpsManager(
             charm=self, relation="restart", callback=self._restart
         )
+
+        if self.model.juju_version.supports_open_port_on_k8s:
+            try:
+                self.unit.set_ports(5432, 8008)
+            except ModelError:
+                logger.exception("failed to open port")
+
+        try:
+            self.refresh = charm_refresh.Kubernetes(
+                PostgreSQLRefresh(
+                    workload_name="PostgreSQL",
+                    charm_name="postgresql-k8s",
+                    oci_resource_name="postgresql-image",
+                    _charm=self,
+                )
+            )
+        except (
+            charm_refresh.KubernetesJujuAppNotTrusted,
+            charm_refresh.PeerRelationNotReady,
+            charm_refresh.UnitTearingDown,
+        ):
+            self.refresh = None
+        self._reconcile_refresh_status()
+
+        # Support for disabling the operator.
+        disable_file = Path(f"{os.environ.get('CHARM_DIR')}/disable")
+        if disable_file.exists():
+            logger.warning(
+                f"\n\tDisable file `{disable_file.resolve()}` found, the charm will skip all events."
+                "\n\tTo resume normal operations, please remove the file."
+            )
+            self.set_unit_status(BlockedStatus("Disabled"))
+            sys.exit(0)
+
+        if (
+            self.refresh is not None
+            and self.refresh.workload_allowed_to_start
+            and not self.refresh.next_unit_allowed_to_refresh
+        ):
+            if self.refresh.in_progress:
+                self.reconcile()
+            else:
+                self.refresh.next_unit_allowed_to_refresh = True
+
         self._observer.start_authorisation_rules_observer()
         self.grafana_dashboards = GrafanaDashboardProvider(self)
         self.metrics_endpoint = MetricsEndpointProvider(
@@ -292,45 +326,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logs_scheme={"postgresql": {"log-files": POSTGRES_LOG_FILES}},
             relation_name="logging",
         )
-
-        if self.model.juju_version.supports_open_port_on_k8s:
-            try:
-                self.unit.set_ports(5432, 8008)
-            except ModelError:
-                logger.exception("failed to open port")
         self.tracing = TracingEndpointRequirer(
             self, relation_name=TRACING_RELATION_NAME, protocols=[TRACING_PROTOCOL]
         )
-
-        try:
-            self.refresh = charm_refresh.Kubernetes(
-                PostgreSQLRefresh(
-                    workload_name="PostgreSQL",
-                    charm_name="postgresql-k8s",
-                    oci_resource_name="postgresql-image",
-                    _charm=self,
-                )
-            )
-        except charm_refresh.KubernetesJujuAppNotTrusted:
-            sys.exit()
-        except charm_refresh.PeerRelationNotReady:
-            if self.unit.is_leader():
-                self.app.status = MaintenanceStatus("Waiting for peer relation")
-            sys.exit()
-        except charm_refresh.UnitTearingDown:
-            self.set_unit_status(MaintenanceStatus("Tearing down"))
-            sys.exit()
-        self._reconcile_refresh_status()
-
-        if (
-            self.refresh is not None
-            and self.refresh.workload_allowed_to_start
-            and not self.refresh.next_unit_allowed_to_refresh
-        ):
-            if self.refresh.in_progress:
-                self.reconcile()
-            else:
-                self.refresh.next_unit_allowed_to_refresh = True
 
     def reconcile(self):
         """Reconcile the unit state on refresh."""
@@ -366,8 +364,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 BlockedStatus("upgrade failed. Check logs for rollback instruction")
             )
         else:
-            self.refresh.next_unit_allowed_to_refresh = True
-            self.set_unit_status(ActiveStatus())
+            if self.refresh is not None:
+                self.refresh.next_unit_allowed_to_refresh = True
+                self.set_unit_status(ActiveStatus())
 
     def _reconcile_refresh_status(self, _=None):
         if self.unit.is_leader():
@@ -1094,7 +1093,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
 
         # Create resources and add labels needed for replication.
-        if not self.refresh.in_progress:
+        if self.refresh is not None and not self.refresh.in_progress:
             try:
                 self._create_services()
             except ApiError:
@@ -1296,7 +1295,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return False
 
         # Create resources and add labels needed for replication
-        if not self.refresh.in_progress:
+        if self.refresh is not None and not self.refresh.in_progress:
             try:
                 self._create_services()
             except ApiError:
@@ -1608,7 +1607,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Recreate k8s resources and add labels required for replication
         # when the pod loses them (like when it's deleted).
         self.push_tls_files_to_workload()
-        if not self.refresh.in_progress:
+        if self.refresh is not None and not self.refresh.in_progress:
             try:
                 self._create_services()
             except ApiError:
