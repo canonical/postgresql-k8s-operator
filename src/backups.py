@@ -1311,12 +1311,12 @@ Stderr:
             return False
 
         if services[0].current == ServiceStatus.ACTIVE:
-            logger.error("Sending SIGHUP to pgBackRest TLS server to reload configuration")
+            logger.debug("Sending SIGHUP to pgBackRest TLS server to reload configuration")
             self.container.pebble.send_signal(
                 signal.SIGHUP, services=[self.charm.pgbackrest_server_service]
             )
         else:
-            logger.error("Starting pgBackRest TLS server service")
+            logger.debug("Starting pgBackRest TLS server service")
             self.container.restart(self.charm.pgbackrest_server_service)
         return True
 
