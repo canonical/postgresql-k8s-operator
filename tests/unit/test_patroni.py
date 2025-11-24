@@ -89,9 +89,11 @@ def test_dict_to_hba_string(harness, patroni):
 
 
 def test_get_primary(harness, patroni):
-    with patch("requests.get") as _get:
+    with patch(
+        "charm.Patroni.parallel_patroni_get_request", return_value=None
+    ) as _parallel_patroni_get_request:
         # Mock Patroni cluster API.
-        _get.return_value.json.return_value = {
+        _parallel_patroni_get_request.return_value = {
             "members": [
                 {"name": "postgresql-k8s-0", "role": "replica"},
                 {"name": "postgresql-k8s-1", "role": "leader"},
@@ -102,30 +104,21 @@ def test_get_primary(harness, patroni):
         # Test returning pod name.
         primary = patroni.get_primary()
         assert primary == "postgresql-k8s-1"
-        _get.assert_called_once_with(
-            "https://postgresql-k8s-0:8008/cluster",
-            verify=patroni._verify,
-            timeout=10,
-            auth=patroni._patroni_auth,
-        )
+        _parallel_patroni_get_request.assert_called_once_with("/cluster", None)
 
         # Test returning unit name.
-        _get.reset_mock()
+        _parallel_patroni_get_request.reset_mock()
         primary = patroni.get_primary(unit_name_pattern=True)
         assert primary == "postgresql-k8s/1"
-        _get.assert_called_once_with(
-            "https://postgresql-k8s-0:8008/cluster",
-            verify=patroni._verify,
-            timeout=10,
-            auth=patroni._patroni_auth,
-        )
+        _parallel_patroni_get_request.assert_called_once_with("/cluster", None)
 
 
 def test_is_creating_backup(harness, patroni):
-    with patch("requests.get") as _get:
+    with patch(
+        "charm.Patroni.parallel_patroni_get_request", return_value=None
+    ) as _parallel_patroni_get_request:
         # Test when one member is creating a backup.
-        response = _get.return_value
-        response.json.return_value = {
+        _parallel_patroni_get_request.return_value = {
             "members": [
                 {"name": "postgresql-k8s-0"},
                 {"name": "postgresql-k8s-1", "tags": {"is_creating_backup": True}},
@@ -134,7 +127,7 @@ def test_is_creating_backup(harness, patroni):
         assert patroni.is_creating_backup
 
         # Test when no member is creating a backup.
-        response.json.return_value = {
+        _parallel_patroni_get_request.return_value = {
             "members": [{"name": "postgresql-k8s-0"}, {"name": "postgresql-k8s-1"}]
         }
         assert not patroni.is_creating_backup
