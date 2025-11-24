@@ -1,9 +1,15 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
+import sys
+from unittest.mock import Mock, mock_open, patch, sentinel
 
-from unittest.mock import mock_open, patch, sentinel
+import pytest
 
-from scripts.authorisation_rules_observer import check_for_database_changes
+from scripts.authorisation_rules_observer import (
+    UnreachableUnitsError,
+    check_for_database_changes,
+    main,
+)
 
 
 def test_check_for_database_changes():
@@ -51,3 +57,42 @@ def test_check_for_database_changes():
             check_for_database_changes(run_cmd, unit, charm_dir, result)
             assert result == sentinel.databases_changed
             _subprocess.run.assert_not_called()
+
+
+async def test_main():
+    with (
+        patch("scripts.authorisation_rules_observer.check_for_database_changes"),
+        patch.object(
+            sys,
+            "argv",
+            ["cmd", "http://server1:8008,http://server2:8008", "run_cmd", "unit/0", "charm_dir"],
+        ),
+        patch("scripts.authorisation_rules_observer.sleep", return_value=None),
+        patch("scripts.authorisation_rules_observer.AsyncClient") as _async_client,
+        patch("scripts.authorisation_rules_observer.create_default_context") as _context,
+    ):
+        mock1 = Mock()
+        mock1.json.return_value = {
+            "members": [
+                {"name": "unit-2", "api_url": "http://server3:8008/patroni", "role": "standby"},
+                {"name": "unit-0", "api_url": "http://server1:8008/patroni", "role": "leader"},
+            ]
+        }
+        mock2 = Mock()
+        mock2.json.return_value = {
+            "members": [
+                {"name": "unit-2", "api_url": "https://server3:8008/patroni", "role": "leader"},
+            ]
+        }
+        async with _async_client() as cli:
+            _get = cli.get
+            _get.side_effect = [
+                mock1,
+                Exception,
+                mock2,
+            ]
+        with pytest.raises(UnreachableUnitsError):
+            await main()
+        _async_client.assert_any_call(timeout=5, verify=_context.return_value)
+        _get.assert_any_call("http://server1:8008/cluster")
+        _get.assert_any_call("http://server3:8008/cluster")

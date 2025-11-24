@@ -57,14 +57,15 @@ optional = true
 
 [tool.poetry.group.unit.dependencies]
 coverage = {extras = ["toml"], version = "^7.10.7"}
-pytest = "^8.4.2"
+pytest = "^9.0.1"
+pytest-asyncio = "*"
 
 [tool.poetry.group.integration]
 optional = true
 
 [tool.poetry.group.integration.dependencies]
 lightkube = "^0.17.2"
-pytest = "^8.4.2"
+pytest = "^9.0.1"
 pytest-operator = "^0.43.1"
 allure-pytest-default-results = "^0.1.3"
 # renovate caret doesn't work: https://github.com/renovatebot/renovate/issues/26940
