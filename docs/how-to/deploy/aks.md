@@ -130,7 +130,7 @@ juju model-config logging-config='<root>=INFO;unit=DEBUG'
 The following command deploys PostgreSQL K8s:
 
 ```text
-juju deploy postgresql-k8s --channel 16/stable --trust -n 3
+juju deploy postgresql-k8s --channel 16/edge --trust -n 3
 ```
 Sample output:
 ```text

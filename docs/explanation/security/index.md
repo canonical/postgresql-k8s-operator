@@ -91,6 +91,23 @@ Charmed PostgreSQL K8s provides native integration with the [Canonical Observabi
 
 PostgreSQL logs are stored in `/var/log/postgresql` within the postgresql container of each unit. It’s recommended to integrate the charm with [COS](https://canonical.com/data/docs/postgresql/k8s/h-enable-monitoring), from where the logs can be easily persisted and queried using [Loki](https://charmhub.io/loki-k8s)/[Grafana](https://charmhub.io/grafana).
 
+### Security event logging
+
+Charmed PostgreSQL K8s provides [PostgreSQL Audit Extension (or pgAudit)](https://www.pgaudit.org/) enabled by default. These logs are stored in the `/var/log/postgresql/` directory of each unit along with the regular workload logs, and rotated minutely. If COS is enabled, audit logs are also persisted there.
+
+The following information is configured to be logged:
+
+* Statements related to roles and privileges, such as GRANT, REVOKE, CREATE, ALTER, and DROP ROLE.
+* Data Definition Language (DDL) statements.
+* Miscellaneous commands like DISCARD, FETCH, CHECKPOINT, VACUUM, SET.
+* Miscellaneous SET commands.
+
+Other events, like connections and disconnections, are logged depending on the value of the charm configuration options related to them. For more information, check the configuration options with the `logging` prefix in the [configuration reference](https://charmhub.io/postgresql-k8s/configurations#logging_log_connections).
+
+Also, all operations performed by the charm as a result of user actions — such as enabling or disabling plugins, managing TLS, creating or restoring backups, and configuring replication between clusters (asynchronous or logical) — are executed through the underlying workload components (PostgreSQL, Patroni, or pgBackRest). Consequently, these operations are recorded in the respective workload log files, which are accessible in the `/var/log/postgresql` directory and also forwarded to COS.
+
+No secrets are logged.
+
 ## Additional Resources
 
 For details on the cryptography used by Charmed PostgreSQL K8s, see the [Cryptography](/explanation/security/cryptography) explanation page.

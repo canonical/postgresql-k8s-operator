@@ -16,7 +16,7 @@ Adding a relation is accomplished with `juju relate` (or `juju integrate` for Ju
 
 ```text
 # Deploy Charmed PostgreSQL cluster with 3 nodes
-juju deploy postgresql-k8s --channel 16/stable -n 3 --trust
+juju deploy postgresql-k8s --channel 16/edge -n 3 --trust
 
 # Deploy the relevant application charms
 juju deploy mycharm
@@ -47,7 +47,7 @@ Check the limitations of legacy interface implementations in [](/explanation/leg
 This charm supports legacy interface `pgsql` from the previous [PostgreSQL charm](https://launchpad.net/postgresql-charm):
 
 ```text
-juju deploy postgresql-k8s --channel 16/stable --trust
+juju deploy postgresql-k8s --channel 16/edge --trust
 juju deploy finos-waltz-k8s --channel edge
 juju relate postgresql-k8s:db finos-waltz-k8s
 ```

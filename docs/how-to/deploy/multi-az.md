@@ -77,7 +77,7 @@ The command below demonstrates how to deploy Charmed PostgreSQL K8s with Juju co
 
 ```text
 export MYAPP="mydatabase" ; \
-juju deploy postgresql-k8s --channel 16/stable  ${MYAPP} --trust -n 3 \
+juju deploy postgresql-k8s --channel 16/edge  ${MYAPP} --trust -n 3 \
  --constraints="tags=anti-pod.app.kubernetes.io/name=${MYAPP},anti-pod.topology-key=topology.kubernetes.io/zone"
 ```
 
