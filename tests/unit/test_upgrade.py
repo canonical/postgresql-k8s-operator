@@ -87,7 +87,7 @@ def test_on_postgresql_pebble_ready(harness):
         patch(
             "charm.Patroni.is_replication_healthy", new_callable=PropertyMock
         ) as _is_replication_healthy,
-        patch("charm.Patroni.cluster_members", new_callable=PropertyMock) as _cluster_members,
+        patch("charm.Patroni.cluster_status") as _cluster_status,
         patch("upgrade.wait_fixed", return_value=tenacity.wait_fixed(0)),
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
     ):
@@ -118,7 +118,7 @@ def test_on_postgresql_pebble_ready(harness):
         # but not joined the cluster yet.
         _member_started.reset_mock()
         mock_event.defer.reset_mock()
-        _cluster_members.return_value = ["postgresql-k8s-1"]
+        _cluster_status.return_value = ["postgresql-k8s-1"]
         harness.charm.upgrade._on_postgresql_pebble_ready(mock_event)
         _member_started.assert_called_once()
         mock_event.defer.assert_not_called()
@@ -129,7 +129,7 @@ def test_on_postgresql_pebble_ready(harness):
         # is not healthy yet.
         _set_unit_failed.reset_mock()
         mock_event.defer.reset_mock()
-        _cluster_members.return_value = [
+        _cluster_status.return_value = [
             harness.charm.unit.name.replace("/", "-"),
             "postgresql-k8s-1",
         ]

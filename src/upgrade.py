@@ -129,7 +129,7 @@ class PostgreSQLUpgrade(DataUpgrade):
                 with attempt:
                     if (
                         self.charm.unit.name.replace("/", "-")
-                        in self.charm._patroni.cluster_members
+                        in self.charm._patroni.cluster_status()
                         and self.charm._patroni.is_replication_healthy
                     ):
                         self._handle_label_change()

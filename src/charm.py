@@ -156,6 +156,8 @@ from upgrade import PostgreSQLUpgrade, get_postgresql_k8s_dependencies_model
 from utils import any_cpu_to_cores, any_memory_to_bytes, new_password
 
 logger = logging.getLogger(__name__)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("asyncio").setLevel(logging.WARNING)
 
 EXTENSIONS_DEPENDENCY_MESSAGE = "Unsatisfied plugin dependencies. Please check the logs"
 EXTENSION_OBJECT_MESSAGE = "Cannot disable plugins: Existing objects depend on it. See logs"
@@ -852,12 +854,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         try:
             # Compare set of Patroni cluster members and Juju hosts
             # to avoid the unnecessary reconfiguration.
-            if self._patroni.cluster_members == self._hosts:
+            if self._patroni.cluster_status() == self._hosts:
                 return
 
             logger.info("Reconfiguring cluster")
             self.unit.status = MaintenanceStatus("reconfiguring cluster")
-            for member in self._hosts - self._patroni.cluster_members:
+            for member in self._hosts - set(self._patroni.cluster_status()):
                 logger.debug("Adding %s to cluster", member)
                 self.add_cluster_member(member)
             self._patroni.update_synchronous_node_count()
