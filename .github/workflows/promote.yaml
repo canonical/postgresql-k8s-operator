@@ -24,8 +24,8 @@ on:
 
 jobs:
   promote:
-    name: Promote charm
-    uses: canonical/data-platform-workflows/.github/workflows/_promote_charm.yaml@v35.0.2
+    name: Promote charms
+    uses: canonical/data-platform-workflows/.github/workflows/_promote_charms.yaml@v39.1.0
     with:
       track: '16'
       from-risk: ${{ inputs.from-risk }}
