@@ -31,7 +31,7 @@ class PostgreSQLRefresh(CharmSpecificKubernetes):
         old_workload_version: str,
         new_workload_version: str,
     ) -> bool:
-        """Checks charm version compatibility."""
+        """Checks charm and workload version compatibility."""
         if not super().is_compatible(
             old_charm_version=old_charm_version,
             new_charm_version=new_charm_version,
