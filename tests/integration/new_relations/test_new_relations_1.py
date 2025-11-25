@@ -27,7 +27,6 @@ DATABASE_APP_NAME = "database"
 ANOTHER_DATABASE_APP_NAME = "another-database"
 DATA_INTEGRATOR_APP_NAME = "data-integrator"
 DISCOURSE_APP_NAME = "discourse-k8s"
-REDIS_APP_NAME = "redis-k8s"
 APP_NAMES = [APPLICATION_APP_NAME, DATABASE_APP_NAME, ANOTHER_DATABASE_APP_NAME]
 DATABASE_APP_METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
 FIRST_DATABASE_RELATION_NAME = "database"
