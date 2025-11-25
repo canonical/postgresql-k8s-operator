@@ -30,7 +30,7 @@ from .juju_ import juju_major_version
 logger = logging.getLogger(__name__)
 
 tls_certificates_app_name = "self-signed-certificates"
-tls_channel = "latest/stable"
+tls_channel = "1/stable"
 tls_config = {"ca-common-name": "Test CA"}
 APPLICATION_UNITS = 2
 DATABASE_UNITS = 3
