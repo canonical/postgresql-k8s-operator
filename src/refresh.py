@@ -64,6 +64,7 @@ class PostgreSQLRefresh(CharmSpecificKubernetes):
         primary_unit_name = self._charm._patroni.get_primary(unit_name_pattern=True)
         unit_zero_name = f"{self._charm.app.name}/0"
         if primary_unit_name != unit_zero_name:
-            raise charm_refresh.PrecheckFailed(
+            logger.warning(
                 f"Switch primary to {unit_zero_name} to avoid multiple switchovers during refresh."
             )
+            raise charm_refresh.PrecheckFailed(f"Switch primary to {unit_zero_name}")

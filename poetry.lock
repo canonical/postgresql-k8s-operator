@@ -453,14 +453,14 @@ charm-api = ">=0.1.1"
 
 [[package]]
 name = "charm-refresh"
-version = "3.1.0.3"
+version = "3.1.1.2"
 description = "In-place rolling refreshes (upgrades) of stateful charmed applications"
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "charm_refresh-3.1.0.3-py3-none-any.whl", hash = "sha256:3f7d871dad188177008c06b860b95c710054f146d8d708ba8090e0c1986380d8"},
-    {file = "charm_refresh-3.1.0.3.tar.gz", hash = "sha256:c25992548d1d51a0fb1cab8de910e5dc8314c5f3e9a6d2f7ef950d81cb70a4b5"},
+    {file = "charm_refresh-3.1.1.2-py3-none-any.whl", hash = "sha256:01143532a8021cd0ab9ad9686b73acccc289a8d51881f627575b0f25ab58c7e0"},
+    {file = "charm_refresh-3.1.1.2.tar.gz", hash = "sha256:1f0156799d338f2d74f27ed2439ed631a107bf46fe69fc5a5eec4877f48489b6"},
 ]
 
 [package.dependencies]
@@ -3040,4 +3040,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "78ec9c5086d12980a128cad181f6805cec9875e85f239fa57541d27f40382efb"
+content-hash = "aa7c367e2d1f96eee04cbc9c00e35826387a424a02c34ea5729cafac775a3dac"
