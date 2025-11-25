@@ -545,16 +545,23 @@ class Patroni:
         Args:
             slots: dictionary of slots in the {slot: database} format.
         """
-        try:
-            current_config = requests.get(
-                f"{self._patroni_url}/config",
-                verify=self._verify,
-                timeout=API_REQUEST_TIMEOUT,
-                auth=self._patroni_auth,
-            )
-        except Exception as e:
-            logger.debug(f"Ensure slots early exit: unable to call Patroni API. {e}")
-            return
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
+            with attempt:
+                current_config = requests.get(
+                    f"{self._patroni_url}/config",
+                    verify=self._verify,
+                    timeout=API_REQUEST_TIMEOUT,
+                    auth=self._patroni_auth,
+                )
+                logger.debug(
+                    "API ensure_slots_controller_by_patroni: %s (%s)",
+                    current_config,
+                    current_config.elapsed.total_seconds(),
+                )
+                if current_config.status_code != 200:
+                    raise Exception(
+                        f"Failed to get current Patroni config: {current_config.status_code} {current_config.text}"
+                    )
 
         slots_patch: dict[str, dict[str, str] | None] = dict.fromkeys(
             current_config.json().get("slots", ()) or {}
