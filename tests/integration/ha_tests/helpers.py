@@ -9,9 +9,7 @@ import string
 import subprocess
 import tarfile
 import tempfile
-import zipfile
 from datetime import datetime
-from pathlib import Path
 
 import kubernetes as kubernetes
 import psycopg2
@@ -49,7 +47,6 @@ from ..helpers import (
     run_command_on_unit,
 )
 from ..juju_ import juju_major_version
-from ..new_relations.helpers import get_application_relation_data
 
 PORT = 5432
 
@@ -562,23 +559,6 @@ async def get_sync_standby(model: Model, application_name: str) -> str:
     for member in cluster["members"]:
         if member["role"] == "sync_standby":
             return member["name"]
-
-
-async def inject_dependency_fault(
-    ops_test: OpsTest, application_name: str, charm_file: str | Path
-) -> None:
-    """Inject a dependency fault into the PostgreSQL charm."""
-    # Query running dependency to overwrite with incompatible version.
-    dependencies = await get_application_relation_data(
-        ops_test, application_name, "upgrade", "dependencies"
-    )
-    loaded_dependency_dict = json.loads(dependencies)
-    loaded_dependency_dict["charm"]["upgrade_supported"] = "^25"
-    loaded_dependency_dict["charm"]["version"] = "25.0"
-
-    # Overwrite dependency.json with incompatible version.
-    with zipfile.ZipFile(charm_file, mode="a") as charm_zip:
-        charm_zip.writestr("src/dependency.json", json.dumps(loaded_dependency_dict))
 
 
 async def is_connection_possible(ops_test: OpsTest, unit_name: str) -> bool:

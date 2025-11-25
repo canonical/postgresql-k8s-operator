@@ -8,6 +8,7 @@ import itertools
 import json
 import logging
 import os
+import pathlib
 import re
 import shutil
 import sys
@@ -23,6 +24,7 @@ from authorisation_rules_observer import (
     AuthorisationRulesChangeCharmEvents,
     AuthorisationRulesObserver,
 )
+from refresh import PostgreSQLRefresh
 
 # First platform-specific import, will fail on wrong architecture
 try:
@@ -39,6 +41,7 @@ except ModuleNotFoundError:
         main(WrongArchitectureWarningCharm, use_juju_for_storage=True)
     raise
 
+import charm_refresh
 from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerUnitData
 from charms.data_platform_libs.v1.data_models import TypedCharmBase
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
@@ -66,12 +69,14 @@ from ops import (
     SecretChangedEvent,
     SecretNotFoundError,
     SecretRemoveEvent,
+    StatusBase,
     Unit,
     UnknownStatus,
     WaitingStatus,
     WorkloadEvent,
     main,
 )
+from ops.log import JujuLogHandler
 from ops.pebble import (
     ChangeError,
     ExecError,
@@ -101,7 +106,7 @@ from single_kernel_postgresql.utils.postgresql import (
     PostgreSQLListUsersError,
     PostgreSQLUpdateUserPasswordError,
 )
-from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
+from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
 from backups import CANNOT_RESTORE_PITR, S3_BLOCK_MESSAGES, PostgreSQLBackups
 from config import CharmConfig
@@ -152,10 +157,10 @@ from relations.logical_replication import (
 from relations.postgresql_provider import PostgreSQLProvider
 from relations.tls import TLS
 from relations.tls_transfer import TLSTransfer
-from upgrade import PostgreSQLUpgrade, get_postgresql_k8s_dependencies_model
 from utils import any_cpu_to_cores, any_memory_to_bytes, new_password
 
 logger = logging.getLogger(__name__)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 logging.getLogger("asyncio").setLevel(logging.WARNING)
 
@@ -190,7 +195,6 @@ class CannotConnectError(Exception):
         PostgreSQLLDAP,
         PostgreSQLProvider,
         TLS,
-        PostgreSQLUpgrade,
         RollingOpsManager,
     ),
 )
@@ -203,15 +207,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def __init__(self, *args):
         super().__init__(*args)
 
-        # Support for disabling the operator.
-        disable_file = Path(f"{os.environ.get('CHARM_DIR')}/disable")
-        if disable_file.exists():
-            logger.warning(
-                f"\n\tDisable file `{disable_file.resolve()}` found, the charm will skip all events."
-                "\n\tTo resume normal operations, please remove the file."
-            )
-            self.unit.status = BlockedStatus("Disabled")
-            sys.exit(0)
+        # Show logger name (module name) in logs
+        root_logger = logging.getLogger()
+        for handler in root_logger.handlers:
+            if isinstance(handler, JujuLogHandler):
+                handler.setFormatter(logging.Formatter("{name}:{message}", style="{"))
 
         self.peer_relation_app = DataPeerData(
             self.model,
@@ -253,18 +253,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.framework.observe(self.on.promote_to_primary_action, self._on_promote_to_primary)
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
         self.framework.observe(self.on.update_status, self._on_update_status)
+        self.framework.observe(self.on.collect_unit_status, self._reconcile_refresh_status)
         self.framework.observe(self.on.secret_remove, self._on_secret_remove)
 
         self._certs_path = "/usr/local/share/ca-certificates"
         self._storage_path = str(self.meta.storages["data"].location)
         self.pgdata_path = f"{self._storage_path}/pgdata"
 
-        self.upgrade = PostgreSQLUpgrade(
-            self,
-            model=get_postgresql_k8s_dependencies_model(),
-            relation_name="upgrade",
-            substrate="k8s",
-        )
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.postgresql_client_relation = PostgreSQLProvider(self)
         self.backup = PostgreSQLBackups(self, "s3-parameters")
@@ -276,6 +271,50 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.restart_manager = RollingOpsManager(
             charm=self, relation="restart", callback=self._restart
         )
+
+        if self.model.juju_version.supports_open_port_on_k8s:
+            try:
+                self.unit.set_ports(5432, 8008)
+            except ModelError:
+                logger.exception("failed to open port")
+
+        try:
+            self.refresh = charm_refresh.Kubernetes(
+                PostgreSQLRefresh(
+                    workload_name="PostgreSQL",
+                    charm_name="postgresql-k8s",
+                    oci_resource_name="postgresql-image",
+                    _charm=self,
+                )
+            )
+        except (
+            charm_refresh.KubernetesJujuAppNotTrusted,
+            charm_refresh.PeerRelationNotReady,
+            charm_refresh.UnitTearingDown,
+        ):
+            self.refresh = None
+        self._reconcile_refresh_status()
+
+        # Support for disabling the operator.
+        disable_file = Path(f"{os.environ.get('CHARM_DIR')}/disable")
+        if disable_file.exists():
+            logger.warning(
+                f"\n\tDisable file `{disable_file.resolve()}` found, the charm will skip all events."
+                "\n\tTo resume normal operations, please remove the file."
+            )
+            self.set_unit_status(BlockedStatus("Disabled"))
+            sys.exit(0)
+
+        if (
+            self.refresh is not None
+            and self.refresh.workload_allowed_to_start
+            and not self.refresh.next_unit_allowed_to_refresh
+        ):
+            if self.refresh.in_progress:
+                self.reconcile()
+            else:
+                self.refresh.next_unit_allowed_to_refresh = True
+
         self._observer.start_authorisation_rules_observer()
         self.grafana_dashboards = GrafanaDashboardProvider(self)
         self.metrics_endpoint = MetricsEndpointProvider(
@@ -288,15 +327,100 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logs_scheme={"postgresql": {"log-files": POSTGRES_LOG_FILES}},
             relation_name="logging",
         )
-
-        if self.model.juju_version.supports_open_port_on_k8s:
-            try:
-                self.unit.set_ports(5432, 8008)
-            except ModelError:
-                logger.exception("failed to open port")
         self.tracing = TracingEndpointRequirer(
             self, relation_name=TRACING_RELATION_NAME, protocols=[TRACING_PROTOCOL]
         )
+
+    def reconcile(self):
+        """Reconcile the unit state on refresh."""
+        self.set_unit_status(MaintenanceStatus("starting services"))
+        self._update_pebble_layers(replan=True)
+
+        if not self._patroni.member_started:
+            logger.debug("Early exit reconcile: Patroni has not started yet")
+            return
+
+        if self.unit.is_leader() and not self._patroni.primary_endpoint_ready:
+            logger.debug(
+                "Early exit reconcile: current unit is leader but primary endpoint is not ready yet"
+            )
+            return
+
+        self.set_unit_status(WaitingStatus("waiting for database initialisation"))
+        try:
+            for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(10)):
+                with attempt:
+                    if not (
+                        self.unit.name.replace("/", "-") in self._patroni.cluster_members
+                        and self._patroni.is_replication_healthy
+                    ):
+                        logger.error(
+                            "Instance not yet back in the cluster or not healthy."
+                            f" Retry {attempt.retry_state.attempt_number}/6"
+                        )
+                        raise Exception
+        except RetryError:
+            logger.debug("Upgraded unit is not part of the cluster or not healthy")
+            self.set_unit_status(
+                BlockedStatus("upgrade failed. Check logs for rollback instruction")
+            )
+        else:
+            if self.refresh is not None:
+                self.refresh.next_unit_allowed_to_refresh = True
+                self.set_unit_status(ActiveStatus())
+
+    def _reconcile_refresh_status(self, _=None):
+        if self.unit.is_leader():
+            self.async_replication.set_app_status()
+
+        # Workaround for other unit statuses being set in a stateful way (i.e. unable to recompute
+        # status on every event)
+        path = pathlib.Path(".last_refresh_unit_status.json")
+        try:
+            last_refresh_unit_status = json.loads(path.read_text())
+        except FileNotFoundError:
+            last_refresh_unit_status = None
+        new_refresh_unit_status = None
+        if self.refresh is not None and self.refresh.unit_status_higher_priority:
+            self.unit.status = self.refresh.unit_status_higher_priority
+            new_refresh_unit_status = self.refresh.unit_status_higher_priority.message
+        elif self.unit.status.message == last_refresh_unit_status:
+            if self.refresh is not None and (
+                refresh_status := self.refresh.unit_status_lower_priority()
+            ):
+                self.unit.status = refresh_status
+                new_refresh_unit_status = refresh_status.message
+            else:
+                # Clear refresh status from unit status
+                self._set_active_status()
+        elif (
+            isinstance(self.unit.status, ActiveStatus)
+            and self.refresh is not None
+            and (refresh_status := self.refresh.unit_status_lower_priority())
+        ):
+            self.unit.status = refresh_status
+            new_refresh_unit_status = refresh_status.message
+        path.write_text(json.dumps(new_refresh_unit_status))
+
+    def set_unit_status(
+        self, status: StatusBase, /, *, refresh: charm_refresh.Kubernetes | None = None
+    ):
+        """Set unit status without overriding higher priority refresh status."""
+        if refresh is None:
+            refresh = getattr(self, "refresh", None)
+        if refresh is not None and refresh.unit_status_higher_priority:
+            return
+        if (
+            isinstance(status, ActiveStatus)
+            and refresh is not None
+            and (refresh_status := refresh.unit_status_lower_priority())
+        ):
+            self.unit.status = refresh_status
+            pathlib.Path(".last_refresh_unit_status.json").write_text(
+                json.dumps(refresh_status.message)
+            )
+            return
+        self.unit.status = status
 
     def _on_databases_change(self, _):
         """Handle databases change event."""
@@ -626,7 +750,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         try:
             self.update_config()
         except ValueError as e:
-            self.unit.status = BlockedStatus("Configuration Error. Please check the logs")
+            self.set_unit_status(BlockedStatus("Configuration Error. Please check the logs"))
             logger.error("Invalid configuration: %s", str(e))
             return
 
@@ -647,7 +771,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Validate the status of the member before setting an ActiveStatus.
         if not self._patroni.member_started:
             logger.debug("Deferring on_peer_relation_changed: Waiting for member to start")
-            self.unit.status = WaitingStatus("awaiting for member to start")
+            self.set_unit_status(WaitingStatus("awaiting for member to start"))
             event.defer()
             return
 
@@ -701,15 +825,17 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             except PostgreSQLUpdateUserPasswordError:
                 event.defer()
 
-    def _on_config_changed(self, event) -> None:  # noqa: C901
+    def _on_config_changed(self, event) -> None:
         """Handle configuration changes, like enabling plugins."""
         if not self.is_cluster_initialised:
             logger.debug("Defer on_config_changed: cluster not initialised yet")
             event.defer()
             return
 
-        if not self.upgrade.idle:
-            logger.debug("Defer on_config_changed: upgrade in progress")
+        if self.refresh is None:
+            logger.warning("Warning _on_config_changed: Refresh could be in progress")
+        elif self.refresh.in_progress:
+            logger.debug("Defer on_config_changed: Refresh in progress")
             event.defer()
             return
 
@@ -722,7 +848,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             event.defer()
             return
         except ValueError as e:
-            self.unit.status = BlockedStatus("Configuration Error. Please check the logs")
+            self.set_unit_status(BlockedStatus("Configuration Error. Please check the logs"))
             logger.error("Invalid configuration: %s", str(e))
             return
         if not self.updated_synchronous_node_count():
@@ -774,7 +900,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 continue
             extension = PLUGIN_OVERRIDES.get(extension, extension)
             if self._check_extension_dependencies(extension, enable):
-                self.unit.status = BlockedStatus(EXTENSIONS_DEPENDENCY_MESSAGE)
+                self.set_unit_status(BlockedStatus(EXTENSIONS_DEPENDENCY_MESSAGE))
                 return
             extensions[extension] = enable
         if self.is_blocked and self.unit.status.message == EXTENSIONS_DEPENDENCY_MESSAGE:
@@ -786,7 +912,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def _handle_enable_disable_extensions(self, original_status, extensions, database) -> None:
         """Try enablind/disabling Postgresql extensions and handle exceptions appropriately."""
         if not isinstance(original_status, UnknownStatus):
-            self.unit.status = WaitingStatus("Updating extensions")
+            self.set_unit_status(WaitingStatus("Updating extensions"))
         try:
             self.postgresql.enable_disable_extensions(extensions, database)
         except psycopg2.errors.DependentObjectsStillExist as e:
@@ -794,7 +920,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 "Failed to disable plugin: %s\nWas the plugin enabled manually? If so, update charm config with `juju config postgresql-k8s plugin_<plugin_name>_enable=True`",
                 str(e),
             )
-            self.unit.status = BlockedStatus(EXTENSION_OBJECT_MESSAGE)
+            self.set_unit_status(BlockedStatus(EXTENSION_OBJECT_MESSAGE))
             return
         except PostgreSQLEnableDisableExtensionError as e:
             logger.exception("failed to change plugins: %s", str(e))
@@ -802,7 +928,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self._set_active_status()
             return
         if not isinstance(original_status, UnknownStatus):
-            self.unit.status = original_status
+            self.set_unit_status(original_status)
 
     def _check_extension_dependencies(self, extension: str, enable: bool) -> bool:
         skip = False
@@ -842,7 +968,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 return
 
             logger.info("Reconfiguring cluster")
-            self.unit.status = MaintenanceStatus("reconfiguring cluster")
+            self.set_unit_status(MaintenanceStatus("reconfiguring cluster"))
             for member in self._hosts - self._patroni.cluster_members:
                 logger.debug("Adding %s to cluster", member)
                 self.add_cluster_member(member)
@@ -875,7 +1001,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self._patch_pod_labels(member)
         except ApiError as e:
             logger.error("failed to patch pod")
-            self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
+            self.set_unit_status(BlockedStatus(f"failed to patch pod with error {e}"))
             return
 
     @property
@@ -914,7 +1040,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             except (ModelError, SecretNotFoundError) as e:
                 # only display the error but don't return to make sure all users have passwords
                 logger.error(f"Error setting internal passwords: {e}")
-                self.unit.status = BlockedStatus("Password setting for system users failed.")
+                self.set_unit_status(BlockedStatus("Password setting for system users failed."))
                 event.defer()
 
         for password in {
@@ -952,12 +1078,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
 
         # Create resources and add labels needed for replication.
-        if self.upgrade.idle:
+        if self.refresh is not None and not self.refresh.in_progress:
             try:
                 self._create_services()
             except ApiError:
                 logger.exception("failed to create k8s services")
-                self.unit.status = BlockedStatus("failed to create k8s services")
+                self.set_unit_status(BlockedStatus("failed to create k8s services"))
                 return
 
         # Remove departing units when the leader changes.
@@ -1029,6 +1155,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _on_postgresql_pebble_ready(self, event: WorkloadEvent) -> None:
         """Event handler for PostgreSQL container on PebbleReadyEvent."""
+        # Safeguard against starting while refreshing.
+        if self.refresh is None:
+            logger.warning("Warning on_postgresql_pebble_ready: Refresh could be in progress")
+        elif self.refresh.in_progress:
+            logger.debug("Defer on_postgresql_pebble_ready: Refresh in progress")
+            event.defer()
+            return
+
         if self._endpoint in self._endpoints:
             self._fix_pod()
 
@@ -1046,8 +1180,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Create the PostgreSQL data directory. This is needed on cloud environments
         # where the volume is mounted with more restrictive permissions.
         self._create_pgdata(container)
-
-        self.unit.set_workload_version(self._patroni.rock_postgresql_version)
 
         # Defer the initialization of the workload in the replicas
         # if the cluster hasn't been bootstrap on the primary yet.
@@ -1084,7 +1216,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Ensure the member is up and running before marking the cluster as initialised.
         if not self._patroni.member_started:
             logger.debug("Deferring on_postgresql_pebble_ready: Waiting for cluster to start")
-            self.unit.status = WaitingStatus("awaiting for cluster to start")
+            self.set_unit_status(WaitingStatus("awaiting for cluster to start"))
             event.defer()
             return
 
@@ -1110,15 +1242,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
         try:
             if self.unit.is_leader() and "s3-initialization-block-message" in self.app_peer_data:
-                self.unit.status = BlockedStatus(
-                    self.app_peer_data["s3-initialization-block-message"]
+                self.set_unit_status(
+                    BlockedStatus(self.app_peer_data["s3-initialization-block-message"])
                 )
                 return
             if self.unit.is_leader() and (
                 self.app_peer_data.get("logical-replication-validation") == "error"
                 or self.logical_replication.has_remote_publisher_errors()
             ):
-                self.unit.status = BlockedStatus(LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS)
+                self.set_unit_status(BlockedStatus(LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS))
                 return
             if (
                 self._patroni.get_primary(unit_name_pattern=True) == self.unit.name
@@ -1127,11 +1259,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 danger_state = ""
                 if len(self._patroni.get_running_cluster_members()) < self.app.planned_units():
                     danger_state = " (degraded)"
-                self.unit.status = ActiveStatus(
-                    f"{'Standby' if self.is_standby_leader else 'Primary'}{danger_state}"
+                self.set_unit_status(
+                    ActiveStatus(
+                        f"{'Standby' if self.is_standby_leader else 'Primary'}{danger_state}"
+                    )
                 )
             elif self._patroni.member_started:
-                self.unit.status = ActiveStatus()
+                self.set_unit_status(ActiveStatus())
         except (RetryError, RequestsConnectionError) as e:
             logger.error(f"failed to get primary with error {e}")
 
@@ -1142,16 +1276,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self._patch_pod_labels(self._unit)
         except ApiError as e:
             logger.error("failed to patch pod")
-            self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
+            self.set_unit_status(BlockedStatus(f"failed to patch pod with error {e}"))
             return False
 
         # Create resources and add labels needed for replication
-        if self.upgrade.idle:
+        if self.refresh is not None and not self.refresh.in_progress:
             try:
                 self._create_services()
             except ApiError:
                 logger.exception("failed to create k8s services")
-                self.unit.status = BlockedStatus("failed to create k8s services")
+                self.set_unit_status(BlockedStatus("failed to create k8s services"))
                 return False
 
         async_replication_primary_cluster = self.async_replication.get_primary_cluster()
@@ -1168,7 +1302,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug(
                 "Deferring on_postgresql_pebble_ready: Waiting for primary endpoint to be ready"
             )
-            self.unit.status = WaitingStatus("awaiting for primary endpoint to be ready")
+            self.set_unit_status(WaitingStatus("awaiting for primary endpoint to be ready"))
             event.defer()
             return False
 
@@ -1177,17 +1311,17 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         except PostgreSQLCreatePredefinedRolesError:
             message = "Failed to create pre-defined roles"
             logger.exception(message)
-            self.unit.status = BlockedStatus(message)
+            self.set_unit_status(BlockedStatus(message))
             return False
         except PostgreSQLGrantDatabasePrivilegesToUserError:
             message = "Failed to grant database privileges to user"
             logger.exception(message)
-            self.unit.status = BlockedStatus(message)
+            self.set_unit_status(BlockedStatus(message))
             return False
         except PostgreSQLCreateUserError:
             message = "Failed to create postgres user"
             logger.exception(message)
-            self.unit.status = BlockedStatus(message)
+            self.set_unit_status(BlockedStatus(message))
             return False
         except PostgreSQLListUsersError:
             logger.warning("Deferring on_start: Unable to list users")
@@ -1374,7 +1508,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.error(
                 "Failed changing the password: This can be ran only in the cluster from the offer side."
             )
-            self.unit.status = BlockedStatus("Password update for system users failed.")
+            self.set_unit_status(BlockedStatus("Password update for system users failed."))
             return
 
         try:
@@ -1392,7 +1526,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     updated_passwords.pop(user)
         except (ModelError, SecretNotFoundError) as e:
             logger.error(f"Error updating internal passwords: {e}")
-            self.unit.status = BlockedStatus("Password update for system users failed.")
+            self.set_unit_status(BlockedStatus("Password update for system users failed."))
             return
 
         try:
@@ -1408,7 +1542,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self.set_secret(APP_SCOPE, f"{user}-password", password)
         except PostgreSQLUpdateUserPasswordError as e:
             logger.exception(e)
-            self.unit.status = BlockedStatus("Password update for system users failed.")
+            self.set_unit_status(BlockedStatus("Password update for system users failed."))
             return
 
         # Update and reload Patroni configuration in this unit to use the new password.
@@ -1458,19 +1592,19 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Recreate k8s resources and add labels required for replication
         # when the pod loses them (like when it's deleted).
         self.push_tls_files_to_workload()
-        if self.upgrade.idle:
+        if self.refresh is not None and not self.refresh.in_progress:
             try:
                 self._create_services()
             except ApiError:
                 logger.exception("failed to create k8s services")
-                self.unit.status = BlockedStatus("failed to create k8s services")
+                self.set_unit_status(BlockedStatus("failed to create k8s services"))
                 return
 
         try:
             self._patch_pod_labels(self.unit.name)
         except ApiError as e:
             logger.error("failed to patch pod")
-            self.unit.status = BlockedStatus(f"failed to patch pod with error {e}")
+            self.set_unit_status(BlockedStatus(f"failed to patch pod with error {e}"))
             return
 
         # Update the sync-standby endpoint in the async replication data.
@@ -1554,8 +1688,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 )
 
     def _on_update_status_early_exit_checks(self, container) -> bool:
-        if not self.upgrade.idle:
-            logger.debug("Early exit on_update_status: upgrade in progress")
+        if self.refresh is None:
+            logger.debug("Early exit on_update_status: Refresh could be in progress")
+            return False
+        if self.refresh.in_progress:
+            logger.debug("Early exit on_update_status: Refresh in progress")
             return False
 
         if not container.can_connect():
@@ -1596,9 +1733,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             free_size / total_size,
         )
         if free_size / total_size < 0.1:
-            self.unit.status = BlockedStatus(INSUFFICIENT_SIZE_WARNING)
+            self.set_unit_status(BlockedStatus(INSUFFICIENT_SIZE_WARNING))
         elif self.unit.status.message == INSUFFICIENT_SIZE_WARNING:
-            self.unit.status = ActiveStatus()
+            self.set_unit_status(ActiveStatus())
             self._set_active_status()
 
     def _on_update_status(self, _) -> None:
@@ -1627,7 +1764,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 logger.exception("Failed to restart patroni")
             # If service doesn't recover fast, exit and wait for next hook run to re-check
             if not self._patroni.member_started:
-                self.unit.status = MaintenanceStatus("Database service inactive, restarting")
+                self.set_unit_status(MaintenanceStatus("Database service inactive, restarting"))
                 return
 
         if (
@@ -1652,7 +1789,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 "You can launch another restore with different parameters"
             )
             self.log_pitr_last_transaction_time()
-            self.unit.status = BlockedStatus(CANNOT_RESTORE_PITR)
+            self.set_unit_status(BlockedStatus(CANNOT_RESTORE_PITR))
             return False
 
         if (
@@ -1660,7 +1797,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             and self.unit.status.message != CANNOT_RESTORE_PITR
         ):
             logger.error("Restore failed: database service failed to start")
-            self.unit.status = BlockedStatus("Failed to restore backup")
+            self.set_unit_status(BlockedStatus("Failed to restore backup"))
             return False
 
         if not self._patroni.member_started:
@@ -2031,7 +2168,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         except RetryError:
             error_message = "failed to restart PostgreSQL"
             logger.exception(error_message)
-            self.unit.status = BlockedStatus(error_message)
+            self.set_unit_status(BlockedStatus(error_message))
             return
 
         # Update health check URL.
@@ -2147,7 +2284,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             is_creating_backup=is_creating_backup,
             enable_ldap=self.is_ldap_enabled,
             enable_tls=self.is_tls_enabled,
-            is_no_sync_member=self.upgrade.is_no_sync_member,
             backup_id=self.app_peer_data.get("restoring-backup"),
             pitr_target=self.app_peer_data.get("restore-to-time"),
             restore_timeline=self.app_peer_data.get("restore-timeline"),
@@ -2359,8 +2495,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def on_deployed_without_trust(self) -> None:
         """Blocks the application and returns a specific error message for deployments made without --trust."""
-        self.unit.status = BlockedStatus(
-            f"Insufficient permissions, try: `juju trust {self._name} --scope=cluster`"
+        self.set_unit_status(
+            BlockedStatus(
+                f"Insufficient permissions, try: `juju trust {self._name} --scope=cluster`"
+            )
         )
         logger.error(
             f"""
