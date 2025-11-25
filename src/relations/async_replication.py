@@ -682,6 +682,8 @@ class PostgreSQLAsyncReplication(Object):
 
     def set_app_status(self) -> None:
         """Set the app status."""
+        if not self.charm.can_set_app_status:
+            return
         if self.charm.refresh is not None and self.charm.refresh.app_status_higher_priority:
             self.charm.app.status = self.charm.refresh.app_status_higher_priority
             return

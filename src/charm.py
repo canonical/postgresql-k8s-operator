@@ -277,6 +277,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             except ModelError:
                 logger.exception("failed to open port")
 
+        self.can_set_app_status = True
         try:
             self.refresh = charm_refresh.Kubernetes(
                 PostgreSQLRefresh(
@@ -286,8 +287,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     _charm=self,
                 )
             )
+        except charm_refresh.KubernetesJujuAppNotTrusted:
+            self.refresh = None
+            self.can_set_app_status = False
         except (
-            charm_refresh.KubernetesJujuAppNotTrusted,
             charm_refresh.PeerRelationNotReady,
             charm_refresh.UnitTearingDown,
         ):
