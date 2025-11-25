@@ -11,6 +11,7 @@ from asyncio import as_completed, create_task, run, wait
 from contextlib import suppress
 from functools import cached_property
 from ssl import CERT_NONE, create_default_context
+from time import sleep
 from typing import Any, TypedDict
 
 import requests
@@ -43,7 +44,6 @@ from utils import label2name
 
 STARTED_STATES = ["running", "streaming"]
 RUNNING_STATES = [*STARTED_STATES, "starting"]
-PATRONI_TIMEOUT = 10
 
 logger = logging.getLogger(__name__)
 
@@ -248,7 +248,7 @@ class Patroni:
                     json={"synchronous_node_count": self._synchronous_node_count},
                     verify=self._verify,
                     auth=self._patroni_auth,
-                    timeout=PATRONI_TIMEOUT,
+                    timeout=API_REQUEST_TIMEOUT,
                 )
 
                 # Check whether the update was unsuccessful.
@@ -317,6 +317,16 @@ class Patroni:
                     sync_standbys.append(label2name(member["name"]))
         return sync_standbys
 
+    @property
+    def cluster_members(self) -> set:
+        """Get the current cluster members."""
+        # Request info from cluster endpoint (which returns all members of the cluster).
+        try:
+            return {member["name"] for member in self.cluster_status()}
+        except Exception:
+            return set()
+        return set()
+
     def get_running_cluster_members(self) -> list[str]:
         """List running patroni members."""
         try:
@@ -340,6 +350,56 @@ class Patroni:
         # (which returns all members of the cluster and their states).
         return len(self.get_running_cluster_members()) == len(self._endpoints)
 
+    @cached_property
+    def cached_patroni_health(self) -> dict[str, str]:
+        """Cached local unit health."""
+        return self.get_patroni_health()
+
+    def get_patroni_health(self) -> dict[str, str]:
+        """Gets, retires and parses the Patroni health endpoint."""
+        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(7)):
+            with attempt:
+                r = requests.get(
+                    f"{self._patroni_url}/health",
+                    verify=self._verify,
+                    timeout=API_REQUEST_TIMEOUT,
+                    auth=self._patroni_auth,
+                )
+                logger.debug("API get_patroni_health: %s (%s)", r, r.elapsed.total_seconds())
+
+        return r.json()
+
+    def is_restart_pending(self) -> bool:
+        """Returns whether the Patroni/PostgreSQL restart pending."""
+        pending_restart = self._get_patroni_restart_pending()
+        if pending_restart:
+            # The current Patroni 3.2.2 has wired behaviour: it temporary flag pending_restart=True
+            # on any changes to REST API, which is gone within a second but long enough to be
+            # cougth by charm. Sleep 2 seconds as a protection here until Patroni 3.3.0 upgrade.
+            # Repeat the request to make sure pending_restart flag is still here
+            logger.debug("Enduring restart is pending (to avoid unnecessary rolling restarts)")
+            sleep(2)
+            pending_restart = self._get_patroni_restart_pending()
+
+        return pending_restart
+
+    def _get_patroni_restart_pending(self) -> bool:
+        """Returns whether the Patroni flag pending_restart on REST API."""
+        r = requests.get(
+            f"{self._patroni_url}/patroni",
+            verify=self._verify,
+            timeout=API_REQUEST_TIMEOUT,
+            auth=self._patroni_auth,
+        )
+        pending_restart = r.json().get("pending_restart", False)
+        logger.debug(
+            f"API _get_patroni_restart_pending ({pending_restart}): %s (%s)",
+            r,
+            r.elapsed.total_seconds(),
+        )
+
+        return pending_restart
+
     @property
     def is_creating_backup(self) -> bool:
         """Returns whether a backup is being created."""
@@ -347,13 +407,13 @@ class Patroni:
         # cluster member; the "is_creating_backup" tag means that the member is creating
         # a backup).
         try:
-            return any(
-                "tags" in member and member["tags"].get("is_creating_backup")
-                for member in self.cluster_status()
-            )
+            members = self.cached_cluster_status
         except RetryError:
             return False
-        return False
+
+        return any(
+            "tags" in member and member["tags"].get("is_creating_backup") for member in members
+        )
 
     @property
     def is_replication_healthy(self) -> bool:
@@ -378,7 +438,7 @@ class Patroni:
                             f"{url}/{endpoint}",
                             verify=self._verify,
                             auth=self._patroni_auth,
-                            timeout=PATRONI_TIMEOUT,
+                            timeout=API_REQUEST_TIMEOUT,
                         )
                         if member_status.status_code != 200:
                             raise Exception
@@ -403,7 +463,7 @@ class Patroni:
                         f"https://{self._primary_endpoint}:8008/health",
                         verify=self._verify,
                         auth=self._patroni_auth,
-                        timeout=PATRONI_TIMEOUT,
+                        timeout=API_REQUEST_TIMEOUT,
                     )
                     if r.json()["state"] not in RUNNING_STATES:
                         raise EndpointNotReadyError
@@ -441,19 +501,14 @@ class Patroni:
             True if services is ready False otherwise. Retries over a period of 60 seconds times to
             allow server time to start up.
         """
+        if not self._charm._is_workload_running:
+            return False
         try:
-            for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(1)):
-                with attempt:
-                    r = requests.get(
-                        f"{self._patroni_url}/health",
-                        verify=self._verify,
-                        auth=self._patroni_auth,
-                        timeout=PATRONI_TIMEOUT,
-                    )
+            response = self.cached_patroni_health
         except RetryError:
             return False
 
-        return r.json()["state"] in RUNNING_STATES
+        return response["state"] in RUNNING_STATES
 
     @property
     def member_streaming(self) -> bool:
@@ -464,18 +519,11 @@ class Patroni:
             allow server time to start up.
         """
         try:
-            for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(1)):
-                with attempt:
-                    r = requests.get(
-                        f"{self._patroni_url}/health",
-                        verify=self._verify,
-                        auth=self._patroni_auth,
-                        timeout=PATRONI_TIMEOUT,
-                    )
+            response = self.cached_patroni_health
         except RetryError:
             return False
 
-        return r.json().get("replication_state") == "streaming"
+        return response.get("replication_state") == "streaming"
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def bulk_update_parameters_controller_by_patroni(self, parameters: dict[str, Any]) -> None:
@@ -488,7 +536,7 @@ class Patroni:
             verify=self._verify,
             json={"postgresql": {"parameters": parameters}},
             auth=self._patroni_auth,
-            timeout=PATRONI_TIMEOUT,
+            timeout=API_REQUEST_TIMEOUT,
         )
 
     def ensure_slots_controller_by_patroni(self, slots: dict[str, str]) -> None:
@@ -501,7 +549,7 @@ class Patroni:
             current_config = requests.get(
                 f"{self._patroni_url}/config",
                 verify=self._verify,
-                timeout=PATRONI_TIMEOUT,
+                timeout=API_REQUEST_TIMEOUT,
                 auth=self._patroni_auth,
             )
         except Exception as e:
@@ -509,7 +557,7 @@ class Patroni:
             return
 
         slots_patch: dict[str, dict[str, str] | None] = dict.fromkeys(
-            current_config.json().get("slots", ())
+            current_config.json().get("slots", ()) or {}
         )
         for slot, database in slots.items():
             slots_patch[slot] = {
@@ -522,7 +570,7 @@ class Patroni:
             verify=self._verify,
             json={"slots": slots_patch},
             auth=self._patroni_auth,
-            timeout=PATRONI_TIMEOUT,
+            timeout=API_REQUEST_TIMEOUT,
         )
 
     def promote_standby_cluster(self) -> None:
@@ -531,7 +579,7 @@ class Patroni:
             f"{self._patroni_url}/config",
             verify=self._verify,
             auth=self._patroni_auth,
-            timeout=PATRONI_TIMEOUT,
+            timeout=API_REQUEST_TIMEOUT,
         )
         if "standby_cluster" not in config_response.json():
             raise StandbyClusterAlreadyPromotedError("standby cluster is already promoted")
@@ -540,7 +588,7 @@ class Patroni:
             verify=self._verify,
             json={"standby_cluster": None},
             auth=self._patroni_auth,
-            timeout=PATRONI_TIMEOUT,
+            timeout=API_REQUEST_TIMEOUT,
         )
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
             with attempt:
@@ -554,7 +602,7 @@ class Patroni:
             f"{self._patroni_url}/reinitialize",
             verify=self._verify,
             auth=self._patroni_auth,
-            timeout=PATRONI_TIMEOUT,
+            timeout=API_REQUEST_TIMEOUT,
         )
 
     def _render_file(self, path: str, content: str, mode: int) -> None:
@@ -667,7 +715,7 @@ class Patroni:
             f"{self._patroni_url}/reload",
             verify=self._verify,
             auth=self._patroni_auth,
-            timeout=PATRONI_TIMEOUT,
+            timeout=API_REQUEST_TIMEOUT,
         )
 
     def last_postgresql_logs(self) -> str:
@@ -701,7 +749,7 @@ class Patroni:
             f"{self._patroni_url}/restart",
             verify=self._verify,
             auth=self._patroni_auth,
-            timeout=PATRONI_TIMEOUT,
+            timeout=API_REQUEST_TIMEOUT,
         )
 
     def switchover(self, candidate: str | None = None, wait: bool = True) -> None:
@@ -718,7 +766,7 @@ class Patroni:
                     json={"leader": primary, "candidate": candidate},
                     verify=self._verify,
                     auth=self._patroni_auth,
-                    timeout=PATRONI_TIMEOUT,
+                    timeout=API_REQUEST_TIMEOUT,
                 )
 
         # Check whether the switchover was unsuccessful.
