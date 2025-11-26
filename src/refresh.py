@@ -74,6 +74,3 @@ class PostgreSQLRefresh(CharmSpecificKubernetes):
                     f"Switched primary to unit {last_unit_to_refresh} during pre-refresh check"
                 )
 
-    def run_pre_refresh_checks_before_any_units_refreshed(self) -> None:
-        """Implement pre-refresh checks before any unit refreshed."""
-        self.run_pre_refresh_checks_after_1_unit_refreshed()
