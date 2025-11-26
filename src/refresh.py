@@ -73,4 +73,3 @@ class PostgreSQLRefresh(CharmSpecificKubernetes):
                 logger.info(
                     f"Switched primary to unit {last_unit_to_refresh} during pre-refresh check"
                 )
-
