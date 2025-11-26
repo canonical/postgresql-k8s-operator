@@ -5,7 +5,6 @@ import asyncio
 import itertools
 import json
 import logging
-from asyncio import sleep
 from datetime import datetime
 from multiprocessing import ProcessError
 from pathlib import Path
@@ -819,22 +818,6 @@ async def switchover(
                 member for member in response.json()["members"] if member["role"] == "sync_standby"
             ])
             assert standbys == len(ops_test.model.applications[app_name].units) - 1
-
-
-async def switchover_to_unit_zero(ops_test: OpsTest) -> None:
-    primary_name = await get_primary(ops_test, DATABASE_APP_NAME)
-    expected_primary_name = f"{DATABASE_APP_NAME}/0"
-    if primary_name != expected_primary_name:
-        logger.info(f"Switching primary to {expected_primary_name}")
-        action = await ops_test.model.units[expected_primary_name].run_action(
-            "promote-to-primary", scope="unit"
-        )
-        await action.wait()
-
-        await sleep(30)
-
-        primary_name = await get_primary(ops_test, DATABASE_APP_NAME)
-        assert primary_name == expected_primary_name, "Primary unit not set to unit 0"
 
 
 async def wait_for_idle_on_blocked(

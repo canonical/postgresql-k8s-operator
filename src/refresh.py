@@ -10,6 +10,8 @@ from typing import TYPE_CHECKING
 import charm_refresh
 from charm_refresh import CharmSpecificKubernetes, CharmVersion
 
+from patroni import SwitchoverFailedError
+
 if TYPE_CHECKING:
     from charm import PostgresqlOperatorCharm
 
@@ -55,16 +57,23 @@ class PostgreSQLRefresh(CharmSpecificKubernetes):
         if self._charm._patroni.is_creating_backup:
             raise charm_refresh.PrecheckFailed("Backup in progress")
 
+        # Switch primary to last unit to refresh (lowest unit number).
+        last_unit_to_refresh = f"{self._charm.app.name}/0"
+        if self._charm._patroni.get_primary(unit_name_pattern=True) == last_unit_to_refresh:
+            logger.info(
+                f"Unit {last_unit_to_refresh} was already primary during pre-refresh check"
+            )
+        else:
+            try:
+                self._charm._patroni.switchover(candidate=last_unit_to_refresh)
+            except SwitchoverFailedError as e:
+                logger.warning(f"switchover failed with reason: {e}")
+                raise charm_refresh.PrecheckFailed("Unable to switch primary") from None
+            else:
+                logger.info(
+                    f"Switched primary to unit {last_unit_to_refresh} during pre-refresh check"
+                )
+
     def run_pre_refresh_checks_before_any_units_refreshed(self) -> None:
         """Implement pre-refresh checks before any unit refreshed."""
         self.run_pre_refresh_checks_after_1_unit_refreshed()
-
-        # If the first unit is not the primary we ask the user to switchover
-        # the primary to it.
-        primary_unit_name = self._charm._patroni.get_primary(unit_name_pattern=True)
-        unit_zero_name = f"{self._charm.app.name}/0"
-        if primary_unit_name != unit_zero_name:
-            logger.warning(
-                f"Switch primary to {unit_zero_name} to avoid multiple switchovers during refresh."
-            )
-            raise charm_refresh.PrecheckFailed(f"Switch primary to {unit_zero_name}")

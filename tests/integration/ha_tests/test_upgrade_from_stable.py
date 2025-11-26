@@ -16,7 +16,6 @@ from ..helpers import (
     count_switchovers,
     get_leader_unit,
     get_primary,
-    switchover_to_unit_zero,
 )
 from .helpers import (
     are_writes_increasing,
@@ -81,8 +80,6 @@ async def test_pre_refresh_check(ops_test: OpsTest) -> None:
     logger.info("Run pre-refresh-check action")
     action = await leader_unit.run_action("pre-refresh-check")
     await action.wait()
-
-    await switchover_to_unit_zero(ops_test)
 
 
 @pytest.mark.abort_on_fail
