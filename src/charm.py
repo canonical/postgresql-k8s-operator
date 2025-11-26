@@ -1184,7 +1184,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Safeguard against starting while refreshing.
         if self.refresh is None:
             logger.warning("Warning on_postgresql_pebble_ready: Refresh could be in progress")
-        elif self.refresh.in_progress:
+        elif self.refresh.in_progress and not self.refresh.next_unit_allowed_to_refresh:
             logger.debug("Defer on_postgresql_pebble_ready: Refresh in progress")
             event.defer()
             return
