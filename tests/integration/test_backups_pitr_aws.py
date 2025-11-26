@@ -60,7 +60,9 @@ async def pitr_backup_operations(
 
     logger.info("deploying the next charms: s3-integrator, self-signed-certificates, postgresql")
     await ops_test.model.deploy(s3_integrator_app_name)
-    await ops_test.model.deploy(tls_certificates_app_name, config=tls_config, channel=tls_channel, base=tls_base)
+    await ops_test.model.deploy(
+        tls_certificates_app_name, config=tls_config, channel=tls_channel, base=tls_base
+    )
     await build_and_deploy(
         ops_test, charm, 2, database_app_name=database_app_name, wait_for_idle=False
     )
