@@ -66,7 +66,10 @@ async def test_tls(ops_test: OpsTest) -> None:
     async with ops_test.fast_forward():
         # Deploy TLS Certificates operator.
         await ops_test.model.deploy(
-            tls_certificates_app_name, config=tls_config, channel=tls_channel, base=CHARM_BASE_NOBLE
+            tls_certificates_app_name,
+            config=tls_config,
+            channel=tls_channel,
+            base=CHARM_BASE_NOBLE,
         )
         # Relate it to the PostgreSQL to enable TLS.
         await ops_test.model.relate(
