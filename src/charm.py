@@ -292,11 +292,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         except charm_refresh.KubernetesJujuAppNotTrusted:
             self.refresh = None
             self.can_set_app_status = False
-        except (
-            charm_refresh.PeerRelationNotReady,
-            charm_refresh.UnitTearingDown,
-        ):
+        except charm_refresh.PeerRelationNotReady:
             self.refresh = None
+        except charm_refresh.UnitTearingDown:
+            self.unit.status = MaintenanceStatus("Tearing down")
+            sys.exit()
         self._reconcile_refresh_status()
 
         # Support for disabling the operator.
