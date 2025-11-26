@@ -12,8 +12,8 @@ from ops.testing import Harness
 from tenacity import RetryError, stop_after_delay, wait_fixed
 
 from charm import PostgresqlOperatorCharm
-from constants import REWIND_USER
-from patroni import PATRONI_TIMEOUT, Patroni, SwitchoverFailedError, SwitchoverNotSyncError
+from constants import API_REQUEST_TIMEOUT, REWIND_USER
+from patroni import Patroni, SwitchoverFailedError, SwitchoverNotSyncError
 from tests.helpers import STORAGE_PATH
 
 
@@ -125,6 +125,7 @@ def test_is_creating_backup(harness, patroni):
             ]
         }
         assert patroni.is_creating_backup
+        del patroni.cached_cluster_status
 
         # Test when no member is creating a backup.
         _parallel_patroni_get_request.return_value = {
@@ -160,13 +161,16 @@ def test_member_streaming(harness, patroni):
         # Test when the member is streaming from primary.
         _get.return_value.json.return_value = {"replication_state": "streaming"}
         assert patroni.member_streaming
+        del patroni.cached_patroni_health
 
         # Test when the member is not streaming from primary.
         _get.return_value.json.return_value = {"replication_state": "running"}
         assert not patroni.member_streaming
+        del patroni.cached_patroni_health
 
         _get.return_value.json.return_value = {}
         assert not patroni.member_streaming
+        del patroni.cached_patroni_health
 
         # Test when an error happens.
         _get.side_effect = RetryError
@@ -325,7 +329,7 @@ def test_switchover(harness, patroni):
             json={"leader": "postgresql-k8s-0", "candidate": None},
             verify=patroni._verify,
             auth=patroni._patroni_auth,
-            timeout=PATRONI_TIMEOUT,
+            timeout=API_REQUEST_TIMEOUT,
         )
 
         # Test a successful switchover with a candidate name.
@@ -337,7 +341,7 @@ def test_switchover(harness, patroni):
             json={"leader": "postgresql-k8s-0", "candidate": "postgresql-k8s-2"},
             verify=patroni._verify,
             auth=patroni._patroni_auth,
-            timeout=PATRONI_TIMEOUT,
+            timeout=API_REQUEST_TIMEOUT,
         )
 
         # Test failed switchovers.
@@ -351,7 +355,7 @@ def test_switchover(harness, patroni):
             json={"leader": "postgresql-k8s-0", "candidate": "postgresql-k8s-2"},
             verify=patroni._verify,
             auth=patroni._patroni_auth,
-            timeout=PATRONI_TIMEOUT,
+            timeout=API_REQUEST_TIMEOUT,
         )
 
         _post.reset_mock()
@@ -365,7 +369,7 @@ def test_switchover(harness, patroni):
             json={"leader": "postgresql-k8s-0", "candidate": "postgresql-k8s-2"},
             verify=patroni._verify,
             auth=patroni._patroni_auth,
-            timeout=PATRONI_TIMEOUT,
+            timeout=API_REQUEST_TIMEOUT,
         )
 
         # Test candidate, not sync
@@ -401,6 +405,11 @@ def test_member_replication_lag(harness, patroni):
 
 def test_member_started_true(patroni):
     with (
+        patch(
+            "charm.PostgresqlOperatorCharm._is_workload_running",
+            new_callable=PropertyMock,
+            return_value=True,
+        ),
         patch("patroni.requests.get") as _get,
         patch("patroni.stop_after_delay", return_value=tenacity.stop_after_delay(0)),
         patch("patroni.wait_fixed", return_value=tenacity.wait_fixed(0)),
@@ -413,12 +422,17 @@ def test_member_started_true(patroni):
             "https://postgresql-k8s-0:8008/health",
             verify=patroni._verify,
             auth=patroni._patroni_auth,
-            timeout=PATRONI_TIMEOUT,
+            timeout=API_REQUEST_TIMEOUT,
         )
 
 
 def test_member_started_false(patroni):
     with (
+        patch(
+            "charm.PostgresqlOperatorCharm._is_workload_running",
+            new_callable=PropertyMock,
+            return_value=True,
+        ),
         patch("patroni.requests.get") as _get,
         patch("patroni.stop_after_delay", return_value=tenacity.stop_after_delay(0)),
         patch("patroni.wait_fixed", return_value=tenacity.wait_fixed(0)),
@@ -431,12 +445,17 @@ def test_member_started_false(patroni):
             "https://postgresql-k8s-0:8008/health",
             verify=patroni._verify,
             auth=patroni._patroni_auth,
-            timeout=PATRONI_TIMEOUT,
+            timeout=API_REQUEST_TIMEOUT,
         )
 
 
 def test_member_started_error(patroni):
     with (
+        patch(
+            "charm.PostgresqlOperatorCharm._is_workload_running",
+            new_callable=PropertyMock,
+            return_value=True,
+        ),
         patch("patroni.requests.get") as _get,
         patch("patroni.stop_after_delay", return_value=tenacity.stop_after_delay(0)),
         patch("patroni.wait_fixed", return_value=tenacity.wait_fixed(0)),
@@ -449,7 +468,7 @@ def test_member_started_error(patroni):
             "https://postgresql-k8s-0:8008/health",
             verify=patroni._verify,
             auth=patroni._patroni_auth,
-            timeout=PATRONI_TIMEOUT,
+            timeout=API_REQUEST_TIMEOUT,
         )
 
 
@@ -497,7 +516,7 @@ def test_update_synchronous_node_count(harness, patroni):
             json={"synchronous_node_count": 0},
             verify=patroni._verify,
             auth=patroni._patroni_auth,
-            timeout=10,
+            timeout=API_REQUEST_TIMEOUT,
         )
 
         # Test when the request fails.

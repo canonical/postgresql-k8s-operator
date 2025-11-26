@@ -106,7 +106,7 @@ from single_kernel_postgresql.utils.postgresql import (
     PostgreSQLListUsersError,
     PostgreSQLUpdateUserPasswordError,
 )
-from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
+from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
 from backups import CANNOT_RESTORE_PITR, S3_BLOCK_MESSAGES, PostgreSQLBackups
 from config import CharmConfig
@@ -459,21 +459,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         ]
 
     @property
-    def app_units(self) -> set[Unit]:
-        """The peer-related units in the application."""
-        if not self._peers:
-            return set()
-
-        return {self.unit, *self._peers.units}
-
-    def scoped_peer_data(self, scope: Scopes) -> dict | None:
-        """Returns peer data based on scope."""
-        if scope == APP_SCOPE:
-            return self.app_peer_data
-        elif scope == UNIT_SCOPE:
-            return self.unit_peer_data
-
-    @property
     def app_peer_data(self) -> dict:
         """Application peer relation data object."""
         return self.all_peer_data.get(self.app, {})
@@ -597,7 +582,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Returns the postgresql container."""
         return self.unit.get_container("postgresql")
 
-    @property
+    @cached_property
     def postgresql(self) -> PostgreSQL:
         """Returns an instance of the object used to interact with the database."""
         return PostgreSQL(
@@ -605,8 +590,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             primary_host=self.primary_endpoint,
             current_host=self.endpoint,
             user=USER,
-            # TODO switching to the new lib will expect None
-            password=self.get_secret(APP_SCOPE, f"{USER}-password"),  # type: ignore
+            password=str(self.get_secret(APP_SCOPE, f"{USER}-password")),
             database=DATABASE_DEFAULT_NAME,
             system_users=SYSTEM_USERS,
         )
@@ -991,7 +975,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         try:
             # Compare set of Patroni cluster members and Juju hosts
             # to avoid the unnecessary reconfiguration.
-            if self._patroni.cluster_status() == self._hosts:
+            if self._patroni.cluster_members == self._hosts:
                 return
 
             logger.info("Reconfiguring cluster")
@@ -2270,12 +2254,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @property
     def _can_connect_to_postgresql(self) -> bool:
         try:
-            for attempt in Retrying(stop=stop_after_delay(30), wait=wait_fixed(3)):
+            for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(3)):
                 with attempt:
                     if not self.postgresql.get_postgresql_timezones():
+                        logger.debug("Cannot connect to database (CannotConnectError)")
                         raise CannotConnectError
         except RetryError:
-            logger.debug("Cannot connect to database")
+            logger.debug("Cannot connect to database (RetryError)")
             return False
         return True
 
@@ -2318,7 +2303,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             restore_stanza=self.app_peer_data.get("restore-stanza"),
             parameters=postgresql_parameters,
             user_databases_map=self.relations_user_databases_map,
-            slots=replication_slots or None,
+            slots=replication_slots,
         )
 
         if not self._is_workload_running:
@@ -2408,18 +2393,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self._patroni.reload_patroni_configuration()
         except Exception as e:
             logger.error(f"Reload patroni call failed! error: {e!s}")
-        # Wait for some more time than the Patroni's loop_wait default value (10 seconds),
-        # which tells how much time Patroni will wait before checking the configuration
-        # file again to reload it.
-        try:
-            for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3)):
-                with attempt:
-                    restart_postgresql = restart_postgresql or self.is_restart_pending()
-                    if not restart_postgresql:
-                        raise Exception
-        except RetryError:
-            # Ignore the error, as it happens only to indicate that the configuration has not changed.
-            pass
+
+        restart_pending = self._patroni.is_restart_pending()
+        logger.debug(
+            f"Checking if restart pending: TLS={restart_postgresql} or API={restart_pending}"
+        )
+        restart_postgresql = restart_postgresql or restart_pending
+
         self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
         self.postgresql_client_relation.update_tls_flag("True" if self.is_tls_enabled else "False")
 

@@ -1342,7 +1342,7 @@ def test_update_config(harness):
             restore_to_latest=False,
             parameters={"test": "test"},
             user_databases_map={"operator": "all", "replication": "all", "rewind": "all"},
-            slots=None,
+            slots={},
         )
         _handle_postgresql_restart_need.assert_called_once()
         _restart_metrics_service.assert_called_once()
@@ -1373,7 +1373,7 @@ def test_update_config(harness):
             restore_to_latest=False,
             parameters={"test": "test"},
             user_databases_map={"operator": "all", "replication": "all", "rewind": "all"},
-            slots=None,
+            slots={},
         )
         _handle_postgresql_restart_need.assert_called_once()
         _restart_metrics_service.assert_called_once()
@@ -1414,7 +1414,7 @@ def test_handle_postgresql_restart_need(harness):
         patch("charm.PostgresqlOperatorCharm._generate_metrics_jobs") as _generate_metrics_jobs,
         patch("charm.wait_fixed", return_value=wait_fixed(0)),
         patch("charm.Patroni.reload_patroni_configuration") as _reload_patroni_configuration,
-        patch("charm.PostgresqlOperatorCharm.is_restart_pending") as _is_restart_pending,
+        patch("charm.Patroni.is_restart_pending") as _is_restart_pending,
         patch(
             "charm.PostgresqlOperatorCharm.is_tls_enabled", new_callable=PropertyMock
         ) as _is_tls_enabled,
