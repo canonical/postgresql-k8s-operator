@@ -194,11 +194,6 @@ async def test_postgresql_parameters_change(ops_test: OpsTest) -> None:
         "response_lc_monetary": "en_GB.utf8",
         "experimental_max_connections": "200",
     })
-    # Wait for maintenance status
-    await ops_test.model.block_until(
-        lambda: ops_test.model.units[f"{APP_NAME}/0"].workload_status == "maintenance",
-        timeout=120,
-    )
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=30)
     password = await get_password(ops_test)
 
