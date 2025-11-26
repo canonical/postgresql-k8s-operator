@@ -1287,6 +1287,10 @@ Stderr:
         Returns:
             a boolean indicating whether the operation succeeded.
         """
+        if self.charm.app.planned_units() <= int(self.charm._unit.split("/")[1]):
+            logger.debug("Early exit start_stop_pgbackrest_service: unit is being teared down")
+            return False
+
         # Ignore this operation if backups settings aren't ok.
         are_backup_settings_ok, _ = self._are_backup_settings_ok()
         if not are_backup_settings_ok:

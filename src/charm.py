@@ -2213,6 +2213,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _restart_metrics_service(self) -> None:
         """Restart the monitoring service if the password was rotated."""
+        if self.app.planned_units() <= int(self._unit.split("/")[1]):
+            logger.debug("Early exit _restart_metrics_service: unit is being teared down")
+            return
+
         current_layer = self._container.get_plan()
 
         metrics_service = current_layer.services[self.metrics_service]
@@ -2230,6 +2234,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _restart_ldap_sync_service(self) -> None:
         """Restart the LDAP sync service in case any configuration changed."""
+        if self.app.planned_units() <= int(self._unit.split("/")[1]):
+            logger.debug("Early exit _restart_ldap_sync_service: unit is being teared down")
+            return
+
         if not self._patroni.member_started:
             logger.debug("Restart LDAP sync early exit: Patroni has not started yet")
             return
@@ -2433,6 +2441,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _update_pebble_layers(self, replan: bool = True) -> None:
         """Update the pebble layers to keep the health check URL up-to-date."""
+        if self.app.planned_units() <= int(self._unit.split("/")[1]):
+            logger.debug("Early exit _update_pebble_layers: unit is being teared down")
+            return
+
         # Get the current layer.
         current_layer = self._container.get_plan()
 
