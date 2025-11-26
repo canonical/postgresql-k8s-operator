@@ -2323,7 +2323,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 logger.debug(
                     "Early exit update_config: patroni not responding but TLS is enabled."
                 )
-                self._handle_postgresql_restart_need()
+                self._handle_postgresql_restart_need(True)
                 return True
             logger.debug("Early exit update_config: Patroni not started yet")
             return False
@@ -2345,11 +2345,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         self._patroni.ensure_slots_controller_by_patroni(replication_slots)
 
-        self._handle_postgresql_restart_need()
+        self._handle_postgresql_restart_need(
+            self.unit_peer_data.get("config_hash") != self.generate_config_hash
+        )
         self._restart_metrics_service()
         self._restart_ldap_sync_service()
 
-        self.unit_peer_data.update({"user_hash": self.generate_user_hash})
+        self.unit_peer_data.update({
+            "user_hash": self.generate_user_hash,
+            "config_hash": self.generate_config_hash,
+        })
         if self.unit.is_leader():
             self.app_peer_data.update({"user_hash": self.generate_user_hash})
         return True
@@ -2383,7 +2388,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 "storage_default_table_access_method config option has an invalid value"
             )
 
-    def _handle_postgresql_restart_need(self):
+    def _handle_postgresql_restart_need(self, config_changed: bool):
         """Handle PostgreSQL restart need based on the TLS configuration and configuration changes."""
         if self._can_connect_to_postgresql:
             restart_postgresql = self.is_tls_enabled != self.postgresql.is_tls_enabled()
@@ -2393,12 +2398,19 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self._patroni.reload_patroni_configuration()
         except Exception as e:
             logger.error(f"Reload patroni call failed! error: {e!s}")
-
-        restart_pending = self._patroni.is_restart_pending()
-        logger.debug(
-            f"Checking if restart pending: TLS={restart_postgresql} or API={restart_pending}"
-        )
-        restart_postgresql = restart_postgresql or restart_pending
+        if config_changed and not restart_postgresql:
+            # Wait for some more time than the Patroni's loop_wait default value (10 seconds),
+            # which tells how much time Patroni will wait before checking the configuration
+            # file again to reload it.
+            try:
+                for attempt in Retrying(stop=stop_after_attempt(5), wait=wait_fixed(3)):
+                    with attempt:
+                        restart_postgresql = restart_postgresql or self.is_restart_pending()
+                        if not restart_postgresql:
+                            raise Exception
+            except RetryError:
+                # Ignore the error, as it happens only to indicate that the configuration has not changed.
+                pass
 
         self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
         self.postgresql_client_relation.update_tls_flag("True" if self.is_tls_enabled else "False")
@@ -2581,6 +2593,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 user = custom_username_mapping.get(str(relation.id), f"relation_id_{relation.id}")
                 user_db_pairs[user] = database
         return shake_128(str(user_db_pairs).encode()).hexdigest(16)
+
+    @cached_property
+    def generate_config_hash(self) -> str:
+        """Generate current configuration hash."""
+        return shake_128(str(self.config.dict()).encode()).hexdigest(16)
 
     def override_patroni_on_failure_condition(
         self, new_condition: str, repeat_cause: str | None
