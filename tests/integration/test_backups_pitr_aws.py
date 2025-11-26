@@ -24,10 +24,12 @@ S3_INTEGRATOR_APP_NAME = "s3-integrator"
 if juju_major_version < 3:
     tls_certificates_app_name = "tls-certificates-operator"
     tls_channel = "legacy/stable"
+    tls_base = "ubuntu@22.04"
     tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
 else:
     tls_certificates_app_name = "self-signed-certificates"
-    tls_channel = "latest/stable"
+    tls_channel = "1/stable"
+    tls_base = "ubuntu@24.04"
     tls_config = {"ca-common-name": "Test CA"}
 
 logger = logging.getLogger(__name__)
@@ -40,6 +42,7 @@ async def pitr_backup_operations(
     tls_certificates_app_name: str,
     tls_config,
     tls_channel,
+    tls_base,
     credentials,
     cloud,
     config,
@@ -57,7 +60,9 @@ async def pitr_backup_operations(
 
     logger.info("deploying the next charms: s3-integrator, self-signed-certificates, postgresql")
     await ops_test.model.deploy(s3_integrator_app_name)
-    await ops_test.model.deploy(tls_certificates_app_name, config=tls_config, channel=tls_channel)
+    await ops_test.model.deploy(
+        tls_certificates_app_name, config=tls_config, channel=tls_channel, base=tls_base
+    )
     await build_and_deploy(
         ops_test, charm, 2, database_app_name=database_app_name, wait_for_idle=False
     )
@@ -349,6 +354,7 @@ async def test_pitr_backup_aws(
         tls_certificates_app_name,
         tls_config,
         tls_channel,
+        tls_base,
         credentials,
         cloud,
         config,

@@ -32,10 +32,12 @@ S3_INTEGRATOR_APP_NAME = "s3-integrator"
 if juju_major_version < 3:
     tls_certificates_app_name = "tls-certificates-operator"
     tls_channel = "legacy/stable"
+    tls_base = "ubuntu@22.04"
     tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
 else:
     tls_certificates_app_name = "self-signed-certificates"
-    tls_channel = "latest/stable"
+    tls_channel = "1/stable"
+    tls_base = "ubuntu@24.04"
     tls_config = {"ca-common-name": "Test CA"}
 
 logger = logging.getLogger(__name__)
@@ -54,6 +56,7 @@ async def test_backup_gcp(ops_test: OpsTest, charm, gcp_cloud_configs: tuple[dic
         tls_certificates_app_name,
         tls_config,
         tls_channel,
+        tls_base,
         credentials,
         GCP,
         config,

@@ -830,6 +830,7 @@ async def backup_operations(
     tls_certificates_app_name: str,
     tls_config,
     tls_channel,
+    tls_base,
     credentials,
     cloud,
     config,
@@ -838,7 +839,7 @@ async def backup_operations(
     # Deploy S3 Integrator and TLS Certificates Operator.
     await ops_test.model.deploy(s3_integrator_app_name, base=CHARM_BASE)
     await ops_test.model.deploy(
-        tls_certificates_app_name, config=tls_config, channel=tls_channel, base=CHARM_BASE
+        tls_certificates_app_name, config=tls_config, channel=tls_channel, base=tls_base
     )
     # Deploy and relate PostgreSQL to S3 integrator (one database app for each cloud for now
     # as archivo_mode is disabled after restoring the backup) and to TLS Certificates Operator
