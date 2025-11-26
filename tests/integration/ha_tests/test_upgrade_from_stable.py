@@ -3,23 +3,19 @@
 
 import asyncio
 import logging
+from time import sleep
 
 import pytest
-from lightkube import Client
-from lightkube.resources.apps_v1 import StatefulSet
 from pytest_operator.plugin import OpsTest
-from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from ..helpers import (
     APPLICATION_NAME,
-    CHARM_BASE,
     CHARM_BASE_NOBLE,
     DATABASE_APP_NAME,
     METADATA,
     count_switchovers,
     get_leader_unit,
     get_primary,
-    get_unit_by_index,
 )
 from .helpers import (
     are_writes_increasing,
@@ -36,60 +32,54 @@ TIMEOUT = 10 * 60
 async def test_deploy_stable(ops_test: OpsTest) -> None:
     """Simple test to ensure that the PostgreSQL and application charms get deployed."""
     await asyncio.gather(
-        ops_test.model.deploy(
+        # TODO: remove call to ops_test.juju and uncomment call to ops_test.model.deploy.
+        ops_test.juju(
+            "deploy",
             DATABASE_APP_NAME,
-            num_units=3,
-            # TODO: move to stable once we release.
-            channel="16/edge",
-            trust=True,
-            config={"profile": "testing"},
-            base=CHARM_BASE_NOBLE,
+            "-n",
+            3,
+            "--channel",
+            "16/edge/neppel",
+            "--trust",
+            "--config",
+            "profile=testing",
+            "--base",
+            CHARM_BASE_NOBLE,
         ),
+        # ops_test.model.deploy(
+        #     DATABASE_APP_NAME,
+        #     num_units=3,
+        #     channel="16/stable",
+        #     trust=True,
+        #     config={"profile": "testing"},
+        #     base=CHARM_BASE_NOBLE,
+        # ),
         ops_test.model.deploy(
             APPLICATION_NAME,
             num_units=1,
             channel="latest/edge",
-            base=CHARM_BASE,
+            config={"sleep_interval": 500},
         ),
     )
     await ops_test.model.relate(DATABASE_APP_NAME, f"{APPLICATION_NAME}:database")
     logger.info("Wait for applications to become active")
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME, APPLICATION_NAME], status="active"
+            apps=[DATABASE_APP_NAME, APPLICATION_NAME], status="active", timeout=(20 * 60)
         )
     assert len(ops_test.model.applications[DATABASE_APP_NAME].units) == 3
 
 
 @pytest.mark.abort_on_fail
-async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
-    """Test that the pre-upgrade-check action runs successfully."""
-    application = ops_test.model.applications[DATABASE_APP_NAME]
-    if "pre-upgrade-check" not in await application.get_actions():
-        logger.info("skipping the test because the charm from 14/stable doesn't support upgrade")
-        return
-
+async def test_pre_refresh_check(ops_test: OpsTest) -> None:
+    """Test that the pre-refresh-check action runs successfully."""
     logger.info("Get leader unit")
     leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
     assert leader_unit is not None, "No leader unit found"
 
-    for attempt in Retrying(stop=stop_after_attempt(2), wait=wait_fixed(30), reraise=True):
-        with attempt:
-            logger.info("Run pre-upgrade-check action")
-            action = await leader_unit.run_action("pre-upgrade-check")
-            await action.wait()
-
-            # Ensure the primary has changed to the first unit.
-            primary_name = await get_primary(ops_test, DATABASE_APP_NAME)
-            assert primary_name == f"{DATABASE_APP_NAME}/0", "Primary unit not set to unit 0"
-
-    logger.info("Assert partition is set to 2")
-    client = Client()
-    stateful_set = client.get(
-        res=StatefulSet, namespace=ops_test.model.info.name, name=DATABASE_APP_NAME
-    )
-
-    assert stateful_set.spec.updateStrategy.rollingUpdate.partition == 2, "Partition not set to 2"
+    logger.info("Run pre-refresh-check action")
+    action = await leader_unit.run_action("pre-refresh-check")
+    await action.wait()
 
 
 @pytest.mark.abort_on_fail
@@ -108,28 +98,51 @@ async def test_upgrade_from_stable(ops_test: OpsTest, charm):
 
     resources = {"postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]}
     application = ops_test.model.applications[DATABASE_APP_NAME]
-    actions = await application.get_actions()
 
     logger.info("Refresh the charm")
     await application.refresh(path=charm, resources=resources)
 
-    logger.info("Wait for upgrade to complete on first upgrading unit")
-    # Highest ordinal unit always the first to upgrade.
-    unit = get_unit_by_index(DATABASE_APP_NAME, application.units, 2)
+    logger.info("Wait for upgrade to start")
+    await ops_test.model.block_until(lambda: application.status == "blocked", timeout=60 * 3)
 
+    logger.info("Wait for refresh to block as paused or incompatible")
     async with ops_test.fast_forward("60s"):
-        await ops_test.model.block_until(
-            lambda: unit.workload_status_message == "upgrade completed", timeout=TIMEOUT
-        )
         await ops_test.model.wait_for_idle(
             apps=[DATABASE_APP_NAME], idle_period=30, timeout=TIMEOUT
         )
 
-    if "resume-upgrade" in actions:
-        logger.info("Resume upgrade")
-        leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
-        action = await leader_unit.run_action("resume-upgrade")
+    # Highest to lowest unit number
+    refresh_order = sorted(
+        application.units, key=lambda unit: int(unit.name.split("/")[1]), reverse=True
+    )
+
+    if "Refresh incompatible" in application.status_message:
+        logger.info("Application refresh is blocked due to incompatibility")
+
+        action = await refresh_order[0].run_action(
+            "force-refresh-start", **{"check-compatibility": False}
+        )
         await action.wait()
+
+        logger.info("Wait for first incompatible unit to upgrade")
+        async with ops_test.fast_forward("60s"):
+            await ops_test.model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], idle_period=30, timeout=TIMEOUT
+            )
+    else:
+        async with ops_test.fast_forward("60s"):
+            await ops_test.model.block_until(
+                lambda: all(unit.workload_status == "active" for unit in application.units),
+                timeout=60 * 3,
+            )
+
+    sleep(60)
+
+    leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
+    logger.info(f"Run resume-refresh action on {leader_unit.name}")
+    action = await leader_unit.run_action("resume-refresh")
+    await action.wait()
+    logger.info(f"Results from the action: {action.results}")
 
     logger.info("Wait for upgrade to complete")
     async with ops_test.fast_forward("60s"):
@@ -147,9 +160,8 @@ async def test_upgrade_from_stable(ops_test: OpsTest, charm):
     await check_writes(ops_test)
 
     # Check the number of switchovers.
-    if "pre-upgrade-check" in actions:
-        logger.info("checking the number of switchovers")
-        final_number_of_switchovers = await count_switchovers(ops_test, primary_name)
-        assert (final_number_of_switchovers - initial_number_of_switchovers) <= 2, (
-            "Number of switchovers is greater than 2"
-        )
+    logger.info("checking the number of switchovers")
+    final_number_of_switchovers = await count_switchovers(ops_test, primary_name)
+    assert (final_number_of_switchovers - initial_number_of_switchovers) <= 2, (
+        "Number of switchovers is greater than 2"
+    )

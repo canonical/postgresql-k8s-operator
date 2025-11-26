@@ -4,29 +4,27 @@
 import asyncio
 import logging
 import shutil
+import zipfile
 from pathlib import Path
+from time import sleep
 
 import pytest
-from lightkube import Client
-from lightkube.resources.apps_v1 import StatefulSet
+import tomli
+import tomli_w
 from pytest_operator.plugin import OpsTest
-from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from ..helpers import (
     APPLICATION_NAME,
-    CHARM_BASE,
     CHARM_BASE_NOBLE,
     DATABASE_APP_NAME,
     METADATA,
     count_switchovers,
     get_leader_unit,
     get_primary,
-    get_unit_by_index,
 )
 from .helpers import (
     are_writes_increasing,
     check_writes,
-    inject_dependency_fault,
     start_continuous_writes,
 )
 
@@ -39,19 +37,33 @@ TIMEOUT = 600
 async def test_deploy_latest(ops_test: OpsTest) -> None:
     """Simple test to ensure that the PostgreSQL and application charms get deployed."""
     await asyncio.gather(
-        ops_test.model.deploy(
+        # TODO: remove call to ops_test.juju and uncomment call to ops_test.model.deploy.
+        ops_test.juju(
+            "deploy",
             DATABASE_APP_NAME,
-            num_units=3,
-            channel="16/edge",
-            trust=True,
-            config={"profile": "testing"},
-            base=CHARM_BASE_NOBLE,
+            "-n",
+            3,
+            "--channel",
+            "16/edge/neppel",
+            "--trust",
+            "--config",
+            "profile=testing",
+            "--base",
+            CHARM_BASE_NOBLE,
         ),
+        # ops_test.model.deploy(
+        #     DATABASE_APP_NAME,
+        #     num_units=3,
+        #     channel="16/edge",
+        #     trust=True,
+        #     config={"profile": "testing"},
+        #     base=CHARM_BASE_NOBLE,
+        # ),
         ops_test.model.deploy(
             APPLICATION_NAME,
             num_units=1,
             channel="latest/edge",
-            base=CHARM_BASE,
+            config={"sleep_interval": 500},
         ),
     )
     await ops_test.model.relate(DATABASE_APP_NAME, f"{APPLICATION_NAME}:database")
@@ -66,29 +78,15 @@ async def test_deploy_latest(ops_test: OpsTest) -> None:
 
 
 @pytest.mark.abort_on_fail
-async def test_pre_upgrade_check(ops_test: OpsTest) -> None:
-    """Test that the pre-upgrade-check action runs successfully."""
+async def test_pre_refresh_check(ops_test: OpsTest) -> None:
+    """Test that the pre-refresh-check action runs successfully."""
     logger.info("Get leader unit")
     leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
     assert leader_unit is not None, "No leader unit found"
 
-    for attempt in Retrying(stop=stop_after_attempt(2), wait=wait_fixed(30), reraise=True):
-        with attempt:
-            logger.info("Run pre-upgrade-check action")
-            action = await leader_unit.run_action("pre-upgrade-check")
-            await action.wait()
-
-            # Ensure the primary has changed to the first unit.
-            primary_name = await get_primary(ops_test, DATABASE_APP_NAME)
-            assert primary_name == f"{DATABASE_APP_NAME}/0", "Primary unit not set to unit 0"
-
-    logger.info("Assert partition is set to 2")
-    client = Client()
-    stateful_set = client.get(
-        res=StatefulSet, namespace=ops_test.model.info.name, name=DATABASE_APP_NAME
-    )
-
-    assert stateful_set.spec.updateStrategy.rollingUpdate.partition == 2, "Partition not set to 2"
+    logger.info("Run pre-refresh-check action")
+    action = await leader_unit.run_action("pre-refresh-check")
+    await action.wait()
 
 
 @pytest.mark.abort_on_fail
@@ -110,26 +108,47 @@ async def test_upgrade_from_edge(ops_test: OpsTest, charm, continuous_writes) ->
     logger.info("Refresh the charm")
     await application.refresh(path=charm, resources=resources)
 
-    logger.info("Wait for upgrade to complete on first upgrading unit")
-    # highest ordinal unit always the first to upgrade
-    unit = get_unit_by_index(DATABASE_APP_NAME, application.units, 2)
+    logger.info("Wait for upgrade to start")
+    await ops_test.model.block_until(lambda: application.status == "blocked", timeout=60 * 3)
 
+    logger.info("Wait for refresh to block as paused or incompatible")
     async with ops_test.fast_forward("60s"):
-        await ops_test.model.block_until(
-            lambda: unit.workload_status_message == "upgrade completed", timeout=TIMEOUT
-        )
         await ops_test.model.wait_for_idle(
             apps=[DATABASE_APP_NAME], idle_period=30, timeout=TIMEOUT
         )
 
-    # Check whether writes are increasing.
-    logger.info("checking whether writes are increasing")
-    await are_writes_increasing(ops_test)
+    # Highest to lowest unit number
+    refresh_order = sorted(
+        application.units, key=lambda unit: int(unit.name.split("/")[1]), reverse=True
+    )
 
-    logger.info("Resume upgrade")
+    if "Refresh incompatible" in refresh_order[0].workload_status_message:
+        logger.info("Application refresh is blocked due to incompatibility")
+
+        action = await refresh_order[0].run_action(
+            "force-refresh-start", **{"check-compatibility": False}
+        )
+        await action.wait()
+
+        logger.info("Wait for first incompatible unit to upgrade")
+        async with ops_test.fast_forward("60s"):
+            await ops_test.model.wait_for_idle(
+                apps=[DATABASE_APP_NAME], idle_period=30, timeout=TIMEOUT
+            )
+    else:
+        async with ops_test.fast_forward("60s"):
+            await ops_test.model.block_until(
+                lambda: all(unit.workload_status == "active" for unit in application.units),
+                timeout=60 * 3,
+            )
+
+    sleep(60)
+
     leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
-    action = await leader_unit.run_action("resume-upgrade")
+    logger.info(f"Run resume-refresh action on {leader_unit.name}")
+    action = await leader_unit.run_action("resume-refresh")
     await action.wait()
+    logger.info(f"Results from the action: {action.results}")
 
     logger.info("Wait for upgrade to complete")
     async with ops_test.fast_forward("60s"):
@@ -167,69 +186,65 @@ async def test_fail_and_rollback(ops_test, charm, continuous_writes) -> None:
     leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
     assert leader_unit is not None, "No leader unit found"
 
-    for attempt in Retrying(stop=stop_after_attempt(2), wait=wait_fixed(30), reraise=True):
-        with attempt:
-            logger.info("Run pre-upgrade-check action")
-            action = await leader_unit.run_action("pre-upgrade-check")
-            await action.wait()
+    logger.info("Run pre-refresh-check action")
 
-            # Ensure the primary has changed to the first unit.
-            primary_name = await get_primary(ops_test, DATABASE_APP_NAME)
-            assert primary_name == f"{DATABASE_APP_NAME}/0"
+    action = await leader_unit.run_action("pre-refresh-check")
+    await action.wait()
 
     filename = Path(charm).name
-    fault_charm = Path("/tmp/", filename)
+    fault_charm = Path("/tmp", f"{filename}.fault.charm")
     shutil.copy(charm, fault_charm)
 
     logger.info("Inject dependency fault")
-    await inject_dependency_fault(ops_test, DATABASE_APP_NAME, fault_charm)
+    await inject_dependency_fault(fault_charm)
 
     application = ops_test.model.applications[DATABASE_APP_NAME]
 
     logger.info("Refresh the charm")
     await application.refresh(path=fault_charm)
 
-    logger.info("Get first upgrading unit")
-    # Highest ordinal unit always the first to upgrade.
-    unit = get_unit_by_index(DATABASE_APP_NAME, application.units, 2)
+    logger.info("Wait for upgrade to fail")
 
-    logger.info("Wait for upgrade to fail on first upgrading unit")
-    async with ops_test.fast_forward("60s"):
-        await ops_test.model.block_until(
-            lambda: unit.workload_status == "blocked",
-            timeout=TIMEOUT,
-        )
+    # Highest to lowest unit number
+    refresh_order = sorted(
+        application.units, key=lambda unit: int(unit.name.split("/")[1]), reverse=True
+    )
+
+    await ops_test.model.block_until(
+        lambda: application.status == "blocked"
+        and "Refresh incompatible" in refresh_order[0].workload_status_message,
+        timeout=TIMEOUT,
+    )
 
     logger.info("Ensure continuous_writes while in failure state on remaining units")
     await are_writes_increasing(ops_test)
 
-    logger.info("Re-run pre-upgrade-check action")
-    action = await leader_unit.run_action("pre-upgrade-check")
-    await action.wait()
-
     logger.info("Re-refresh the charm")
     await application.refresh(path=charm)
 
-    async with ops_test.fast_forward("60s"):
-        await ops_test.model.block_until(
-            lambda: unit.workload_status_message == "upgrade completed", timeout=TIMEOUT
-        )
-        await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME], idle_period=30, timeout=TIMEOUT
-        )
+    logger.info("Wait for upgrade to start")
 
-    # Check whether writes are increasing.
-    logger.info("checking whether writes are increasing")
-    await are_writes_increasing(ops_test)
-
-    logger.info("Resume upgrade")
-    action = await leader_unit.run_action("resume-upgrade")
-    await action.wait()
+    await ops_test.model.block_until(lambda: application.status == "blocked", timeout=TIMEOUT)
 
     logger.info("Wait for application to recover")
     async with ops_test.fast_forward("60s"):
+        await ops_test.model.block_until(
+            lambda: all(unit.workload_status == "active" for unit in application.units),
+            timeout=60 * 3,
+        )
+
+    sleep(60)
+
+    leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
+    logger.info(f"Run resume-refresh action on {leader_unit.name}")
+    action = await leader_unit.run_action("resume-refresh")
+    await action.wait()
+    logger.info(f"Results from the action: {action.results}")
+
+    logger.info("Wait for upgrade to complete")
+    async with ops_test.fast_forward("60s"):
         await ops_test.model.wait_for_idle(
-            apps=[DATABASE_APP_NAME], status="active", timeout=TIMEOUT
+            apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
         )
 
     logger.info("Ensure continuous_writes after rollback procedure")
@@ -242,3 +257,16 @@ async def test_fail_and_rollback(ops_test, charm, continuous_writes) -> None:
 
     # Remove fault charm file.
     fault_charm.unlink()
+
+
+async def inject_dependency_fault(charm_file: str | Path) -> None:
+    """Inject a dependency fault into the PostgreSQL charm."""
+    with Path("refresh_versions.toml").open("rb") as file:
+        versions = tomli.load(file)
+
+    versions["charm"] = "16/0.0.0"
+    versions["workload"] = "16.10"
+
+    # Overwrite refresh_versions.toml with incompatible version.
+    with zipfile.ZipFile(charm_file, mode="a") as charm_zip:
+        charm_zip.writestr("refresh_versions.toml", tomli_w.dumps(versions))

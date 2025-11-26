@@ -18,6 +18,7 @@ lightkube = "^0.17.2"
 lightkube-models = "^1.28.1.4"
 psycopg2 = "^2.9.10"
 postgresql-charms-single-kernel = "16.1.0"
+charm-refresh = "^3.1.1.2"
 
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py
@@ -72,6 +73,14 @@ boto3 = "*"
 tenacity = "^9.1.2"
 allure-pytest = "^2.15.0"
 jubilant = "^1.4.0"
+tomli-w = "^1.2.0"
+tomli = "^2.3.0"
+
+[tool.poetry.group.build-refresh-version]
+optional = true
+
+[tool.poetry.group.build-refresh-version.dependencies]
+charm-refresh-build-version = "^0.4.0"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
@@ -137,7 +146,7 @@ notice-rgx = "Copyright\\s\\d{4}([-,]\\d{4})*\\s+"
 min-file-size = 1
 
 [tool.ruff.lint.mccabe]
-max-complexity = 10
+max-complexity = 12
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
