@@ -106,7 +106,7 @@ from single_kernel_postgresql.utils.postgresql import (
     PostgreSQLListUsersError,
     PostgreSQLUpdateUserPasswordError,
 )
-from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
+from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
 from backups import CANNOT_RESTORE_PITR, S3_BLOCK_MESSAGES, PostgreSQLBackups
 from config import CharmConfig
