@@ -10,6 +10,7 @@ from ..helpers import METADATA
 from .high_availability_helpers_new import (
     check_db_units_writes_increment,
     count_switchovers,
+    get_app_leader,
     get_app_units,
     wait_for_apps_status,
 )
@@ -87,7 +88,9 @@ def test_refresh_without_pre_refresh_check(juju: Juju, charm: str, continuous_wr
         juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
 
         logging.info("Run resume-refresh action")
-        juju.run(unit=unit_names[1], action="resume-refresh", wait=5 * MINUTE_SECS)
+        juju.run(
+            unit=get_app_leader(juju, DB_APP_NAME), action="resume-refresh", wait=5 * MINUTE_SECS
+        )
     except TimeoutError:
         logging.info("Upgrade completed without snap refresh (charm.py upgrade only)")
         assert juju.status().apps[DB_APP_NAME].is_active
