@@ -83,13 +83,19 @@ def test_upgrade_from_stable(juju: Juju, charm: str, continuous_writes) -> None:
     )
 
     logging.info("Wait for refresh to block as paused or incompatible")
+    units = get_app_units(juju, DB_APP_NAME)
+    unit_names = sorted(units.keys())
     try:
-        juju.wait(lambda status: status.apps[DB_APP_NAME].is_blocked, timeout=8 * MINUTE_SECS)
+        juju.wait(
+            lambda status: status.apps[DB_APP_NAME].units[unit_names[-1]].is_blocked,
+            timeout=5 * MINUTE_SECS,
+        )
+        juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
 
-        units = get_app_units(juju, DB_APP_NAME)
-        unit_names = sorted(units.keys())
-
-        if "Refresh incompatible" in juju.status().apps[DB_APP_NAME].app_status.message:
+        if (
+            "Refresh incompatible"
+            in juju.status().apps[DB_APP_NAME].units[unit_names[-1]].workload_status.message
+        ):
             logging.info("Application refresh is blocked due to incompatibility")
             juju.run(
                 unit=unit_names[-1],
@@ -97,16 +103,14 @@ def test_upgrade_from_stable(juju: Juju, charm: str, continuous_writes) -> None:
                 params={"check-compatibility": False, "run-pre-refresh-checks": False},
                 wait=5 * MINUTE_SECS,
             )
-
-        juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
-
-        logging.info("Run resume-refresh action")
-        juju.run(
-            unit=get_app_leader(juju, DB_APP_NAME), action="resume-refresh", wait=5 * MINUTE_SECS
-        )
     except TimeoutError:
         logging.info("Upgrade completed without incompatibility")
         assert juju.status().apps[DB_APP_NAME].is_active
+
+    juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
+
+    logging.info("Run resume-refresh action")
+    juju.run(unit=get_app_leader(juju, DB_APP_NAME), action="resume-refresh", wait=5 * MINUTE_SECS)
 
     logging.info("Wait for upgrade to complete")
     juju.wait(
