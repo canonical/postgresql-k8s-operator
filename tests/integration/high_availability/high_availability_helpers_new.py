@@ -11,7 +11,7 @@ import jubilant
 import requests
 from jubilant import Juju
 from jubilant.statustypes import Status, UnitStatus
-from tenacity import Retrying, stop_after_delay, wait_fixed
+from tenacity import Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
 from constants import PEER
 
@@ -302,7 +302,11 @@ def run_upgrade(juju: Juju, app_name: str, charm: str) -> None:
     juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
 
     logging.info("Run resume-refresh action")
-    juju.run(unit=get_app_leader(juju, app_name), action="resume-refresh", wait=5 * MINUTE_SECS)
+    for attempt in Retrying(reraise=True, stop=stop_after_attempt(3), wait=wait_fixed(3)):
+        with attempt:
+            juju.run(
+                unit=get_app_leader(juju, app_name), action="resume-refresh", wait=5 * MINUTE_SECS
+            )
 
     logging.info("Wait for upgrade to complete")
     juju.wait(ready=wait_for_apps_status(jubilant.all_active, app_name), timeout=20 * MINUTE_SECS)

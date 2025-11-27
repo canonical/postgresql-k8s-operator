@@ -78,15 +78,6 @@ def test_upgrade_from_edge(juju: Juju, charm: str, continuous_writes) -> None:
 
     initial_number_of_switchovers = count_switchovers(juju, DB_APP_NAME)
 
-    logging.info("Refresh the charm")
-    juju.refresh(
-        app=DB_APP_NAME,
-        path=charm,
-        resources={
-            "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
-        },
-    )
-
     run_upgrade(juju, DB_APP_NAME, charm)
 
     logging.info("Ensure continuous writes are incrementing")
