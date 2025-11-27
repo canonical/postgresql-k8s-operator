@@ -17,6 +17,7 @@ from .high_availability_helpers_new import (
     get_app_leader,
     get_app_units,
     get_db_max_written_value,
+    run_upgrade,
     wait_for_apps_status,
 )
 
@@ -184,10 +185,10 @@ def test_upgrade_from_edge(
     model_2 = Juju(model=second_model)
 
     run_pre_refresh_checks(model_1, DB_APP_1)
-    run_upgrade_from_edge(model_1, DB_APP_1, charm)
+    run_upgrade(model_1, DB_APP_1, charm)
 
     run_pre_refresh_checks(model_2, DB_APP_2)
-    run_upgrade_from_edge(model_2, DB_APP_2, charm)
+    run_upgrade(model_2, DB_APP_2, charm)
 
 
 def test_data_replication(
@@ -235,45 +236,3 @@ def run_pre_refresh_checks(juju: Juju, app_name: str) -> None:
 
     logging.info("Run pre-upgrade-check action")
     juju.run(unit=app_leader, action="pre-refresh-check").raise_on_failure()
-
-
-def run_upgrade_from_edge(juju: Juju, app_name: str, charm: str) -> None:
-    """Update the second cluster."""
-    logging.info("Refresh the charm")
-    juju.refresh(app=app_name, path=charm)
-    logging.info("Wait for refresh to block as paused or incompatible")
-    units = get_app_units(juju, app_name)
-    unit_names = sorted(units.keys())
-    try:
-        juju.wait(
-            lambda status: status.apps[app_name].units[unit_names[-1]].is_blocked,
-            timeout=5 * MINUTE_SECS,
-        )
-        juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
-
-        if (
-            "Refresh incompatible"
-            in juju.status().apps[app_name].units[unit_names[-1]].workload_status.message
-        ):
-            logging.info("Application refresh is blocked due to incompatibility")
-            juju.run(
-                unit=unit_names[-1],
-                action="force-refresh-start",
-                params={"check-compatibility": False, "run-pre-refresh-checks": False},
-                wait=5 * MINUTE_SECS,
-            )
-    except TimeoutError:
-        logging.info("Upgrade completed without incompatibility")
-        assert juju.status().apps[app_name].is_active
-
-    juju.wait(
-        lambda status: status.apps[app_name].units[unit_names[-1]].is_active,
-        timeout=5 * MINUTE_SECS,
-    )
-    juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
-
-    logging.info("Run resume-refresh action")
-    juju.run(unit=get_app_leader(juju, app_name), action="resume-refresh", wait=5 * MINUTE_SECS)
-
-    logging.info("Wait for upgrade to complete")
-    juju.wait(ready=wait_for_apps_status(jubilant.all_active, app_name), timeout=20 * MINUTE_SECS)

@@ -6,12 +6,12 @@ import logging
 import jubilant
 from jubilant import Juju
 
-from ..helpers import METADATA
 from .high_availability_helpers_new import (
     check_db_units_writes_increment,
     count_switchovers,
     get_app_leader,
     get_app_units,
+    run_upgrade,
     wait_for_apps_status,
 )
 
@@ -60,54 +60,7 @@ def test_refresh_without_pre_refresh_check(juju: Juju, charm: str, continuous_wr
     """Test updating from stable channel."""
     initial_number_of_switchovers = count_switchovers(juju, DB_APP_NAME)
 
-    logging.info("Refresh the charm")
-    juju.refresh(
-        app=DB_APP_NAME,
-        path=charm,
-        resources={
-            "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
-        },
-    )
-
-    logging.info("Wait for refresh to block as paused or incompatible")
-    units = get_app_units(juju, DB_APP_NAME)
-    unit_names = sorted(units.keys())
-    try:
-        juju.wait(
-            lambda status: status.apps[DB_APP_NAME].units[unit_names[-1]].is_blocked,
-            timeout=5 * MINUTE_SECS,
-        )
-        juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
-
-        if (
-            "Refresh incompatible"
-            in juju.status().apps[DB_APP_NAME].units[unit_names[-1]].workload_status.message
-        ):
-            logging.info("Application refresh is blocked due to incompatibility")
-            juju.run(
-                unit=unit_names[-1],
-                action="force-refresh-start",
-                params={"check-compatibility": False, "run-pre-refresh-checks": False},
-                wait=5 * MINUTE_SECS,
-            )
-    except TimeoutError:
-        logging.info("Upgrade completed without incompatibility")
-        assert juju.status().apps[DB_APP_NAME].is_active
-
-    juju.wait(
-        lambda status: status.apps[DB_APP_NAME].units[unit_names[-1]].is_active,
-        timeout=5 * MINUTE_SECS,
-    )
-    juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
-
-    logging.info("Run resume-refresh action")
-    juju.run(unit=get_app_leader(juju, DB_APP_NAME), action="resume-refresh", wait=5 * MINUTE_SECS)
-
-    logging.info("Wait for upgrade to complete")
-    juju.wait(
-        ready=wait_for_apps_status(jubilant.all_active, DB_APP_NAME),
-        timeout=20 * MINUTE_SECS,
-    )
+    run_upgrade(juju, DB_APP_NAME, charm)
 
     logging.info("Ensure continuous writes are incrementing")
     check_db_units_writes_increment(juju, DB_APP_NAME)
@@ -125,7 +78,7 @@ async def test_rollback_without_pre_refresh_check(
     """Test refresh back to stable channel."""
     # Early Jubilant 1.X.Y versions do not support the `switch` option
     logging.info("Refresh the charm to stable channel")
-    juju.cli("refresh", "--channel=16/stable", f"--switch={DB_APP_NAME}", DB_APP_NAME)
+    juju.cli("refresh", "--channel=16/edge", f"--switch={DB_APP_NAME}", DB_APP_NAME)
 
     logging.info("Wait for refresh to block as paused or incompatible")
     units = get_app_units(juju, DB_APP_NAME)

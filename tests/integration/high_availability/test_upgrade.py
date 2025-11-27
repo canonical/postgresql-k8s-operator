@@ -17,6 +17,7 @@ from .high_availability_helpers_new import (
     count_switchovers,
     get_app_leader,
     get_app_units,
+    run_upgrade,
     wait_for_apps_status,
 )
 
@@ -86,45 +87,7 @@ def test_upgrade_from_edge(juju: Juju, charm: str, continuous_writes) -> None:
         },
     )
 
-    logging.info("Wait for refresh to block as paused or incompatible")
-    units = get_app_units(juju, DB_APP_NAME)
-    unit_names = sorted(units.keys())
-    try:
-        juju.wait(
-            lambda status: status.apps[DB_APP_NAME].units[unit_names[-1]].is_blocked,
-            timeout=5 * MINUTE_SECS,
-        )
-        juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
-
-        if (
-            "Refresh incompatible"
-            in juju.status().apps[DB_APP_NAME].units[unit_names[-1]].workload_status.message
-        ):
-            logging.info("Application refresh is blocked due to incompatibility")
-            juju.run(
-                unit=unit_names[-1],
-                action="force-refresh-start",
-                params={"check-compatibility": False, "run-pre-refresh-checks": False},
-                wait=5 * MINUTE_SECS,
-            )
-    except TimeoutError:
-        logging.info("Upgrade completed without incompatibility")
-        assert juju.status().apps[DB_APP_NAME].is_active
-
-    juju.wait(
-        lambda status: status.apps[DB_APP_NAME].units[unit_names[-1]].is_active,
-        timeout=5 * MINUTE_SECS,
-    )
-    juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
-
-    logging.info("Run resume-refresh action")
-    juju.run(unit=get_app_leader(juju, DB_APP_NAME), action="resume-refresh", wait=5 * MINUTE_SECS)
-
-    logging.info("Wait for upgrade to complete")
-    juju.wait(
-        ready=wait_for_apps_status(jubilant.all_active, DB_APP_NAME),
-        timeout=20 * MINUTE_SECS,
-    )
+    run_upgrade(juju, DB_APP_NAME, charm)
 
     logging.info("Ensure continuous writes are incrementing")
     check_db_units_writes_increment(juju, DB_APP_NAME)
@@ -139,7 +102,8 @@ def test_upgrade_from_edge(juju: Juju, charm: str, continuous_writes) -> None:
 def test_fail_and_rollback(juju: Juju, charm: str, continuous_writes) -> None:
     """Test an upgrade failure and its rollback."""
     db_app_leader = get_app_leader(juju, DB_APP_NAME)
-    db_app_units = get_app_units(juju, DB_APP_NAME)
+    units = get_app_units(juju, DB_APP_NAME)
+    unit_names = sorted(units.keys())
 
     logging.info("Run pre-refresh-check action")
     juju.run(unit=db_app_leader, action="pre-refresh-check")
@@ -164,14 +128,14 @@ def test_fail_and_rollback(juju: Juju, charm: str, continuous_writes) -> None:
         },
     )
 
-    logging.info("Wait for upgrade to fail on leader")
+    logging.info("Wait for upgrade to fail last unit to fail")
     juju.wait(
-        ready=wait_for_apps_status(jubilant.any_blocked, DB_APP_NAME),
-        timeout=10 * MINUTE_SECS,
+        lambda status: status.apps[DB_APP_NAME].units[unit_names[-1]].is_blocked,
+        timeout=5 * MINUTE_SECS,
     )
 
-    logging.info("Ensure continuous writes on all units")
-    check_db_units_writes_increment(juju, DB_APP_NAME, list(db_app_units))
+    logging.info("Ensure continuous writes on all active units")
+    check_db_units_writes_increment(juju, DB_APP_NAME, unit_names[:-1])
 
     logging.info("Re-refresh the charm")
     juju.refresh(
@@ -182,13 +146,22 @@ def test_fail_and_rollback(juju: Juju, charm: str, continuous_writes) -> None:
         },
     )
 
+    juju.wait(
+        lambda status: status.apps[DB_APP_NAME].units[unit_names[-1]].is_active,
+        timeout=5 * MINUTE_SECS,
+    )
+    juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
+
+    logging.info("Run resume-refresh action")
+    juju.run(unit=get_app_leader(juju, DB_APP_NAME), action="resume-refresh", wait=5 * MINUTE_SECS)
+
     logging.info("Wait for upgrade to complete")
     juju.wait(
         ready=wait_for_apps_status(jubilant.all_active, DB_APP_NAME), timeout=20 * MINUTE_SECS
     )
 
     logging.info("Ensure continuous writes after rollback procedure")
-    check_db_units_writes_increment(juju, DB_APP_NAME, list(db_app_units))
+    check_db_units_writes_increment(juju, DB_APP_NAME, unit_names)
 
     # Remove fault charm file
     tmp_folder_charm.unlink()
