@@ -71,7 +71,7 @@ async def test_restore_on_new_cluster(
     ops_test: OpsTest, charm, gcp_cloud_configs: tuple[dict, dict]
 ) -> None:
     """Test that is possible to restore a backup to another PostgreSQL cluster."""
-    previous_database_app_name = f"old-{DATABASE_APP_NAME}-gcp"
+    previous_database_app_name = f"{DATABASE_APP_NAME}-gcp"
     database_app_name = f"new-{DATABASE_APP_NAME}"
     await build_and_deploy(
         ops_test, charm, 1, database_app_name=previous_database_app_name, wait_for_idle=False
