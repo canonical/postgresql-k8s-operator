@@ -5,6 +5,7 @@ import logging
 
 import jubilant
 from jubilant import Juju
+from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from .high_availability_helpers_new import (
     check_db_units_writes_increment,
@@ -108,7 +109,13 @@ async def test_rollback_without_pre_refresh_check(
     juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
 
     logging.info("Run resume-refresh action")
-    juju.run(unit=get_app_leader(juju, DB_APP_NAME), action="resume-refresh", wait=5 * MINUTE_SECS)
+    for attempt in Retrying(reraise=True, stop=stop_after_attempt(3), wait=wait_fixed(3)):
+        with attempt:
+            juju.run(
+                unit=get_app_leader(juju, DB_APP_NAME),
+                action="resume-refresh",
+                wait=5 * MINUTE_SECS,
+            )
 
     logging.info("Wait for upgrade to complete")
     juju.wait(
