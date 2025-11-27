@@ -266,6 +266,10 @@ def run_upgrade_from_edge(juju: Juju, app_name: str, charm: str) -> None:
         logging.info("Upgrade completed without incompatibility")
         assert juju.status().apps[app_name].is_active
 
+    juju.wait(
+        lambda status: status.apps[app_name].units[unit_names[-1]].is_active,
+        timeout=5 * MINUTE_SECS,
+    )
     juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
 
     logging.info("Run resume-refresh action")

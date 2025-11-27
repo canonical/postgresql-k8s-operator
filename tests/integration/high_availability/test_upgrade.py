@@ -2,7 +2,6 @@
 # See LICENSE file for licensing details.
 
 import logging
-import platform
 import shutil
 import zipfile
 from pathlib import Path
@@ -112,16 +111,14 @@ def test_upgrade_from_edge(juju: Juju, charm: str, continuous_writes) -> None:
         logging.info("Upgrade completed without incompatibility")
         assert juju.status().apps[DB_APP_NAME].is_active
 
+    juju.wait(
+        lambda status: status.apps[DB_APP_NAME].units[unit_names[-1]].is_active,
+        timeout=5 * MINUTE_SECS,
+    )
     juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
 
     logging.info("Run resume-refresh action")
     juju.run(unit=get_app_leader(juju, DB_APP_NAME), action="resume-refresh", wait=5 * MINUTE_SECS)
-
-    logging.info("Wait for upgrade to complete")
-    juju.wait(
-        ready=wait_for_apps_status(jubilant.all_active, DB_APP_NAME),
-        timeout=20 * MINUTE_SECS,
-    )
 
     logging.info("Wait for upgrade to complete")
     juju.wait(
@@ -203,7 +200,7 @@ def inject_dependency_fault(juju: Juju, app_name: str, charm_file: str | Path) -
         versions = tomli.load(file)
 
     versions["charm"] = "16/0.0.0"
-    versions["snap"]["revisions"][platform.machine()] = "1"
+    versions["workload"] = "16.10"
 
     # Overwrite refresh_versions.toml with incompatible version.
     with zipfile.ZipFile(charm_file, mode="a") as charm_zip:

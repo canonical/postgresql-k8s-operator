@@ -107,6 +107,10 @@ def test_upgrade_from_stable(juju: Juju, charm: str, continuous_writes) -> None:
         logging.info("Upgrade completed without incompatibility")
         assert juju.status().apps[DB_APP_NAME].is_active
 
+    juju.wait(
+        lambda status: status.apps[DB_APP_NAME].units[unit_names[-1]].is_active,
+        timeout=5 * MINUTE_SECS,
+    )
     juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
 
     logging.info("Run resume-refresh action")
