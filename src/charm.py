@@ -2594,11 +2594,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Generate current configuration hash."""
         return shake_128(str(self.config.dict()).encode()).hexdigest(16)
 
-    @cached_property
-    def generate_config_hash(self) -> str:
-        """Generate current configuration hash."""
-        return shake_128(str(self.config.dict()).encode()).hexdigest(16)
-
     def override_patroni_on_failure_condition(
         self, new_condition: str, repeat_cause: str | None
     ) -> bool:
