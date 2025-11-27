@@ -116,7 +116,7 @@ async def test_upgrade_from_stable(ops_test: OpsTest, charm):
         application.units, key=lambda unit: int(unit.name.split("/")[1]), reverse=True
     )
 
-    if "Refresh incompatible" in application.status_message:
+    if "Refresh incompatible" in refresh_order[0].workload_status_message:
         logger.info("Application refresh is blocked due to incompatibility")
 
         action = await refresh_order[0].run_action(
