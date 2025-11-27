@@ -1342,7 +1342,7 @@ def test_update_config(harness):
             restore_to_latest=False,
             parameters={"test": "test"},
             user_databases_map={"operator": "all", "replication": "all", "rewind": "all"},
-            slots=None,
+            slots={},
         )
         _handle_postgresql_restart_need.assert_called_once()
         _restart_metrics_service.assert_called_once()
@@ -1373,7 +1373,7 @@ def test_update_config(harness):
             restore_to_latest=False,
             parameters={"test": "test"},
             user_databases_map={"operator": "all", "replication": "all", "rewind": "all"},
-            slots=None,
+            slots={},
         )
         _handle_postgresql_restart_need.assert_called_once()
         _restart_metrics_service.assert_called_once()
@@ -1431,7 +1431,7 @@ def test_handle_postgresql_restart_need(harness):
             postgresql_mock.is_tls_enabled = PropertyMock(return_value=values[1])
             _is_restart_pending.return_value = values[2]
 
-            harness.charm._handle_postgresql_restart_need()
+            harness.charm._handle_postgresql_restart_need(True)
             _reload_patroni_configuration.assert_called_once()
             if values[0]:
                 assert "tls" in harness.get_relation_data(rel_id, harness.charm.unit)
