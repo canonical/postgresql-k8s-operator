@@ -20,7 +20,6 @@ from .high_availability_helpers_new import (
     wait_for_apps_status,
 )
 
-DB_APP_NAME = "postgresql"
 DB_APP_1 = "db1"
 DB_APP_2 = "db2"
 DB_TEST_APP_NAME = "postgresql-test-app"

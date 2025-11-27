@@ -14,7 +14,7 @@ from .high_availability_helpers_new import (
     wait_for_apps_status,
 )
 
-DB_APP_NAME = "postgresql"
+DB_APP_NAME = "postgresql-k8s"
 DB_TEST_APP_NAME = "postgresql-test-app"
 
 MINUTE_SECS = 60
@@ -29,7 +29,8 @@ def test_deploy_stable(juju: Juju) -> None:
         charm=DB_APP_NAME,
         app=DB_APP_NAME,
         base="ubuntu@24.04",
-        channel="16/stable",
+        # TODO Switch channel after stable release
+        channel="16/edge",
         config={"profile": "testing"},
         num_units=3,
         trust=True,
