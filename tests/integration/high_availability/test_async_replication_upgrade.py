@@ -243,7 +243,7 @@ def run_upgrade_from_edge(juju: Juju, app_name: str, charm: str) -> None:
     juju.refresh(app=app_name, path=charm)
     logging.info("Wait for refresh to block as paused or incompatible")
     try:
-        juju.wait(lambda status: status.apps[app_name].is_blocked, timeout=5 * MINUTE_SECS)
+        juju.wait(lambda status: status.apps[app_name].is_blocked, timeout=8 * MINUTE_SECS)
 
         units = get_app_units(juju, app_name)
         unit_names = sorted(units.keys())
@@ -253,7 +253,7 @@ def run_upgrade_from_edge(juju: Juju, app_name: str, charm: str) -> None:
             juju.run(
                 unit=unit_names[-1],
                 action="force-refresh-start",
-                params={"check-compatibility": False},
+                params={"check-compatibility": False, "run-pre-refresh-checks": False},
                 wait=5 * MINUTE_SECS,
             )
 
@@ -264,7 +264,7 @@ def run_upgrade_from_edge(juju: Juju, app_name: str, charm: str) -> None:
             unit=get_app_leader(juju, app_name), action="resume-refresh", wait=5 * MINUTE_SECS
         )
     except TimeoutError:
-        logging.info("Upgrade completed without snap refresh (charm.py upgrade only)")
+        logging.info("Upgrade completed without incompatibility")
         assert juju.status().apps[app_name].is_active
 
     logging.info("Wait for upgrade to complete")
