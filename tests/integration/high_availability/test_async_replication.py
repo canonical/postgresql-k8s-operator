@@ -304,14 +304,22 @@ def test_failover_in_standby_cluster(first_model: str, second_model: str) -> Non
     model_2.remove_unit(DB_APP_2, num_units=1)
 
     model_2.wait(
+        ready=lambda status: len(status.apps[DB_APP_2].units) == 2, timeout=2 * MINUTE_SECS
+    )
+    model_2.wait(
         ready=wait_for_apps_status(jubilant.all_active, DB_APP_2), timeout=10 * MINUTE_SECS
     )
 
-    results = get_db_max_written_values(first_model, second_model, first_model, DB_TEST_APP_1)
+    for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(3), reraise=True):
+        with attempt:
+            results = get_db_max_written_values(
+                first_model, second_model, first_model, DB_TEST_APP_1
+            )
+            logging.info(f"Results: {results}")
 
-    assert len(results) == 4
-    assert all(results[0] == x for x in results), "Data is not consistent across units"
-    assert results[0] > 1, "No data was written to the database"
+            assert len(results) == 4
+            assert all(results[0] == x for x in results), "Data is not consistent across units"
+            assert results[0] > 1, "No data was written to the database"
 
 
 def test_scale_up(first_model: str, second_model: str) -> None:
