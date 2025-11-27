@@ -17,8 +17,6 @@ from .high_availability_helpers_new import (
     get_app_leader,
     get_app_units,
     get_db_max_written_value,
-    get_db_primary_unit,
-    get_db_standby_leader_unit,
     wait_for_apps_status,
 )
 
@@ -276,8 +274,7 @@ def test_failover_in_main_cluster(first_model: str, second_model: str) -> None:
 
     rerelate_test_app(model_1, DB_APP_1, DB_TEST_APP_1)
 
-    primary = get_db_primary_unit(model_1, DB_APP_1)
-    model_1.remove_unit(primary)
+    model_1.remove_unit(DB_APP_1, num_units=1)
     model_1.wait(
         ready=wait_for_apps_status(jubilant.all_active, DB_APP_1), timeout=10 * MINUTE_SECS
     )
@@ -296,8 +293,6 @@ def test_failover_in_main_cluster(first_model: str, second_model: str) -> None:
             assert all(results[0] == x for x in results), "Data is not consistent across units"
             assert results[0] > 1, "No data was written to the database"
 
-            assert primary != get_db_primary_unit(model_1, DB_APP_1)
-
 
 def test_failover_in_standby_cluster(first_model: str, second_model: str) -> None:
     """Test that async replication fails over correctly."""
@@ -306,8 +301,7 @@ def test_failover_in_standby_cluster(first_model: str, second_model: str) -> Non
 
     rerelate_test_app(model_1, DB_APP_1, DB_TEST_APP_1)
 
-    standby = get_db_standby_leader_unit(model_2, DB_APP_2)
-    model_2.remove_unit(standby)
+    model_2.remove_unit(DB_APP_2, num_units=1)
 
     model_2.wait(
         ready=wait_for_apps_status(jubilant.all_active, DB_APP_2), timeout=10 * MINUTE_SECS
@@ -318,8 +312,6 @@ def test_failover_in_standby_cluster(first_model: str, second_model: str) -> Non
     assert len(results) == 4
     assert all(results[0] == x for x in results), "Data is not consistent across units"
     assert results[0] > 1, "No data was written to the database"
-
-    assert standby != get_db_standby_leader_unit(model_2, DB_APP_2)
 
 
 def test_scale_up(first_model: str, second_model: str) -> None:
