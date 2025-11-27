@@ -1,0 +1,90 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [executing] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] waiting: Awaiting restart operation
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.12   unsupported  01:42:26Z
+
+App                       Version                         Status  Scale  Charm                     Channel        Rev  Address         Exposed  Message
+mattermost                .../mattermost:v8.1.3-20.04...  active      2  mattermost-k8s            latest/stable   27  10.152.183.37   no       
+postgresql-k8s            14.19                           active      3  postgresql-k8s                             0  10.152.183.209  no       
+self-signed-certificates                                  active      1  self-signed-certificates  1/stable       317  10.152.183.53   no       
+
+Unit                         Workload  Agent  Address       Ports     Message
+mattermost/0*                active    idle   10.1.243.146  8065/TCP  
+mattermost/1                 active    idle   10.1.243.145  8065/TCP  
+postgresql-k8s/0*            active    idle   10.1.243.141            
+postgresql-k8s/1             active    idle   10.1.243.143            
+postgresql-k8s/2             active    idle   10.1.243.142            Primary
+self-signed-certificates/0*  active    idle   10.1.243.137            
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-self-signed-certificates-0: 01:32:22 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:32:32 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:32:35 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:32:39 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:32:42 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:32:51 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:32:55 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:32:57 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:32:59 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:33:11 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:33:21 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:33:33 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:33:45 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:33:54 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:33:59 ERROR unit.self-signed-certificates/0.juju-log certificates:3: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:34:03 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:34:11 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:34:20 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:34:30 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:34:40 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:34:50 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-postgresql-k8s-2: 01:34:56 ERROR unit.postgresql-k8s/2.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-self-signed-certificates-0: 01:35:01 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:35:10 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:35:21 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:35:32 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:35:42 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:35:53 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:36:05 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:36:16 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:36:26 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:37:48 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:38:00 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:38:10 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:38:32 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:38:43 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:38:51 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:39:02 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:39:14 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:39:23 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:39:36 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:39:44 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:39:54 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:40:03 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:40:14 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:40:24 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:40:34 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:40:43 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:40:55 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:41:15 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:41:24 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:41:34 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:41:44 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:41:55 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:42:06 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:42:19 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
