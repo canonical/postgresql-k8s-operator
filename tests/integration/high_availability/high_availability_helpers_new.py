@@ -3,6 +3,7 @@
 # See LICENSE file for licensing details.
 
 import json
+import logging
 import subprocess
 from collections.abc import Callable
 
@@ -10,11 +11,11 @@ import jubilant
 import requests
 from jubilant import Juju
 from jubilant.statustypes import Status, UnitStatus
-from tenacity import Retrying, stop_after_delay, wait_fixed
+from tenacity import Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
 from constants import PEER
 
-from ..helpers import execute_queries_on_unit
+from ..helpers import METADATA, execute_queries_on_unit
 
 MINUTE_SECS = 60
 SERVER_CONFIG_USERNAME = "operator"
@@ -258,3 +259,54 @@ def count_switchovers(juju: Juju, app_name: str) -> int:
     unit_address = get_unit_ip(juju, app_name, app_primary)
     switchover_history_info = requests.get(f"https://{unit_address}:8008/history", verify=False)
     return len(switchover_history_info.json())
+
+
+def run_upgrade(juju: Juju, app_name: str, charm: str) -> None:
+    """Update a cluster."""
+    logging.info("Refresh the charm")
+    juju.refresh(
+        app=app_name,
+        path=charm,
+        resources={
+            "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
+        },
+    )
+    logging.info("Wait for refresh to block as paused or incompatible")
+    units = get_app_units(juju, app_name)
+    unit_names = sorted(units.keys())
+    try:
+        juju.wait(
+            lambda status: status.apps[app_name].units[unit_names[-1]].is_blocked,
+            timeout=5 * MINUTE_SECS,
+        )
+        juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
+
+        if (
+            "Refresh incompatible"
+            in juju.status().apps[app_name].units[unit_names[-1]].workload_status.message
+        ):
+            logging.info("Application refresh is blocked due to incompatibility")
+            juju.run(
+                unit=unit_names[-1],
+                action="force-refresh-start",
+                params={"check-compatibility": False, "run-pre-refresh-checks": False},
+                wait=5 * MINUTE_SECS,
+            )
+    except TimeoutError:
+        logging.info("Upgrade started without incompatibility")
+
+    juju.wait(
+        lambda status: status.apps[app_name].units[unit_names[-1]].is_active,
+        timeout=5 * MINUTE_SECS,
+    )
+    juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
+
+    logging.info("Run resume-refresh action")
+    for attempt in Retrying(reraise=True, stop=stop_after_attempt(3), wait=wait_fixed(3)):
+        with attempt:
+            juju.run(
+                unit=get_app_leader(juju, app_name), action="resume-refresh", wait=5 * MINUTE_SECS
+            )
+
+    logging.info("Wait for upgrade to complete")
+    juju.wait(ready=wait_for_apps_status(jubilant.all_active, app_name), timeout=20 * MINUTE_SECS)

@@ -65,7 +65,12 @@ class PostgreSQLRefresh(CharmSpecificKubernetes):
             )
         else:
             try:
-                self._charm._patroni.switchover(candidate=last_unit_to_refresh)
+                self._charm._patroni.switchover(
+                    candidate=last_unit_to_refresh,
+                    async_cluster=bool(
+                        self._charm.async_replication.get_primary_cluster_endpoint()
+                    ),
+                )
             except SwitchoverFailedError as e:
                 logger.warning(f"switchover failed with reason: {e}")
                 raise charm_refresh.PrecheckFailed("Unable to switch primary") from None

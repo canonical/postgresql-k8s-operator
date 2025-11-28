@@ -2264,6 +2264,26 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return False
         return True
 
+    def _api_update_config(self, available_cpu_cores: int) -> None:
+        # Use config value if set, calculate otherwise
+        if self.config.experimental_max_connections:
+            max_connections = self.config.experimental_max_connections
+        else:
+            max_connections = max(4 * available_cpu_cores, 100)
+
+        cfg_patch = {
+            "max_connections": max_connections,
+            "max_prepared_transactions": self.config.memory_max_prepared_transactions,
+            "max_replication_slots": 25,
+            "max_wal_senders": 25,
+            "shared_buffers": self.config.memory_shared_buffers,
+            "wal_keep_size": self.config.durability_wal_keep_size,
+        }
+        base_patch = {}
+        if primary_endpoint := self.async_replication.get_primary_cluster_endpoint():
+            base_patch["standby_cluster"] = {"host": primary_endpoint}
+        self._patroni.bulk_update_parameters_controller_by_patroni(cfg_patch, base_patch)
+
     def update_config(self, is_creating_backup: bool = False) -> bool:
         """Updates Patroni config file based on the existence of the TLS files."""
         # Retrieve PostgreSQL parameters.
@@ -2326,20 +2346,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("Early exit update_config: Patroni not started yet")
             return False
 
-        # Use config value if set, calculate otherwise
-        if self.config.experimental_max_connections:
-            max_connections = self.config.experimental_max_connections
-        else:
-            max_connections = max(4 * available_cpu_cores, 100)
-
-        self._patroni.bulk_update_parameters_controller_by_patroni({
-            "max_connections": max_connections,
-            "max_prepared_transactions": self.config.memory_max_prepared_transactions,
-            "max_replication_slots": 25,
-            "max_wal_senders": 25,
-            "shared_buffers": self.config.memory_shared_buffers,
-            "wal_keep_size": self.config.durability_wal_keep_size,
-        })
+        self._api_update_config(available_cpu_cores)
 
         self._patroni.ensure_slots_controller_by_patroni(replication_slots)
 
