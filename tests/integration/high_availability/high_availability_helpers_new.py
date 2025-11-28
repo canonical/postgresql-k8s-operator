@@ -289,7 +289,7 @@ def run_upgrade(juju: Juju, app_name: str, charm: str) -> None:
             juju.run(
                 unit=unit_names[-1],
                 action="force-refresh-start",
-                params={"check-compatibility": False, "run-pre-refresh-checks": False},
+                params={"check-compatibility": False},
                 wait=5 * MINUTE_SECS,
             )
     except TimeoutError:
