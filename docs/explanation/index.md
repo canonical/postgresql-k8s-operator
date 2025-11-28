@@ -23,6 +23,7 @@ Clarification of standard operational concepts:
 :titlesonly:
 
 Users <users>
+Roles <roles>
 Logs <logs>
 Connection pooling <connection-pooling>
 ```
