@@ -48,7 +48,7 @@ async def test_glauth_integration(ops_test: OpsTest):
         ops_test.model.deploy(
             GLAUTH_CERT_APP_NAME,
             application_name=glauth_cert_app_name,
-            channel="latest/stable",
+            channel="1/stable",
             trust=False,
         ),
         ops_test.model.deploy(
