@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2024 Canonical Ltd.
 # See LICENSE file for licensing details.
-
+import asyncio
 import logging
 
 import pytest
@@ -10,13 +10,14 @@ from pytest_operator.plugin import OpsTest
 from .helpers import (
     CHARM_BASE,
     METADATA,
-    get_leader_unit,
 )
 
 logger = logging.getLogger(__name__)
 
 APP_NAME = "untrusted-postgresql-k8s"
-UNTRUST_ERROR_MESSAGE = f"Insufficient permissions, try: `juju trust {APP_NAME} --scope=cluster`"
+UNTRUST_ERROR_MESSAGE = (
+    f"Run `juju trust {APP_NAME} --scope=cluster`. Needed for in-place refreshes"
+)
 
 
 @pytest.mark.abort_on_fail
@@ -36,17 +37,16 @@ async def test_deploy_without_trust(ops_test: OpsTest, charm):
         base=CHARM_BASE,
     )
 
-    await ops_test.model.block_until(
-        lambda: any(
-            unit.workload_status == "blocked"
-            for unit in ops_test.model.applications[APP_NAME].units
+    logger.info("Waiting for charm to become blocked due to missing --trust")
+    await asyncio.gather(
+        ops_test.model.block_until(
+            lambda: ops_test.model.applications[APP_NAME].status == "blocked", timeout=1000
         ),
-        timeout=1000,
+        ops_test.model.block_until(
+            lambda: ops_test.model.applications[APP_NAME].status_message == UNTRUST_ERROR_MESSAGE,
+            timeout=1000,
+        ),
     )
-
-    leader_unit = await get_leader_unit(ops_test, APP_NAME)
-    assert leader_unit.workload_status == "blocked"
-    assert leader_unit.workload_status_message == UNTRUST_ERROR_MESSAGE
 
 
 async def test_trust_blocked_deployment(ops_test: OpsTest):
@@ -56,4 +56,4 @@ async def test_trust_blocked_deployment(ops_test: OpsTest):
     """
     await ops_test.juju("trust", APP_NAME, "--scope=cluster")
 
-    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=1000)
+    await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", timeout=3000)

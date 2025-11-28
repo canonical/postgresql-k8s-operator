@@ -29,6 +29,9 @@ POSTGRES_LOG_FILES = [
 # List of system usernames needed for correct work of the charm/workload.
 SYSTEM_USERS = [BACKUP_USER, REPLICATION_USER, REWIND_USER, USER, MONITORING_USER]
 
+API_REQUEST_TIMEOUT = 5
+PATRONI_CLUSTER_STATUS_ENDPOINT = "cluster"
+
 # Labels are not confidential
 REPLICATION_PASSWORD_KEY = "replication-password"  # noqa: S105
 REWIND_PASSWORD_KEY = "rewind-password"  # noqa: S105
@@ -42,6 +45,7 @@ SECRET_DELETED_LABEL = "None"  # noqa: S105
 SYSTEM_USERS_PASSWORD_CONFIG = "system-users"  # noqa: S105
 
 USERNAME_MAPPING_LABEL = "custom-usernames"
+DATABASE_MAPPING_LABEL = "prefix-databases"
 
 APP_SCOPE = "app"
 UNIT_SCOPE = "unit"

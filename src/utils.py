@@ -71,3 +71,15 @@ def any_cpu_to_cores(cpu_str) -> int:
         # convert millis to cores, undercommited
         return int(cpu_str[:-1]) // 1000
     return int(cpu_str)
+
+
+def label2name(label: str) -> str:
+    """Convert a unit label (with `-`) to a unit name (with `/`).
+
+    Args:
+        label: The label to convert.
+
+    Returns:
+        The converted name.
+    """
+    return label.rsplit("-", 1)[0] + "/" + label.rsplit("-", 1)[1]

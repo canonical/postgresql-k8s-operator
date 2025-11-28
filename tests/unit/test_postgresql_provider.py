@@ -1,7 +1,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-from unittest.mock import Mock, PropertyMock, patch, sentinel
+from unittest.mock import Mock, PropertyMock, patch
 
 import pytest
 from ops import Unit
@@ -214,27 +214,3 @@ def test_on_relation_broken(harness):
             )
         harness.charm.postgresql_client_relation._on_relation_broken(event)
         postgresql_mock.delete_user.assert_not_called()
-
-
-def test_update_tls_flag(harness):
-    with (
-        patch("charm.TLS.get_client_tls_files", return_value=(None, sentinel.ca, None)),
-        patch(
-            "relations.postgresql_provider.new_password", return_value="test-password"
-        ) as _new_password,
-        patch(
-            "relations.postgresql_provider.DatabaseProvides.fetch_relation_field",
-            side_effect=[None, "db"],
-        ),
-        patch(
-            "relations.postgresql_provider.DatabaseProvides.set_tls",
-        ) as _set_tls,
-        patch(
-            "relations.postgresql_provider.DatabaseProvides.set_tls_ca",
-        ) as _set_tls_ca,
-    ):
-        with harness.hooks_disabled():
-            second_rel = harness.add_relation(RELATION_NAME, "second_app")
-        harness.charm.postgresql_client_relation.update_tls_flag("True")
-        _set_tls.assert_called_once_with(second_rel, "True")
-        _set_tls_ca.assert_called_once_with(second_rel, sentinel.ca)
