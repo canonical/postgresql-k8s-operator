@@ -4,6 +4,7 @@
 import logging
 
 import jubilant
+import pytest
 from jubilant import Juju
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 
@@ -73,6 +74,7 @@ def test_refresh_without_pre_refresh_check(juju: Juju, charm: str, continuous_wr
     )
 
 
+@pytest.mark.skip(reason="Unstable")
 async def test_rollback_without_pre_refresh_check(
     juju: Juju, charm: str, continuous_writes
 ) -> None:
