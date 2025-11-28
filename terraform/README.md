@@ -45,3 +45,34 @@ No modules.
 | <a name="output_provides"></a> [provides](#output\_provides) | n/a |
 | <a name="output_requires"></a> [requires](#output\_requires) | n/a |
 <!-- END_TF_DOCS -->
+
+## Usage
+
+Users should ensure that Juju model has been created to deploy into:
+```
+juju add-model welcome
+```
+
+To deploy Charmed PostgreSQL into the model `welcome`, run:
+```
+terraform apply -var='juju_model_name=welcome' -auto-approve
+```
+
+By default, this Terraform module will deploy PostgreSQL with `1` unit only.
+To configure the module to deploy `3` units, run:
+```
+terraform apply -var='juju_model_name=welcome' -var='units=3' -auto-approve
+```
+
+The juju storage directives config example:
+```
+terraform apply -var='juju_model_name=welcome' -auto-approve \
+  -var='storage={data="10G", archive="2G,lxd", logs="3G", temp="tmpfs,2G"}'
+```
+
+The juju constraints example:
+```
+terraform apply -var='juju_model_name=welcome' -auto-approve \
+  -var='constraints=arch=amd64 cores=4 mem=4096M virt-type=virtual-machine'
+```
+
