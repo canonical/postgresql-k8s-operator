@@ -1,0 +1,159 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-test-app/0 [idle] active: received database credentials of the first database
+  postgresql-test-app/1 [idle] active: received database credentials of the first database
+  database/0 [executing] active: Primary
+  database/1 [executing] active: 
+  database/2 [executing] active: 
+  another-database/0 [idle] active: Primary
+  another-database/1 [idle] active: 
+  another-database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] active: Primary
+  database/1 [idle] active: 
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/data-integrator-299
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  another-data-integrator/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [executing] blocked: Please relate the data-integrator with the desired product
+  another-data-integrator/0 [executing] blocked: Please specify either topic, index, database name, or prefix
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] active: Primary
+  database/1 [executing] active: 
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] active: Primary
+  database/1 [executing] active: 
+  database/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] blocked: invalid role(s) for extra user roles
+  database/1 [idle] active: 
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] blocked: invalid role(s) for extra user roles
+  database/1 [idle] active: 
+  database/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] blocked: invalid role(s) for extra user roles
+  database/1 [idle] active: 
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] blocked: invalid role(s) for extra user roles
+  database/1 [idle] active: 
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary
+  database/1 [idle] active: 
+  database/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.12   unsupported  01:57:23Z
+
+App                      Version  Status   Scale  Charm                Channel      Rev  Address         Exposed  Message
+another-application               active       1  postgresql-test-app  latest/edge  418  10.152.183.46   no       received database credentials of the first database
+another-data-integrator           blocked      1  data-integrator      latest/edge  299  10.152.183.80   no       Please relate the data-integrator with the desired product
+another-database         14.19    active       3  postgresql-k8s                      1  10.152.183.55   no       
+data-integrator                   blocked      1  data-integrator      latest/edge  299  10.152.183.66   no       Please relate the data-integrator with the desired product
+database                 14.19    active       3  postgresql-k8s                      0  10.152.183.232  no       
+postgresql-test-app               active       2  postgresql-test-app  latest/edge  418  10.152.183.97   no       received database credentials of the first database
+
+Unit                        Workload  Agent  Address       Ports  Message
+another-application/0*      active    idle   10.1.243.152         received database credentials of the first database
+another-data-integrator/0*  blocked   idle   10.1.243.156         Please relate the data-integrator with the desired product
+another-database/0*         active    idle   10.1.243.143         Primary
+another-database/1          active    idle   10.1.243.145         
+another-database/2          active    idle   10.1.243.144         
+data-integrator/0*          blocked   idle   10.1.243.155         Please relate the data-integrator with the desired product
+database/0*                 active    idle   10.1.243.148         Primary
+database/1                  active    idle   10.1.243.153         
+database/2                  active    idle   10.1.243.154         
+postgresql-test-app/0*      active    idle   10.1.243.136         received database credentials of the first database
+postgresql-test-app/1       active    idle   10.1.243.137         received database credentials of the first database
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-another-database-2: 01:34:22 ERROR unit.another-database/2.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-database-1: 01:43:34 ERROR unit.database/1.juju-log failed to patch k8s Endpoints patroni-database-config
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 279, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '409 Conflict' for url 'https://10.152.183.1/api/v1/namespaces/testing/endpoints/patroni-database-config?force=true&fieldManager=database'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/409
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-1/charm/src/charm.py", line 1468, in _on_stop
+    client.apply(
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 767, in apply
+    return self.patch(
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 490, in patch
+    return self._client.request(
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 359, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 293, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 281, in raise_for_status
+    raise transform_exception(e) from e
+lightkube.core.exceptions.ApiError: Operation cannot be fulfilled on endpoints "patroni-database-config": the object has been modified; please apply your changes to the latest version and try again
+unit-database-1: 01:43:34 ERROR unit.database/1.juju-log failed to patch k8s Endpoints patroni-database-sync
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 279, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '409 Conflict' for url 'https://10.152.183.1/api/v1/namespaces/testing/endpoints/patroni-database-sync?force=true&fieldManager=database'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/409
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-1/charm/src/charm.py", line 1468, in _on_stop
+    client.apply(
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 767, in apply
+    return self.patch(
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 490, in patch
+    return self._client.request(
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 359, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 293, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 281, in raise_for_status
+    raise transform_exception(e) from e
+lightkube.core.exceptions.ApiError: Operation cannot be fulfilled on endpoints "patroni-database-sync": the object has been modified; please apply your changes to the latest version and try again
+unit-postgresql-test-app-0: 01:44:42 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-0: 01:44:43 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-1: 01:44:43 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-2: 01:44:44 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-1: 01:44:44 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 01:44:44 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-application-0: 01:44:46 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-1: 01:46:52 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-2: 01:46:53 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-0: 01:47:51 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-1: 01:47:51 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-0: 01:47:54 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 01:48:56 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-application-0: 01:48:58 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-2: 01:49:00 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-1: 01:49:00 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-2: 01:51:31 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-1: 01:51:39 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-1: 01:51:42 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-0: 01:51:49 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-0: 01:51:50 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 01:54:49 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-2: 01:55:10 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-1: 01:55:11 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-application-0: 01:55:12 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-data-integrator-0: 01:55:12 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-1: 01:55:35 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-1: 01:55:36 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-2: 01:56:45 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
