@@ -67,7 +67,7 @@ class PostgreSQLRefresh(CharmSpecificKubernetes):
             member_name = f"{self._charm.app.name}-{unit_number}"
             if unit_number != highest_unit_number and member_name not in running_members:
                 raise charm_refresh.PrecheckFailed(
-                    f"Unit {member_name} is not online. All units except the highest unit must be online before refresh."
+                    f"PostgreSQL is not running on unit {unit_number}"
                 )
 
         # Switch primary to last unit to refresh (lowest unit number).
