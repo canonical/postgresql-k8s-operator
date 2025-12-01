@@ -52,10 +52,23 @@ class PostgreSQLRefresh(CharmSpecificKubernetes):
     def run_pre_refresh_checks_after_1_unit_refreshed(self) -> None:
         """Implement pre-refresh checks after 1 unit refreshed."""
         logger.debug("Running pre-refresh checks")
-        if not self._charm._patroni.are_all_members_ready():
-            raise charm_refresh.PrecheckFailed("PostgreSQL is not running on 1+ units")
         if self._charm._patroni.is_creating_backup:
             raise charm_refresh.PrecheckFailed("Backup in progress")
+
+        # Check if all units except the highest unit (first to be refreshed) are online.
+        running_members = self._charm._patroni.get_running_cluster_members()
+
+        # The highest unit number is planned_units - 1 (e.g., if 3 units, highest is unit 2).
+        # Members are named like "postgresql-k8s-0", "postgresql-k8s-1", etc.
+        highest_unit_number = self._charm.app.planned_units() - 1
+
+        # Check if all units except the highest unit are online.
+        for unit_number in range(self._charm.app.planned_units()):
+            member_name = f"{self._charm.app.name}-{unit_number}"
+            if unit_number != highest_unit_number and member_name not in running_members:
+                raise charm_refresh.PrecheckFailed(
+                    f"PostgreSQL is not running on unit {unit_number}"
+                )
 
         # Switch primary to last unit to refresh (lowest unit number).
         last_unit_to_refresh = f"{self._charm.app.name}/0"
@@ -78,3 +91,10 @@ class PostgreSQLRefresh(CharmSpecificKubernetes):
                 logger.info(
                     f"Switched primary to unit {last_unit_to_refresh} during pre-refresh check"
                 )
+
+    def run_pre_refresh_checks_before_any_units_refreshed(self) -> None:
+        """Implement pre-refresh checks before any unit refreshed."""
+        if not self._charm._patroni.are_all_members_ready():
+            raise charm_refresh.PrecheckFailed("PostgreSQL is not running on 1+ units")
+
+        self.run_pre_refresh_checks_after_1_unit_refreshed()
