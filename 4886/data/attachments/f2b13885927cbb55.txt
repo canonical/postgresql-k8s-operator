@@ -1,0 +1,171 @@
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:806 Connecting to existing model concierge-microk8s:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHSession received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHTunneler received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/s3-integrator-145
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/self-signed-certificates-317
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-0
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [allocating] waiting: installing agent
+  postgresql-k8s-aws/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [allocating] waiting: agent initialising
+  postgresql-k8s-aws/1 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s-aws/1 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [executing] waiting: awaiting for primary endpoint to be ready
+  postgresql-k8s-aws/1 [executing] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [executing] maintenance: Executing restart operation
+  postgresql-k8s-aws/1 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [executing] active: Primary (degraded)
+  postgresql-k8s-aws/1 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [idle] active: 
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m integration.helpers:helpers.py:862 configuring S3 integrator for AWS
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [executing] active: Primary
+  postgresql-k8s-aws/1 [executing] active: 
+  s3-integrator/0 [executing] blocked: Missing parameters: ['access-key', 'secret-key']
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [executing] active: Primary
+  postgresql-k8s-aws/1 [executing] active: 
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: Primary
+[32mINFO    [0m integration.helpers:helpers.py:883 creating a table in the database
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [idle] active: Primary
+  postgresql-k8s-aws/1 [idle] active: 
+[32mINFO    [0m integration.helpers:helpers.py:894 creating a backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [executing] active: Primary
+  postgresql-k8s-aws/1 [idle] active: 
+[32mINFO    [0m integration.helpers:helpers.py:903 listing the available backups
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [idle] active: Primary
+  postgresql-k8s-aws/1 [idle] active: 
+[32mINFO    [0m integration.helpers:helpers.py:912 creating a second table in the database
+[32mINFO    [0m integration.helpers:helpers.py:919 creating a backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [idle] active: Primary
+  postgresql-k8s-aws/1 [idle] active: 
+[32mINFO    [0m integration.helpers:helpers.py:930 listing the available backups
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [idle] active: Primary
+  postgresql-k8s-aws/1 [idle] active: 
+[32mINFO    [0m integration.helpers:helpers.py:939 creating a second table in the database
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws (waiting for exactly 1 units, current : 2)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws (waiting for exactly 1 units, current : 2)
+[32mINFO    [0m integration.helpers:helpers.py:955 restoring the backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: Primary
+[32mINFO    [0m integration.helpers:helpers.py:968 checking that the backup was correctly restored
+[32mINFO    [0m integration.helpers:helpers.py:1000 restoring the backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: Primary
+[32mINFO    [0m integration.helpers:helpers.py:1013 checking that the backup was correctly restored
+[32mINFO    [0m integration.test_backups_aws:test_backups_aws.py:64 removing the TLS relation
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws (waiting for exactly 2 units, current : 1)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [executing] active: Primary (degraded)
+  postgresql-k8s-aws/1 [idle] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: Primary
+  postgresql-k8s-aws/1 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [idle] active: 
+[32mINFO    [0m integration.test_backups_aws:test_backups_aws.py:76 ensuring that the replication is working correctly
+[32mINFO    [0m integration.test_backups_aws:test_backups_aws.py:107 performing a switchover from postgresql-k8s-aws/0 to postgresql-k8s-aws/1
+[32mINFO    [0m integration.test_backups_aws:test_backups_aws.py:110 checking that the primary unit has changed
+[32mINFO    [0m integration.test_backups_aws:test_backups_aws.py:119 listing the available backups to ensure that the stanza is working correctly
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [idle] active: Primary
+[32mINFO    [0m integration.conftest:conftest.py:54 deleting the previously created backups
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.12   unsupported  01:47:23Z
+
+App            Version  Status  Scale  Charm          Channel        Rev  Address         Exposed  Message
+s3-integrator           active      1  s3-integrator  latest/stable  145  10.152.183.101  no       
+
+Unit              Workload  Agent  Address       Ports  Message
+s3-integrator/0*  active    idle   10.1.243.137         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-self-signed-certificates-0: 01:33:05 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:33:08 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:33:21 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:33:44 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:34:25 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:34:49 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:36:38 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:37:01 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:37:10 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:37:50 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:37:59 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:38:46 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-postgresql-k8s-aws-0: 01:43:43 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-s3-integrator-0: 01:43:47 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-self-signed-certificates-0: 01:43:52 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-self-signed-certificates-0: 01:43:53 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:44:02 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:44:24 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:44:35 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:44:43 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:44:52 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:45:01 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:45:12 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:45:20 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:45:31 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:45:42 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:45:52 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:46:04 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:46:12 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:46:23 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 01:46:35 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+controller-0: 01:46:39 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql-k8s-aws": getting OCI image resources: unable to fetch OCI image resources for postgresql-k8s-aws: application "postgresql-k8s-aws" dying or dead
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
