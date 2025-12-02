@@ -55,6 +55,21 @@ class PostgreSQLRefresh(CharmSpecificKubernetes):
         if self._charm._patroni.is_creating_backup:
             raise charm_refresh.PrecheckFailed("Backup in progress")
 
+        # Check if all units except the highest unit (first to be refreshed) are online.
+        running_members = self._charm._patroni.get_running_cluster_members()
+
+        # The highest unit number is planned_units - 1 (e.g., if 3 units, highest is unit 2).
+        # Members are named like "postgresql-k8s-0", "postgresql-k8s-1", etc.
+        highest_unit_number = self._charm.app.planned_units() - 1
+
+        # Check if all units except the highest unit are online.
+        for unit_number in range(self._charm.app.planned_units()):
+            member_name = f"{self._charm.app.name}-{unit_number}"
+            if unit_number != highest_unit_number and member_name not in running_members:
+                raise charm_refresh.PrecheckFailed(
+                    f"PostgreSQL is not running on unit {unit_number}"
+                )
+
         # Switch primary to last unit to refresh (lowest unit number).
         last_unit_to_refresh = f"{self._charm.app.name}/0"
         if self._charm._patroni.get_primary(unit_name_pattern=True) == last_unit_to_refresh:
@@ -63,7 +78,12 @@ class PostgreSQLRefresh(CharmSpecificKubernetes):
             )
         else:
             try:
-                self._charm._patroni.switchover(candidate=last_unit_to_refresh)
+                self._charm._patroni.switchover(
+                    candidate=last_unit_to_refresh,
+                    async_cluster=bool(
+                        self._charm.async_replication.get_primary_cluster_endpoint()
+                    ),
+                )
             except SwitchoverFailedError as e:
                 logger.warning(f"switchover failed with reason: {e}")
                 raise charm_refresh.PrecheckFailed("Unable to switch primary") from None

@@ -69,7 +69,7 @@ async def test_discourse(ops_test: OpsTest):
     await gather(
         ops_test.model.deploy(DISCOURSE_APP_NAME, application_name=DISCOURSE_APP_NAME),
         ops_test.model.deploy(
-            REDIS_APP_NAME, application_name=REDIS_APP_NAME, channel="latest/edge", base=CHARM_BASE
+            REDIS_APP_NAME, application_name=REDIS_APP_NAME, channel="latest/edge", series="jammy"
         ),
     )
 
@@ -151,10 +151,10 @@ async def test_indico_datatabase(ops_test: OpsTest) -> None:
             series="focal",
         )
         await ops_test.model.deploy(
-            "redis-k8s", channel="edge", application_name="redis-broker", base="ubuntu@22.04"
+            REDIS_APP_NAME, application_name="redis-broker", channel="latest/edge", series="jammy"
         )
         await ops_test.model.deploy(
-            "redis-k8s", channel="edge", application_name="redis-cache", base="ubuntu@22.04"
+            REDIS_APP_NAME, application_name="redis-cache", channel="latest/edge", series="jammy"
         )
         await asyncio.gather(
             ops_test.model.relate("redis-broker", "indico:redis-broker"),

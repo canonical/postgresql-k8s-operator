@@ -61,6 +61,7 @@ from ops import (
     CharmEvents,
     Container,
     HookEvent,
+    JujuVersion,
     LeaderElectedEvent,
     MaintenanceStatus,
     ModelError,
@@ -670,7 +671,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
 
         endpoints_to_remove = self._get_endpoints_to_remove()
-        self.postgresql_client_relation.update_read_only_endpoint()
+        self.postgresql_client_relation.update_endpoints()
         self._remove_from_endpoints(endpoints_to_remove)
 
         # Update the sync-standby endpoint in the async replication data.
@@ -721,7 +722,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # A cluster can have all members as replicas for some time after
         # a failed switchover, so wait until the primary is elected.
         endpoints_to_remove = self._get_endpoints_to_remove()
-        self.postgresql_client_relation.update_read_only_endpoint()
+        self.postgresql_client_relation.update_endpoints()
         self._remove_from_endpoints(endpoints_to_remove)
 
     def _on_peer_relation_changed(self, event: HookEvent) -> None:  # noqa: C901
@@ -787,7 +788,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
 
         try:
-            self.postgresql_client_relation.update_read_only_endpoint()
+            self.postgresql_client_relation.update_endpoints()
         except ModelError as e:
             logger.warning("Cannot update read_only endpoints: %s", str(e))
 
@@ -1581,6 +1582,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 event.fail("Switchover failed or timed out, check the logs for details")
 
     def _on_secret_remove(self, event: SecretRemoveEvent) -> None:
+        if self.model.juju_version < JujuVersion("3.6.11"):
+            logger.warning(
+                "Skipping secret revision removal due to https://github.com/juju/juju/issues/20782"
+            )
+            return
+
         # A secret removal (entire removal, not just a revision removal) causes
         # https://github.com/juju/juju/issues/20794. This check is to avoid the
         # errors that would happen if we tried to remove the revision in that case
@@ -2264,6 +2271,26 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return False
         return True
 
+    def _api_update_config(self, available_cpu_cores: int) -> None:
+        # Use config value if set, calculate otherwise
+        if self.config.experimental_max_connections:
+            max_connections = self.config.experimental_max_connections
+        else:
+            max_connections = max(4 * available_cpu_cores, 100)
+
+        cfg_patch = {
+            "max_connections": max_connections,
+            "max_prepared_transactions": self.config.memory_max_prepared_transactions,
+            "max_replication_slots": 25,
+            "max_wal_senders": 25,
+            "shared_buffers": self.config.memory_shared_buffers,
+            "wal_keep_size": self.config.durability_wal_keep_size,
+        }
+        base_patch = {}
+        if primary_endpoint := self.async_replication.get_primary_cluster_endpoint():
+            base_patch["standby_cluster"] = {"host": primary_endpoint}
+        self._patroni.bulk_update_parameters_controller_by_patroni(cfg_patch, base_patch)
+
     def update_config(self, is_creating_backup: bool = False) -> bool:
         """Updates Patroni config file based on the existence of the TLS files."""
         # Retrieve PostgreSQL parameters.
@@ -2312,9 +2339,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             # in a bundle together with the TLS certificates operator. This flag is used to
             # know when to call the Patroni API using HTTP or HTTPS.
             self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
-            self.postgresql_client_relation.update_tls_flag(
-                "True" if self.is_tls_enabled else "False"
-            )
+            self.postgresql_client_relation.update_endpoints()
             logger.debug("Early exit update_config: Workload not started yet")
             return True
 
@@ -2328,20 +2353,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("Early exit update_config: Patroni not started yet")
             return False
 
-        # Use config value if set, calculate otherwise
-        if self.config.experimental_max_connections:
-            max_connections = self.config.experimental_max_connections
-        else:
-            max_connections = max(4 * available_cpu_cores, 100)
-
-        self._patroni.bulk_update_parameters_controller_by_patroni({
-            "max_connections": max_connections,
-            "max_prepared_transactions": self.config.memory_max_prepared_transactions,
-            "max_replication_slots": 25,
-            "max_wal_senders": 25,
-            "shared_buffers": self.config.memory_shared_buffers,
-            "wal_keep_size": self.config.durability_wal_keep_size,
-        })
+        self._api_update_config(available_cpu_cores)
 
         self._patroni.ensure_slots_controller_by_patroni(replication_slots)
 
@@ -2413,7 +2425,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 pass
 
         self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
-        self.postgresql_client_relation.update_tls_flag("True" if self.is_tls_enabled else "False")
+        self.postgresql_client_relation.update_endpoints()
 
         # Restart PostgreSQL if TLS configuration has changed
         # (so the both old and new connections use the configuration).
@@ -2549,7 +2561,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         except PostgreSQLListGroupsError as e:
             logger.warning(f"Failed to list access groups: {e}")
             return {USER: "all", REPLICATION_USER: "all", REWIND_USER: "all"}
-        user_database_map = {}
+
+        user_database_map = self._collect_user_relations()
         for user in self.postgresql.list_users(current_host=self.is_connectivity_enabled):
             if user in (
                 "backup",
@@ -2569,30 +2582,26 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             else:
                 logger.debug(f"User {user} has no databases to connect to")
 
-        # Copy relations users directly instead of waiting for them to be created
-        custom_username_mapping = self.postgresql_client_relation.get_username_mapping()
-        for relation in self.model.relations[self.postgresql_client_relation.relation_name]:
-            user = custom_username_mapping.get(str(relation.id), f"relation_id_{relation.id}")
-            if user not in user_database_map and (
-                database := self.postgresql_client_relation.database_provides.fetch_relation_field(
-                    relation.id, "database"
-                )
-            ):
-                user_database_map[user] = database
         return user_database_map
 
-    @cached_property
-    def generate_user_hash(self) -> str:
-        """Generate expected user and database hash."""
+    def _collect_user_relations(self) -> dict[str, str]:
         user_db_pairs = {}
         custom_username_mapping = self.postgresql_client_relation.get_username_mapping()
+        prefix_database_mapping = self.postgresql_client_relation.get_databases_prefix_mapping()
+
         for relation in self.model.relations[self.postgresql_client_relation.relation_name]:
             if database := self.postgresql_client_relation.database_provides.fetch_relation_field(
                 relation.id, "database"
             ):
                 user = custom_username_mapping.get(str(relation.id), f"relation_id_{relation.id}")
+                database = ",".join(prefix_database_mapping.get(str(relation.id), [database]))
                 user_db_pairs[user] = database
-        return shake_128(str(user_db_pairs).encode()).hexdigest(16)
+        return user_db_pairs
+
+    @cached_property
+    def generate_user_hash(self) -> str:
+        """Generate expected user and database hash."""
+        return shake_128(str(self._collect_user_relations()).encode()).hexdigest(16)
 
     @cached_property
     def generate_config_hash(self) -> str:
