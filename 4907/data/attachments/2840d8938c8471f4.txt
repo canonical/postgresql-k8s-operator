@@ -1,0 +1,61 @@
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:806 Connecting to existing model concierge-microk8s:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHSession received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHTunneler received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m integration.test_pg_hba:test_pg_hba.py:33 Deploying charms
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-0
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/data-integrator-180
+[32mINFO    [0m integration.test_pg_hba:test_pg_hba.py:42 Adding relation between charms
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [allocating] waiting: installing agent
+  postgresql-k8s/0 [allocating] waiting: installing agent
+  postgresql-k8s/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [executing] blocked: Please relate the data-integrator with the desired product
+  postgresql-k8s/0 [executing] maintenance: installing charm software
+  postgresql-k8s/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [idle] blocked: Please relate the data-integrator with the desired product
+  postgresql-k8s/0 [executing] unknown: 
+  postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [idle] blocked: Please relate the data-integrator with the desired product
+  postgresql-k8s/0 [idle] unknown: 
+  postgresql-k8s/1 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [idle] active: 
+  postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/1 [idle] maintenance: reconfiguring cluster
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: awaiting for member to start
+  postgresql-k8s/1 [idle] active: Primary
+[32mINFO    [0m integration.test_pg_hba:test_pg_hba.py:73 Dropping database objects from the previous test run (if any)
+[32mINFO    [0m integration.test_pg_hba:test_pg_hba.py:86 Creating database objects needed for the test
+[32mINFO    [0m integration.test_pg_hba:test_pg_hba.py:108 Checking that the user relation_id_0 can connect to the database test_1 on postgresql-k8s/0
+[32mINFO    [0m integration.test_pg_hba:test_pg_hba.py:130 Checking that the user relation_id_1 can connect to the database test_2 on postgresql-k8s/0
+[32mINFO    [0m integration.test_pg_hba:test_pg_hba.py:150 Checking that the user relation_id_1 cannot connect to the database test_1 on postgresql-k8s/0
+[32mINFO    [0m integration.test_pg_hba:test_pg_hba.py:108 Checking that the user relation_id_0 can connect to the database test_1 on postgresql-k8s/1
+[32mINFO    [0m integration.test_pg_hba:test_pg_hba.py:130 Checking that the user relation_id_1 can connect to the database test_2 on postgresql-k8s/1
+[32mINFO    [0m integration.test_pg_hba:test_pg_hba.py:150 Checking that the user relation_id_1 cannot connect to the database test_1 on postgresql-k8s/1
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.12   unsupported  01:36:15Z
+
+App              Version  Status  Scale  Charm            Channel        Rev  Address        Exposed  Message
+data-integrator           active      1  data-integrator  latest/stable  180  10.152.183.85  no       
+postgresql-k8s   14.19    active      2  postgresql-k8s                    0  10.152.183.98  no       
+
+Unit                Workload  Agent  Address       Ports  Message
+data-integrator/0*  active    idle   10.1.106.138         
+postgresql-k8s/0    active    idle   10.1.106.139         
+postgresql-k8s/1*   active    idle   10.1.106.140         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
