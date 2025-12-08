@@ -495,10 +495,10 @@ def test_enable_disable_extensions(harness):
         # Blocks on missing extension dependencies
         with harness.hooks_disabled():
             harness.update_config({
-                "plugin_cube_enable": False,
-                "plugin_spi_enable": False,
-                "plugin_jsonb_plperl_enable": True,
-                "plugin_plperl_enable": False,
+                "plugin-cube-enable": False,
+                "plugin-spi-enable": False,
+                "plugin-jsonb-plperl-enable": True,
+                "plugin-plperl-enable": False,
             })
         _get_primary.return_value = "primary"
         _plugin_keys.return_value = [
@@ -517,7 +517,7 @@ def test_enable_disable_extensions(harness):
         # Unblock if dependencies are met
         with harness.hooks_disabled():
             harness.update_config({
-                "plugin_plperl_enable": True,
+                "plugin-plperl-enable": True,
             })
         harness.charm.enable_disable_extensions()
         assert isinstance(harness.charm.unit.status, ActiveStatus)
@@ -949,14 +949,14 @@ def test_validate_config_options(harness):
         _charm_lib.return_value.validate_group_map.return_value = False
         _charm_lib.return_value.get_postgresql_timezones.return_value = []
 
-        # Test instance_default_text_search_config exception
+        # Test instance-default-text-search-config exception
         with harness.hooks_disabled():
-            harness.update_config({"instance_default_text_search_config": "pg_catalog.test"})
+            harness.update_config({"instance-default-text-search-config": "pg_catalog.test"})
 
         with tc.assertRaises(ValueError) as e:
             harness.charm._validate_config_options()
             assert (
-                e.msg == "instance_default_text_search_config config option has an invalid value"
+                e.msg == "instance-default-text-search-config config option has an invalid value"
             )
 
         _charm_lib.return_value.get_postgresql_text_search_configs.assert_called_once_with()
@@ -964,35 +964,35 @@ def test_validate_config_options(harness):
             "pg_catalog.test"
         ]
 
-        # Test ldap_map exception
+        # Test ldap-map exception
         with harness.hooks_disabled():
-            harness.update_config({"ldap_map": "ldap_group="})
+            harness.update_config({"ldap-map": "ldap_group="})
 
         with tc.assertRaises(ValueError) as e:
             harness.charm._validate_config_options()
-            assert e.msg == "ldap_map config option has an invalid value"
+            assert e.msg == "ldap-map config option has an invalid value"
 
         _charm_lib.return_value.validate_group_map.assert_called_once_with("ldap_group=")
         _charm_lib.return_value.validate_group_map.return_value = True
 
-        # Test request_date_style exception
+        # Test request-date-style exception
         with harness.hooks_disabled():
-            harness.update_config({"request_date_style": "ISO, TEST"})
+            harness.update_config({"request-date-style": "ISO, TEST"})
 
         with tc.assertRaises(ValueError) as e:
             harness.charm._validate_config_options()
-            assert e.msg == "request_date_style config option has an invalid value"
+            assert e.msg == "request-date-style config option has an invalid value"
 
         _charm_lib.return_value.validate_date_style.assert_called_once_with("ISO, TEST")
         _charm_lib.return_value.validate_date_style.return_value = ["ISO, TEST"]
 
-        # Test request_time_zone exception
+        # Test request-time-zone exception
         with harness.hooks_disabled():
-            harness.update_config({"request_time_zone": "TEST_ZONE"})
+            harness.update_config({"request-time-zone": "TEST_ZONE"})
 
         with tc.assertRaises(ValueError) as e:
             harness.charm._validate_config_options()
-            assert e.msg == "request_time_zone config option has an invalid value"
+            assert e.msg == "request-time-zone config option has an invalid value"
 
         _charm_lib.return_value.get_postgresql_timezones.assert_called_once_with()
         _charm_lib.return_value.get_postgresql_timezones.return_value = ["TEST_ZONE"]
@@ -1547,9 +1547,9 @@ def test_get_plugins(harness):
 
         # Test when the charm has some plugins enabled.
         harness.update_config({
-            "plugin_audit_enable": True,
-            "plugin_citext_enable": True,
-            "plugin_spi_enable": True,
+            "plugin-audit-enable": True,
+            "plugin-citext-enable": True,
+            "plugin-spi-enable": True,
         })
         assert harness.charm.get_plugins() == [
             "pgaudit",
@@ -1561,7 +1561,7 @@ def test_get_plugins(harness):
         ]
 
         # Test when the charm has the pgAudit plugin disabled.
-        harness.update_config({"plugin_audit_enable": False})
+        harness.update_config({"plugin-audit-enable": False})
         assert harness.charm.get_plugins() == [
             "citext",
             "refint",

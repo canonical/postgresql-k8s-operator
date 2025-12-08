@@ -69,7 +69,7 @@ async def test_audit_plugin(ops_test: OpsTest, charm) -> None:
 
     logger.info("Disabling the audit plugin")
     await ops_test.model.applications[DATABASE_APP_NAME].set_config({
-        "plugin_audit_enable": "False"
+        "plugin-audit-enable": "False"
     })
     await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active")
 
