@@ -929,7 +929,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.postgresql.enable_disable_extensions(extensions, database)
         except psycopg2.errors.DependentObjectsStillExist as e:
             logger.error(
-                "Failed to disable plugin: %s\nWas the plugin enabled manually? If so, update charm config with `juju config postgresql-k8s plugin_<plugin_name>_enable=True`",
+                "Failed to disable plugin: %s\nWas the plugin enabled manually? If so, update charm config with `juju config postgresql-k8s plugin-<plugin_name>-enable=True`",
                 str(e),
             )
             self.set_unit_status(BlockedStatus(EXTENSION_OBJECT_MESSAGE))
@@ -2378,26 +2378,26 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             not in self.postgresql.get_postgresql_text_search_configs()
         ):
             raise ValueError(
-                "instance_default_text_search_config config option has an invalid value"
+                "instance-default-text-search-config config option has an invalid value"
             )
 
         if not self.postgresql.validate_group_map(self.config.ldap_map):
-            raise ValueError("ldap_map config option has an invalid value")
+            raise ValueError("ldap-map config option has an invalid value")
 
         if self.config.request_date_style and not self.postgresql.validate_date_style(
             self.config.request_date_style
         ):
-            raise ValueError("request_date_style config option has an invalid value")
+            raise ValueError("request-date-style config option has an invalid value")
 
         if self.config.request_time_zone not in self.postgresql.get_postgresql_timezones():
-            raise ValueError("request_time_zone config option has an invalid value")
+            raise ValueError("request-time-zone config option has an invalid value")
 
         if (
             self.config.storage_default_table_access_method
             not in self.postgresql.get_postgresql_default_table_access_methods()
         ):
             raise ValueError(
-                "storage_default_table_access_method config option has an invalid value"
+                "storage-default-table-access-method config option has an invalid value"
             )
 
     def _handle_postgresql_restart_need(self, config_changed: bool):
