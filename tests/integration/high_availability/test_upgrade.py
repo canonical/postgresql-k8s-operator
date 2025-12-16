@@ -164,7 +164,7 @@ def inject_dependency_fault(juju: Juju, app_name: str, charm_file: str | Path) -
         versions = tomli.load(file)
 
     versions["charm"] = "16/0.0.0"
-    versions["workload"] = "16.10"
+    versions["workload"] = "16.11"
 
     # Overwrite refresh_versions.toml with incompatible version.
     with zipfile.ZipFile(charm_file, mode="a") as charm_zip:
