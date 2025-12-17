@@ -1520,6 +1520,38 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.unit.status = ActiveStatus()
             self._set_active_status()
 
+    def _cleanup_ipc_resources(self, container: Container) -> None:
+        """Clean up IPC resources (semaphores, shared memory) before PostgreSQL restart.
+
+        This is necessary for PostgreSQL 14.20+ which has stricter validation
+        of pre-existing IPC resources during startup.
+        """
+        try:
+            # List and remove stale semaphores
+            result = container.exec(["ipcs", "-s"]).wait_output()
+            logger.debug(f"Current semaphores: {result[0]}")
+
+            # Remove semaphores owned by postgres user
+            cleanup_result = container.exec([
+                "sh",
+                "-c",
+                "ipcs -s | grep postgres | awk '{print $2}' | xargs -r -n1 ipcrm -s",
+            ]).wait_output()
+            logger.info(f"Cleaned up semaphores: {cleanup_result[0]}")
+
+            # List and remove stale shared memory segments
+            result = container.exec(["ipcs", "-m"]).wait_output()
+            logger.debug(f"Current shared memory: {result[0]}")
+
+            cleanup_result = container.exec([
+                "sh",
+                "-c",
+                "ipcs -m | grep postgres | awk '{print $2}' | xargs -r -n1 ipcrm -m",
+            ]).wait_output()
+            logger.info(f"Cleaned up shared memory: {cleanup_result[0]}")
+        except ExecError as e:
+            logger.warning(f"Failed to clean up IPC resources: {e}")
+
     def _on_update_status(self, _) -> None:
         """Update the unit status message."""
         container = self.unit.get_container("postgresql")
@@ -1542,6 +1574,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 f"{self.postgresql_service} pebble service inactive, restarting service"
             )
             try:
+                # Clean up IPC resources before restart (PostgreSQL 14.20+ requirement)
+                self._cleanup_ipc_resources(container)
                 container.restart(self.postgresql_service)
             except ChangeError:
                 logger.exception("Failed to restart patroni")
