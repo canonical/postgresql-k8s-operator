@@ -493,6 +493,28 @@ def test_on_update_status(harness):
         ),
         patch("charm.Patroni.get_running_cluster_members", return_value=["test"]),
     ):
+        # Register exec handler for IPC cleanup commands
+        harness.handle_exec(
+            POSTGRESQL_CONTAINER,
+            ["ipcs", "-s"],
+            result="",
+        )
+        harness.handle_exec(
+            POSTGRESQL_CONTAINER,
+            ["sh", "-c", "ipcs -s | grep postgres | awk '{print $2}' | xargs -r -n1 ipcrm -s"],
+            result="",
+        )
+        harness.handle_exec(
+            POSTGRESQL_CONTAINER,
+            ["ipcs", "-m"],
+            result="",
+        )
+        harness.handle_exec(
+            POSTGRESQL_CONTAINER,
+            ["sh", "-c", "ipcs -m | grep postgres | awk '{print $2}' | xargs -r -n1 ipcrm -m"],
+            result="",
+        )
+
         # Early exit on can connect.
         harness.set_can_connect(POSTGRESQL_CONTAINER, False)
         harness.charm.on.update_status.emit()
