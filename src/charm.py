@@ -1623,7 +1623,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         return True
 
-    @property
+    @cached_property
     def _patroni(self):
         """Returns an instance of the Patroni object."""
         return Patroni(
