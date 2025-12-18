@@ -29,13 +29,13 @@ containers:
     resource: postgresql-image
     mounts:
       - storage: archive
-        location: /var/lib/postgresql/archive
+        location: /var/lib/pg/archive
       - storage: data
-        location: /var/lib/postgresql/data
+        location: /var/lib/pg/data
       - storage: logs
-        location: /var/lib/postgresql/logs
+        location: /var/lib/pg/logs
       - storage: temp
-        location: /var/lib/postgresql/temp
+        location: /var/lib/pg/temp
 
 resources:
   postgresql-image:
@@ -107,19 +107,19 @@ storage:
   archive:
     type: filesystem
     description: Storage mount used for holding local backups (before typically sending them to remote object storage) when relevant/needed.
-    location: /var/lib/postgresql/archive
+    location: /var/lib/pg/archive
   data:
     type: filesystem
     description: Storage mount used for storing all tables, indexes, and so on (except those from temporary tablespaces).
-    location: /var/lib/postgresql/data
+    location: /var/lib/pg/data
   logs:
     type: filesystem
     description: Storage mount used for storing all the logs that are part of the transactional commit path (WAL files).
-    location: /var/lib/postgresql/logs
+    location: /var/lib/pg/logs
   temp:
     type: filesystem
     description: Storage mount used for storing temporary tablespaces (where typically sort operations happen).
-    location: /var/lib/postgresql/temp
+    location: /var/lib/pg/temp
 
 assumes:
   - k8s-api

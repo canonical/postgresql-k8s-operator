@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 set -Eeuo pipefail
-rm -rf /var/lib/postgresql/archive/*
-rm -rf /var/lib/postgresql/data/pgdata/*
-rm -rf /var/lib/postgresql/logs/*
-rm -rf /var/lib/postgresql/temp/*
+rm -rf /var/lib/pg/archive/*
+rm -rf /var/lib/pg/data/16/main/*
+rm -rf /var/lib/pg/logs/*
+rm -rf /var/lib/pg/temp/*

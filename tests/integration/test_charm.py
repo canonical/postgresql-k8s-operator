@@ -494,7 +494,7 @@ async def test_storage_with_more_restrictive_permissions(ops_test: OpsTest, char
             )
 
         # Restrict the permissions of the storage.
-        command = "chmod 755 /var/lib/postgresql/data"
+        command = "chmod 755 /var/lib/pg/data"
         complete_command = f"ssh --container postgresql {app_name}/0 {command}"
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
             with attempt:

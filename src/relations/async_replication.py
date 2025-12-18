@@ -721,10 +721,10 @@ class PostgreSQLAsyncReplication(Object):
             # Remove and recreate the pgdata folder to enable replication of the data from the
             # primary cluster.
             for path in [
-                "/var/lib/postgresql/archive",
+                "/var/lib/pg/archive",
                 POSTGRESQL_DATA_PATH,
-                "/var/lib/postgresql/logs",
-                "/var/lib/postgresql/temp",
+                "/var/lib/pg/logs",
+                "/var/lib/pg/temp",
             ]:
                 logger.info(f"Removing contents from {path}")
                 self.container.exec(f"find {path} -mindepth 1 -delete".split()).wait_output()

@@ -621,7 +621,7 @@ async def is_replica(ops_test: OpsTest, unit_name: str) -> bool:
 async def list_wal_files(ops_test: OpsTest, app: str) -> set:
     """Returns the list of WAL segment files in each unit."""
     units = [unit.name for unit in ops_test.model.applications[app].units]
-    command = "ls -1 /var/lib/postgresql/data/pgdata/pg_wal/"
+    command = "ls -1 /var/lib/pg/data/16/main/pg_wal/"
     files = {}
     for unit in units:
         complete_command = f"run --unit {unit} -- {command}"

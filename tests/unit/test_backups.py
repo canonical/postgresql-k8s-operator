@@ -67,7 +67,7 @@ def test_tls_ca_chain_filename(harness):
         )
     assert (
         harness.charm.backup._tls_ca_chain_filename
-        == "/var/lib/postgresql/data/pgbackrest-tls-ca-chain.crt"
+        == "/var/lib/pg/data/pgbackrest-tls-ca-chain.crt"
     )
 
 
@@ -310,7 +310,7 @@ def test_construct_endpoint(harness):
 
 
 @pytest.mark.parametrize(
-    "tls_ca_chain_filename", ["", "/var/lib/postgresql/data/pgbackrest-tls-ca-chain.crt"]
+    "tls_ca_chain_filename", ["", "/var/lib/pg/data/pgbackrest-tls-ca-chain.crt"]
 )
 def test_create_bucket_if_not_exists(harness, tls_ca_chain_filename):
     with (
@@ -400,7 +400,7 @@ def test_create_bucket_if_not_exists(harness, tls_ca_chain_filename):
 def test_empty_data_files(harness):
     with patch("ops.model.Container.exec") as _exec:
         # Test when the removal of the data files fails.
-        command = ["rm", "-r", "/var/lib/postgresql/data/pgdata"]
+        command = ["rm", "-r", "/var/lib/pg/data/16/main"]
         _exec.side_effect = ExecError(command=command, exit_code=1, stdout="", stderr="fake error")
         try:
             harness.charm.backup._empty_data_files()
@@ -443,7 +443,7 @@ def test_change_connectivity_to_database(harness):
 
 def test_execute_command(harness):
     with patch("ops.model.Container.exec") as _exec:
-        command = ["rm", "-r", "/var/lib/postgresql/data/pgdata"]
+        command = ["rm", "-r", "/var/lib/pg/data/16/main"]
         _exec.return_value.wait_output.return_value = ("fake stdout", "")
 
         # Test when the command runs successfully.
@@ -1720,7 +1720,7 @@ def test_pre_restore_checks(harness):
 
 
 @pytest.mark.parametrize(
-    "tls_ca_chain_filename", ["", "/var/lib/postgresql/data/pgbackrest-tls-ca-chain.crt"]
+    "tls_ca_chain_filename", ["", "/var/lib/pg/data/pgbackrest-tls-ca-chain.crt"]
 )
 def test_render_pgbackrest_conf_file(harness, tls_ca_chain_filename):
     with (
@@ -2015,7 +2015,7 @@ def test_start_stop_pgbackrest_service(harness):
 
 
 @pytest.mark.parametrize(
-    "tls_ca_chain_filename", ["", "/var/lib/postgresql/data/pgbackrest-tls-ca-chain.crt"]
+    "tls_ca_chain_filename", ["", "/var/lib/pg/data/pgbackrest-tls-ca-chain.crt"]
 )
 def test_upload_content_to_s3(harness, tls_ca_chain_filename):
     with (

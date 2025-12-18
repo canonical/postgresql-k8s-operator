@@ -261,7 +261,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         self._certs_path = "/usr/local/share/ca-certificates"
         self._storage_path = str(self.meta.storages["data"].location)
-        self.pgdata_path = f"{self._storage_path}/pgdata"
+        self.pgdata_path = f"{self._storage_path}/16/main"
 
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.postgresql_client_relation = PostgreSQLProvider(self)
@@ -1136,13 +1136,17 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Create the PostgreSQL data directory."""
         if not container.exists(self.pgdata_path):
             container.make_dir(
-                self.pgdata_path, permissions=0o700, user=WORKLOAD_OS_USER, group=WORKLOAD_OS_GROUP
+                self.pgdata_path,
+                permissions=0o700,
+                user=WORKLOAD_OS_USER,
+                group=WORKLOAD_OS_GROUP,
+                make_parents=True,
             )
         # Also, fix the permissions from the parent directory.
         container.exec([
             "chown",
             f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
-            "/var/lib/postgresql/archive",
+            "/var/lib/pg/archive",
         ]).wait()
         container.exec([
             "chown",
@@ -1152,12 +1156,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         container.exec([
             "chown",
             f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
-            "/var/lib/postgresql/logs",
+            "/var/lib/pg/logs",
         ]).wait()
         container.exec([
             "chown",
             f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
-            "/var/lib/postgresql/temp",
+            "/var/lib/pg/temp",
         ]).wait()
 
     def _on_start(self, _) -> None:
@@ -1360,7 +1364,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 extra_user_roles=["pg_monitor"],
             )
 
-        self.postgresql.set_up_database(temp_location="/var/lib/postgresql/temp")
+        self.postgresql.set_up_database(temp_location="/var/lib/pg/temp/16/main")
 
         access_groups = self.postgresql.list_access_groups()
         if access_groups != set(ACCESS_GROUPS):
