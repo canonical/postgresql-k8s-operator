@@ -58,7 +58,7 @@ def test_subscriber_blocks_on_cycle(harness: Harness):
     # Provide subscription request config FIRST (before creating relation)
     with harness.hooks_disabled():
         harness.update_config({
-            "logical_replication_subscription_request": json.dumps({
+            "logical-replication-subscription-request": json.dumps({
                 "testdb": ["public.test_cycle"],
             })
         })
