@@ -154,7 +154,6 @@ convention = "google"
 
 [tool.pyright]
 include = ["src", "scripts"]
-exclude = ["src/relations/logical_replication.py"]
 extraPaths = ["./lib"]
 pythonVersion = "3.12"
 pythonPlatform = "All"
