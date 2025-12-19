@@ -250,7 +250,7 @@ class PostgreSQLLogicalReplication(Object):
             logger.error(
                 f"Got logical replication error from the publisher in {LOGICAL_REPLICATION_RELATION} #{event.relation.id}: {error}"
             )
-            self.charm.unit.status = BlockedStatus(LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS)
+            self.charm.set_unit_status(BlockedStatus(LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS))
 
         secret_content = self.model.get_secret(
             id=event.relation.data[event.app]["secret-id"]
@@ -429,7 +429,7 @@ class PostgreSQLLogicalReplication(Object):
     # endregion
 
     def apply_changed_config(self, event: EventBase) -> bool:
-        """Validate & apply (relation) logical_replication_subscription_request config parameter."""
+        """Validate & apply (relation) logical-replication-subscription-request config parameter."""
         if not self.charm.unit.is_leader():
             return True
         if not self.charm.primary_endpoint:
@@ -610,7 +610,7 @@ class PostgreSQLLogicalReplication(Object):
         if message:
             logger.error(f"Logical replication validation: {message}")
         self.charm.app_peer_data["logical-replication-validation"] = "error"
-        self.charm.unit.status = BlockedStatus(LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS)
+        self.charm.set_unit_status(BlockedStatus(LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS))
         return False
 
     def _validate_new_publication(

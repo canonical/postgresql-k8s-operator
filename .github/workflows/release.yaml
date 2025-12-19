@@ -1,11 +1,11 @@
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
-name: Release to Charmhub
+name: Release to Charmhub edge
 
 on:
   push:
     branches:
-    - '16/edge'
+      - '*/edge'
     paths-ignore:
       - 'tests/**'
       - 'docs/**'
@@ -16,37 +16,31 @@ on:
       - '.github/workflows/sync_docs.yaml'
 
 jobs:
+  tag:
+    name: Create charm refresh compatibility version git tag
+    uses: canonical/data-platform-workflows/.github/workflows/tag_charm_edge.yaml@v40.0.2
+    with:
+      track: '16'
+    permissions:
+      contents: write  # Needed to create git tag
+
   ci-tests:
     name: Tests
+    needs:
+      - tag
     uses: ./.github/workflows/ci.yaml
     secrets: inherit
     permissions:
       contents: write  # Needed for Allure Report
 
-  release-libraries:
-    name: Release libraries
-    needs:
-      - ci-tests
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-      - name: Release charm libraries
-        uses: canonical/charming-actions/release-libraries@2.7.0
-        with:
-          credentials: "${{ secrets.CHARMHUB_TOKEN }}"
-          github-token: "${{ secrets.GITHUB_TOKEN }}"
-
   release:
     name: Release charm
     needs:
+      - tag
       - ci-tests
-    uses: canonical/data-platform-workflows/.github/workflows/release_charm_edge.yaml@v35.0.2
+    uses: canonical/data-platform-workflows/.github/workflows/release_charm_edge.yaml@v40.0.2
     with:
-      track: 16
+      track: ${{ needs.tag.outputs.track }}
       artifact-prefix: ${{ needs.ci-tests.outputs.artifact-prefix }}
     secrets:
       charmhub-token: ${{ secrets.CHARMHUB_TOKEN }}

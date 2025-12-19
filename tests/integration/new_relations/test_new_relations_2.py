@@ -69,14 +69,14 @@ async def test_discourse(ops_test: OpsTest):
     await gather(
         ops_test.model.deploy(DISCOURSE_APP_NAME, application_name=DISCOURSE_APP_NAME),
         ops_test.model.deploy(
-            REDIS_APP_NAME, application_name=REDIS_APP_NAME, channel="latest/edge", base=CHARM_BASE
+            REDIS_APP_NAME, application_name=REDIS_APP_NAME, channel="latest/edge", series="jammy"
         ),
     )
 
     async with ops_test.fast_forward():
         # Enable the plugins/extensions required by Discourse.
         logger.info("Enabling the plugins/extensions required by Discourse")
-        config = {"plugin_hstore_enable": "True", "plugin_pg_trgm_enable": "True"}
+        config = {"plugin-hstore-enable": "True", "plugin-pg-trgm-enable": "True"}
         await ops_test.model.applications[DATABASE_APP_NAME].set_config(config)
         await gather(
             ops_test.model.wait_for_idle(apps=[DISCOURSE_APP_NAME], status="waiting"),
@@ -151,10 +151,10 @@ async def test_indico_datatabase(ops_test: OpsTest) -> None:
             series="focal",
         )
         await ops_test.model.deploy(
-            "redis-k8s", channel="stable", application_name="redis-broker", base="ubuntu@20.04"
+            REDIS_APP_NAME, application_name="redis-broker", channel="latest/edge", series="jammy"
         )
         await ops_test.model.deploy(
-            "redis-k8s", channel="stable", application_name="redis-cache", base="ubuntu@20.04"
+            REDIS_APP_NAME, application_name="redis-cache", channel="latest/edge", series="jammy"
         )
         await asyncio.gather(
             ops_test.model.relate("redis-broker", "indico:redis-broker"),
@@ -170,7 +170,7 @@ async def test_indico_datatabase(ops_test: OpsTest) -> None:
 
         # Verify that the charm doesn't block when the extensions are enabled.
         logger.info("Verifying that the charm doesn't block when the extensions are enabled")
-        config = {"plugin_pg_trgm_enable": "True", "plugin_unaccent_enable": "True"}
+        config = {"plugin-pg-trgm-enable": "True", "plugin-unaccent-enable": "True"}
         await ops_test.model.applications[DATABASE_APP_NAME].set_config(config)
         await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active")
         await ops_test.model.relate(DATABASE_APP_NAME, "indico")

@@ -1,56 +1,50 @@
 # Explanation
 
-Additional context about key concepts behind the PostgreSQL charm, including design and legacy information.
+Additional context about the PostgreSQL charm, including design, legacy information, and security.
 
-## Core concepts and design
-* [Architecture]
-* [Interfaces and endpoints]
-* [Juju]
-* [Legacy charm]
+## Core
 
-## Operational concepts
-* [Users]
-* [Logs]
-* [Connection pooling]
+Core concepts about the history and design of the charm:
 
-## Security and hardening
-* [Security hardening guide][Security]
-  * [Cryptography]
+```{toctree}
+:titlesonly:
 
-## Development
-Charm event flowcharts:
-* [Charm]
-* [Relations]
-* [Backups]
+Architecture <architecture>
+Interfaces and endpoints <interfaces-and-endpoints>
+Legacy charm <legacy-charm>
+Juju <juju>
+```
 
-<!-- Links -->
+## Operation
 
-[Architecture]: /explanation/architecture
-[Interfaces and endpoints]: /explanation/interfaces-and-endpoints
-[Users]: /explanation/users
-[Logs]: /explanation/logs
-[Juju]: /explanation/juju
-[Legacy charm]: /explanation/legacy-charm
-[Connection pooling]: /explanation/connection-pooling
-[Charm]: /explanation/flowcharts/charm
-[Relations]: /explanation/flowcharts/relations
-[Backups]: /explanation/flowcharts/backups
-[Security]: /explanation/security/index
-[Cryptography]: /explanation/security/cryptography
+Clarification of standard operational concepts:
 
+```{toctree}
+:titlesonly:
+
+Users <users>
+Roles <roles>
+Logs <logs>
+Connection pooling <connection-pooling>
+```
+
+## Security
+
+Security hardening overview:
 
 ```{toctree}
 :titlesonly:
 :maxdepth: 2
-:glob:
-:hidden:
 
-Architecture <architecture>
-Interfaces and endpoints <interfaces-and-endpoints>
-Juju <juju>
-Legacy charm <legacy-charm>
-Users <users>
-Logs <logs>
-Connection pooling <connection-pooling>
 Security <security/index>
+```
+
+## Development
+
+Charm event flowcharts:
+
+```{toctree}
+:titlesonly:
+
 Flowcharts <flowcharts/index>
+```

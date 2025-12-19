@@ -23,7 +23,7 @@ Deploy the [GLAuth charm](https://charmhub.io/glauth-k8s):
 ```text
 juju add-model glauth
 juju deploy self-signed-certificates
-juju deploy postgresql-k8s --channel 16/stable --trust
+juju deploy postgresql-k8s --channel 16/edge --trust
 juju deploy glauth-k8s --channel edge --trust
 ```
 
@@ -82,7 +82,7 @@ juju integrate postgresql-k8s:receive-ca-cert send-ca-cert
 To have LDAP users available in PostgreSQL, provide a comma separated list of LDAP groups to already created PostgreSQL authorisation groups. To create those groups before hand, refer to the [data integrator charm](https://charmhub.io/data-integrator).
 
 ```text
-juju config postgresql-k8s ldap_map="<ldap_group>=<psql_group>"
+juju config postgresql-k8s ldap-map="<ldap_group>=<psql_group>"
 ```
 
 ## Disable LDAP

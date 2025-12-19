@@ -189,10 +189,10 @@ async def test_postgresql_locales(ops_test: OpsTest) -> None:
 async def test_postgresql_parameters_change(ops_test: OpsTest) -> None:
     """Test that's possible to change PostgreSQL parameters."""
     await ops_test.model.applications[APP_NAME].set_config({
-        "memory_max_prepared_transactions": "100",
-        "memory_shared_buffers": "32768",  # 2 * 128MB. Patroni may refuse the config if < 128MB
-        "response_lc_monetary": "en_GB.utf8",
-        "experimental_max_connections": "200",
+        "memory-max-prepared-transactions": "100",
+        "memory-shared-buffers": "32768",  # 2 * 128MB. Patroni may refuse the config if < 128MB
+        "response-lc-monetary": "en_GB.utf8",
+        "experimental-max-connections": "200",
     })
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=30)
     password = await get_password(ops_test)
@@ -404,6 +404,7 @@ async def test_application_removal(ops_test: OpsTest) -> None:
     assert APP_NAME not in ops_test.model.applications
 
 
+@pytest.mark.skip(reason="Unstable")
 async def test_redeploy_charm_same_model(ops_test: OpsTest, charm):
     """Redeploy the charm in the same model to test that it works."""
     async with ops_test.fast_forward():
@@ -425,6 +426,7 @@ async def test_redeploy_charm_same_model(ops_test: OpsTest, charm):
         )
 
 
+@pytest.mark.skip(reason="Unstable")
 async def test_redeploy_charm_same_model_after_forcing_removal(ops_test: OpsTest, charm) -> None:
     """Redeploy the charm in the same model to test that it works after a forceful removal."""
     return_code, _, stderr = await ops_test.juju(

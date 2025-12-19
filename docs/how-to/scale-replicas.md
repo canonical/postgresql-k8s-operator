@@ -9,7 +9,7 @@ This guide will show you how to establish and change the amount of juju units us
 To deploy PostgreSQL with multiple replicas, specify the number of desired units with the `-n` option:
 
 ```text
-juju deploy postgresql-k8s --channel 16/stable -n <number_of_replicas> --trust
+juju deploy postgresql-k8s --channel 16/edge -n <number_of_replicas> --trust
 ```
 
 ### Primary vs. leader unit

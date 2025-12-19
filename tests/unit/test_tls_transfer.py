@@ -18,8 +18,8 @@ def harness():
     harness = Harness(PostgresqlOperatorCharm)
 
     # Set up the initial relation and hooks.
-    peer_rel_id = harness.add_relation(PEER, "postgresql")
-    harness.add_relation_unit(peer_rel_id, "postgresql/0")
+    peer_rel_id = harness.add_relation(PEER, "postgresql-k8s")
+    harness.add_relation_unit(peer_rel_id, "postgresql-k8s/0")
     harness.begin()
     yield harness
     harness.cleanup()
