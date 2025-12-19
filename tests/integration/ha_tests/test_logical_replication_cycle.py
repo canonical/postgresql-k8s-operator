@@ -255,7 +255,7 @@ def _create_test_table(data_integrator_app_name: str, database: str, qualified_t
                 connection = psycopg2.connect(connection_string)
         connection.autocommit = True
         with connection.cursor() as cursor:
-            schema, table = qualified_table.split(".")
+            _, table = qualified_table.split(".")
             cursor.execute(f"CREATE TABLE IF NOT EXISTS {table} (test_column text);")
     finally:
         if connection is not None:

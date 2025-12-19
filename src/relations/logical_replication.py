@@ -8,10 +8,10 @@ TODO: add description after specification is accepted.
 
 import json
 import logging
+from datetime import UTC, datetime
 from typing import (
     TYPE_CHECKING,
 )
-from datetime import datetime, timezone
 
 from ops import (
     BlockedStatus,
@@ -47,7 +47,7 @@ class PostgreSQLLogicalReplication(Object):
     @staticmethod
     def _now_iso() -> str:
         """Return current UTC time in ISO 8601 format."""
-        return datetime.now(timezone.utc).isoformat()
+        return datetime.now(UTC).isoformat()
 
     def _parse_iso(self, value: str | None) -> float:
         """Parse ISO8601 string to POSIX timestamp seconds; return 0 on error/empty."""
@@ -57,7 +57,7 @@ class PostgreSQLLogicalReplication(Object):
             # Support values with or without timezone; assume UTC if absent
             dt = datetime.fromisoformat(value)
             if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=timezone.utc)
+                dt = dt.replace(tzinfo=UTC)
             return dt.timestamp()
         except Exception:
             return 0.0
@@ -342,6 +342,14 @@ class PostgreSQLLogicalReplication(Object):
         reflect the new provenance without requiring a subscription-request
         change from the remote.
         """
+        mapping = self._aggregate_subscribed_upstream()
+        # Save aggregated subscribed upstream
+        self.charm.app_peer_data["logical-replication-subscribed-upstream"] = json.dumps(mapping)
+        # Propagate updated provenance to all offers at root level.
+        self._propagate_upstream_to_offers(mapping, set_configured_time)
+
+    def _aggregate_subscribed_upstream(self) -> dict[str, str]:
+        """Aggregate upstream provenance from all subscription relations."""
         mapping: dict[str, str] = {}
         for relation in self.model.relations.get(LOGICAL_REPLICATION_RELATION, ()):
             pubs = json.loads(relation.data[relation.app].get("publications", "{}"))
@@ -358,12 +366,13 @@ class PostgreSQLLogicalReplication(Object):
                     upstream = root_upstream.get(key) or root_publisher_id
                     if upstream:
                         mapping[key] = upstream
-        # Save aggregated subscribed upstream
-        self.charm.app_peer_data["logical-replication-subscribed-upstream"] = json.dumps(mapping)
+        return mapping
 
-        # Propagate updated provenance to all offers at root level.
-        # Compute per-offer, per-requested table upstream map based on current mapping
-        for offer in self.model.relations.get(LOGICAL_REPLICATION_OFFER_RELATION, () ):
+    def _propagate_upstream_to_offers(
+        self, mapping: dict[str, str], set_configured_time: bool
+    ) -> None:
+        """Propagate upstream provenance to all offer relations."""
+        for offer in self.model.relations.get(LOGICAL_REPLICATION_OFFER_RELATION, ()):
             try:
                 subs_req = json.loads(offer.data[offer.app].get("subscription-request", "{}"))
             except json.JSONDecodeError:
@@ -519,48 +528,82 @@ class PostgreSQLLogicalReplication(Object):
             else {}
         )
         # Publisher-provided upstream provenance (root-level)
-        publisher_upstream = {}
-        if relation:
-            try:
-                publisher_upstream = json.loads(
-                    relation.data[relation.app].get("upstream", "{}")
-                )
-            except json.JSONDecodeError:
-                publisher_upstream = {}
+        publisher_upstream = self._get_publisher_upstream(relation)
 
         logger.error(f"subscription_request_config: {subscription_request_config}")
         for database, schematables in subscription_request_config.items():
-            if not self.charm.postgresql.database_exists(database):
-                return self._fail_validation(f"database {database} doesn't exist")
-            for schematable in schematables:
-                try:
-                    schema, table = schematable.split(".")
-                except ValueError:
-                    return self._fail_validation(f"table format isn't right at {schematable}")
-                if not self.charm.postgresql.table_exists(database, schema, table):
-                    return self._fail_validation(
-                        f"table {schematable} in database {database} doesn't exist"
-                    )
-                # Cycle detection: if publisher says this table's upstream is us, subscribing would create a loop
-                upstream_key = f"{database}:{schematable}"
-                logger.error(f"publisher_upstream.get(upstream_key): {publisher_upstream.get(upstream_key)}, self._identity(): {self._identity()}")
-                if publisher_upstream.get(upstream_key) == self._identity():
-                    return self._fail_validation(
-                        f"cyclic logical replication detected for {upstream_key}: upstream equals subscriber"
-                    )
-                already_subscribed = (
-                    database in subscription_request_relation
-                    and schematable in subscription_request_relation[database]
-                )
-                if not already_subscribed and not self.charm.postgresql.is_table_empty(
-                    database, schema, table
-                ):
-                    return self._fail_validation(
-                        f"table {schematable} in database {database} isn't empty"
-                    )
+            if not self._validate_database_and_tables(
+                database, schematables, subscription_request_relation, publisher_upstream
+            ):
+                return False
 
         self.charm.app_peer_data["logical-replication-validation"] = ""
         self.charm._set_active_status()
+        return True
+
+    def _get_publisher_upstream(self, relation) -> dict[str, str]:
+        """Get publisher-provided upstream provenance map."""
+        if not relation:
+            return {}
+        try:
+            return json.loads(relation.data[relation.app].get("upstream", "{}"))
+        except json.JSONDecodeError:
+            return {}
+
+    def _validate_database_and_tables(
+        self,
+        database: str,
+        schematables: list[str],
+        subscription_request_relation: dict,
+        publisher_upstream: dict[str, str],
+    ) -> bool:
+        """Validate that database and tables exist and can be subscribed."""
+        if not self.charm.postgresql.database_exists(database):
+            return self._fail_validation(f"database {database} doesn't exist")
+
+        for schematable in schematables:
+            if not self._validate_single_table(
+                database, schematable, subscription_request_relation, publisher_upstream
+            ):
+                return False
+        return True
+
+    def _validate_single_table(
+        self,
+        database: str,
+        schematable: str,
+        subscription_request_relation: dict,
+        publisher_upstream: dict[str, str],
+    ) -> bool:
+        """Validate a single table for subscription."""
+        try:
+            schema, table = schematable.split(".")
+        except ValueError:
+            return self._fail_validation(f"table format isn't right at {schematable}")
+
+        if not self.charm.postgresql.table_exists(database, schema, table):
+            return self._fail_validation(
+                f"table {schematable} in database {database} doesn't exist"
+            )
+
+        # Cycle detection: if publisher says this table's upstream is us, subscribing would create a loop
+        upstream_key = f"{database}:{schematable}"
+        logger.error(
+            f"publisher_upstream.get(upstream_key): {publisher_upstream.get(upstream_key)}, self._identity(): {self._identity()}"
+        )
+        if publisher_upstream.get(upstream_key) == self._identity():
+            return self._fail_validation(
+                f"cyclic logical replication detected for {upstream_key}: upstream equals subscriber"
+            )
+
+        already_subscribed = (
+            database in subscription_request_relation
+            and schematable in subscription_request_relation[database]
+        )
+        if not already_subscribed and not self.charm.postgresql.is_table_empty(
+            database, schema, table
+        ):
+            return self._fail_validation(f"table {schematable} in database {database} isn't empty")
         return True
 
     def _fail_validation(self, message: str | None = None) -> bool:
@@ -642,13 +685,20 @@ class PostgreSQLLogicalReplication(Object):
                 key = f"{database}:{schematable}"
                 if key not in publisher_upstream:
                     # Compare configured-time values to decide whether to wait
-                    our_ct_ts = self._parse_iso(relation.data[self.model.app].get("configured-time"))
+                    our_ct_ts = self._parse_iso(
+                        relation.data[self.model.app].get("configured-time")
+                    )
                     other_ct_ts = self._other_configured_time_ts()
                     if our_ct_ts == 0 or our_ct_ts < other_ct_ts:
                         logger.error(
                             "Not waiting for publisher upstream because our configured-time (%s) is earlier than remote (%s)",
                             relation.data[self.model.app].get("configured-time"),
-                            max((rel.data[rel.app].get("configured-time") or "") for rel in self.model.relations.get(LOGICAL_REPLICATION_RELATION, ())),
+                            max(
+                                (rel.data[rel.app].get("configured-time") or "")
+                                for rel in self.model.relations.get(
+                                    LOGICAL_REPLICATION_RELATION, ()
+                                )
+                            ),
                         )
                         return False
                     logger.error(
@@ -665,7 +715,6 @@ class PostgreSQLLogicalReplication(Object):
         subscriptions_request = json.loads(
             relation.data[relation.app].get("subscription-request", "{}")
         )
-        requester_id = relation.data[relation.app].get("requester-id", "")
         publications = json.loads(relation.data[self.model.app].get("publications", "{}"))
         secret = self._get_secret(relation.id)
         user = secret.peek_content()["username"]
@@ -699,13 +748,17 @@ class PostgreSQLLogicalReplication(Object):
                     local_upstream = subscribed_upstream[key]
                     db_table_upstream[schematable] = local_upstream
                     root_upstream_map[key] = local_upstream
-                    logger.error(f"Using subscribed upstream {local_upstream} for {key} and {schematable}")
+                    logger.error(
+                        f"Using subscribed upstream {local_upstream} for {key} and {schematable}"
+                    )
                 elif not has_subscriptions:
                     # No upstream subscriptions at all: we are the origin for this table
                     local_upstream = self._identity()
                     db_table_upstream[schematable] = local_upstream
                     root_upstream_map[key] = local_upstream
-                    logger.error(f"Using unsubscribed upstream {local_upstream} for {key} and {schematable}")
+                    logger.error(
+                        f"Using unsubscribed upstream {local_upstream} for {key} and {schematable}"
+                    )
                 else:
                     # Upstream not yet known and we do have subscriptions; leave unset (we deferred earlier)
                     logger.error(f"Cannot determine upstream for {key} and {schematable}")
