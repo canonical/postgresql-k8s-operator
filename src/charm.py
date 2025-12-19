@@ -4,6 +4,7 @@
 
 """Charmed Kubernetes Operator for the PostgreSQL database."""
 
+import contextlib
 import itertools
 import json
 import logging
@@ -1225,7 +1226,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
             incorrect_path = "/var/lib/postgresql/data/peer_ca.pem"
             if incorrect_path not in script_content:
-                logger.info("Health check script does not contain the expected incorrect path, skipping")
+                logger.info(
+                    "Health check script does not contain the expected incorrect path, skipping"
+                )
                 return
 
             patched_content = script_content.replace(incorrect_path, correct_path)
@@ -1240,12 +1243,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     sed_cmd = f"sed -i 's|{incorrect_path}|{correct_path}|g' {script_path}"
                     logger.debug(f"Attempting sed fallback: {sed_cmd}")
                     exec_res = container.exec(["sh", "-c", sed_cmd])
-                    try:
+                    with contextlib.suppress(Exception):
                         exec_res.wait()
-                    except Exception:
-                        # Some testing harnesses return a MagicMock that doesn't provide wait
-                        pass
-                    logger.info(f"Patched health check script via exec sed: {incorrect_path} -> {correct_path}")
+                    logger.info(
+                        f"Patched health check script via exec sed: {incorrect_path} -> {correct_path}"
+                    )
                 except Exception as e2:
                     logger.exception(
                         f"Failed to patch health check script via exec fallback {script_path}: {e2}"
@@ -1717,17 +1719,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # possible (e.g. during upgrade_charm or when pod resources are recreated).
         # This helps avoid races where the Pebble layer with the health check is added
         # before the script is patched.
-        try:
+        # Defensive: don't let any unexpected errors from fixing the script
+        # prevent the remainder of the pod fix from running.
+        with contextlib.suppress(Exception):
             try:
                 container = self._container
                 if container.can_connect():
                     self._fix_health_check_script(container)
             except Exception as e:
                 logger.debug(f"_fix_pod: could not fix health check script: {e}")
-        except Exception:
-            # Defensive: don't let any unexpected errors from fixing the script
-            # prevent the remainder of the pod fix from running.
-            pass
 
         if self.refresh is not None and not self.refresh.in_progress:
             try:

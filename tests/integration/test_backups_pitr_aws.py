@@ -148,8 +148,10 @@ async def pitr_backup_operations(
     logger.info("1: waiting for the database charm to become blocked after restore")
     async with ops_test.fast_forward():
         await ops_test.model.block_until(
-            lambda: ops_test.model.units.get(f"{database_app_name}/0").workload_status_message
-            == CANNOT_RESTORE_PITR,
+            lambda: (
+                ops_test.model.units.get(f"{database_app_name}/0").workload_status_message
+                == CANNOT_RESTORE_PITR
+            ),
             timeout=1000,
         )
     logger.info(

@@ -1576,7 +1576,9 @@ def test_fix_health_check_script(harness):
     container.reset_mock()
     container.exists.return_value = True
     mock_file = MagicMock()
-    mock_file.read.return_value = '#!/usr/bin/python3\npath = "/var/lib/postgresql/data/peer_ca.pem"\n'
+    mock_file.read.return_value = (
+        '#!/usr/bin/python3\npath = "/var/lib/postgresql/data/peer_ca.pem"\n'
+    )
     container.pull.return_value = mock_file
 
     harness.charm._fix_health_check_script(container)
@@ -1594,7 +1596,9 @@ def test_fix_health_check_script(harness):
     container.reset_mock()
     container.exists.return_value = True
     mock_file_correct = MagicMock()
-    mock_file_correct.read.return_value = '#!/usr/bin/python3\npath = "/var/lib/pg/data/peer_ca.pem"\n'
+    mock_file_correct.read.return_value = (
+        '#!/usr/bin/python3\npath = "/var/lib/pg/data/peer_ca.pem"\n'
+    )
     container.pull.return_value = mock_file_correct
 
     harness.charm._fix_health_check_script(container)
