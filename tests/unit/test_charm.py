@@ -19,7 +19,7 @@ from ops.model import (
     RelationDataTypeError,
     WaitingStatus,
 )
-from ops.pebble import ChangeError, ServiceStatus
+from ops.pebble import ChangeError, CheckStatus, ServiceStatus
 from ops.testing import Harness
 from requests import ConnectionError as RequestsConnectionError
 from tenacity import RetryError, wait_fixed
@@ -492,7 +492,13 @@ def test_on_update_status(harness):
             return_value=False,
         ),
         patch("charm.Patroni.get_running_cluster_members", return_value=["test"]),
+        patch("charm.PostgresqlOperatorCharm._get_postgresql_startup_logs") as _get_startup_logs,
     ):
+        # Setup default healthy health check
+        _pebble.get_checks.return_value = [
+            MagicMock(status=CheckStatus.UP, failures=0, threshold=3)
+        ]
+
         # Early exit on can connect.
         harness.set_can_connect(POSTGRESQL_CONTAINER, False)
         harness.charm.on.update_status.emit()
@@ -520,11 +526,13 @@ def test_on_update_status(harness):
         _enable_disable_extensions.assert_called_once()
         _pebble.get_services.assert_called_once()
 
-        # Test when a failure need to be handled.
+        # Test when a failure need to be handled (service inactive).
         _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.INACTIVE)]
         harness.charm.on.update_status.emit()
         _restart.assert_called_once_with("postgresql")
+        _get_startup_logs.assert_called()
         _restart.reset_mock()
+        _get_startup_logs.reset_mock()
         _get_primary.assert_called_once_with(unit_name_pattern=True)
         _get_primary.reset_mock()
 
@@ -534,8 +542,11 @@ def test_on_update_status(harness):
         harness.charm.on.update_status.emit()
         _restart.assert_called_once_with("postgresql")
         _logger.exception.assert_called_once_with("Failed to restart patroni")
+        # Verify startup logs are collected after failed restart
+        assert _get_startup_logs.call_count == 2  # Before and after restart attempt
         _restart.reset_mock()
         _logger.exception.reset_mock()
+        _get_startup_logs.reset_mock()
         _restart.side_effect = None
 
         # Check primary message not being set (current unit is not the primary).
@@ -550,6 +561,78 @@ def test_on_update_status(harness):
         # Test again and check primary message being set (current unit is the primary).
         harness.charm.on.update_status.emit()
         assert harness.model.unit.status == ActiveStatus("Primary")
+
+
+def test_on_update_status_health_check_failing(harness):
+    """Test that service is restarted when health check is failing."""
+    with (
+        patch("charm.logger") as _logger,
+        patch("charm.PostgresqlOperatorCharm.enable_disable_extensions"),
+        patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
+        patch("charm.Patroni.get_primary") as _get_primary,
+        patch("ops.model.Container.pebble") as _pebble,
+        patch("ops.model.Container.restart") as _restart,
+        patch("upgrade.PostgreSQLUpgrade.idle", return_value="idle"),
+        patch(
+            "charm.PostgresqlOperatorCharm.is_standby_leader",
+            new_callable=PropertyMock,
+            return_value=False,
+        ),
+        patch("charm.Patroni.get_running_cluster_members", return_value=["test"]),
+        patch("charm.PostgresqlOperatorCharm._get_postgresql_startup_logs") as _get_startup_logs,
+    ):
+        harness.set_can_connect(POSTGRESQL_CONTAINER, True)
+
+        # Service is ACTIVE but health check is DOWN - should trigger restart
+        _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.ACTIVE)]
+        _pebble.get_checks.return_value = [
+            MagicMock(status=CheckStatus.DOWN, failures=3, threshold=3)
+        ]
+        _member_started.return_value = True
+
+        harness.charm.on.update_status.emit()
+
+        # Verify health check warning is logged
+        _logger.warning.assert_any_call(
+            "PostgreSQL health check failing: CheckStatus.DOWN (failures: 3/3)"
+        )
+        # Verify restart was triggered
+        _restart.assert_called_once_with("postgresql")
+        # Verify diagnostic logs were collected
+        _get_startup_logs.assert_called()
+
+
+def test_on_update_status_health_check_error_handling(harness):
+    """Test that health check errors are handled gracefully."""
+    with (
+        patch("charm.logger") as _logger,
+        patch("charm.PostgresqlOperatorCharm.enable_disable_extensions"),
+        patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
+        patch("charm.Patroni.get_primary") as _get_primary,
+        patch("ops.model.Container.pebble") as _pebble,
+        patch("ops.model.Container.restart") as _restart,
+        patch("upgrade.PostgreSQLUpgrade.idle", return_value="idle"),
+        patch(
+            "charm.PostgresqlOperatorCharm.is_standby_leader",
+            new_callable=PropertyMock,
+            return_value=False,
+        ),
+        patch("charm.Patroni.get_running_cluster_members", return_value=["test"]),
+    ):
+        harness.set_can_connect(POSTGRESQL_CONTAINER, True)
+
+        # Service is ACTIVE and health check throws an exception - should not restart
+        _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.ACTIVE)]
+        _pebble.get_checks.side_effect = Exception("Pebble error")
+        _member_started.return_value = True
+        _get_primary.return_value = harness.charm.unit.name
+
+        harness.charm.on.update_status.emit()
+
+        # Verify error was logged at debug level
+        _logger.debug.assert_any_call("Could not get health check status: Pebble error")
+        # Verify restart was NOT triggered (service is active, only health check failed to query)
+        _restart.assert_not_called()
 
 
 def test_on_update_status_no_connection(harness):
@@ -573,6 +656,10 @@ def test_on_update_status_with_error_on_get_primary(harness):
     ):
         # Mock the access to the list of Pebble services.
         _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.ACTIVE)]
+        # Mock healthy health check to avoid triggering restart path
+        _pebble.get_checks.return_value = [
+            MagicMock(status=CheckStatus.UP, failures=0, threshold=3)
+        ]
 
         _get_primary.side_effect = [RetryError("fake error")]
 
@@ -1928,3 +2015,33 @@ def test_on_secret_remove(harness, only_with_juju_secrets):
         event.secret.label = None
         harness.charm._on_secret_remove(event)
         assert not event.remove_revision.called
+
+
+def test_get_postgresql_startup_logs(harness):
+    """Test that _get_postgresql_startup_logs collects diagnostic information."""
+    with (
+        patch("charm.logger") as _logger,
+        patch("ops.model.Container.pebble") as _pebble,
+        patch("charm.Patroni.last_postgresql_logs") as _last_postgresql_logs,
+    ):
+        container = harness.charm.unit.get_container("postgresql")
+
+        # Setup mock for pebble logs exec
+        mock_exec = MagicMock()
+        mock_exec.wait_output.return_value = ("Sample pebble logs output", "")
+        _pebble.exec.return_value = mock_exec
+
+        # Setup mock for PostgreSQL logs
+        _last_postgresql_logs.return_value = "Sample PostgreSQL logs"
+
+        harness.charm._get_postgresql_startup_logs(container)
+
+        # Verify pebble logs were collected
+        _pebble.exec.assert_called_once_with(
+            ["pebble", "logs", "postgresql", "-n", "100"], combine_stderr=True
+        )
+        _logger.error.assert_any_call("Recent PostgreSQL/Patroni logs:\nSample pebble logs output")
+
+        # Verify PostgreSQL logs were collected
+        _last_postgresql_logs.assert_called_once()
+        _logger.error.assert_any_call("Recent PostgreSQL logs:\nSample PostgreSQL logs")
