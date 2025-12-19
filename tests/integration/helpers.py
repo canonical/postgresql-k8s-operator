@@ -43,6 +43,9 @@ APPLICATION_NAME = "postgresql-test-app"
 DATA_INTEGRATOR_APP_NAME = "data-integrator"
 STORAGE_PATH = METADATA["storage"]["data"]["location"]
 
+# PGDATA_PATH points to the workload's Postgres data directory (versioned path under the storage mount).
+PGDATA_PATH = f"{STORAGE_PATH}/16/main"
+
 
 class SecretNotFoundError(Exception):
     """Raised when a secret is not found."""
@@ -832,8 +835,10 @@ async def wait_for_idle_on_blocked(
     await asyncio.gather(
         ops_test.model.wait_for_idle(apps=[other_app_name], status="active"),
         ops_test.model.block_until(
-            lambda: unit.workload_status == "blocked"
-            and unit.workload_status_message == status_message
+            lambda: (
+                unit.workload_status == "blocked"
+                and unit.workload_status_message == status_message
+            )
         ),
     )
 
