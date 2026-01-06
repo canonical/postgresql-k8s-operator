@@ -385,9 +385,12 @@ async def test_application_removal(ops_test: OpsTest) -> None:
 
     # Block until the application is completely removed, or any unit gets in an error state.
     await ops_test.model.block_until(
-        lambda: APP_NAME not in ops_test.model.applications
-        or any(
-            unit.workload_status == "error" for unit in ops_test.model.applications[APP_NAME].units
+        lambda: (
+            APP_NAME not in ops_test.model.applications
+            or any(
+                unit.workload_status == "error"
+                for unit in ops_test.model.applications[APP_NAME].units
+            )
         )
     )
 
@@ -437,9 +440,12 @@ async def test_redeploy_charm_same_model_after_forcing_removal(ops_test: OpsTest
 
     # Block until the application is completely removed, or any unit gets in an error state.
     await ops_test.model.block_until(
-        lambda: APP_NAME not in ops_test.model.applications
-        or any(
-            unit.workload_status == "error" for unit in ops_test.model.applications[APP_NAME].units
+        lambda: (
+            APP_NAME not in ops_test.model.applications
+            or any(
+                unit.workload_status == "error"
+                for unit in ops_test.model.applications[APP_NAME].units
+            )
         )
     )
 
