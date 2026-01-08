@@ -1623,7 +1623,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         return True
 
-    @property
+    @cached_property
     def _patroni(self):
         """Returns an instance of the Patroni object."""
         return Patroni(
@@ -1636,7 +1636,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.get_secret(APP_SCOPE, USER_PASSWORD_KEY),
             self.get_secret(APP_SCOPE, REPLICATION_PASSWORD_KEY),
             self.get_secret(APP_SCOPE, REWIND_PASSWORD_KEY),
-            bool(self.unit_peer_data.get("tls")),
             self.get_secret(APP_SCOPE, PATRONI_PASSWORD_KEY),
         )
 
@@ -1671,6 +1670,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if not self.model.get_relation(PEER):
             return False
         return all(self.tls.get_tls_files())
+
+    @property
+    def is_peer_data_tls_set(self) -> bool:
+        """Return whether the TLS flag is raised in the peer data."""
+        return bool(self.unit_peer_data.get("tls"))
 
     @property
     def _endpoint(self) -> str:

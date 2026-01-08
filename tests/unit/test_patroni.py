@@ -38,7 +38,6 @@ def patroni(harness):
         "superuser-password",
         "replication-password",
         "rewind-password",
-        False,
         "patroni-password",
     )
     root = harness.get_filesystem_root("postgresql")
