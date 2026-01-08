@@ -97,7 +97,7 @@ class Patroni:
         # TLS is enabled, otherwise True is set because it's the default value.
         return f"{self._storage_path}/{TLS_CA_FILE}" if self._charm.is_peer_data_tls_set else True
 
-    @property
+    @cached_property
     def _patroni_auth(self) -> requests.auth.HTTPBasicAuth:
         return requests.auth.HTTPBasicAuth("patroni", self._patroni_password)
 
