@@ -76,7 +76,6 @@ class Patroni:
         superuser_password: str,
         replication_password: str,
         rewind_password: str,
-        tls_enabled: bool,
         patroni_password: str,
     ):
         self._charm = charm
@@ -89,21 +88,23 @@ class Patroni:
         self._superuser_password = superuser_password
         self._replication_password = replication_password
         self._rewind_password = rewind_password
-        self._tls_enabled = tls_enabled
         self._patroni_password = patroni_password
+
+    @property
+    def _verify(self) -> str | bool:
         # Variable mapping to requests library verify parameter.
         # The CA bundle file is used to validate the server certificate when
         # TLS is enabled, otherwise True is set because it's the default value.
-        self._verify = f"{self._storage_path}/{TLS_CA_FILE}" if tls_enabled else True
+        return f"{self._storage_path}/{TLS_CA_FILE}" if self._charm.is_peer_data_tls_set else True
 
-    @cached_property
+    @property
     def _patroni_auth(self) -> requests.auth.HTTPBasicAuth:
         return requests.auth.HTTPBasicAuth("patroni", self._patroni_password)
 
-    @cached_property
+    @property
     def _patroni_url(self) -> str:
         """Patroni REST API URL."""
-        return f"{'https' if self._tls_enabled else 'http'}://{self._endpoint}:8008"
+        return f"{'https' if self._charm.is_peer_data_tls_set else 'http'}://{self._endpoint}:8008"
 
     @property
     def rock_postgresql_version(self) -> str | None:
@@ -353,7 +354,7 @@ class Patroni:
             for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(1)):
                 with attempt:
                     r = requests.get(
-                        f"{'https' if self._tls_enabled else 'http'}://{self._primary_endpoint}:8008/health",
+                        f"{'https' if self._charm.is_peer_data_tls_set else 'http'}://{self._primary_endpoint}:8008/health",
                         verify=self._verify,
                         auth=self._patroni_auth,
                         timeout=PATRONI_TIMEOUT,
