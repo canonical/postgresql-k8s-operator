@@ -2,7 +2,7 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-from unittest.mock import MagicMock, Mock, PropertyMock, mock_open, patch
+from unittest.mock import MagicMock, PropertyMock, mock_open, patch
 
 import pytest
 import requests
@@ -89,54 +89,45 @@ def test_dict_to_hba_string(harness, patroni):
 
 
 def test_get_primary(harness, patroni):
-    with patch("requests.get") as _get:
-        # Mock Patroni cluster API.
-        _get.return_value.json.return_value = {
+    with (
+        patch(
+            "charm.Patroni.parallel_patroni_get_request", return_value=None
+        ) as _parallel_patroni_get_request,
+    ):
+        # No primary if no members
+        assert patroni.get_primary() is None
+
+        _parallel_patroni_get_request.return_value = {
             "members": [
-                {"name": "postgresql-k8s-0", "role": "replica"},
-                {"name": "postgresql-k8s-1", "role": "leader"},
-                {"name": "postgresql-k8s-2", "role": "replica"},
+                {
+                    "name": "postgresql-1",
+                    "role": "replica",
+                },
+                {
+                    "name": "postgresql-0",
+                    "role": "leader",
+                },
             ]
         }
+        # Test using the current Patroni URL.
+        assert patroni.get_primary() == "postgresql-0"
 
-        # Test returning pod name.
-        primary = patroni.get_primary()
-        assert primary == "postgresql-k8s-1"
-        _get.assert_called_once_with(
-            "http://postgresql-k8s-0:8008/cluster",
-            verify=True,
-            timeout=10,
-            auth=patroni._patroni_auth,
-        )
-
-        # Test returning unit name.
-        _get.reset_mock()
-        primary = patroni.get_primary(unit_name_pattern=True)
-        assert primary == "postgresql-k8s/1"
-        _get.assert_called_once_with(
-            "http://postgresql-k8s-0:8008/cluster",
-            verify=True,
-            timeout=10,
-            auth=patroni._patroni_auth,
-        )
+        # Test requesting the primary in the unit name pattern.
+        assert patroni.get_primary(unit_name_pattern=True) == "postgresql/0"
 
 
 def test_is_creating_backup(harness, patroni):
-    with patch("requests.get") as _get:
+    with patch("charm.Patroni.cluster_status") as _cluster_status:
         # Test when one member is creating a backup.
-        response = _get.return_value
-        response.json.return_value = {
-            "members": [
-                {"name": "postgresql-k8s-0"},
-                {"name": "postgresql-k8s-1", "tags": {"is_creating_backup": True}},
-            ]
-        }
+        _cluster_status.return_value = [
+            {"name": "postgresql-0"},
+            {"name": "postgresql-1", "tags": {"is_creating_backup": True}},
+        ]
         assert patroni.is_creating_backup
 
         # Test when no member is creating a backup.
-        response.json.return_value = {
-            "members": [{"name": "postgresql-k8s-0"}, {"name": "postgresql-k8s-1"}]
-        }
+        del patroni.cached_cluster_status
+        _cluster_status.return_value = [{"name": "postgresql-0"}, {"name": "postgresql-1"}]
         assert not patroni.is_creating_backup
 
 
@@ -380,28 +371,6 @@ def test_switchover(harness, patroni):
         with pytest.raises(SwitchoverNotSyncError):
             patroni.switchover("candidate")
             assert False
-
-
-def test_member_replication_lag(harness, patroni):
-    with (
-        patch("requests.get", side_effect=mocked_requests_get) as _get,
-        patch("charm.Patroni._patroni_url", new_callable=PropertyMock) as _patroni_url,
-    ):
-        # Test when the cluster member has a value for the lag field.
-        _patroni_url.return_value = "http://server1"
-        lag = patroni.member_replication_lag
-        assert lag == "1"
-
-        # Test when the cluster member doesn't have a value for the lag field.
-        harness.charm.unit.name = "postgresql-k8s/1"
-        lag = patroni.member_replication_lag
-        assert lag == "unknown"
-
-        # Test when the API call fails.
-        _patroni_url.return_value = "http://server2"
-        with patch.object(tenacity.Retrying, "iter", Mock(side_effect=tenacity.RetryError(None))):
-            lag = patroni.member_replication_lag
-            assert lag == "unknown"
 
 
 def test_member_started_true(patroni):

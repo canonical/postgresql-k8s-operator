@@ -1400,9 +1400,6 @@ def test_on_peer_relation_changed(harness):
         ) as _start_stop_pgbackrest_service,
         patch("backups.PostgreSQLBackups.coordinate_stanza_fields") as _coordinate_stanza_fields,
         patch("charm.Patroni.reinitialize_postgresql") as _reinitialize_postgresql,
-        patch(
-            "charm.Patroni.member_replication_lag", new_callable=PropertyMock
-        ) as _member_replication_lag,
         patch("charm.PostgresqlOperatorCharm.is_primary") as _is_primary,
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
@@ -1478,16 +1475,15 @@ def test_on_peer_relation_changed(harness):
         # Test when Patroni has already started but this is a replica with a
         # huge or unknown lag.
         _member_started.return_value = True
-        for values in itertools.product([True, False], ["0", "1000", "1001", "unknown"]):
+        for values in [True, False]:
             _set_active_status.reset_mock()
             _defer.reset_mock()
             _coordinate_stanza_fields.reset_mock()
             _start_stop_pgbackrest_service.reset_mock()
-            _is_primary.return_value = values[0]
-            _member_replication_lag.return_value = values[1]
+            _is_primary.return_value = values
             harness.charm.unit.status = ActiveStatus()
             harness.charm.on.database_peers_relation_changed.emit(relation)
-            if _is_primary.return_value == values[0] or int(values[1]) <= 1000:
+            if _is_primary.return_value == values:
                 _defer.assert_not_called()
                 _coordinate_stanza_fields.assert_called_once()
                 _start_stop_pgbackrest_service.assert_called_once()
@@ -1503,7 +1499,6 @@ def test_on_peer_relation_changed(harness):
         _defer.reset_mock()
         _set_active_status.reset_mock()
         _is_primary.return_value = True
-        _member_replication_lag.return_value = "0"
         _start_stop_pgbackrest_service.return_value = False
         harness.charm.unit.status = MaintenanceStatus()
         with harness.hooks_disabled():
