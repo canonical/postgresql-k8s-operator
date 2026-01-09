@@ -138,10 +138,14 @@ from relations.async_replication import (
 )
 from relations.db import EXTENSIONS_BLOCKING_MESSAGE, DbProvides
 from relations.postgresql_provider import PostgreSQLProvider
+from relations.tls_transfer import TLSTransfer
 from upgrade import PostgreSQLUpgrade, get_postgresql_k8s_dependencies_model
 from utils import any_cpu_to_cores, any_memory_to_bytes, new_password
 
 logger = logging.getLogger(__name__)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("asyncio").setLevel(logging.WARNING)
 
 EXTENSIONS_DEPENDENCY_MESSAGE = "Unsatisfied plugin dependencies. Please check the logs"
 EXTENSION_OBJECT_MESSAGE = "Cannot disable plugins: Existing objects depend on it. See logs"
@@ -175,6 +179,7 @@ class CannotConnectError(Exception):
         PostgreSQLLDAP,
         PostgreSQLProvider,
         PostgreSQLTLS,
+        TLSTransfer,
         PostgreSQLUpgrade,
         RollingOpsManager,
     ),
@@ -260,6 +265,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.backup = PostgreSQLBackups(self, "s3-parameters")
         self.ldap = PostgreSQLLDAP(self, "ldap")
         self.tls = PostgreSQLTLS(self, PEER, [self.primary_endpoint, self.replicas_endpoint])
+        self.tls_transfer = TLSTransfer(self, PEER)
         self.async_replication = PostgreSQLAsyncReplication(self)
         self.restart_manager = RollingOpsManager(
             charm=self, relation="restart", callback=self._restart
@@ -1004,7 +1010,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         try:
             self.push_tls_files_to_workload()
-            for ca_secret_name in self.tls.get_ca_secret_names():
+            for ca_secret_name in self.tls_transfer.get_ca_secret_names():
                 self.push_ca_file_into_workload(ca_secret_name)
         except (PathError, ProtocolError) as e:
             logger.error(
