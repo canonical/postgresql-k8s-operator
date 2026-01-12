@@ -340,10 +340,9 @@ async def test_wal_compression_config(ops_test: OpsTest) -> None:
     await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=300)
 
     result = await execute_query_on_unit(unit_address, password, "SHOW wal_compression")
-    # Verify it's a known compression algorithm
-    known_algorithms = ["pglz", "lz4", "zstd"]
-    assert result[0] in known_algorithms, (
-        f"Expected a known compression algorithm, got '{result[0]}'"
+    # In PostgreSQL 14, wal_compression is either "on" or "off" (no specific algorithms)
+    assert result[0] in ["on", "pglz"], (
+        f"Expected 'on' or 'pglz' for enabled compression, got '{result[0]}'"
     )
 
     # Test disabling WAL compression
