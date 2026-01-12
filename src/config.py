@@ -23,7 +23,6 @@ class CharmConfig(BaseConfigModel):
     connection_authentication_timeout: int | None
     connection_statement_timeout: int | None
     cpu_max_logical_replication_workers: Literal["auto"] | WorkerProcessInt | None
-    cpu_max_parallel_apply_workers_per_subscription: Literal["auto"] | WorkerProcessInt | None
     cpu_max_parallel_maintenance_workers: Literal["auto"] | WorkerProcessInt | None
     cpu_max_parallel_workers: Literal["auto"] | WorkerProcessInt | None
     cpu_max_sync_workers_per_subscription: Literal["auto"] | WorkerProcessInt | None

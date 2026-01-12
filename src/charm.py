@@ -2151,20 +2151,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             )
         return None
 
-    def _calculate_max_parallel_apply_workers_per_subscription(
-        self, base_max_workers: int, cpu_cores: int
-    ) -> str | None:
-        """Calculate cpu_max_parallel_apply_workers_per_subscription configuration value."""
-        if self.config.cpu_max_parallel_apply_workers_per_subscription == "auto":
-            return str(base_max_workers)
-        elif self.config.cpu_max_parallel_apply_workers_per_subscription is not None:
-            return self._validate_worker_config_value(
-                "cpu_max_parallel_apply_workers_per_subscription",
-                self.config.cpu_max_parallel_apply_workers_per_subscription,
-                cpu_cores,
-            )
-        return None
-
     def _calculate_worker_process_config(self, cpu_cores: int) -> dict[str, str]:
         """Calculate worker process configuration values.
 
@@ -2207,16 +2193,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if cpu_max_sync_workers_per_subscription_value is not None:
             result["max_sync_workers_per_subscription"] = (
                 cpu_max_sync_workers_per_subscription_value
-            )
-
-        cpu_max_parallel_apply_workers_per_subscription_value = (
-            self._calculate_max_parallel_apply_workers_per_subscription(
-                base_max_workers, cpu_cores
-            )
-        )
-        if cpu_max_parallel_apply_workers_per_subscription_value is not None:
-            result["max_parallel_apply_workers_per_subscription"] = (
-                cpu_max_parallel_apply_workers_per_subscription_value
             )
 
         return result

@@ -1616,7 +1616,6 @@ def test_update_config(harness):
             "max_parallel_maintenance_workers": "8",
             "max_logical_replication_workers": "8",
             "max_sync_workers_per_subscription": "8",
-            "max_parallel_apply_workers_per_subscription": "8",
             "wal_compression": "on",
         }
         _render_patroni_yml_file.assert_called_once_with(
@@ -1954,7 +1953,6 @@ def test_calculate_worker_process_config_auto_values(harness):
                 "cpu_max_parallel_maintenance_workers": "auto",
                 "cpu_max_logical_replication_workers": "auto",
                 "cpu_max_sync_workers_per_subscription": "auto",
-                "cpu_max_parallel_apply_workers_per_subscription": "auto",
             })
 
         result = harness.charm._calculate_worker_process_config(2)
@@ -1965,7 +1963,6 @@ def test_calculate_worker_process_config_auto_values(harness):
         assert result["max_parallel_maintenance_workers"] == "4"
         assert result["max_logical_replication_workers"] == "4"
         assert result["max_sync_workers_per_subscription"] == "4"
-        assert result["max_parallel_apply_workers_per_subscription"] == "4"
 
         # Test with 8 vCPUs (auto should be min(8, 2*8) = 8)
         result = harness.charm._calculate_worker_process_config(8)
@@ -2002,7 +1999,6 @@ def test_calculate_worker_process_config_all_workers_numeric(harness):
             "cpu_max_parallel_maintenance_workers": "10",
             "cpu_max_logical_replication_workers": "12",
             "cpu_max_sync_workers_per_subscription": "8",
-            "cpu_max_parallel_apply_workers_per_subscription": "8",
         })
 
     result = harness.charm._calculate_worker_process_config(4)  # Cap would be 40
@@ -2013,7 +2009,6 @@ def test_calculate_worker_process_config_all_workers_numeric(harness):
     assert result["max_parallel_maintenance_workers"] == "10"
     assert result["max_logical_replication_workers"] == "12"
     assert result["max_sync_workers_per_subscription"] == "8"
-    assert result["max_parallel_apply_workers_per_subscription"] == "8"
 
 
 def test_calculate_worker_process_config_validation_blocking_max_worker_processes(harness):
@@ -2058,7 +2053,6 @@ def test_calculate_worker_process_config_edge_cases(harness):
                 "cpu_max_parallel_maintenance_workers",
                 "cpu_max_logical_replication_workers",
                 "cpu_max_sync_workers_per_subscription",
-                "cpu_max_parallel_apply_workers_per_subscription",
                 "cpu_wal_compression",
             ]
         )
@@ -2071,7 +2065,6 @@ def test_calculate_worker_process_config_edge_cases(harness):
         "max_parallel_maintenance_workers": "8",
         "max_logical_replication_workers": "8",
         "max_sync_workers_per_subscription": "8",
-        "max_parallel_apply_workers_per_subscription": "8",
     }
     assert result == expected
 
@@ -2087,7 +2080,6 @@ def test_calculate_worker_process_config_edge_cases(harness):
         "max_parallel_maintenance_workers": "10",
         "max_logical_replication_workers": "10",
         "max_sync_workers_per_subscription": "10",
-        "max_parallel_apply_workers_per_subscription": "10",
     }
     assert result == expected
 
@@ -2100,7 +2092,6 @@ def test_calculate_worker_process_config_edge_cases(harness):
                 "cpu_max_parallel_maintenance_workers",
                 "cpu_max_logical_replication_workers",
                 "cpu_max_sync_workers_per_subscription",
-                "cpu_max_parallel_apply_workers_per_subscription",
             ]
         )
 
@@ -2112,7 +2103,6 @@ def test_calculate_worker_process_config_edge_cases(harness):
         "max_parallel_maintenance_workers": "8",
         "max_logical_replication_workers": "8",
         "max_sync_workers_per_subscription": "8",
-        "max_parallel_apply_workers_per_subscription": "8",
     }
     assert result == expected
 
@@ -2197,7 +2187,6 @@ def test_calculate_worker_process_config_all_workers_validation_blocking(harness
         ("cpu_max_parallel_maintenance_workers", "22"),
         ("cpu_max_logical_replication_workers", "30"),
         ("cpu_max_sync_workers_per_subscription", "25"),
-        ("cpu_max_parallel_apply_workers_per_subscription", "100"),
     ]
 
     for param_name, invalid_value in exceeding_configs:
@@ -2208,7 +2197,6 @@ def test_calculate_worker_process_config_all_workers_validation_blocking(harness
             "cpu_max_parallel_maintenance_workers": "auto",
             "cpu_max_logical_replication_workers": "auto",
             "cpu_max_sync_workers_per_subscription": "auto",
-            "cpu_max_parallel_apply_workers_per_subscription": "auto",
         }
         reset_config[param_name] = invalid_value
 
@@ -2229,7 +2217,6 @@ def test_calculate_worker_process_config_all_workers_validation_blocking(harness
             "cpu_max_parallel_maintenance_workers": "auto",
             "cpu_max_logical_replication_workers": "auto",
             "cpu_max_sync_workers_per_subscription": "auto",
-            "cpu_max_parallel_apply_workers_per_subscription": "auto",
         })
 
     result = harness.charm._calculate_worker_process_config(cpu_cores)
