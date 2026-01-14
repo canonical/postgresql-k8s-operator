@@ -1,6 +1,0 @@
-[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
-  database (waiting for exactly 1 units, current : 3)
-[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
-  database (waiting for exactly 1 units, current : 3)
-[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
-  database (waiting for exactly 1 units, current : 3)

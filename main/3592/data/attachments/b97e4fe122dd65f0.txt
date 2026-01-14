@@ -1,0 +1,2 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:787 Connecting to existing model concierge-microk8s:testing on unspecified cloud
+[32mINFO    [0m integration.test_trust:test_trust.py:58 Response from rbac check ('no' means enabled): no

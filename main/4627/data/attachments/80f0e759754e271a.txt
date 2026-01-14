@@ -1,0 +1,53 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-test-app/0 [executing] blocked: No database integration available
+  postgresql-test-app2/0 [executing] blocked: No database integration available
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Primary
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m integration.test_db:test_db.py:219 Verify that the charm remains blocked if there are other blocking relations
+[32mINFO    [0m integration.test_db:test_db.py:230 Verify that active status is restored when all blocking relations are gone
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] active: 
+  postgresql-k8s/1 [executing] active: 
+  postgresql-k8s/2 [idle] blocked: roles requested through relation, use postgresql_client interface instead
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.9    unsupported  02:02:28Z
+
+App                   Version  Status   Scale  Charm                Channel      Rev  Address         Exposed  Message
+another-finos-waltz            blocked      1  finos-waltz-k8s      latest/edge   33  10.152.183.188  no       Waiting for database configuration.
+finos-waltz                    active       1  finos-waltz-k8s      latest/edge   33  10.152.183.166  no       
+postgresql-k8s        14.19    active       3  postgresql-k8s                      0  10.152.183.246  no       
+postgresql-test-app            blocked      1  postgresql-test-app  latest/edge  410  10.152.183.69   no       No database integration available
+postgresql-test-app2           blocked      1  postgresql-test-app  latest/edge  410  10.152.183.20   no       No database integration available
+
+Unit                     Workload  Agent  Address       Ports  Message
+another-finos-waltz/0*   blocked   idle   10.1.113.143         Waiting for database configuration.
+finos-waltz/0*           active    idle   10.1.113.142         
+postgresql-k8s/0         active    idle   10.1.113.139         
+postgresql-k8s/1         active    idle   10.1.113.140         
+postgresql-k8s/2*        active    idle   10.1.113.141         
+postgresql-test-app2/0*  blocked   idle   10.1.113.145         No database integration available
+postgresql-test-app/0*   blocked   idle   10.1.113.144         No database integration available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-1: 01:33:06 ERROR unit.postgresql-k8s/1.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-postgresql-k8s-2: 01:35:13 ERROR unit.postgresql-k8s/2.juju-log db:3: Failed to create database: tuple concurrently updated
+
+unit-postgresql-k8s-2: 01:54:28 ERROR unit.postgresql-k8s/2.juju-log db:7: ERROR - `extensions` (pg_trgm, unaccent) cannot be requested through relations - Please enable extensions through `juju config` and add the relation again.
+unit-postgresql-k8s-2: 01:54:35 ERROR unit.postgresql-k8s/2.juju-log db:7: ERROR - `extensions` (unaccent, pg_trgm) cannot be requested through relations - Please enable extensions through `juju config` and add the relation again.
+unit-postgresql-k8s-2: 01:57:07 ERROR unit.postgresql-k8s/2.juju-log ERROR - `extensions` (pg_trgm, unaccent) cannot be requested through relations - Please enable extensions through `juju config` and add the relation again.
+unit-postgresql-k8s-2: 01:57:07 ERROR unit.postgresql-k8s/2.juju-log ERROR - `extensions` (pg_trgm, unaccent) cannot be requested through relations - Please enable extensions through `juju config` and add the relation again.
+unit-postgresql-k8s-2: 01:57:11 ERROR unit.postgresql-k8s/2.juju-log ERROR - `extensions` (pg_trgm, unaccent) cannot be requested through relations - Please enable extensions through `juju config` and add the relation again.
+unit-postgresql-k8s-2: 01:57:18 ERROR unit.postgresql-k8s/2.juju-log db:9: ERROR - `extensions` (unaccent, pg_trgm) cannot be requested through relations - Please enable extensions through `juju config` and add the relation again.
+unit-postgresql-k8s-2: 01:57:18 ERROR unit.postgresql-k8s/2.juju-log db:9: ERROR - `extensions` (unaccent, pg_trgm) cannot be requested through relations - Please enable extensions through `juju config` and add the relation again.
+unit-postgresql-k8s-2: 01:57:24 ERROR unit.postgresql-k8s/2.juju-log db:9: ERROR - `extensions` (unaccent, pg_trgm) cannot be requested through relations - Please enable extensions through `juju config` and add the relation again.
+unit-postgresql-k8s-2: 01:57:24 ERROR unit.postgresql-k8s/2.juju-log db:9: ERROR - `extensions` (unaccent, pg_trgm) cannot be requested through relations - Please enable extensions through `juju config` and add the relation again.
+unit-postgresql-k8s-2: 01:58:17 ERROR unit.postgresql-k8s/2.juju-log db:10: ERROR - `extensions` (pg_trgm, unaccent) cannot be requested through relations - Please enable extensions through `juju config` and add the relation again.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...

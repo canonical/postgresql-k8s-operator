@@ -1,0 +1,198 @@
+[32mINFO    [0m integration.test_backups:test_backups.py:393 Getting original backup config
+[32mINFO    [0m integration.test_backups:test_backups.py:400 Deleting the pod
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: DELETE https://10.1.0.32:16443/api/v1/namespaces/test/pods/new-postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  new-postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  new-postgresql-k8s/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  new-postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m integration.test_backups:test_backups.py:88 deleting the previously created backups
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.4.6    unsupported  02:02:34Z
+
+App                 Version  Status  Scale  Charm           Channel        Rev  Address         Exposed  Message
+new-postgresql-k8s  14.13    active      1  postgresql-k8s                   2  10.152.183.168  no       
+s3-integrator                active      1  s3-integrator   latest/stable   31  10.152.183.206  no       
+
+Unit                   Workload  Agent  Address     Ports  Message
+new-postgresql-k8s/0*  active    idle   10.1.95.82         Primary
+s3-integrator/0*       active    idle   10.1.95.72         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-postgresql-k8s-gcp-0: 01:47:32 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:47:32 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:47:41 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:47:41 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:47:52 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:47:52 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:00 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:00 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:09 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:09 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:18 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:18 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:26 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:26 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:37 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:37 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:48 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:48 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:58 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:58 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:49:09 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:49:09 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:49:20 ERROR unit.postgresql-k8s-gcp/0.juju-log Failed to get PostgreSQL last archived WAL: connection to server at "postgresql-k8s-gcp-primary.test.svc.cluster.local" (10.152.183.24), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-k8s-gcp-0: 01:49:20 ERROR unit.postgresql-k8s-gcp/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 415, in get_last_archived_wal
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 734, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 150, in _connect_to_database
+    connection = psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-gcp-primary.test.svc.cluster.local" (10.152.183.24), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/./src/charm.py", line 2202, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/ops/__init__.py", line 343, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/ops/_main.py", line 543, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/ops/_main.py", line 529, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/ops/_main.py", line 518, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name, self._juju_context)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/ops/_main.py", line 134, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/ops/framework.py", line 347, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/ops/framework.py", line 857, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/ops/framework.py", line 947, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 734, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/./src/charm.py", line 1428, in _on_update_status
+    ) and not self._was_restore_successful(container, services[0]):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 734, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/./src/charm.py", line 1472, in _was_restore_successful
+    can_use_s3_repository, validation_message = self.backup.can_use_s3_repository()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 734, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/src/backups.py", line 174, in can_use_s3_repository
+    return self._is_s3_wal_compatible(stanza)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 734, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/src/backups.py", line 180, in _is_s3_wal_compatible
+    charm_last_archived_wal = self.charm.postgresql.get_last_archived_wal()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 734, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 420, in get_last_archived_wal
+    raise PostgreSQLGetLastArchivedWALError()
+charms.postgresql_k8s.v0.postgresql.PostgreSQLGetLastArchivedWALError
+unit-postgresql-k8s-gcp-0: 01:49:21 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+unit-postgresql-k8s-gcp-0: 01:49:40 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:49:40 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:50:15 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:50:15 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:50:25 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:50:25 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:50:34 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:50:34 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:50:42 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:50:42 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:50:51 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:50:51 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:00 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:00 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:10 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:10 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:21 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:21 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:29 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:29 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:37 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:37 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:48 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:48 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:52:04 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:52:04 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-new-postgresql-k8s-0: 01:59:26 ERROR unit.new-postgresql-k8s/0.juju-log s3-parameters:13: Failed to create a session 'bucket' in region=region.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/src/backups.py", line 233, in _create_bucket_if_not_exists
+    s3 = session.resource(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/boto3/session.py", line 444, in resource
+    client = self.client(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/boto3/session.py", line 297, in client
+    return self._session.create_client(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/session.py", line 997, in create_client
+    client = client_creator.create_client(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/client.py", line 165, in create_client
+    client_args = self._get_client_args(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/client.py", line 524, in _get_client_args
+    return args_creator.get_client_args(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/args.py", line 138, in get_client_args
+    endpoint = endpoint_creator.create_endpoint(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/endpoint.py", line 408, in create_endpoint
+    raise ValueError(f"Invalid endpoint: {endpoint_url}")
+ValueError: Invalid endpoint: endpoint
+unit-new-postgresql-k8s-0: 01:59:42 ERROR unit.new-postgresql-k8s/0.juju-log s3-parameters:13: Failed to create a session 'bucket' in region=region.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/src/backups.py", line 233, in _create_bucket_if_not_exists
+    s3 = session.resource(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/boto3/session.py", line 444, in resource
+    client = self.client(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/boto3/session.py", line 297, in client
+    return self._session.create_client(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/session.py", line 997, in create_client
+    client = client_creator.create_client(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/client.py", line 165, in create_client
+    client_args = self._get_client_args(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/client.py", line 524, in _get_client_args
+    return args_creator.get_client_args(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/args.py", line 138, in get_client_args
+    endpoint = endpoint_creator.create_endpoint(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/endpoint.py", line 408, in create_endpoint
+    raise ValueError(f"Invalid endpoint: {endpoint_url}")
+ValueError: Invalid endpoint: endpoint
+unit-new-postgresql-k8s-0: 02:01:20 ERROR unit.new-postgresql-k8s/0.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-new-postgresql-k8s-0: 02:01:41 ERROR unit.new-postgresql-k8s/0.juju-log failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 326, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 734, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 150, in _connect_to_database
+    connection = psycopg2.connect(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "new-postgresql-k8s-primary.test.svc.cluster.local" (10.152.183.242), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/./src/charm.py", line 707, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 734, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 353, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError()
+charms.postgresql_k8s.v0.postgresql.PostgreSQLEnableDisableExtensionError
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...

@@ -1,0 +1,16 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.12   unsupported  01:32:26Z
+
+App             Version  Status  Scale  Charm           Channel  Rev  Address         Exposed  Message
+postgresql-k8s           error     0/2  postgresql-k8s             0  10.152.183.161  no       create Pod postgresql-k8s-1 in StatefulSet postgresql-k8s failed error: failed to create PVC postgresql-k8s-pgdata-0e...
+
+Unit              Workload  Agent       Address      Ports  Message
+postgresql-k8s/0  waiting   allocating  10.1.16.141         installing agent
+postgresql-k8s/1  waiting   allocating  10.1.16.142         installing agent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...

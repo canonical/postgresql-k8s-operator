@@ -1,0 +1,47 @@
+[32mINFO    [0m integration.test_plugins:test_plugins.py:214 Creating an index object which depends on the pg_trgm config
+[32mINFO    [0m integration.test_plugins:test_plugins.py:223 Disabling the plugin on charm config, waiting for blocked status
+[32mINFO    [0m integration.test_plugins:test_plugins.py:232 Enabling the plugin back on charm config, status should resolve
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] blocked: Cannot disable plugins: Existing objects depend on it. See logs
+  postgresql-k8s/1 [idle] active: 
+[32mINFO    [0m integration.test_plugins:test_plugins.py:238 Re-disabling plugin, waiting for blocked status to come back
+[32mINFO    [0m integration.test_plugins:test_plugins.py:247 Delete the object which depends on the plugin
+[32mINFO    [0m integration.test_plugins:test_plugins.py:253 Waiting for status to resolve again
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [executing] blocked: Cannot disable plugins: Existing objects depend on it. See logs
+  postgresql-k8s/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] blocked: Cannot disable plugins: Existing objects depend on it. See logs
+  postgresql-k8s/1 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] blocked: Cannot disable plugins: Existing objects depend on it. See logs
+  postgresql-k8s/1 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.4.6    unsupported  01:40:27Z
+
+App             Version  Status  Scale  Charm           Channel  Rev  Address         Exposed  Message
+postgresql-k8s  14.13    active      2  postgresql-k8s             0  10.152.183.100  no       
+
+Unit               Workload  Agent  Address      Ports  Message
+postgresql-k8s/0*  active    idle   10.1.96.202         Primary
+postgresql-k8s/1   active    idle   10.1.96.203         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-postgresql-k8s-0: 01:38:08 ERROR unit.postgresql-k8s/0.juju-log Failed to disable plugin: cannot drop extension pg_trgm because other objects depend on it
+DETAIL:  index example_idx depends on operator class gin_trgm_ops for access method gin
+HINT:  Use DROP ... CASCADE to drop the dependent objects too.
+
+Was the plugin enabled manually? If so, update charm config with `juju config postgresql-k8s plugin_<plugin_name>_enable=True`
+unit-postgresql-k8s-0: 01:38:52 ERROR unit.postgresql-k8s/0.juju-log Failed to disable plugin: cannot drop extension pg_trgm because other objects depend on it
+DETAIL:  index example_idx depends on operator class gin_trgm_ops for access method gin
+HINT:  Use DROP ... CASCADE to drop the dependent objects too.
+
+Was the plugin enabled manually? If so, update charm config with `juju config postgresql-k8s plugin_<plugin_name>_enable=True`
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...

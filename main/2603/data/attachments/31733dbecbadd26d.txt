@@ -1,0 +1,23 @@
+[32mINFO    [0m integration.test_backups:test_backups.py:87 deleting the previously created backups
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.8    unsupported  02:10:20Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Address         Exposed  Message
+postgresql-k8s-gcp        14.11    waiting      2  postgresql-k8s                             1  10.152.183.189  no       installing agent
+s3-integrator                      active       1  s3-integrator             latest/stable   24  10.152.183.227  no       
+self-signed-certificates           active       1  self-signed-certificates  latest/stable  151  10.152.183.109  no       
+
+Unit                         Workload  Agent      Address     Ports  Message
+postgresql-k8s-gcp/0*        active    idle       10.1.82.17         Primary
+postgresql-k8s-gcp/1         waiting   executing  10.1.82.18         awaiting for member to start
+s3-integrator/0*             active    idle       10.1.82.8          
+self-signed-certificates/0*  active    idle       10.1.82.9          
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+controller-0: 01:53:07 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql-k8s-aws": getting OCI image resources: unable to fetch OCI image resources for postgresql-k8s-aws: application "postgresql-k8s-aws" dying or dead
+unit-postgresql-k8s-gcp-1: 02:00:08 ERROR unit.postgresql-k8s-gcp/1.juju-log certificates:9: Cannot push TLS certificates: RetryError(<Future at 0x7f95b250b4f0 state=finished raised ConnectionError>)
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...

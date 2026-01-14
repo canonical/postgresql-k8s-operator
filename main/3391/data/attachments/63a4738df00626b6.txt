@@ -1,0 +1,61 @@
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:354 starting continuous writes to the database
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:357 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.11:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.11:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:243 Initial writes {'test.postgresql-k8s-0': 400, 'test.postgresql-k8s-2': 400}
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.11:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.11:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:249 Retry writes {'test.postgresql-k8s-0': 400, 'test.postgresql-k8s-2': 400}
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.11:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.11:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:249 Retry writes {'test.postgresql-k8s-0': 669, 'test.postgresql-k8s-2': 671}
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:360 reestablishing the relation
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:372 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.11:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.11:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:243 Initial writes {'test.postgresql-k8s-0': 1536, 'test.postgresql-k8s-2': 1538}
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.11:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.11:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:249 Retry writes {'test.postgresql-k8s-0': 1681, 'test.postgresql-k8s-2': 1683}
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:376 Get leader unit
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:379 promoting the first cluster
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [executing] active: 
+  postgresql-k8s/1 [executing] active: 
+  postgresql-k8s/2 [executing] maintenance: Creating replication...
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [executing] active: 
+  postgresql-k8s/1 [executing] active: 
+  postgresql-k8s/2 [executing] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: Waiting for the database to start
+  postgresql-k8s/1 [idle] waiting: Waiting for the standby leader start the database
+  postgresql-k8s/2 [idle] waiting: Still starting the database in the standby leader
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] waiting: Waiting for the database to be started in all units
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Standby
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:396 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.11:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.11:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:243 Initial writes {'test.postgresql-k8s-0': 7145, 'test.postgresql-k8s-2': 7146}
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.11:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.11:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:249 Retry writes {'test.postgresql-k8s-0': 7263, 'test.postgresql-k8s-2': 7265}
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:401 checking whether no writes were lost
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.11:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.11:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.0.11:16443/api/v1/namespaces/test-other/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"

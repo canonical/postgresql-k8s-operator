@@ -1,0 +1,47 @@
+[32mINFO    [0m juju.model:model.py:2097 Deploying local:jammy/postgresql-k8s-2
+[32mINFO    [0m juju.model:model.py:2097 Deploying local:jammy/postgresql-k8s-3
+[33mWARNING [0m juju.model:model.py:1563 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:model.py:1563 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m integration.test_backups:test_backups.py:289 waiting for the database charm to become blocked due to existing backups from another cluster in the repository
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-gcp/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] blocked: the S3 repository has backups from another cluster
+[32mINFO    [0m integration.test_backups:test_backups.py:299 waiting for the database charm to become blocked due to existing backups from another cluster in the repository
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  new-postgresql-k8s/0 [executing] blocked: the S3 repository has backups from another cluster
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  new-postgresql-k8s/0 [idle] blocked: the S3 repository has backups from another cluster
+[32mINFO    [0m integration.test_backups:test_backups.py:315 listing the available backups
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  new-postgresql-k8s/0 [idle] blocked: the S3 repository has backups from another cluster
+[32mINFO    [0m integration.test_backups:test_backups.py:333 restoring the backup
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  new-postgresql-k8s/0 [executing] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  new-postgresql-k8s/0 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  new-postgresql-k8s/0 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  new-postgresql-k8s/0 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  new-postgresql-k8s/0 [idle] blocked: the S3 repository has backups from another cluster
+[32mINFO    [0m integration.test_backups:test_backups.py:356 checking that the backup was correctly restored

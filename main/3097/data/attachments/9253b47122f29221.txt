@@ -1,0 +1,104 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:766 Connecting to existing model microk8s-localhost:test on unspecified cloud
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/jammy/s3-integrator-31
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/jammy/self-signed-certificates-155
+[32mINFO    [0m juju.model:model.py:2098 Deploying local:jammy/postgresql-k8s-0
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [allocating] waiting: installing agent
+  postgresql-k8s-gcp/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] maintenance: installing charm software
+  postgresql-k8s-gcp/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] unknown: 
+  postgresql-k8s-gcp/1 [executing] unknown: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] error: unknown container reason "ImagePullBackOff": Back-off pulling image "ghcr.io/canonical/charmed-postgresql@sha256:3abdbc00413b065fbfea8c6a3aaad8e137790ebb3e7bf5e1f42e19cbc1861926"
+  postgresql-k8s-gcp/1 [idle] error: unknown container reason "ImagePullBackOff": Back-off pulling image "ghcr.io/canonical/charmed-postgresql@sha256:3abdbc00413b065fbfea8c6a3aaad8e137790ebb3e7bf5e1f42e19cbc1861926"
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] waiting: awaiting for primary endpoint to be ready
+  postgresql-k8s-gcp/1 [idle] error: unknown container reason "ImagePullBackOff": Back-off pulling image "ghcr.io/canonical/charmed-postgresql@sha256:3abdbc00413b065fbfea8c6a3aaad8e137790ebb3e7bf5e1f42e19cbc1861926"
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] waiting: awaiting for primary endpoint to be ready
+  postgresql-k8s-gcp/1 [idle] error: unknown container reason "ImagePullBackOff": Back-off pulling image "ghcr.io/canonical/charmed-postgresql@sha256:3abdbc00413b065fbfea8c6a3aaad8e137790ebb3e7bf5e1f42e19cbc1861926"
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] error: OCI image pull error: rpc error: code = DeadlineExceeded desc = failed to pull and unpack image "ghcr.io/canonical/charmed-postgresql@sha256:3abdbc00413b065fbfea8c6a3aaad8e137790ebb3e7bf5e1f42e19cbc1861926": failed to resolve reference "ghcr.io/canonical/charmed-postgresql@sha256:3abdbc00413b065fbfea8c6a3aaad8e137790ebb3e7bf5e1f42e19cbc1861926": failed to do request: Head "https://ghcr.io/v2/canonical/charmed-postgresql/manifests/sha256:3abdbc00413b065fbfea8c6a3aaad8e137790ebb3e7bf5e1f42e19cbc1861926": dial tcp 140.82.112.34:443: i/o timeout
+  postgresql-k8s-gcp/1 [idle] error: OCI image pull error: rpc error: code = DeadlineExceeded desc = failed to pull and unpack image "ghcr.io/canonical/charmed-postgresql@sha256:3abdbc00413b065fbfea8c6a3aaad8e137790ebb3e7bf5e1f42e19cbc1861926": failed to resolve reference "ghcr.io/canonical/charmed-postgresql@sha256:3abdbc00413b065fbfea8c6a3aaad8e137790ebb3e7bf5e1f42e19cbc1861926": failed to do request: Head "https://ghcr.io/v2/canonical/charmed-postgresql/manifests/sha256:3abdbc00413b065fbfea8c6a3aaad8e137790ebb3e7bf5e1f42e19cbc1861926": dial tcp 140.82.112.34:443: i/o timeout
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] error: unknown container reason "ImagePullBackOff": Back-off pulling image "ghcr.io/canonical/charmed-postgresql@sha256:3abdbc00413b065fbfea8c6a3aaad8e137790ebb3e7bf5e1f42e19cbc1861926"
+  postgresql-k8s-gcp/1 [idle] error: unknown container reason "ImagePullBackOff": Back-off pulling image "ghcr.io/canonical/charmed-postgresql@sha256:3abdbc00413b065fbfea8c6a3aaad8e137790ebb3e7bf5e1f42e19cbc1861926"
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] error: unknown container reason "ImagePullBackOff": Back-off pulling image "ghcr.io/canonical/charmed-postgresql@sha256:3abdbc00413b065fbfea8c6a3aaad8e137790ebb3e7bf5e1f42e19cbc1861926"
+  postgresql-k8s-gcp/1 [idle] error: unknown container reason "ImagePullBackOff": Back-off pulling image "ghcr.io/canonical/charmed-postgresql@sha256:3abdbc00413b065fbfea8c6a3aaad8e137790ebb3e7bf5e1f42e19cbc1861926"
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] error: OCI image pull error: rpc error: code = DeadlineExceeded desc = failed to pull and unpack image "ghcr.io/canonical/charmed-postgresql@sha256:3abdbc00413b065fbfea8c6a3aaad8e137790ebb3e7bf5e1f42e19cbc1861926": failed to resolve reference "ghcr.io/canonical/charmed-postgresql@sha256:3abdbc00413b065fbfea8c6a3aaad8e137790ebb3e7bf5e1f42e19cbc1861926": failed to do request: Head "https://ghcr.io/v2/canonical/charmed-postgresql/manifests/sha256:3abdbc00413b065fbfea8c6a3aaad8e137790ebb3e7bf5e1f42e19cbc1861926": dial tcp 140.82.113.33:443: i/o timeout
+  postgresql-k8s-gcp/1 [idle] error: OCI image pull error: rpc error: code = DeadlineExceeded desc = failed to pull and unpack image "ghcr.io/canonical/charmed-postgresql@sha256:3abdbc00413b065fbfea8c6a3aaad8e137790ebb3e7bf5e1f42e19cbc1861926": failed to resolve reference "ghcr.io/canonical/charmed-postgresql@sha256:3abdbc00413b065fbfea8c6a3aaad8e137790ebb3e7bf5e1f42e19cbc1861926": failed to do request: Head "https://ghcr.io/v2/canonical/charmed-postgresql/manifests/sha256:3abdbc00413b065fbfea8c6a3aaad8e137790ebb3e7bf5e1f42e19cbc1861926": dial tcp 140.82.113.33:443: i/o timeout
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] error: unknown container reason "ImagePullBackOff": Back-off pulling image "ghcr.io/canonical/charmed-postgresql@sha256:3abdbc00413b065fbfea8c6a3aaad8e137790ebb3e7bf5e1f42e19cbc1861926"
+  postgresql-k8s-gcp/1 [idle] error: unknown container reason "ImagePullBackOff": Back-off pulling image "ghcr.io/canonical/charmed-postgresql@sha256:3abdbc00413b065fbfea8c6a3aaad8e137790ebb3e7bf5e1f42e19cbc1861926"
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] waiting: awaiting for primary endpoint to be ready
+  postgresql-k8s-gcp/1 [executing] unknown: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] waiting: awaiting for primary endpoint to be ready
+  postgresql-k8s-gcp/1 [executing] unknown: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+  postgresql-k8s-gcp/1 [executing] unknown: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+  postgresql-k8s-gcp/1 [executing] unknown: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] waiting: Updating extensions
+  postgresql-k8s-gcp/1 [executing] unknown: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] active: Primary
+  postgresql-k8s-gcp/1 [executing] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] active: Primary
+  postgresql-k8s-gcp/1 [executing] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] active: Primary
+  postgresql-k8s-gcp/1 [executing] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+  postgresql-k8s-gcp/1 [executing] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+  postgresql-k8s-gcp/1 [executing] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+  postgresql-k8s-gcp/1 [executing] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+  postgresql-k8s-gcp/1 [executing] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+  postgresql-k8s-gcp/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+  postgresql-k8s-gcp/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+  postgresql-k8s-gcp/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+  postgresql-k8s-gcp/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+  postgresql-k8s-gcp/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+  postgresql-k8s-gcp/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+  postgresql-k8s-gcp/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+  postgresql-k8s-gcp/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+  postgresql-k8s-gcp/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+  postgresql-k8s-gcp/1 [idle] waiting: awaiting for member to start

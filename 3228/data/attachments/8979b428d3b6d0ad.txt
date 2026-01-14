@@ -1,8 +1,0 @@
-[32mINFO    [0m integration.test_charm:test_charm.py:273 connecting to primary postgresql-k8s/1 on 10.1.134.13
-[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
-  postgresql-k8s/0 [idle] active: 
-  postgresql-k8s/1 [idle] active: Primary
-  postgresql-k8s/2 [idle] active: 
-[32mINFO    [0m integration.test_charm:test_charm.py:288 connecting to the database host: 10.1.134.14
-[32mINFO    [0m integration.test_charm:test_charm.py:288 connecting to the database host: 10.1.134.13
-[32mINFO    [0m integration.test_charm:test_charm.py:288 connecting to the database host: 10.1.134.15

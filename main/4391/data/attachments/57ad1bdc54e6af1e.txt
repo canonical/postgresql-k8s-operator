@@ -1,0 +1,20 @@
+[32mINFO    [0m integration.conftest:conftest.py:54 deleting the previously created backups
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.8    unsupported  01:47:46Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Address         Exposed  Message
+postgresql-k8s-gcp        14.18    active      1  postgresql-k8s                             0  10.152.183.89   no       
+s3-integrator                      active      1  s3-integrator             latest/stable  145  10.152.183.173  no       
+self-signed-certificates           active      1  self-signed-certificates  latest/stable  264  10.152.183.225  no       
+
+Unit                         Workload  Agent  Address      Ports  Message
+postgresql-k8s-gcp/0*        error     idle   10.1.52.204         hook failed: "update-status"
+s3-integrator/0*             active    idle   10.1.52.200         
+self-signed-certificates/0*  active    idle   10.1.52.201         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...

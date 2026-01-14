@@ -1,4 +1,0 @@
-[32mINFO    [0m integration.ha_tests.test_upgrade_from_stable:test_upgrade_from_stable.py:70 Get leader unit
-[32mINFO    [0m integration.ha_tests.test_upgrade_from_stable:test_upgrade_from_stable.py:76 Run pre-upgrade-check action
-[32mINFO    [0m integration.ha_tests.test_upgrade_from_stable:test_upgrade_from_stable.py:84 Assert partition is set to 2
-[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.151:16443/apis/apps/v1/namespaces/testing/statefulsets/postgresql-k8s "HTTP/1.1 200 OK"

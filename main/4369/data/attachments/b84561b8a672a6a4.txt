@@ -1,0 +1,65 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.8    unsupported  01:33:05Z
+
+App                  Version  Status   Scale  Charm                Channel      Rev  Address         Exposed  Message
+postgresql-k8s       14.18    waiting      3  postgresql-k8s       14/edge      636  10.152.183.36   no       awaiting for cluster to start
+postgresql-test-app           error        1  postgresql-test-app  latest/edge  398  10.152.183.237  no       hook failed: "database-relation-changed"
+
+Unit                    Workload  Agent      Address       Ports  Message
+postgresql-k8s/0        waiting   idle       10.1.112.204         awaiting for cluster to start
+postgresql-k8s/1        waiting   executing  10.1.112.206         awaiting for cluster to start
+postgresql-k8s/2*       active    executing  10.1.112.205         Primary (degraded)
+postgresql-test-app/0*  error     idle       10.1.112.200         hook failed: "database-relation-changed"
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-test-app-0: 01:33:04 ERROR unit.postgresql-test-app/0.juju-log database:4: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3637, in _run
+    result = subprocess.run(args, **kwargs)  # type: ignore
+  File "/usr/lib/python3.10/subprocess.py", line 526, in run
+    raise CalledProcessError(retcode, process.args,
+subprocess.CalledProcessError: Command '('/var/lib/juju/tools/unit-postgresql-test-app-0/secret-get', 'secret://e1bc3607-5f85-4e2f-8998-0daa1c50d230/d2al7d6sbu4c7ba2a6dg', '--label', 'database.4.user.secret', '--format=json')' returned non-zero exit status 1.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/src/charm.py", line 579, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 356, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 504, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 488, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 423, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 467, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 3188, in _on_relation_changed_event
+    self.relation_data._register_secrets_to_relation(event.relation, diff.added)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1249, in _register_secrets_to_relation
+    self._register_secret_to_relation(relation.name, relation.id, secret_uri, group)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1234, in _register_secret_to_relation
+    CachedSecret(self._model, self.component, label, secret_id).meta
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 651, in meta
+    self._secret_meta = self._model.get_secret(id=self._secret_uri, label=self.label)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 325, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 4023, in secret_get
+    result = self._run('secret-get', *args, return_output=True, use_json=True)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3639, in _run
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR secrets "d2al7d6sbu4c7ba2a6dg-1" is forbidden: User "system:serviceaccount:testing:unit-postgresql-test-app-0" cannot get resource "secrets" in API group "" in the namespace "testing"
+
+unit-postgresql-test-app-0: 01:33:04 ERROR juju.worker.uniter.operation hook "database-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...

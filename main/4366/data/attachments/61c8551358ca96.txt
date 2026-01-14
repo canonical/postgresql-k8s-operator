@@ -1,0 +1,19 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.8    unsupported  01:41:07Z
+
+App                  Version  Status   Scale  Charm                Channel      Rev  Address         Exposed  Message
+postgresql-k8s                waiting      3  postgresql-k8s       14/stable    495  10.152.183.144  no       awaiting for primary endpoint to be ready
+postgresql-test-app           blocked      1  postgresql-test-app  latest/edge  398  10.152.183.150  no       No database integration available
+
+Unit                    Workload  Agent      Address       Ports  Message
+postgresql-k8s/0*       waiting   executing  10.1.112.204         awaiting for primary endpoint to be ready
+postgresql-k8s/1        unknown   idle       10.1.112.206         
+postgresql-k8s/2        unknown   idle       10.1.112.205         
+postgresql-test-app/0*  blocked   idle       10.1.112.200         No database integration available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...

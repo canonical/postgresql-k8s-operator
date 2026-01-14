@@ -1,0 +1,37 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] active: 
+  postgresql-k8s/1 [executing] active: 
+  postgresql-k8s/2 [executing] active: 
+  postgresql-test-app/0 [executing] active: 
+  postgresql-test-app2/0 [executing] active: 
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m integration.test_db:test_db.py:229 Verify that the charm remains blocked if there are other blocking relations
+[32mINFO    [0m integration.test_db:test_db.py:240 Verify that active status is restored when all blocking relations are gone
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] active: 
+  postgresql-k8s/1 [executing] active: 
+  postgresql-k8s/2 [executing] blocked: roles requested through relation, use postgresql_client interface instead
+[32mINFO    [0m pytest_operator.plugin:plugin.py:929 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.6.2    unsupported  01:41:58Z
+
+App                   Version  Status  Scale  Charm                Channel      Rev  Address         Exposed  Message
+postgresql-k8s        14.15    active      3  postgresql-k8s                      0  10.152.183.156  no       
+postgresql-test-app            active      1  postgresql-test-app  latest/edge  342  10.152.183.37   no       
+postgresql-test-app2           active      1  postgresql-test-app  latest/edge  342  10.152.183.162  no       
+
+Unit                     Workload  Agent  Address       Ports  Message
+postgresql-k8s/0         active    idle   10.1.181.203         
+postgresql-k8s/1         active    idle   10.1.181.205         
+postgresql-k8s/2*        active    idle   10.1.181.204         
+postgresql-test-app2/0*  active    idle   10.1.181.209         
+postgresql-test-app/0*   active    idle   10.1.181.208         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:935 Juju error logs:
+
+unit-postgresql-k8s-2: 01:38:45 ERROR unit.postgresql-k8s/2.juju-log db:8: ERROR - `extensions` (unaccent, pg_trgm) cannot be requested through relations - Please enable extensions through `juju config` and add the relation again.
+unit-postgresql-k8s-2: 01:40:39 ERROR unit.postgresql-k8s/2.juju-log db:10: ERROR - `extensions` (pg_trgm, unaccent) cannot be requested through relations - Please enable extensions through `juju config` and add the relation again.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1017 Forgetting model main...

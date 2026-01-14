@@ -1,0 +1,19 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:784 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.7    unsupported  01:28:11Z
+
+App                  Version  Status   Scale  Charm                Channel      Rev  Address         Exposed  Message
+postgresql-k8s                waiting      3  postgresql-k8s       14/stable    177  10.152.183.140  no       installing agent
+postgresql-test-app           active       1  postgresql-test-app  latest/edge   50  10.152.183.204  no       
+
+Unit                    Workload  Agent  Address      Ports  Message
+postgresql-k8s/0        error     idle   10.1.50.140         unknown container reason "ImagePullBackOff": Back-off pulling image "registry.jujucharms.com/charm/kotcfrohea62xreenq...
+postgresql-k8s/1*       error     idle   10.1.50.142         unknown container reason "ImagePullBackOff": Back-off pulling image "registry.jujucharms.com/charm/kotcfrohea62xreenq...
+postgresql-k8s/2        error     idle   10.1.50.141         unknown container reason "ImagePullBackOff": Back-off pulling image "registry.jujucharms.com/charm/kotcfrohea62xreenq...
+postgresql-test-app/0*  active    idle   10.1.50.136         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:856 Forgetting main...

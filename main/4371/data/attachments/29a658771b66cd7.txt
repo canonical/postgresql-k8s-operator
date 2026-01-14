@@ -1,0 +1,34 @@
+[32mINFO    [0m integration.test_backups_gcp:test_backups_gcp.py:232 Getting original backup config
+[32mINFO    [0m integration.test_backups_gcp:test_backups_gcp.py:239 Deleting the pod
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: DELETE https://10.1.0.190:16443/api/v1/namespaces/testing/pods/new-postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  new-postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  new-postgresql-k8s/0 [executing] maintenance: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  new-postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  new-postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m integration.conftest:conftest.py:54 deleting the previously created backups
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.8    unsupported  01:58:10Z
+
+App                 Version  Status  Scale  Charm           Channel        Rev  Address         Exposed  Message
+new-postgresql-k8s  14.18    active      1  postgresql-k8s                   2  10.152.183.237  no       
+s3-integrator                active      1  s3-integrator   latest/stable  145  10.152.183.131  no       
+
+Unit                   Workload  Agent  Address      Ports  Message
+new-postgresql-k8s/0*  active    idle   10.1.52.210         Primary
+s3-integrator/0*       active    idle   10.1.52.200         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-s3-integrator-0: 01:48:29 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-self-signed-certificates-0: 01:48:29 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-k8s-gcp-0: 01:48:29 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-new-postgresql-k8s-0: 01:56:11 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-new-postgresql-k8s-0: 01:56:47 ERROR unit.new-postgresql-k8s/0.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...

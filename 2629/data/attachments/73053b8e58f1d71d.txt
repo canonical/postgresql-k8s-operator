@@ -1,1 +1,0 @@
-[32mINFO    [0m httpx:_client.py:1773 HTTP Request: GET https://10.1.0.218:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"

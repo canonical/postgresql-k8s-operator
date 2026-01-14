@@ -1,0 +1,145 @@
+[32mINFO    [0m integration.test_backups:test_backups.py:378 Getting original backup config
+[32mINFO    [0m integration.test_backups:test_backups.py:385 Deleting the pod
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: DELETE https://10.1.0.30:16443/api/v1/namespaces/test/pods/new-postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  new-postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  new-postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  new-postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m integration.test_backups:test_backups.py:82 deleting the previously created backups
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.6.1    unsupported  02:05:08Z
+
+App                 Version  Status  Scale  Charm           Channel        Rev  Address        Exposed  Message
+new-postgresql-k8s  14.13    active      1  postgresql-k8s                   2  10.152.183.22  no       
+s3-integrator                active      1  s3-integrator   latest/stable   77  10.152.183.20  no       
+
+Unit                   Workload  Agent  Address     Ports  Message
+new-postgresql-k8s/0*  active    idle   10.1.87.18         Primary
+s3-integrator/0*       active    idle   10.1.87.8          
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-postgresql-k8s-gcp-0: 01:46:47 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:46:47 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:47:13 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:47:13 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:47:22 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:47:22 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:47:31 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:47:31 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:47:40 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:47:40 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:47:52 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:47:52 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:04 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:04 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:13 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:13 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:22 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:22 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:30 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:30 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:38 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:38 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:48 ERROR unit.postgresql-k8s-gcp/0.juju-log Failed to get PostgreSQL current timeline id: connection to server at "postgresql-k8s-gcp-primary.test.svc.cluster.local" (10.152.183.214), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-k8s-gcp-0: 01:48:48 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:48:48 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:49:15 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:49:15 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:49:31 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:49:31 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:49:40 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:49:40 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:50:11 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:50:11 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:50:21 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:50:21 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:50:29 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:50:29 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:50:40 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:50:40 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:50:51 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:50:51 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:02 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:02 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:13 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:13 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:24 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:24 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:32 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:32 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:42 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:42 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:51 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:51:51 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:52:03 ERROR unit.postgresql-k8s-gcp/0.juju-log Failed to get PostgreSQL current timeline id: connection to server at "postgresql-k8s-gcp-primary.test.svc.cluster.local" (10.152.183.214), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-k8s-gcp-0: 01:52:03 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:52:03 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:52:29 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:52:29 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:52:45 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:52:45 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:52:49 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:52:49 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:52:59 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service get failed: services "postgresql-k8s-gcp" not found
+unit-postgresql-k8s-gcp-0: 01:52:59 ERROR unit.postgresql-k8s-gcp/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-gcp" not found
+controller-0: 01:56:45 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql-k8s-gcp": getting OCI image resources: unable to fetch OCI image resources for postgresql-k8s-gcp: application "postgresql-k8s-gcp" dying or dead
+unit-new-postgresql-k8s-0: 01:57:58 ERROR unit.new-postgresql-k8s/0.juju-log Restore failed: Cannot restore to the timeline without restore-to-time parameter
+unit-new-postgresql-k8s-0: 01:58:08 ERROR unit.new-postgresql-k8s/0.juju-log Restore failed: Cannot restore to the timeline without restore-to-time parameter
+unit-new-postgresql-k8s-0: 01:58:17 ERROR unit.new-postgresql-k8s/0.juju-log Restore failed: Cannot restore to the timeline without restore-to-time parameter
+unit-new-postgresql-k8s-0: 01:58:30 ERROR unit.new-postgresql-k8s/0.juju-log Restore failed: Cannot restore to the timeline without restore-to-time parameter
+unit-new-postgresql-k8s-0: 01:58:45 ERROR unit.new-postgresql-k8s/0.juju-log Restore failed: Cannot restore to the timeline without restore-to-time parameter
+unit-new-postgresql-k8s-0: 01:59:09 ERROR unit.new-postgresql-k8s/0.juju-log Restore failed: Cannot restore to the timeline without restore-to-time parameter
+unit-new-postgresql-k8s-0: 01:59:46 ERROR unit.new-postgresql-k8s/0.juju-log Restore failed: Cannot restore to the timeline without restore-to-time parameter
+unit-new-postgresql-k8s-0: 02:00:24 ERROR unit.new-postgresql-k8s/0.juju-log Restore failed: Cannot restore to the timeline without restore-to-time parameter
+unit-new-postgresql-k8s-0: 02:01:01 ERROR unit.new-postgresql-k8s/0.juju-log Restore failed: Cannot restore to the timeline without restore-to-time parameter
+unit-new-postgresql-k8s-0: 02:01:39 ERROR unit.new-postgresql-k8s/0.juju-log Restore failed: Cannot restore to the timeline without restore-to-time parameter
+unit-new-postgresql-k8s-0: 02:01:54 ERROR unit.new-postgresql-k8s/0.juju-log s3-parameters:13: Failed to create a session 'bucket' in region=region.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/src/backups.py", line 235, in _create_bucket_if_not_exists
+    s3 = session.resource(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/boto3/session.py", line 444, in resource
+    client = self.client(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/boto3/session.py", line 297, in client
+    return self._session.create_client(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/session.py", line 997, in create_client
+    client = client_creator.create_client(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/client.py", line 165, in create_client
+    client_args = self._get_client_args(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/client.py", line 524, in _get_client_args
+    return args_creator.get_client_args(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/args.py", line 138, in get_client_args
+    endpoint = endpoint_creator.create_endpoint(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/endpoint.py", line 408, in create_endpoint
+    raise ValueError(f"Invalid endpoint: {endpoint_url}")
+ValueError: Invalid endpoint: endpoint
+unit-new-postgresql-k8s-0: 02:02:09 ERROR unit.new-postgresql-k8s/0.juju-log s3-parameters:13: Failed to create a session 'bucket' in region=region.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/src/backups.py", line 235, in _create_bucket_if_not_exists
+    s3 = session.resource(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/boto3/session.py", line 444, in resource
+    client = self.client(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/boto3/session.py", line 297, in client
+    return self._session.create_client(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/session.py", line 997, in create_client
+    client = client_creator.create_client(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/client.py", line 165, in create_client
+    client_args = self._get_client_args(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/client.py", line 524, in _get_client_args
+    return args_creator.get_client_args(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/args.py", line 138, in get_client_args
+    endpoint = endpoint_creator.create_endpoint(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/botocore/endpoint.py", line 408, in create_endpoint
+    raise ValueError(f"Invalid endpoint: {endpoint_url}")
+ValueError: Invalid endpoint: endpoint
+unit-new-postgresql-k8s-0: 02:03:51 ERROR unit.new-postgresql-k8s/0.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...

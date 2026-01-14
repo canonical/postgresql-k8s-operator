@@ -1,0 +1,204 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:766 Connecting to existing model microk8s-localhost:test on unspecified cloud
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/jammy/s3-integrator-31
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/jammy/self-signed-certificates-155
+[32mINFO    [0m juju.model:model.py:2098 Deploying local:jammy/postgresql-k8s-0
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [allocating] waiting: installing agent
+  postgresql-k8s-aws/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [allocating] waiting: agent initialising
+  postgresql-k8s-aws/1 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [executing] unknown: 
+  postgresql-k8s-aws/1 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [executing] unknown: 
+  postgresql-k8s-aws/1 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] unknown: 
+  postgresql-k8s-aws/1 [idle] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] unknown: 
+  postgresql-k8s-aws/1 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s-aws/1 [idle] maintenance: reconfiguring cluster
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [executing] active: 
+  postgresql-k8s-aws/1 [idle] maintenance: Executing restart operation
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] waiting: Awaiting restart operation
+  postgresql-k8s-aws/1 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [idle] active: Primary
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m integration.helpers:helpers.py:856 configuring S3 integrator for AWS
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [executing] active: 
+  postgresql-k8s-aws/1 [executing] active: Primary
+  s3-integrator/0 [executing] blocked: Missing parameters: ['access-key', 'secret-key']
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [executing] maintenance: initialising stanza
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/1 [executing] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [executing] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [idle] maintenance: initialising stanza
+[32mINFO    [0m integration.helpers:helpers.py:877 creating a table in the database
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [idle] active: Primary
+[32mINFO    [0m integration.helpers:helpers.py:888 creating a backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [executing] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/1 [idle] active: Primary
+[32mINFO    [0m integration.helpers:helpers.py:897 listing the available backups
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [idle] active: Primary
+[32mINFO    [0m integration.helpers:helpers.py:906 creating a second table in the database
+[32mINFO    [0m integration.helpers:helpers.py:913 creating a backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [idle] active: Primary
+[32mINFO    [0m integration.helpers:helpers.py:924 listing the available backups
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [idle] active: Primary
+[32mINFO    [0m integration.helpers:helpers.py:933 creating a second table in the database
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws (waiting for exactly 1 units, current : 2)
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws (waiting for exactly 1 units, current : 2)
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: Primary
+[32mINFO    [0m integration.helpers:helpers.py:949 restoring the backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: Primary
+[32mINFO    [0m integration.helpers:helpers.py:962 checking that the backup was correctly restored
+[32mINFO    [0m integration.helpers:helpers.py:994 restoring the backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [executing] active: Primary
+[32mINFO    [0m integration.helpers:helpers.py:1007 checking that the backup was correctly restored
+[32mINFO    [0m integration.test_backups:test_backups.py:124 removing the TLS relation
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws (waiting for exactly 2 units, current : 1)
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] maintenance: reconfiguring cluster
+  postgresql-k8s-aws/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: Primary
+  postgresql-k8s-aws/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/1 [executing] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s-aws/1 [idle] active: 
+[32mINFO    [0m integration.test_backups:test_backups.py:136 ensuring that the replication is working correctly
+[32mINFO    [0m integration.test_backups:test_backups.py:166 performing a switchover from postgresql-k8s-aws/0 to postgresql-k8s-aws/1
+[32mINFO    [0m integration.test_backups:test_backups.py:169 checking that the primary unit has changed
+[32mINFO    [0m integration.test_backups:test_backups.py:178 listing the available backups to ensure that the stanza is working correctly
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [idle] active: Primary
+[32mINFO    [0m integration.test_backups:test_backups.py:88 deleting the previously created backups
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.4.6    unsupported  01:54:04Z
+
+App            Version  Status  Scale  Charm          Channel        Rev  Address         Exposed  Message
+s3-integrator           active      1  s3-integrator  latest/stable   31  10.152.183.214  no       
+
+Unit              Workload  Agent  Address     Ports  Message
+s3-integrator/0*  active    idle   10.1.236.8         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-postgresql-k8s-aws-0: 01:46:17 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:46:17 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:46:39 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:46:39 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:46:48 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:46:48 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:46:56 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:46:56 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:47:07 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:47:07 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:47:16 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:47:16 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:47:41 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:47:41 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:47:56 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:47:56 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:47:59 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:47:59 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:48:10 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:48:10 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:48:31 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:48:31 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:48:40 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:48:40 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:48:49 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:48:49 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:48:58 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:48:58 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:49:07 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:49:07 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:49:16 ERROR unit.postgresql-k8s-aws/0.juju-log Failed to get PostgreSQL current timeline id: connection to server at "postgresql-k8s-aws-primary.test.svc.cluster.local" (10.152.183.81), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-k8s-aws-0: 01:49:16 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:49:16 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:49:42 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:49:42 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:49:57 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:49:57 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:50:00 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:50:00 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:50:09 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service get failed: services "postgresql-k8s-aws" not found
+unit-postgresql-k8s-aws-0: 01:50:09 ERROR unit.postgresql-k8s-aws/0.juju-log Kubernetes service patch failed: services "postgresql-k8s-aws" not found
+controller-0: 01:53:36 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql-k8s-aws": getting OCI image resources: unable to fetch OCI image resources for postgresql-k8s-aws: application "postgresql-k8s-aws" dying or dead
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...

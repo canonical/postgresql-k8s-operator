@@ -1,0 +1,201 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.8    unsupported  02:35:32Z
+
+App                  Version  Status   Scale  Charm                Channel  Rev  Address         Exposed  Message
+another-application           active       1  postgresql-test-app  edge     127  10.152.183.213  no       received database credentials of the first database
+another-database     14.11    active       3  postgresql-k8s                  1  10.152.183.191  no       Primary
+database             14.11    waiting      3  postgresql-k8s                  0  10.152.183.252  no       installing agent
+postgresql-test-app           active       2  postgresql-test-app  edge     127  10.152.183.59   no       received database credentials of the second database
+
+Unit                    Workload  Agent  Address       Ports  Message
+another-application/0*  active    idle   10.1.254.150         received database credentials of the first database
+another-database/0*     active    idle   10.1.254.147         Primary
+another-database/1      active    idle   10.1.254.149         
+another-database/2      active    idle   10.1.254.148         
+database/0*             active    idle   10.1.254.143         Primary
+database/1              unknown   idle   10.1.254.151         
+database/2              unknown   idle   10.1.254.152         
+postgresql-test-app/0*  active    idle   10.1.254.136         received database credentials of the second database
+postgresql-test-app/1   active    idle   10.1.254.137         received database credentials of the second database
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+unit-database-2: 01:45:44 ERROR unit.database/2.juju-log failed to patch k8s Endpoints patroni-database-config
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 188, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/httpx/_models.py", line 761, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '409 Conflict' for url 'https://10.152.183.1/api/v1/namespaces/test/endpoints/patroni-database-config?force=true&fieldManager=database'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/409
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-2/charm/./src/charm.py", line 1097, in _on_stop
+    client.apply(
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/client.py", line 457, in apply
+    return self.patch(type(obj), name, obj, namespace=namespace,
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/client.py", line 325, in patch
+    return self._client.request("patch", res=res, name=name, namespace=namespace, obj=obj,
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 245, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 196, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 190, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Operation cannot be fulfilled on endpoints "patroni-database-config": the object has been modified; please apply your changes to the latest version and try again
+unit-database-2: 01:45:44 ERROR unit.database/2.juju-log failed to patch k8s Endpoints database-primary
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 188, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/httpx/_models.py", line 761, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '409 Conflict' for url 'https://10.152.183.1/api/v1/namespaces/test/endpoints/database-primary?force=true&fieldManager=database'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/409
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-2/charm/./src/charm.py", line 1097, in _on_stop
+    client.apply(
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/client.py", line 457, in apply
+    return self.patch(type(obj), name, obj, namespace=namespace,
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/client.py", line 325, in patch
+    return self._client.request("patch", res=res, name=name, namespace=namespace, obj=obj,
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 245, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 196, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 190, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Operation cannot be fulfilled on endpoints "database-primary": the object has been modified; please apply your changes to the latest version and try again
+unit-database-2: 01:45:44 ERROR unit.database/2.juju-log failed to patch k8s Endpoints patroni-database-sync
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 188, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/httpx/_models.py", line 761, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '409 Conflict' for url 'https://10.152.183.1/api/v1/namespaces/test/endpoints/patroni-database-sync?force=true&fieldManager=database'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/409
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-2/charm/./src/charm.py", line 1097, in _on_stop
+    client.apply(
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/client.py", line 457, in apply
+    return self.patch(type(obj), name, obj, namespace=namespace,
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/client.py", line 325, in patch
+    return self._client.request("patch", res=res, name=name, namespace=namespace, obj=obj,
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 245, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 196, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 190, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Operation cannot be fulfilled on endpoints "patroni-database-sync": the object has been modified; please apply your changes to the latest version and try again
+unit-database-2: 01:45:44 ERROR unit.database/2.juju-log failed to patch k8s Endpoints database-replicas
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 188, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/httpx/_models.py", line 761, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '409 Conflict' for url 'https://10.152.183.1/api/v1/namespaces/test/endpoints/database-replicas?force=true&fieldManager=database'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/409
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-2/charm/./src/charm.py", line 1097, in _on_stop
+    client.apply(
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/client.py", line 457, in apply
+    return self.patch(type(obj), name, obj, namespace=namespace,
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/client.py", line 325, in patch
+    return self._client.request("patch", res=res, name=name, namespace=namespace, obj=obj,
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 245, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 196, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 190, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Operation cannot be fulfilled on endpoints "database-replicas": the object has been modified; please apply your changes to the latest version and try again
+unit-database-2: 01:45:44 ERROR unit.database/2.juju-log failed to patch k8s Endpoints database
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 188, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/httpx/_models.py", line 761, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '409 Conflict' for url 'https://10.152.183.1/api/v1/namespaces/test/endpoints/database?force=true&fieldManager=database'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/409
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-2/charm/./src/charm.py", line 1097, in _on_stop
+    client.apply(
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/client.py", line 457, in apply
+    return self.patch(type(obj), name, obj, namespace=namespace,
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/client.py", line 325, in patch
+    return self._client.request("patch", res=res, name=name, namespace=namespace, obj=obj,
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 245, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 196, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 190, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Operation cannot be fulfilled on endpoints "database": the object has been modified; please apply your changes to the latest version and try again
+unit-database-2: 01:45:44 ERROR unit.database/2.juju-log failed to patch k8s Endpoints patroni-database
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 188, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/httpx/_models.py", line 761, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '409 Conflict' for url 'https://10.152.183.1/api/v1/namespaces/test/endpoints/patroni-database?force=true&fieldManager=database'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/409
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-2/charm/./src/charm.py", line 1097, in _on_stop
+    client.apply(
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/client.py", line 457, in apply
+    return self.patch(type(obj), name, obj, namespace=namespace,
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/client.py", line 325, in patch
+    return self._client.request("patch", res=res, name=name, namespace=namespace, obj=obj,
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 245, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 196, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 190, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Operation cannot be fulfilled on endpoints "patroni-database": the object has been modified; please apply your changes to the latest version and try again
+unit-database-2: 01:45:44 ERROR unit.database/2.juju-log failed to patch k8s Service patroni-database-config
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 188, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/httpx/_models.py", line 761, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '409 Conflict' for url 'https://10.152.183.1/api/v1/namespaces/test/services/patroni-database-config?force=true&fieldManager=database'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/409
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-2/charm/./src/charm.py", line 1097, in _on_stop
+    client.apply(
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/client.py", line 457, in apply
+    return self.patch(type(obj), name, obj, namespace=namespace,
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/client.py", line 325, in patch
+    return self._client.request("patch", res=res, name=name, namespace=namespace, obj=obj,
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 245, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 196, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lightkube/core/generic_client.py", line 190, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Operation cannot be fulfilled on services "patroni-database-config": the object has been modified; please apply your changes to the latest version and try again
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...

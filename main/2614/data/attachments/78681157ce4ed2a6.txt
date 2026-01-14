@@ -1,0 +1,7 @@
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:275 stopping database from postgresql-k8s/1
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:279 removing data from postgresql-k8s/1
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:292 checking whether writes are increasing
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:298 checking whether a new primary was elected
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:306 enabling WAL rotation on postgresql-k8s/1
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:306 enabling WAL rotation on postgresql-k8s/1
+[32mINFO    [0m integration.ha_tests.test_self_healing:test_self_healing.py:310 rotating WAL segments on None

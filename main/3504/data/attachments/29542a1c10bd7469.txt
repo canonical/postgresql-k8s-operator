@@ -1,0 +1,6 @@
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.97:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:242 Initial writes {'test.postgresql-k8s-1': 177}
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.97:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Retry writes {'test.postgresql-k8s-1': 309}
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.97:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.97:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"

@@ -1,0 +1,30 @@
+[32mINFO    [0m integration.test_backups_gcp:test_backups_gcp.py:280 Getting original backup config
+[32mINFO    [0m integration.test_backups_gcp:test_backups_gcp.py:287 Deleting the pod
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: DELETE https://10.1.0.192:16443/api/v1/namespaces/testing/pods/new-postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  new-postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  new-postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  new-postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m integration.test_backups_gcp:test_backups_gcp.py:79 deleting the previously created backups
+[32mINFO    [0m pytest_operator.plugin:plugin.py:936 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.3    unsupported  01:57:09Z
+
+App                 Version  Status  Scale  Charm           Channel        Rev  Address        Exposed  Message
+new-postgresql-k8s  14.15    active      1  postgresql-k8s                   2  10.152.183.67  no       
+s3-integrator                active      1  s3-integrator   latest/stable   77  10.152.183.87  no       
+
+Unit                   Workload  Agent  Address      Ports  Message
+new-postgresql-k8s/0*  active    idle   10.1.19.146         Primary
+s3-integrator/0*       active    idle   10.1.19.136         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:942 Juju error logs:
+
+unit-s3-integrator-0: 01:48:52 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-new-postgresql-k8s-0: 01:55:56 ERROR unit.new-postgresql-k8s/0.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-s3-integrator-0: 01:56:01 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1024 Forgetting model main...

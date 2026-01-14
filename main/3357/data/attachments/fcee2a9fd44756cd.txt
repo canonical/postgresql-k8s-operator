@@ -1,0 +1,87 @@
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [executing] blocked: Insufficient permissions, try: `juju trust untrusted-postgresql-k8s --scope=cluster`
+  untrusted-postgresql-k8s/1 [executing] maintenance: installing charm software
+  untrusted-postgresql-k8s/2 [executing] maintenance: installing charm software
+[1m[31mERROR   [0m asyncio:base_events.py:1758 Task exception was never retrieved
+future: <Task finished name='Task-282' coro=<Connection._connect.<locals>._try_endpoint() done, defined at /home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py:803> exception=OSError(9, 'Bad file descriptor')>
+Traceback (most recent call last):
+  File "/home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 806, in _try_endpoint
+    return await self._open(endpoint, cacert)
+  File "/home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/juju/client/connection.py", line 427, in _open
+    return (await websockets.connect(
+  File "/home/runner/work/postgresql-k8s-operator/postgresql-k8s-operator/.tox/integration/lib/python3.10/site-packages/websockets/legacy/client.py", line 654, in __await_impl__
+    _transport, protocol = await self._create_connection()
+  File "/usr/lib/python3.10/asyncio/base_events.py", line 1103, in create_connection
+    transport, protocol = await self._create_connection_transport(
+  File "/usr/lib/python3.10/asyncio/base_events.py", line 1119, in _create_connection_transport
+    sock.setblocking(False)
+OSError: [Errno 9] Bad file descriptor
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [executing] waiting: awaiting for cluster to start
+  untrusted-postgresql-k8s/1 [executing] unknown: 
+  untrusted-postgresql-k8s/2 [executing] unknown: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+  untrusted-postgresql-k8s/1 [idle] unknown: 
+  untrusted-postgresql-k8s/2 [idle] unknown: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] active: Primary
+  untrusted-postgresql-k8s/1 [idle] unknown: 
+  untrusted-postgresql-k8s/2 [idle] unknown: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [executing] active: Primary
+  untrusted-postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+  untrusted-postgresql-k8s/2 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] active: Primary
+  untrusted-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+  untrusted-postgresql-k8s/2 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] active: Primary
+  untrusted-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+  untrusted-postgresql-k8s/2 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [executing] active: Primary
+  untrusted-postgresql-k8s/1 [idle] active: 
+  untrusted-postgresql-k8s/2 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] active: Primary
+  untrusted-postgresql-k8s/1 [idle] active: 
+  untrusted-postgresql-k8s/2 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] active: Primary
+  untrusted-postgresql-k8s/1 [idle] active: 
+  untrusted-postgresql-k8s/2 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] active: Primary
+  untrusted-postgresql-k8s/1 [idle] active: 
+  untrusted-postgresql-k8s/2 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] active: Primary
+  untrusted-postgresql-k8s/1 [idle] active: 
+  untrusted-postgresql-k8s/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.4.6    unsupported  01:36:36Z
+
+App                       Version  Status  Scale  Charm           Channel  Rev  Address        Exposed  Message
+untrusted-postgresql-k8s  14.13    active      3  postgresql-k8s             0  10.152.183.69  no       
+
+Unit                         Workload  Agent  Address     Ports  Message
+untrusted-postgresql-k8s/0*  active    idle   10.1.88.75         Primary
+untrusted-postgresql-k8s/1   active    idle   10.1.88.77         
+untrusted-postgresql-k8s/2   active    idle   10.1.88.76         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-untrusted-postgresql-k8s-0: 01:30:52 ERROR unit.untrusted-postgresql-k8s/0.juju-log 
+            Access to k8s cluster resources is not authorized. This happens when RBAC is enabled and the deployed application was not trusted by the juju admin.
+            To fix this issue, run `juju trust untrusted-postgresql-k8s --scope=cluster` (or remove & re-deploy untrusted-postgresql-k8s with `--trust`)
+            
+unit-untrusted-postgresql-k8s-0: 01:30:52 ERROR unit.untrusted-postgresql-k8s/0.juju-log 
+            Access to k8s cluster resources is not authorized. This happens when RBAC is enabled and the deployed application was not trusted by the juju admin.
+            To fix this issue, run `juju trust untrusted-postgresql-k8s --scope=cluster` (or remove & re-deploy untrusted-postgresql-k8s with `--trust`)
+            
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...

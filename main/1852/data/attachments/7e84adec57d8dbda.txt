@@ -1,0 +1,46 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:784 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.7    unsupported  02:28:55Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Address         Exposed  Message
+postgresql-k8s-gcp        14.10    waiting      1  postgresql-k8s                             1  10.152.183.227  no       installing agent
+s3-integrator                      active       1  s3-integrator             latest/stable   13  10.152.183.187  no       
+self-signed-certificates           active       1  self-signed-certificates  latest/stable   72  10.152.183.157  no       
+
+Unit                         Workload  Agent  Address      Ports  Message
+postgresql-k8s-gcp/0*        waiting   idle   10.1.53.144         reinitialising replica
+s3-integrator/0*             active    idle   10.1.53.136         
+self-signed-certificates/0*  active    idle   10.1.53.137         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Juju error logs:
+
+unit-postgresql-k8s-aws-1: 01:47:48 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Non-existing secret {'cauth'} was attempted to be removed.
+unit-postgresql-k8s-aws-1: 01:47:48 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Can't update secret for relation 3
+unit-postgresql-k8s-aws-1: 01:47:48 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Non-existing field 'cauth' was attempted to be removed from the databag (relation ID: 3)
+unit-postgresql-k8s-aws-1: 01:47:48 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Non-existing secret {'cert'} was attempted to be removed.
+unit-postgresql-k8s-aws-1: 01:47:48 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Can't update secret for relation 3
+unit-postgresql-k8s-aws-1: 01:47:48 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Non-existing field 'cert' was attempted to be removed from the databag (relation ID: 3)
+unit-postgresql-k8s-aws-1: 01:47:48 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Non-existing secret {'chain'} was attempted to be removed.
+unit-postgresql-k8s-aws-1: 01:47:48 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Can't update secret for relation 3
+unit-postgresql-k8s-aws-1: 01:47:48 ERROR unit.postgresql-k8s-aws/1.juju-log certificates:5: Non-existing field 'chain' was attempted to be removed from the databag (relation ID: 3)
+unit-postgresql-k8s-aws-0: 01:49:51 ERROR unit.postgresql-k8s-aws/0.juju-log certificates:5: Non-existing secret {'cauth'} was attempted to be removed.
+unit-postgresql-k8s-aws-0: 01:49:51 ERROR unit.postgresql-k8s-aws/0.juju-log certificates:5: Can't update secret for relation 3
+unit-postgresql-k8s-aws-0: 01:49:51 ERROR unit.postgresql-k8s-aws/0.juju-log certificates:5: Non-existing field 'cauth' was attempted to be removed from the databag (relation ID: 3)
+unit-postgresql-k8s-aws-0: 01:49:51 ERROR unit.postgresql-k8s-aws/0.juju-log certificates:5: Non-existing secret {'cert'} was attempted to be removed.
+unit-postgresql-k8s-aws-0: 01:49:51 ERROR unit.postgresql-k8s-aws/0.juju-log certificates:5: Can't update secret for relation 3
+unit-postgresql-k8s-aws-0: 01:49:51 ERROR unit.postgresql-k8s-aws/0.juju-log certificates:5: Non-existing field 'cert' was attempted to be removed from the databag (relation ID: 3)
+unit-postgresql-k8s-aws-0: 01:49:51 ERROR unit.postgresql-k8s-aws/0.juju-log certificates:5: Non-existing secret {'chain'} was attempted to be removed.
+unit-postgresql-k8s-aws-0: 01:49:51 ERROR unit.postgresql-k8s-aws/0.juju-log certificates:5: Can't update secret for relation 3
+unit-postgresql-k8s-aws-0: 01:49:51 ERROR unit.postgresql-k8s-aws/0.juju-log certificates:5: Non-existing field 'chain' was attempted to be removed from the databag (relation ID: 3)
+unit-postgresql-k8s-gcp-1: 02:09:53 ERROR unit.postgresql-k8s-gcp/1.juju-log certificates:10: Non-existing secret {'cauth'} was attempted to be removed.
+unit-postgresql-k8s-gcp-1: 02:09:53 ERROR unit.postgresql-k8s-gcp/1.juju-log certificates:10: Can't update secret for relation 6
+unit-postgresql-k8s-gcp-1: 02:09:53 ERROR unit.postgresql-k8s-gcp/1.juju-log certificates:10: Non-existing field 'cauth' was attempted to be removed from the databag (relation ID: 6)
+unit-postgresql-k8s-gcp-1: 02:09:53 ERROR unit.postgresql-k8s-gcp/1.juju-log certificates:10: Non-existing secret {'cert'} was attempted to be removed.
+unit-postgresql-k8s-gcp-1: 02:09:53 ERROR unit.postgresql-k8s-gcp/1.juju-log certificates:10: Can't update secret for relation 6
+unit-postgresql-k8s-gcp-1: 02:09:53 ERROR unit.postgresql-k8s-gcp/1.juju-log certificates:10: Non-existing field 'cert' was attempted to be removed from the databag (relation ID: 6)
+unit-postgresql-k8s-gcp-1: 02:09:53 ERROR unit.postgresql-k8s-gcp/1.juju-log certificates:10: Non-existing secret {'chain'} was attempted to be removed.
+unit-postgresql-k8s-gcp-1: 02:09:53 ERROR unit.postgresql-k8s-gcp/1.juju-log certificates:10: Can't update secret for relation 6
+unit-postgresql-k8s-gcp-1: 02:09:53 ERROR unit.postgresql-k8s-gcp/1.juju-log certificates:10: Non-existing field 'chain' was attempted to be removed from the databag (relation ID: 6)
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:856 Forgetting main...

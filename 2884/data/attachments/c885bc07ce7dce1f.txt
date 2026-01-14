@@ -1,2 +1,0 @@
-[32mINFO    [0m pytest_operator.plugin:plugin.py:766 Connecting to existing model microk8s-localhost:test on unspecified cloud
-[32mINFO    [0m integration.test_trust:test_trust.py:58 Response from rbac check ('no' means enabled): no

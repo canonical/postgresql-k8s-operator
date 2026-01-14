@@ -1,0 +1,153 @@
+[32mINFO    [0m integration.test_backups:test_backups.py:80 deleting the previously created backups
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.8    unsupported  01:57:39Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Address         Exposed  Message
+postgresql-k8s-gcp        14.11    waiting      2  postgresql-k8s                             1  10.152.183.95   no       installing agent
+s3-integrator                      active       1  s3-integrator             latest/stable   17  10.152.183.232  no       
+self-signed-certificates           active       1  self-signed-certificates  latest/stable   72  10.152.183.42   no       
+
+Unit                         Workload  Agent      Address       Ports  Message
+postgresql-k8s-gcp/0         waiting   executing  10.1.148.209         awaiting for cluster to start
+postgresql-k8s-gcp/1*        active    idle       10.1.148.210         Primary
+s3-integrator/0*             active    idle       10.1.148.200         
+self-signed-certificates/0*  active    idle       10.1.148.201         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+unit-postgresql-k8s-aws-0: 01:53:06 ERROR unit.postgresql-k8s-aws/0.juju-log failed to patch k8s Endpoints patroni-postgresql-k8s-aws
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-0/charm/venv/lightkube/core/generic_client.py", line 188, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-0/charm/venv/httpx/_models.py", line 761, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '409 Conflict' for url 'https://10.152.183.1/api/v1/namespaces/test/endpoints/patroni-postgresql-k8s-aws?force=true&fieldManager=postgresql-k8s-aws'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/409
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-0/charm/./src/charm.py", line 1097, in _on_stop
+    client.apply(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-0/charm/venv/lightkube/core/client.py", line 457, in apply
+    return self.patch(type(obj), name, obj, namespace=namespace,
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-0/charm/venv/lightkube/core/client.py", line 325, in patch
+    return self._client.request("patch", res=res, name=name, namespace=namespace, obj=obj,
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-0/charm/venv/lightkube/core/generic_client.py", line 245, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-0/charm/venv/lightkube/core/generic_client.py", line 196, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-aws-0/charm/venv/lightkube/core/generic_client.py", line 190, in raise_for_status
+    raise transform_exception(e)
+lightkube.core.exceptions.ApiError: Operation cannot be fulfilled on endpoints "patroni-postgresql-k8s-aws": the object has been modified; please apply your changes to the latest version and try again
+unit-postgresql-k8s-gcp-1: 01:57:11 ERROR unit.postgresql-k8s-gcp/1.juju-log certificates:10: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/urllib3/connectionpool.py", line 793, in urlopen
+    response = self._make_request(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/urllib3/connectionpool.py", line 537, in _make_request
+    response = conn.getresponse()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/urllib3/connection.py", line 466, in getresponse
+    httplib_response = super().getresponse()
+  File "/usr/lib/python3.10/http/client.py", line 1375, in getresponse
+    response.begin()
+  File "/usr/lib/python3.10/http/client.py", line 318, in begin
+    version, status, reason = self._read_status()
+  File "/usr/lib/python3.10/http/client.py", line 279, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+  File "/usr/lib/python3.10/socket.py", line 705, in readinto
+    return self._sock.recv_into(b)
+ConnectionResetError: [Errno 104] Connection reset by peer
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/requests/adapters.py", line 486, in send
+    resp = conn.urlopen(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/urllib3/connectionpool.py", line 847, in urlopen
+    retries = retries.increment(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/urllib3/util/retry.py", line 470, in increment
+    raise reraise(type(error), error, _stacktrace)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/urllib3/util/util.py", line 38, in reraise
+    raise value.with_traceback(tb)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/urllib3/connectionpool.py", line 793, in urlopen
+    response = self._make_request(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/urllib3/connectionpool.py", line 537, in _make_request
+    response = conn.getresponse()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/urllib3/connection.py", line 466, in getresponse
+    httplib_response = super().getresponse()
+  File "/usr/lib/python3.10/http/client.py", line 1375, in getresponse
+    response.begin()
+  File "/usr/lib/python3.10/http/client.py", line 318, in begin
+    version, status, reason = self._read_status()
+  File "/usr/lib/python3.10/http/client.py", line 279, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+  File "/usr/lib/python3.10/socket.py", line 705, in readinto
+    return self._sock.recv_into(b)
+urllib3.exceptions.ProtocolError: ('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/tenacity/__init__.py", line 382, in __call__
+    result = fn(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/src/patroni.py", line 462, in reload_patroni_configuration
+    requests.post(f"{self._patroni_url}/reload", verify=self._verify)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/requests/api.py", line 115, in post
+    return request("post", url, data=data, json=json, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/requests/api.py", line 59, in request
+    return session.request(method=method, url=url, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/requests/sessions.py", line 589, in request
+    resp = self.send(prep, **send_kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/requests/sessions.py", line 703, in send
+    r = adapter.send(request, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/requests/adapters.py", line 501, in send
+    raise ConnectionError(err, request=request)
+requests.exceptions.ConnectionError: ('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/./src/charm.py", line 1690, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/ops/main.py", line 544, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/ops/main.py", line 520, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/ops/main.py", line 509, in _emit
+    _emit_charm_event(self.charm, self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/ops/main.py", line 143, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/ops/framework.py", line 851, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/ops/framework.py", line 941, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/lib/charms/tls_certificates_interface/v2/tls_certificates.py", line 1824, in _on_relation_changed
+    self.on.certificate_available.emit(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/ops/framework.py", line 352, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/ops/framework.py", line 851, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/ops/framework.py", line 941, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/lib/charms/postgresql_k8s/v0/postgresql_tls.py", line 141, in _on_certificate_available
+    if not self.charm.push_tls_files_to_workload():
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/./src/charm.py", line 1413, in push_tls_files_to_workload
+    return self.update_config()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/./src/charm.py", line 1507, in update_config
+    self._handle_postgresql_restart_need()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/./src/charm.py", line 1554, in _handle_postgresql_restart_need
+    self._patroni.reload_patroni_configuration()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/tenacity/__init__.py", line 289, in wrapped_f
+    return self(f, *args, **kw)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/tenacity/__init__.py", line 379, in __call__
+    do = self.iter(retry_state=retry_state)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/tenacity/__init__.py", line 326, in iter
+    raise retry_exc from fut.exception()
+tenacity.RetryError: RetryError[<Future at 0x7f9798d67190 state=finished raised ConnectionError>]
+unit-postgresql-k8s-gcp-1: 01:57:12 ERROR juju.worker.uniter.operation hook "certificates-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...

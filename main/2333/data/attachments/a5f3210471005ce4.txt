@@ -1,0 +1,5 @@
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/jammy/redis-k8s-27
+[32mINFO    [0m juju.model:model.py:2098 Deploying ch:amd64/focal/discourse-k8s-124
+[32mINFO    [0m integration.new_relations.test_new_relations:test_new_relations.py:600 Enabling the plugins/extensions required by Discourse
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  discourse-k8s/0 [allocating] waiting: installing agent

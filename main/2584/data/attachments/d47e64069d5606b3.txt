@@ -1,0 +1,137 @@
+[32mINFO    [0m integration.test_charm:test_charm.py:274 connecting to primary postgresql-k8s/1 on 10.1.208.141
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica
+[32mINFO    [0m juju.model:model.py:2971 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] maintenance: reinitialising replica

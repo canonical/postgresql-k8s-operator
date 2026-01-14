@@ -1,0 +1,3 @@
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.0.51:16443/api/v1/namespaces/test/endpoints?labelSelector=app.juju.is%2Fcreated-by%3Dpostgresql-k8s "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.0.51:16443/api/v1/namespaces/test/services?labelSelector=app.juju.is%2Fcreated-by%3Dpostgresql-k8s "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.test_charm:test_charm.py:372 existing_resources: set()

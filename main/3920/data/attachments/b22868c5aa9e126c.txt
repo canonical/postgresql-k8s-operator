@@ -1,0 +1,38 @@
+[33mWARNING [0m juju.client.connection:connection.py:861 unexpected facade SSHServer received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:794 Connecting to existing model concierge-microk8s:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:861 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:861 unexpected facade SSHSession received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:861 unexpected facade SSHTunneler received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:861 unexpected facade SSHServer received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/postgresql-test-app-279
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-0
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-test-app/0 [idle] active: 
+  postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m integration.test_audit:test_audit.py:37 Checking that the audit plugin is enabled
+[32mINFO    [0m pytest_operator.plugin:plugin.py:936 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.5    unsupported  01:32:40Z
+
+App                  Version  Status  Scale  Charm                Channel        Rev  Address         Exposed  Message
+postgresql-k8s       14.17    active      1  postgresql-k8s                        0  10.152.183.159  no       
+postgresql-test-app           active      1  postgresql-test-app  latest/stable  279  10.152.183.237  no       
+
+Unit                    Workload  Agent  Address      Ports  Message
+postgresql-k8s/0*       active    idle   10.1.209.74         Primary
+postgresql-test-app/0*  active    idle   10.1.209.72         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:942 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1024 Forgetting model main...

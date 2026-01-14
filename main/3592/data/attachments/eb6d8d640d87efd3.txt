@@ -1,0 +1,466 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/focal/indico-243
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/focal/redis-k8s-7
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/focal/redis-k8s-7
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for database availability
+[32mINFO    [0m integration.new_relations.test_new_relations_2:test_new_relations_2.py:171 Verifying that the charm doesn't block when the extensions are enabled
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] active: Primary
+  database/1 [idle] active: 
+  database/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary
+  database/1 [idle] active: 
+  database/2 [idle] active: 
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary
+  database/1 [idle] active: 
+  database/2 [idle] active: 
+  indico/0 [executing] waiting: Waiting for database availability
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m pytest_operator.plugin:plugin.py:929 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.2    unsupported  02:30:10Z
+
+App            Version               Status   Scale  Charm           Channel        Rev  Address         Exposed  Message
+database       14.15                 active       3  postgresql-k8s                   0  10.152.183.130  no       
+discourse-k8s                        waiting      1  discourse-k8s   latest/stable  183  10.152.183.161  no       Waiting for database relation
+indico                               waiting      1  indico          latest/edge    243  10.152.183.188  no       Waiting for pebble
+redis-broker   ubuntu/redis@691f315  active       1  redis-k8s       latest/stable    7                  no       
+redis-cache    ubuntu/redis@691f315  active       1  redis-k8s       latest/stable    7                  no       
+redis-k8s      7.2.5                 active       1  redis-k8s       latest/edge     38  10.152.183.114  no       
+
+Unit              Workload  Agent  Address      Ports     Message
+database/0*       active    idle   10.1.231.11            Primary
+database/1        active    idle   10.1.231.12            
+database/2        active    idle   10.1.231.13            
+discourse-k8s/0*  waiting   idle   10.1.231.14            Waiting for database relation
+indico/0*         waiting   idle   10.1.231.19            Waiting for pebble
+redis-broker/0*   active    idle   10.1.231.23  6379/TCP  
+redis-cache/0*    active    idle   10.1.231.22  6379/TCP  
+redis-k8s/0*      active    idle   10.1.231.16            
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:935 Juju error logs:
+
+unit-database-2: 01:43:19 ERROR unit.database/2.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-redis-k8s-0: 01:45:22 ERROR unit.redis-k8s/0.juju-log redis-peers:4: Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:45:22 ERROR unit.redis-k8s/0.juju-log redis-peers:4: Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:45:22 ERROR unit.redis-k8s/0.juju-log redis-peers:4: Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:45:30 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:45:30 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:45:30 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:45:30 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:45:42 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:45:42 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:45:42 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:45:42 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:45:50 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:45:50 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:45:50 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:45:50 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:46:01 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:46:01 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:46:01 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:46:01 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:46:13 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:46:13 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:46:13 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:46:13 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:46:22 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:46:22 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:46:22 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:46:22 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:46:33 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:46:33 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:46:33 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:46:34 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:46:44 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:46:44 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:46:44 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:46:44 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:46:53 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:46:53 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:46:53 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:46:53 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:47:01 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:47:01 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:47:01 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:47:01 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:47:11 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:47:11 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:47:11 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:47:12 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:47:20 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:47:20 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:47:20 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:47:20 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:47:31 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:47:31 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:47:31 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:47:31 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:47:40 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:47:40 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:47:40 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:47:40 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:47:49 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:47:49 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:47:49 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:47:49 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:47:58 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:47:58 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:47:58 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:47:58 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:48:08 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:48:08 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:48:08 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:48:08 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:48:16 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:48:16 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:48:16 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:48:16 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:48:26 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:48:26 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:48:26 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:48:26 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:48:37 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:48:37 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:48:37 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:48:37 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:48:46 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:48:46 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:48:46 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:48:46 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:48:54 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:48:54 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:48:54 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:48:54 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:49:04 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:49:04 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:49:04 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:49:04 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:49:13 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:49:13 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:49:13 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:49:14 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:49:23 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:49:23 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:49:23 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:49:23 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:49:34 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:49:34 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:49:35 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:49:35 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:49:43 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:49:43 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:49:43 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:49:43 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:49:53 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:49:53 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:49:53 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:49:53 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:50:04 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:50:04 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:50:04 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:50:04 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:50:14 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:50:14 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:50:14 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:50:14 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:50:25 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:50:25 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:50:25 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:50:25 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:50:36 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:50:36 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:50:36 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:50:36 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:50:48 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:50:48 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:50:48 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:50:48 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:50:58 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:50:58 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:50:58 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:50:58 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:51:09 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:51:09 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:51:09 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:51:09 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:51:20 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:51:20 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:51:20 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:51:20 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:51:28 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:51:28 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:51:28 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:51:28 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:51:37 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:51:37 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:51:37 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:51:37 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:51:49 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:51:49 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:51:49 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:51:49 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:51:58 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:51:58 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:51:58 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:51:58 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:52:07 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:52:07 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:52:07 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:52:07 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:52:16 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:52:16 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:52:16 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:52:16 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:52:25 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:52:25 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:52:25 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:52:25 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:52:35 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:52:35 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:52:35 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:52:35 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:52:44 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:52:44 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:52:44 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:52:44 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:52:54 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:52:54 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:52:54 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:52:54 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:53:02 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:53:02 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:53:02 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:53:02 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:53:14 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:53:14 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:53:14 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:53:14 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:53:22 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:53:22 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:53:22 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:53:22 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:53:30 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:53:30 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:53:30 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:53:30 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:53:40 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:53:40 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:53:40 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:53:40 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:53:50 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:53:50 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:53:50 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:53:50 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:53:59 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:53:59 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:53:59 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:53:59 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:54:08 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:54:08 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:54:08 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:54:08 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:54:18 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:54:18 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:54:18 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:54:18 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:54:29 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:54:29 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:54:29 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:54:29 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:54:39 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:54:39 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:54:39 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:54:39 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:54:47 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:54:47 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:54:47 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:54:47 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+application-redis-broker: 01:55:05 ERROR juju.worker.dependency "operator" manifold worker returned unexpected error: failed to initialize caasoperator for "redis-broker": failed to download charm "ch:amd64/redis-k8s-7" from API server: Get https://controller-service.controller-concierge-microk8s.svc.cluster.local:17070/model/b76e4c96-61fe-4d02-8a00-42860a495a25/charms?file=%2A&url=ch%3Aamd64%2Fredis-k8s-7: cannot retrieve charm: ch:amd64/redis-k8s-7
+application-redis-broker: 01:55:09 ERROR juju.worker.dependency "operator" manifold worker returned unexpected error: failed to initialize caasoperator for "redis-broker": failed to download charm "ch:amd64/redis-k8s-7" from API server: Get https://controller-service.controller-concierge-microk8s.svc.cluster.local:17070/model/b76e4c96-61fe-4d02-8a00-42860a495a25/charms?file=%2A&url=ch%3Aamd64%2Fredis-k8s-7: cannot retrieve charm: ch:amd64/redis-k8s-7
+application-redis-cache: 01:55:10 ERROR juju.worker.dependency "operator" manifold worker returned unexpected error: failed to initialize caasoperator for "redis-cache": failed to download charm "ch:amd64/redis-k8s-7" from API server: Get https://controller-service.controller-concierge-microk8s.svc.cluster.local:17070/model/b76e4c96-61fe-4d02-8a00-42860a495a25/charms?file=%2A&url=ch%3Aamd64%2Fredis-k8s-7: cannot retrieve charm: ch:amd64/redis-k8s-7
+application-redis-broker: 01:55:13 ERROR juju.worker.dependency "operator" manifold worker returned unexpected error: failed to initialize caasoperator for "redis-broker": failed to download charm "ch:amd64/redis-k8s-7" from API server: Get https://controller-service.controller-concierge-microk8s.svc.cluster.local:17070/model/b76e4c96-61fe-4d02-8a00-42860a495a25/charms?file=%2A&url=ch%3Aamd64%2Fredis-k8s-7: cannot retrieve charm: ch:amd64/redis-k8s-7
+application-redis-cache: 01:55:14 ERROR juju.worker.dependency "operator" manifold worker returned unexpected error: failed to initialize caasoperator for "redis-cache": failed to download charm "ch:amd64/redis-k8s-7" from API server: Get https://controller-service.controller-concierge-microk8s.svc.cluster.local:17070/model/b76e4c96-61fe-4d02-8a00-42860a495a25/charms?file=%2A&url=ch%3Aamd64%2Fredis-k8s-7: cannot retrieve charm: ch:amd64/redis-k8s-7
+application-redis-cache: 01:55:18 ERROR juju.worker.dependency "operator" manifold worker returned unexpected error: failed to initialize caasoperator for "redis-cache": failed to download charm "ch:amd64/redis-k8s-7" from API server: Get https://controller-service.controller-concierge-microk8s.svc.cluster.local:17070/model/b76e4c96-61fe-4d02-8a00-42860a495a25/charms?file=%2A&url=ch%3Aamd64%2Fredis-k8s-7: cannot retrieve charm: ch:amd64/redis-k8s-7
+application-redis-broker: 01:55:19 ERROR juju.worker.dependency "operator" manifold worker returned unexpected error: failed to initialize caasoperator for "redis-broker": failed to download charm "ch:amd64/redis-k8s-7" from API server: Get https://controller-service.controller-concierge-microk8s.svc.cluster.local:17070/model/b76e4c96-61fe-4d02-8a00-42860a495a25/charms?file=%2A&url=ch%3Aamd64%2Fredis-k8s-7: cannot retrieve charm: ch:amd64/redis-k8s-7
+application-redis-cache: 01:55:22 ERROR juju.worker.dependency "operator" manifold worker returned unexpected error: failed to initialize caasoperator for "redis-cache": failed to download charm "ch:amd64/redis-k8s-7" from API server: Get https://controller-service.controller-concierge-microk8s.svc.cluster.local:17070/model/b76e4c96-61fe-4d02-8a00-42860a495a25/charms?file=%2A&url=ch%3Aamd64%2Fredis-k8s-7: cannot retrieve charm: ch:amd64/redis-k8s-7
+unit-redis-k8s-0: 01:55:23 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:55:23 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:55:23 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:55:23 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+application-redis-broker: 01:55:25 ERROR juju.worker.dependency "operator" manifold worker returned unexpected error: failed to initialize caasoperator for "redis-broker": failed to download charm "ch:amd64/redis-k8s-7" from API server: Get https://controller-service.controller-concierge-microk8s.svc.cluster.local:17070/model/b76e4c96-61fe-4d02-8a00-42860a495a25/charms?file=%2A&url=ch%3Aamd64%2Fredis-k8s-7: cannot retrieve charm: ch:amd64/redis-k8s-7
+application-redis-broker: 01:55:50 ERROR unit.redis-broker/0.juju-log redis:6: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "./src/charm.py", line 159, in <module>
+    main(RedisCharm)
+  File "/var/lib/juju/agents/unit-redis-broker-0/charm/venv/ops/main.py", line 402, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-redis-broker-0/charm/venv/ops/main.py", line 140, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-redis-broker-0/charm/venv/ops/framework.py", line 278, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-redis-broker-0/charm/venv/ops/framework.py", line 722, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-redis-broker-0/charm/venv/ops/framework.py", line 767, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-redis-broker-0/charm/lib/charms/redis_k8s/v0/redis.py", line 91, in _on_relation_changed
+    event.relation.data[self.model.unit]['hostname'] = str(self._bind_address(event))
+  File "/var/lib/juju/agents/unit-redis-broker-0/charm/lib/charms/redis_k8s/v0/redis.py", line 103, in _bind_address
+    return self.app.name
+AttributeError: 'RedisProvides' object has no attribute 'app'
+application-redis-broker: 01:55:50 ERROR juju.worker.caasoperator.uniter.redis-broker/0.operation hook "redis-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+unit-redis-k8s-0: 01:55:53 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:55:53 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:55:53 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:55:53 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:56:18 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:56:18 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:56:18 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:56:18 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:56:52 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:56:52 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:56:52 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:56:52 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1017 Forgetting model main...

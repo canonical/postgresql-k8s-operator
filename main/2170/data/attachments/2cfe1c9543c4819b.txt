@@ -1,0 +1,35 @@
+[32mINFO    [0m juju.model:model.py:2098 Deploying local:jammy/postgresql-k8s-3
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  test-storage-postgresql-k8s/0 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  test-storage-postgresql-k8s/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  test-storage-postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  test-storage-postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  test-storage-postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.7    unsupported  02:08:21Z
+
+App                          Version  Status  Scale  Charm           Channel  Rev  Address         Exposed  Message
+postgresql-k8s               14.11    active      3  postgresql-k8s             2  10.152.183.250  no       Primary
+test-storage-postgresql-k8s  14.11    active      1  postgresql-k8s             3  10.152.183.87   no       Primary
+
+Unit                            Workload  Agent  Address     Ports  Message
+postgresql-k8s/0*               active    idle   10.1.8.161         Primary
+postgresql-k8s/1                active    idle   10.1.8.160         
+postgresql-k8s/2                active    idle   10.1.8.159         
+test-storage-postgresql-k8s/0*  active    idle   10.1.8.163         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+unit-postgresql-k8s-2: 01:36:56 ERROR unit.postgresql-k8s/2.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+controller-0: 01:48:46 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql-k8s": updating filesystem information for postgresql-k8s: cannot set info for filesystem attachment 3:postgresql-k8s/3: state changing too quickly; try again soon
+controller-0: 01:49:07 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql-k8s": finding filesystem info for postgresql-k8s-pgdata-3f23651e: unable to get persistent volume claim: k8s: persistentvolumeclaims "postgresql-k8s-pgdata-3f23651e-postgresql-k8s-3" not found
+unit-postgresql-k8s-0: 01:50:09 ERROR unit.postgresql-k8s/0.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+controller-0: 02:01:09 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql-k8s": cannot scale dying application to 0: application "postgresql-k8s" not found
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...

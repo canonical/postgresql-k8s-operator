@@ -1,0 +1,79 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.12   unsupported  01:42:01Z
+
+App                  Version  Status  Scale  Charm                Channel      Rev  Address         Exposed  Message
+another-application           active      1  postgresql-test-app  latest/edge  420  10.152.183.70   no       received database credentials of the first database
+another-database     14.19    active      3  postgresql-k8s                      1  10.152.183.173  no       
+database             14.19    active      3  postgresql-k8s                      0  10.152.183.29   no       
+postgresql-test-app           error       2  postgresql-test-app  latest/edge  420  10.152.183.97   no       hook failed: "aliased-multiple-database-clusters-relation-changed"
+
+Unit                    Workload  Agent      Address       Ports  Message
+another-application/0*  active    idle       10.1.106.152         received database credentials of the first database
+another-database/0*     active    idle       10.1.106.149         Primary
+another-database/1      active    idle       10.1.106.151         
+another-database/2      active    idle       10.1.106.150         
+database/0              active    executing  10.1.106.143         
+database/1*             active    executing  10.1.106.146         Primary
+database/2              active    executing  10.1.106.144         
+postgresql-test-app/0*  active    executing  10.1.106.136         received database credentials for cluster1
+postgresql-test-app/1   error     idle       10.1.106.137         hook failed: "aliased-multiple-database-clusters-relation-changed"
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-another-database-2: 01:35:17 ERROR unit.another-database/2.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-postgresql-test-app-1: 01:41:59 ERROR unit.postgresql-test-app/1.juju-log aliased-multiple-database-clusters:12: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3570, in _wrap_hookcmd
+    yield
+  File "/var/lib/juju/agents/unit-postgresql-test-app-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3921, in secret_get
+    return hookcmds.secret_get(
+  File "/var/lib/juju/agents/unit-postgresql-test-app-1/charm/venv/lib/python3.10/site-packages/ops/hookcmds/_secret.py", line 153, in secret_get
+    stdout = run('secret-get', '--format=json', *args)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-1/charm/venv/lib/python3.10/site-packages/ops/hookcmds/_utils.py", line 53, in run
+    raise Error(returncode=e.returncode, cmd=e.cmd, stdout=e.stdout, stderr=e.stderr) from None
+ops.hookcmds._utils.Error: command ('secret-get', '--format=json', 'secret://50807757-695d-4505-8429-949dd523a0d8/d4r2pouojsdc7b8uant0', '--label', 'aliased-multiple-database-clusters.12.user.secret') exited with status 1
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-test-app-1/charm/src/charm.py", line 579, in <module>
+    main(ApplicationCharm)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-1/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 360, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 507, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-postgresql-test-app-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 491, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-postgresql-test-app-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 426, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 470, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 337, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 910, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-1/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1028, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 3614, in _on_relation_changed_event
+    self.relation_data._register_secrets_to_relation(event.relation, diff.added)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1371, in _register_secrets_to_relation
+    self._register_secret_to_relation(relation.name, relation.id, secret_uri, group)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1356, in _register_secret_to_relation
+    CachedSecret(self._model, self.component, label, secret_id).meta
+  File "/var/lib/juju/agents/unit-postgresql-test-app-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 771, in meta
+    self._secret_meta = self._model.get_secret(id=self._secret_uri, label=self.label)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 309, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3920, in secret_get
+    with self._wrap_hookcmd('secret-get', id=id, label=label, refresh=refresh, peek=peek):
+  File "/usr/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/var/lib/juju/agents/unit-postgresql-test-app-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3580, in _wrap_hookcmd
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR secrets "d4r2pouojsdc7b8uant0-1" is forbidden: User "system:serviceaccount:testing:unit-postgresql-test-app-1" cannot get resource "secrets" in API group "" in the namespace "testing"
+
+unit-postgresql-test-app-1: 01:41:59 ERROR juju.worker.uniter.operation hook "aliased-multiple-database-clusters-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...

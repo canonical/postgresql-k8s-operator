@@ -1,0 +1,70 @@
+[32mINFO    [0m juju.model:model.py:2098 Deploying local:jammy/postgresql-k8s-1
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  second-postgresql-k8s/0 [allocating] waiting: installing agent
+  second-postgresql-k8s/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  second-postgresql-k8s/0 [executing] waiting: awaiting for cluster to start
+  second-postgresql-k8s/1 [executing] unknown: 
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  second-postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+  second-postgresql-k8s/1 [idle] unknown: 
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  second-postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+  second-postgresql-k8s/1 [idle] unknown: 
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  second-postgresql-k8s/0 [idle] waiting: awaiting for primary endpoint to be ready
+  second-postgresql-k8s/1 [idle] unknown: 
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  second-postgresql-k8s/0 [idle] active: Primary
+  second-postgresql-k8s/1 [idle] unknown: 
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  second-postgresql-k8s/0 [executing] active: Primary
+  second-postgresql-k8s/1 [idle] unknown: 
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  second-postgresql-k8s/0 [executing] active: Primary
+  second-postgresql-k8s/1 [idle] unknown: 
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  second-postgresql-k8s/0 [idle] active: Primary
+  second-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  second-postgresql-k8s/0 [idle] active: Primary
+  second-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  second-postgresql-k8s/0 [idle] active: Primary
+  second-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  second-postgresql-k8s/0 [idle] active: Primary
+  second-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  second-postgresql-k8s/0 [idle] active: Primary
+  second-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:model.py:2958 Waiting for model:
+  second-postgresql-k8s/0 [idle] active: Primary
+  second-postgresql-k8s/1 [idle] active: 
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.0.58:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.0.58:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.0.58:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1026 HTTP Request: GET https://10.1.0.58:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m pytest_operator.plugin:plugin.py:862 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.8    unsupported  01:47:36Z
+
+App                    Version  Status  Scale  Charm                Channel  Rev  Address         Exposed  Message
+postgresql-k8s         14.11    active      3  postgresql-k8s                  0  10.152.183.139  no       Primary
+postgresql-test-app             active      1  postgresql-test-app  edge     130  10.152.183.46   no       received database credentials of the first database
+second-postgresql-k8s  14.11    active      2  postgresql-k8s                  1  10.152.183.22   no       Primary
+
+Unit                      Workload  Agent  Address      Ports  Message
+postgresql-k8s/0          active    idle   10.1.117.11         Primary
+postgresql-k8s/1          active    idle   10.1.117.12         
+postgresql-k8s/2*         active    idle   10.1.117.15         
+postgresql-test-app/0*    active    idle   10.1.117.14         received database credentials of the first database
+second-postgresql-k8s/0*  active    idle   10.1.117.18         Primary
+second-postgresql-k8s/1   active    idle   10.1.117.19         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:868 Juju error logs:
+
+unit-postgresql-k8s-2: 01:38:29 ERROR unit.postgresql-k8s/2.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:947 Forgetting model main...

@@ -1,0 +1,57 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:766 Connecting to existing model microk8s-localhost:test on unspecified cloud
+[32mINFO    [0m juju.model:model.py:2098 Deploying local:postgresql-k8s-0
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [executing] active: Primary
+[32mINFO    [0m integration.test_config:test_config.py:92 durability_synchronous_commit
+[32mINFO    [0m integration.test_config:test_config.py:92 instance_password_encryption
+[32mINFO    [0m integration.test_config:test_config.py:92 logging_log_min_duration_statement
+[32mINFO    [0m integration.test_config:test_config.py:92 memory_maintenance_work_mem
+[32mINFO    [0m integration.test_config:test_config.py:92 memory_max_prepared_transactions
+[32mINFO    [0m integration.test_config:test_config.py:92 memory_shared_buffers
+[32mINFO    [0m integration.test_config:test_config.py:92 memory_temp_buffers
+[32mINFO    [0m integration.test_config:test_config.py:92 memory_work_mem
+[32mINFO    [0m integration.test_config:test_config.py:92 optimizer_constraint_exclusion
+[32mINFO    [0m integration.test_config:test_config.py:92 optimizer_default_statistics_target
+[32mINFO    [0m integration.test_config:test_config.py:92 optimizer_from_collapse_limit
+[32mINFO    [0m integration.test_config:test_config.py:92 optimizer_join_collapse_limit
+[32mINFO    [0m integration.test_config:test_config.py:92 profile
+[32mINFO    [0m integration.test_config:test_config.py:92 response_bytea_output
+[32mINFO    [0m integration.test_config:test_config.py:92 vacuum_autovacuum_analyze_scale_factor
+[32mINFO    [0m integration.test_config:test_config.py:92 vacuum_autovacuum_vacuum_scale_factor
+[32mINFO    [0m integration.test_config:test_config.py:92 vacuum_autovacuum_analyze_threshold
+[32mINFO    [0m integration.test_config:test_config.py:92 vacuum_autovacuum_freeze_max_age
+[32mINFO    [0m integration.test_config:test_config.py:92 vacuum_autovacuum_vacuum_cost_delay
+[32mINFO    [0m integration.test_config:test_config.py:92 vacuum_vacuum_freeze_table_age
+[32mINFO    [0m integration.test_config:test_config.py:92 instance_default_text_search_config
+[32mINFO    [0m integration.test_config:test_config.py:92 request_date_style
+[32mINFO    [0m integration.test_config:test_config.py:92 request_time_zone
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.4.6    unsupported  01:33:22Z
+
+App             Version  Status   Scale  Charm           Channel  Rev  Address        Exposed  Message
+postgresql-k8s  14.13    waiting      1  postgresql-k8s             0  10.152.183.63  no       installing agent
+
+Unit               Workload  Agent      Address       Ports  Message
+postgresql-k8s/0*  active    executing  10.1.245.201         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-postgresql-k8s-0: 01:33:14 ERROR unit.postgresql-k8s/0.juju-log Invalid configuration: 1 validation error for CharmConfig
+durability_synchronous_commit
+  Value not one of 'on', 'remote_apply' or 'remote_write' (type=value_error)
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...

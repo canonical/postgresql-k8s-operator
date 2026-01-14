@@ -1,3 +1,0 @@
-[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:259 stopping database from postgresql-k8s/0
-[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:263 removing data from postgresql-k8s/0
-[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:275 checking whether writes are increasing

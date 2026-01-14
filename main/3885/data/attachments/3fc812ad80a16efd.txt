@@ -1,0 +1,80 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-3
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [executing] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m pytest_operator.plugin:plugin.py:936 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.4    unsupported  02:37:37Z
+
+App                          Version  Status  Scale  Charm           Channel  Rev  Address         Exposed  Message
+postgresql-k8s               14.17    active      3  postgresql-k8s             2  10.152.183.175  no       
+test-storage-postgresql-k8s  14.17    active      1  postgresql-k8s             3  10.152.183.28   no       
+
+Unit                            Workload  Agent  Address      Ports  Message
+postgresql-k8s/0                active    idle   10.1.157.92         
+postgresql-k8s/1                active    idle   10.1.157.94         
+postgresql-k8s/2*               active    idle   10.1.157.93         Primary
+test-storage-postgresql-k8s/0*  active    idle   10.1.157.96         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:942 Juju error logs:
+
+unit-postgresql-k8s-2: 02:02:27 ERROR unit.postgresql-k8s/2.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-postgresql-k8s-1: 02:05:36 ERROR unit.postgresql-k8s/1.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-postgresql-k8s-1: 02:17:57 ERROR unit.postgresql-k8s/1.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+controller-0: 02:31:12 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql-k8s": finding filesystem info for postgresql-k8s-pgdata-a68c78bc: unable to get persistent volume claim: k8s: persistentvolumeclaims "postgresql-k8s-pgdata-a68c78bc-postgresql-k8s-2" not found
+unit-test-storage-postgresql-k8s-0: 02:36:37 ERROR unit.test-storage-postgresql-k8s/0.juju-log failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 428, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1109, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 180, in _connect_to_database
+    connection = psycopg2.connect(
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "test-storage-postgresql-k8s-primary.testing.svc.cluster.local" (10.152.183.87), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/src/charm.py", line 776, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1109, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 455, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+charms.postgresql_k8s.v0.postgresql.PostgreSQLEnableDisableExtensionError
+unit-test-storage-postgresql-k8s-0: 02:36:51 ERROR unit.test-storage-postgresql-k8s/0.juju-log failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 428, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1109, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 180, in _connect_to_database
+    connection = psycopg2.connect(
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "test-storage-postgresql-k8s-primary.testing.svc.cluster.local" (10.152.183.87), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/src/charm.py", line 776, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1109, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-test-storage-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 455, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+charms.postgresql_k8s.v0.postgresql.PostgreSQLEnableDisableExtensionError
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1024 Forgetting model main...

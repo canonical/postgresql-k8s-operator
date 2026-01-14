@@ -1,0 +1,84 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/focal/indico-293
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/redis-k8s-42
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/redis-k8s-42
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [executing] maintenance: installing charm software
+[32mINFO    [0m integration.new_relations.test_new_relations_2:test_new_relations_2.py:172 Verifying that the charm doesn't block when the extensions are enabled
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] active: Primary
+  database/1 [idle] active: 
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary
+  database/1 [idle] active: 
+  database/2 [idle] active: 
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary
+  database/1 [idle] active: 
+  database/2 [idle] active: 
+  indico/0 [executing] waiting: Waiting for database availability
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary
+  database/1 [idle] active: 
+  database/2 [idle] active: 
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] maintenance: Starting indico container
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.12   unsupported  01:43:49Z
+
+App           Version  Status  Scale  Charm           Channel      Rev  Address         Exposed  Message
+database      14.20    active      3  postgresql-k8s                 0  10.152.183.25   no       
+indico        3.3.9    active      1  indico          latest/edge  293  10.152.183.121  no       
+redis-broker  7.2.5    active      1  redis-k8s       latest/edge   42  10.152.183.207  no       
+redis-cache   7.2.5    active      1  redis-k8s       latest/edge   42  10.152.183.233  no       
+
+Unit             Workload  Agent  Address      Ports  Message
+database/0*      active    idle   10.1.206.77         Primary
+database/1       active    idle   10.1.206.79         
+database/2       active    idle   10.1.206.78         
+indico/0*        active    idle   10.1.206.82         
+redis-broker/0*  active    idle   10.1.206.86         
+redis-cache/0*   active    idle   10.1.206.85         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-redis-broker-0: 01:35:31 ERROR unit.redis-broker/0.juju-log redis-peers:4: Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-broker-0: 01:35:31 ERROR unit.redis-broker/0.juju-log redis-peers:4: Unit redis-broker/0 doesn't agree on tracked master
+unit-redis-broker-0: 01:35:31 ERROR unit.redis-broker/0.juju-log redis-peers:4: Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-cache-0: 01:35:31 ERROR unit.redis-cache/0.juju-log redis-peers:5: Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-cache-0: 01:35:31 ERROR unit.redis-cache/0.juju-log redis-peers:5: Unit redis-cache/0 doesn't agree on tracked master
+unit-redis-cache-0: 01:35:31 ERROR unit.redis-cache/0.juju-log redis-peers:5: Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...

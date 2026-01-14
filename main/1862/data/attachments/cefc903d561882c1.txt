@@ -1,0 +1,91 @@
+[32mINFO    [0m juju.model:model.py:2087 Deploying ch:amd64/focal/indico-169
+[32mINFO    [0m juju.model:model.py:2087 Deploying ch:amd64/focal/redis-k8s-7
+[32mINFO    [0m juju.model:model.py:2087 Deploying ch:amd64/focal/redis-k8s-7
+[33mWARNING [0m juju.model:model.py:1553 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:model.py:1553 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2947 Waiting for model:
+  indico/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:model.py:2947 Waiting for model:
+  indico/0 [allocating] waiting: installing agent
+[32mINFO    [0m pytest_operator.plugin:plugin.py:784 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.7    unsupported  01:45:51Z
+
+App                      Version               Status   Scale  Charm                Channel        Rev  Address         Exposed  Message
+another-application                            active       1  postgresql-test-app  edge            50  10.152.183.229  no       received database credentials of the first database
+another-data-integrator                        waiting      1  data-integrator      latest/stable   13  10.152.183.202  no       installing agent
+another-database         14.10                 active       3  postgresql-k8s                        1  10.152.183.230  no       Primary
+data-integrator                                waiting      1  data-integrator      latest/stable   13  10.152.183.64   no       installing agent
+database                 14.10                 active       3  postgresql-k8s                        0  10.152.183.49   no       Primary
+discourse-k8s                                  waiting      1  discourse-k8s        latest/stable   82  10.152.183.180  no       installing agent
+indico                                         waiting      1  indico               stable         169  10.152.183.241  no       installing agent
+postgresql-test-app                            active       2  postgresql-test-app  edge            50  10.152.183.58   no       received database credentials of the first database
+redis-broker             ubuntu/redis@691f315  waiting      1  redis-k8s            stable           7                  no       
+redis-cache              ubuntu/redis@691f315  waiting      1  redis-k8s            stable           7                  no       
+redis-k8s                                      waiting      1  redis-k8s            latest/edge     27  10.152.183.84   no       installing agent
+
+Unit                        Workload  Agent      Address      Ports     Message
+another-application/0*      active    idle       10.1.202.86            received database credentials of the first database
+another-data-integrator/0*  blocked   idle       10.1.202.90            Please relate the data-integrator with the desired product
+another-database/0*         active    idle       10.1.202.83            Primary
+another-database/1          active    idle       10.1.202.85            
+another-database/2          active    idle       10.1.202.84            
+data-integrator/0*          blocked   idle       10.1.202.89            Please relate the data-integrator with the desired product
+database/0*                 active    idle       10.1.202.79            Primary
+database/1                  active    idle       10.1.202.87            
+database/2                  active    idle       10.1.202.88            
+discourse-k8s/0*            error     idle       10.1.202.92            OCI image pull error: failed to pull and unpack image "registry.jujucharms.com/charm/1do4bht9nkx2kuk2thi94lw9kzlgiytu...
+indico/0*                   error     idle       10.1.202.97            unknown container reason "ImagePullBackOff": Back-off pulling image "registry.jujucharms.com/charm/e7cgxprwp5telxhlb2...
+postgresql-test-app/0       active    idle       10.1.202.72            received database credentials of the first database
+postgresql-test-app/1*      active    idle       10.1.202.73            received database credentials of the first database
+redis-broker/0*             waiting   executing  10.1.202.98  6379/TCP  Waiting for Redis ...
+redis-cache/0*              error     idle                    6379/TCP  hook failed: "redis-relation-changed"
+redis-k8s/0*                error     idle       10.1.202.93            unknown container reason "ImagePullBackOff": Back-off pulling image "registry.jujucharms.com/charm/eraaguoucqtrw0qtpw...
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Juju error logs:
+
+unit-database-0: 01:43:09 ERROR unit.database/0.juju-log database:21: Invalid extra user roles: test
+unit-database-0: 01:43:09 ERROR unit.database/0.juju-log database:21: invalid role(s) for extra user roles
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-0/charm/src/relations/postgresql_provider.py", line 90, in _on_database_requested
+    self.charm.postgresql.create_user(user, password, extra_user_roles=extra_user_roles)
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 221, in create_user
+    raise PostgreSQLCreateUserError(INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE)
+charms.postgresql_k8s.v0.postgresql.PostgreSQLCreateUserError: invalid role(s) for extra user roles
+unit-database-0: 01:43:10 ERROR unit.database/0.juju-log database:20: Invalid extra user roles: test
+unit-database-0: 01:43:10 ERROR unit.database/0.juju-log database:20: invalid role(s) for extra user roles
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-0/charm/src/relations/postgresql_provider.py", line 90, in _on_database_requested
+    self.charm.postgresql.create_user(user, password, extra_user_roles=extra_user_roles)
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 221, in create_user
+    raise PostgreSQLCreateUserError(INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE)
+charms.postgresql_k8s.v0.postgresql.PostgreSQLCreateUserError: invalid role(s) for extra user roles
+unit-redis-k8s-0: 01:44:55 ERROR unit.redis-k8s/0.juju-log redis-peers:22: Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:44:55 ERROR unit.redis-k8s/0.juju-log redis-peers:22: Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:44:55 ERROR unit.redis-k8s/0.juju-log redis-peers:22: Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:45:26 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 01:45:26 ERROR unit.redis-k8s/0.juju-log Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 01:45:26 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-k8s-0: 01:45:27 ERROR unit.redis-k8s/0.juju-log Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+application-redis-cache: 01:45:49 ERROR unit.redis-cache/0.juju-log redis:26: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "./src/charm.py", line 159, in <module>
+    main(RedisCharm)
+  File "/var/lib/juju/agents/unit-redis-cache-0/charm/venv/ops/main.py", line 402, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-redis-cache-0/charm/venv/ops/main.py", line 140, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-redis-cache-0/charm/venv/ops/framework.py", line 278, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-redis-cache-0/charm/venv/ops/framework.py", line 722, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-redis-cache-0/charm/venv/ops/framework.py", line 767, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-redis-cache-0/charm/lib/charms/redis_k8s/v0/redis.py", line 91, in _on_relation_changed
+    event.relation.data[self.model.unit]['hostname'] = str(self._bind_address(event))
+  File "/var/lib/juju/agents/unit-redis-cache-0/charm/lib/charms/redis_k8s/v0/redis.py", line 103, in _bind_address
+    return self.app.name
+AttributeError: 'RedisProvides' object has no attribute 'app'
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:856 Forgetting main...

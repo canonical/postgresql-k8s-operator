@@ -1,0 +1,46 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-1
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/0 [allocating] waiting: installing agent
+  second-postgresql-k8s/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/0 [executing] waiting: awaiting for cluster to start
+  second-postgresql-k8s/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/0 [executing] active: Primary (degraded)
+  second-postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/0 [idle] active: Primary
+  second-postgresql-k8s/1 [idle] active: 
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.1.45:16443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.1.45:16443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:242 Initial writes {'testing.postgresql-k8s-1': 6, 'testing.postgresql-k8s-2': 6}
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.1.45:16443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.1.45:16443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Retry writes {'testing.postgresql-k8s-1': 10, 'testing.postgresql-k8s-2': 10}
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.1.45:16443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.1.45:16443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.1.45:16443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.12   unsupported  01:38:35Z
+
+App                    Version  Status  Scale  Charm                Channel      Rev  Address         Exposed  Message
+postgresql-k8s         14.20    active      3  postgresql-k8s                      0  10.152.183.105  no       
+postgresql-test-app             active      1  postgresql-test-app  latest/edge  424  10.152.183.254  no       received database credentials of the first database
+second-postgresql-k8s  14.20    active      2  postgresql-k8s                      1  10.152.183.60   no       
+
+Unit                      Workload  Agent  Address      Ports  Message
+postgresql-k8s/0          active    idle   10.1.206.76         Primary
+postgresql-k8s/1          active    idle   10.1.206.77         
+postgresql-k8s/2*         active    idle   10.1.206.82         
+postgresql-test-app/0*    active    idle   10.1.206.81         received database credentials of the first database
+second-postgresql-k8s/0*  active    idle   10.1.206.85         Primary
+second-postgresql-k8s/1   active    idle   10.1.206.86         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-1: 01:34:06 ERROR unit.postgresql-k8s/1.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-postgresql-k8s-2: 01:35:13 ERROR unit.postgresql-k8s/2.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...

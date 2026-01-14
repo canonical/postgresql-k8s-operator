@@ -1,0 +1,37 @@
+[32mINFO    [0m juju.model:model.py:2087 Deploying local:jammy/postgresql-k8s-3
+[32mINFO    [0m juju.model:model.py:2947 Waiting for model:
+  test-storage-postgresql-k8s/0 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:model.py:2947 Waiting for model:
+  test-storage-postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2947 Waiting for model:
+  test-storage-postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2947 Waiting for model:
+  test-storage-postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:model.py:2947 Waiting for model:
+  test-storage-postgresql-k8s/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:784 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.7    unsupported  02:04:18Z
+
+App                          Version  Status  Scale  Charm           Channel  Rev  Address         Exposed  Message
+postgresql-k8s               14.10    active      3  postgresql-k8s             2  10.152.183.111  no       Primary
+test-storage-postgresql-k8s  14.10    active      1  postgresql-k8s             3  10.152.183.230  no       Primary
+
+Unit                            Workload  Agent  Address      Ports  Message
+postgresql-k8s/0*               active    idle   10.1.92.160         Primary
+postgresql-k8s/1                active    idle   10.1.92.161         
+postgresql-k8s/2                active    idle   10.1.92.159         
+test-storage-postgresql-k8s/0*  active    idle   10.1.92.163         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:790 Juju error logs:
+
+unit-postgresql-k8s-1: 01:32:52 ERROR unit.postgresql-k8s/1.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-postgresql-k8s-0: 01:46:31 ERROR unit.postgresql-k8s/0.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-postgresql-k8s-1: 01:57:25 ERROR juju.worker.uniter.context cannot apply changes: permission denied
+unit-postgresql-k8s-1: 01:57:25 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: permission denied
+unit-postgresql-k8s-0: 01:57:25 ERROR juju.worker.uniter.context cannot apply changes: permission denied
+unit-postgresql-k8s-0: 01:57:25 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: permission denied
+controller-0: 01:57:34 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql-k8s": cannot scale dying application to 0: application "postgresql-k8s" not found
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:856 Forgetting main...

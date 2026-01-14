@@ -1,0 +1,145 @@
+[32mINFO    [0m juju.model:model.py:2097 Deploying ch:amd64/focal/indico-175
+[32mINFO    [0m juju.model:model.py:2097 Deploying ch:amd64/focal/redis-k8s-7
+[32mINFO    [0m juju.model:model.py:2097 Deploying ch:amd64/focal/redis-k8s-7
+[33mWARNING [0m juju.model:model.py:1563 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:model.py:1563 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  indico/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  indico/0 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  indico/0 [idle] waiting: Waiting for database availability
+[32mINFO    [0m integration.new_relations.test_new_relations:test_new_relations.py:693 Verifying that the charm doesn't block when the extensions are enabled
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  database/0 [executing] active: Primary
+  database/1 [executing] active: 
+  database/2 [executing] active: 
+[33mWARNING [0m juju.model:model.py:1563 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  database/0 [executing] active: Primary
+  database/1 [idle] active: 
+  database/2 [executing] active: 
+  indico/0 [executing] waiting: Waiting for database availability
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  database/0 [idle] active: Primary
+  database/1 [idle] active: 
+  database/2 [idle] active: 
+  indico/0 [executing] maintenance: Adding indico layer to pebble
+[32mINFO    [0m juju.model:model.py:2957 Waiting for model:
+  indico/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:791 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.7    unsupported  02:07:32Z
+
+App                      Version               Status   Scale  Charm                Channel        Rev  Address         Exposed  Message
+another-application                            active       1  postgresql-test-app  edge            70  10.152.183.228  no       received database credentials of the first database
+another-data-integrator                        waiting      1  data-integrator      latest/stable   19  10.152.183.213  no       installing agent
+another-database         14.11                 active       3  postgresql-k8s                        0  10.152.183.246  no       Primary
+data-integrator                                waiting      1  data-integrator      latest/stable   19  10.152.183.140  no       installing agent
+database                 14.11                 active       3  postgresql-k8s                        1  10.152.183.166  no       Primary
+indico                   3.2.8                 active       1  indico               stable         175  10.152.183.161  no       
+other-discourse-k8s      3.2.0                 active       1  discourse-k8s        latest/stable   95  10.152.183.69   no       
+postgresql-test-app                            active       2  postgresql-test-app  edge            70  10.152.183.252  no       received database credentials of the first database
+redis-broker             ubuntu/redis@691f315  active       1  redis-k8s            stable           7                  no       
+redis-cache              ubuntu/redis@691f315  active       1  redis-k8s            stable           7                  no       
+redis-k8s                7.0.4                 active       1  redis-k8s            latest/edge     27  10.152.183.44   no       
+
+Unit                        Workload  Agent  Address     Ports     Message
+another-application/0*      active    idle   10.1.36.22            received database credentials of the first database
+another-data-integrator/0*  blocked   idle   10.1.36.26            Please relate the data-integrator with the desired product
+another-database/0*         active    idle   10.1.36.19            Primary
+another-database/1          active    idle   10.1.36.21            
+another-database/2          active    idle   10.1.36.20            
+data-integrator/0*          blocked   idle   10.1.36.25            Please relate the data-integrator with the desired product
+database/0                  active    idle   10.1.36.16            Primary
+database/1                  active    idle   10.1.36.23            
+database/2*                 active    idle   10.1.36.24            
+indico/0*                   active    idle   10.1.36.34            
+other-discourse-k8s/0*      active    idle   10.1.36.30            
+postgresql-test-app/0       active    idle   10.1.36.8             received database credentials of the first database
+postgresql-test-app/1*      active    idle   10.1.36.9             received database credentials of the first database
+redis-broker/0*             active    idle   10.1.36.35  6379/TCP  
+redis-cache/0*              active    idle   10.1.36.37  6379/TCP  
+redis-k8s/0*                active    idle   10.1.36.29            
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:797 Juju error logs:
+
+unit-database-0: 01:45:46 ERROR unit.database/0.juju-log database:20: Invalid extra user roles: test
+unit-database-0: 01:45:46 ERROR unit.database/0.juju-log database:20: invalid role(s) for extra user roles
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-0/charm/src/relations/postgresql_provider.py", line 90, in _on_database_requested
+    self.charm.postgresql.create_user(user, password, extra_user_roles=extra_user_roles)
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 221, in create_user
+    raise PostgreSQLCreateUserError(INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE)
+charms.postgresql_k8s.v0.postgresql.PostgreSQLCreateUserError: invalid role(s) for extra user roles
+unit-database-0: 01:45:48 ERROR unit.database/0.juju-log database:21: Invalid extra user roles: test
+unit-database-0: 01:45:48 ERROR unit.database/0.juju-log database:21: invalid role(s) for extra user roles
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-0/charm/src/relations/postgresql_provider.py", line 90, in _on_database_requested
+    self.charm.postgresql.create_user(user, password, extra_user_roles=extra_user_roles)
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 221, in create_user
+    raise PostgreSQLCreateUserError(INVALID_EXTRA_USER_ROLE_BLOCKING_MESSAGE)
+charms.postgresql_k8s.v0.postgresql.PostgreSQLCreateUserError: invalid role(s) for extra user roles
+unit-database-1: 02:00:01 ERROR unit.database/1.juju-log failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-1/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 300, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+  File "/var/lib/juju/agents/unit-database-1/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 127, in _connect_to_database
+    connection = psycopg2.connect(
+  File "/var/lib/juju/agents/unit-database-1/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "database-primary.test.svc.cluster.local" (10.152.183.79), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-1/charm/./src/charm.py", line 489, in enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-database-1/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 324, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError()
+charms.postgresql_k8s.v0.postgresql.PostgreSQLEnableDisableExtensionError
+unit-database-0: 02:00:03 ERROR unit.database/0.juju-log failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 300, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 127, in _connect_to_database
+    connection = psycopg2.connect(
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "database-primary.test.svc.cluster.local" (10.152.183.79), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-0/charm/./src/charm.py", line 489, in enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 324, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError()
+charms.postgresql_k8s.v0.postgresql.PostgreSQLEnableDisableExtensionError
+application-redis-cache: 02:05:27 ERROR unit.redis-cache/0.juju-log redis:30: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "./src/charm.py", line 159, in <module>
+    main(RedisCharm)
+  File "/var/lib/juju/agents/unit-redis-cache-0/charm/venv/ops/main.py", line 402, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-redis-cache-0/charm/venv/ops/main.py", line 140, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-redis-cache-0/charm/venv/ops/framework.py", line 278, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-redis-cache-0/charm/venv/ops/framework.py", line 722, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-redis-cache-0/charm/venv/ops/framework.py", line 767, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-redis-cache-0/charm/lib/charms/redis_k8s/v0/redis.py", line 91, in _on_relation_changed
+    event.relation.data[self.model.unit]['hostname'] = str(self._bind_address(event))
+  File "/var/lib/juju/agents/unit-redis-cache-0/charm/lib/charms/redis_k8s/v0/redis.py", line 103, in _bind_address
+    return self.app.name
+AttributeError: 'RedisProvides' object has no attribute 'app'
+application-redis-cache: 02:05:28 ERROR juju.worker.caasoperator.uniter.redis-cache/0.operation hook "redis-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:861 Forgetting main...

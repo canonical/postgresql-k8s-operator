@@ -1,0 +1,138 @@
+[32mINFO    [0m integration.ha_tests.test_rollback_to_master_label:test_rollback_to_master_label.py:78 starting continuous writes to the database
+[33mWARNING [0m juju.model:model.py:1564 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Primary
+  postgresql-test-app/0 [idle] active: 
+[32mINFO    [0m integration.ha_tests.test_rollback_to_master_label:test_rollback_to_master_label.py:82 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Initial writes {'test.postgresql-k8s-0': 192, 'test.postgresql-k8s-2': 193}
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:254 Retry writes {'test.postgresql-k8s-0': 335, 'test.postgresql-k8s-2': 336}
+[32mINFO    [0m integration.ha_tests.test_rollback_to_master_label:test_rollback_to_master_label.py:85 Get leader unit
+[32mINFO    [0m integration.ha_tests.test_rollback_to_master_label:test_rollback_to_master_label.py:91 Run pre-upgrade-check action
+[32mINFO    [0m integration.ha_tests.test_rollback_to_master_label:test_rollback_to_master_label.py:107 Inject dependency fault
+[32mINFO    [0m integration.ha_tests.test_rollback_to_master_label:test_rollback_to_master_label.py:115 Refresh the charm
+[32mINFO    [0m integration.ha_tests.test_rollback_to_master_label:test_rollback_to_master_label.py:118 Get first upgrading unit
+[32mINFO    [0m integration.ha_tests.test_rollback_to_master_label:test_rollback_to_master_label.py:122 Wait for upgrade to fail on first upgrading unit
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_rollback_to_master_label:test_rollback_to_master_label.py:133 Ensure continuous_writes while in failure state on remaining units
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Initial writes {'test.postgresql-k8s-0': 3707, 'test.postgresql-k8s-1': 3709}
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:254 Retry writes {'test.postgresql-k8s-0': 3840, 'test.postgresql-k8s-1': 3842}
+[32mINFO    [0m integration.ha_tests.test_rollback_to_master_label:test_rollback_to_master_label.py:136 Re-run pre-upgrade-check action
+[32mINFO    [0m integration.ha_tests.test_rollback_to_master_label:test_rollback_to_master_label.py:140 Re-refresh the charm
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: other units upgrading first...
+  postgresql-k8s/1 [idle] waiting: other units upgrading first...
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: other units upgrading first...
+  postgresql-k8s/1 [executing] waiting: other units upgrading first...
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/1 [idle] waiting: other units upgrading first...
+[32mINFO    [0m integration.ha_tests.test_rollback_to_master_label:test_rollback_to_master_label.py:167 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Initial writes {'test.postgresql-k8s-0': 17643, 'test.postgresql-k8s-1': 17644}
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:254 Retry writes {'test.postgresql-k8s-0': 17780, 'test.postgresql-k8s-1': 17782}
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_rollback_to_master_label:test_rollback_to_master_label.py:175 Resume upgrade
+[32mINFO    [0m integration.ha_tests.test_rollback_to_master_label:test_rollback_to_master_label.py:179 Wait for application to recover
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: other units upgrading first...
+  postgresql-k8s/1 [executing] maintenance: stopping charm software
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: other units upgrading first...
+  postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: other units upgrading first...
+  postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: other units upgrading first...
+  postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [executing] maintenance: upgrading unit
+  postgresql-k8s/1 [idle] maintenance: upgrade completed
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+  postgresql-k8s/1 [idle] maintenance: upgrade completed
+  postgresql-k8s/2 [idle] maintenance: upgrade completed
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] maintenance: upgrade completed
+  postgresql-k8s/1 [idle] maintenance: upgrade completed
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:model.py:2972 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_rollback_to_master_label:test_rollback_to_master_label.py:190 Ensure continuous_writes after rollback procedure
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:248 Initial writes {'test.postgresql-k8s-1': 34038, 'test.postgresql-k8s-2': 34040}
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:254 Retry writes {'test.postgresql-k8s-1': 34183, 'test.postgresql-k8s-2': 34185}
+[32mINFO    [0m integration.ha_tests.test_rollback_to_master_label:test_rollback_to_master_label.py:195 Checking whether no writes were lost
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1038 HTTP Request: GET https://10.1.1.163:16443/api/v1/namespaces/test/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m pytest_operator.plugin:plugin.py:903 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.4.6    unsupported  01:46:12Z
+
+App                  Version  Status  Scale  Charm                Channel      Rev  Address         Exposed  Message
+postgresql-k8s       14.11    active      3  postgresql-k8s                      1  10.152.183.21   no       
+postgresql-test-app           active      1  postgresql-test-app  latest/edge  293  10.152.183.166  no       received database credentials of the first database
+
+Unit                    Workload  Agent  Address      Ports  Message
+postgresql-k8s/0        active    idle   10.1.116.18         
+postgresql-k8s/1        active    idle   10.1.116.17         
+postgresql-k8s/2*       active    idle   10.1.116.16         
+postgresql-test-app/0*  active    idle   10.1.116.8          received database credentials of the first database
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:909 Juju error logs:
+
+unit-postgresql-k8s-2: 01:38:14 ERROR unit.postgresql-k8s/2.juju-log charms.data_platform_libs.v0.upgrade.VersionError - {'message': 'Versions incompatible, charm 1 can not be upgraded to 15.0', 'cause': 'Upgrades only supported for specific versions, charm versions satisfying requirement ^15', 'resolution': ''}
+unit-postgresql-k8s-2: 01:38:53 ERROR unit.postgresql-k8s/2.juju-log database:4: failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 346, in enable_disable_extensions
+    cursor.execute(
+psycopg2.errors.UndefinedFile: could not open extension control file "/usr/share/postgresql/14/extension/pgaudit.control": No such file or directory
+
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/./src/charm.py", line 719, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1064, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 357, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError()
+charms.postgresql_k8s.v0.postgresql.PostgreSQLEnableDisableExtensionError
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:991 Forgetting model main...

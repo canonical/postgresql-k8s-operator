@@ -1,1 +1,0 @@
-[32mINFO    [0m integration.test_charm:test_charm.py:105 connecting to the database host: 10.1.107.203

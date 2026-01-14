@@ -1,0 +1,21 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:834 Model status:
+
+Model  Controller          Cloud/Region        Version  SLA          Timestamp
+test   microk8s-localhost  microk8s/localhost  3.1.7    unsupported  01:29:44Z
+
+App                   Version  Status   Scale  Charm                Channel  Rev  Address         Exposed  Message
+postgresql-k8s                 error      0/3  postgresql-k8s                  0  10.152.183.206  no       create Pod postgresql-k8s-1 in StatefulSet postgresql-k8s failed error: failed to create PVC postgresql-k8s-pgdata-ee...
+postgresql-test-app            waiting    0/1  postgresql-test-app  edge      93                  no       installing agent
+postgresql-test-app2           waiting    0/1  postgresql-test-app  edge      93                  no       installing agent
+
+Unit                    Workload  Agent       Address       Ports  Message
+postgresql-k8s/0        waiting   allocating  10.1.165.203         agent initialising
+postgresql-k8s/1*       waiting   allocating  10.1.165.205         agent initialising
+postgresql-k8s/2        waiting   allocating  10.1.165.204         agent initialising
+postgresql-test-app2/0  waiting   allocating                       installing agent
+postgresql-test-app/0   waiting   allocating                       installing agent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:840 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:904 Forgetting main...
