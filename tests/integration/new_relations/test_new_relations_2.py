@@ -64,11 +64,12 @@ async def test_database_deploy_clientapps(ops_test: OpsTest, charm):
 
 @markers.amd64_only  # discourse-k8s charm not available for arm64
 async def test_discourse(ops_test: OpsTest):
+    pytest.skip("Second migration doesn't complete")
     # Deploy Discourse and Redis.
     await gather(
         ops_test.model.deploy(DISCOURSE_APP_NAME, application_name=DISCOURSE_APP_NAME),
         ops_test.model.deploy(
-            REDIS_APP_NAME, application_name=REDIS_APP_NAME, channel="latest/edge", base=CHARM_BASE
+            REDIS_APP_NAME, application_name=REDIS_APP_NAME, channel="latest/edge", series="jammy"
         ),
     )
 
@@ -150,10 +151,10 @@ async def test_indico_datatabase(ops_test: OpsTest) -> None:
             series="focal",
         )
         await ops_test.model.deploy(
-            "redis-k8s", channel="stable", application_name="redis-broker", base="ubuntu@20.04"
+            REDIS_APP_NAME, application_name="redis-broker", channel="latest/edge", series="jammy"
         )
         await ops_test.model.deploy(
-            "redis-k8s", channel="stable", application_name="redis-cache", base="ubuntu@20.04"
+            REDIS_APP_NAME, application_name="redis-cache", channel="latest/edge", series="jammy"
         )
         await asyncio.gather(
             ops_test.model.relate("redis-broker", "indico:redis-broker"),

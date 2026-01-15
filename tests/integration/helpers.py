@@ -786,8 +786,10 @@ async def wait_for_idle_on_blocked(
     await asyncio.gather(
         ops_test.model.wait_for_idle(apps=[other_app_name], status="active"),
         ops_test.model.block_until(
-            lambda: unit.workload_status == "blocked"
-            and unit.workload_status_message == status_message
+            lambda: (
+                unit.workload_status == "blocked"
+                and unit.workload_status_message == status_message
+            )
         ),
     )
 
@@ -830,6 +832,7 @@ async def backup_operations(
     tls_certificates_app_name: str,
     tls_config,
     tls_channel,
+    tls_base,
     credentials,
     cloud,
     config,
@@ -838,7 +841,7 @@ async def backup_operations(
     # Deploy S3 Integrator and TLS Certificates Operator.
     await ops_test.model.deploy(s3_integrator_app_name, base=CHARM_BASE)
     await ops_test.model.deploy(
-        tls_certificates_app_name, config=tls_config, channel=tls_channel, base=CHARM_BASE
+        tls_certificates_app_name, config=tls_config, channel=tls_channel, base=tls_base
     )
     # Deploy and relate PostgreSQL to S3 integrator (one database app for each cloud for now
     # as archivo_mode is disabled after restoring the backup) and to TLS Certificates Operator

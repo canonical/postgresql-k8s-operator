@@ -7,6 +7,7 @@
 import logging
 import os
 import pwd
+from functools import cached_property
 from typing import Any
 
 import requests
@@ -75,7 +76,6 @@ class Patroni:
         superuser_password: str,
         replication_password: str,
         rewind_password: str,
-        tls_enabled: bool,
         patroni_password: str,
     ):
         self._charm = charm
@@ -88,21 +88,23 @@ class Patroni:
         self._superuser_password = superuser_password
         self._replication_password = replication_password
         self._rewind_password = rewind_password
-        self._tls_enabled = tls_enabled
         self._patroni_password = patroni_password
+
+    @property
+    def _verify(self) -> str | bool:
         # Variable mapping to requests library verify parameter.
         # The CA bundle file is used to validate the server certificate when
         # TLS is enabled, otherwise True is set because it's the default value.
-        self._verify = f"{self._storage_path}/{TLS_CA_FILE}" if tls_enabled else True
+        return f"{self._storage_path}/{TLS_CA_FILE}" if self._charm.is_peer_data_tls_set else True
 
-    @property
+    @cached_property
     def _patroni_auth(self) -> requests.auth.HTTPBasicAuth:
         return requests.auth.HTTPBasicAuth("patroni", self._patroni_password)
 
     @property
     def _patroni_url(self) -> str:
         """Patroni REST API URL."""
-        return f"{'https' if self._tls_enabled else 'http'}://{self._endpoint}:8008"
+        return f"{'https' if self._charm.is_peer_data_tls_set else 'http'}://{self._endpoint}:8008"
 
     @property
     def rock_postgresql_version(self) -> str | None:
@@ -145,7 +147,7 @@ class Patroni:
             url = self._patroni_url
         return url
 
-    @property
+    @cached_property
     def _synchronous_node_count(self) -> int:
         planned_units = self._charm.app.planned_units()
         if self._charm.config.synchronous_node_count == "all":
@@ -252,7 +254,7 @@ class Patroni:
                         sync_standbys.append("/".join(member["name"].rsplit("-", 1)))
         return sync_standbys
 
-    @property
+    @cached_property
     def cluster_members(self) -> set:
         """Get the current cluster members."""
         # Request info from cluster endpoint (which returns all members of the cluster).
@@ -352,7 +354,7 @@ class Patroni:
             for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(1)):
                 with attempt:
                     r = requests.get(
-                        f"{'https' if self._tls_enabled else 'http'}://{self._primary_endpoint}:8008/health",
+                        f"{'https' if self._charm.is_peer_data_tls_set else 'http'}://{self._primary_endpoint}:8008/health",
                         verify=self._verify,
                         auth=self._patroni_auth,
                         timeout=PATRONI_TIMEOUT,
@@ -429,19 +431,6 @@ class Patroni:
 
         return r.json().get("replication_state") == "streaming"
 
-    @property
-    def is_database_running(self) -> bool:
-        """Returns whether the PostgreSQL database process is running (and isn't frozen)."""
-        container = self._charm.unit.get_container("postgresql")
-        output = container.exec(["ps", "aux"]).wait_output()
-        postgresql_processes = [
-            process
-            for process in output[0].split("/n")
-            if "/usr/lib/postgresql/14/bin/postgres" in process
-        ]
-        # Check whether the PostgreSQL process has a state equal to T (frozen).
-        return any(process for process in postgresql_processes if process.split()[7] != "T")
-
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def bulk_update_parameters_controller_by_patroni(self, parameters: dict[str, Any]) -> None:
         """Update the value of a parameter controller by Patroni.
@@ -451,7 +440,13 @@ class Patroni:
         requests.patch(
             f"{self._patroni_url}/config",
             verify=self._verify,
-            json={"postgresql": {"parameters": parameters}},
+            json={
+                "postgresql": {
+                    "remove_data_directory_on_rewind_failure": False,
+                    "remove_data_directory_on_diverged_timelines": False,
+                    "parameters": parameters,
+                }
+            },
             auth=self._patroni_auth,
             timeout=PATRONI_TIMEOUT,
         )
@@ -477,6 +472,16 @@ class Patroni:
             with attempt:
                 if self.get_primary() is None:
                     raise ClusterNotPromotedError("cluster not promoted")
+
+    def set_failsafe_mode(self) -> None:
+        """Patch the DCS with failsafe mode on."""
+        requests.patch(
+            f"{self._patroni_url}/config",
+            verify=self._verify,
+            json={"failsafe_mode": True},
+            auth=self._patroni_auth,
+            timeout=PATRONI_TIMEOUT,
+        )
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def reinitialize_postgresql(self) -> None:

@@ -163,8 +163,8 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
 
     # Validate configuration exposed by Patroni.
     assert settings["postgresql"]["use_pg_rewind"] is True
-    assert settings["postgresql"]["remove_data_directory_on_rewind_failure"] is True
-    assert settings["postgresql"]["remove_data_directory_on_diverged_timelines"] is True
+    assert settings["postgresql"]["remove_data_directory_on_rewind_failure"] is False
+    assert settings["postgresql"]["remove_data_directory_on_diverged_timelines"] is False
 
 
 async def test_postgresql_parameters_change(ops_test: OpsTest) -> None:
@@ -366,9 +366,12 @@ async def test_application_removal(ops_test: OpsTest) -> None:
 
     # Block until the application is completely removed, or any unit gets in an error state.
     await ops_test.model.block_until(
-        lambda: APP_NAME not in ops_test.model.applications
-        or any(
-            unit.workload_status == "error" for unit in ops_test.model.applications[APP_NAME].units
+        lambda: (
+            APP_NAME not in ops_test.model.applications
+            or any(
+                unit.workload_status == "error"
+                for unit in ops_test.model.applications[APP_NAME].units
+            )
         )
     )
 
@@ -416,9 +419,12 @@ async def test_redeploy_charm_same_model_after_forcing_removal(ops_test: OpsTest
 
     # Block until the application is completely removed, or any unit gets in an error state.
     await ops_test.model.block_until(
-        lambda: APP_NAME not in ops_test.model.applications
-        or any(
-            unit.workload_status == "error" for unit in ops_test.model.applications[APP_NAME].units
+        lambda: (
+            APP_NAME not in ops_test.model.applications
+            or any(
+                unit.workload_status == "error"
+                for unit in ops_test.model.applications[APP_NAME].units
+            )
         )
     )
 

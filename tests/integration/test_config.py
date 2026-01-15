@@ -10,7 +10,10 @@ from pytest_operator.plugin import OpsTest
 from .helpers import (
     DATABASE_APP_NAME,
     build_and_deploy,
+    execute_query_on_unit,
     get_leader_unit,
+    get_password,
+    get_unit_address,
 )
 
 logger = logging.getLogger(__name__)
@@ -207,6 +210,38 @@ async def test_config_parameters(ops_test: OpsTest, charm) -> None:
         {
             "vacuum_vacuum_multixact_freeze_table_age": ["-1", "150000000"]
         },  # config option is between 0 and 2000000000
+        # Worker process configs
+        {"cpu_max_worker_processes": ["-1", "16"]},  # negative (invalid) and valid value
+        {"cpu_max_worker_processes": ["1", "2"]},  # below min (1<2) and valid min value
+        {
+            "cpu_max_worker_processes": ["invalid", "auto"]
+        },  # config option is "auto" or a positive integer
+        {"cpu_max_parallel_workers": ["-1", "16"]},  # negative (invalid) and valid value
+        {"cpu_max_parallel_workers": ["1", "2"]},  # below min (1<2) and valid min value
+        {
+            "cpu_max_parallel_workers": ["invalid", "auto"]
+        },  # config option is "auto" or a positive integer
+        {"cpu_max_parallel_maintenance_workers": ["-1", "0"]},  # negative and zero (both invalid)
+        {
+            "cpu_max_parallel_maintenance_workers": ["1", "100"]
+        },  # below min (1<2) and above max (100>10*vCores)
+        {
+            "cpu_max_parallel_maintenance_workers": ["invalid", "auto"]
+        },  # config option is "auto" or a positive integer
+        {"cpu_max_logical_replication_workers": ["-1", "0"]},  # negative and zero (both invalid)
+        {
+            "cpu_max_logical_replication_workers": ["1", "100"]
+        },  # below min (1<2) and above max (100>10*vCores)
+        {
+            "cpu_max_logical_replication_workers": ["invalid", "auto"]
+        },  # config option is "auto" or a positive integer
+        {"cpu_max_sync_workers_per_subscription": ["-1", "0"]},  # negative and zero (both invalid)
+        {
+            "cpu_max_sync_workers_per_subscription": ["1", "100"]
+        },  # below min (1<2) and above max (100>10*vCores)
+        {
+            "cpu_max_sync_workers_per_subscription": ["invalid", "auto"]
+        },  # config option is "auto" or a positive integer
     ]
 
     charm_config = {}
@@ -216,8 +251,9 @@ async def test_config_parameters(ops_test: OpsTest, charm) -> None:
             charm_config[k] = v[0]
             await ops_test.model.applications[DATABASE_APP_NAME].set_config(charm_config)
             await ops_test.model.block_until(
-                lambda: ops_test.model.units[f"{DATABASE_APP_NAME}/0"].workload_status
-                == "blocked",
+                lambda: (
+                    ops_test.model.units[f"{DATABASE_APP_NAME}/0"].workload_status == "blocked"
+                ),
                 timeout=100,
             )
             assert "Configuration Error" in leader_unit.workload_status_message
@@ -228,3 +264,92 @@ async def test_config_parameters(ops_test: OpsTest, charm) -> None:
         lambda: ops_test.model.units[f"{DATABASE_APP_NAME}/0"].workload_status == "active",
         timeout=100,
     )
+
+
+@pytest.mark.abort_on_fail
+async def test_worker_process_configs(ops_test: OpsTest) -> None:
+    """Test worker process configuration parameters are applied correctly."""
+    leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
+    leader_unit_name = leader_unit.name
+    password = await get_password(ops_test)
+    unit_address = await get_unit_address(ops_test, leader_unit_name)
+
+    # Test setting explicit numeric values (all values must be >= 2 per validation)
+    worker_configs = {
+        "cpu_max_worker_processes": "16",
+        "cpu_max_parallel_workers": "8",
+        "cpu_max_parallel_maintenance_workers": "8",
+        "cpu_max_logical_replication_workers": "8",
+        "cpu_max_sync_workers_per_subscription": "8",
+    }
+
+    await ops_test.model.applications[DATABASE_APP_NAME].set_config(worker_configs)
+    await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=300)
+
+    # Verify the configs are applied in PostgreSQL
+    # Map charm config names to PostgreSQL parameter names
+    config_to_pg_param = {
+        "cpu_max_worker_processes": "max_worker_processes",
+        "cpu_max_parallel_workers": "max_parallel_workers",
+        "cpu_max_parallel_maintenance_workers": "max_parallel_maintenance_workers",
+        "cpu_max_logical_replication_workers": "max_logical_replication_workers",
+        "cpu_max_sync_workers_per_subscription": "max_sync_workers_per_subscription",
+    }
+
+    for config_name, expected_value in worker_configs.items():
+        pg_param = config_to_pg_param.get(config_name, config_name.replace("-", "_"))
+        result = await execute_query_on_unit(unit_address, password, f"SHOW {pg_param}")
+        actual_value = str(result[0]) if result else ""
+        assert actual_value == expected_value, (
+            f"{pg_param}: expected {expected_value}, got {actual_value}"
+        )
+
+    # Test setting "auto" values
+    auto_configs = {
+        "cpu_max_worker_processes": "auto",
+        "cpu_max_parallel_workers": "auto",
+        "cpu_max_parallel_maintenance_workers": "auto",
+        "cpu_max_logical_replication_workers": "auto",
+        "cpu_max_sync_workers_per_subscription": "auto",
+    }
+
+    await ops_test.model.applications[DATABASE_APP_NAME].set_config(auto_configs)
+    await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=300)
+
+    # Verify "auto" values are resolved to integers (not the string "auto")
+    for config_name in auto_configs:
+        pg_param = config_to_pg_param.get(config_name, config_name.replace("-", "_"))
+        result = await execute_query_on_unit(unit_address, password, f"SHOW {pg_param}")
+        actual_value = str(result[0]) if result else ""
+        assert actual_value != "auto", f"{pg_param} should be resolved to a number, not 'auto'"
+        assert actual_value.isdigit(), f"{pg_param} should be a number, got '{actual_value}'"
+
+
+@pytest.mark.abort_on_fail
+async def test_wal_compression_config(ops_test: OpsTest) -> None:
+    """Test wal_compression configuration parameter."""
+    leader_unit = await get_leader_unit(ops_test, DATABASE_APP_NAME)
+    leader_unit_name = leader_unit.name
+    password = await get_password(ops_test)
+    unit_address = await get_unit_address(ops_test, leader_unit_name)
+
+    # Test enabling WAL compression
+    await ops_test.model.applications[DATABASE_APP_NAME].set_config({
+        "cpu_wal_compression": "true"
+    })
+    await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=300)
+
+    result = await execute_query_on_unit(unit_address, password, "SHOW wal_compression")
+    # In PostgreSQL 14, wal_compression is either "on" or "off" (no specific algorithms)
+    assert result[0] in ["on", "pglz"], (
+        f"Expected 'on' or 'pglz' for enabled compression, got '{result[0]}'"
+    )
+
+    # Test disabling WAL compression
+    await ops_test.model.applications[DATABASE_APP_NAME].set_config({
+        "cpu_wal_compression": "false"
+    })
+    await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=300)
+
+    result = await execute_query_on_unit(unit_address, password, "SHOW wal_compression")
+    assert result[0] == "off"

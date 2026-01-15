@@ -23,6 +23,7 @@ from ..helpers import (
 from .helpers import (
     are_writes_increasing,
     check_writes,
+    get_patroni_setting,
     start_continuous_writes,
 )
 
@@ -49,6 +50,7 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
             base=CHARM_BASE,
         ),
     )
+    await ops_test.model.relate(DATABASE_APP_NAME, f"{APPLICATION_NAME}:database")
     logger.info("Wait for applications to become active")
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(
@@ -149,3 +151,4 @@ async def test_upgrade_from_stable(ops_test: OpsTest, charm, continuous_writes):
         assert (final_number_of_switchovers - initial_number_of_switchovers) <= 2, (
             "Number of switchovers is greater than 2"
         )
+        assert await get_patroni_setting(ops_test, "failsafe_mode")

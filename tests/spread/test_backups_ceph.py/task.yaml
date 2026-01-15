@@ -1,9 +1,7 @@
-summary: test_db_admin.py
+summary: test_backups_ceph.py
 environment:
-  TEST_MODULE: test_db_admin.py
+  TEST_MODULE: test_backups_ceph.py
 execute: |
   tox run -e integration -- "tests/integration/$TEST_MODULE" --model testing --alluredir="$SPREAD_TASK/allure-results"
 artifacts:
   - allure-results
-systems:
-  - -ubuntu-24.04-arm

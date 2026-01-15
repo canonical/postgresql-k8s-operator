@@ -435,7 +435,9 @@ async def fetch_cluster_members(ops_test: OpsTest):
     return member_ips
 
 
-async def get_patroni_setting(ops_test: OpsTest, setting: str, tls: bool = False) -> int | None:
+async def get_patroni_setting(
+    ops_test: OpsTest, setting: str, tls: bool = False
+) -> int | str | None:
     """Get the value of one of the integer Patroni settings.
 
     Args:
@@ -453,8 +455,10 @@ async def get_patroni_setting(ops_test: OpsTest, setting: str, tls: bool = False
             primary_name = await get_primary(ops_test, app)
             unit_ip = await get_unit_address(ops_test, primary_name)
             configuration_info = requests.get(f"{schema}://{unit_ip}:8008/config", verify=not tls)
-            primary_start_timeout = configuration_info.json().get(setting)
-            return int(primary_start_timeout) if primary_start_timeout is not None else None
+            value = configuration_info.json().get(setting)
+            with contextlib.suppress(ValueError, TypeError):
+                value = int(value)
+            return value
 
 
 async def get_instances_roles(ops_test: OpsTest):
@@ -919,18 +923,14 @@ async def start_continuous_writes(ops_test: OpsTest, app: str, model: Model = No
     ]
     if not relations:
         await model.relate(app, f"{APPLICATION_NAME}:database")
-        await model.wait_for_idle(status="active", timeout=1000)
-    else:
-        action = (
-            await model.applications[APPLICATION_NAME]
-            .units[0]
-            .run_action("start-continuous-writes")
+        await model.wait_for_idle(
+            apps=[APPLICATION_NAME, app], status="active", timeout=1000, idle_period=30
         )
-        await action.wait()
     for attempt in Retrying(stop=stop_after_delay(60 * 5), wait=wait_fixed(3), reraise=True):
         with attempt:
             action = (
-                await model.applications[APPLICATION_NAME]
+                await model
+                .applications[APPLICATION_NAME]
                 .units[0]
                 .run_action("start-continuous-writes")
             )

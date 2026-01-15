@@ -29,6 +29,7 @@ CSR
 CSRs
 databag
 databags
+DDL
 dev
 dvipng
 eks
@@ -69,14 +70,17 @@ LDAP
 libs
 lifecycle
 MinIO
+misconfiguration
 Multipass
 nameserver
 nameservers
 Nextcloud
 otf
 Parca
+patroni
 Patroni
 Patroni*
+pgAudit
 pgbackrest
 pgBackRest
 pgbouncer

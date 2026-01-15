@@ -92,7 +92,8 @@ async def second_model_continuous_writes(second_model) -> None:
     for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(3), reraise=True):
         with attempt:
             action = (
-                await second_model.applications[APPLICATION_NAME]
+                await second_model
+                .applications[APPLICATION_NAME]
                 .units[0]
                 .run_action("clear-continuous-writes")
             )
@@ -117,18 +118,12 @@ async def test_deploy_async_replication_setup(
 
     async with ops_test.fast_forward(), fast_forward(second_model):
         await gather(
-            first_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME, APPLICATION_NAME],
-                status="active",
-                timeout=TIMEOUT,
-                raise_on_error=False,
-            ),
-            second_model.wait_for_idle(
-                apps=[DATABASE_APP_NAME, APPLICATION_NAME],
-                status="active",
-                timeout=TIMEOUT,
-                raise_on_error=False,
-            ),
+            first_model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked"),
+            second_model.wait_for_idle(apps=[APPLICATION_NAME], status="blocked"),
+        )
+        await gather(
+            first_model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=TIMEOUT),
+            second_model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=TIMEOUT),
         )
 
 
