@@ -1,0 +1,34 @@
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:806 Connecting to existing model concierge-microk8s:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHSession received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHTunneler received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m integration.test_pg_hba:test_pg_hba.py:33 Deploying charms
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-0
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/data-integrator-180
+[32mINFO    [0m integration.test_pg_hba:test_pg_hba.py:42 Adding relation between charms
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [allocating] waiting: installing agent
+  postgresql-k8s/0 [allocating] waiting: installing agent
+  postgresql-k8s/1 [allocating] waiting: installing agent
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.12   unsupported  01:30:52Z
+
+App              Version  Status   Scale  Charm            Channel        Rev  Address         Exposed  Message
+data-integrator           blocked      1  data-integrator  latest/stable  180  10.152.183.212  no       Please relate the data-integrator with the desired product
+postgresql-k8s            error      1/2  postgresql-k8s                    0  10.152.183.157  no       Create Pod postgresql-k8s-1 in StatefulSet postgresql-k8s failed error: failed to create PVC postgresql-k8s-data-240d...
+
+Unit                Workload     Agent       Address     Ports  Message
+data-integrator/0*  blocked      idle        10.1.60.12         Please relate the data-integrator with the desired product
+postgresql-k8s/0*   maintenance  executing                      (install) installing charm software
+postgresql-k8s/1    waiting      allocating                     installing agent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
