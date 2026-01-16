@@ -1,0 +1,27 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-3
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [executing] active: Primary
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.12   unsupported  00:50:00Z
+
+App                          Version  Status   Scale  Charm           Channel  Rev  Address         Exposed  Message
+postgresql-k8s                        waiting    0/3  postgresql-k8s             2  10.152.183.165  no       agent initialising
+test-storage-postgresql-k8s  14.20    active       1  postgresql-k8s             3  10.152.183.243  no       
+
+Unit                            Workload  Agent       Address     Ports  Message
+postgresql-k8s/0                waiting   allocating                     agent initialising
+postgresql-k8s/1*               waiting   allocating                     agent initialising
+postgresql-k8s/2                waiting   allocating                     agent initialising
+test-storage-postgresql-k8s/0*  active    idle        10.1.60.26         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-1: 00:12:07 ERROR unit.postgresql-k8s/1.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-postgresql-k8s-1: 00:22:18 ERROR unit.postgresql-k8s/1.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+controller-0: 00:32:03 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql-k8s": getting OCI image resources: unable to fetch OCI image resources for postgresql-k8s: application "postgresql-k8s" dying or dead
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
