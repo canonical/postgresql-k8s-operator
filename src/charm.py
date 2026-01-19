@@ -151,10 +151,11 @@ from relations.async_replication import (
     REPLICATION_OFFER_RELATION,
     PostgreSQLAsyncReplication,
 )
-from relations.logical_replication import (
-    LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS,
-    PostgreSQLLogicalReplication,
-)
+
+# from relations.logical_replication import (
+#     LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS,
+#     PostgreSQLLogicalReplication,
+# )
 from relations.postgresql_provider import PostgreSQLProvider
 from relations.tls import TLS
 from relations.tls_transfer import TLSTransfer
@@ -270,7 +271,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.tls = TLS(self, PEER)
         self.tls_transfer = TLSTransfer(self, PEER)
         self.async_replication = PostgreSQLAsyncReplication(self)
-        self.logical_replication = PostgreSQLLogicalReplication(self)
+        # self.logical_replication = PostgreSQLLogicalReplication(self)
         self.restart_manager = RollingOpsManager(
             charm=self, relation="restart", callback=self._restart
         )
@@ -874,8 +875,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Update the sync-standby endpoint in the async replication data.
         self.async_replication.update_async_replication_data()
 
-        if not self.logical_replication.apply_changed_config(event):
-            return
+        # if not self.logical_replication.apply_changed_config(event):
+        #     return
 
         if not self.unit.is_leader():
             return
@@ -929,7 +930,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.postgresql.enable_disable_extensions(extensions, database)
         except psycopg2.errors.DependentObjectsStillExist as e:
             logger.error(
-                "Failed to disable plugin: %s\nWas the plugin enabled manually? If so, update charm config with `juju config postgresql-k8s plugin_<plugin_name>_enable=True`",
+                "Failed to disable plugin: %s\nWas the plugin enabled manually? If so, update charm config with `juju config postgresql-k8s plugin-<plugin_name>-enable=True`",
                 str(e),
             )
             self.set_unit_status(BlockedStatus(EXTENSION_OBJECT_MESSAGE))
@@ -1258,12 +1259,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     BlockedStatus(self.app_peer_data["s3-initialization-block-message"])
                 )
                 return
-            if self.unit.is_leader() and (
-                self.app_peer_data.get("logical-replication-validation") == "error"
-                or self.logical_replication.has_remote_publisher_errors()
-            ):
-                self.set_unit_status(BlockedStatus(LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS))
-                return
+            # if self.unit.is_leader() and (
+            #     self.app_peer_data.get("logical-replication-validation") == "error"
+            #     or self.logical_replication.has_remote_publisher_errors()
+            # ):
+            #     self.set_unit_status(BlockedStatus(LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS))
+            #     return
             if (
                 self._patroni.get_primary(unit_name_pattern=True) == self.unit.name
                 or self.is_standby_leader
@@ -1720,9 +1721,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._check_pgdata_storage_size()
 
         if (
-            self._has_blocked_status
-            and self.unit.status not in S3_BLOCK_MESSAGES
-            and self.unit.status.message != LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS
+            self._has_blocked_status and self.unit.status not in S3_BLOCK_MESSAGES
+            # and self.unit.status.message != LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS
         ) or self._has_non_restore_waiting_status:
             # If charm was failing to disable plugin, try again and continue (user may have removed the objects)
             if self.unit.status.message == EXTENSION_OBJECT_MESSAGE:
@@ -1795,7 +1795,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         self.backup.coordinate_stanza_fields()
 
-        self.logical_replication.retry_validations()
+        # self.logical_replication.retry_validations()
 
         self._set_active_status()
 
@@ -1866,7 +1866,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         return True
 
-    @property
+    @cached_property
     def _patroni(self):
         """Returns an instance of the Patroni object."""
         return Patroni(
@@ -2271,6 +2271,175 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return False
         return True
 
+    def _calculate_max_worker_processes(self, cpu_cores: int) -> str | None:
+        """Calculate cpu_max_worker_processes configuration value."""
+        if self.config.cpu_max_worker_processes == "auto":
+            # auto = minimum(8, 2 * vCores)
+            return str(min(8, 2 * cpu_cores))
+        elif self.config.cpu_max_worker_processes is not None:
+            value = self.config.cpu_max_worker_processes
+            # Pydantic already enforces minimum of 2 via conint(ge=2)
+            # This is an extra safeguard
+            if value < 2:
+                raise ValueError(f"cpu-max-worker-processes value {value} is below minimum of 2")
+            cap = 10 * cpu_cores
+            if value > cap:
+                raise ValueError(
+                    f"cpu-max-worker-processes value {value} exceeds maximum allowed "
+                    f"of {cap} (10 * vCores). Please set a value <= {cap}."
+                )
+            return str(value)
+        return None
+
+    def _validate_worker_config_value(self, param_name: str, value: int, cpu_cores: int) -> str:
+        """Shared validation logic for worker process parameters.
+
+        Args:
+            param_name: The configuration parameter name (for error messages)
+            value: The integer value to validate
+            cpu_cores: The number of available CPU cores
+
+        Returns:
+            String representation of the validated value
+
+        Raises:
+            ValueError: If value is less than 2 or exceeds 10 * vCores
+        """
+        if value < 2:
+            raise ValueError(f"{param_name} value {value} is below minimum of 2")
+        cap = 10 * cpu_cores
+        if value > cap:
+            raise ValueError(
+                f"{param_name} value {value} exceeds maximum allowed "
+                f"of {cap} (10 * vCores). Please set a value <= {cap}."
+            )
+        return str(value)
+
+    def _calculate_max_parallel_workers(self, base_max_workers: int, cpu_cores: int) -> str | None:
+        """Calculate cpu_max_parallel_workers configuration value."""
+        if self.config.cpu_max_parallel_workers == "auto":
+            return str(base_max_workers)
+        elif self.config.cpu_max_parallel_workers is not None:
+            # Validate the value first
+            validated_value_str = self._validate_worker_config_value(
+                "cpu-max-parallel-workers", self.config.cpu_max_parallel_workers, cpu_cores
+            )
+            # Apply the min constraint with base_max_workers
+            return str(min(int(validated_value_str), base_max_workers))
+        return None
+
+    def _calculate_max_parallel_maintenance_workers(
+        self, base_max_workers: int, cpu_cores: int
+    ) -> str | None:
+        """Calculate cpu_max_parallel_maintenance_workers configuration value."""
+        if self.config.cpu_max_parallel_maintenance_workers == "auto":
+            return str(base_max_workers)
+        elif self.config.cpu_max_parallel_maintenance_workers is not None:
+            return self._validate_worker_config_value(
+                "cpu-max-parallel-maintenance-workers",
+                self.config.cpu_max_parallel_maintenance_workers,
+                cpu_cores,
+            )
+        return None
+
+    def _calculate_max_logical_replication_workers(
+        self, base_max_workers: int, cpu_cores: int
+    ) -> str | None:
+        """Calculate cpu_max_logical_replication_workers configuration value."""
+        if self.config.cpu_max_logical_replication_workers == "auto":
+            return str(base_max_workers)
+        elif self.config.cpu_max_logical_replication_workers is not None:
+            return self._validate_worker_config_value(
+                "cpu-max-logical-replication-workers",
+                self.config.cpu_max_logical_replication_workers,
+                cpu_cores,
+            )
+        return None
+
+    def _calculate_max_sync_workers_per_subscription(
+        self, base_max_workers: int, cpu_cores: int
+    ) -> str | None:
+        """Calculate cpu_max_sync_workers_per_subscription configuration value."""
+        if self.config.cpu_max_sync_workers_per_subscription == "auto":
+            return str(base_max_workers)
+        elif self.config.cpu_max_sync_workers_per_subscription is not None:
+            return self._validate_worker_config_value(
+                "cpu-max-sync-workers-per-subscription",
+                self.config.cpu_max_sync_workers_per_subscription,
+                cpu_cores,
+            )
+        return None
+
+    def _calculate_max_parallel_apply_workers_per_subscription(
+        self, base_max_workers: int, cpu_cores: int
+    ) -> str | None:
+        """Calculate cpu_max_parallel_apply_workers_per_subscription configuration value."""
+        if self.config.cpu_max_parallel_apply_workers_per_subscription == "auto":
+            return str(base_max_workers)
+        elif self.config.cpu_max_parallel_apply_workers_per_subscription is not None:
+            return self._validate_worker_config_value(
+                "cpu-max-parallel-apply-workers-per-subscription",
+                self.config.cpu_max_parallel_apply_workers_per_subscription,
+                cpu_cores,
+            )
+        return None
+
+    def _calculate_worker_process_config(self, cpu_cores: int) -> dict[str, str]:
+        """Calculate worker process configuration values.
+
+        Handles 'auto' values and capping logic for worker process parameters.
+        Returns a dictionary with the calculated values ready for PostgreSQL.
+        """
+        result: dict[str, str] = {}
+
+        # Calculate cpu_max_worker_processes (baseline for other worker configs)
+        cpu_max_worker_processes_value = self._calculate_max_worker_processes(cpu_cores)
+        if cpu_max_worker_processes_value is not None:
+            result["max_worker_processes"] = cpu_max_worker_processes_value
+
+        # Get the effective cpu_max_worker_processes for dependent configs
+        # Use the calculated value, or fall back to PostgreSQL default (8)
+        base_max_workers = int(result.get("max_worker_processes", "8"))
+
+        # Calculate other worker parameters
+        cpu_max_parallel_workers_value = self._calculate_max_parallel_workers(
+            base_max_workers, cpu_cores
+        )
+        if cpu_max_parallel_workers_value is not None:
+            result["max_parallel_workers"] = cpu_max_parallel_workers_value
+
+        cpu_max_parallel_maintenance_workers_value = (
+            self._calculate_max_parallel_maintenance_workers(base_max_workers, cpu_cores)
+        )
+        if cpu_max_parallel_maintenance_workers_value is not None:
+            result["max_parallel_maintenance_workers"] = cpu_max_parallel_maintenance_workers_value
+
+        cpu_max_logical_replication_workers_value = (
+            self._calculate_max_logical_replication_workers(base_max_workers, cpu_cores)
+        )
+        if cpu_max_logical_replication_workers_value is not None:
+            result["max_logical_replication_workers"] = cpu_max_logical_replication_workers_value
+
+        cpu_max_sync_workers_per_subscription_value = (
+            self._calculate_max_sync_workers_per_subscription(base_max_workers, cpu_cores)
+        )
+        if cpu_max_sync_workers_per_subscription_value is not None:
+            result["max_sync_workers_per_subscription"] = (
+                cpu_max_sync_workers_per_subscription_value
+            )
+
+        cpu_max_parallel_apply_workers_per_subscription_value = (
+            self._calculate_max_parallel_apply_workers_per_subscription(
+                base_max_workers, cpu_cores
+            )
+        )
+        if cpu_max_parallel_apply_workers_per_subscription_value is not None:
+            result["max_parallel_apply_workers_per_subscription"] = (
+                cpu_max_parallel_apply_workers_per_subscription_value
+            )
+
+        return result
+
     def _api_update_config(self, available_cpu_cores: int) -> None:
         # Use config value if set, calculate otherwise
         if self.config.experimental_max_connections:
@@ -2286,18 +2455,66 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             "shared_buffers": self.config.memory_shared_buffers,
             "wal_keep_size": self.config.durability_wal_keep_size,
         }
+
+        # Add restart-required worker process parameters via Patroni API
+        worker_configs = self._calculate_worker_process_config(available_cpu_cores)
+        if "max_worker_processes" in worker_configs:
+            cfg_patch["max_worker_processes"] = worker_configs["max_worker_processes"]
+
+        if "max_logical_replication_workers" in worker_configs:
+            cfg_patch["max_logical_replication_workers"] = worker_configs[
+                "max_logical_replication_workers"
+            ]
+
         base_patch = {}
         if primary_endpoint := self.async_replication.get_primary_cluster_endpoint():
             base_patch["standby_cluster"] = {"host": primary_endpoint}
         self._patroni.bulk_update_parameters_controller_by_patroni(cfg_patch, base_patch)
 
+    def _build_postgresql_parameters(
+        self, available_cpu_cores: int, available_memory: int
+    ) -> dict | None:
+        """Build PostgreSQL configuration parameters.
+
+        Args:
+            available_cpu_cores: Number of available CPU cores
+            available_memory: Available memory in bytes
+
+        Returns:
+            Dictionary of PostgreSQL parameters or None if base parameters couldn't be built.
+        """
+        limit_memory = None
+        if self.config.profile_limit_memory:
+            limit_memory = self.config.profile_limit_memory * 10**6
+
+        # Build PostgreSQL parameters.
+        pg_parameters = self.postgresql.build_postgresql_parameters(
+            self.model.config, available_memory, limit_memory
+        )
+
+        # Calculate and merge worker process configurations
+        worker_configs = self._calculate_worker_process_config(available_cpu_cores)
+
+        # Add cpu_wal_compression configuration (separate from worker processes)
+        if self.config.cpu_wal_compression is not None:
+            cpu_wal_compression = "on" if self.config.cpu_wal_compression else "off"
+        else:
+            # Use config.yaml default when unset (default: true)
+            cpu_wal_compression = "on"
+
+        if pg_parameters is not None:
+            pg_parameters.update(worker_configs)
+            pg_parameters["wal_compression"] = cpu_wal_compression
+        else:
+            pg_parameters = dict(worker_configs)
+            pg_parameters["wal_compression"] = cpu_wal_compression
+            logger.debug(f"pg_parameters set to worker_configs = {pg_parameters}")
+
+        return pg_parameters
+
     def update_config(self, is_creating_backup: bool = False) -> bool:
         """Updates Patroni config file based on the existence of the TLS files."""
         # Retrieve PostgreSQL parameters.
-        if self.config.profile_limit_memory:
-            limit_memory = self.config.profile_limit_memory * 10**6
-        else:
-            limit_memory = None
         try:
             available_cpu_cores, available_memory = self.get_available_resources()
         except ApiError as e:
@@ -2306,14 +2523,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 return False
             raise e
 
-        # TODO Updating the lib should accept ConfigData
-        postgresql_parameters = self.postgresql.build_postgresql_parameters(
-            self.model.config,  # type: ignore
-            available_memory,
-            limit_memory,
+        # Build PostgreSQL parameters
+        postgresql_parameters = self._build_postgresql_parameters(
+            available_cpu_cores, available_memory
         )
 
-        replication_slots = self.logical_replication.replication_slots()
+        # replication_slots = self.logical_replication.replication_slots()
+        replication_slots = {}
 
         logger.info("Updating Patroni config file")
         # Update and reload configuration based on TLS files availability.
@@ -2378,26 +2594,26 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             not in self.postgresql.get_postgresql_text_search_configs()
         ):
             raise ValueError(
-                "instance_default_text_search_config config option has an invalid value"
+                "instance-default-text-search-config config option has an invalid value"
             )
 
         if not self.postgresql.validate_group_map(self.config.ldap_map):
-            raise ValueError("ldap_map config option has an invalid value")
+            raise ValueError("ldap-map config option has an invalid value")
 
         if self.config.request_date_style and not self.postgresql.validate_date_style(
             self.config.request_date_style
         ):
-            raise ValueError("request_date_style config option has an invalid value")
+            raise ValueError("request-date-style config option has an invalid value")
 
         if self.config.request_time_zone not in self.postgresql.get_postgresql_timezones():
-            raise ValueError("request_time_zone config option has an invalid value")
+            raise ValueError("request-time-zone config option has an invalid value")
 
         if (
             self.config.storage_default_table_access_method
             not in self.postgresql.get_postgresql_default_table_access_methods()
         ):
             raise ValueError(
-                "storage_default_table_access_method config option has an invalid value"
+                "storage-default-table-access-method config option has an invalid value"
             )
 
     def _handle_postgresql_restart_need(self, config_changed: bool):

@@ -66,7 +66,7 @@ The legacy charm configuration options were not moved to the modern charm due to
 
 ## Extensions supported by modern charm
 
-The legacy charm provided plugins/extensions enabling through the relation (interface `pgsql`). It is NOT supported by the modern charm (neither `pgsql` nor `postgresql_client` interfaces). Please enable the necessary extensions using appropriate `plugin_*_enable` [config option](https://charmhub.io/postgresql-k8s/configure) of the modern charm. After enabling the modern charm will provide plugins support for both `pgsql` and `postgresql_client` interfaces.
+The legacy charm provided plugins/extensions enabling through the relation (interface `pgsql`). It is NOT supported by the modern charm (neither `pgsql` nor `postgresql_client` interfaces). Please enable the necessary extensions using appropriate `plugin-*-enable` [config option](https://charmhub.io/postgresql-k8s/configurations?channel=16/stable) of the modern charm. After enabling the modern charm will provide plugins support for both `pgsql` and `postgresql_client` interfaces.
 
 Please find the list of supported PostgreSQL [Extensions](/reference/plugins-extensions) by modern charm. Feel free to [contact us](/reference/contacts) with a list of required extensions.
 

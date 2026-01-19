@@ -44,7 +44,7 @@ async def test_default_all(ops_test: OpsTest) -> None:
 async def test_majority(ops_test: OpsTest) -> None:
     app = await app_name(ops_test)
 
-    await ops_test.model.applications[app].set_config({"synchronous_node_count": "majority"})
+    await ops_test.model.applications[app].set_config({"synchronous-node-count": "majority"})
 
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(apps=[app], status="active")
@@ -63,7 +63,7 @@ async def test_majority(ops_test: OpsTest) -> None:
 async def test_constant(ops_test: OpsTest) -> None:
     app = await app_name(ops_test)
 
-    await ops_test.model.applications[app].set_config({"synchronous_node_count": "2"})
+    await ops_test.model.applications[app].set_config({"synchronous-node-count": "2"})
 
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(apps=[app], status="active", timeout=300)

@@ -21,7 +21,7 @@ from .helpers import (
 CANNOT_RESTORE_PITR = "cannot restore PITR, juju debug-log for details"
 S3_INTEGRATOR_APP_NAME = "s3-integrator"
 tls_certificates_app_name = "self-signed-certificates"
-tls_channel = "latest/stable"
+tls_channel = "1/stable"
 tls_config = {"ca-common-name": "Test CA"}
 
 logger = logging.getLogger(__name__)
@@ -148,8 +148,10 @@ async def pitr_backup_operations(
     logger.info("1: waiting for the database charm to become blocked after restore")
     async with ops_test.fast_forward():
         await ops_test.model.block_until(
-            lambda: ops_test.model.units.get(f"{database_app_name}/0").workload_status_message
-            == CANNOT_RESTORE_PITR,
+            lambda: (
+                ops_test.model.units.get(f"{database_app_name}/0").workload_status_message
+                == CANNOT_RESTORE_PITR
+            ),
             timeout=1000,
         )
     logger.info(

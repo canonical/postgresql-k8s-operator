@@ -309,7 +309,7 @@ class PostgreSQLLogicalReplication(Object):
     # endregion
 
     def apply_changed_config(self, event: EventBase) -> bool:
-        """Validate & apply (relation) logical_replication_subscription_request config parameter."""
+        """Validate & apply (relation) logical-replication-subscription-request config parameter."""
         if not self.charm.unit.is_leader():
             return True
         if not self.charm.primary_endpoint:

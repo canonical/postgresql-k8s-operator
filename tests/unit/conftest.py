@@ -34,7 +34,7 @@ def mock_refresh():
     # Mock the _RefreshVersions class to avoid KeyError when charm key is missing
     versions_mock = Mock()
     versions_mock.charm = "v1/16.0.0"
-    versions_mock.workload = "16.10"
+    versions_mock.workload = "16.11"
 
     with (
         patch("charm_refresh.Kubernetes", Mock(return_value=refresh_mock)),

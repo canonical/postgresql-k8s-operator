@@ -189,10 +189,10 @@ async def test_postgresql_locales(ops_test: OpsTest) -> None:
 async def test_postgresql_parameters_change(ops_test: OpsTest) -> None:
     """Test that's possible to change PostgreSQL parameters."""
     await ops_test.model.applications[APP_NAME].set_config({
-        "memory_max_prepared_transactions": "100",
-        "memory_shared_buffers": "32768",  # 2 * 128MB. Patroni may refuse the config if < 128MB
-        "response_lc_monetary": "en_GB.utf8",
-        "experimental_max_connections": "200",
+        "memory-max-prepared-transactions": "100",
+        "memory-shared-buffers": "32768",  # 2 * 128MB. Patroni may refuse the config if < 128MB
+        "response-lc-monetary": "en_GB.utf8",
+        "experimental-max-connections": "200",
     })
     await ops_test.model.wait_for_idle(apps=[APP_NAME], status="active", idle_period=30)
     password = await get_password(ops_test)
@@ -385,9 +385,12 @@ async def test_application_removal(ops_test: OpsTest) -> None:
 
     # Block until the application is completely removed, or any unit gets in an error state.
     await ops_test.model.block_until(
-        lambda: APP_NAME not in ops_test.model.applications
-        or any(
-            unit.workload_status == "error" for unit in ops_test.model.applications[APP_NAME].units
+        lambda: (
+            APP_NAME not in ops_test.model.applications
+            or any(
+                unit.workload_status == "error"
+                for unit in ops_test.model.applications[APP_NAME].units
+            )
         )
     )
 
@@ -435,9 +438,12 @@ async def test_redeploy_charm_same_model_after_forcing_removal(ops_test: OpsTest
 
     # Block until the application is completely removed, or any unit gets in an error state.
     await ops_test.model.block_until(
-        lambda: APP_NAME not in ops_test.model.applications
-        or any(
-            unit.workload_status == "error" for unit in ops_test.model.applications[APP_NAME].units
+        lambda: (
+            APP_NAME not in ops_test.model.applications
+            or any(
+                unit.workload_status == "error"
+                for unit in ops_test.model.applications[APP_NAME].units
+            )
         )
     )
 

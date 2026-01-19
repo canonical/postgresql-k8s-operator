@@ -80,7 +80,7 @@ async def test_pg2_publisher_error(ops_test: OpsTest):
     await _create_test_table(ops_test, SECOND_DATA_INTEGRATOR_APP_NAME)
 
     pg2_config = DATABASE_APP_CONFIG.copy()
-    pg2_config["logical_replication_subscription_request"] = json.dumps({
+    pg2_config["logical-replication-subscription-request"] = json.dumps({
         TESTING_DATABASE: ["public.test_table"]
     })
     await ops_test.model.applications[SECOND_DATABASE_APP_NAME].set_config(pg2_config)
@@ -91,7 +91,7 @@ async def test_pg2_publisher_error(ops_test: OpsTest):
 @pytest.mark.abort_on_fail
 async def test_pg3_local_error(ops_test: OpsTest):
     pg3_config = DATABASE_APP_CONFIG.copy()
-    pg3_config["logical_replication_subscription_request"] = json.dumps({
+    pg3_config["logical-replication-subscription-request"] = json.dumps({
         "bad_database": ["bad_format"]
     })
     await ops_test.model.applications[THIRD_DATABASE_APP_NAME].set_config(pg3_config)
@@ -103,7 +103,7 @@ async def test_pg3_local_error(ops_test: OpsTest):
     )
     await _wait_for_leader_on_blocked(ops_test, THIRD_DATABASE_APP_NAME)
 
-    pg3_config["logical_replication_subscription_request"] = json.dumps({
+    pg3_config["logical-replication-subscription-request"] = json.dumps({
         TESTING_DATABASE: ["public.test_table2"]
     })
     await ops_test.model.applications[THIRD_DATABASE_APP_NAME].set_config(pg3_config)
@@ -170,7 +170,7 @@ async def test_pg3_extend_subscription(ops_test: OpsTest):
     await _create_test_table(ops_test, THIRD_DATA_INTEGRATOR_APP_NAME)
 
     pg3_config = DATABASE_APP_CONFIG.copy()
-    pg3_config["logical_replication_subscription_request"] = json.dumps({
+    pg3_config["logical-replication-subscription-request"] = json.dumps({
         TESTING_DATABASE: ["public.test_table", "public.test_table2"]
     })
     await ops_test.model.applications[THIRD_DATABASE_APP_NAME].set_config(pg3_config)
@@ -189,7 +189,7 @@ async def test_pg2_change_subscription(ops_test: OpsTest):
     await _create_test_table(ops_test, SECOND_DATA_INTEGRATOR_APP_NAME, "test_table2")
 
     pg2_config = DATABASE_APP_CONFIG.copy()
-    pg2_config["logical_replication_subscription_request"] = json.dumps({
+    pg2_config["logical-replication-subscription-request"] = json.dumps({
         TESTING_DATABASE: ["public.test_table2"]
     })
     await ops_test.model.applications[SECOND_DATABASE_APP_NAME].set_config(pg2_config)
@@ -222,7 +222,7 @@ async def test_replication_after_subscriptions_changes(ops_test: OpsTest):
 @pytest.mark.abort_on_fail
 async def test_pg2_dynamic_error(ops_test: OpsTest):
     pg2_config = DATABASE_APP_CONFIG.copy()
-    pg2_config["logical_replication_subscription_request"] = json.dumps({
+    pg2_config["logical-replication-subscription-request"] = json.dumps({
         TESTING_DATABASE: ["public.test_table", "public.test_table2"]
     })
     await ops_test.model.applications[SECOND_DATABASE_APP_NAME].set_config(pg2_config)

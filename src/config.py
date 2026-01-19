@@ -5,14 +5,18 @@
 """Structured configuration for the PostgreSQL charm."""
 
 import logging
-from typing import Literal
+from typing import Annotated, Literal
 
 from charms.data_platform_libs.v1.data_models import BaseConfigModel
-from pydantic import Field, PositiveInt
+from pydantic import Field, PositiveInt, conint
 
 from locales import ROCK_LOCALES
 
 logger = logging.getLogger(__name__)
+
+
+# Type for worker process parameters that must be >= 2
+WorkerProcessInt = Annotated[int, conint(ge=2)]
 
 
 class CharmConfig(BaseConfigModel):
@@ -21,7 +25,22 @@ class CharmConfig(BaseConfigModel):
     synchronous_node_count: Literal["all", "majority"] | PositiveInt = Field(default="all")
     connection_authentication_timeout: int | None = Field(ge=1, le=600, default=None)
     connection_statement_timeout: int | None = Field(ge=0, le=2147483647, default=None)
+    cpu_max_logical_replication_workers: Literal["auto"] | WorkerProcessInt | None = Field(
+        default="auto"
+    )
+    cpu_max_parallel_apply_workers_per_subscription: Literal["auto"] | WorkerProcessInt | None = (
+        Field(default="auto")
+    )
+    cpu_max_parallel_maintenance_workers: Literal["auto"] | WorkerProcessInt | None = Field(
+        default="auto"
+    )
+    cpu_max_parallel_workers: Literal["auto"] | WorkerProcessInt | None = Field(default="auto")
+    cpu_max_sync_workers_per_subscription: Literal["auto"] | WorkerProcessInt | None = Field(
+        default="auto"
+    )
+    cpu_max_worker_processes: Literal["auto"] | WorkerProcessInt | None = Field(default="auto")
     cpu_parallel_leader_participation: bool | None = Field(default=None)
+    cpu_wal_compression: bool | None = Field(default=None)
     durability_synchronous_commit: Literal["on", "remote_apply", "remote_write"] | None = Field(
         default=None
     )
@@ -52,7 +71,7 @@ class CharmConfig(BaseConfigModel):
     logging_log_lock_waits: bool | None = Field(default=None)
     logging_log_min_duration_statement: int | None = Field(ge=-1, le=2147483647, default=None)
     logging_track_functions: Literal["none", "pl", "all"] | None = Field(default=None)
-    logical_replication_subscription_request: str | None
+    # logical_replication_subscription_request: str | None
     memory_maintenance_work_mem: int | None = Field(ge=1024, le=2147483647, default=None)
     memory_max_prepared_transactions: int | None = Field(ge=0, le=262143, default=None)
     memory_shared_buffers: int | None = Field(ge=16, le=1073741823, default=None)
