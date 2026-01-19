@@ -1,0 +1,5 @@
+[32mINFO    [0m root:test_upgrade.py:34 Deploying PostgreSQL cluster
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju deploy --model testing postgresql-k8s postgresql-k8s --base ubuntu@24.04 --channel 16/edge --config profile=testing --num-units 3 --trust
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju deploy --model testing postgresql-test-app postgresql-test-app --base ubuntu@22.04 --channel latest/edge
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju integrate --model testing postgresql-k8s:database postgresql-test-app:database
+[32mINFO    [0m root:test_upgrade.py:57 Wait for applications to become active
