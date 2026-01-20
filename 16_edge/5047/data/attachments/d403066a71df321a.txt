@@ -1,0 +1,39 @@
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:806 Connecting to existing model concierge-microk8s:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHSession received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHTunneler received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-0
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/postgresql-test-app-430
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-test-app/0 [allocating] waiting: installing agent
+  postgresql-k8s/0 [allocating] waiting: installing agent
+  postgresql-k8s/1 [allocating] waiting: installing agent
+  postgresql-k8s/2 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-test-app/0 [executing] maintenance: installing charm software
+  postgresql-k8s/0 [executing] maintenance: installing charm software
+  postgresql-k8s/1 [allocating] waiting: installing agent
+  postgresql-k8s/2 [allocating] waiting: installing agent
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.13   unsupported  01:31:04Z
+
+App                  Version  Status   Scale  Charm                Channel      Rev  Address        Exposed  Message
+postgresql-k8s                error      1/3  postgresql-k8s                      0  10.152.183.26  no       Create Pod postgresql-k8s-1 in StatefulSet postgresql-k8s failed error: failed to create PVC postgresql-k8s-archive-3...
+postgresql-test-app           blocked      1  postgresql-test-app  latest/edge  430  10.152.183.88  no       No database integration available
+
+Unit                    Workload     Agent       Address     Ports  Message
+postgresql-k8s/0*       maintenance  executing   10.1.60.15         installing charm software
+postgresql-k8s/1        waiting      allocating                     installing agent
+postgresql-k8s/2        waiting      allocating                     installing agent
+postgresql-test-app/0*  blocked      idle        10.1.60.20         No database integration available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
