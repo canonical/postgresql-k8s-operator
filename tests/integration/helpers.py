@@ -430,12 +430,29 @@ def get_existing_k8s_resources(namespace: str, application: str) -> set:
     # Retrieve the resources created by the charm and Patroni.
     resources = set()
     for kind in [Endpoints, Service]:
-        extra_resources = client.list(
+        # Get resources with Juju's created-by label
+        juju_resources = client.list(
             kind,
             namespace=namespace,
             labels={"app.juju.is/created-by": application},
         )
-        resources.update({f"{kind.__name__}/{x.metadata.name}" for x in extra_resources})
+        resources.update({f"{kind.__name__}/{x.metadata.name}" for x in juju_resources})
+
+        # Since Juju 3.6.13 (commit aa38cff0b1), the mutating webhook no longer
+        # processes Endpoints - they were removed from the webhook's resource allowlist.
+        # Patroni creates its own Endpoints with these labels:
+        # - application: patroni
+        # - cluster-name: patroni-{application}
+        # These resources never get Juju labels, so we must query for them separately.
+        patroni_resources = client.list(
+            kind,
+            namespace=namespace,
+            labels={
+                "application": "patroni",
+                "cluster-name": f"patroni-{application}",
+            },
+        )
+        resources.update({f"{kind.__name__}/{x.metadata.name}" for x in patroni_resources})
 
     return resources
 
