@@ -1,0 +1,35 @@
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju status --model testing --format json
+[32mINFO    [0m root:test_async_replication_upgrade.py:61 Clearing continuous writes
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju run --model testing --format json postgresql-test-app/0 clear-continuous-writes --wait 120s
+[32mINFO    [0m root:test_async_replication_upgrade.py:66 Starting continuous writes
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju run --model testing --format json postgresql-test-app/0 start-continuous-writes
+[32mINFO    [0m root:test_async_replication_upgrade.py:198 Testing data replication
+[32mINFO    [0m root:test_async_replication_upgrade.py:211 Stopping continuous writes
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju run --model testing --format json postgresql-test-app/0 stop-continuous-writes --params /root/snap/juju/common/tmp82mqueyo
+[32mINFO    [0m root:test_async_replication_upgrade.py:220 Querying max value on all db1 units
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju show-secret --model testing secret:d5o2oq1479nc7bln8msg --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju show-secret --model testing secret:d5o2oq1479nc7bln8msg --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju show-secret --model testing secret:d5o2oq1479nc7bln8msg --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju status --model testing --format json
+[32mINFO    [0m root:test_async_replication_upgrade.py:225 Querying max value on all db2 units
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju secrets --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju show-secret --model testing-other secret:d5o2p39479nc7bln8mtg --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju secrets --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju show-secret --model testing-other secret:d5o2p39479nc7bln8mtg --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju secrets --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju show-secret --model testing-other secret:d5o2p39479nc7bln8mtg --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju status --model testing-other --format json
+[32mINFO    [0m root:test_async_replication_upgrade.py:77 Clearing continuous writes
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju run --model testing --format json postgresql-test-app/0 clear-continuous-writes --wait 120s
+[32mINFO    [0m root:test_async_replication_upgrade.py:51 Destroying model: testing-other
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju destroy-model testing-other --no-prompt --destroy-storage --force

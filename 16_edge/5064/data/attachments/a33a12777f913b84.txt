@@ -1,0 +1,5 @@
+[32mINFO    [0m root:test_async_replication.py:379 Reintegrating db1 and test-app1
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju remove-relation --model testing db1 test-app1:database
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju integrate --model testing db1:database test-app1:database
+[32mINFO    [0m root:test_async_replication.py:52 Destroying model: testing-other
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju destroy-model testing-other --no-prompt --destroy-storage --force
