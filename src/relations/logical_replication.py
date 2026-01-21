@@ -258,6 +258,20 @@ class PostgreSQLLogicalReplication(Object):
         subscriptions = self._subscriptions_info()
         publications = json.loads(event.relation.data[event.app].get("publications", "{}"))
 
+        # Cycle detection: check if publisher's upstream indicates we are the origin
+        publisher_upstream = self._get_publisher_upstream(event.relation)
+        for database, publication in publications.items():
+            for schematable in publication.get("tables", []):
+                upstream_key = f"{database}:{schematable}"
+                if publisher_upstream.get(upstream_key) == self._identity():
+                    logger.error(
+                        f"Cycle detected in _on_relation_changed: upstream for {upstream_key} equals subscriber identity {self._identity()}"
+                    )
+                    self.charm.set_unit_status(
+                        BlockedStatus(LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS)
+                    )
+                    return
+
         for database, publication in publications.items():
             subscription_name = self._subscription_name(event.relation.id, database)
             if database in subscriptions:
@@ -371,7 +385,20 @@ class PostgreSQLLogicalReplication(Object):
     def _propagate_upstream_to_offers(
         self, mapping: dict[str, str], set_configured_time: bool
     ) -> None:
-        """Propagate upstream provenance to all offer relations."""
+        """Propagate upstream provenance to all offer relations.
+
+        For each table requested by a subscriber, the upstream is:
+        - The subscribed upstream if we subscribe to that table (we're relaying data)
+        - Our own identity if we don't subscribe to that table (we're the origin)
+        """
+        # Get our subscription config to determine what tables we subscribe to
+        try:
+            our_subscription_config = json.loads(
+                self.charm.config.logical_replication_subscription_request or "{}"
+            )
+        except json.JSONDecodeError:
+            our_subscription_config = {}
+
         for offer in self.model.relations.get(LOGICAL_REPLICATION_OFFER_RELATION, ()):
             try:
                 subs_req = json.loads(offer.data[offer.app].get("subscription-request", "{}"))
@@ -381,8 +408,18 @@ class PostgreSQLLogicalReplication(Object):
             for database, tables in subs_req.items():
                 for schematable in tables:
                     key = f"{database}:{schematable}"
-                    if key in mapping:
+                    # Check if we subscribe to this specific table
+                    we_subscribe_to_this = (
+                        database in our_subscription_config
+                        and schematable in our_subscription_config.get(database, [])
+                    )
+                    if key in mapping and we_subscribe_to_this:
+                        # We're relaying data from our subscription - use that upstream
                         root_map[key] = mapping[key]
+                    elif not we_subscribe_to_this:
+                        # We're the origin for this table - use our identity
+                        root_map[key] = self._identity()
+                    # If we subscribe but don't have upstream yet, leave unset (deferred)
             # Only write if we have something or if upstream key was previously set (to allow clearing/refresh)
             offer.data[self.model.app]["upstream"] = json.dumps(root_map)
             # Update configured-time whenever we refresh the upstream map
@@ -738,8 +775,13 @@ class PostgreSQLLogicalReplication(Object):
 
         # Build a root-level upstream provenance map for requested tables
         root_upstream_map: dict[str, str] = {}
-        # Determine if we have any active subscriptions; if none, we are the origin
-        has_subscriptions = bool(self.model.relations.get(LOGICAL_REPLICATION_RELATION, ()))
+        # Get our own subscription request config to check if we subscribe to specific tables
+        try:
+            our_subscription_config = json.loads(
+                self.charm.config.logical_replication_subscription_request or "{}"
+            )
+        except json.JSONDecodeError:
+            our_subscription_config = {}
         for database, tables in subscriptions_request.items():
             db_table_upstream: dict[str, str] = {}
             for schematable in tables:
@@ -751,18 +793,26 @@ class PostgreSQLLogicalReplication(Object):
                     logger.error(
                         f"Using subscribed upstream {local_upstream} for {key} and {schematable}"
                     )
-                elif not has_subscriptions:
-                    # No upstream subscriptions at all: we are the origin for this table
-                    local_upstream = self._identity()
-                    db_table_upstream[schematable] = local_upstream
-                    root_upstream_map[key] = local_upstream
-                    logger.error(
-                        f"Using unsubscribed upstream {local_upstream} for {key} and {schematable}"
-                    )
                 else:
-                    # Upstream not yet known and we do have subscriptions; leave unset (we deferred earlier)
-                    logger.error(f"Cannot determine upstream for {key} and {schematable}")
-                    continue
+                    # Check if we have a subscription config for this specific table
+                    we_subscribe_to_this_table = (
+                        database in our_subscription_config
+                        and schematable in our_subscription_config.get(database, [])
+                    )
+                    if we_subscribe_to_this_table:
+                        # Upstream not yet known but we are configured to subscribe; leave unset (deferred earlier)
+                        logger.error(
+                            f"Cannot determine upstream for {key} and {schematable} (waiting for subscription data)"
+                        )
+                        continue
+                    else:
+                        # We don't subscribe to this table, so we are the origin for it
+                        local_upstream = self._identity()
+                        db_table_upstream[schematable] = local_upstream
+                        root_upstream_map[key] = local_upstream
+                        logger.error(
+                            f"Using self as upstream {local_upstream} for {key} and {schematable} (not subscribed to this table)"
+                        )
 
             if database not in publications:
                 if validation_error := self._validate_new_publication(database, tables):

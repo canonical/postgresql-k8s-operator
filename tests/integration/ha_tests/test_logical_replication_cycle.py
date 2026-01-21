@@ -181,7 +181,7 @@ def test_cycle_detection_three_clusters(juju: jubilant.Juju, charm):
     juju.wait(lambda status: jubilant.all_active(status, SECOND_DATABASE_APP_NAME), timeout=600)
 
     pg2_config = DATABASE_APP_CONFIG.copy()
-    pg2_config["logical_replication_subscription_request"] = json.dumps({
+    pg2_config["logical-replication-subscription-request"] = json.dumps({
         TESTING_DATABASE: ["public.test_cycle"],
     })
     juju.config(app=SECOND_DATABASE_APP_NAME, values=pg2_config)
@@ -194,7 +194,7 @@ def test_cycle_detection_three_clusters(juju: jubilant.Juju, charm):
     juju.wait(lambda status: jubilant.all_active(status, THIRD_DATABASE_APP_NAME), timeout=600)
 
     pg3_config = DATABASE_APP_CONFIG.copy()
-    pg3_config["logical_replication_subscription_request"] = json.dumps({
+    pg3_config["logical-replication-subscription-request"] = json.dumps({
         TESTING_DATABASE: ["public.test_cycle"],
     })
     juju.config(app=THIRD_DATABASE_APP_NAME, values=pg3_config)
@@ -207,7 +207,7 @@ def test_cycle_detection_three_clusters(juju: jubilant.Juju, charm):
     juju.wait(lambda status: jubilant.all_active(status, DATABASE_APP_NAME), timeout=600)
 
     pg1_config = DATABASE_APP_CONFIG.copy()
-    pg1_config["logical_replication_subscription_request"] = json.dumps({
+    pg1_config["logical-replication-subscription-request"] = json.dumps({
         TESTING_DATABASE: ["public.test_cycle"],
     })
     juju.config(app=DATABASE_APP_NAME, values=pg1_config)
@@ -231,7 +231,7 @@ def test_cycle_unblocks_with_different_table(juju: jubilant.Juju, charm):
 
     # Update A's subscription request to use the different table; this should clear the blocked status
     pg1_config = DATABASE_APP_CONFIG.copy()
-    pg1_config["logical_replication_subscription_request"] = json.dumps({
+    pg1_config["logical-replication-subscription-request"] = json.dumps({
         TESTING_DATABASE: [other_table],
     })
     juju.config(app=DATABASE_APP_NAME, values=pg1_config)

@@ -99,6 +99,12 @@ def test_offer_upstream_updates_when_subscribed_upstream_changes(harness: Harnes
     mapping = {"testdb:public.t1": new_upstream_identity}
     harness.charm.app_peer_data["logical-replication-subscribed-upstream"] = json.dumps(mapping)
 
+    # Set the config to indicate we subscribe to this table (required for propagation logic)
+    with harness.hooks_disabled():
+        harness.update_config({
+            "logical-replication-subscription-request": json.dumps({"testdb": ["public.t1"]}),
+        })
+
     # Trigger propagation directly (instead of rebuild which would overwrite our manual mapping)
     harness.charm.logical_replication._propagate_upstream_to_offers(
         mapping, set_configured_time=False
