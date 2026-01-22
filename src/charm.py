@@ -1167,6 +1167,23 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 group=WORKLOAD_OS_GROUP,
                 make_parents=True,
             )
+        # Create a symlink from the default PostgreSQL data directory to our data directory
+        # (e.g., /var/lib/postgresql/16/main -> /var/lib/pg/data/16/main)
+        default_pgdata_path = "/var/lib/postgresql/16/main"
+        if not container.exists(default_pgdata_path):
+            container.make_dir(
+                "/var/lib/postgresql/16",
+                user=WORKLOAD_OS_USER,
+                group=WORKLOAD_OS_GROUP,
+                make_parents=True,
+            )
+            container.exec(["ln", "-s", self.pgdata_path, default_pgdata_path]).wait()
+            container.exec([
+                "chown",
+                "-h",
+                f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
+                default_pgdata_path,
+            ]).wait()
         # Also, fix the permissions from the parent directory.
         container.exec([
             "chown",
