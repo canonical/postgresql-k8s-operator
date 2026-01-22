@@ -1544,8 +1544,18 @@ def test_create_pgdata(harness):
             group="postgres",
             make_parents=True,
         ),
+        call(
+            "/var/lib/postgresql/16",
+            user="postgres",
+            group="postgres",
+            make_parents=True,
+        ),
     ])
     container.exec.assert_has_calls([
+        call(["ln", "-s", "/var/lib/pg/data/16/main", "/var/lib/postgresql/16/main"]),
+        call().wait(),
+        call(["chown", "-h", "postgres:postgres", "/var/lib/postgresql/16/main"]),
+        call().wait(),
         call(["chown", "postgres:postgres", "/var/lib/pg/archive"]),
         call().wait(),
         call(["chown", "postgres:postgres", "/var/lib/pg/data"]),
