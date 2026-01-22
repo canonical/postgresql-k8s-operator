@@ -1,7 +1,6 @@
-output "application_name" {
+output "app_name" {
   value = juju_application.k8s_postgresql.name
 }
-
 
 output "provides" {
   value = {
