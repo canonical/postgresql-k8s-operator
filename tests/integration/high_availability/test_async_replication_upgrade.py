@@ -13,6 +13,7 @@ from tenacity import Retrying, stop_after_attempt
 
 from .. import architecture
 from ..helpers import METADATA
+from ..jubilant_helpers import retry_if_cli_error
 from .high_availability_helpers_new import (
     get_app_leader,
     get_app_units,
@@ -126,11 +127,15 @@ def test_deploy(first_model: str, second_model: str, charm: str) -> None:
     model_1.integrate(f"{DB_APP_1}:database", f"{DB_TEST_APP_NAME}:database")
 
     logging.info("Waiting for the applications to settle")
-    model_1.wait(
-        ready=wait_for_apps_status(jubilant.all_active, DB_APP_1), timeout=20 * MINUTE_SECS
+    retry_if_cli_error(
+        lambda: model_1.wait(
+            ready=wait_for_apps_status(jubilant.all_active, DB_APP_1), timeout=20 * MINUTE_SECS
+        )
     )
-    model_2.wait(
-        ready=wait_for_apps_status(jubilant.all_active, DB_APP_2), timeout=20 * MINUTE_SECS
+    retry_if_cli_error(
+        lambda: model_2.wait(
+            ready=wait_for_apps_status(jubilant.all_active, DB_APP_2), timeout=20 * MINUTE_SECS
+        )
     )
 
 
@@ -138,23 +143,29 @@ def test_async_relate(first_model: str, second_model: str) -> None:
     """Relate the two PostgreSQL clusters."""
     logging.info("Creating offers in first model")
     model_1 = Juju(model=first_model)
-    model_1.offer(f"{first_model}.{DB_APP_1}", endpoint="replication-offer")
+    retry_if_cli_error(
+        lambda: model_1.offer(f"{first_model}.{DB_APP_1}", endpoint="replication-offer")
+    )
 
     logging.info("Consuming offer in second model")
     model_2 = Juju(model=second_model)
-    model_2.consume(f"{first_model}.{DB_APP_1}")
+    retry_if_cli_error(lambda: model_2.consume(f"{first_model}.{DB_APP_1}"))
 
     logging.info("Relating the two postgresql clusters")
-    model_2.integrate(f"{DB_APP_1}", f"{DB_APP_2}:replication")
+    retry_if_cli_error(lambda: model_2.integrate(f"{DB_APP_1}", f"{DB_APP_2}:replication"))
 
     logging.info("Waiting for the applications to settle")
-    model_1.wait(
-        ready=wait_for_apps_status(jubilant.any_active, DB_APP_1),
-        timeout=10 * MINUTE_SECS,
+    retry_if_cli_error(
+        lambda: model_1.wait(
+            ready=wait_for_apps_status(jubilant.any_active, DB_APP_1),
+            timeout=10 * MINUTE_SECS,
+        )
     )
-    model_2.wait(
-        ready=wait_for_apps_status(jubilant.any_active, DB_APP_2),
-        timeout=10 * MINUTE_SECS,
+    retry_if_cli_error(
+        lambda: model_2.wait(
+            ready=wait_for_apps_status(jubilant.any_active, DB_APP_2),
+            timeout=10 * MINUTE_SECS,
+        )
     )
 
 
@@ -164,16 +175,24 @@ def test_create_replication(first_model: str, second_model: str) -> None:
     model_2 = Juju(model=second_model)
 
     logging.info("Running create replication action")
-    model_1.run(
-        unit=get_app_leader(model_1, DB_APP_1), action="create-replication", wait=5 * MINUTE_SECS
-    ).raise_on_failure()
+    retry_if_cli_error(
+        lambda: model_1.run(
+            unit=get_app_leader(model_1, DB_APP_1),
+            action="create-replication",
+            wait=5 * MINUTE_SECS,
+        ).raise_on_failure()
+    )
 
     logging.info("Waiting for the applications to settle")
-    model_1.wait(
-        ready=wait_for_apps_status(jubilant.all_active, DB_APP_1), timeout=20 * MINUTE_SECS
+    retry_if_cli_error(
+        lambda: model_1.wait(
+            ready=wait_for_apps_status(jubilant.all_active, DB_APP_1), timeout=20 * MINUTE_SECS
+        )
     )
-    model_2.wait(
-        ready=wait_for_apps_status(jubilant.all_active, DB_APP_2), timeout=20 * MINUTE_SECS
+    retry_if_cli_error(
+        lambda: model_2.wait(
+            ready=wait_for_apps_status(jubilant.all_active, DB_APP_2), timeout=20 * MINUTE_SECS
+        )
     )
 
 
@@ -235,4 +254,6 @@ def run_pre_refresh_checks(juju: Juju, app_name: str) -> None:
     app_leader = get_app_leader(juju, app_name)
 
     logging.info("Run pre-upgrade-check action")
-    juju.run(unit=app_leader, action="pre-refresh-check").raise_on_failure()
+    retry_if_cli_error(
+        lambda: juju.run(unit=app_leader, action="pre-refresh-check").raise_on_failure()
+    )
