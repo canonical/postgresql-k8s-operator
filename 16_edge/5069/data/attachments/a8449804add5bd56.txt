@@ -1,0 +1,5 @@
+[32mINFO    [0m root:test_async_replication.py:228 Remove async relation
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju remove-relation --model testing-other db1 db2:replication
+[32mINFO    [0m root:test_async_replication.py:231 Waiting for the applications to settle
+[32mINFO    [0m root:test_async_replication.py:52 Destroying model: testing-other
+[32mINFO    [0m jubilant:_juju.py:391 cli: juju destroy-model testing-other --no-prompt --destroy-storage --force
