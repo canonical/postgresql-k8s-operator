@@ -1793,11 +1793,29 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             # Get the k8s resources created by the charm and Patroni.
             resources_to_patch = []
             for kind in [Endpoints, Service]:
+                # Get resources with Juju's created-by label
                 resources_to_patch.extend(
                     client.list(
                         kind,
                         namespace=self._namespace,
                         labels={"app.juju.is/created-by": f"{self._name}"},
+                    )
+                )
+
+                # Since Juju 3.6.13 (commit aa38cff0b1), the mutating webhook no longer
+                # processes Endpoints - they were removed from the webhook's resource allowlist.
+                # Patroni creates its own Endpoints with these labels:
+                # - application: patroni
+                # - cluster-name: patroni-{application}
+                # These resources never get Juju labels, so we must query for them separately.
+                resources_to_patch.extend(
+                    client.list(
+                        kind,
+                        namespace=self._namespace,
+                        labels={
+                            "application": "patroni",
+                            "cluster-name": f"patroni-{self._name}",
+                        },
                     )
                 )
         except ApiError:

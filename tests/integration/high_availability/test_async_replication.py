@@ -13,6 +13,7 @@ from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from .. import architecture
 from ..helpers import METADATA
+from ..jubilant_helpers import retry_if_cli_error
 from .high_availability_helpers_new import (
     get_app_leader,
     get_app_units,
@@ -136,13 +137,17 @@ def test_deploy(first_model: str, second_model: str, charm: str) -> None:
     model_2.integrate(f"{DB_TEST_APP_2}:database", f"{DB_APP_2}:database")
 
     logging.info("Waiting for the applications to settle")
-    model_1.wait(
-        ready=wait_for_apps_status(jubilant.all_active, DB_APP_1, DB_TEST_APP_1),
-        timeout=20 * MINUTE_SECS,
+    retry_if_cli_error(
+        lambda: model_1.wait(
+            ready=wait_for_apps_status(jubilant.all_active, DB_APP_1, DB_TEST_APP_1),
+            timeout=20 * MINUTE_SECS,
+        )
     )
-    model_2.wait(
-        ready=wait_for_apps_status(jubilant.all_active, DB_APP_2, DB_TEST_APP_2),
-        timeout=20 * MINUTE_SECS,
+    retry_if_cli_error(
+        lambda: model_2.wait(
+            ready=wait_for_apps_status(jubilant.all_active, DB_APP_2, DB_TEST_APP_2),
+            timeout=20 * MINUTE_SECS,
+        )
     )
 
 
@@ -150,23 +155,29 @@ def test_async_relate(first_model: str, second_model: str) -> None:
     """Relate the two PostgreSQL clusters."""
     logging.info("Creating offers in first model")
     model_1 = Juju(model=first_model)
-    model_1.offer(f"{first_model}.{DB_APP_1}", endpoint="replication-offer")
+    retry_if_cli_error(
+        lambda: model_1.offer(f"{first_model}.{DB_APP_1}", endpoint="replication-offer")
+    )
 
     logging.info("Consuming offer in second model")
     model_2 = Juju(model=second_model)
-    model_2.consume(f"{first_model}.{DB_APP_1}")
+    retry_if_cli_error(lambda: model_2.consume(f"{first_model}.{DB_APP_1}"))
 
     logging.info("Relating the two postgresql clusters")
-    model_2.integrate(f"{DB_APP_1}", f"{DB_APP_2}:replication")
+    retry_if_cli_error(lambda: model_2.integrate(f"{DB_APP_1}", f"{DB_APP_2}:replication"))
 
     logging.info("Waiting for the applications to settle")
-    model_1.wait(
-        ready=wait_for_apps_status(jubilant.any_active, DB_APP_1),
-        timeout=10 * MINUTE_SECS,
+    retry_if_cli_error(
+        lambda: model_1.wait(
+            ready=wait_for_apps_status(jubilant.any_active, DB_APP_1),
+            timeout=10 * MINUTE_SECS,
+        )
     )
-    model_2.wait(
-        ready=wait_for_apps_status(jubilant.any_active, DB_APP_2),
-        timeout=10 * MINUTE_SECS,
+    retry_if_cli_error(
+        lambda: model_2.wait(
+            ready=wait_for_apps_status(jubilant.any_active, DB_APP_2),
+            timeout=10 * MINUTE_SECS,
+        )
     )
 
 
@@ -176,16 +187,24 @@ def test_create_replication(first_model: str, second_model: str) -> None:
     model_2 = Juju(model=second_model)
 
     logging.info("Running create replication action")
-    model_1.run(
-        unit=get_app_leader(model_1, DB_APP_1), action="create-replication", wait=5 * MINUTE_SECS
-    ).raise_on_failure()
+    retry_if_cli_error(
+        lambda: model_1.run(
+            unit=get_app_leader(model_1, DB_APP_1),
+            action="create-replication",
+            wait=5 * MINUTE_SECS,
+        ).raise_on_failure()
+    )
 
     logging.info("Waiting for the applications to settle")
-    model_1.wait(
-        ready=wait_for_apps_status(jubilant.all_active, DB_APP_1), timeout=20 * MINUTE_SECS
+    retry_if_cli_error(
+        lambda: model_1.wait(
+            ready=wait_for_apps_status(jubilant.all_active, DB_APP_1), timeout=20 * MINUTE_SECS
+        )
     )
-    model_2.wait(
-        ready=wait_for_apps_status(jubilant.all_active, DB_APP_2), timeout=20 * MINUTE_SECS
+    retry_if_cli_error(
+        lambda: model_2.wait(
+            ready=wait_for_apps_status(jubilant.all_active, DB_APP_2), timeout=20 * MINUTE_SECS
+        )
     )
 
 
@@ -226,39 +245,59 @@ def test_unrelate_and_relate(first_model: str, second_model: str) -> None:
     model_2 = Juju(model=second_model)
 
     logging.info("Remove async relation")
-    model_2.remove_relation(f"{DB_APP_1}", f"{DB_APP_2}:replication")
+    retry_if_cli_error(lambda: model_2.remove_relation(f"{DB_APP_1}", f"{DB_APP_2}:replication"))
 
     logging.info("Waiting for the applications to settle")
-    model_1.wait(
-        ready=wait_for_apps_status(jubilant.all_agents_idle, DB_APP_1), timeout=10 * MINUTE_SECS
+    retry_if_cli_error(
+        lambda: model_1.wait(
+            ready=wait_for_apps_status(jubilant.all_agents_idle, DB_APP_1),
+            timeout=10 * MINUTE_SECS,
+        )
     )
-    model_2.wait(
-        ready=wait_for_apps_status(jubilant.all_agents_idle, DB_APP_2), timeout=10 * MINUTE_SECS
+    retry_if_cli_error(
+        lambda: model_2.wait(
+            ready=wait_for_apps_status(jubilant.all_agents_idle, DB_APP_2),
+            timeout=10 * MINUTE_SECS,
+        )
     )
 
     logging.info("Re-relating the two postgresql clusters")
-    model_2.integrate(f"{DB_APP_1}", f"{DB_APP_2}:replication")
+    retry_if_cli_error(lambda: model_2.integrate(f"{DB_APP_1}", f"{DB_APP_2}:replication"))
 
-    model_1.wait(
-        ready=wait_for_apps_status(jubilant.all_agents_idle, DB_APP_1), timeout=10 * MINUTE_SECS
+    retry_if_cli_error(
+        lambda: model_1.wait(
+            ready=wait_for_apps_status(jubilant.all_agents_idle, DB_APP_1),
+            timeout=10 * MINUTE_SECS,
+        )
     )
-    model_2.wait(
-        ready=wait_for_apps_status(jubilant.all_agents_idle, DB_APP_2), timeout=10 * MINUTE_SECS
+    retry_if_cli_error(
+        lambda: model_2.wait(
+            ready=wait_for_apps_status(jubilant.all_agents_idle, DB_APP_2),
+            timeout=10 * MINUTE_SECS,
+        )
     )
 
     logging.info("Running create replication action")
-    model_1.run(
-        unit=get_app_leader(model_1, DB_APP_1), action="create-replication", wait=5 * MINUTE_SECS
-    ).raise_on_failure()
+    retry_if_cli_error(
+        lambda: model_1.run(
+            unit=get_app_leader(model_1, DB_APP_1),
+            action="create-replication",
+            wait=5 * MINUTE_SECS,
+        ).raise_on_failure()
+    )
 
     rerelate_test_app(model_1, DB_APP_1, DB_TEST_APP_1)
 
     logging.info("Waiting for the applications to settle")
-    model_1.wait(
-        ready=wait_for_apps_status(jubilant.all_active, DB_APP_1), timeout=20 * MINUTE_SECS
+    retry_if_cli_error(
+        lambda: model_1.wait(
+            ready=wait_for_apps_status(jubilant.all_active, DB_APP_1), timeout=20 * MINUTE_SECS
+        )
     )
-    model_2.wait(
-        ready=wait_for_apps_status(jubilant.all_active, DB_APP_2), timeout=20 * MINUTE_SECS
+    retry_if_cli_error(
+        lambda: model_2.wait(
+            ready=wait_for_apps_status(jubilant.all_active, DB_APP_2), timeout=20 * MINUTE_SECS
+        )
     )
 
     results = get_db_max_written_values(first_model, second_model, first_model, DB_TEST_APP_1)
@@ -274,12 +313,16 @@ def test_failover_in_main_cluster(first_model: str, second_model: str) -> None:
 
     rerelate_test_app(model_1, DB_APP_1, DB_TEST_APP_1)
 
-    model_1.remove_unit(DB_APP_1, num_units=1)
-    model_1.wait(
-        ready=wait_for_apps_status(jubilant.all_active, DB_APP_1), timeout=10 * MINUTE_SECS
+    retry_if_cli_error(lambda: model_1.remove_unit(DB_APP_1, num_units=1))
+    retry_if_cli_error(
+        lambda: model_1.wait(
+            ready=wait_for_apps_status(jubilant.all_active, DB_APP_1), timeout=10 * MINUTE_SECS
+        )
     )
-    model_2.wait(
-        ready=wait_for_apps_status(jubilant.all_active, DB_APP_2), timeout=10 * MINUTE_SECS
+    retry_if_cli_error(
+        lambda: model_2.wait(
+            ready=wait_for_apps_status(jubilant.all_active, DB_APP_2), timeout=10 * MINUTE_SECS
+        )
     )
 
     for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(3), reraise=True):
@@ -301,13 +344,17 @@ def test_failover_in_standby_cluster(first_model: str, second_model: str) -> Non
 
     rerelate_test_app(model_1, DB_APP_1, DB_TEST_APP_1)
 
-    model_2.remove_unit(DB_APP_2, num_units=1)
+    retry_if_cli_error(lambda: model_2.remove_unit(DB_APP_2, num_units=1))
 
-    model_2.wait(
-        ready=lambda status: len(status.apps[DB_APP_2].units) == 2, timeout=2 * MINUTE_SECS
+    retry_if_cli_error(
+        lambda: model_2.wait(
+            ready=lambda status: len(status.apps[DB_APP_2].units) == 2, timeout=2 * MINUTE_SECS
+        )
     )
-    model_2.wait(
-        ready=wait_for_apps_status(jubilant.all_active, DB_APP_2), timeout=10 * MINUTE_SECS
+    retry_if_cli_error(
+        lambda: model_2.wait(
+            ready=wait_for_apps_status(jubilant.all_active, DB_APP_2), timeout=10 * MINUTE_SECS
+        )
     )
 
     for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(3), reraise=True):
@@ -327,15 +374,19 @@ def test_scale_up(first_model: str, second_model: str) -> None:
     model_2 = Juju(model=second_model)
 
     rerelate_test_app(model_1, DB_APP_1, DB_TEST_APP_1)
-    model_1.add_unit(DB_APP_1)
-    model_2.add_unit(DB_APP_2)
+    retry_if_cli_error(lambda: model_1.add_unit(DB_APP_1))
+    retry_if_cli_error(lambda: model_2.add_unit(DB_APP_2))
 
     logging.info("Waiting for the applications to settle")
-    model_1.wait(
-        ready=wait_for_apps_status(jubilant.all_active, DB_APP_1), timeout=20 * MINUTE_SECS
+    retry_if_cli_error(
+        lambda: model_1.wait(
+            ready=wait_for_apps_status(jubilant.all_active, DB_APP_1), timeout=20 * MINUTE_SECS
+        )
     )
-    model_2.wait(
-        ready=wait_for_apps_status(jubilant.all_active, DB_APP_2), timeout=20 * MINUTE_SECS
+    retry_if_cli_error(
+        lambda: model_2.wait(
+            ready=wait_for_apps_status(jubilant.all_active, DB_APP_2), timeout=20 * MINUTE_SECS
+        )
     )
 
     results = get_db_max_written_values(first_model, second_model, first_model, DB_TEST_APP_1)
@@ -377,27 +428,37 @@ def get_db_max_written_values(
 
 def rerelate_test_app(juju: Juju, db_name: str, test_app_name: str) -> None:
     logging.info(f"Reintegrating {db_name} and {test_app_name}")
-    juju.remove_relation(db_name, f"{test_app_name}:database")
-    juju.wait(
-        ready=wait_for_apps_status(jubilant.all_blocked, test_app_name)
-        and wait_for_apps_status(jubilant.all_active, db_name),
-        timeout=10 * MINUTE_SECS,
+    retry_if_cli_error(lambda: juju.remove_relation(db_name, f"{test_app_name}:database"))
+    retry_if_cli_error(
+        lambda: juju.wait(
+            ready=wait_for_apps_status(jubilant.all_blocked, test_app_name)
+            and wait_for_apps_status(jubilant.all_active, db_name),
+            timeout=10 * MINUTE_SECS,
+        )
     )
 
-    juju.integrate(f"{db_name}:database", f"{test_app_name}:database")
-    juju.wait(
-        ready=wait_for_apps_status(jubilant.all_active, test_app_name, db_name),
-        timeout=10 * MINUTE_SECS,
+    retry_if_cli_error(lambda: juju.integrate(f"{db_name}:database", f"{test_app_name}:database"))
+    retry_if_cli_error(
+        lambda: juju.wait(
+            ready=wait_for_apps_status(jubilant.all_active, test_app_name, db_name),
+            timeout=10 * MINUTE_SECS,
+        )
     )
 
     logging.info("Clearing continuous writes")
     application_unit = get_app_leader(juju, test_app_name)
-    juju.run(unit=application_unit, action="clear-continuous-writes", wait=120).raise_on_failure()
+    retry_if_cli_error(
+        lambda: juju.run(
+            unit=application_unit, action="clear-continuous-writes", wait=120
+        ).raise_on_failure()
+    )
 
     logging.info("Starting continuous writes")
     for attempt in Retrying(stop=stop_after_attempt(10), reraise=True):
         with attempt:
-            result = juju.run(unit=application_unit, action="start-continuous-writes")
+            result = retry_if_cli_error(
+                lambda: juju.run(unit=application_unit, action="start-continuous-writes")
+            )
             result.raise_on_failure()
 
             assert result.results["result"] == "True"
