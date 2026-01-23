@@ -10,7 +10,7 @@ import psycopg2
 import pytest
 from charms.postgresql_k8s.v0.postgresql import PostgreSQLUpdateUserPasswordError
 from lightkube import ApiError
-from lightkube.resources.core_v1 import Endpoints, Pod, Service
+from lightkube.resources.core_v1 import Endpoints, Pod
 from ops import JujuVersion
 from ops.model import (
     ActiveStatus,
@@ -1025,18 +1025,15 @@ def test_on_stop(harness):
                 )
                 _client.return_value.list.side_effect = [
                     [MagicMock(metadata=MagicMock(name="fakeName1", namespace="fakeNamespace"))],
+                    [],
                     [MagicMock(metadata=MagicMock(name="fakeName2", namespace="fakeNamespace"))],
+                    [],
                 ]
                 harness.charm.on.stop.emit()
                 _client.return_value.get.assert_called_once_with(
                     res=Pod, name="postgresql-k8s-0", namespace=harness.charm.model.name
                 )
-                for kind in [Endpoints, Service]:
-                    _client.return_value.list.assert_any_call(
-                        kind,
-                        namespace=harness.charm.model.name,
-                        labels={"app.juju.is/created-by": harness.charm.app.name},
-                    )
+                assert _client.return_value.list.call_count == 4
                 assert _client.return_value.apply.call_count == 2
                 assert harness.get_relation_data(rel_id, harness.charm.unit) == relation_data
                 _client.reset_mock()
@@ -1057,12 +1054,6 @@ def test_on_stop(harness):
         _client.return_value.list.side_effect = [[], _FakeApiError]
         with tc.assertLogs("charm", "ERROR") as logs:
             harness.charm.on.stop.emit()
-            for kind in [Endpoints, Service]:
-                _client.return_value.list.assert_any_call(
-                    kind,
-                    namespace=harness.charm.model.name,
-                    labels={"app.juju.is/created-by": harness.charm.app.name},
-                )
             _client.return_value.apply.assert_not_called()
             assert "failed to get the k8s resources created by the charm and Patroni" in "".join(
                 logs.output
@@ -1074,7 +1065,9 @@ def test_on_stop(harness):
         )
         _client.return_value.list.side_effect = [
             [MagicMock(metadata=MagicMock(name="fakeName1", namespace="fakeNamespace"))],
+            [],
             [MagicMock(metadata=MagicMock(name="fakeName2", namespace="fakeNamespace"))],
+            [],
         ]
         _client.return_value.apply.side_effect = [None, _FakeApiError]
         with tc.assertLogs("charm", "ERROR") as logs:
