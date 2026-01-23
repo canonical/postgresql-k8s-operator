@@ -3,13 +3,48 @@
 # See LICENSE file for licensing details.
 import json
 import subprocess
+from collections.abc import Callable
 from enum import Enum
 
 import jubilant
+from jubilant import CLIError
+from tenacity import RetryError, Retrying, retry_if_exception_type, stop_after_attempt, wait_fixed
 
 from constants import PEER
 
 from .helpers import DATABASE_APP_NAME, SecretNotFoundError
+
+
+def retry_if_cli_error[T](fn: Callable[[], T], *, max_attempts: int = 10) -> T:
+    """Retry a function if a CLIError is raised.
+
+    All jubilant.Juju operations risk raising intermittent CLIErrors under CPU pressure
+    (e.g. "connection is shut down"), so we wrap each of them with this retry helper.
+
+    Args:
+        fn: The function to retry.
+        max_attempts: The maximum number of attempts.
+
+    Returns:
+        The result of the function.
+
+    Raises:
+        AssertionError: If the operation failed after max_attempts attempts.
+    """
+    try:
+        for attempt in Retrying(
+            retry=retry_if_exception_type(CLIError),
+            stop=stop_after_attempt(max_attempts),
+            wait=wait_fixed(10),
+        ):
+            with attempt:
+                return fn()
+    except RetryError as exc:
+        raise AssertionError(
+            f"Operation failed after {max_attempts} attempts"
+        ) from exc.last_attempt.exception()
+    # This should never be reached, but type checkers need it
+    raise AssertionError("Unexpected state in retry_if_cli_error")
 
 
 class RoleAttributeValue(Enum):
