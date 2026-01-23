@@ -1,0 +1,23 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-2
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [executing] active: Primary
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.13   unsupported  00:33:19Z
+
+App                          Version  Status  Scale  Charm           Channel  Rev  Address        Exposed  Message
+test-storage-postgresql-k8s  14.20    active      1  postgresql-k8s             2  10.152.183.55  no       
+
+Unit                            Workload  Agent  Address      Ports  Message
+test-storage-postgresql-k8s/0*  active    idle   10.1.12.159         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-1: 00:12:28 ERROR unit.postgresql-k8s/1.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-postgresql-k8s-1: 00:22:12 ERROR unit.postgresql-k8s/1.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+controller-0: 00:32:10 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql-k8s": finding filesystem info for postgresql-k8s-pgdata-a44b2f33: unable to get persistent volume claim: k8s: persistentvolumeclaims "postgresql-k8s-pgdata-a44b2f33-postgresql-k8s-1" not found
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
