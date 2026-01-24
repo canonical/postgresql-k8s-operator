@@ -56,9 +56,9 @@ provides:
     interface: postgresql_async
     limit: 1
     optional: true
-#   logical-replication-offer:
-#     interface: postgresql_logical_replication
-#     optional: true
+  logical-replication-offer:
+    interface: postgresql_logical_replication
+    optional: true
   database:
     interface: postgresql_client
   metrics-endpoint:
@@ -71,10 +71,10 @@ requires:
     interface: postgresql_async
     limit: 1
     optional: true
-#   logical-replication:
-#     interface: postgresql_logical_replication
-#     limit: 1
-#     optional: true
+  logical-replication:
+    interface: postgresql_logical_replication
+    limit: 1
+    optional: true
   peer-certificates:
     interface: tls-certificates
     limit: 1
