@@ -10,6 +10,7 @@ import pwd
 from asyncio import as_completed, create_task, run, wait
 from contextlib import suppress
 from functools import cached_property
+from signal import SIGHUP
 from ssl import CERT_NONE, create_default_context
 from typing import Any, TypedDict
 
@@ -426,6 +427,19 @@ class Patroni:
 
         return True
 
+    def get_patroni_health(self) -> dict[str, str]:
+        """Gets, retires and parses the Patroni health endpoint."""
+        for attempt in Retrying(stop=stop_after_delay(15), wait=wait_fixed(3)):
+            with attempt:
+                r = requests.get(
+                    f"{self._patroni_url}/health",
+                    verify=self._verify,
+                    timeout=PATRONI_TIMEOUT,
+                    auth=self._patroni_auth,
+                )
+
+                return r.json()
+
     @property
     def member_started(self) -> bool:
         """Has the member started Patroni and PostgreSQL.
@@ -435,18 +449,11 @@ class Patroni:
             allow server time to start up.
         """
         try:
-            for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(1)):
-                with attempt:
-                    r = requests.get(
-                        f"{self._patroni_url}/health",
-                        verify=self._verify,
-                        auth=self._patroni_auth,
-                        timeout=PATRONI_TIMEOUT,
-                    )
+            health = self.get_patroni_health()
         except RetryError:
             return False
 
-        return r.json()["state"] in RUNNING_STATES
+        return health["state"] in RUNNING_STATES
 
     @property
     def member_streaming(self) -> bool:
@@ -457,18 +464,11 @@ class Patroni:
             allow server time to start up.
         """
         try:
-            for attempt in Retrying(stop=stop_after_delay(10), wait=wait_fixed(1)):
-                with attempt:
-                    r = requests.get(
-                        f"{self._patroni_url}/health",
-                        verify=self._verify,
-                        auth=self._patroni_auth,
-                        timeout=PATRONI_TIMEOUT,
-                    )
+            health = self.get_patroni_health()
         except RetryError:
             return False
 
-        return r.json().get("replication_state") == "streaming"
+        return health.get("replication_state") == "streaming"
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def bulk_update_parameters_controller_by_patroni(self, parameters: dict[str, Any]) -> None:
@@ -631,15 +631,15 @@ class Patroni:
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 
-    @retry(stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=2, max=30))
     def reload_patroni_configuration(self) -> None:
         """Reloads the configuration after it was updated in the file."""
-        requests.post(
-            f"{self._patroni_url}/reload",
-            verify=self._verify,
-            auth=self._patroni_auth,
-            timeout=PATRONI_TIMEOUT,
-        )
+        container = self._charm.unit.get_container("postgresql")
+        if (
+            not container.can_connect()
+            or len(container.pebble.get_services(names=[self._charm.postgresql_service])) == 0
+        ):
+            logger.warning("Unable to find Patroni service. Skipping reload")
+        container.send_signal(SIGHUP, self._charm.postgresql_service)
 
     def last_postgresql_logs(self) -> str:
         """Get last log file content of Postgresql service in the container.

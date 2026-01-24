@@ -2252,7 +2252,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         except ApiError as e:
             if e.status.code == 403:
                 self.on_deployed_without_trust()
-                return
+                return False
             raise e
 
         postgresql_parameters = self._build_postgresql_parameters(
@@ -2293,6 +2293,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return True
 
         if not self._patroni.member_started:
+            # Potentially expired cert reloading and deferring
+            self._patroni.reload_patroni_configuration()
             logger.debug("Early exit update_config: Patroni not started yet")
             return False
 
@@ -2376,6 +2378,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         restart_postgresql = self.is_tls_enabled != self.postgresql.is_tls_enabled()
         try:
             self._patroni.reload_patroni_configuration()
+            self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
         except Exception as e:
             logger.error(f"Reload patroni call failed! error: {e!s}")
         if config_changed and not restart_postgresql:
@@ -2393,7 +2396,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             except RetryError:
                 # Ignore the error, as it happens only to indicate that the configuration has not changed.
                 pass
-        self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
+        elif restart_postgresql:
+            try:
+                self._patroni.get_patroni_health()
+            except RetryError:
+                logger.warning("Unable to get health endpoint after switching tls")
         self.postgresql_client_relation.update_tls_flag("True" if self.is_tls_enabled else "False")
 
         # Restart PostgreSQL if TLS configuration has changed

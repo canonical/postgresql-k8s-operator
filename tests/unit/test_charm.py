@@ -1582,6 +1582,7 @@ def test_update_config(harness):
             "charm.PostgresqlOperatorCharm._is_workload_running", new_callable=PropertyMock
         ) as _is_workload_running,
         patch("charm.Patroni.render_patroni_yml_file") as _render_patroni_yml_file,
+        patch("charm.Patroni.reload_patroni_configuration"),
         patch("charm.PostgreSQLUpgrade") as _upgrade,
         patch("charm.PostgresqlOperatorCharm.is_primary", return_value=False),
         patch(
@@ -1694,6 +1695,7 @@ def test_handle_postgresql_restart_need(harness):
         patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock,
         patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_acquire_lock") as _restart,
         patch("charm.PostgresqlOperatorCharm._generate_metrics_jobs") as _generate_metrics_jobs,
+        patch("charm.Patroni.get_patroni_health"),
         patch("charm.wait_fixed", return_value=wait_fixed(0)),
         patch("charm.Patroni.reload_patroni_configuration") as _reload_patroni_configuration,
         patch(
