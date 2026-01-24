@@ -15,9 +15,9 @@ on:
       - '**.md'
       - .github/renovate.json5
       - 'docs/**'
-  schedule:
-    - cron: '53 0 * * *'  # Daily at 00:53 UTC
-  # Triggered on push to branch "main" by .github/workflows/release.yaml
+  # Triggered on schedule by .github/workflows/scheduled_ci_*.yaml on default branch
+  workflow_dispatch:
+  # Triggered on push by .github/workflows/release.yaml
   workflow_call:
     outputs:
       artifact-prefix:
@@ -27,7 +27,7 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v40.0.2
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v41.0.0
 
   unit-test:
     name: Unit test charm
@@ -63,7 +63,7 @@ jobs:
 
   build:
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v40.0.2
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v41.0.0
 
   integration-test:
     name: Integration test charm

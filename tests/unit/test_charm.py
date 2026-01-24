@@ -1566,6 +1566,7 @@ def test_clean_ca_file_from_workload(harness):
 def test_update_config(harness):
     with (
         patch("ops.model.Container.get_plan") as _get_plan,
+        patch("charm.PostgresqlOperatorCharm.get_available_resources", return_value=(4, 8000000)),
         patch(
             "charm.PostgresqlOperatorCharm._handle_postgresql_restart_need"
         ) as _handle_postgresql_restart_need,
@@ -1602,6 +1603,16 @@ def test_update_config(harness):
             harness.update_relation_data(rel_id, harness.charm.unit.name, {"tls": ""})
         _is_tls_enabled.return_value = False
         harness.charm.update_config()
+        # Expected parameters include base "test": "test" plus worker configs (auto = 8, since min(8, 2*4) = 8)
+        expected_parameters = {
+            "test": "test",
+            "max_worker_processes": "8",
+            "max_parallel_workers": "8",
+            "max_parallel_maintenance_workers": "8",
+            "max_logical_replication_workers": "8",
+            "max_sync_workers_per_subscription": "8",
+            "wal_compression": "on",
+        }
         _render_patroni_yml_file.assert_called_once_with(
             connectivity=True,
             is_creating_backup=False,
@@ -1614,7 +1625,7 @@ def test_update_config(harness):
             restore_timeline=None,
             pitr_target=None,
             restore_to_latest=False,
-            parameters={"test": "test"},
+            parameters=expected_parameters,
             user_databases_map={"operator": "all", "replication": "all", "rewind": "all"},
         )
         _handle_postgresql_restart_need.assert_called_once()
@@ -1644,7 +1655,7 @@ def test_update_config(harness):
             restore_timeline=None,
             pitr_target=None,
             restore_to_latest=False,
-            parameters={"test": "test"},
+            parameters=expected_parameters,
             user_databases_map={"operator": "all", "replication": "all", "rewind": "all"},
         )
         _handle_postgresql_restart_need.assert_called_once()
@@ -1923,3 +1934,285 @@ def test_on_secret_remove(harness, only_with_juju_secrets):
         event.secret.label = None
         harness.charm._on_secret_remove(event)
         assert not event.remove_revision.called
+
+
+def test_calculate_worker_process_config_auto_values(harness):
+    """Test worker process config calculation with 'auto' values."""
+    with patch.object(
+        PostgresqlOperatorCharm, "get_available_resources", return_value=(2, 8000000)
+    ):
+        with harness.hooks_disabled():
+            harness.update_config({
+                "cpu_max_worker_processes": "auto",
+                "cpu_max_parallel_workers": "auto",
+                "cpu_max_parallel_maintenance_workers": "auto",
+                "cpu_max_logical_replication_workers": "auto",
+                "cpu_max_sync_workers_per_subscription": "auto",
+            })
+
+        result = harness.charm._calculate_worker_process_config(2)
+
+        # All auto values should resolve to 4 (min(8, 2*2))
+        assert result["max_worker_processes"] == "4"
+        assert result["max_parallel_workers"] == "4"
+        assert result["max_parallel_maintenance_workers"] == "4"
+        assert result["max_logical_replication_workers"] == "4"
+        assert result["max_sync_workers_per_subscription"] == "4"
+
+        # Test with 8 vCPUs (auto should be min(8, 2*8) = 8)
+        result = harness.charm._calculate_worker_process_config(8)
+        assert result["max_worker_processes"] == "8"
+        assert result["max_parallel_workers"] == "8"
+
+        # Test with 1 vCPU (auto should be min(8, 2*1) = 2)
+        result = harness.charm._calculate_worker_process_config(1)
+        assert result["max_worker_processes"] == "2"
+
+
+def test_calculate_worker_process_config_numeric_values(harness):
+    """Test worker process config calculation with numeric values."""
+    with harness.hooks_disabled():
+        harness.update_config({
+            "cpu_max_worker_processes": "10",
+            "cpu_max_parallel_workers": "8",
+            "cpu_max_parallel_maintenance_workers": "8",
+        })
+
+    result = harness.charm._calculate_worker_process_config(4)
+
+    assert result["max_worker_processes"] == "10"
+    assert result["max_parallel_workers"] == "8"
+    assert result["max_parallel_maintenance_workers"] == "8"
+
+
+def test_calculate_worker_process_config_all_workers_numeric(harness):
+    """Test all worker configs with numeric values within limits (not capped)."""
+    with harness.hooks_disabled():
+        harness.update_config({
+            "cpu_max_worker_processes": "20",
+            "cpu_max_parallel_workers": "15",
+            "cpu_max_parallel_maintenance_workers": "10",
+            "cpu_max_logical_replication_workers": "12",
+            "cpu_max_sync_workers_per_subscription": "8",
+        })
+
+    result = harness.charm._calculate_worker_process_config(4)  # Cap would be 40
+
+    # All values should pass through unchanged (within cap of 40)
+    assert result["max_worker_processes"] == "20"
+    assert result["max_parallel_workers"] == "15"
+    assert result["max_parallel_maintenance_workers"] == "10"
+    assert result["max_logical_replication_workers"] == "12"
+    assert result["max_sync_workers_per_subscription"] == "8"
+
+
+def test_calculate_worker_process_config_validation_blocking_max_worker_processes(harness):
+    """Test worker process config validation blocks max_worker_processes exceeding values instead of capping."""
+    with harness.hooks_disabled():
+        harness.update_config({"cpu_max_worker_processes": "50"})  # Exceeds cap of 20 (2*10)
+
+    with pytest.raises(
+        ValueError, match="cpu_max_worker_processes value 50 exceeds maximum allowed of 20"
+    ):
+        harness.charm._calculate_worker_process_config(2)
+
+
+def test_calculate_worker_process_config_validation_blocking_max_parallel_workers(harness):
+    """Test worker process config validation blocks max_parallel_workers exceeding values instead of capping."""
+    with harness.hooks_disabled():
+        harness.update_config({"cpu_max_parallel_workers": "30"})  # Exceeds cap of 20 (2*10)
+
+    with pytest.raises(
+        ValueError, match="cpu_max_parallel_workers value 30 exceeds maximum allowed of 20"
+    ):
+        harness.charm._calculate_worker_process_config(2)
+
+
+def test_calculate_worker_process_config_validation_blocking_valid_value(harness):
+    """Test worker process config validation accepts valid values within cap."""
+    with harness.hooks_disabled():
+        harness.update_config({"cpu_max_parallel_maintenance_workers": "15"})  # Within cap of 20
+
+    result = harness.charm._calculate_worker_process_config(2)
+    assert result["max_parallel_maintenance_workers"] == "15"  # Should accept valid value
+
+
+def test_calculate_worker_process_config_edge_cases(harness):
+    """Test worker process config edge cases."""
+    # Test with no worker config set (but wal_compression has default)
+    with harness.hooks_disabled():
+        harness.update_config(
+            unset=[
+                "cpu_max_worker_processes",
+                "cpu_max_parallel_workers",
+                "cpu_max_parallel_maintenance_workers",
+                "cpu_max_logical_replication_workers",
+                "cpu_max_sync_workers_per_subscription",
+                "cpu_wal_compression",
+            ]
+        )
+
+    result = harness.charm._calculate_worker_process_config(4)
+    # All worker parameters default to auto, so they get calculated
+    expected = {
+        "max_worker_processes": "8",  # min(8, 2 * 4) = 8
+        "max_parallel_workers": "8",
+        "max_parallel_maintenance_workers": "8",
+        "max_logical_replication_workers": "8",
+        "max_sync_workers_per_subscription": "8",
+    }
+    assert result == expected
+
+    # Test with only one worker config set
+    with harness.hooks_disabled():
+        harness.update_config({"cpu_max_worker_processes": "10"})
+
+    result = harness.charm._calculate_worker_process_config(4)
+    # Other worker parameters still get auto-calculated since they default to "auto"
+    expected = {
+        "max_worker_processes": "10",
+        "max_parallel_workers": "10",  # auto = base_max_workers (10)
+        "max_parallel_maintenance_workers": "10",
+        "max_logical_replication_workers": "10",
+        "max_sync_workers_per_subscription": "10",
+    }
+    assert result == expected
+
+    # Test with very high vCPU count (reset config to defaults first)
+    with harness.hooks_disabled():
+        harness.update_config(
+            unset=[
+                "cpu_max_worker_processes",
+                "cpu_max_parallel_workers",
+                "cpu_max_parallel_maintenance_workers",
+                "cpu_max_logical_replication_workers",
+                "cpu_max_sync_workers_per_subscription",
+            ]
+        )
+
+    result = harness.charm._calculate_worker_process_config(128)
+    # Should be min(8, 2*128) = 8
+    expected = {
+        "max_worker_processes": "8",
+        "max_parallel_workers": "8",
+        "max_parallel_maintenance_workers": "8",
+        "max_logical_replication_workers": "8",
+        "max_sync_workers_per_subscription": "8",
+    }
+    assert result == expected
+
+
+def test_calculate_worker_process_config_dependencies(harness):
+    """Test that dependent worker configs properly use max_worker_processes as base."""
+    with harness.hooks_disabled():
+        harness.update_config({
+            "cpu_max_worker_processes": "12",
+            "cpu_max_parallel_workers": "auto",
+            "cpu_max_parallel_maintenance_workers": "auto",
+        })
+
+    result = harness.charm._calculate_worker_process_config(4)
+
+    # Auto values should use max_worker_processes (12) as base
+    assert result["max_worker_processes"] == "12"
+    assert result["max_parallel_workers"] == "12"
+    assert result["max_parallel_maintenance_workers"] == "12"
+
+
+def test_calculate_worker_process_config_wal_compression(harness):
+    """Test that wal_compression is NOT included in worker process config."""
+    # Test with wal_compression enabled - should NOT be in worker config result
+    with harness.hooks_disabled():
+        harness.update_config({"cpu_wal_compression": True})
+
+    result = harness.charm._calculate_worker_process_config(4)
+    assert "wal_compression" not in result  # wal_compression is not part of worker configs
+
+    # Test with wal_compression disabled - should NOT be in worker config result
+    with harness.hooks_disabled():
+        harness.update_config({"cpu_wal_compression": False})
+
+    result = harness.charm._calculate_worker_process_config(4)
+    assert "wal_compression" not in result  # wal_compression is not part of worker configs
+
+    # Test with wal_compression not explicitly set - should NOT be in worker config result
+    with harness.hooks_disabled():
+        harness.update_config(unset=["cpu_wal_compression"])
+
+    result = harness.charm._calculate_worker_process_config(4)
+    assert "wal_compression" not in result  # wal_compression is not part of worker configs
+
+
+def test_calculate_worker_process_config_mixed_auto_and_numeric(harness):
+    """Test worker process config with mixed auto and numeric values."""
+    with harness.hooks_disabled():
+        harness.update_config({
+            "cpu_max_worker_processes": "16",
+            "cpu_max_parallel_workers": "auto",  # Should become 16
+            "cpu_max_parallel_maintenance_workers": "8",  # Explicit value
+            "cpu_max_logical_replication_workers": "auto",  # Should become 16
+        })
+
+    result = harness.charm._calculate_worker_process_config(4)
+
+    assert result["max_worker_processes"] == "16"
+    assert result["max_parallel_workers"] == "16"  # Auto resolved to base
+    assert result["max_parallel_maintenance_workers"] == "8"  # Explicit value
+    assert result["max_logical_replication_workers"] == "16"  # Auto resolved to base
+
+
+def test_calculate_worker_process_config_zero_cpu_count(harness):
+    """Test worker process config when cpu_count is 0 (edge case)."""
+    with harness.hooks_disabled():
+        harness.update_config({"cpu_max_worker_processes": "auto"})
+
+    result = harness.charm._calculate_worker_process_config(0)
+
+    # min(8, 2*0) = 0
+    assert result["max_worker_processes"] == "0"
+
+
+def test_calculate_worker_process_config_all_workers_validation_blocking(harness):
+    """Test that worker configs exceeding limits raise ValueError instead of capping."""
+    cpu_cores = 2  # Cap = 20
+
+    # Test each exceeding parameter individually (since first exception stops execution)
+    exceeding_configs = [
+        ("cpu_max_worker_processes", "25"),
+        ("cpu_max_parallel_maintenance_workers", "22"),
+        ("cpu_max_logical_replication_workers", "30"),
+        ("cpu_max_sync_workers_per_subscription", "25"),
+    ]
+
+    for param_name, invalid_value in exceeding_configs:
+        # Reset all configs to auto first, then set the specific one we want to test
+        reset_config = {
+            "cpu_max_worker_processes": "auto",
+            "cpu_max_parallel_workers": "auto",
+            "cpu_max_parallel_maintenance_workers": "auto",
+            "cpu_max_logical_replication_workers": "auto",
+            "cpu_max_sync_workers_per_subscription": "auto",
+        }
+        reset_config[param_name] = invalid_value
+
+        with harness.hooks_disabled():
+            harness.update_config(reset_config)
+
+        with pytest.raises(
+            ValueError,
+            match=f"{param_name.replace('-', '_')} value {invalid_value} exceeds maximum allowed of 20",
+        ):
+            harness.charm._calculate_worker_process_config(cpu_cores)
+
+    # Test valid value within cap works - need to set max_worker_processes high enough
+    with harness.hooks_disabled():
+        harness.update_config({
+            "cpu_max_worker_processes": "20",  # Set high enough to allow max_parallel_workers = 18
+            "cpu_max_parallel_workers": "18",  # Within both CPU cap (20) and max_worker_processes (20)
+            "cpu_max_parallel_maintenance_workers": "auto",
+            "cpu_max_logical_replication_workers": "auto",
+            "cpu_max_sync_workers_per_subscription": "auto",
+        })
+
+    result = harness.charm._calculate_worker_process_config(cpu_cores)
+    assert result["max_parallel_workers"] == "18"  # Should accept valid value
