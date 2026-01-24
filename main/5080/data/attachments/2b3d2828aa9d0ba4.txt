@@ -1,0 +1,26 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-2
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [executing] active: Primary
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.13   unsupported  00:37:25Z
+
+App                          Version  Status  Scale  Charm           Channel  Rev  Address        Exposed  Message
+test-storage-postgresql-k8s  14.20    active      1  postgresql-k8s             2  10.152.183.89  no       
+
+Unit                            Workload  Agent  Address      Ports  Message
+test-storage-postgresql-k8s/0*  active    idle   10.1.12.158         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-2: 00:16:26 ERROR unit.postgresql-k8s/2.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-postgresql-k8s-0: 00:25:07 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-k8s-1: 00:25:07 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-k8s-1: 00:26:50 ERROR unit.postgresql-k8s/1.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-postgresql-k8s-2: 00:35:13 ERROR unit.postgresql-k8s/2.juju-log pgdata folder not found in /var/lib/postgresql/data/pgdata
+controller-0: 00:36:14 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql-k8s": cannot scale dying application to 0: application "postgresql-k8s" not found
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
