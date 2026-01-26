@@ -85,6 +85,8 @@ backends:
 
       sudo mkdir -p /var/snap/microk8s/common/default-storage
       sudo mount --bind /mnt /var/snap/microk8s/common/default-storage
+
+      sudo apt purge containerd.io docker-ce-cli docker-ce buildx compose
     # HACK: spread does not pass environment variables set on runner
     # Manually pass specific environment variables
     environment:
