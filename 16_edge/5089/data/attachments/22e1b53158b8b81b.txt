@@ -1,0 +1,77 @@
+[32mINFO    [0m integration.test_plugins:test_plugins.py:215 Creating an index object which depends on the pg_trgm config
+[32mINFO    [0m integration.test_plugins:test_plugins.py:224 Disabling the plugin on charm config, waiting for blocked status
+[32mINFO    [0m integration.test_plugins:test_plugins.py:233 Enabling the plugin back on charm config, status should resolve
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] blocked: Cannot disable plugins: Existing objects depend on it. See logs
+  postgresql-k8s/1 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [idle] active: 
+[32mINFO    [0m integration.test_plugins:test_plugins.py:239 Re-disabling plugin, waiting for blocked status to come back
+[32mINFO    [0m integration.test_plugins:test_plugins.py:248 Delete the object which depends on the plugin
+[32mINFO    [0m integration.test_plugins:test_plugins.py:254 Waiting for status to resolve again
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] blocked: Cannot disable plugins: Existing objects depend on it. See logs
+  postgresql-k8s/1 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] blocked: Cannot disable plugins: Existing objects depend on it. See logs
+  postgresql-k8s/1 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.13   unsupported  01:36:23Z
+
+App             Version  Status  Scale  Charm           Channel  Rev  Address         Exposed  Message
+postgresql-k8s  16.11    active      2  postgresql-k8s             0  10.152.183.119  no       
+
+Unit               Workload  Agent  Address      Ports  Message
+postgresql-k8s/0*  active    idle   10.1.12.143         Primary
+postgresql-k8s/1   active    idle   10.1.12.148         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-0: 01:31:29 ERROR unit.postgresql-k8s/0.juju-log __main__:failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 802, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1153, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 304, in _connect_to_database
+    connection = psycopg2.connect(
+                 ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.testing.svc.cluster.local" (10.152.183.72), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/charm.py", line 930, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1153, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 831, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+single_kernel_postgresql.utils.postgresql.PostgreSQLEnableDisableExtensionError
+unit-postgresql-k8s-1: 01:32:04 ERROR unit.postgresql-k8s/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-postgresql-k8s-0: 01:34:07 ERROR unit.postgresql-k8s/0.juju-log __main__:Failed to disable plugin: cannot drop extension pg_trgm because other objects depend on it
+DETAIL:  index example_idx depends on operator class gin_trgm_ops for access method gin
+HINT:  Use DROP ... CASCADE to drop the dependent objects too.
+
+Was the plugin enabled manually? If so, update charm config with `juju config postgresql-k8s plugin-<plugin_name>-enable=True`
+unit-postgresql-k8s-0: 01:35:00 ERROR unit.postgresql-k8s/0.juju-log __main__:Failed to disable plugin: cannot drop extension pg_trgm because other objects depend on it
+DETAIL:  index example_idx depends on operator class gin_trgm_ops for access method gin
+HINT:  Use DROP ... CASCADE to drop the dependent objects too.
+
+Was the plugin enabled manually? If so, update charm config with `juju config postgresql-k8s plugin-<plugin_name>-enable=True`
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
