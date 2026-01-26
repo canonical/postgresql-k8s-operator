@@ -263,7 +263,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         self._certs_path = "/usr/local/share/ca-certificates"
         self._storage_path = str(self.meta.storages["data"].location)
-        self.pgdata_path = f"{self._storage_path}/16/main"
+        self._actual_pgdata_path = f"{self._storage_path}/16/main"
+        self.pgdata_path = "/var/lib/postgresql/16/main"
 
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.postgresql_client_relation = PostgreSQLProvider(self)
@@ -1136,10 +1137,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _create_pgdata(self, container: Container):
         """Create the PostgreSQL data directories."""
-        # Create the pgdata directory (e.g., /var/lib/pg/data/16/main)
-        if not container.exists(self.pgdata_path):
+        # Create the pgdata directory on the storage mount (e.g., /var/lib/pg/data/16/main)
+        if not container.exists(self._actual_pgdata_path):
             container.make_dir(
-                self.pgdata_path,
+                self._actual_pgdata_path,
                 permissions=0o700,
                 user=WORKLOAD_OS_USER,
                 group=WORKLOAD_OS_GROUP,
@@ -1169,20 +1170,20 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             )
         # Create a symlink from the default PostgreSQL data directory to our data directory
         # (e.g., /var/lib/postgresql/16/main -> /var/lib/pg/data/16/main)
-        default_pgdata_path = "/var/lib/postgresql/16/main"
-        if not container.exists(default_pgdata_path):
+        # Patroni and other tools will use the symlink path (self.pgdata_path)
+        if not container.exists(self.pgdata_path):
             container.make_dir(
                 "/var/lib/postgresql/16",
                 user=WORKLOAD_OS_USER,
                 group=WORKLOAD_OS_GROUP,
                 make_parents=True,
             )
-            container.exec(["ln", "-s", self.pgdata_path, default_pgdata_path]).wait()
+            container.exec(["ln", "-s", self._actual_pgdata_path, self.pgdata_path]).wait()
             container.exec([
                 "chown",
                 "-h",
                 f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
-                default_pgdata_path,
+                self.pgdata_path,
             ]).wait()
         # Also, fix the permissions from the parent directory.
         container.exec([
@@ -2029,6 +2030,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.primary_endpoint,
             self._namespace,
             self._storage_path,
+            self.pgdata_path,
             self.get_secret(APP_SCOPE, USER_PASSWORD_KEY),
             self.get_secret(APP_SCOPE, REPLICATION_PASSWORD_KEY),
             self.get_secret(APP_SCOPE, REWIND_PASSWORD_KEY),

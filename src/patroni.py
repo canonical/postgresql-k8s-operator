@@ -99,6 +99,7 @@ class Patroni:
         primary_endpoint: str,
         namespace: str,
         storage_path: str,
+        pgdata_path: str,
         superuser_password: str | None,
         replication_password: str | None,
         rewind_password: str | None,
@@ -110,6 +111,7 @@ class Patroni:
         self._primary_endpoint = primary_endpoint
         self._namespace = namespace
         self._storage_path = storage_path
+        self._pgdata_path = pgdata_path
         self._members_count = len(self._endpoints)
         self._superuser_password = superuser_password
         self._replication_password = replication_password
@@ -673,6 +675,7 @@ class Patroni:
             is_no_sync_member=is_no_sync_member,
             namespace=self._namespace,
             storage_path=self._storage_path,
+            pgdata_path=self._pgdata_path,
             superuser_password=self._superuser_password,
             replication_password=self._replication_password,
             rewind_user=REWIND_USER,

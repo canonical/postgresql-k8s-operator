@@ -65,7 +65,7 @@ bootstrap:
   method: pgbackrest
   pgbackrest:
     command: >
-      pgbackrest --stanza={{ restore_stanza }} --pg1-path={{ storage_path }}/16/main
+      pgbackrest --stanza={{ restore_stanza }} --pg1-path={{ pgdata_path }}
       {%- if backup_id %} --set={{ backup_id }} {%- endif %}
       {%- if restore_timeline %} --target-timeline="0x{{ restore_timeline }}" {% endif %}
       {%- if restore_to_latest %} --type=default {%- else %}
@@ -118,7 +118,7 @@ postgresql:
   basebackup:
     - waldir: /var/lib/pg/logs/16/main
   connect_address: '{{ endpoint }}:5432'
-  data_dir: {{ storage_path }}/16/main
+  data_dir: {{ pgdata_path }}
   bin_dir: /usr/lib/postgresql/{{ version }}/bin
   listen: 0.0.0.0:5432
   parameters:

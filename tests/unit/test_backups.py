@@ -400,7 +400,7 @@ def test_create_bucket_if_not_exists(harness, tls_ca_chain_filename):
 def test_empty_data_files(harness):
     with patch("ops.model.Container.exec") as _exec:
         # Test when the removal of the data files fails.
-        command = ["rm", "-r", "/var/lib/pg/data/16/main"]
+        command = ["rm", "-r", "/var/lib/postgresql/16/main"]
         _exec.side_effect = ExecError(command=command, exit_code=1, stdout="", stderr="fake error")
         try:
             harness.charm.backup._empty_data_files()
@@ -443,7 +443,7 @@ def test_change_connectivity_to_database(harness):
 
 def test_execute_command(harness):
     with patch("ops.model.Container.exec") as _exec:
-        command = ["rm", "-r", "/var/lib/pg/data/16/main"]
+        command = ["rm", "-r", "/var/lib/postgresql/16/main"]
         _exec.return_value.wait_output.return_value = ("fake stdout", "")
 
         # Test when the command runs successfully.

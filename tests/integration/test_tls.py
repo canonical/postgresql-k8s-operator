@@ -119,7 +119,7 @@ async def test_tls(ops_test: OpsTest) -> None:
                 await run_command_on_unit(
                     ops_test,
                     replica,
-                    'su postgres -c "/usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/pg/data/16/main promote"',
+                    'su postgres -c "/usr/lib/postgresql/16/bin/pg_ctl -D /var/lib/postgresql/16/main promote"',
                 )
 
                 # Check that the replica was promoted.

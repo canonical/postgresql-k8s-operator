@@ -14,7 +14,7 @@ from tenacity import RetryError, stop_after_delay, wait_fixed
 from charm import PostgresqlOperatorCharm
 from constants import API_REQUEST_TIMEOUT, REWIND_USER
 from patroni import Patroni, SwitchoverFailedError, SwitchoverNotSyncError
-from tests.helpers import STORAGE_PATH
+from tests.helpers import PGDATA_PATH, STORAGE_PATH
 
 
 @pytest.fixture(autouse=True)
@@ -35,6 +35,7 @@ def patroni(harness):
         "postgresql-k8s-primary.dev.svc.cluster.local",
         "test-model",
         STORAGE_PATH,
+        PGDATA_PATH,
         "superuser-password",
         "replication-password",
         "rewind-password",
@@ -224,6 +225,7 @@ def test_render_patroni_yml_file(harness, patroni):
             endpoints=patroni._endpoints,
             namespace=patroni._namespace,
             storage_path=patroni._storage_path,
+            pgdata_path=patroni._pgdata_path,
             superuser_password=patroni._superuser_password,
             replication_password=patroni._replication_password,
             rewind_user=REWIND_USER,
@@ -260,6 +262,7 @@ def test_render_patroni_yml_file(harness, patroni):
             endpoints=patroni._endpoints,
             namespace=patroni._namespace,
             storage_path=patroni._storage_path,
+            pgdata_path=patroni._pgdata_path,
             superuser_password=patroni._superuser_password,
             replication_password=patroni._replication_password,
             rewind_user=REWIND_USER,

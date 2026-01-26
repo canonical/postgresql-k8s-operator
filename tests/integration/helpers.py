@@ -43,8 +43,11 @@ APPLICATION_NAME = "postgresql-test-app"
 DATA_INTEGRATOR_APP_NAME = "data-integrator"
 STORAGE_PATH = METADATA["storage"]["data"]["location"]
 
-# PGDATA_PATH points to the workload's Postgres data directory (versioned path under the storage mount).
-PGDATA_PATH = f"{STORAGE_PATH}/16/main"
+# PGDATA_PATH points to the symlink path that Patroni and PostgreSQL use.
+PGDATA_PATH = "/var/lib/postgresql/16/main"
+
+# ACTUAL_PGDATA_PATH points to the actual storage location (versioned path under the storage mount).
+ACTUAL_PGDATA_PATH = f"{STORAGE_PATH}/16/main"
 
 
 class SecretNotFoundError(Exception):
