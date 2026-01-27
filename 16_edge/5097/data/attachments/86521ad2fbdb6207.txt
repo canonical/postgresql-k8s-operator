@@ -1,0 +1,264 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database (waiting for exactly 3 units, current : 1)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] active: Primary (degraded)
+  database/1 [allocating] waiting: agent initialising
+  database/2 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [executing] maintenance: installing charm software
+  database/2 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [executing] waiting: awaiting for cluster to start
+  database/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [executing] waiting: awaiting for cluster to start
+  database/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] active: Primary (degraded)
+  database/1 [executing] waiting: awaiting for cluster to start
+  database/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] active: Primary (degraded)
+  database/1 [executing] waiting: awaiting for cluster to start
+  database/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] active: Primary (degraded)
+  database/1 [executing] waiting: awaiting for cluster to start
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [executing] waiting: awaiting for member to start
+  database/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [executing] waiting: awaiting for member to start
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] maintenance: Executing restart operation
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary (degraded)
+  database/1 [idle] waiting: awaiting for member to start
+  database/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.13   unsupported  02:10:02Z
+
+App                  Version  Status   Scale  Charm                Channel      Rev  Address         Exposed  Message
+another-application           active       1  postgresql-test-app  latest/edge  432  10.152.183.90   no       received database credentials of the first database
+another-database     16.11    active       3  postgresql-k8s                      0  10.152.183.179  no       
+database             16.11    waiting      3  postgresql-k8s                      1  10.152.183.186  no       installing agent
+postgresql-test-app           active       2  postgresql-test-app  latest/edge  432  10.152.183.254  no       received database credentials of the second database
+
+Unit                    Workload  Agent  Address      Ports  Message
+another-application/0*  active    idle   10.1.12.172         received database credentials of the first database
+another-database/0*     active    idle   10.1.12.145         Primary
+another-database/1      active    idle   10.1.12.156         
+another-database/2      active    idle   10.1.12.153         
+database/0*             active    idle   10.1.12.161         Primary (degraded)
+database/1              waiting   idle   10.1.12.175         awaiting for member to start
+database/2              active    idle   10.1.12.173         
+postgresql-test-app/0   active    idle   10.1.12.137         received database credentials of the second database
+postgresql-test-app/1*  active    idle   10.1.12.136         received database credentials of the second database
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-another-database-1: 01:40:51 ERROR unit.another-database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-2: 01:40:53 ERROR unit.another-database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-1: 01:41:03 ERROR unit.another-database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-2: 01:41:06 ERROR unit.another-database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-1: 01:41:15 ERROR unit.another-database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-2: 01:41:16 ERROR unit.another-database/2.juju-log __main__:pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-another-database-2: 01:41:16 ERROR unit.another-database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-2: 01:41:27 ERROR unit.another-database/2.juju-log __main__:pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-another-database-2: 01:41:27 ERROR unit.another-database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-2: 01:41:40 ERROR unit.another-database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-2: 01:41:50 ERROR unit.another-database/2.juju-log database-peers:1: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-2.another-database-endpoints.testing.svc.cluster.local" (10.1.12.153), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-database-2: 01:42:09 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:42:09 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-2: 01:42:26 ERROR unit.another-database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:42:37 ERROR unit.database/2.juju-log __main__:pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-database-2: 01:42:37 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:42:39 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:42:48 ERROR unit.database/2.juju-log __main__:pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-database-2: 01:42:48 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:42:49 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:42:59 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:42:59 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:43:11 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:43:11 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:43:21 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:43:22 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:43:30 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:43:31 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:43:39 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:43:40 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:43:50 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:43:51 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:43:58 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:43:59 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:44:08 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:44:09 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:44:19 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:44:30 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:45:11 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+controller-0: 01:51:45 ERROR juju.worker.caasapplicationprovisioner.runner exited "database": updating filesystem information for database: cannot set info for filesystem attachment 17:database/1: state changing too quickly; try again soon
+unit-postgresql-test-app-1: 01:53:52 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-0: 01:53:53 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 01:53:54 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-1: 01:53:54 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-0: 01:53:55 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-2: 01:53:55 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-application-0: 01:53:59 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-0: 01:54:57 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-2: 01:54:57 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 01:54:58 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-1: 01:55:01 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-0: 01:55:06 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-1: 01:55:06 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-1: 01:56:25 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-2: 01:56:25 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-1: 01:56:46 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-2: 01:56:47 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 01:56:49 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-0: 01:56:51 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-1: 01:58:11 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-2: 01:58:11 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-1: 01:58:15 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:58:26 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:58:38 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:58:46 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:58:56 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:59:05 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:59:13 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:59:23 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:59:33 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:59:46 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:59:57 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 02:00:04 ERROR unit.database/1.juju-log __main__:pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-database-1: 02:00:04 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 02:00:14 ERROR unit.database/1.juju-log __main__:pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-database-1: 02:00:14 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 02:00:26 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-2: 02:00:32 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 02:00:34 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-0: 02:00:36 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-1: 02:00:36 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-2: 02:02:38 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-1: 02:02:43 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-1: 02:02:45 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 02:02:53 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-postgresql-test-app-0: 02:03:05 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-1: 02:03:05 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-1: 02:05:30 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 02:05:31 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-0: 02:05:34 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-1: 02:05:59 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-1: 02:06:00 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 02:06:11 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 02:06:20 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 02:06:30 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 02:06:38 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 02:06:49 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 02:06:57 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 02:07:07 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 02:07:17 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 02:07:29 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 02:07:40 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 02:07:49 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-application-0: 02:07:52 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 02:09:54 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-0: 02:09:55 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
