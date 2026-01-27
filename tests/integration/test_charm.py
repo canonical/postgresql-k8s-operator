@@ -409,6 +409,10 @@ async def test_redeploy_charm_same_model(ops_test: OpsTest, charm):
         )
 
 
+# Juju bug: stale storage references after force removal with --destroy-storage
+# cause StatefulSet volumeMount errors on redeployment.
+# Possibly caused by https://github.com/juju/juju/pull/20795 (Juju 3.6.13+).
+@pytest.mark.skip(reason="Unstable")
 async def test_redeploy_charm_same_model_after_forcing_removal(ops_test: OpsTest, charm) -> None:
     """Redeploy the charm in the same model to test that it works after a forceful removal."""
     return_code, _, stderr = await ops_test.juju(
