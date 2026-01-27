@@ -8,7 +8,7 @@ requires-poetry = ">=2.0.0"
 [tool.poetry.dependencies]
 python = "^3.12"
 ops = "^2.23.1"
-boto3 = "^1.42.34"
+boto3 = "^1.42.35"
 pgconnstr = "^1.0.1"
 requests = "^2.32.5"
 tenacity = "^9.1.2"
@@ -54,7 +54,7 @@ pyright = "^1.1.408"
 optional = true
 
 [tool.poetry.group.unit.dependencies]
-coverage = {extras = ["toml"], version = "^7.13.1"}
+coverage = {extras = ["toml"], version = "^7.13.2"}
 pytest = "^9.0.2"
 pytest-asyncio = "*"
 
