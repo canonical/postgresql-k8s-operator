@@ -1,0 +1,116 @@
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:806 Connecting to existing model concierge-microk8s:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHSession received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHTunneler received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-0
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m integration.test_config:test_config.py:262 synchronous-node-count
+[32mINFO    [0m integration.test_config:test_config.py:262 synchronous-node-count
+[32mINFO    [0m integration.test_config:test_config.py:262 connection-authentication-timeout
+[32mINFO    [0m integration.test_config:test_config.py:262 connection-statement-timeout
+[32mINFO    [0m integration.test_config:test_config.py:262 durability-synchronous-commit
+[32mINFO    [0m integration.test_config:test_config.py:262 instance-default-text-search-config
+[32mINFO    [0m integration.test_config:test_config.py:262 instance-max-locks-per-transaction
+[32mINFO    [0m integration.test_config:test_config.py:262 instance-password-encryption
+[32mINFO    [0m integration.test_config:test_config.py:262 instance-password-encryption
+[32mINFO    [0m integration.test_config:test_config.py:262 logging-client-min-messages
+[32mINFO    [0m integration.test_config:test_config.py:262 logging-log-min-duration-statement
+[32mINFO    [0m integration.test_config:test_config.py:262 logging-track-functions
+[32mINFO    [0m integration.test_config:test_config.py:262 memory-maintenance-work-mem
+[32mINFO    [0m integration.test_config:test_config.py:262 memory-max-prepared-transactions
+[32mINFO    [0m integration.test_config:test_config.py:262 memory-shared-buffers
+[32mINFO    [0m integration.test_config:test_config.py:262 memory-temp-buffers
+[32mINFO    [0m integration.test_config:test_config.py:262 memory-work-mem
+[32mINFO    [0m integration.test_config:test_config.py:262 optimizer-constraint-exclusion
+[32mINFO    [0m integration.test_config:test_config.py:262 optimizer-cpu-index-tuple-cost
+[32mINFO    [0m integration.test_config:test_config.py:262 optimizer-cpu-operator-cost
+[32mINFO    [0m integration.test_config:test_config.py:262 optimizer-cpu-tuple-cost
+[32mINFO    [0m integration.test_config:test_config.py:262 optimizer-cursor-tuple-fraction
+[32mINFO    [0m integration.test_config:test_config.py:262 optimizer-default-statistics-target
+[32mINFO    [0m integration.test_config:test_config.py:262 optimizer-from-collapse-limit
+[32mINFO    [0m integration.test_config:test_config.py:262 optimizer-geqo-effort
+[32mINFO    [0m integration.test_config:test_config.py:262 optimizer-geqo-generations
+[32mINFO    [0m integration.test_config:test_config.py:262 optimizer-geqo-pool-size
+[32mINFO    [0m integration.test_config:test_config.py:262 optimizer-geqo-seed
+[32mINFO    [0m integration.test_config:test_config.py:262 optimizer-geqo-selection-bias
+[32mINFO    [0m integration.test_config:test_config.py:262 optimizer-geqo-threshold
+[32mINFO    [0m integration.test_config:test_config.py:262 optimizer-jit-above-cost
+[32mINFO    [0m integration.test_config:test_config.py:262 optimizer-jit-inline-above-cost
+[32mINFO    [0m integration.test_config:test_config.py:262 optimizer-jit-optimize-above-cost
+[32mINFO    [0m integration.test_config:test_config.py:262 optimizer-join-collapse-limit
+[32mINFO    [0m integration.test_config:test_config.py:262 optimizer-min-parallel-index-scan-size
+[32mINFO    [0m integration.test_config:test_config.py:262 optimizer-min-parallel-table-scan-size
+[32mINFO    [0m integration.test_config:test_config.py:262 optimizer-parallel-setup-cost
+[32mINFO    [0m integration.test_config:test_config.py:262 optimizer-parallel-tuple-cost
+[32mINFO    [0m integration.test_config:test_config.py:262 profile
+[32mINFO    [0m integration.test_config:test_config.py:262 profile-limit-memory
+[32mINFO    [0m integration.test_config:test_config.py:262 request-backslash-quote
+[32mINFO    [0m integration.test_config:test_config.py:262 request-date-style
+[32mINFO    [0m integration.test_config:test_config.py:262 request-deadlock-timeout
+[32mINFO    [0m integration.test_config:test_config.py:262 request-default-transaction-isolation
+[32mINFO    [0m integration.test_config:test_config.py:262 request-lock-timeout
+[32mINFO    [0m integration.test_config:test_config.py:262 request-time-zone
+[32mINFO    [0m integration.test_config:test_config.py:262 request-track-activity-query-size
+[32mINFO    [0m integration.test_config:test_config.py:262 request-xmlbinary
+[32mINFO    [0m integration.test_config:test_config.py:262 request-xmloption
+[32mINFO    [0m integration.test_config:test_config.py:262 response-bytea-output
+[32mINFO    [0m integration.test_config:test_config.py:262 response-extra-float-digits
+[32mINFO    [0m integration.test_config:test_config.py:262 response-gin-fuzzy-search-limit
+[32mINFO    [0m integration.test_config:test_config.py:262 response-lc-monetary
+[32mINFO    [0m integration.test_config:test_config.py:262 response-lc-numeric
+[32mINFO    [0m integration.test_config:test_config.py:262 response-lc-time
+[32mINFO    [0m integration.test_config:test_config.py:262 session-idle-in-transaction-session-timeout
+[32mINFO    [0m integration.test_config:test_config.py:262 storage-bgwriter-lru-maxpages
+[32mINFO    [0m integration.test_config:test_config.py:262 storage-bgwriter-lru-multiplier
+[32mINFO    [0m integration.test_config:test_config.py:262 storage-default-table-access-method
+[32mINFO    [0m integration.test_config:test_config.py:262 storage-gin-pending-list-limit
+[32mINFO    [0m integration.test_config:test_config.py:262 storage-old-snapshot-threshold
+[32mINFO    [0m integration.test_config:test_config.py:262 vacuum-autovacuum-analyze-scale-factor
+[32mINFO    [0m integration.test_config:test_config.py:262 vacuum-autovacuum-analyze-threshold
+[32mINFO    [0m integration.test_config:test_config.py:262 vacuum-autovacuum-freeze-max-age
+[32mINFO    [0m integration.test_config:test_config.py:262 vacuum-autovacuum-naptime
+[32mINFO    [0m integration.test_config:test_config.py:262 vacuum-autovacuum-vacuum-cost-delay
+[32mINFO    [0m integration.test_config:test_config.py:262 vacuum-autovacuum-vacuum-cost-limit
+[32mINFO    [0m integration.test_config:test_config.py:262 vacuum-autovacuum-vacuum-insert-scale-factor
+[32mINFO    [0m integration.test_config:test_config.py:262 vacuum-autovacuum-vacuum-insert-threshold
+[32mINFO    [0m integration.test_config:test_config.py:262 vacuum-autovacuum-vacuum-scale-factor
+[32mINFO    [0m integration.test_config:test_config.py:262 vacuum-autovacuum-vacuum-threshold
+[32mINFO    [0m integration.test_config:test_config.py:262 vacuum-vacuum-cost-delay
+[32mINFO    [0m integration.test_config:test_config.py:262 vacuum-vacuum-cost-limit
+[32mINFO    [0m integration.test_config:test_config.py:262 vacuum-vacuum-cost-page-dirty
+[32mINFO    [0m integration.test_config:test_config.py:262 vacuum-vacuum-cost-page-hit
+[32mINFO    [0m integration.test_config:test_config.py:262 vacuum-vacuum-cost-page-miss
+[32mINFO    [0m integration.test_config:test_config.py:262 vacuum-vacuum-failsafe-age
+[32mINFO    [0m integration.test_config:test_config.py:262 vacuum-vacuum-freeze-min-age
+[32mINFO    [0m integration.test_config:test_config.py:262 vacuum-vacuum-freeze-table-age
+[32mINFO    [0m integration.test_config:test_config.py:262 vacuum-vacuum-multixact-failsafe-age
+[32mINFO    [0m integration.test_config:test_config.py:262 vacuum-vacuum-multixact-freeze-min-age
+[32mINFO    [0m integration.test_config:test_config.py:262 vacuum-vacuum-multixact-freeze-table-age
+[32mINFO    [0m integration.test_config:test_config.py:262 cpu-max-worker-processes
+[32mINFO    [0m integration.test_config:test_config.py:262 cpu-max-worker-processes
+[32mINFO    [0m integration.test_config:test_config.py:262 cpu-max-worker-processes
+[32mINFO    [0m integration.test_config:test_config.py:262 cpu-max-parallel-workers
+[32mINFO    [0m integration.test_config:test_config.py:262 cpu-max-parallel-workers
+[32mINFO    [0m integration.test_config:test_config.py:262 cpu-max-parallel-workers
+[32mINFO    [0m integration.test_config:test_config.py:262 cpu-max-parallel-maintenance-workers
+[32mINFO    [0m integration.test_config:test_config.py:262 cpu-max-parallel-maintenance-workers
+[32mINFO    [0m integration.test_config:test_config.py:262 cpu-max-parallel-maintenance-workers
+[32mINFO    [0m integration.test_config:test_config.py:262 cpu-max-logical-replication-workers
+[32mINFO    [0m integration.test_config:test_config.py:262 cpu-max-logical-replication-workers
+[32mINFO    [0m integration.test_config:test_config.py:262 cpu-max-logical-replication-workers
+[32mINFO    [0m integration.test_config:test_config.py:262 cpu-max-sync-workers-per-subscription
+[32mINFO    [0m integration.test_config:test_config.py:262 cpu-max-sync-workers-per-subscription
+[32mINFO    [0m integration.test_config:test_config.py:262 cpu-max-sync-workers-per-subscription
+[32mINFO    [0m integration.test_config:test_config.py:262 cpu-max-parallel-apply-workers-per-subscription
+[32mINFO    [0m integration.test_config:test_config.py:262 cpu-max-parallel-apply-workers-per-subscription
+[32mINFO    [0m integration.test_config:test_config.py:262 cpu-max-parallel-apply-workers-per-subscription

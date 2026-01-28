@@ -1,0 +1,366 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/data-integrator-343
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [idle] blocked: Please specify either topic, index, database name, or prefix
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/data-integrator-343
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  another-data-integrator/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [executing] blocked: Please specify either topic, index, database name, or prefix
+  another-data-integrator/0 [executing] blocked: Please specify either topic, index, database name, or prefix
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] active: Primary
+  database/1 [executing] active: 
+  database/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary
+  database/1 [executing] active: 
+  database/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] active: Primary
+  database/1 [executing] active: 
+  database/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] blocked: invalid role(s) for extra user roles
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] blocked: invalid role(s) for extra user roles
+  database/1 [executing] active: 
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] blocked: invalid role(s) for extra user roles
+  database/1 [executing] active: 
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] blocked: invalid role(s) for extra user roles
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] blocked: invalid role(s) for extra user roles
+  database/1 [idle] active: 
+  database/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] active: Primary
+  database/1 [executing] active: 
+  database/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary
+  database/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.13   unsupported  02:07:11Z
+
+App                      Version  Status   Scale  Charm                Channel      Rev  Address         Exposed  Message
+another-application               active       1  postgresql-test-app  latest/edge  434  10.152.183.136  no       received database credentials of the first database
+another-data-integrator           blocked      1  data-integrator      latest/edge  343  10.152.183.39   no       Please relate the data-integrator with the desired product
+another-database         16.11    active       3  postgresql-k8s                      0  10.152.183.98   no       
+data-integrator                   blocked      1  data-integrator      latest/edge  343  10.152.183.66   no       Please relate the data-integrator with the desired product
+database                 16.11    active       3  postgresql-k8s                      1  10.152.183.160  no       
+postgresql-test-app               active       2  postgresql-test-app  latest/edge  434  10.152.183.131  no       received database credentials of the first database
+
+Unit                        Workload  Agent  Address      Ports  Message
+another-application/0*      active    idle   10.1.12.170         received database credentials of the first database
+another-data-integrator/0*  blocked   idle   10.1.12.174         Please relate the data-integrator with the desired product
+another-database/0*         active    idle   10.1.12.145         Primary
+another-database/1          active    idle   10.1.12.153         
+another-database/2          active    idle   10.1.12.155         
+data-integrator/0*          blocked   idle   10.1.12.173         Please relate the data-integrator with the desired product
+database/0*                 active    idle   10.1.12.160         Primary
+database/1                  active    idle   10.1.12.172         
+database/2                  active    idle   10.1.12.171         
+postgresql-test-app/0*      active    idle   10.1.12.137         received database credentials of the first database
+postgresql-test-app/1       active    idle   10.1.12.136         received database credentials of the first database
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-another-database-0: 01:37:28 ERROR unit.another-database/0.juju-log single_kernel_postgresql.utils.postgresql:Failed to grant internal access group memberships: connection to server at "another-database-primary.testing.svc.cluster.local" (10.152.183.236), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-another-database-0: 01:37:28 ERROR unit.another-database/0.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-another-database-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 667, in grant_internal_access_group_memberships
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-another-database-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1153, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-another-database-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 304, in _connect_to_database
+    connection = psycopg2.connect(
+                 ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-another-database-0/charm/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "another-database-primary.testing.svc.cluster.local" (10.152.183.236), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-another-database-0/charm/src/charm.py", line 3061, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-another-database-0/charm/venv/lib/python3.12/site-packages/ops/__init__.py", line 356, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-another-database-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 502, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-another-database-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 486, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-another-database-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 421, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-another-database-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 465, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-another-database-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 351, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-another-database-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 924, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-another-database-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1030, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-another-database-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1153, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-another-database-0/charm/src/charm.py", line 1236, in _on_postgresql_pebble_ready
+    if self.unit.is_leader() and not self._initialize_cluster(event):
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-another-database-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1153, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-another-database-0/charm/src/charm.py", line 1323, in _initialize_cluster
+    self._setup_users()
+  File "/var/lib/juju/agents/unit-another-database-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1153, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-another-database-0/charm/src/charm.py", line 1369, in _setup_users
+    self.postgresql.grant_internal_access_group_memberships()
+  File "/var/lib/juju/agents/unit-another-database-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1153, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-another-database-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 677, in grant_internal_access_group_memberships
+    raise PostgreSQLAssignGroupError() from e
+single_kernel_postgresql.utils.postgresql.PostgreSQLAssignGroupError
+unit-another-database-0: 01:37:29 ERROR juju.worker.uniter.operation hook "postgresql-pebble-ready" (via hook dispatching script: dispatch) failed: exit status 1
+unit-another-database-0: 01:37:29 ERROR juju.worker.uniter pebble poll failed for container "postgresql": failed to send pebble-ready event: hook failed
+unit-another-database-0: 01:39:51 ERROR unit.another-database/0.juju-log refresh-v-three:1: __main__:failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-another-database-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 804, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-another-database-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1153, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-another-database-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 304, in _connect_to_database
+    connection = psycopg2.connect(
+                 ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-another-database-0/charm/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "another-database-primary.testing.svc.cluster.local" (10.152.183.236), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.0.149", user "operator", database "postgres", no encryption
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-another-database-0/charm/src/charm.py", line 930, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-another-database-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1153, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-another-database-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 833, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+single_kernel_postgresql.utils.postgresql.PostgreSQLEnableDisableExtensionError
+unit-another-database-1: 01:39:56 ERROR unit.another-database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-0: 01:40:01 ERROR unit.another-database/0.juju-log database-peers:3: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-0.another-database-endpoints.testing.svc.cluster.local" (10.1.12.145), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.145", user "operator", database "postgres", no encryption
+
+unit-another-database-1: 01:40:04 ERROR unit.another-database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:40:10 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:40:11 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-2: 01:40:15 ERROR unit.another-database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-1: 01:40:17 ERROR unit.another-database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-2: 01:40:26 ERROR unit.another-database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-0: 01:40:27 ERROR unit.another-database/0.juju-log refresh-v-three:1: __main__:failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-another-database-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 804, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-another-database-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1153, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-another-database-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 304, in _connect_to_database
+    connection = psycopg2.connect(
+                 ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-another-database-0/charm/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "another-database-primary.testing.svc.cluster.local" (10.152.183.236), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.0.149", user "operator", database "postgres", no encryption
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-another-database-0/charm/src/charm.py", line 930, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-another-database-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1153, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-another-database-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 833, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+single_kernel_postgresql.utils.postgresql.PostgreSQLEnableDisableExtensionError
+unit-another-database-1: 01:40:28 ERROR unit.another-database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:40:30 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:40:31 ERROR unit.database/1.juju-log __main__:pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-database-1: 01:40:31 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-0: 01:40:32 ERROR unit.another-database/0.juju-log database-peers:3: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-0.another-database-endpoints.testing.svc.cluster.local" (10.1.12.145), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.145", user "operator", database "postgres", no encryption
+
+unit-another-database-2: 01:40:34 ERROR unit.another-database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:40:37 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:40:38 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-1: 01:40:38 ERROR unit.another-database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-2: 01:40:45 ERROR unit.another-database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-1: 01:40:50 ERROR unit.another-database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-0: 01:40:51 ERROR unit.another-database/0.juju-log database-peers:3: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-0.another-database-endpoints.testing.svc.cluster.local" (10.1.12.145), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.145", user "operator", database "postgres", no encryption
+
+unit-another-database-2: 01:40:58 ERROR unit.another-database/2.juju-log __main__:pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-another-database-2: 01:40:58 ERROR unit.another-database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:40:59 ERROR unit.database/2.juju-log __main__:pgdata folder not found in /var/lib/postgresql/data/pgdata
+unit-database-2: 01:40:59 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-1: 01:41:00 ERROR unit.another-database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:41:02 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:41:08 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-2: 01:41:09 ERROR unit.another-database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:41:09 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-0: 01:41:13 ERROR unit.another-database/0.juju-log database-peers:3: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-0.another-database-endpoints.testing.svc.cluster.local" (10.1.12.145), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.145", user "operator", database "postgres", no encryption
+
+unit-database-2: 01:41:17 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:41:18 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-2: 01:41:18 ERROR unit.another-database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-1: 01:41:23 ERROR unit.another-database/1.juju-log single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-1.another-database-endpoints.testing.svc.cluster.local" (10.1.12.153), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.153", user "operator", database "postgres", no encryption
+
+unit-database-1: 01:41:25 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:41:25 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-2: 01:41:29 ERROR unit.another-database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:41:34 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:41:35 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-1: 01:41:37 ERROR unit.another-database/1.juju-log single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-1.another-database-endpoints.testing.svc.cluster.local" (10.1.12.153), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.153", user "operator", database "postgres", no encryption
+
+unit-database-2: 01:41:42 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:41:46 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-1: 01:41:47 ERROR unit.another-database/1.juju-log database-peers:3: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-1.another-database-endpoints.testing.svc.cluster.local" (10.1.12.153), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.153", user "operator", database "postgres", no encryption
+
+unit-another-database-0: 01:41:48 ERROR unit.another-database/0.juju-log database-peers:3: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-0.another-database-endpoints.testing.svc.cluster.local" (10.1.12.145), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.145", user "operator", database "postgres", no encryption
+
+unit-database-2: 01:41:52 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-2: 01:41:53 ERROR unit.another-database/2.juju-log __main__:failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 804, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-another-database-2/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1153, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 304, in _connect_to_database
+    connection = psycopg2.connect(
+                 ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "another-database-primary.testing.svc.cluster.local" (10.152.183.236), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.155", user "operator", database "postgres", no encryption
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-another-database-2/charm/src/charm.py", line 930, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 1153, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 833, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+single_kernel_postgresql.utils.postgresql.PostgreSQLEnableDisableExtensionError
+unit-another-database-2: 01:41:54 ERROR unit.another-database/2.juju-log single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-2.another-database-endpoints.testing.svc.cluster.local" (10.1.12.155), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.155", user "operator", database "postgres", no encryption
+
+unit-database-1: 01:41:57 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-2: 01:41:59 ERROR unit.another-database/2.juju-log database-peers:3: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-2.another-database-endpoints.testing.svc.cluster.local" (10.1.12.155), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.155", user "operator", database "postgres", no encryption
+
+unit-another-database-1: 01:42:02 ERROR unit.another-database/1.juju-log database-peers:3: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-1.another-database-endpoints.testing.svc.cluster.local" (10.1.12.153), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.153", user "operator", database "postgres", no encryption
+
+unit-database-2: 01:42:04 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-0: 01:42:05 ERROR unit.another-database/0.juju-log database-peers:3: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-0.another-database-endpoints.testing.svc.cluster.local" (10.1.12.145), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.145", user "operator", database "postgres", no encryption
+
+unit-database-1: 01:42:08 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:42:16 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:42:19 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:42:23 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:42:30 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:42:32 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:42:45 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:42:50 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:43:24 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:43:31 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-0: 01:46:13 ERROR unit.another-database/0.juju-log database:11: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-0.another-database-endpoints.testing.svc.cluster.local" (10.1.12.145), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.145", user "operator", database "postgres", no encryption
+
+unit-another-database-1: 01:46:30 ERROR unit.another-database/1.juju-log database-peers:3: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-1.another-database-endpoints.testing.svc.cluster.local" (10.1.12.153), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.153", user "operator", database "postgres", no encryption
+
+unit-another-database-0: 01:46:31 ERROR unit.another-database/0.juju-log database:11: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-0.another-database-endpoints.testing.svc.cluster.local" (10.1.12.145), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.145", user "operator", database "postgres", no encryption
+
+unit-another-database-2: 01:46:36 ERROR unit.another-database/2.juju-log database-peers:3: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-2.another-database-endpoints.testing.svc.cluster.local" (10.1.12.155), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.155", user "operator", database "postgres", no encryption
+
+unit-another-database-2: 01:46:53 ERROR unit.another-database/2.juju-log database-peers:3: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-2.another-database-endpoints.testing.svc.cluster.local" (10.1.12.155), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.155", user "operator", database "postgres", no encryption
+
+unit-another-database-0: 01:46:58 ERROR unit.another-database/0.juju-log database:11: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-0.another-database-endpoints.testing.svc.cluster.local" (10.1.12.145), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.145", user "operator", database "postgres", no encryption
+
+unit-another-database-0: 01:47:18 ERROR unit.another-database/0.juju-log database-peers:3: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-0.another-database-endpoints.testing.svc.cluster.local" (10.1.12.145), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.145", user "operator", database "postgres", no encryption
+
+unit-another-database-0: 01:47:35 ERROR unit.another-database/0.juju-log database-peers:3: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-0.another-database-endpoints.testing.svc.cluster.local" (10.1.12.145), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.145", user "operator", database "postgres", no encryption
+
+unit-another-database-1: 01:47:53 ERROR unit.another-database/1.juju-log database-peers:3: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-1.another-database-endpoints.testing.svc.cluster.local" (10.1.12.153), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.153", user "operator", database "postgres", no encryption
+
+unit-another-database-0: 01:47:53 ERROR unit.another-database/0.juju-log database-peers:3: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-0.another-database-endpoints.testing.svc.cluster.local" (10.1.12.145), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.145", user "operator", database "postgres", no encryption
+
+unit-another-database-2: 01:48:20 ERROR unit.another-database/2.juju-log database-peers:3: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-2.another-database-endpoints.testing.svc.cluster.local" (10.1.12.155), port 5432 failed: FATAL:  no pg_hba.conf entry for host "10.1.12.155", user "operator", database "postgres", no encryption
+
+unit-postgresql-test-app-0: 01:53:01 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-1: 01:53:01 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-application-0: 01:53:01 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 01:53:02 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-0: 01:53:05 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-1: 01:53:06 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-2: 01:53:09 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-application-0: 01:54:22 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-1: 01:54:22 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-0: 01:54:22 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 01:54:23 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-1: 01:55:18 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-2: 01:55:18 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-2: 01:56:02 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-postgresql-test-app-0: 01:57:04 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-application-0: 01:57:05 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 01:57:05 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-1: 01:57:15 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-2: 01:57:36 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-1: 01:57:37 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-0: 01:57:52 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 01:58:48 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-1: 01:58:50 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-0: 01:58:50 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-application-0: 01:58:56 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-1: 01:59:56 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-2: 01:59:57 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 02:00:50 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-1: 02:00:52 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-0: 02:00:52 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-2: 02:03:04 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-1: 02:03:08 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 02:04:26 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-0: 02:04:30 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-1: 02:04:30 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-data-integrator-0: 02:04:30 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-2: 02:04:33 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-data-integrator-0: 02:04:35 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-1: 02:04:40 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-0: 02:06:53 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
