@@ -549,9 +549,7 @@ class Patroni:
                         current_config.elapsed.total_seconds(),
                     )
                     if current_config.status_code in (502, 503):
-                        raise Exception(
-                            f"Patroni API not ready: {current_config.status_code}"
-                        )
+                        raise Exception(f"Patroni API not ready: {current_config.status_code}")
                     if current_config.status_code != 200:
                         raise Exception(
                             f"Failed to get current Patroni config: {current_config.status_code} {current_config.text}"

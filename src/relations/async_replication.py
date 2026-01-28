@@ -831,9 +831,11 @@ class PostgreSQLAsyncReplication(Object):
         # For non-leader units, clear pgdata now that the standby leader is running.
         # This ensures replicas get the correct system ID from the standby leader.
         # Only clear pgdata once - use a flag to track if we've already done it.
-        if not self.charm.unit.is_leader():
-            if self.charm._peers.data[self.charm.unit].get("standby-pgdata-cleared") != "True":
-                self._clear_pgdata()
-                self.charm._peers.data[self.charm.unit].update({"standby-pgdata-cleared": "True"})
+        if (
+            not self.charm.unit.is_leader()
+            and self.charm._peers.data[self.charm.unit].get("standby-pgdata-cleared") != "True"
+        ):
+            self._clear_pgdata()
+            self.charm._peers.data[self.charm.unit].update({"standby-pgdata-cleared": "True"})
 
         return False
