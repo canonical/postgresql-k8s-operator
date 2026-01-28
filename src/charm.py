@@ -1893,9 +1893,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def _check_pgdata_storage_size(self) -> None:
         """Asserts that pgdata volume has at least 10% free space and blocks charm if not."""
         try:
-            total_size, _, free_size = shutil.disk_usage(self.pgdata_path)
+            total_size, _, free_size = shutil.disk_usage(self._actual_pgdata_path)
         except FileNotFoundError:
-            logger.error("pgdata folder not found in %s", self.pgdata_path)
+            logger.error("pgdata folder not found in %s", self._actual_pgdata_path)
             return
 
         logger.debug(

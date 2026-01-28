@@ -353,7 +353,10 @@ class PostgreSQLAsyncReplication(Object):
             if self.charm._patroni.member_started:
                 # If the database is started, update the databag in a way the unit is marked as configured
                 # for async replication.
-                self.charm._peers.data[self.charm.unit].update({"stopped": ""})
+                self.charm._peers.data[self.charm.unit].update({
+                    "stopped": "",
+                    "standby-pgdata-cleared": "",
+                })
                 self.charm._peers.data[self.charm.unit].update({
                     "unit-promoted-cluster-counter": self._get_highest_promoted_cluster_counter_value()
                 })
@@ -480,6 +483,7 @@ class PostgreSQLAsyncReplication(Object):
 
         self.charm._peers.data[self.charm.unit].update({
             "stopped": "",
+            "standby-pgdata-cleared": "",
             "unit-promoted-cluster-counter": "",
         })
 
@@ -508,8 +512,12 @@ class PostgreSQLAsyncReplication(Object):
         if self._configure_primary_cluster(primary_cluster, event):
             return
 
-        # Return if this is a new unit.
+        # Return if this is a new unit joining an existing standby cluster.
+        # But first, clear pgdata if needed so Patroni can run pg_basebackup.
         if not self.charm.unit.is_leader() and self._is_following_promoted_cluster():
+            if self.charm._peers.data[self.charm.unit].get("standby-pgdata-cleared") != "True":
+                self._clear_pgdata()
+                self.charm._peers.data[self.charm.unit].update({"standby-pgdata-cleared": "True"})
             logger.debug("Early exit on_async_relation_changed: following promoted cluster.")
             return
 
@@ -718,21 +726,28 @@ class PostgreSQLAsyncReplication(Object):
                 if not self._configure_standby_cluster(event):
                     return False
 
-            # Remove and recreate the pgdata folder to enable replication of the data from the
-            # primary cluster.
-            for path in [
-                "/var/lib/pg/archive",
-                POSTGRESQL_DATA_PATH,
-                "/var/lib/pg/logs",
-                "/var/lib/pg/temp",
-            ]:
-                logger.info(f"Removing contents from {path}")
-                self.container.exec(f"find {path} -mindepth 1 -delete".split()).wait_output()
-            self.charm._create_pgdata(self.container)
+                # Only the leader clears pgdata here. Non-leaders will clear pgdata
+                # after the standby leader has started (in _wait_for_standby_leader)
+                # to avoid system ID mismatch issues.
+                self._clear_pgdata()
 
             self.charm._peers.data[self.charm.unit].update({"stopped": "True"})
 
         return True
+
+    def _clear_pgdata(self) -> None:
+        """Remove and recreate the pgdata folder to enable replication."""
+        # Note: Use _actual_pgdata_path instead of POSTGRESQL_DATA_PATH because
+        # POSTGRESQL_DATA_PATH is a symlink, and find doesn't follow symlinks by default.
+        for path in [
+            "/var/lib/pg/archive",
+            self.charm._actual_pgdata_path,
+            "/var/lib/pg/logs",
+            "/var/lib/pg/temp",
+        ]:
+            logger.info(f"Removing contents from {path}")
+            self.container.exec(f"find {path} -mindepth 1 -delete".split()).wait_output()
+        self.charm._create_pgdata(self.container)
 
     def update_async_replication_data(self) -> None:
         """Updates the async-replication data, if the unit is the leader.
@@ -796,7 +811,11 @@ class PostgreSQLAsyncReplication(Object):
         )
 
     def _wait_for_standby_leader(self, event: RelationChangedEvent) -> bool:
-        """Wait for the standby leader to be up and running."""
+        """Wait for the standby leader to be up and running.
+
+        For non-leader units, this also clears pgdata once the standby leader is confirmed
+        running to avoid system ID mismatch issues.
+        """
         try:
             standby_leader = self.charm._patroni.get_standby_leader(check_whether_is_running=True)
         except RetryError:
@@ -808,4 +827,13 @@ class PostgreSQLAsyncReplication(Object):
             logger.debug("Deferring on_async_relation_changed: standby leader hasn't started yet.")
             event.defer()
             return True
+
+        # For non-leader units, clear pgdata now that the standby leader is running.
+        # This ensures replicas get the correct system ID from the standby leader.
+        # Only clear pgdata once - use a flag to track if we've already done it.
+        if not self.charm.unit.is_leader():
+            if self.charm._peers.data[self.charm.unit].get("standby-pgdata-cleared") != "True":
+                self._clear_pgdata()
+                self.charm._peers.data[self.charm.unit].update({"standby-pgdata-cleared": "True"})
+
         return False

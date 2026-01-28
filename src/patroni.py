@@ -525,29 +525,40 @@ class Patroni:
             timeout=API_REQUEST_TIMEOUT,
         )
 
-    def ensure_slots_controller_by_patroni(self, slots: dict[str, str]) -> None:
+    def ensure_slots_controller_by_patroni(self, slots: dict[str, str]) -> bool:
         """Synchronises slots controlled by Patroni with the provided state by removing unneeded slots and creating new ones.
 
         Args:
             slots: dictionary of slots in the {slot: database} format.
+
+        Returns:
+            True if successful, False if Patroni API is not ready.
         """
-        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
-            with attempt:
-                current_config = requests.get(
-                    f"{self._patroni_url}/config",
-                    verify=self._verify,
-                    timeout=API_REQUEST_TIMEOUT,
-                    auth=self._patroni_auth,
-                )
-                logger.debug(
-                    "API ensure_slots_controller_by_patroni: %s (%s)",
-                    current_config,
-                    current_config.elapsed.total_seconds(),
-                )
-                if current_config.status_code != 200:
-                    raise Exception(
-                        f"Failed to get current Patroni config: {current_config.status_code} {current_config.text}"
+        try:
+            for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+                with attempt:
+                    current_config = requests.get(
+                        f"{self._patroni_url}/config",
+                        verify=self._verify,
+                        timeout=API_REQUEST_TIMEOUT,
+                        auth=self._patroni_auth,
                     )
+                    logger.debug(
+                        "API ensure_slots_controller_by_patroni: %s (%s)",
+                        current_config,
+                        current_config.elapsed.total_seconds(),
+                    )
+                    if current_config.status_code in (502, 503):
+                        raise Exception(
+                            f"Patroni API not ready: {current_config.status_code}"
+                        )
+                    if current_config.status_code != 200:
+                        raise Exception(
+                            f"Failed to get current Patroni config: {current_config.status_code} {current_config.text}"
+                        )
+        except RetryError:
+            logger.warning("Patroni config API not ready after retries, will retry later")
+            return False
 
         slots_patch: dict[str, dict[str, str] | None] = dict.fromkeys(
             current_config.json().get("slots", ()) or {}
@@ -565,6 +576,7 @@ class Patroni:
             auth=self._patroni_auth,
             timeout=API_REQUEST_TIMEOUT,
         )
+        return True
 
     def promote_standby_cluster(self) -> None:
         """Promote a standby cluster to be a regular cluster."""
