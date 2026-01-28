@@ -780,7 +780,7 @@ def test_postgresql_layer(harness):
                 POSTGRESQL_SERVICE: {
                     "override": "replace",
                     "summary": "entrypoint of the postgresql + patroni image",
-                    "command": "patroni /var/lib/postgresql/data/patroni.yml",
+                    "command": "patroni /var/lib/pg/data/patroni.yml",
                     "startup": "enabled",
                     "on-failure": "restart",
                     "user": "postgres",
@@ -1528,17 +1528,48 @@ def test_create_pgdata(harness):
     container = MagicMock()
     container.exists.return_value = False
     harness.charm._create_pgdata(container)
-    container.make_dir.assert_called_once_with(
-        "/var/lib/postgresql/data/pgdata", permissions=448, user="postgres", group="postgres"
-    )
+    # When directories don't exist, all three should be created
+    container.make_dir.assert_has_calls([
+        call(
+            "/var/lib/pg/data/16/main",
+            permissions=448,
+            user="postgres",
+            group="postgres",
+            make_parents=True,
+        ),
+        call(
+            "/var/lib/pg/logs/16/main",
+            permissions=448,
+            user="postgres",
+            group="postgres",
+            make_parents=True,
+        ),
+        call(
+            "/var/lib/pg/temp/16/main",
+            permissions=448,
+            user="postgres",
+            group="postgres",
+            make_parents=True,
+        ),
+        call(
+            "/var/lib/postgresql/16",
+            user="postgres",
+            group="postgres",
+            make_parents=True,
+        ),
+    ])
     container.exec.assert_has_calls([
-        call(["chown", "postgres:postgres", "/var/lib/postgresql/archive"]),
+        call(["ln", "-s", "/var/lib/pg/data/16/main", "/var/lib/postgresql/16/main"]),
         call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/postgresql/data"]),
+        call(["chown", "-h", "postgres:postgres", "/var/lib/postgresql/16/main"]),
         call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/postgresql/logs"]),
+        call(["chown", "postgres:postgres", "/var/lib/pg/archive"]),
         call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/postgresql/temp"]),
+        call(["chown", "postgres:postgres", "/var/lib/pg/data"]),
+        call().wait(),
+        call(["chown", "postgres:postgres", "/var/lib/pg/logs"]),
+        call().wait(),
+        call(["chown", "postgres:postgres", "/var/lib/pg/temp"]),
         call().wait(),
     ])
 
@@ -1546,17 +1577,77 @@ def test_create_pgdata(harness):
     container.exec.reset_mock()
     container.exists.return_value = True
     harness.charm._create_pgdata(container)
+    # When directories exist, none should be created
     container.make_dir.assert_not_called()
     container.exec.assert_has_calls([
-        call(["chown", "postgres:postgres", "/var/lib/postgresql/archive"]),
+        call(["chown", "postgres:postgres", "/var/lib/pg/archive"]),
         call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/postgresql/data"]),
+        call(["chown", "postgres:postgres", "/var/lib/pg/data"]),
         call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/postgresql/logs"]),
+        call(["chown", "postgres:postgres", "/var/lib/pg/logs"]),
         call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/postgresql/temp"]),
+        call(["chown", "postgres:postgres", "/var/lib/pg/temp"]),
         call().wait(),
     ])
+
+
+def test_fix_health_check_script(harness):
+    """Test that the health check script path is correctly patched."""
+    container = MagicMock()
+
+    # Test when script doesn't exist - should skip gracefully
+    container.exists.return_value = False
+    harness.charm._fix_health_check_script(container)
+    container.exists.assert_called_once_with("/scripts/self-signed-checker.py")
+    container.pull.assert_not_called()
+
+    # Test when script exists with incorrect path - should patch it
+    container.reset_mock()
+    container.exists.return_value = True
+    mock_file = MagicMock()
+    mock_file.read.return_value = (
+        '#!/usr/bin/python3\npath = "/var/lib/postgresql/data/peer_ca.pem"\n'
+    )
+    container.pull.return_value = mock_file
+
+    harness.charm._fix_health_check_script(container)
+
+    container.exists.assert_called_once_with("/scripts/self-signed-checker.py")
+    container.pull.assert_called_once_with("/scripts/self-signed-checker.py")
+    # Verify the content was patched correctly
+    call_args = container.push.call_args
+    assert call_args[0][0] == "/scripts/self-signed-checker.py"
+    assert "/var/lib/pg/data/peer_ca.pem" in call_args[0][1]
+    assert "/var/lib/postgresql/data/peer_ca.pem" not in call_args[0][1]
+    assert call_args[1]["permissions"] == 0o755
+
+    # Test when script already has correct path - should skip patching
+    container.reset_mock()
+    container.exists.return_value = True
+    mock_file_correct = MagicMock()
+    mock_file_correct.read.return_value = (
+        '#!/usr/bin/python3\npath = "/var/lib/pg/data/peer_ca.pem"\n'
+    )
+    container.pull.return_value = mock_file_correct
+
+    harness.charm._fix_health_check_script(container)
+
+    container.exists.assert_called_once_with("/scripts/self-signed-checker.py")
+    container.pull.assert_called_once_with("/scripts/self-signed-checker.py")
+    container.push.assert_not_called()  # Should not push if already correct
+
+    # Test when script has no matching path - should skip patching
+    container.reset_mock()
+    container.exists.return_value = True
+    mock_file_other = MagicMock()
+    mock_file_other.read.return_value = '#!/usr/bin/python3\npath = "/some/other/path"\n'
+    container.pull.return_value = mock_file_other
+
+    harness.charm._fix_health_check_script(container)
+
+    container.exists.assert_called_once_with("/scripts/self-signed-checker.py")
+    container.pull.assert_called_once_with("/scripts/self-signed-checker.py")
+    container.push.assert_not_called()  # Should not push if nothing to patch
 
 
 def test_get_plugins(harness):
