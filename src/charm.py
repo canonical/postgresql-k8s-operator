@@ -138,10 +138,14 @@ from relations.async_replication import (
 )
 from relations.db import EXTENSIONS_BLOCKING_MESSAGE, DbProvides
 from relations.postgresql_provider import PostgreSQLProvider
+from relations.tls_transfer import TLSTransfer
 from upgrade import PostgreSQLUpgrade, get_postgresql_k8s_dependencies_model
 from utils import any_cpu_to_cores, any_memory_to_bytes, new_password
 
 logger = logging.getLogger(__name__)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("asyncio").setLevel(logging.WARNING)
 
 EXTENSIONS_DEPENDENCY_MESSAGE = "Unsatisfied plugin dependencies. Please check the logs"
 EXTENSION_OBJECT_MESSAGE = "Cannot disable plugins: Existing objects depend on it. See logs"
@@ -175,6 +179,7 @@ class CannotConnectError(Exception):
         PostgreSQLLDAP,
         PostgreSQLProvider,
         PostgreSQLTLS,
+        TLSTransfer,
         PostgreSQLUpgrade,
         RollingOpsManager,
     ),
@@ -260,6 +265,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.backup = PostgreSQLBackups(self, "s3-parameters")
         self.ldap = PostgreSQLLDAP(self, "ldap")
         self.tls = PostgreSQLTLS(self, PEER, [self.primary_endpoint, self.replicas_endpoint])
+        self.tls_transfer = TLSTransfer(self, PEER)
         self.async_replication = PostgreSQLAsyncReplication(self)
         self.restart_manager = RollingOpsManager(
             charm=self, relation="restart", callback=self._restart
@@ -1004,7 +1010,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         try:
             self.push_tls_files_to_workload()
-            for ca_secret_name in self.tls.get_ca_secret_names():
+            for ca_secret_name in self.tls_transfer.get_ca_secret_names():
                 self.push_ca_file_into_workload(ca_secret_name)
         except (PathError, ProtocolError) as e:
             logger.error(
@@ -2259,7 +2265,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         except ApiError as e:
             if e.status.code == 403:
                 self.on_deployed_without_trust()
-                return
+                return False
             raise e
 
         postgresql_parameters = self._build_postgresql_parameters(
@@ -2300,6 +2306,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return True
 
         if not self._patroni.member_started:
+            # Potentially expired cert reloading and deferring
+            self._patroni.reload_patroni_configuration()
             logger.debug("Early exit update_config: Patroni not started yet")
             return False
 
@@ -2383,6 +2391,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         restart_postgresql = self.is_tls_enabled != self.postgresql.is_tls_enabled()
         try:
             self._patroni.reload_patroni_configuration()
+            self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
         except Exception as e:
             logger.error(f"Reload patroni call failed! error: {e!s}")
         if config_changed and not restart_postgresql:
@@ -2400,7 +2409,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             except RetryError:
                 # Ignore the error, as it happens only to indicate that the configuration has not changed.
                 pass
-        self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
+        elif restart_postgresql:
+            try:
+                self._patroni.get_patroni_health()
+            except RetryError:
+                logger.warning("Unable to get health endpoint after switching tls")
         self.postgresql_client_relation.update_tls_flag("True" if self.is_tls_enabled else "False")
 
         # Restart PostgreSQL if TLS configuration has changed

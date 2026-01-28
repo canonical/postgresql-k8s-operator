@@ -6,6 +6,8 @@
 DATABASE_DEFAULT_NAME = "postgres"
 DATABASE_PORT = "5432"
 PEER = "database-peers"
+API_REQUEST_TIMEOUT = 5
+PATRONI_CLUSTER_STATUS_ENDPOINT = "cluster"
 BACKUP_USER = "backup"
 REPLICATION_USER = "replication"
 REWIND_USER = "rewind"
