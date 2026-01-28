@@ -275,7 +275,10 @@ class PostgreSQLBackups(Object):
     def _empty_data_files(self) -> None:
         """Empty the PostgreSQL data directory in preparation of backup restore."""
         try:
-            self.container.exec(["rm", "-r", POSTGRESQL_DATA_PATH]).wait_output()
+            # Remove the actual data directory contents, not the symlink.
+            # POSTGRESQL_DATA_PATH is a symlink to _actual_pgdata_path, and rm -r on a
+            # symlink only removes the symlink itself, not the directory it points to.
+            self.container.exec(["rm", "-r", self.charm._actual_pgdata_path]).wait_output()
         except ExecError as e:
             # If previous PITR restore was unsuccessful, there is no such directory.
             if "No such file or directory" not in str(e.stderr):
@@ -1213,6 +1216,7 @@ Stderr:
             secret_key=s3_parameters["secret-key"],
             stanza=self.stanza_name,
             storage_path=self.charm._storage_path,
+            pgdata_path=POSTGRESQL_DATA_PATH,
             user=BACKUP_USER,
             retention_full=s3_parameters["delete-older-than-days"],
             process_max=max(cpu_count - 2, 1),
