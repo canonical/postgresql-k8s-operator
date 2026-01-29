@@ -399,23 +399,39 @@ def test_create_bucket_if_not_exists(harness, tls_ca_chain_filename):
 
 def test_empty_data_files(harness):
     with patch("ops.model.Container.exec") as _exec:
-        # Test when the removal of the data files fails.
-        # Uses _actual_pgdata_path (the real path) instead of POSTGRESQL_DATA_PATH (symlink)
-        # because rm -r on a symlink only removes the symlink, not the directory contents.
-        command = ["rm", "-r", "/var/lib/pg/data/16/main"]
-        _exec.side_effect = ExecError(command=command, exit_code=1, stdout="", stderr="fake error")
+        # Mock the wait_output method
+        mock_process = MagicMock()
+        mock_process.wait_output.return_value = ("", "")
+        _exec.return_value = mock_process
+
+        # Test when the removal of data files fails on the first directory.
+        _exec.side_effect = ExecError(
+            command=["find", "/var/lib/pg/archive", "-mindepth", "1", "-delete"],
+            exit_code=1,
+            stdout="",
+            stderr="fake error",
+        )
         try:
             harness.charm.backup._empty_data_files()
             assert False
         except ExecError:
             pass
-        _exec.assert_called_once_with(command)
 
-        # Test when data files are successfully removed.
+        # Test when data files are successfully removed from all directories.
         _exec.reset_mock()
         _exec.side_effect = None
+        _exec.return_value = mock_process
         harness.charm.backup._empty_data_files()
-        _exec.assert_called_once_with(command)
+        # Should be called 4 times: archive, data, logs, temp
+        assert _exec.call_count == 4
+        expected_calls = [
+            (["find", "/var/lib/pg/archive", "-mindepth", "1", "-delete"],),
+            (["find", "/var/lib/pg/data/16/main", "-mindepth", "1", "-delete"],),
+            (["find", "/var/lib/pg/logs", "-mindepth", "1", "-delete"],),
+            (["find", "/var/lib/pg/temp", "-mindepth", "1", "-delete"],),
+        ]
+        for call, expected in zip(_exec.call_args_list, expected_calls, strict=True):
+            assert call[0] == expected
 
 
 def test_change_connectivity_to_database(harness):

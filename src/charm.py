@@ -1137,6 +1137,27 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
     def _create_pgdata(self, container: Container):
         """Create the PostgreSQL data directories."""
+        logs_path = str(self.meta.storages["logs"].location)
+        waldir_path = f"{logs_path}/16/main"
+        temp_path = str(self.meta.storages["temp"].location)
+        temp_tablespace_path = f"{temp_path}/16/main"
+
+        # For non-leader units joining a cluster: if the data directory is empty but other
+        # storage directories have content, clear them. This happens when a replica rejoins
+        # after a restore - pg_basebackup requires empty --waldir and --tablespace directories.
+        if not self.unit.is_leader():
+            data_empty = not container.exists(
+                self._actual_pgdata_path
+            ) or not container.list_files(self._actual_pgdata_path)
+            if data_empty:
+                for path, name in [(logs_path, "logs"), (temp_path, "temp")]:
+                    subdir = f"{path}/16/main"
+                    if container.exists(subdir) and container.list_files(subdir):
+                        logger.info(
+                            f"Clearing stale files from {name} directory for replica initialization"
+                        )
+                        container.exec(f"find {path} -mindepth 1 -delete".split()).wait()
+
         # Create the pgdata directory on the storage mount (e.g., /var/lib/pg/data/16/main)
         if not container.exists(self._actual_pgdata_path):
             container.make_dir(
@@ -1147,8 +1168,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 make_parents=True,
             )
         # Create the WAL directory (e.g., /var/lib/pg/logs/16/main)
-        logs_path = str(self.meta.storages["logs"].location)
-        waldir_path = f"{logs_path}/16/main"
         if not container.exists(waldir_path):
             container.make_dir(
                 waldir_path,
@@ -1158,8 +1177,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 make_parents=True,
             )
         # Create the temp tablespace directory (e.g., /var/lib/pg/temp/16/main)
-        temp_path = str(self.meta.storages["temp"].location)
-        temp_tablespace_path = f"{temp_path}/16/main"
         if not container.exists(temp_tablespace_path):
             container.make_dir(
                 temp_tablespace_path,

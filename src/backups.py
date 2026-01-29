@@ -274,18 +274,24 @@ class PostgreSQLBackups(Object):
 
     def _empty_data_files(self) -> None:
         """Empty the PostgreSQL data directory in preparation of backup restore."""
-        try:
-            # Remove the actual data directory contents, not the symlink.
-            # POSTGRESQL_DATA_PATH is a symlink to _actual_pgdata_path, and rm -r on a
-            # symlink only removes the symlink itself, not the directory it points to.
-            self.container.exec(["rm", "-r", self.charm._actual_pgdata_path]).wait_output()
-        except ExecError as e:
-            # If previous PITR restore was unsuccessful, there is no such directory.
-            if "No such file or directory" not in str(e.stderr):
-                logger.exception(
-                    "Failed to empty data directory in prep for backup restore", exc_info=e
-                )
-                raise
+        # Clear all storage directories, not just data. The logs directory must be cleared
+        # so that when new replicas join after restore, pg_basebackup can use the --waldir
+        # option (which requires an empty directory).
+        for path in [
+            "/var/lib/pg/archive",
+            self.charm._actual_pgdata_path,
+            "/var/lib/pg/logs",
+            "/var/lib/pg/temp",
+        ]:
+            try:
+                self.container.exec(f"find {path} -mindepth 1 -delete".split()).wait_output()
+            except ExecError as e:
+                # If previous PITR restore was unsuccessful, there may be no such directory.
+                if "No such file or directory" not in str(e.stderr):
+                    logger.exception(
+                        f"Failed to empty {path} in prep for backup restore", exc_info=e
+                    )
+                    raise
 
     def _change_connectivity_to_database(self, connectivity: bool) -> None:
         """Enable or disable the connectivity to the database."""
