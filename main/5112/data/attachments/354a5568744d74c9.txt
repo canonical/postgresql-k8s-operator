@@ -1,0 +1,48 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  untrusted-postgresql-k8s/0 [executing] maintenance: installing charm software
+  untrusted-postgresql-k8s/1 [executing] blocked: Insufficient permissions, try: `juju trust untrusted-postgresql-k8s --scope=cluster`
+  untrusted-postgresql-k8s/2 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] unknown: 
+  untrusted-postgresql-k8s/1 [idle] waiting: awaiting for primary endpoint to be ready
+  untrusted-postgresql-k8s/2 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  untrusted-postgresql-k8s/0 [executing] unknown: 
+  untrusted-postgresql-k8s/1 [executing] waiting: awaiting for primary endpoint to be ready
+  untrusted-postgresql-k8s/2 [executing] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] waiting: awaiting for member to start
+  untrusted-postgresql-k8s/1 [executing] active: Primary (degraded)
+  untrusted-postgresql-k8s/2 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] active: 
+  untrusted-postgresql-k8s/1 [idle] active: Primary (degraded)
+  untrusted-postgresql-k8s/2 [idle] waiting: awaiting for member to start
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  00:12:28Z
+
+App                       Version  Status  Scale  Charm           Channel  Rev  Address        Exposed  Message
+untrusted-postgresql-k8s  14.20    active      3  postgresql-k8s             0  10.152.183.57  no       
+
+Unit                         Workload  Agent  Address      Ports  Message
+untrusted-postgresql-k8s/0   active    idle   10.1.12.139         
+untrusted-postgresql-k8s/1*  active    idle   10.1.12.140         Primary
+untrusted-postgresql-k8s/2   active    idle   10.1.12.141         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-untrusted-postgresql-k8s-1: 00:10:00 ERROR unit.untrusted-postgresql-k8s/1.juju-log 
+            Access to k8s cluster resources is not authorized. This happens when RBAC is enabled and the deployed application was not trusted by the juju admin.
+            To fix this issue, run `juju trust untrusted-postgresql-k8s --scope=cluster` (or remove & re-deploy untrusted-postgresql-k8s with `--trust`)
+            
+unit-untrusted-postgresql-k8s-1: 00:10:00 ERROR unit.untrusted-postgresql-k8s/1.juju-log 
+            Access to k8s cluster resources is not authorized. This happens when RBAC is enabled and the deployed application was not trusted by the juju admin.
+            To fix this issue, run `juju trust untrusted-postgresql-k8s --scope=cluster` (or remove & re-deploy untrusted-postgresql-k8s with `--trust`)
+            
+unit-untrusted-postgresql-k8s-0: 00:11:32 ERROR unit.untrusted-postgresql-k8s/0.juju-log restart:2: Failed to list PostgreSQL database users: connection to server at "untrusted-postgresql-k8s-0.untrusted-postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.12.139), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
