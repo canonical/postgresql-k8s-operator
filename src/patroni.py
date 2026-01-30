@@ -237,6 +237,16 @@ class Patroni:
             else planned_units - 1
         )
 
+    @cached_property
+    def synchronous_configuration(self) -> dict[str, Any]:
+        """Synchronous mode configuration."""
+        # Try to update synchronous_node_count.
+        return {
+            "synchronous_node_count": self._synchronous_node_count,
+            "synchronous_mode_strict": self._charm.config.synchronous_mode_strict
+            and self._synchronous_node_count > 0,
+        }
+
     def update_synchronous_node_count(self) -> None:
         """Update synchronous_node_count."""
         # Try to update synchronous_node_count.
@@ -244,7 +254,7 @@ class Patroni:
             with attempt:
                 r = requests.patch(
                     f"{self._patroni_url}/config",
-                    json={"synchronous_node_count": self._synchronous_node_count},
+                    json=self.synchronous_configuration,
                     verify=self._verify,
                     auth=self._patroni_auth,
                     timeout=API_REQUEST_TIMEOUT,
@@ -687,6 +697,7 @@ class Patroni:
             stanza=stanza,
             restore_stanza=restore_stanza,
             synchronous_node_count=self._synchronous_node_count,
+            maximum_lag_on_failover=self._charm.config.durability_maximum_lag_on_failover,
             version=self.rock_postgresql_version.split(".")[0],
             pg_parameters=parameters,
             primary_cluster_endpoint=self._charm.async_replication.get_primary_cluster_endpoint(),

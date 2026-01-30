@@ -263,9 +263,6 @@ def test_on_config_changed(harness):
             "charm.PostgresqlOperatorCharm._validate_config_options"
         ) as _validate_config_options,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
-        patch(
-            "charm.PostgresqlOperatorCharm.updated_synchronous_node_count", return_value=True
-        ) as _updated_synchronous_node_count,
         patch("charm.Patroni.member_started", return_value=True, new_callable=PropertyMock),
         patch("charm.Patroni.get_primary"),
         patch(
@@ -303,14 +300,6 @@ def test_on_config_changed(harness):
         harness.charm._on_config_changed(mock_event)
         assert isinstance(harness.charm.unit.status, ActiveStatus)
         assert not _enable_disable_extensions.called
-        _updated_synchronous_node_count.assert_called_once_with()
-
-        # Deferst on update sync nodes failure
-        _updated_synchronous_node_count.return_value = False
-        harness.charm._on_config_changed(mock_event)
-        mock_event.defer.assert_called_once_with()
-        mock_event.defer.reset_mock()
-        _updated_synchronous_node_count.return_value = True
 
         # Leader enables extensions
         with harness.hooks_disabled():

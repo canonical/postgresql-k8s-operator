@@ -864,10 +864,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.set_unit_status(BlockedStatus("Configuration Error. Please check the logs"))
             logger.error("Invalid configuration: %s", str(e))
             return
-        if not self.updated_synchronous_node_count():
-            logger.debug("Defer on_config_changed: unable to set synchronous node count")
-            event.defer()
-            return
 
         if self.is_blocked and "Configuration Error" in self.unit.status.message:
             self._set_active_status()
@@ -2296,10 +2292,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return str(min(8, 2 * cpu_cores))
         elif self.config.cpu_max_worker_processes is not None:
             value = self.config.cpu_max_worker_processes
-            # Pydantic already enforces minimum of 2 via conint(ge=2)
-            # This is an extra safeguard
-            if value < 2:
-                raise ValueError(f"cpu-max-worker-processes value {value} is below minimum of 2")
             cap = 10 * cpu_cores
             if value > cap:
                 raise ValueError(
@@ -2323,8 +2315,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         Raises:
             ValueError: If value is less than 2 or exceeds 10 * vCores
         """
-        if value < 2:
-            raise ValueError(f"{param_name} value {value} is below minimum of 2")
         cap = 10 * cpu_cores
         if value > cap:
             raise ValueError(
@@ -2484,7 +2474,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 "max_logical_replication_workers"
             ]
 
-        base_patch = {}
+        base_patch = {
+            **self._patroni.synchronous_configuration,
+            "maximum_lag_on_failover": self.config.durability_maximum_lag_on_failover,
+        }
         if primary_endpoint := self.async_replication.get_primary_cluster_endpoint():
             base_patch["standby_cluster"] = {"host": primary_endpoint}
         self._patroni.bulk_update_parameters_controller_by_patroni(cfg_patch, base_patch)
@@ -2527,6 +2520,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             pg_parameters = dict(worker_configs)
             pg_parameters["wal_compression"] = cpu_wal_compression
             logger.debug(f"pg_parameters set to worker_configs = {pg_parameters}")
+        pg_parameters.pop("maximum_lag_on_failover", None)
 
         return pg_parameters
 
