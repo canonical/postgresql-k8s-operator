@@ -2,7 +2,8 @@
 # Copyright 2021 Canonical Ltd.
 # See LICENSE file for licensing details.
 
-from unittest.mock import MagicMock, PropertyMock, mock_open, patch
+from signal import SIGHUP
+from unittest.mock import MagicMock, Mock, PropertyMock, mock_open, patch
 
 import pytest
 import requests
@@ -494,3 +495,45 @@ def test_set_failsafe_mode(harness, patroni):
             auth=patroni._patroni_auth,
             timeout=10,
         )
+
+
+def test_reload_patroni_configuration(harness, patroni):
+    with (
+        patch("ops.model.Container.send_signal") as _send_signal,
+        patch("ops.model.Container.pebble") as _pebble,
+    ):
+        # Can't connect
+        harness.set_can_connect("postgresql", False)
+
+        patroni.reload_patroni_configuration()
+
+        assert not _send_signal.called
+        assert not _pebble.get_services.called
+
+        # No service
+        harness.set_can_connect("postgresql", True)
+        _pebble.get_services.return_value = []
+
+        patroni.reload_patroni_configuration()
+
+        assert not _send_signal.called
+        _pebble.get_services.assert_called_once_with(names=["postgresql"])
+        _pebble.get_services.reset_mock()
+
+        # Not running
+        mock_svc = Mock()
+        mock_svc.is_running.return_value = False
+        _pebble.get_services.return_value = [mock_svc]
+
+        patroni.reload_patroni_configuration()
+
+        assert not _send_signal.called
+        _pebble.get_services.assert_called_once_with(names=["postgresql"])
+        _pebble.get_services.reset_mock()
+
+        # Reload
+        mock_svc.is_running.return_value = True
+
+        patroni.reload_patroni_configuration()
+
+        _send_signal.assert_called_once_with(SIGHUP, "postgresql")

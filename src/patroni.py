@@ -634,12 +634,12 @@ class Patroni:
     def reload_patroni_configuration(self) -> None:
         """Reloads the configuration after it was updated in the file."""
         container = self._charm.unit.get_container("postgresql")
-        if (
-            not container.can_connect()
-            or len(container.pebble.get_services(names=[self._charm.postgresql_service])) == 0
-        ):
-            logger.warning("Unable to find Patroni service. Skipping reload")
-        container.send_signal(SIGHUP, self._charm.postgresql_service)
+        if container.can_connect():
+            services = container.pebble.get_services(names=[self._charm.postgresql_service])
+            if len(services) > 0 and services[0].is_running():
+                container.send_signal(SIGHUP, self._charm.postgresql_service)
+                return
+        logger.warning("Unable to find Patroni service. Skipping reload")
 
     def last_postgresql_logs(self) -> str:
         """Get last log file content of Postgresql service in the container.
