@@ -1,0 +1,20 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/focal/mattermost-k8s-27
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mattermost/0 [allocating] waiting: installing agent
+  mattermost/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mattermost/0 [executing] waiting: Waiting for database relation
+  mattermost/1 [executing] waiting: Waiting for database relation
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mattermost/0 [idle] waiting: Waiting for database relation
+  mattermost/1 [idle] waiting: Waiting for database relation
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mattermost/0 [executing] active: 
+  mattermost/1 [executing] waiting: Waiting for database relation
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mattermost/0 [executing] active: 
+  mattermost/1 [idle] error: crash loop backoff: back-off 10s restarting failed container=mattermost pod=mattermost-cdd8d5c8d-qqltr_testing(b6d47ce8-1ea4-4d11-b9c9-afde50ee3275)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  mattermost/0 [idle] active: 
+  mattermost/1 [idle] active:
