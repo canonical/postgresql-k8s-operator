@@ -243,7 +243,8 @@ class Patroni:
         # Try to update synchronous_node_count.
         return {
             "synchronous_node_count": self._synchronous_node_count,
-            "synchronous_mode_strict": self._charm.config.synchronous_mode_strict
+            "synchronous_mode_strict": self._members_count > 1
+            and self._charm.config.synchronous_mode_strict
             and self._synchronous_node_count > 0,
         }
 
