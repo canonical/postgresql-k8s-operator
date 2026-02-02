@@ -1,0 +1,107 @@
+[32mINFO    [0m integration.conftest:conftest.py:54 deleting the previously created backups
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  00:30:31Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Address         Exposed  Message
+postgresql-k8s-gcp        14.20    waiting      2  postgresql-k8s                             0  10.152.183.223  no       installing agent
+s3-integrator                      active       1  s3-integrator             latest/stable  145  10.152.183.40   no       
+self-signed-certificates           active       1  self-signed-certificates  1/stable       317  10.152.183.192  no       
+
+Unit                         Workload  Agent  Address       Ports  Message
+postgresql-k8s-gcp/0         active    idle   10.1.100.204         
+postgresql-k8s-gcp/1*        blocked   idle   10.1.100.205         failed to access/create the bucket, check your S3 settings
+s3-integrator/0*             active    idle   10.1.100.200         
+self-signed-certificates/0*  active    idle   10.1.100.201         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-self-signed-certificates-0: 00:11:13 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 00:11:15 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 00:11:28 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 00:11:50 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 00:12:28 ERROR unit.self-signed-certificates/0.juju-log certificates:4: At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 00:12:45 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-postgresql-k8s-gcp-0: 00:13:12 ERROR unit.postgresql-k8s-gcp/0.juju-log database-peers:3: Failed to list PostgreSQL database users: connection to server at "postgresql-k8s-gcp-0.postgresql-k8s-gcp-endpoints.testing.svc.cluster.local" (10.1.100.204), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-k8s-gcp-1: 00:13:55 ERROR unit.postgresql-k8s-gcp/1.juju-log s3-parameters:5: Couldn't create bucket named 'data-charms-testing' in region=us-east-1.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/src/backups.py", line 271, in _create_bucket_if_not_exists
+    bucket.create(CreateBucketConfiguration={"LocationConstraint": region})
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/boto3/resources/factory.py", line 581, in do_action
+    response = action(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/boto3/resources/action.py", line 88, in __call__
+    response = getattr(parent.meta.client, operation_name)(*args, **params)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/botocore/client.py", line 602, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/botocore/client.py", line 1078, in _make_api_call
+    raise error_class(parsed_response, operation_name)
+botocore.exceptions.ClientError: An error occurred (KeyDeleted) when calling the CreateBucket operation: Authentication required.
+unit-postgresql-k8s-gcp-1: 00:13:59 ERROR unit.postgresql-k8s-gcp/1.juju-log s3-parameters:5: Couldn't create bucket named 'data-charms-testing' in region=us-east-1.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/src/backups.py", line 271, in _create_bucket_if_not_exists
+    bucket.create(CreateBucketConfiguration={"LocationConstraint": region})
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/boto3/resources/factory.py", line 581, in do_action
+    response = action(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/boto3/resources/action.py", line 88, in __call__
+    response = getattr(parent.meta.client, operation_name)(*args, **params)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/botocore/client.py", line 602, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/botocore/client.py", line 1078, in _make_api_call
+    raise error_class(parsed_response, operation_name)
+botocore.exceptions.ClientError: An error occurred (KeyDeleted) when calling the CreateBucket operation: Authentication required.
+unit-postgresql-k8s-gcp-1: 00:14:05 ERROR unit.postgresql-k8s-gcp/1.juju-log s3-parameters:5: Couldn't create bucket named 'data-charms-testing' in region=us-east-1.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/src/backups.py", line 271, in _create_bucket_if_not_exists
+    bucket.create(CreateBucketConfiguration={"LocationConstraint": region})
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/boto3/resources/factory.py", line 581, in do_action
+    response = action(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/boto3/resources/action.py", line 88, in __call__
+    response = getattr(parent.meta.client, operation_name)(*args, **params)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/botocore/client.py", line 602, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/botocore/client.py", line 1078, in _make_api_call
+    raise error_class(parsed_response, operation_name)
+botocore.exceptions.ClientError: An error occurred (KeyDeleted) when calling the CreateBucket operation: Authentication required.
+unit-postgresql-k8s-gcp-1: 00:14:21 ERROR unit.postgresql-k8s-gcp/1.juju-log s3-parameters:5: Couldn't create bucket named 'data-charms-testing' in region=us-east-1.
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/src/backups.py", line 271, in _create_bucket_if_not_exists
+    bucket.create(CreateBucketConfiguration={"LocationConstraint": region})
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/boto3/resources/factory.py", line 581, in do_action
+    response = action(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/boto3/resources/action.py", line 88, in __call__
+    response = getattr(parent.meta.client, operation_name)(*args, **params)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/botocore/client.py", line 602, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/botocore/client.py", line 1078, in _make_api_call
+    raise error_class(parsed_response, operation_name)
+botocore.exceptions.ClientError: An error occurred (KeyDeleted) when calling the CreateBucket operation: Authentication required.
+unit-self-signed-certificates-0: 00:14:48 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 00:15:43 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 00:16:43 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 00:17:35 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 00:18:36 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 00:19:32 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 00:20:29 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 00:21:37 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 00:22:28 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 00:23:37 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 00:24:29 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 00:25:18 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 00:26:08 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 00:27:15 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 00:28:23 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 00:29:35 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-self-signed-certificates-0: 00:30:23 ERROR unit.self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
