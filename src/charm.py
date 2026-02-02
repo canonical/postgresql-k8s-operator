@@ -1142,22 +1142,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         temp_path = str(self.meta.storages["temp"].location)
         temp_tablespace_path = f"{temp_path}/16/main"
 
-        # For non-leader units joining a cluster: if the data directory is empty but other
-        # storage directories have content, clear them. This happens when a replica rejoins
-        # after a restore - pg_basebackup requires empty --waldir and --tablespace directories.
-        if not self.unit.is_leader():
-            data_empty = not container.exists(
-                self._actual_pgdata_path
-            ) or not container.list_files(self._actual_pgdata_path)
-            if data_empty:
-                for path, name in [(logs_path, "logs"), (temp_path, "temp")]:
-                    subdir = f"{path}/16/main"
-                    if container.exists(subdir) and container.list_files(subdir):
-                        logger.info(
-                            f"Clearing stale files from {name} directory for replica initialization"
-                        )
-                        container.exec(f"find {path} -mindepth 1 -delete".split()).wait()
-
         # Create the pgdata directory on the storage mount (e.g., /var/lib/pg/data/16/main)
         if not container.exists(self._actual_pgdata_path):
             container.make_dir(
@@ -1188,6 +1172,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Create a symlink from the default PostgreSQL data directory to our data directory
         # (e.g., /var/lib/postgresql/16/main -> /var/lib/pg/data/16/main)
         # Patroni and other tools will use the symlink path (self.pgdata_path)
+        # Note: This symlink is on ephemeral storage and may not persist across container restarts.
+        # It gets recreated on each pebble-ready event.
         if not container.exists(self.pgdata_path):
             container.make_dir(
                 "/var/lib/postgresql/16",
