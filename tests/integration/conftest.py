@@ -7,7 +7,6 @@ import uuid
 import boto3
 import jubilant
 import pytest
-from pytest_operator.plugin import OpsTest
 
 from . import architecture
 from .helpers import construct_endpoint
@@ -69,7 +68,7 @@ def cleanup_cloud(config: dict[str, str], credentials: dict[str, str]) -> None:
 
 
 @pytest.fixture(scope="module")
-async def aws_cloud_configs(ops_test: OpsTest) -> None:
+async def aws_cloud_configs():
     if (
         not os.environ.get("AWS_ACCESS_KEY", "").strip()
         or not os.environ.get("AWS_SECRET_KEY", "").strip()
@@ -84,7 +83,7 @@ async def aws_cloud_configs(ops_test: OpsTest) -> None:
 
 
 @pytest.fixture(scope="module")
-async def gcp_cloud_configs(ops_test: OpsTest) -> None:
+async def gcp_cloud_configs():
     if (
         not os.environ.get("GCP_ACCESS_KEY", "").strip()
         or not os.environ.get("GCP_SECRET_KEY", "").strip()
