@@ -712,10 +712,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.unit.status = BlockedStatus("Configuration Error. Please check the logs")
             logger.error("Invalid configuration: %s", str(e))
             return
-        if not self.updated_synchronous_node_count():
-            logger.debug("Defer on_config_changed: unable to set synchronous node count")
-            event.defer()
-            return
 
         if self.is_blocked and "Configuration Error" in self.unit.status.message:
             self._set_active_status()
@@ -2053,21 +2049,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return str(min(8, 2 * cpu_cores))
         elif self.config.cpu_max_worker_processes is not None:
             value = self.config.cpu_max_worker_processes
-            if value < 2:
-                from pydantic import ValidationError
-                from pydantic_core import InitErrorDetails
-
-                raise ValidationError.from_exception_data(
-                    "ValidationError",
-                    [
-                        InitErrorDetails(
-                            type="greater_than_equal",
-                            ctx={"ge": 2},
-                            input=value,
-                            loc=("cpu_max_worker_processes",),
-                        )
-                    ],
-                )
             cap = 10 * cpu_cores
             if value > cap:
                 raise ValueError(
@@ -2092,21 +2073,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             ValidationError: If value is less than 2
             ValueError: If value exceeds 10 * vCores
         """
-        if value < 2:
-            from pydantic import ValidationError
-            from pydantic_core import InitErrorDetails
-
-            raise ValidationError.from_exception_data(
-                "ValidationError",
-                [
-                    InitErrorDetails(
-                        type="greater_than_equal",
-                        ctx={"ge": 2},
-                        input=value,
-                        loc=(param_name,),
-                    )
-                ],
-            )
         cap = 10 * cpu_cores
         if value > cap:
             raise ValueError(
@@ -2216,6 +2182,40 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         return result
 
+    def _api_update_config(self, available_cpu_cores: int) -> None:
+        # Use config value if set, calculate otherwise
+        if self.config.experimental_max_connections:
+            max_connections = self.config.experimental_max_connections
+        else:
+            max_connections = max(4 * available_cpu_cores, 100)
+
+        cfg_patch = {
+            "max_connections": max_connections,
+            "max_prepared_transactions": self.config.memory_max_prepared_transactions,
+            "max_replication_slots": 25,
+            "max_wal_senders": 25,
+            "shared_buffers": self.config.memory_shared_buffers,
+            "wal_keep_size": self.config.durability_wal_keep_size,
+        }
+
+        # Add restart-required worker process parameters via Patroni API
+        worker_configs = self._calculate_worker_process_config(available_cpu_cores)
+        if "max_worker_processes" in worker_configs:
+            cfg_patch["max_worker_processes"] = worker_configs["max_worker_processes"]
+
+        if "max_logical_replication_workers" in worker_configs:
+            cfg_patch["max_logical_replication_workers"] = worker_configs[
+                "max_logical_replication_workers"
+            ]
+
+        base_patch = {
+            **self._patroni.synchronous_configuration,
+            "maximum_lag_on_failover": self.config.durability_maximum_lag_on_failover,
+        }
+        if primary_endpoint := self.async_replication.get_primary_cluster_endpoint():
+            base_patch["standby_cluster"] = {"host": primary_endpoint}
+        self._patroni.bulk_update_parameters_controller_by_patroni(cfg_patch, base_patch)
+
     def _build_postgresql_parameters(
         self, available_cpu_cores: int, available_memory: int
     ) -> dict | None:
@@ -2254,6 +2254,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             pg_parameters = dict(worker_configs)
             pg_parameters["wal_compression"] = cpu_wal_compression
             logger.debug(f"pg_parameters set to worker_configs = {pg_parameters}")
+        pg_parameters.pop("maximum_lag_on_failover", None)
 
         return pg_parameters
 
@@ -2271,9 +2272,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         postgresql_parameters = self._build_postgresql_parameters(
             available_cpu_cores, available_memory
         )
-
-        # Extract worker configs for later use in Patroni API
-        worker_configs = self._calculate_worker_process_config(available_cpu_cores)
 
         logger.info("Updating Patroni config file")
         # Update and reload configuration based on TLS files availability.
@@ -2311,29 +2309,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("Early exit update_config: Patroni not started yet")
             return False
 
-        # Use config value if set, calculate otherwise
-        if self.config.experimental_max_connections:
-            max_connections = self.config.experimental_max_connections
-        else:
-            max_connections = max(4 * available_cpu_cores, 100)
-
-        # Build the config patch with restart-required parameters
-        config_patch = {
-            "max_connections": max_connections,
-            "max_prepared_transactions": self.config.memory_max_prepared_transactions,
-            "shared_buffers": self.config.memory_shared_buffers,
-            "wal_keep_size": self.config.durability_wal_keep_size,
-        }
-
-        # Add restart-required worker process parameters via Patroni API
-        if "max_worker_processes" in worker_configs:
-            config_patch["max_worker_processes"] = worker_configs["max_worker_processes"]
-        if "max_logical_replication_workers" in worker_configs:
-            config_patch["max_logical_replication_workers"] = worker_configs[
-                "max_logical_replication_workers"
-            ]
-
-        self._patroni.bulk_update_parameters_controller_by_patroni(config_patch)
+        self._api_update_config(available_cpu_cores)
 
         self._handle_postgresql_restart_need(
             self.unit_peer_data.get("config_hash") != self.generate_config_hash
