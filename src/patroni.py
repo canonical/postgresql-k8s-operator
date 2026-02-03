@@ -482,11 +482,15 @@ class Patroni:
         return health.get("replication_state") == "streaming"
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-    def bulk_update_parameters_controller_by_patroni(self, parameters: dict[str, Any]) -> None:
+    def bulk_update_parameters_controller_by_patroni(
+        self, parameters: dict[str, Any], base_parameters: dict[str, Any] | None
+    ) -> None:
         """Update the value of a parameter controller by Patroni.
 
         For more information, check https://patroni.readthedocs.io/en/latest/patroni_configuration.html#postgresql-parameters-controlled-by-patroni.
         """
+        if not base_parameters:
+            base_parameters = {}
         requests.patch(
             f"{self._patroni_url}/config",
             verify=self._verify,
@@ -495,10 +499,11 @@ class Patroni:
                     "remove_data_directory_on_rewind_failure": False,
                     "remove_data_directory_on_diverged_timelines": False,
                     "parameters": parameters,
-                }
+                },
+                **base_parameters,
             },
             auth=self._patroni_auth,
-            timeout=PATRONI_TIMEOUT,
+            timeout=API_REQUEST_TIMEOUT,
         )
 
     def promote_standby_cluster(self) -> None:
