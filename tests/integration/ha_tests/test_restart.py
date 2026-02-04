@@ -38,6 +38,8 @@ async def test_deploy(ops_test: OpsTest, charm) -> None:
     if not await app_name(ops_test, APPLICATION_NAME):
         await ops_test.model.deploy(APPLICATION_NAME, num_units=1, channel="edge")
 
+    await ops_test.model.relate(DATABASE_APP_NAME, f"{APPLICATION_NAME}:database")
+
     async with ops_test.fast_forward():
         await ops_test.model.wait_for_idle(
             apps=[DATABASE_APP_NAME],

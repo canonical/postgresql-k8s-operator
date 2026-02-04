@@ -121,6 +121,7 @@ from constants import (
     MONITORING_USER,
     PATRONI_PASSWORD_KEY,
     PEER,
+    PGBACKREST_METRICS_PORT,
     PLUGIN_OVERRIDES,
     POSTGRES_LOG_FILES,
     REPLICATION_PASSWORD_KEY,
@@ -233,6 +234,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.pgbackrest_server_service = "pgbackrest server"
         self.ldap_sync_service = "ldap-sync"
         self.metrics_service = "metrics_server"
+        self.pgbackrest_metrics_service = "pgbackrest_metrics_service"
         self._unit = self.model.unit.name
         self._name = self.model.app.name
         self._namespace = self.model.name
@@ -453,6 +455,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Generate spec for Prometheus scraping."""
         return [
             {"static_configs": [{"targets": [f"*:{METRICS_PORT}"]}]},
+            {"static_configs": [{"targets": [f"*:{PGBACKREST_METRICS_PORT}"]}]},
             {
                 "static_configs": [{"targets": ["*:8008"]}],
                 "scheme": "https",
@@ -2042,6 +2045,18 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             },
         }
 
+    def _generate_pgbackrest_metrics_service(self) -> ServiceDict:
+        """Generate the pgbackrest metrics service definition."""
+        return {
+            "override": "replace",
+            "summary": "pgbackrest metrics exporter",
+            "command": "/usr/bin/pgbackrest_exporter",
+            "startup": "enabled",
+            "after": [self.postgresql_service],
+            "user": WORKLOAD_OS_USER,
+            "group": WORKLOAD_OS_GROUP,
+        }
+
     def _postgresql_layer(self) -> Layer:
         """Returns a Pebble configuration layer for PostgreSQL."""
         pod_name = self._unit_name_to_pod_name(self._unit)
@@ -2086,6 +2101,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     "startup": "disabled",
                 },
                 self.metrics_service: self._generate_metrics_service(),
+                self.pgbackrest_metrics_service: self._generate_pgbackrest_metrics_service(),
                 self.rotate_logs_service: {
                     "override": "replace",
                     "summary": "rotate logs",
