@@ -242,6 +242,17 @@ class Patroni:
             else planned_units - 1
         )
 
+    @cached_property
+    def synchronous_configuration(self) -> dict[str, Any]:
+        """Synchronous mode configuration."""
+        # Try to update synchronous_node_count.
+        return {
+            "synchronous_node_count": self._synchronous_node_count,
+            "synchronous_mode_strict": self._members_count > 1
+            and self._charm.config.synchronous_mode_strict
+            and self._synchronous_node_count > 0,
+        }
+
     def update_synchronous_node_count(self) -> None:
         """Update synchronous_node_count."""
         # Try to update synchronous_node_count.
@@ -249,7 +260,7 @@ class Patroni:
             with attempt:
                 r = requests.patch(
                     f"{self._patroni_url}/config",
-                    json={"synchronous_node_count": self._synchronous_node_count},
+                    json=self.synchronous_configuration,
                     verify=self._verify,
                     auth=self._patroni_auth,
                     timeout=PATRONI_TIMEOUT,
@@ -471,11 +482,15 @@ class Patroni:
         return health.get("replication_state") == "streaming"
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
-    def bulk_update_parameters_controller_by_patroni(self, parameters: dict[str, Any]) -> None:
+    def bulk_update_parameters_controller_by_patroni(
+        self, parameters: dict[str, Any], base_parameters: dict[str, Any] | None
+    ) -> None:
         """Update the value of a parameter controller by Patroni.
 
         For more information, check https://patroni.readthedocs.io/en/latest/patroni_configuration.html#postgresql-parameters-controlled-by-patroni.
         """
+        if not base_parameters:
+            base_parameters = {}
         requests.patch(
             f"{self._patroni_url}/config",
             verify=self._verify,
@@ -484,10 +499,11 @@ class Patroni:
                     "remove_data_directory_on_rewind_failure": False,
                     "remove_data_directory_on_diverged_timelines": False,
                     "parameters": parameters,
-                }
+                },
+                **base_parameters,
             },
             auth=self._patroni_auth,
-            timeout=PATRONI_TIMEOUT,
+            timeout=API_REQUEST_TIMEOUT,
         )
 
     def promote_standby_cluster(self) -> None:
@@ -621,6 +637,7 @@ class Patroni:
             stanza=stanza,
             restore_stanza=restore_stanza,
             synchronous_node_count=self._synchronous_node_count,
+            maximum_lag_on_failover=self._charm.config.durability_maximum_lag_on_failover,
             version=self.rock_postgresql_version.split(".")[0],
             pg_parameters=parameters,
             primary_cluster_endpoint=self._charm.async_replication.get_primary_cluster_endpoint(),
