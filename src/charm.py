@@ -1142,6 +1142,27 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         temp_path = str(self.meta.storages["temp"].location)
         temp_tablespace_path = f"{temp_path}/16/main"
 
+        # Clear stale storage directories when a replica joins an initialized cluster.
+        # This is needed because PersistentVolumes may retain data from previous pods,
+        # and pg_basebackup requires empty --waldir and --tablespace directories.
+        # Only clear once per unit lifecycle, tracked by unit peer data flag.
+        if (
+            not self.unit.is_leader()
+            and self.is_cluster_initialised
+            and self.unit_peer_data.get("storage-dirs-cleared") != "True"
+        ):
+            for path in [waldir_path, temp_tablespace_path]:
+                if container.exists(path):
+                    try:
+                        container.exec(f"find {path} -mindepth 1 -delete".split()).wait_output()
+                        logger.info(
+                            f"Cleared stale content from {path} for replica initialization"
+                        )
+                    except ExecError as e:
+                        if "No such file or directory" not in str(e.stderr):
+                            logger.warning(f"Failed to clear {path}: {e}")
+            self.unit_peer_data["storage-dirs-cleared"] = "True"
+
         # Create the pgdata directory on the storage mount (e.g., /var/lib/pg/data/16/main)
         if not container.exists(self._actual_pgdata_path):
             container.make_dir(

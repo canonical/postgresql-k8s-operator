@@ -38,6 +38,7 @@ from tenacity import (
 from ..helpers import (
     APPLICATION_NAME,
     KUBECTL,
+    PGDATA_PATH,
     app_name,
     db_connect,
     execute_query_on_unit,
@@ -621,7 +622,7 @@ async def is_replica(ops_test: OpsTest, unit_name: str) -> bool:
 async def list_wal_files(ops_test: OpsTest, app: str) -> set:
     """Returns the list of WAL segment files in each unit."""
     units = [unit.name for unit in ops_test.model.applications[app].units]
-    command = "ls -1 /var/lib/postgresql/16/main/pg_wal/"
+    command = f"ls -1 {PGDATA_PATH}/pg_wal/"
     files = {}
     for unit in units:
         complete_command = f"run --unit {unit} -- {command}"
