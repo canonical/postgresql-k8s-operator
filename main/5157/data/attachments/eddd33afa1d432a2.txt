@@ -1,0 +1,70 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-2
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  00:25:16Z
+
+App                          Version  Status  Scale  Charm           Channel  Rev  Address         Exposed  Message
+postgresql-k8s               14.20    active      3  postgresql-k8s             1  10.152.183.233  no       
+test-storage-postgresql-k8s  14.20    active      1  postgresql-k8s             2  10.152.183.69   no       
+
+Unit                            Workload  Agent  Address       Ports  Message
+postgresql-k8s/0*               active    idle   10.1.100.214         Primary
+postgresql-k8s/1                active    idle   10.1.100.215         
+postgresql-k8s/2                active    idle   10.1.100.216         
+test-storage-postgresql-k8s/0*  active    idle   10.1.100.218         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-0: 00:13:38 ERROR unit.postgresql-k8s/0.juju-log restart:0: Failed to list PostgreSQL database users: connection to server at "postgresql-k8s-0.postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.100.203), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-k8s-1: 00:13:38 ERROR unit.postgresql-k8s/1.juju-log restart:0: Failed to list PostgreSQL database users: connection to server at "postgresql-k8s-1.postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.100.204), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-k8s-2: 00:14:23 ERROR unit.postgresql-k8s/2.juju-log failed to patch k8s Service patroni-postgresql-k8s-config
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 262, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '409 Conflict' for url 'https://10.152.183.1/api/v1/namespaces/testing/services/patroni-postgresql-k8s-config?force=true&fieldManager=postgresql-k8s'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/409
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/charm.py", line 1483, in _on_stop
+    client.apply(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 814, in apply
+    return self.patch(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 479, in patch
+    return self._client.request(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 342, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 276, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 264, in raise_for_status
+    raise transform_exception(e) from e
+lightkube.core.exceptions.ApiError: Operation cannot be fulfilled on services "patroni-postgresql-k8s-config": the object has been modified; please apply your changes to the latest version and try again
+unit-postgresql-k8s-2: 00:14:38 ERROR unit.postgresql-k8s/2.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-postgresql-k8s-2: 00:14:59 ERROR unit.postgresql-k8s/2.juju-log Failed to list PostgreSQL database users: connection to server at "postgresql-k8s-2.postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.100.206), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-k8s-3: 00:17:01 ERROR unit.postgresql-k8s/3.juju-log Failed to list PostgreSQL database users: connection to server at "postgresql-k8s-3.postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.100.209), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-k8s-0: 00:19:35 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-k8s-1: 00:19:55 ERROR unit.postgresql-k8s/1.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-postgresql-k8s-1: 00:20:16 ERROR unit.postgresql-k8s/1.juju-log Failed to list PostgreSQL database users: connection to server at "postgresql-k8s-1.postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.100.210), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-k8s-2: 00:23:19 ERROR unit.postgresql-k8s/2.juju-log database-peers:3: Failed to list PostgreSQL database users: connection to server at "postgresql-k8s-2.postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.100.216), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
