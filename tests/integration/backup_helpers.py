@@ -26,16 +26,16 @@ async def backup_deploy(
     charm,
     s3_integrator_app_name: str,
     tls_certificates_app_name: str | None,
-    tls_channel,
+    tls_channel: str,
     credentials,
     cloud,
     config,
 ) -> str:
     # Deploy S3 Integrator and TLS Certificates Operator.
     use_tls = all([tls_certificates_app_name, tls_channel])
-    await ops_test.model.deploy(s3_integrator_app_name, series="jammy")
+    await ops_test.model.deploy(s3_integrator_app_name)
     if use_tls:
-        await ops_test.model.deploy(tls_certificates_app_name, channel=tls_channel, series="noble")
+        await ops_test.model.deploy(tls_certificates_app_name, channel=tls_channel)
     # Deploy and relate PostgreSQL to S3 integrator (one database app for each cloud for now
     # as archivo_mode is disabled after restoring the backup) and to TLS Certificates Operator
     # (to be able to create backups from replicas).
@@ -78,7 +78,7 @@ async def backup_operations(
     charm,
     s3_integrator_app_name: str,
     tls_certificates_app_name: str | None,
-    tls_channel,
+    tls_channel: str,
     credentials,
     cloud,
     config,
@@ -86,13 +86,13 @@ async def backup_operations(
     """Basic set of operations for backup testing in different cloud providers."""
     database_app_name = await backup_deploy(
         ops_test,
+        charm,
         s3_integrator_app_name,
         tls_certificates_app_name,
         tls_channel,
         credentials,
         cloud,
         config,
-        charm,
     )
 
     primary = await get_primary(ops_test, database_app_name)
@@ -267,7 +267,7 @@ async def pitr_backup_operations(
     charm,
     s3_integrator_app_name: str,
     tls_certificates_app_name: str | None,
-    tls_channel,
+    tls_channel: str,
     credentials,
     cloud,
     config,
@@ -282,13 +282,13 @@ async def pitr_backup_operations(
     """
     database_app_name = await backup_deploy(
         ops_test,
+        charm,
         s3_integrator_app_name,
         tls_certificates_app_name,
         tls_channel,
         credentials,
         cloud,
         config,
-        charm,
     )
 
     primary = await get_primary(ops_test, database_app_name)
