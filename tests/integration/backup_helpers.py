@@ -33,9 +33,9 @@ async def backup_deploy(
 ) -> str:
     # Deploy S3 Integrator and TLS Certificates Operator.
     use_tls = all([tls_certificates_app_name, tls_channel])
-    await ops_test.model.deploy(s3_integrator_app_name)
+    await ops_test.model.deploy(s3_integrator_app_name, series="jammy")
     if use_tls:
-        await ops_test.model.deploy(tls_certificates_app_name, channel=tls_channel)
+        await ops_test.model.deploy(tls_certificates_app_name, channel=tls_channel, series="noble")
     # Deploy and relate PostgreSQL to S3 integrator (one database app for each cloud for now
     # as archivo_mode is disabled after restoring the backup) and to TLS Certificates Operator
     # (to be able to create backups from replicas).
