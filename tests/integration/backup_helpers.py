@@ -7,8 +7,6 @@ from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_exponential
 
 from .helpers import (
-    CHARM_BASE,
-    CHARM_BASE_NOBLE,
     DATABASE_APP_NAME,
     build_and_deploy,
     db_connect,
@@ -27,7 +25,7 @@ async def backup_deploy(
     ops_test: OpsTest,
     charm,
     s3_integrator_app_name: str,
-    tls_certificates_app_name: str,
+    tls_certificates_app_name: str | None,
     tls_channel,
     credentials,
     cloud,
@@ -35,13 +33,9 @@ async def backup_deploy(
 ) -> str:
     # Deploy S3 Integrator and TLS Certificates Operator.
     use_tls = all([tls_certificates_app_name, tls_channel])
-    await ops_test.model.deploy(s3_integrator_app_name, base=CHARM_BASE)
+    await ops_test.model.deploy(s3_integrator_app_name)
     if use_tls:
-        await ops_test.model.deploy(
-            tls_certificates_app_name,
-            channel=tls_channel,
-            base=CHARM_BASE_NOBLE,
-        )
+        await ops_test.model.deploy(tls_certificates_app_name, channel=tls_channel)
     # Deploy and relate PostgreSQL to S3 integrator (one database app for each cloud for now
     # as archivo_mode is disabled after restoring the backup) and to TLS Certificates Operator
     # (to be able to create backups from replicas).
@@ -83,7 +77,7 @@ async def backup_operations(
     ops_test: OpsTest,
     charm,
     s3_integrator_app_name: str,
-    tls_certificates_app_name: str,
+    tls_certificates_app_name: str | None,
     tls_channel,
     credentials,
     cloud,
@@ -272,7 +266,7 @@ async def pitr_backup_operations(
     ops_test: OpsTest,
     charm,
     s3_integrator_app_name: str,
-    tls_certificates_app_name: str,
+    tls_certificates_app_name: str | None,
     tls_channel,
     credentials,
     cloud,
