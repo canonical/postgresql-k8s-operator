@@ -563,7 +563,7 @@ backup-id            | action              | status   | reference-backup-id  | L
                 None,
             ),
             (
-                '{".":{"type":"path"},"archive/None.patroni-postgresql-k8s/14-1/00000002.history":{"type": "file","size": 32,"time": 1728937652}}',
+                '{"None.patroni-postgresql-k8s/14-1/00000002.history":{"type": "file","size": 32,"time": 1728937652}}',
                 None,
             ),
         ]
@@ -607,7 +607,7 @@ def test_list_timelines(harness):
         assert harness.charm.backup._list_timelines() == dict[str, tuple[str, str]]()
 
         _execute_command.return_value = (
-            '{".":{"type":"path"},"archive/test-stanza/14-1/00000002.history":{"type": "file","size": 32,"time": 1728937652}}',
+            '{"test-stanza/14-1/00000002.history":{"type": "file","size": 32,"time": 1728937652}}',
             None,
         )
         assert harness.charm.backup._list_timelines() == dict[str, tuple[str, str]]([
