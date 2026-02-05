@@ -513,13 +513,17 @@ class PostgreSQLAsyncReplication(Object):
             return
 
         # Return if this is a new unit joining an existing standby cluster.
-        # But first, clear pgdata if needed so Patroni can run pg_basebackup.
+        # If the database is already running (i.e., we're a late joiner that completed setup),
+        # just return early - the unit is already part of the standby cluster.
         if not self.charm.unit.is_leader() and self._is_following_promoted_cluster():
+            if self.charm._patroni.member_started:
+                logger.debug("Early exit on_async_relation_changed: following promoted cluster.")
+                return
+            # Database not running - clear pgdata if needed so Patroni can run pg_basebackup.
+            # Only clear once, tracked by standby-pgdata-cleared flag.
             if self.charm._peers.data[self.charm.unit].get("standby-pgdata-cleared") != "True":
                 self._clear_pgdata()
                 self.charm._peers.data[self.charm.unit].update({"standby-pgdata-cleared": "True"})
-            logger.debug("Early exit on_async_relation_changed: following promoted cluster.")
-            return
 
         if not self._stop_database(event):
             return
