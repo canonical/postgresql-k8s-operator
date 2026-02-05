@@ -454,6 +454,7 @@ class PostgreSQLBackups(Object):
             "--recurse",
             "--filter",
             "\\.history$",
+            "--output=json",
         ])
 
         repository = json.loads(output).items() if output else None
