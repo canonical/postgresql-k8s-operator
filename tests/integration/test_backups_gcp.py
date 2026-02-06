@@ -10,10 +10,10 @@ from lightkube.resources.core_v1 import Pod
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_exponential
 
+from .backup_helpers import backup_operations
 from .conftest import GCP
 from .helpers import (
     DATABASE_APP_NAME,
-    backup_operations,
     build_and_deploy,
     cat_file_from_unit,
     db_connect,
