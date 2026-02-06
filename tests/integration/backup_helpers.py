@@ -99,7 +99,7 @@ async def backup_operations(
             break
 
     # Write some data.
-    password = await get_password(ops_test, primary)
+    password = await get_password(ops_test, database_app_name=database_app_name)
     address = await get_unit_address(ops_test, primary)
     logger.info("creating a table in the database")
     with db_connect(host=address, password=password) as connection:
@@ -295,7 +295,7 @@ async def pitr_backup_operations(
         if unit.name != primary:
             replica = unit.name
             break
-    password = await get_password(ops_test, primary)
+    password = await get_password(ops_test, database_app_name=database_app_name)
     address = await get_unit_address(ops_test, primary)
 
     logger.info("1: creating table")

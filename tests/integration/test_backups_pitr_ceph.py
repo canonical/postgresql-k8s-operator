@@ -16,12 +16,10 @@ S3_INTEGRATOR_APP_NAME = "s3-integrator"
 if juju_major_version < 3:
     tls_certificates_app_name = "tls-certificates-operator"
     tls_channel = "legacy/stable"
-    tls_base = "ubuntu@22.04"
     tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
 else:
     tls_certificates_app_name = "self-signed-certificates"
     tls_channel = "1/stable"
-    tls_base = "ubuntu@24.04"
     tls_config = {"ca-common-name": "Test CA"}
 
 backup_id, value_before_backup, value_after_backup = "", None, None
