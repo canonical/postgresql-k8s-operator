@@ -8,7 +8,7 @@ requires-poetry = ">=2.0.0"
 [tool.poetry.dependencies]
 python = "^3.12"
 ops = "^2.23.1"
-boto3 = "^1.42.35"
+boto3 = "^1.42.40"
 pgconnstr = "^1.0.1"
 requests = "^2.32.5"
 tenacity = "^9.1.2"
@@ -18,8 +18,8 @@ lightkube = "^0.19.1"
 lightkube-models = "^1.28.1.4"
 psycopg2 = "^2.9.11"
 httpx = "^0.28.1"
-charmlibs-interfaces-tls-certificates = "^1.4.0"
-postgresql-charms-single-kernel = "16.1.6"
+charmlibs-interfaces-tls-certificates = "^1.6.0"
+postgresql-charms-single-kernel = "16.1.7"
 charm-refresh = "^3.1.1.2"
 
 [tool.poetry.group.charm-libs.dependencies]
@@ -48,7 +48,7 @@ optional = true
 
 [tool.poetry.group.lint.dependencies]
 codespell = "^2.4.1"
-pyright = "^1.1.408"
+ty = "^0.0.15"
 
 [tool.poetry.group.unit]
 optional = true
@@ -72,7 +72,7 @@ psycopg2-binary = "^2.9.11"
 boto3 = "*"
 tenacity = "^9.1.2"
 allure-pytest = "^2.15.3"
-jubilant = "^1.6.2"
+jubilant = "^1.7.0"
 tomli-w = "^1.2.0"
 tomli = "^2.4.0"
 
@@ -152,14 +152,10 @@ max-complexity = 12
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
-[tool.pyright]
+[tool.ty.environment]
+python = ".tox/lint/"
+extra-paths = ["./lib"]
+
+[tool.ty.src]
 include = ["src", "scripts"]
-exclude = ["src/relations/logical_replication.py"]
-extraPaths = ["./lib"]
-pythonVersion = "3.12"
-pythonPlatform = "All"
-typeCheckingMode = "basic"
-reportIncompatibleMethodOverride = false
-reportImportCycles = false
-reportMissingModuleSource = true
-stubPath = ""
+exclude = ["tests"]

@@ -251,8 +251,7 @@ class PostgreSQLBackups(Object):
         except ValueError as e:
             logger.exception("Failed to create a session '%s' in region=%s.", bucket_name, region)
             raise e
-        # Boto3 doesn't have typedefs
-        bucket = s3.Bucket(bucket_name)  # type: ignore
+        bucket = s3.Bucket(bucket_name)
         try:
             bucket.meta.client.head_bucket(Bucket=bucket_name)
             logger.info("Bucket %s exists.", bucket_name)
@@ -460,25 +459,27 @@ class PostgreSQLBackups(Object):
         output, _ = self._execute_command([
             "pgbackrest",
             "repo-ls",
+            "archive",
             "--recurse",
+            "--filter",
+            "\\.history$",
             "--output=json",
         ])
 
         repository = json.loads(output).items() if output else None
-        if repository is None:
-            return dict[str, tuple[str, str]]()
-
-        return dict[str, tuple[str, str]]({
-            datetime.strftime(
-                datetime.fromtimestamp(timeline_object["time"], UTC),
-                "%Y-%m-%dT%H:%M:%SZ",
-            ): (
-                timeline.split("/")[1],
-                timeline.split("/")[-1].split(".")[0].lstrip("0"),
-            )
-            for timeline, timeline_object in repository
-            if timeline.endswith(".history") and not timeline.endswith("backup.history")
-        })
+        output = dict[str, tuple[str, str]]()
+        if repository:
+            for timeline, timeline_object in repository:
+                if not timeline.endswith("backup.history"):
+                    # 0 is the stanza -1 is the timeline file
+                    path = timeline.split("/")
+                    output[
+                        datetime.strftime(
+                            datetime.fromtimestamp(timeline_object["time"], UTC),
+                            "%Y-%m-%dT%H:%M:%SZ",
+                        )
+                    ] = (path[0], path[-1].split(".")[0].lstrip("0"))
+        return output
 
     def _get_nearest_timeline(self, timestamp: str) -> tuple[str, str] | None:
         """Finds the nearest timeline or backup prior to the specified timeline.
@@ -967,12 +968,11 @@ Stderr:
         elif is_backup_id_timeline:
             restore_stanza_timeline = timelines[backup_id]
         else:
-            backups_list = list(self._list_backups(show_failed=False).values())
-            timelines_list = self._list_timelines()
+            backups_list = list(backups.values())
             if (
                 restore_to_time == "latest"
-                and timelines_list is not None
-                and max(timelines_list.values() or [backups_list[0]]) not in backups_list
+                and timelines is not None
+                and max(timelines.values() or [backups_list[0]]) not in backups_list
             ):
                 error_message = "There is no base backup created from the latest timeline"
                 logger.error(f"Restore failed: {error_message}")
@@ -1356,8 +1356,7 @@ Stderr:
             logger.info(f"Uploading content to bucket={bucket_name}, path={processed_s3_path}")
 
             s3 = self._get_s3_session_resource(s3_parameters)
-            # Boto3 doesn't have typedefs
-            bucket = s3.Bucket(bucket_name)  # type: ignore
+            bucket = s3.Bucket(bucket_name)
 
             with tempfile.NamedTemporaryFile() as temp_file:
                 temp_file.write(content.encode("utf-8"))
@@ -1390,8 +1389,7 @@ Stderr:
         try:
             logger.info(f"Reading content from bucket={bucket_name}, path={processed_s3_path}")
             s3 = self._get_s3_session_resource(s3_parameters)
-            # Boto3 doesn't have typedefs
-            bucket = s3.Bucket(bucket_name)  # type: ignore
+            bucket = s3.Bucket(bucket_name)
             with BytesIO() as buf:
                 bucket.download_fileobj(processed_s3_path, buf)
                 return buf.getvalue().decode("utf-8")

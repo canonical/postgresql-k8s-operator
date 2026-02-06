@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-# Copyright 2024 Canonical Ltd.
+# Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
 import logging
 
 import pytest
 from pytest_operator.plugin import OpsTest
 
-from .backup_helpers import backup_operations
+from .backup_helpers import pitr_backup_operations
 from .conftest import ConnectionInformation
 
 logger = logging.getLogger(__name__)
@@ -37,9 +37,12 @@ def cloud_configs(microceph: ConnectionInformation):
     }
 
 
-async def test_backup_ceph(ops_test: OpsTest, cloud_configs, cloud_credentials, charm) -> None:
-    """Build and deploy two units of PostgreSQL in microceph, test backup and restore actions."""
-    await backup_operations(
+@pytest.mark.abort_on_fail
+async def test_pitr_backup_ceph(
+    ops_test: OpsTest, cloud_configs, cloud_credentials, charm
+) -> None:
+    """Build and deploy two units of PostgreSQL in AWS and then test PITR backup and restore actions."""
+    await pitr_backup_operations(
         ops_test,
         charm,
         S3_INTEGRATOR_APP_NAME,

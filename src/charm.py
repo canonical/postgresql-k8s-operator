@@ -30,6 +30,7 @@ from refresh import PostgreSQLRefresh
 # First platform-specific import, will fail on wrong architecture
 try:
     import psycopg2
+    import psycopg2.errors
 except ModuleNotFoundError:
     from ops.main import main
 
@@ -94,6 +95,7 @@ from requests import ConnectionError as RequestsConnectionError
 from single_kernel_postgresql.config.literals import (
     Substrates,
 )
+from single_kernel_postgresql.events.tls_transfer import TLSTransfer
 from single_kernel_postgresql.utils.postgresql import (
     ACCESS_GROUP_IDENTITY,
     ACCESS_GROUPS,
@@ -159,13 +161,14 @@ from relations.async_replication import (
 # )
 from relations.postgresql_provider import PostgreSQLProvider
 from relations.tls import TLS
-from relations.tls_transfer import TLSTransfer
 from utils import any_cpu_to_cores, any_memory_to_bytes, new_password
 
 logger = logging.getLogger(__name__)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 logging.getLogger("httpcore").setLevel(logging.WARNING)
 logging.getLogger("asyncio").setLevel(logging.WARNING)
+logging.getLogger("boto3").setLevel(logging.WARNING)
+logging.getLogger("botocore").setLevel(logging.WARNING)
 
 EXTENSIONS_DEPENDENCY_MESSAGE = "Unsatisfied plugin dependencies. Please check the logs"
 EXTENSION_OBJECT_MESSAGE = "Cannot disable plugins: Existing objects depend on it. See logs"
@@ -866,10 +869,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.set_unit_status(BlockedStatus("Configuration Error. Please check the logs"))
             logger.error("Invalid configuration: %s", str(e))
             return
-        if not self.updated_synchronous_node_count():
-            logger.debug("Defer on_config_changed: unable to set synchronous node count")
-            event.defer()
-            return
 
         if self.is_blocked and "Configuration Error" in self.unit.status.message:
             self._set_active_status()
@@ -930,7 +929,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.set_unit_status(WaitingStatus("Updating extensions"))
         try:
             self.postgresql.enable_disable_extensions(extensions, database)
-        except psycopg2.errors.DependentObjectsStillExist as e:
+        except psycopg2.errors.DependentObjectsStillExist as e:  # type: ignore
             logger.error(
                 "Failed to disable plugin: %s\nWas the plugin enabled manually? If so, update charm config with `juju config postgresql-k8s plugin-<plugin_name>-enable=True`",
                 str(e),
@@ -1873,7 +1872,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 resource.metadata.ownerReferences = pod0.metadata.ownerReferences
                 resource.metadata.managedFields = None
                 client.apply(
-                    obj=resource,  # type: ignore
+                    obj=resource,
                     name=resource.metadata.name,
                     namespace=resource.metadata.namespace,
                     force=True,
@@ -2457,10 +2456,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return str(min(8, 2 * cpu_cores))
         elif self.config.cpu_max_worker_processes is not None:
             value = self.config.cpu_max_worker_processes
-            # Pydantic already enforces minimum of 2 via conint(ge=2)
-            # This is an extra safeguard
-            if value < 2:
-                raise ValueError(f"cpu-max-worker-processes value {value} is below minimum of 2")
             cap = 10 * cpu_cores
             if value > cap:
                 raise ValueError(
@@ -2484,8 +2479,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         Raises:
             ValueError: If value is less than 2 or exceeds 10 * vCores
         """
-        if value < 2:
-            raise ValueError(f"{param_name} value {value} is below minimum of 2")
         cap = 10 * cpu_cores
         if value > cap:
             raise ValueError(
@@ -2645,7 +2638,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 "max_logical_replication_workers"
             ]
 
-        base_patch = {}
+        base_patch = {
+            **self._patroni.synchronous_configuration,
+            "maximum_lag_on_failover": self.config.durability_maximum_lag_on_failover,
+        }
         if primary_endpoint := self.async_replication.get_primary_cluster_endpoint():
             base_patch["standby_cluster"] = {"host": primary_endpoint}
         self._patroni.bulk_update_parameters_controller_by_patroni(cfg_patch, base_patch)
@@ -2688,6 +2684,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             pg_parameters = dict(worker_configs)
             pg_parameters["wal_compression"] = cpu_wal_compression
             logger.debug(f"pg_parameters set to worker_configs = {pg_parameters}")
+        pg_parameters.pop("maximum_lag_on_failover", None)
 
         return pg_parameters
 
@@ -3001,7 +2998,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @cached_property
     def generate_config_hash(self) -> str:
         """Generate current configuration hash."""
-        return shake_128(str(self.config.dict()).encode()).hexdigest(16)
+        return shake_128(str(self.config.model_dump()).encode()).hexdigest(16)
 
     def override_patroni_on_failure_condition(
         self, new_condition: str, repeat_cause: str | None

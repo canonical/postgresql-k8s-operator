@@ -230,6 +230,7 @@ def test_render_patroni_yml_file(harness, patroni):
             replication_password=patroni._replication_password,
             rewind_user=REWIND_USER,
             rewind_password=patroni._rewind_password,
+            maximum_lag_on_failover=1048576,
             synchronous_node_count=0,
             version="16",
             patroni_password=patroni._patroni_password,
@@ -268,6 +269,7 @@ def test_render_patroni_yml_file(harness, patroni):
             rewind_user=REWIND_USER,
             rewind_password=patroni._rewind_password,
             synchronous_node_count=0,
+            maximum_lag_on_failover=1048576,
             version="16",
             patroni_password=patroni._patroni_password,
             instance_password_encryption="scram-sha-256",
@@ -516,7 +518,7 @@ def test_update_synchronous_node_count(harness, patroni):
 
         _patch.assert_called_once_with(
             "https://postgresql-k8s-0:8008/config",
-            json={"synchronous_node_count": 0},
+            json={"synchronous_node_count": 0, "synchronous_mode_strict": False},
             verify=patroni._verify,
             auth=patroni._patroni_auth,
             timeout=API_REQUEST_TIMEOUT,

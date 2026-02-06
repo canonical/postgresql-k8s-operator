@@ -646,8 +646,8 @@ class PostgreSQLAsyncReplication(Object):
         sync_standby_names = self.charm._patroni.get_sync_standby_names()
         if len(sync_standby_names) > 0:
             unit = self.model.get_unit(sync_standby_names[0])
-            return self.charm.get_unit_ip(unit)  # type: ignore
-        return self.charm.get_unit_ip(self.charm.unit)  # type: ignore
+            return self.charm.get_unit_ip(unit)
+        return self.charm.get_unit_ip(self.charm.unit)
 
     def _re_emit_async_relation_changed_event(self) -> None:
         """Re-emit the async relation changed event."""
@@ -795,7 +795,7 @@ class PostgreSQLAsyncReplication(Object):
 
         if promoted_cluster_counter is not None:
             for relation in [async_relation, self.charm._peers]:
-                relation.data[self.charm.app].update({
+                relation.data[self.charm.app].update({  # type: ignore
                     "promoted-cluster-counter": str(promoted_cluster_counter)
                 })
 
@@ -805,7 +805,7 @@ class PostgreSQLAsyncReplication(Object):
         if async_relation.name == REPLICATION_OFFER_RELATION:  # type: ignore
             secret = self._get_secret()
             secret.grant(async_relation)  # type: ignore
-            primary_cluster_data["secret-id"] = secret.id  # type: ignore
+            primary_cluster_data["secret-id"] = secret.id
 
         if system_identifier is not None:
             primary_cluster_data["system-id"] = system_identifier
