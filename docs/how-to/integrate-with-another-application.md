@@ -96,7 +96,7 @@ The simplest way to test it is to use `requested-entities-secret` field via the 
 ````{dropdown} Example
 
 ```shell
-$ juju deploy postgresql-k8s --channel 16/edge
+$ juju deploy postgresql-k8s --channel 16/edge --trust
 
 $ juju add-secret myusername mylogin=mypassword
 secret:d5l3do605d8c4b1gn9a0
