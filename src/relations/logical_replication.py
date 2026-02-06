@@ -191,7 +191,7 @@ class PostgreSQLLogicalReplication(Object):
         if not self._validate_subscription_request():
             return
         event.relation.data[self.model.app]["subscription-request"] = (
-            self.charm.config.logical_replication_subscription_request or ""
+            self.charm.config.logical_replication_subscription_request or ""  # type: ignore
         )
 
     def _on_relation_changed(self, event: RelationChangedEvent) -> None:
@@ -366,11 +366,11 @@ class PostgreSQLLogicalReplication(Object):
             "Logical replication config validation is passed, applying config to the active relations"
         )
         subscription_request_config = json.loads(
-            self.charm.config.logical_replication_subscription_request or "{}"
+            self.charm.config.logical_replication_subscription_request or "{}"  # type: ignore
         )
         subscriptions = self._subscriptions_info()
-        relation.data[self.model.app]["subscription-request"] = (  # type: ignore
-            self.charm.config.logical_replication_subscription_request
+        relation.data[self.model.app]["subscription-request"] = (
+            self.charm.config.logical_replication_subscription_request  # type: ignore
         )
         for database, subscription in subscriptions.copy().items():
             if database in subscription_request_config:
@@ -385,7 +385,7 @@ class PostgreSQLLogicalReplication(Object):
     def _validate_subscription_request(self) -> bool:
         try:
             subscription_request_config = json.loads(
-                self.charm.config.logical_replication_subscription_request or "{}"
+                self.charm.config.logical_replication_subscription_request or "{}"  # type: ignore
             )
         except json.JSONDecodeError as err:
             return self._fail_validation(f"JSON decode error {err}")

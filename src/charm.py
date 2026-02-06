@@ -29,6 +29,7 @@ from refresh import PostgreSQLRefresh
 # First platform-specific import, will fail on wrong architecture
 try:
     import psycopg2
+    import psycopg2.errors
 except ModuleNotFoundError:
     from ops.main import main
 
@@ -926,7 +927,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.set_unit_status(WaitingStatus("Updating extensions"))
         try:
             self.postgresql.enable_disable_extensions(extensions, database)
-        except psycopg2.errors.DependentObjectsStillExist as e:
+        except psycopg2.errors.DependentObjectsStillExist as e:  # type: ignore
             logger.error(
                 "Failed to disable plugin: %s\nWas the plugin enabled manually? If so, update charm config with `juju config postgresql-k8s plugin-<plugin_name>-enable=True`",
                 str(e),
@@ -1711,7 +1712,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 resource.metadata.ownerReferences = pod0.metadata.ownerReferences
                 resource.metadata.managedFields = None
                 client.apply(
-                    obj=resource,  # type: ignore
+                    obj=resource,
                     name=resource.metadata.name,
                     namespace=resource.metadata.namespace,
                     force=True,
@@ -2836,7 +2837,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @cached_property
     def generate_config_hash(self) -> str:
         """Generate current configuration hash."""
-        return shake_128(str(self.config.dict()).encode()).hexdigest(16)
+        return shake_128(str(self.config.model_dump()).encode()).hexdigest(16)
 
     def override_patroni_on_failure_condition(
         self, new_condition: str, repeat_cause: str | None
