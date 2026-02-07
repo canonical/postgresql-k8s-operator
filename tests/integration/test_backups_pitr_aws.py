@@ -7,6 +7,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_exponential
 
+from .architecture import architecture
 from .conftest import AWS
 from .helpers import (
     DATABASE_APP_NAME,
@@ -59,7 +60,8 @@ async def pitr_backup_operations(
     database_app_name = f"{DATABASE_APP_NAME}-{cloud}"
 
     logger.info("deploying the next charms: s3-integrator, self-signed-certificates, postgresql")
-    await ops_test.model.deploy(s3_integrator_app_name, channel="2/edge/pr-109")
+    revision = 288 if architecture == "amd64" else 289
+    await ops_test.model.deploy(s3_integrator_app_name, revision=revision)
     await ops_test.model.deploy(
         tls_certificates_app_name, config=tls_config, channel=tls_channel, base=tls_base
     )

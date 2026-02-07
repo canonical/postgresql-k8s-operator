@@ -34,6 +34,8 @@ from tenacity import (
 
 from constants import DATABASE_DEFAULT_NAME
 
+from .architecture import architecture
+
 CHARM_BASE = "ubuntu@22.04"
 CHARM_SERIES = "jammy"
 METADATA = yaml.safe_load(Path("./metadata.yaml").read_text())
@@ -851,7 +853,8 @@ async def backup_operations(
 ) -> None:
     """Basic set of operations for backup testing in different cloud providers."""
     # Deploy S3 Integrator and TLS Certificates Operator.
-    await ops_test.model.deploy(s3_integrator_app_name, base=CHARM_BASE, channel="2/edge/pr-109")
+    revision = 288 if architecture == "amd64" else 289
+    await ops_test.model.deploy(s3_integrator_app_name, base=CHARM_BASE, revision=revision)
     await ops_test.model.deploy(
         tls_certificates_app_name, config=tls_config, channel=tls_channel, base=tls_base
     )
