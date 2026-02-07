@@ -851,7 +851,7 @@ async def backup_operations(
 ) -> None:
     """Basic set of operations for backup testing in different cloud providers."""
     # Deploy S3 Integrator and TLS Certificates Operator.
-    await ops_test.model.deploy(s3_integrator_app_name, base=CHARM_BASE)
+    await ops_test.model.deploy(s3_integrator_app_name, base=CHARM_BASE, channel="2/edge/pr-109")
     await ops_test.model.deploy(
         tls_certificates_app_name, config=tls_config, channel=tls_channel, base=tls_base
     )
@@ -874,12 +874,24 @@ async def backup_operations(
 
     # Configure and set access and secret keys.
     logger.info(f"configuring S3 integrator for {cloud}")
-    await ops_test.model.applications[s3_integrator_app_name].set_config(config)
-    action = await ops_test.model.units.get(f"{s3_integrator_app_name}/0").run_action(
-        "sync-s3-credentials",
-        **credentials,
+
+    rc, stdout, stderr = await ops_test.juju(
+        "add-secret",
+        "s3keys",
+        "access-key=" + credentials["access-key"],
+        "secret-key=" + credentials["secret-key"],
     )
-    await action.wait()
+    assert rc == 0, f"Failed to add secret: {stderr}"
+    secret_id = stdout.strip()
+    rc, stdout, stderr = await ops_test.juju("grant-secret", secret_id, s3_integrator_app_name)
+    assert rc == 0, "Failed to grant secret"
+    config["credentials"] = secret_id
+    # await ops_test.model.applications[s3_integrator_app_name].set_config(config)
+    # action = await ops_test.model.units.get(f"{s3_integrator_app_name}/0").run_action(
+    #     "sync-s3-credentials",
+    #     **credentials,
+    # )
+    # await action.wait()
     async with ops_test.fast_forward(fast_interval="60s"):
         await ops_test.model.wait_for_idle(
             apps=[database_app_name, s3_integrator_app_name], status="active", timeout=1000
