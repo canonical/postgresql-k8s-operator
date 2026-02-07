@@ -854,7 +854,9 @@ async def backup_operations(
     """Basic set of operations for backup testing in different cloud providers."""
     # Deploy S3 Integrator and TLS Certificates Operator.
     revision = 288 if architecture == "amd64" else 289
-    await ops_test.model.deploy(s3_integrator_app_name, revision=revision, channel="2/edge")
+    await ops_test.model.deploy(
+        s3_integrator_app_name, revision=revision, channel="2/edge", base="ubuntu@24.04"
+    )
     await ops_test.model.deploy(
         tls_certificates_app_name, config=tls_config, channel=tls_channel, base=tls_base
     )
@@ -889,7 +891,7 @@ async def backup_operations(
     rc, stdout, stderr = await ops_test.juju("grant-secret", secret_id, s3_integrator_app_name)
     assert rc == 0, "Failed to grant secret"
     config["credentials"] = secret_id
-    # await ops_test.model.applications[s3_integrator_app_name].set_config(config)
+    await ops_test.model.applications[s3_integrator_app_name].set_config(config)
     # action = await ops_test.model.units.get(f"{s3_integrator_app_name}/0").run_action(
     #     "sync-s3-credentials",
     #     **credentials,
