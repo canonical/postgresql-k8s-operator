@@ -855,7 +855,11 @@ async def backup_operations(
     # Deploy S3 Integrator and TLS Certificates Operator.
     revision = 288 if architecture == "amd64" else 289
     await ops_test.model.deploy(
-        s3_integrator_app_name, revision=revision, channel="2/edge", base="ubuntu@24.04"
+        s3_integrator_app_name,
+        revision=revision,
+        channel="2/edge",
+        series="noble",
+        base="ubuntu@24.04",
     )
     await ops_test.model.deploy(
         tls_certificates_app_name, config=tls_config, channel=tls_channel, base=tls_base
