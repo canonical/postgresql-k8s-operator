@@ -60,14 +60,39 @@ async def pitr_backup_operations(
     database_app_name = f"{DATABASE_APP_NAME}-{cloud}"
 
     logger.info("deploying the next charms: s3-integrator, self-signed-certificates, postgresql")
-    revision = 288 if architecture == "amd64" else 289
-    await ops_test.model.deploy(
-        s3_integrator_app_name,
-        revision=revision,
-        channel="2/edge",
-        base="ubuntu@24.04",
-        series="noble",
-    )
+    if ops_test.model.juju_version.has_secrets:
+        revision = 288 if architecture == "amd64" else 289
+        await ops_test.model.deploy(
+            s3_integrator_app_name,
+            revision=revision,
+            channel="2/edge",
+            series="noble",
+            base="ubuntu@24.04",
+        )
+
+        # Configure and set access and secret keys.
+        logger.info(f"configuring S3 integrator for {cloud}")
+        rc, stdout, stderr = await ops_test.juju(
+            "add-secret",
+            "s3keys",
+            "access-key=" + credentials["access-key"],
+            "secret-key=" + credentials["secret-key"],
+        )
+        assert rc == 0, f"Failed to add secret: {stderr}"
+        secret_id = stdout.strip()
+        rc, stdout, stderr = await ops_test.juju("grant-secret", secret_id, s3_integrator_app_name)
+        assert rc == 0, "Failed to grant secret"
+        config["credentials"] = secret_id
+        await ops_test.model.applications[s3_integrator_app_name].set_config(config)
+    else:
+        await ops_test.model.deploy(s3_integrator_app_name)
+        await ops_test.model.applications[s3_integrator_app_name].set_config(config)
+        action = await ops_test.model.units.get(f"{s3_integrator_app_name}/0").run_action(
+            "sync-s3-credentials",
+            **credentials,
+        )
+        await action.wait()
+
     await ops_test.model.deploy(
         tls_certificates_app_name, config=tls_config, channel=tls_channel, base=tls_base
     )
@@ -88,26 +113,6 @@ async def pitr_backup_operations(
             timeout=1000,
             raise_on_error=False,
         )
-
-    # Configure and set access and secret keys.
-    logger.info(f"configuring S3 integrator for {cloud}")
-    rc, stdout, stderr = await ops_test.juju(
-        "add-secret",
-        "s3keys",
-        "access-key=" + credentials["access-key"],
-        "secret-key=" + credentials["secret-key"],
-    )
-    assert rc == 0, f"Failed to add secret: {stderr}"
-    secret_id = stdout.strip()
-    rc, stdout, stderr = await ops_test.juju("grant-secret", secret_id, s3_integrator_app_name)
-    assert rc == 0, "Failed to grant secret"
-    config["credentials"] = secret_id
-    await ops_test.model.applications[s3_integrator_app_name].set_config(config)
-    # action = await ops_test.model.units.get(f"{s3_integrator_app_name}/0").run_action(
-    #     "sync-s3-credentials",
-    #     **credentials,
-    # )
-    # await action.wait()
 
     logger.info("integrating s3-integrator with postgresql and waiting model to stabilize")
     await ops_test.model.relate(database_app_name, s3_integrator_app_name)
