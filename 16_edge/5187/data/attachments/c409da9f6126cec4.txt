@@ -1,0 +1,88 @@
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:806 Connecting to existing model concierge-microk8s:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHSession received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHTunneler received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m integration.test_pg_hba:test_pg_hba.py:33 Deploying charms
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-0
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/data-integrator-180
+[32mINFO    [0m integration.test_pg_hba:test_pg_hba.py:42 Adding relation between charms
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [allocating] waiting: installing agent
+  postgresql-k8s/0 [allocating] waiting: installing agent
+  postgresql-k8s/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [idle] blocked: Please relate the data-integrator with the desired product
+  postgresql-k8s/0 [executing] maintenance: installing charm software
+  postgresql-k8s/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [idle] blocked: Please relate the data-integrator with the desired product
+  postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+  postgresql-k8s/1 [executing] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [idle] blocked: Please relate the data-integrator with the desired product
+  postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+  postgresql-k8s/1 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [idle] blocked: Please relate the data-integrator with the desired product
+  postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+  postgresql-k8s/1 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] maintenance: reconfiguring cluster
+  postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary (degraded)
+  postgresql-k8s/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary (degraded)
+  postgresql-k8s/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary (degraded)
+  postgresql-k8s/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [idle] active: 
+[32mINFO    [0m integration.test_pg_hba:test_pg_hba.py:73 Dropping database objects from the previous test run (if any)
+[32mINFO    [0m integration.test_pg_hba:test_pg_hba.py:87 Creating database objects needed for the test
+[32mINFO    [0m integration.test_pg_hba:test_pg_hba.py:109 Checking that the user relation_id_0 can connect to the database test_1 on postgresql-k8s/0
+[32mINFO    [0m integration.test_pg_hba:test_pg_hba.py:131 Checking that the user relation_id_1 can connect to the database test_2 on postgresql-k8s/0
+[32mINFO    [0m integration.test_pg_hba:test_pg_hba.py:151 Checking that the user relation_id_1 cannot connect to the database test_1 on postgresql-k8s/0
+[32mINFO    [0m integration.test_pg_hba:test_pg_hba.py:109 Checking that the user relation_id_0 can connect to the database test_1 on postgresql-k8s/1
+[32mINFO    [0m integration.test_pg_hba:test_pg_hba.py:131 Checking that the user relation_id_1 can connect to the database test_2 on postgresql-k8s/1
+[32mINFO    [0m integration.test_pg_hba:test_pg_hba.py:151 Checking that the user relation_id_1 cannot connect to the database test_1 on postgresql-k8s/1
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  01:37:45Z
+
+App              Version  Status  Scale  Charm            Channel        Rev  Address         Exposed  Message
+data-integrator           active      1  data-integrator  latest/stable  180  10.152.183.57   no       
+postgresql-k8s   16.11    active      2  postgresql-k8s                    0  10.152.183.254  no       
+
+Unit                Workload  Agent  Address      Ports  Message
+data-integrator/0*  active    idle   10.1.76.145         
+postgresql-k8s/0*   active    idle   10.1.76.143         Primary
+postgresql-k8s/1    active    idle   10.1.76.146         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-1: 01:33:57 ERROR unit.postgresql-k8s/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-postgresql-k8s-1: 01:34:20 ERROR unit.postgresql-k8s/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-postgresql-k8s-1: 01:34:29 ERROR unit.postgresql-k8s/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-postgresql-k8s-1: 01:34:37 ERROR unit.postgresql-k8s/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-postgresql-k8s-1: 01:34:47 ERROR unit.postgresql-k8s/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-postgresql-k8s-1: 01:34:57 ERROR unit.postgresql-k8s/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-postgresql-k8s-1: 01:35:05 ERROR unit.postgresql-k8s/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-postgresql-k8s-1: 01:35:15 ERROR unit.postgresql-k8s/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-postgresql-k8s-1: 01:35:25 ERROR unit.postgresql-k8s/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-postgresql-k8s-1: 01:35:34 ERROR unit.postgresql-k8s/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-postgresql-k8s-1: 01:35:44 ERROR unit.postgresql-k8s/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-postgresql-k8s-1: 01:35:53 ERROR unit.postgresql-k8s/1.juju-log __main__:calling self.fix_leader_annotation()
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
