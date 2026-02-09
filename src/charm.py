@@ -4,7 +4,6 @@
 
 """Charmed Kubernetes Operator for the PostgreSQL database."""
 
-import contextlib
 import itertools
 import json
 import logging
@@ -1230,78 +1229,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             temp_path,
         ]).wait()
 
-    def _fix_health_check_script(self, container: Container) -> None:
-        """Fix the OCI image health check script to use correct certificate path.
-
-        The OCI image's /scripts/self-signed-checker.py script has a hardcoded path
-        /var/lib/postgresql/data/peer_ca.pem which is incorrect. The correct path
-        for this charm is based on the charm storage location (self._storage_path).
-
-        This is a workaround until the OCI image is fixed upstream.
-        """
-        script_path = "/scripts/self-signed-checker.py"
-
-        try:
-            # Check if script exists
-            if not container.exists(script_path):
-                logger.info(f"Health check script {script_path} not found, skipping patch")
-                return
-
-            # Read current script content (may be bytes or str)
-            try:
-                raw = container.pull(script_path).read()
-            except Exception as e:
-                logger.exception(f"Failed to pull health check script {script_path}: {e}")
-                return
-            script_content = raw.decode() if isinstance(raw, (bytes, bytearray)) else str(raw)
-
-            # Determine the correct path based on charm storage location
-            storage_path = str(self._storage_path)
-            # The peer CA file used by the workload is expected at <storage_path>/peer_ca.pem
-            correct_path = f"{storage_path}/peer_ca.pem"
-
-            # If already patched, nothing to do
-            if correct_path in script_content:
-                logger.info("Health check script already patched")
-                return
-
-            incorrect_path = "/var/lib/postgresql/data/peer_ca.pem"
-            if incorrect_path not in script_content:
-                logger.info(
-                    "Health check script does not contain the expected incorrect path, skipping"
-                )
-                return
-
-            patched_content = script_content.replace(incorrect_path, correct_path)
-
-            # Push the patched script back (preserve executable bit)
-            try:
-                container.push(script_path, patched_content, permissions=0o755)
-            except Exception as e:
-                logger.exception(f"Failed to push patched health check script {script_path}: {e}")
-                # Try fallback: run an in-container sed to patch the file in-place
-                try:
-                    sed_cmd = f"sed -i 's|{incorrect_path}|{correct_path}|g' {script_path}"
-                    logger.debug(f"Attempting sed fallback: {sed_cmd}")
-                    exec_res = container.exec(["sh", "-c", sed_cmd])
-                    with contextlib.suppress(Exception):
-                        exec_res.wait()
-                    logger.info(
-                        f"Patched health check script via exec sed: {incorrect_path} -> {correct_path}"
-                    )
-                except Exception as e2:
-                    logger.exception(
-                        f"Failed to patch health check script via exec fallback {script_path}: {e2}"
-                    )
-                return
-            logger.info(f"Patched health check script: {incorrect_path} -> {correct_path}")
-
-        except PathError as e:
-            # Don't fail the charm if we can't patch the script
-            logger.exception(f"Failed to patch health check script due to PathError: {e}")
-        except Exception as e:
-            logger.exception(f"Unexpected error while patching health check script: {e}")
-
     def _on_start(self, _) -> None:
         # Make sure the CA bubdle file exists
         # Bundle is not secret
@@ -1334,9 +1261,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Create the PostgreSQL data directory. This is needed on cloud environments
         # where the volume is mounted with more restrictive permissions.
         self._create_pgdata(container)
-
-        # Fix the health check script path (workaround for OCI image bug)
-        self._fix_health_check_script(container)
 
         # Defer the initialization of the workload in the replicas
         # if the cluster hasn't been bootstrap on the primary yet.
@@ -1755,20 +1679,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Recreate k8s resources and add labels required for replication
         # when the pod loses them (like when it's deleted).
         self.push_tls_files_to_workload()
-
-        # Ensure the health check script in the workload image is fixed as early as
-        # possible (e.g. during upgrade_charm or when pod resources are recreated).
-        # This helps avoid races where the Pebble layer with the health check is added
-        # before the script is patched.
-        # Defensive: don't let any unexpected errors from fixing the script
-        # prevent the remainder of the pod fix from running.
-        with contextlib.suppress(Exception):
-            try:
-                container = self._container
-                if container.can_connect():
-                    self._fix_health_check_script(container)
-            except Exception as e:
-                logger.debug(f"_fix_pod: could not fix health check script: {e}")
 
         if self.refresh is not None and not self.refresh.in_progress:
             try:

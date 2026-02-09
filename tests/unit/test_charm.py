@@ -1580,65 +1580,6 @@ def test_create_pgdata(harness):
     ])
 
 
-def test_fix_health_check_script(harness):
-    """Test that the health check script path is correctly patched."""
-    container = MagicMock()
-
-    # Test when script doesn't exist - should skip gracefully
-    container.exists.return_value = False
-    harness.charm._fix_health_check_script(container)
-    container.exists.assert_called_once_with("/scripts/self-signed-checker.py")
-    container.pull.assert_not_called()
-
-    # Test when script exists with incorrect path - should patch it
-    container.reset_mock()
-    container.exists.return_value = True
-    mock_file = MagicMock()
-    mock_file.read.return_value = (
-        '#!/usr/bin/python3\npath = "/var/lib/postgresql/data/peer_ca.pem"\n'
-    )
-    container.pull.return_value = mock_file
-
-    harness.charm._fix_health_check_script(container)
-
-    container.exists.assert_called_once_with("/scripts/self-signed-checker.py")
-    container.pull.assert_called_once_with("/scripts/self-signed-checker.py")
-    # Verify the content was patched correctly
-    call_args = container.push.call_args
-    assert call_args[0][0] == "/scripts/self-signed-checker.py"
-    assert "/var/lib/pg/data/peer_ca.pem" in call_args[0][1]
-    assert "/var/lib/postgresql/data/peer_ca.pem" not in call_args[0][1]
-    assert call_args[1]["permissions"] == 0o755
-
-    # Test when script already has correct path - should skip patching
-    container.reset_mock()
-    container.exists.return_value = True
-    mock_file_correct = MagicMock()
-    mock_file_correct.read.return_value = (
-        '#!/usr/bin/python3\npath = "/var/lib/pg/data/peer_ca.pem"\n'
-    )
-    container.pull.return_value = mock_file_correct
-
-    harness.charm._fix_health_check_script(container)
-
-    container.exists.assert_called_once_with("/scripts/self-signed-checker.py")
-    container.pull.assert_called_once_with("/scripts/self-signed-checker.py")
-    container.push.assert_not_called()  # Should not push if already correct
-
-    # Test when script has no matching path - should skip patching
-    container.reset_mock()
-    container.exists.return_value = True
-    mock_file_other = MagicMock()
-    mock_file_other.read.return_value = '#!/usr/bin/python3\npath = "/some/other/path"\n'
-    container.pull.return_value = mock_file_other
-
-    harness.charm._fix_health_check_script(container)
-
-    container.exists.assert_called_once_with("/scripts/self-signed-checker.py")
-    container.pull.assert_called_once_with("/scripts/self-signed-checker.py")
-    container.push.assert_not_called()  # Should not push if nothing to patch
-
-
 def test_get_plugins(harness):
     with patch("charm.PostgresqlOperatorCharm._on_config_changed"):
         # Test when the charm has no plugins enabled.
