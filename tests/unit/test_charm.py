@@ -1669,7 +1669,7 @@ def test_update_config(harness):
         _handle_postgresql_restart_need.assert_not_called()
         _restart_metrics_service.assert_not_called()
         _restart_ldap_sync_service.assert_not_called()
-        assert "tls" not in harness.get_relation_data(rel_id, harness.charm.unit.name)
+        assert harness.get_relation_data(rel_id, harness.charm.unit.name)["tls"] == "enabled"
 
 
 def test_handle_postgresql_restart_need(harness):

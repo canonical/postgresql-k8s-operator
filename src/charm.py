@@ -2310,6 +2310,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if not self._patroni.member_started:
             # Potentially expired cert reloading and deferring
             self._patroni.reload_patroni_configuration()
+            self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
             logger.debug("Early exit update_config: Patroni not started yet")
             return False
 
