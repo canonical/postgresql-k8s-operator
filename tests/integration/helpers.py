@@ -35,6 +35,7 @@ from tenacity import (
 from constants import DATABASE_DEFAULT_NAME
 
 from .architecture import architecture
+from .juju_ import juju_major_version
 
 CHARM_BASE = "ubuntu@22.04"
 CHARM_SERIES = "jammy"
@@ -853,7 +854,7 @@ async def backup_operations(
 ) -> None:
     """Basic set of operations for backup testing in different cloud providers."""
     # Deploy S3 Integrator and TLS Certificates Operator.
-    if ops_test.model.juju_version.has_secrets:
+    if juju_major_version >= 3:
         revision = 288 if architecture == "amd64" else 289
         await ops_test.model.deploy(
             s3_integrator_app_name,

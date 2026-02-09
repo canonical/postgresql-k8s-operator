@@ -60,7 +60,7 @@ async def pitr_backup_operations(
     database_app_name = f"{DATABASE_APP_NAME}-{cloud}"
 
     logger.info("deploying the next charms: s3-integrator, self-signed-certificates, postgresql")
-    if ops_test.model.juju_version.has_secrets:
+    if juju_major_version >= 3:
         revision = 288 if architecture == "amd64" else 289
         await ops_test.model.deploy(
             s3_integrator_app_name,
