@@ -507,9 +507,10 @@ class Patroni:
         )
         logger.debug(
             "API bulk_update_parameters_controller_by_patroni: %s (%s)",
-            r.raise_for_status(),
+            r,
             r.elapsed.total_seconds(),
         )
+        r.raise_for_status()
 
     def promote_standby_cluster(self) -> None:
         """Promote a standby cluster to be a regular cluster."""
