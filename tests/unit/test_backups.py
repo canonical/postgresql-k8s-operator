@@ -744,7 +744,7 @@ def test_initialise_stanza(harness):
             # Only the leader will display the blocked status.
             assert isinstance(harness.charm.unit.status, MaintenanceStatus)
             _s3_initialization_set_failure.assert_called_once_with(
-                FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE
+                f"{FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE}: fake error"
             )
 
         # Test when the archiving is working correctly (pgBackRest check command succeeds)
@@ -809,7 +809,7 @@ def test_check_stanza(harness):
         _reload_patroni_configuration.assert_not_called()
         _set_active_status.assert_not_called()
         _s3_initialization_set_failure.assert_called_once_with(
-            FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE
+            f"{FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE}: fake error"
         )
 
         _execute_command.reset_mock()

@@ -34,6 +34,7 @@ from constants import (
     BACKUP_TYPE_OVERRIDES,
     BACKUP_USER,
     PGBACKREST_LOGROTATE_FILE,
+    PGBACKREST_LOGS_PATH,
     WORKLOAD_OS_GROUP,
     WORKLOAD_OS_USER,
 )
@@ -53,6 +54,11 @@ S3_BLOCK_MESSAGES = [
     FAILED_TO_ACCESS_CREATE_BUCKET_ERROR_MESSAGE,
     FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE,
 ]
+
+
+def is_s3_block_message(message: str) -> bool:
+    """Check if a status message is an S3 block message (with possible error hint suffix)."""
+    return any(message.startswith(block_msg) for block_msg in S3_BLOCK_MESSAGES)
 
 
 class PostgreSQLBackups(Object):
@@ -193,8 +199,21 @@ class PostgreSQLBackups(Object):
 
         for stanza in json.loads(output):
             if (stanza_name := stanza.get("name")) and stanza_name == "[invalid]":
-                logger.error("Invalid stanza name from s3")
-                return False, FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE
+                repo_message = next(
+                    (
+                        repo["status"]["message"]
+                        for repo in stanza.get("repo", [])
+                        if repo.get("status", {}).get("message")
+                    ),
+                    "",
+                )[:120]
+                logger.error("Invalid stanza name from s3: %s", repo_message)
+                error_message = (
+                    f"{FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE}: {repo_message}"
+                    if repo_message
+                    else FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE
+                )
+                return False, error_message
             if stanza_name != self.stanza_name:
                 logger.debug(
                     f"can_use_s3_repository: incompatible stanza name s3={stanza_name or ''}, local={self.stanza_name}"
@@ -546,6 +565,45 @@ class PostgreSQLBackups(Object):
             backup_type,
         )
 
+    @staticmethod
+    def _extract_error_message(
+        stdout: str | None, stderr: str | None, *, for_status: bool = False
+    ) -> str | None:
+        """Extract key error message from pgBackRest output.
+
+        Args:
+            stdout: Standard output from pgBackRest command.
+            stderr: Standard error from pgBackRest command.
+            for_status: If True, return None instead of a generic fallback message.
+
+        Returns:
+            Extracted error message, prioritizing ERROR/WARN lines from output.
+        """
+        combined_output = f"{stdout or ''}\n{stderr or ''}".strip()
+        if not combined_output:
+            if for_status:
+                return None
+            return f"Unknown error occurred. Please check the logs at {PGBACKREST_LOGS_PATH}"
+
+        error_lines = []
+        for line in combined_output.splitlines():
+            if "ERROR:" in line or "WARN:" in line:
+                cleaned = re.sub(r"^.*?(ERROR:|WARN:)", r"\1", line).strip()
+                error_lines.append(cleaned)
+
+        if error_lines:
+            result = "; ".join(error_lines)
+        elif stderr and stderr.strip():
+            result = stderr.strip().splitlines()[-1]
+        elif stdout and stdout.strip():
+            result = stdout.strip().splitlines()[-1]
+        elif for_status:
+            return None
+        else:
+            return f"Unknown error occurred. Please check the logs at {PGBACKREST_LOGS_PATH}"
+
+        return result[:120]
+
     def _initialise_stanza(self, event: HookEvent) -> bool:
         """Initialize the stanza.
 
@@ -555,7 +613,7 @@ class PostgreSQLBackups(Object):
         """
         # Enable stanza initialisation if the backup settings were fixed after being invalid
         # or pointing to a repository where there are backups from another cluster.
-        if self.charm.is_blocked and self.charm.unit.status.message not in S3_BLOCK_MESSAGES:
+        if self.charm.is_blocked and not is_s3_block_message(self.charm.unit.status.message):
             logger.warning("couldn't initialize stanza due to a blocked status, deferring event")
             event.defer()
             return False
@@ -575,9 +633,15 @@ class PostgreSQLBackups(Object):
                         f"--stanza={self.stanza_name}",
                         "stanza-create",
                     ])
-        except ExecError:
-            logger.exception("Failed to initialise stanza:")
-            self._s3_initialization_set_failure(FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE)
+        except ExecError as e:
+            logger.error("Failed to initialise stanza: stdout=%s, stderr=%s", e.stdout, e.stderr)
+            error_hint = self._extract_error_message(e.stdout, e.stderr, for_status=True)
+            block_message = (
+                f"{FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE}: {error_hint}"
+                if error_hint
+                else FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE
+            )
+            self._s3_initialization_set_failure(block_message)
             return False
 
         self.start_stop_pgbackrest_service()
@@ -615,6 +679,16 @@ class PostgreSQLBackups(Object):
                 with attempt:
                     self._execute_command(["pgbackrest", f"--stanza={self.stanza_name}", "check"])
             self.charm._set_active_status()
+        except ExecError as e:
+            logger.error("Failed to check stanza: stdout=%s, stderr=%s", e.stdout, e.stderr)
+            error_hint = self._extract_error_message(e.stdout, e.stderr, for_status=True)
+            block_message = (
+                f"{FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE}: {error_hint}"
+                if error_hint
+                else FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE
+            )
+            self._s3_initialization_set_failure(block_message)
+            return False
         except Exception:
             logger.exception("Failed to check stanza:")
             self._s3_initialization_set_failure(FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE)
@@ -916,7 +990,7 @@ Stderr:
             "s3-initialization-done": "",
             "s3-initialization-block-message": "",
         })
-        if self.charm.is_blocked and self.charm.unit.status.message in S3_BLOCK_MESSAGES:
+        if self.charm.is_blocked and is_s3_block_message(self.charm.unit.status.message):
             self.charm._set_active_status()
 
     def _on_list_backups_action(self, event) -> None:

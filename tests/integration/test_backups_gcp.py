@@ -264,5 +264,8 @@ async def test_block_on_missing_region(
     logger.info("waiting for the database charm to become blocked")
     unit = ops_test.model.units.get(f"{database_app_name}/0")
     await ops_test.model.block_until(
-        lambda: unit.workload_status_message == FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE
+        lambda: (
+            unit.workload_status_message
+            and unit.workload_status_message.startswith(FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE)
+        )
     )
