@@ -22,12 +22,14 @@ You can see which existing charms are compatible with PostgreSQL in the [Integra
 ### Modern `postgresql_client` interface
 
 To integrate, run
-```text
+
+```shell
 juju integrate postgresql-k8s:database <charm>
 ```
 
 To remove the integration, run
-```text
+
+```shell
 juju remove-relation postgresql-k8s <charm>
 ```
 
@@ -38,12 +40,14 @@ Note that this interface is **deprecated**. See [](/explanation/legacy-charm).
 ```
 
 Using the `mattermost-k8s` charm as an example, an integration with the legacy interface could be created as follows:
- ```text
+
+ ```shell
 juju integrate postgresql-k8s:db mattermost-k8s:db
 ```
 
 Extended permissions can be requested using the `db-admin` endpoint:
-```text
+
+```shell
 juju integrate postgresql-k8s:db-admin mattermost-k8s:db
 ```
 
@@ -52,17 +56,20 @@ juju integrate postgresql-k8s:db-admin mattermost-k8s:db
 To integrate with an application outside of Juju, you must use the [`data-integrator` charm](https://charmhub.io/data-integrator) to create the required credentials and endpoints.
 
 Deploy `data-integrator`:
-```text
+
+```shell
 juju deploy data-integrator --config database-name=<name>
 ```
 
 Integrate with PostgreSQL K8s:
-```text
+
+```shell
 juju integrate data-integrator postgresql-k8s
 ```
 
 Use the `get-credentials` action to retrieve credentials from `data-integrator`:
-```text
+
+```shell
 juju run data-integrator/leader get-credentials
 ```
 
@@ -70,7 +77,7 @@ juju run data-integrator/leader get-credentials
 
 To rotate the passwords of users created for integrated applications, the integration should be removed and created again. This process will generate a new user and password for the application.
 
-```text
+```shell
 juju remove-relation <charm> postgresql-k8s
 juju integrate <charm> postgresql-k8s
 ```
@@ -79,3 +86,44 @@ In the case of connecting with a non-charmed application, `<charm>` would be `da
 
 
 See also: [](/how-to/manage-passwords)
+
+## Request a custom username
+
+Charms can request a custom username to be used in their relation with PostgreSQL 16.
+
+The simplest way to test it is to use `requested-entities-secret` field via the [`data-integrator` charm](https://charmhub.io/data-integrator).
+
+````{dropdown} Example
+
+```shell
+$ juju deploy postgresql-k8s --channel 16/edge --trust
+
+$ juju add-secret myusername mylogin=mypassword
+secret:d5l3do605d8c4b1gn9a0
+
+$ juju deploy data-integrator --channel latest/edge --config database-name=mydbname --config requested-entities-secret=d5l3do605d8c4b1gn9a0
+Deployed "data-integrator" from charm-hub charm "data-integrator", revision 307 in channel latest/edge on ubuntu@24.04/stable
+
+$ juju grant-secret d5l3do605d8c4b1gn9a0 data-integrator
+
+$ juju relate postgresql-k8s data-integrator
+
+$ juju run data-integrator/leader get-credentials
+...
+postgresql-k8s:
+  database: mydbname
+  username: mylogin
+  password: mypassword
+  uris: postgresql://mylogin:mypassword@10.218.34.199:5432/mydbname
+  version: "16.11"
+  ...
+
+$ psql postgresql://mylogin:mypassword@10.218.34.199:5432/mydbname -c "SELECT SESSION_USER, CURRENT_USER"
+ session_user |       current_user        
+--------------+---------------------------
+ mylogin      | charmed_mydbname_owner
+(1 row)
+```
+````
+
+For more technical details, see the [description of the `postgresql_client` interface](https://github.com/canonical/charm-relation-interfaces/tree/main/interfaces/postgresql_client/v0)

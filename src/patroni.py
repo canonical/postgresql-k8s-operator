@@ -192,7 +192,7 @@ class Patroni:
             auth=self._patroni_async_auth, timeout=API_REQUEST_TIMEOUT, verify=ssl_ctx
         ) as client:
             try:
-                return (await client.get(url)).json()
+                return (await client.get(url)).raise_for_status().json()
             except (HTTPError, ValueError):
                 return None
 
@@ -521,7 +521,7 @@ class Patroni:
         """
         if not base_parameters:
             base_parameters = {}
-        requests.patch(
+        r = requests.patch(
             f"{self._patroni_url}/config",
             verify=self._verify,
             json={
@@ -535,6 +535,12 @@ class Patroni:
             auth=self._patroni_auth,
             timeout=API_REQUEST_TIMEOUT,
         )
+        logger.debug(
+            "API bulk_update_parameters_controller_by_patroni: %s (%s)",
+            r,
+            r.elapsed.total_seconds(),
+        )
+        r.raise_for_status()
 
     def ensure_slots_controller_by_patroni(self, slots: dict[str, str]) -> bool:
         """Synchronises slots controlled by Patroni with the provided state by removing unneeded slots and creating new ones.

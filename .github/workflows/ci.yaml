@@ -28,7 +28,7 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v41.1.1
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v41.1.2
 
   unit-test:
     name: Unit test charm
@@ -48,9 +48,23 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
+  alert-test:
+    name: Test Prometheus Alert Rules
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+      - name: Install prometheus snap
+        run: sudo snap install prometheus
+      - name: Check validity of prometheus alert rules
+        run: promtool check rules src/prometheus_alert_rules/*
+      - name: Run unit tests for prometheus alert rules
+        run: promtool test rules tests/alerts/*.yaml
+
   build:
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v41.1.1
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v41.1.2
 
   integration-test:
     name: Integration test charm
