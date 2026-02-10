@@ -36,7 +36,7 @@ async def backup_deploy(
     # Deploy S3 Integrator and TLS Certificates Operator.
     use_tls = all([tls_certificates_app_name, tls_channel])
     if juju_major_version >= 3:
-        revision = 298 if architecture == "amd64" else 299
+        revision = 306 if architecture == "amd64" else 307
         await ops_test.model.deploy(
             s3_integrator_app_name,
             revision=revision,
