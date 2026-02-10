@@ -44,7 +44,6 @@ async def backup_deploy(
             series="noble",
             base="ubuntu@24.04",
         )
-
         # Configure and set access and secret keys.
         logger.info(f"configuring S3 integrator for {cloud}")
         rc, stdout, stderr = await ops_test.juju(
