@@ -1143,12 +1143,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Clear stale storage directories when a replica joins an initialized cluster.
         # This is needed because PersistentVolumes may retain data from previous pods,
         # and pg_basebackup requires empty --waldir and --tablespace directories.
-        # Only clear once per unit lifecycle, tracked by unit peer data flag.
-        if (
-            not self.unit.is_leader()
-            and self.is_cluster_initialised
-            and self.unit_peer_data.get("storage-dirs-cleared") != "True"
-        ):
+        # Clear on every call until pgdata is populated (PG_VERSION exists), since
+        # pg_basebackup can fail and leave stale files that prevent retries.
+        pgdata_populated = container.exists(f"{self._actual_pgdata_path}/PG_VERSION")
+        if not self.unit.is_leader() and self.is_cluster_initialised and not pgdata_populated:
             for path in [waldir_path, temp_tablespace_path]:
                 if container.exists(path):
                     try:
@@ -1159,7 +1157,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     except ExecError as e:
                         if "No such file or directory" not in str(e.stderr):
                             logger.warning(f"Failed to clear {path}: {e}")
-            self.unit_peer_data["storage-dirs-cleared"] = "True"
 
         # Create the pgdata directory on the storage mount (e.g., /var/lib/pg/data/16/main)
         if not container.exists(self._actual_pgdata_path):
@@ -1193,20 +1190,31 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Patroni and other tools will use the symlink path (self.pgdata_path)
         # Note: This symlink is on ephemeral storage and may not persist across container restarts.
         # It gets recreated on each pebble-ready event.
-        if not container.exists(self.pgdata_path):
-            container.make_dir(
-                "/var/lib/postgresql/16",
-                user=WORKLOAD_OS_USER,
-                group=WORKLOAD_OS_GROUP,
-                make_parents=True,
-            )
-            container.exec(["ln", "-s", self._actual_pgdata_path, self.pgdata_path]).wait()
-            container.exec([
-                "chown",
-                "-h",
-                f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
-                self.pgdata_path,
-            ]).wait()
+        # The OCI image ships /var/lib/postgresql/16/main as a real directory, so we must
+        # remove it first if it exists as a non-symlink (e.g., on replicas).
+        container.make_dir(
+            "/var/lib/postgresql/16",
+            user=WORKLOAD_OS_USER,
+            group=WORKLOAD_OS_GROUP,
+            make_parents=True,
+        )
+        container.exec([
+            "bash",
+            "-c",
+            f"[ -L {self.pgdata_path} ] || rm -rf {self.pgdata_path}",
+        ]).wait()
+        container.exec([
+            "ln",
+            "-sfn",
+            self._actual_pgdata_path,
+            self.pgdata_path,
+        ]).wait()
+        container.exec([
+            "chown",
+            "-h",
+            f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
+            self.pgdata_path,
+        ]).wait()
         # Also, fix the permissions from the parent directory.
         container.exec([
             "chown",
