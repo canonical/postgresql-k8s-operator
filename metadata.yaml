@@ -63,8 +63,10 @@ provides:
     interface: postgresql_client
   metrics-endpoint:
     interface: prometheus_scrape
+    optional: true
   grafana-dashboard:
     interface: grafana_dashboard
+    optional: true
 
 requires:
   replication:
