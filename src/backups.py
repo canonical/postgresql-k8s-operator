@@ -31,10 +31,13 @@ from ops.pebble import ChangeError, ExecError, ServiceStatus
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from constants import (
+    ARCHIVE_PATH,
     BACKUP_TYPE_OVERRIDES,
     BACKUP_USER,
+    LOGS_STORAGE_PATH,
     PGBACKREST_LOGROTATE_FILE,
     POSTGRESQL_DATA_PATH,
+    TEMP_STORAGE_PATH,
     WORKLOAD_OS_GROUP,
     WORKLOAD_OS_USER,
 )
@@ -277,13 +280,13 @@ class PostgreSQLBackups(Object):
         # so that when new replicas join after restore, pg_basebackup can use the --waldir
         # option (which requires an empty directory).
         for path in [
-            "/var/lib/pg/archive",
+            ARCHIVE_PATH,
             self.charm._actual_pgdata_path,
-            "/var/lib/pg/logs",
-            "/var/lib/pg/temp",
+            LOGS_STORAGE_PATH,
+            TEMP_STORAGE_PATH,
         ]:
             try:
-                self.container.exec(f"find {path} -mindepth 1 -delete".split()).wait_output()
+                self.container.exec(["find", path, "-mindepth", "1", "-delete"]).wait_output()
             except ExecError as e:
                 # If previous PITR restore was unsuccessful, there may be no such directory.
                 if "No such file or directory" not in str(e.stderr):
@@ -1245,7 +1248,9 @@ Stderr:
                 "/home/postgres/rotate_logs.py",
                 f.read(),
             )
-        self.container.start(self.charm.rotate_logs_service)
+        services = self.container.pebble.get_services(names=[self.charm.rotate_logs_service])
+        if services:
+            self.container.start(self.charm.rotate_logs_service)
 
         return True
 

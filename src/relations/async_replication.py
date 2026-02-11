@@ -41,8 +41,11 @@ from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
 from constants import (
     APP_SCOPE,
+    ARCHIVE_PATH,
+    LOGS_STORAGE_PATH,
     PEER,
     POSTGRESQL_DATA_PATH,
+    TEMP_STORAGE_PATH,
     WORKLOAD_OS_GROUP,
     WORKLOAD_OS_USER,
 )
@@ -744,13 +747,13 @@ class PostgreSQLAsyncReplication(Object):
         # Note: Use _actual_pgdata_path instead of POSTGRESQL_DATA_PATH because
         # POSTGRESQL_DATA_PATH is a symlink, and find doesn't follow symlinks by default.
         for path in [
-            "/var/lib/pg/archive",
+            ARCHIVE_PATH,
             self.charm._actual_pgdata_path,
-            "/var/lib/pg/logs",
-            "/var/lib/pg/temp",
+            LOGS_STORAGE_PATH,
+            TEMP_STORAGE_PATH,
         ]:
             logger.info(f"Removing contents from {path}")
-            self.container.exec(f"find {path} -mindepth 1 -delete".split()).wait_output()
+            self.container.exec(["find", path, "-mindepth", "1", "-delete"]).wait_output()
         self.charm._create_pgdata(self.container)
 
     def update_async_replication_data(self) -> None:

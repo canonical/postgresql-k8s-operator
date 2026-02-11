@@ -33,6 +33,7 @@ from tenacity import (
 
 from constants import (
     API_REQUEST_TIMEOUT,
+    LOGS_STORAGE_PATH,
     PATRONI_CLUSTER_STATUS_ENDPOINT,
     POSTGRESQL_LOGS_PATH,
     POSTGRESQL_LOGS_PATTERN,
@@ -702,6 +703,7 @@ class Patroni:
             is_no_sync_member=is_no_sync_member,
             namespace=self._namespace,
             storage_path=self._storage_path,
+            logs_storage_path=LOGS_STORAGE_PATH,
             pgdata_path=self._pgdata_path,
             superuser_password=self._superuser_password,
             replication_password=self._replication_password,

@@ -3,5 +3,5 @@
 set -Eeuo pipefail
 find /var/lib/pg/archive -mindepth 1 -delete
 find /var/lib/pg/data/16/main -mindepth 1 -delete
-find /var/lib/pg/logs/16/main/pg_wal -mindepth 1 -delete
-find /var/lib/pg/temp/16/main/pgsql_tmp -mindepth 1 -delete
+find /var/lib/pg/logs -mindepth 1 -delete
+find /var/lib/pg/temp -mindepth 1 -delete

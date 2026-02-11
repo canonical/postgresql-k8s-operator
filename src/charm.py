@@ -135,6 +135,7 @@ from constants import (
     SECRET_KEY_OVERRIDES,
     SPI_MODULE,
     SYSTEM_USERS,
+    TEMP_STORAGE_PATH,
     TLS_CA_BUNDLE_FILE,
     TLS_CA_FILE,
     TLS_CERT_FILE,
@@ -1168,7 +1169,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             for path in [waldir_path, temp_tablespace_path]:
                 if container.exists(path):
                     try:
-                        container.exec(f"find {path} -mindepth 1 -delete".split()).wait_output()
+                        container.exec(["find", path, "-mindepth", "1", "-delete"]).wait_output()
                         logger.info(
                             f"Cleared stale content from {path} for replica initialization"
                         )
@@ -1454,7 +1455,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 extra_user_roles=["pg_monitor"],
             )
 
-        self.postgresql.set_up_database(temp_location="/var/lib/pg/temp/16/main/pgsql_tmp")
+        self.postgresql.set_up_database(temp_location=f"{TEMP_STORAGE_PATH}/16/main/pgsql_tmp")
 
         access_groups = self.postgresql.list_access_groups()
         if access_groups != set(ACCESS_GROUPS):
@@ -2701,7 +2702,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.warning("Early exit update_config: Unable to patch Patroni API")
             return False
 
-        self._patroni.ensure_slots_controller_by_patroni(replication_slots)
+        if not self._patroni.ensure_slots_controller_by_patroni(replication_slots):
+            logger.warning(
+                "Failed to sync replication slots with Patroni — will retry on next config update"
+            )
 
         self._handle_postgresql_restart_need(
             self.unit_peer_data.get("config_hash") != self.generate_config_hash

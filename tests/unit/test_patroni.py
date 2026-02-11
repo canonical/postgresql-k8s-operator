@@ -12,7 +12,7 @@ from ops.testing import Harness
 from tenacity import RetryError, stop_after_delay, wait_fixed
 
 from charm import PostgresqlOperatorCharm
-from constants import API_REQUEST_TIMEOUT, REWIND_USER
+from constants import API_REQUEST_TIMEOUT, LOGS_STORAGE_PATH, REWIND_USER
 from patroni import Patroni, SwitchoverFailedError, SwitchoverNotSyncError
 from tests.helpers import PGDATA_PATH, STORAGE_PATH
 
@@ -225,6 +225,7 @@ def test_render_patroni_yml_file(harness, patroni):
             endpoints=patroni._endpoints,
             namespace=patroni._namespace,
             storage_path=patroni._storage_path,
+            logs_storage_path=LOGS_STORAGE_PATH,
             pgdata_path=patroni._pgdata_path,
             superuser_password=patroni._superuser_password,
             replication_password=patroni._replication_password,
@@ -263,6 +264,7 @@ def test_render_patroni_yml_file(harness, patroni):
             endpoints=patroni._endpoints,
             namespace=patroni._namespace,
             storage_path=patroni._storage_path,
+            logs_storage_path=LOGS_STORAGE_PATH,
             pgdata_path=patroni._pgdata_path,
             superuser_password=patroni._superuser_password,
             replication_password=patroni._replication_password,

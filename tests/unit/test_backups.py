@@ -1741,6 +1741,8 @@ def test_pre_restore_checks(harness):
     "tls_ca_chain_filename", ["", "/var/lib/pg/data/pgbackrest-tls-ca-chain.crt"]
 )
 def test_render_pgbackrest_conf_file(harness, tls_ca_chain_filename):
+    mock_pebble = MagicMock()
+    mock_pebble.get_services.return_value = [MagicMock()]
     with (
         patch("ops.model.Container.start") as _start,
         patch("ops.model.Container.push") as _push,
@@ -1750,6 +1752,7 @@ def test_render_pgbackrest_conf_file(harness, tls_ca_chain_filename):
         ) as _tls_ca_chain_filename,
         patch("charm.PostgreSQLBackups._retrieve_s3_parameters") as _retrieve_s3_parameters,
         patch("charm.PostgresqlOperatorCharm.get_available_resources", return_value=(4, 1024)),
+        patch("ops.model.Container.pebble", new_callable=PropertyMock(return_value=mock_pebble)),
     ):
         # Set up a mock for the `open` method, set returned data to postgresql.conf template.
         with open("templates/pgbackrest.conf.j2") as f:
