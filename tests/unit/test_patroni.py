@@ -531,3 +531,76 @@ def test_update_synchronous_node_count(harness, patroni):
         with pytest.raises(RetryError):
             patroni.update_synchronous_node_count()
             assert False
+
+
+def test_ensure_slots_controller_by_patroni(harness, patroni):
+    with (
+        patch("patroni.stop_after_delay", return_value=stop_after_delay(0)),
+        patch("patroni.wait_fixed", return_value=wait_fixed(0)),
+        patch("requests.get") as _get,
+        patch("requests.patch") as _patch,
+    ):
+        # Success path: no existing slots, add one new slot.
+        get_response = MagicMock()
+        get_response.status_code = 200
+        get_response.json.return_value = {"slots": {}}
+        get_response.elapsed.total_seconds.return_value = 0.1
+        _get.return_value = get_response
+
+        patch_response = MagicMock()
+        patch_response.status_code = 200
+        _patch.return_value = patch_response
+
+        result = patroni.ensure_slots_controller_by_patroni({"slot1": "db1"})
+        assert result is True
+        _patch.assert_called_once_with(
+            f"{patroni._patroni_url}/config",
+            verify=patroni._verify,
+            json={"slots": {"slot1": {"database": "db1", "plugin": "pgoutput", "type": "logical"}}},
+            auth=patroni._patroni_auth,
+            timeout=API_REQUEST_TIMEOUT,
+        )
+
+        # Existing slots are merged: old_slot should be set to None (removed).
+        _get.reset_mock()
+        _patch.reset_mock()
+        get_response.json.return_value = {
+            "slots": {"old_slot": {"database": "old_db", "plugin": "pgoutput", "type": "logical"}}
+        }
+        _get.return_value = get_response
+        _patch.return_value = patch_response
+
+        result = patroni.ensure_slots_controller_by_patroni({"slot1": "db1"})
+        assert result is True
+        expected_slots = {
+            "old_slot": None,
+            "slot1": {"database": "db1", "plugin": "pgoutput", "type": "logical"},
+        }
+        _patch.assert_called_once_with(
+            f"{patroni._patroni_url}/config",
+            verify=patroni._verify,
+            json={"slots": expected_slots},
+            auth=patroni._patroni_auth,
+            timeout=API_REQUEST_TIMEOUT,
+        )
+
+        # RetryError path: 502 status code.
+        _get.reset_mock()
+        _patch.reset_mock()
+        get_response_502 = MagicMock()
+        get_response_502.status_code = 502
+        get_response_502.elapsed.total_seconds.return_value = 0.1
+        _get.return_value = get_response_502
+
+        result = patroni.ensure_slots_controller_by_patroni({"slot1": "db1"})
+        assert result is False
+        _patch.assert_not_called()
+
+        # RetryError path: connection error.
+        _get.reset_mock()
+        _patch.reset_mock()
+        _get.side_effect = requests.exceptions.ConnectionError("connection refused")
+
+        result = patroni.ensure_slots_controller_by_patroni({"slot1": "db1"})
+        assert result is False
+        _patch.assert_not_called()
