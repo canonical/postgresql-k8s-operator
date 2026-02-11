@@ -1537,14 +1537,14 @@ def test_create_pgdata(harness):
             make_parents=True,
         ),
         call(
-            "/var/lib/pg/logs/16/main",
+            "/var/lib/pg/logs/16/main/pg_wal",
             permissions=448,
             user="postgres",
             group="postgres",
             make_parents=True,
         ),
         call(
-            "/var/lib/pg/temp/16/main",
+            "/var/lib/pg/temp/16/main/pgsql_tmp",
             permissions=448,
             user="postgres",
             group="postgres",

@@ -1136,12 +1136,27 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 raise e
         return True
 
+    def _replica_can_start(self) -> bool:
+        """Check whether this replica is ready to start Patroni.
+
+        Returns False if the cluster hasn't been bootstrapped yet, or if the
+        leader hasn't added this unit's endpoint to the members list (which
+        controls the pg_hba replication entries on the primary).
+        """
+        if not self.is_cluster_initialised:
+            logger.debug("Replica not ready: cluster not initialized")
+            return False
+        if self._endpoint not in self._endpoints:
+            logger.debug("Replica not ready: endpoint not yet in members list")
+            return False
+        return True
+
     def _create_pgdata(self, container: Container):
         """Create the PostgreSQL data directories."""
         logs_path = str(self.meta.storages["logs"].location)
-        waldir_path = f"{logs_path}/16/main"
+        waldir_path = f"{logs_path}/16/main/pg_wal"
         temp_path = str(self.meta.storages["temp"].location)
-        temp_tablespace_path = f"{temp_path}/16/main"
+        temp_tablespace_path = f"{temp_path}/16/main/pgsql_tmp"
 
         # Clear stale storage directories when a replica joins an initialized cluster.
         # This is needed because PersistentVolumes may retain data from previous pods,
@@ -1170,7 +1185,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 group=WORKLOAD_OS_GROUP,
                 make_parents=True,
             )
-        # Create the WAL directory (e.g., /var/lib/pg/logs/16/main)
+        # Create the WAL directory (e.g., /var/lib/pg/logs/16/main/pg_wal)
         if not container.exists(waldir_path):
             container.make_dir(
                 waldir_path,
@@ -1179,7 +1194,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 group=WORKLOAD_OS_GROUP,
                 make_parents=True,
             )
-        # Create the temp tablespace directory (e.g., /var/lib/pg/temp/16/main)
+        # Create the temp tablespace directory (e.g., /var/lib/pg/temp/16/main/pgsql_tmp)
         if not container.exists(temp_tablespace_path):
             container.make_dir(
                 temp_tablespace_path,
@@ -1273,15 +1288,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # where the volume is mounted with more restrictive permissions.
         self._create_pgdata(container)
 
-        # Defer the initialization of the workload in the replicas
-        # if the cluster hasn't been bootstrap on the primary yet.
-        # Otherwise, each unit will create a different cluster and
-        # any update in the members list on the units won't have effect
-        # on fixing that.
-        if not self.unit.is_leader() and not self.is_cluster_initialised:
-            logger.debug(
-                "Deferring on_postgresql_pebble_ready: Not leader and cluster not initialized"
-            )
+        # Defer the initialization of the workload in the replicas if the cluster
+        # hasn't been bootstrapped on the primary yet, or the leader hasn't added
+        # this unit's endpoint to the cluster members list yet.  The endpoint
+        # controls pg_hba replication entries on the primary — without it,
+        # pg_basebackup is rejected, triggering retries and remove_data_directory()
+        # calls that can race with _create_pgdata() and break the pg_wal symlink
+        # created by --waldir.
+        if not self.unit.is_leader() and not self._replica_can_start():
             event.defer()
             return
 
@@ -1440,7 +1454,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 extra_user_roles=["pg_monitor"],
             )
 
-        self.postgresql.set_up_database(temp_location="/var/lib/pg/temp/16/main")
+        self.postgresql.set_up_database(temp_location="/var/lib/pg/temp/16/main/pgsql_tmp")
 
         access_groups = self.postgresql.list_access_groups()
         if access_groups != set(ACCESS_GROUPS):

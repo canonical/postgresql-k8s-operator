@@ -76,3 +76,17 @@ def test_pgdata_symlinks(juju: jubilant.Juju, unit_id: int):
     assert pgdata_owner.strip() == "postgres:postgres", (
         f"Expected pgdata symlink to be owned by postgres:postgres, got {pgdata_owner.strip()}"
     )
+
+
+@pytest.mark.parametrize("unit_id", UNIT_IDS)
+def test_pg_wal_symlink(juju: jubilant.Juju, unit_id: int):
+    """Test that pg_wal symlink inside pgdata points to WAL directory on logs storage."""
+    unit_name = f"{APP_NAME}/{unit_id}"
+
+    # Check pg_wal symlink exists and points to correct location
+    pg_wal_symlink_path = f"{PGDATA_SYMLINK_PATH}/pg_wal"
+    expected_target = "/var/lib/pg/logs/16/main/pg_wal"
+    result = juju.ssh(unit_name, "readlink", "-f", pg_wal_symlink_path, container="postgresql")
+    assert result.strip() == expected_target, (
+        f"Expected pg_wal symlink to point to {expected_target}, got {result.strip()}"
+    )
