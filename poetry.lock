@@ -1655,25 +1655,24 @@ files = [
 
 [[package]]
 name = "ops"
-version = "2.23.1"
+version = "3.5.1"
 description = "The Python library behind great charms"
 optional = false
-python-versions = ">=3.8"
+python-versions = ">=3.10"
 groups = ["main", "charm-libs"]
 files = [
-    {file = "ops-2.23.1-py3-none-any.whl", hash = "sha256:fdf58163beafd25180c12a4c7efaf1e76e5f8710508a97840c07055bb78b0c77"},
-    {file = "ops-2.23.1.tar.gz", hash = "sha256:aecacd67ef7ca913f63f397e0330bfa93d70529a3ef71ed2d99e2bc232564ae3"},
+    {file = "ops-3.5.1-py3-none-any.whl", hash = "sha256:890dd7bf33d1381afeed0e484d02c7bb13ad3945dcc7b723e8d73e4bba0ff94c"},
+    {file = "ops-3.5.1.tar.gz", hash = "sha256:376ef51d35d45b376795196851550e209565e922e58af8ac491cf23bc8b46498"},
 ]
 
 [package.dependencies]
-importlib-metadata = "*"
 opentelemetry-api = ">=1.0,<2.0"
 PyYAML = "==6.*"
 websocket-client = "==1.*"
 
 [package.extras]
-testing = ["ops-scenario (==7.23.1)"]
-tracing = ["ops-tracing (==2.23.1)"]
+testing = ["ops-scenario (==8.5.1)"]
+tracing = ["ops-tracing (==3.5.1)"]
 
 [[package]]
 name = "packaging"
@@ -3109,4 +3108,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "46d9d0ed3fa5c9350551f32bec6e5a96e870bf743950bee0b02564689b1bfdf1"
+content-hash = "55a8ef51719e096bea7c61ae0f6398ee11e3e8d13c5673ad199afb2b6e248d9e"
