@@ -15,7 +15,7 @@ from io import BytesIO
 
 from boto3.session import Session
 from botocore.client import Config
-from botocore.exceptions import ClientError
+from botocore.exceptions import ClientError, EndpointConnectionError
 from botocore.loaders import create_loader
 from botocore.regions import EndpointResolver
 from charms.data_platform_libs.v0.object_storage import (
@@ -738,7 +738,7 @@ class PostgreSQLBackups(Object):
 
         try:
             self._create_bucket_if_not_exists()
-        except (ClientError, ValueError):
+        except (ClientError, ValueError, EndpointConnectionError):
             self._s3_initialization_set_failure(FAILED_TO_ACCESS_CREATE_BUCKET_ERROR_MESSAGE)
             return False
 
