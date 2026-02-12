@@ -1778,13 +1778,18 @@ class StorageRequirerEventHandlers(EventHandlers):
         Returns:
             dict[str, str]: Connection info (may be empty if relation/app does not exist).
         """
+        info = {}
         if not relation:
             relation = next(iter(self.relation_data.relations), None)
         if relation and relation.app:
-            info = self.relation_data.fetch_relation_data([relation.id])[relation.id]
+            for key, value in self.relation_data.fetch_relation_data([relation.id])[relation.id].items():
+                try:
+                    info[key] = json.loads(value)
+                except (json.decoder.JSONDecodeError, TypeError):
+                    info[key] = value
             info.pop(SCHEMA_VERSION_FIELD, None)
-            return info
-        return {}
+        return info
+                
 
     def _on_relation_changed_event(self, event: RelationChangedEvent) -> None:
         """Validate fields on relation-changed and emit requirer events."""
