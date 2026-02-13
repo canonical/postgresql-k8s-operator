@@ -6,15 +6,18 @@
   reviewers: [
     'team:data-postgresql',
   ],
-  "baseBranches": ["main", "/^*\\/edge$/"],
+  baseBranchPatterns: [
+    'main',
+    '/^*\\/edge$/',
+  ],
   packageRules: [
     {
       matchPackageNames: [
         'pydantic',
       ],
+      "matchBaseBranches": ["main"],
       allowedVersions: '<2.0.0',
     },
   ],
-  customManagers: [
-  ],
+  customManagers: [],
 }
