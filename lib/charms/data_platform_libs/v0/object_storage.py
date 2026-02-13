@@ -19,41 +19,31 @@ Example:
 
 from charms.data_platform_libs.v0.object_storage import (
     StorageConnectionInfoRequestedEvent,
-    GcsStorageProviderEventHandlers,
+    S3Provider,
 )
 
-class ExampleStorageProviderEvents(BaseEventHandler, ManagerStatusProtocol, WithLogging):
+class ExampleProviderCharm(CharmBase):
 
-    def __init__(self, charm: "GCStorageIntegratorCharm", context: Context):
-        self.name = "gc-storage-provider"
-        super().__init__(charm, self.name)
-        self.charm = charm
-        self.state = context
+    def __init__(self, charm: CharmBase):
+        super().__init__(charm, "example-provider")
 
-        self.gcs_provider = GcsStorageProviderEventHandlers(self.charm)
-
+        self.s3_provider = S3Provider(self, S3_RELATION_NAME)
         self.framework.observe(
-            self.gcs_provider.on.storage_connection_info_requested,
+            self.s3_provider.on.storage_connection_info_requested,
             self._on_storage_connection_info_requested,
-        )
-        self.framework.observe(
-            self.charm.on[GCS_RELATION_NAME].relation_broken, self._on_gcs_relation_broken
         )
 
     def _on_storage_connection_info_requested(
         self, event: StorageConnectionInfoRequestedEvent
     ) -> None:
-        self.logger.info("On storage-connection-info-requested")
         if not self.charm.unit.is_leader():
             return
+        bucket_name = self.charm.config.get("bucket")
+        access_key, secret_key = prepare_keys(self.charm.config.get("credentials"))
 
-        self.publish_to_relation(event.relation)
-
-    def _on_gcs_relation_broken(self, event: StorageConnectionInfoRequestedEvent) -> None:
-        self.logger.info("On gcs relation broken")
-        if not self.charm.unit.is_leader():
-            return
-        self.publish_to_relation(event.relation)
+        self.s3_provider.update_relation_data(
+            {"bucket": bucket_name, "access-key": access_key, "secret-key": secret_key}
+        )
 
 
 if __name__ == "__main__":
@@ -62,69 +52,41 @@ if __name__ == "__main__":
 
 ### Requirer charm
 
-A requirer consumes the published fields and (optionally) provides overrides.
+A requirer consumes the published fields.
 
-Provider charm.
-
-An example of requirer charm is the following:
+An example of requirer charm using S3 storage is the following:
 
 Example:
 ```python
 
-from charms.data_platform_libs.v0.object_storage import (
-    GcsStorageRequires,
-)
-
-REL_NAME = "gcs-credentials"
-BACKEND_NAME = "gcs"
+from s3_lib import S3Requirer, StorageConnectionInfoChangedEvent, StorageConnectionInfoGoneEvent
 
 class ExampleRequirerCharm(CharmBase):
 
     def __init__(
         self,
         charm: CharmBase,
-        relation_name: str = REL_NAME,
     ):
-        super().__init__(charm, "gcs-requirer")
+        super().__init__(charm, "s3-requirer")
         self.charm = charm
-        self.relation_name = relation_name
-        self.storage = GcsStorageRequires(
-            charm, relation_name, overrides=self.overrides_from_config()
+        self.s3_client = S3Requirer(
+            charm, relation_name, bucket="test-bucket"
         )
         self.framework.observe(
-            self.storage.on.storage_connection_info_changed, self._on_conn_info_changed
+            self.s3_client.on.storage_connection_info_changed, self._on_conn_info_changed
         )
         self.framework.observe(
-            self.storage.on.storage_connection_info_gone, self._on_conn_info_gone
+            self.s3_client.on.storage_connection_info_gone, self._on_conn_info_gone
         )
 
-        self.framework.observe(self.charm.on.config_changed, self._on_config_changed)
+    def _on_conn_info_changed(self, event: StorageConnectionInfoChangedEvent):
+        # access data from the provider
+        connection_info = self.s3_client.get_storage_connection_info()
+        process_connection_info(connection_info)
 
-        self.framework.observe(self.charm.on.start, lambda e: self.refresh_status())
-        self.framework.observe(self.charm.on.update_status, lambda e: self.refresh_status())
-
-    def _on_config_changed(self, _):
-        self.storage.set_overrides(self.overrides_from_config(), push=True)
-        self.refresh_status()
-
-    def _on_conn_info_changed(self, event):
-        payload = self._load_payload(event.relation)
-        bucket = payload.get("bucket")
-        secret_content = payload.get("secret-key")
-
-        missing = [k for k, v in (("bucket", bucket), ("secret-key", secret_content)) if not v]
-        if missing:
-            self.charm.unit.status = BlockedStatus("missing data: " + ", ".join(missing))
-            return
-
-        self.charm.unit.status = ActiveStatus(f"gcs ok: bucket={bucket}")
-
-    def _on_conn_info_gone(self, event):
-        if self._any_relation_ready(exclude_relation_id=event.relation.id):
-            self.charm.unit.status = ActiveStatus("gcs credentials available")
-        else:
-            self.charm.unit.status = WaitingStatus("gcs credentials not available")
-
+    def _on_credential_gone(self, event: StorageConnectionInfoGoneEvent):
+        # credentials are removed
+        process_connection_info(None)
 
  if __name__ == "__main__":
     main(ExampleRequirerCharm)
@@ -143,6 +105,7 @@ from enum import Enum
 from typing import (
     Callable,
     Dict,
+    Generic,
     ItemsView,
     Iterable,
     KeysView,
@@ -152,8 +115,12 @@ from typing import (
     Set,
     Tuple,
     TypeAlias,
+    TypeVar,
+    TypedDict,
     Union,
     ValuesView,
+    cast,
+    overload,
 )  # using py38-style typing
 
 from ops import (
@@ -191,8 +158,6 @@ LIBAPI = 0
 LIBPATCH = 1
 
 
-REQ_SECRET_FIELDS = "requested-secrets"
-
 Diff = namedtuple("Diff", "added changed deleted")
 Diff.__doc__ = """
 A tuple for storing the diff between two data mappings.
@@ -219,10 +184,6 @@ SCHEMA_VERSION_FIELD = "version"
 SCHEMA_VERSION = 1
 
 StorageBackend: TypeAlias = Literal["gcs", "s3", "azure"]
-
-DEFAULT_REL_GCS = "gcs-credentials"
-DEFAULT_REL_S3 = "s3-credentials"
-DEFAULT_REL_AZURE = "azure-credentials"
 
 
 logger = logging.getLogger(__name__)
@@ -273,6 +234,7 @@ def get_encoded_dict(
     if isinstance(data, dict):
         return data
     logger.error("Unexpected datatype for %s instead of dict.", str(data))
+    return None
 
 
 def get_encoded_list(
@@ -283,6 +245,7 @@ def get_encoded_list(
     if isinstance(data, list):
         return data
     logger.error("Unexpected datatype for %s instead of list.", str(data))
+    return None
 
 
 def set_encoded_field(
@@ -432,8 +395,8 @@ class CachedSecret:
         secret_uri: Optional[str] = None,
         legacy_labels: List[str] = [],
     ):
-        self._secret_meta = None
-        self._secret_content = {}
+        self._secret_meta: Optional[Secret] = None
+        self._secret_content: Dict[str, str] = {}
         self._secret_uri = secret_uri
         self.label = label
         self._model = model
@@ -446,7 +409,7 @@ class CachedSecret:
         """Getting cached secret meta-information."""
         if not self._secret_meta:
             if not (self._secret_uri or self.label):
-                return
+                return None
 
             try:
                 self._secret_meta = self._model.get_secret(label=self.label)
@@ -482,7 +445,7 @@ class CachedSecret:
             secret.grant(relation)
         self._secret_uri = secret.id
         self._secret_meta = secret
-        return self._secret_meta
+        return secret
 
     def get_content(self) -> Dict[str, str]:
         """Getting cached secret content."""
@@ -520,6 +483,7 @@ class CachedSecret:
         """Wrapper function to apply the corresponding call on the Secret object within CachedSecret if any."""
         if self.meta:
             return self.meta.get_info()
+        return None
 
     def remove(self) -> None:
         """Remove secret."""
@@ -590,7 +554,7 @@ class DataDict(UserDict):
         self.relation_id = relation_id
 
     @property
-    def data(self) -> Dict[str, str]:
+    def data(self) -> Dict[str, str]:  # type: ignore[override]
         """Return the full content of the Abstract Relation Data dictionary."""
         result = self.relation_data.fetch_my_relation_data([self.relation_id])
         try:
@@ -627,7 +591,7 @@ class DataDict(UserDict):
             raise KeyError
         return result
 
-    def __eq__(self, d: dict) -> bool:
+    def __eq__(self, d: object) -> bool:
         """Equality."""
         return self.data == d
 
@@ -647,7 +611,7 @@ class DataDict(UserDict):
         """Does the key exist in the Abstract Relation Data dictionary?"""
         return key in self.data
 
-    def update(self, items: Dict[str, str]):
+    def update(self, items: Dict[str, str]) -> None:  # type: ignore[override]
         """Update the Abstract Relation Data dictionary."""
         self.relation_data.update_relation_data(self.relation_id, items)
 
@@ -663,7 +627,7 @@ class DataDict(UserDict):
         """Items of the Abstract Relation Data dictionary."""
         return self.data.items()
 
-    def pop(self, item: str) -> str:
+    def pop(self, item: str, *args: str) -> str:  # type: ignore[override]
         """Pop an item of the Abstract Relation Data dictionary."""
         result = self.relation_data.fetch_my_relation_field(self.relation_id, item)
         if not result:
@@ -671,7 +635,7 @@ class DataDict(UserDict):
         self.relation_data.delete_relation_data(self.relation_id, [item])
         return result
 
-    def __contains__(self, item: str) -> bool:
+    def __contains__(self, item: object) -> bool:
         """Does the Abstract Relation Data dictionary contain item?"""
         return item in self.data.values()
 
@@ -679,13 +643,14 @@ class DataDict(UserDict):
         """Iterate through the Abstract Relation Data dictionary."""
         return iter(self.data)
 
-    def get(self, key: str, default: Optional[str] = None) -> Optional[str]:
+    def get(self, key: str, default: Optional[str] = None) -> Optional[str]:  # type: ignore[override]
         """Safely get an item of the Abstract Relation Data dictionary."""
         try:
             if result := self[key]:
                 return result
         except KeyError:
             return default
+        return default
 
 
 class Data(ABC):
@@ -694,19 +659,9 @@ class Data(ABC):
     SCOPE = Scope.APP
 
     # Local map to associate mappings with secrets potentially as a group
-    SECRET_LABEL_MAP = {
-        "username": SECRET_GROUPS.USER,
-        "password": SECRET_GROUPS.USER,
-        "uris": SECRET_GROUPS.USER,
-        "read-only-uris": SECRET_GROUPS.USER,
-        "tls": SECRET_GROUPS.TLS,
-        "tls-ca": SECRET_GROUPS.TLS,
-        "mtls-cert": SECRET_GROUPS.MTLS,
-        "entity-name": SECRET_GROUPS.ENTITY,
-        "entity-password": SECRET_GROUPS.ENTITY,
-    }
+    SECRET_LABEL_MAP: Dict[str, SecretGroup] = {}
 
-    SECRET_FIELDS = []
+    SECRET_FIELDS: List[str] = []
 
     def __init__(
         self,
@@ -717,11 +672,11 @@ class Data(ABC):
         self.local_app = self._model.app
         self.local_unit = self._model.unit
         self.relation_name = relation_name
-        self._jujuversion = None
+        self._jujuversion: Optional[JujuVersion] = None
         self.component = self.local_app if self.SCOPE == Scope.APP else self.local_unit
         self.secrets = SecretCache(self._model, self.component)
-        self.data_component = None
-        self._local_secret_fields = []
+        self.data_component: Optional[Union[Unit, Application]] = None
+        self._local_secret_fields: List[str] = []
         self._remote_secret_fields = list(self.SECRET_FIELDS)
 
     @property
@@ -730,14 +685,14 @@ class Data(ABC):
         return self._model.relations[self.relation_name]
 
     @property
-    def secrets_enabled(self):
+    def secrets_enabled(self) -> bool:
         """Is this Juju version allowing for Secrets usage?"""
         if not self._jujuversion:
             self._jujuversion = JujuVersion.from_environ()
         return self._jujuversion.has_secrets
 
     @property
-    def secret_label_map(self):
+    def secret_label_map(self) -> Dict[str, SecretGroup]:
         """Exposing secret-label map via a property -- could be overridden in descendants!"""
         return self.SECRET_LABEL_MAP
 
@@ -746,12 +701,14 @@ class Data(ABC):
         """Local access to secrets field, in case they are being used."""
         if self.secrets_enabled:
             return self._local_secret_fields
+        return None
 
     @property
     def remote_secret_fields(self) -> Optional[List[str]]:
         """Local access to secrets field, in case they are being used."""
         if self.secrets_enabled:
             return self._remote_secret_fields
+        return None
 
     @property
     def my_secret_groups(self) -> Optional[List[SecretGroup]]:
@@ -762,6 +719,7 @@ class Data(ABC):
                 for field in self._local_secret_fields
                 if field in self.SECRET_LABEL_MAP
             ]
+        return None
 
     # Mandatory overrides for internal/helper methods
 
@@ -779,10 +737,12 @@ class Data(ABC):
 
         relation = self._model.get_relation(relation_name, relation_id)
         if not relation:
-            return
+            return None
 
         if secret_uri := self.get_secret_uri(relation, group_mapping):
             return self.secrets.get(label, secret_uri)
+
+        return None
 
     # Mandatory overrides for requirer and peer, implemented for Provider
     # Requirer uses local component and switched keys
@@ -1009,15 +969,15 @@ class Data(ABC):
         contents = secret_label.split(".")
 
         if not (contents and len(contents) >= 3):
-            return
+            return None
 
         contents.pop()  # ".secret" at the end
         contents.pop()  # Group mapping
-        relation_id = contents.pop()
+        relation_id_str = contents.pop()
         try:
-            relation_id = int(relation_id)
+            relation_id = int(relation_id_str)
         except ValueError:
-            return
+            return None
 
         # In case '.' character appeared in relation name
         relation_name = ".".join(contents)
@@ -1025,7 +985,7 @@ class Data(ABC):
         try:
             return self.get_relation(relation_name, relation_id)
         except ModelError:
-            return
+            return None
 
     def _group_secret_fields(self, secret_fields: List[str]) -> Dict[SecretGroup, List[str]]:
         """Helper function to arrange secret mappings under their group.
@@ -1033,7 +993,7 @@ class Data(ABC):
         NOTE: All unrecognized items end up in the 'extra' secret bucket.
         Make sure only secret fields are passed!
         """
-        secret_fieldnames_grouped = {}
+        secret_fieldnames_grouped: Dict[SecretGroup, List[str]] = {}
         for key in secret_fields:
             if group := self.secret_label_map.get(key):
                 secret_fieldnames_grouped.setdefault(group, []).append(key)
@@ -1081,6 +1041,7 @@ class Data(ABC):
         secret = self._get_relation_secret(relation_id, group_mapping, relation_name)
         if secret:
             return secret.get_content()
+        return None
 
     # Core operations on Relation Fields manipulations (regardless whether the field is in the databag or in a secret)
     # Internal functions to be called directly from transparent public interface functions (+closely related helpers)
@@ -1158,8 +1119,8 @@ class Data(ABC):
         used to read the Provider side's databag (eigher by the Requires side, or by
         Provider side itself).
         """
-        result = {}
-        normal_fields = []
+        result: Dict[str, str] = {}
+        normal_fields: List[str] = []
 
         if not fields:
             if component not in relation.data:
@@ -1170,9 +1131,10 @@ class Data(ABC):
             fields = normal_fields + req_secret_fields if req_secret_fields else normal_fields
 
         if fields:
-            result, normal_fields = self._process_secret_fields(
+            result, normal_fields_set = self._process_secret_fields(
                 relation, req_secret_fields, fields, self._get_group_secret_contents
             )
+            normal_fields = list(normal_fields_set)
 
         # Processing "normal" fields. May include leftover from what we couldn't retrieve as a secret.
         # (Typically when Juju3 Requires meets Juju2 Provider)
@@ -1326,6 +1288,7 @@ class Data(ABC):
         """
         if relation_data := self.fetch_my_relation_data([relation_id], [field], relation_name):
             return relation_data.get(relation_id, {}).get(field)
+        return None
 
     @leader_only
     def update_relation_data(self, relation_id: int, data: dict) -> None:
@@ -1420,42 +1383,93 @@ class _Contract:
             databag before the relation is considered "ready". This may include
             non-secret fields such as bucket-name, container and secret fields
             such as secret-key, access-key.
-        optional_info: Keys that must be optionally present in the provider's application
-            databag. These are the non-secret fields such as storage-account, path, storage-class, etc.
         secret_fields: Keys in the provider's databag that represent Juju secret
             references (URIs, labels, or IDs). The library will automatically
             register and track these secrets for the requirer.
     """
 
     required_info: list[str]
-    optional_info: list[str]
     secret_fields: list[str]
 
 
 _CONTRACTS: dict[StorageBackend, _Contract] = {
     "gcs": _Contract(
         required_info=["bucket", "secret-key"],
-        optional_info=["storage-class", "path"],
         secret_fields=["secret-key"],
     ),
     "s3": _Contract(
         required_info=["access-key", "secret-key"],
-        optional_info=[
-            "endpoint",
-            "region",
-            "path",
-            "s3-uri-style",
-            "storage-class",
-            "s3-api-version",
-        ],
         secret_fields=["access-key", "secret-key"],
     ),
     "azure": _Contract(
         required_info=["container", "storage-account", "secret-key", "connection-protocol"],
-        optional_info=["path", "connection-protocol", "endpoint", "resource-group"],
         secret_fields=["secret-key"],
     ),
 }
+
+# Marker classes for backend types
+class S3:
+    """Marker class for S3 backend type."""
+
+
+class GCS:
+    """Marker class for GCS backend type."""
+
+
+class AzureStorage:
+    """Marker class for Azure backend type."""
+
+
+
+
+# TypedDict definitions for storage connection info
+
+S3Info = TypedDict(
+    "S3Info",
+    {
+        "access-key": str,
+        "secret-key": str,
+        "region": str,
+        "storage-class": str,
+        "attributes": str,
+        "bucket": str,
+        "endpoint": str,
+        "path": str,
+        "s3-api-version": str,
+        "s3-uri-style": str,
+        "tls-ca-chain": str,
+        "delete-older-than-days": str,
+    },
+    total=False,
+)
+
+GcsInfo = TypedDict(
+    "GcsInfo",
+    {
+        "bucket": str,
+        "secret-key": str,
+        "storage-class": str,
+        "path": str,
+    },
+    total=False,
+)
+
+AzureStorageInfo = TypedDict(
+    "AzureStorageInfo",
+    {
+        "container": str,
+        "storage-account": str,
+        "secret-key": str,
+        "connection-protocol": str, 
+        "path": str,
+        "endpoint": str,
+        "resource-group": str,
+    },
+    total=False,
+)
+
+# TypeVar for generic backend types
+BackendType = TypeVar("BackendType", bound=Union[S3, GCS, AzureStorage])
 
 
 class ObjectStorageEvent(RelationEvent):
@@ -1523,7 +1537,7 @@ class StorageRequirerEvents(CharmEvents):
     storage_connection_info_gone = EventSource(StorageConnectionInfoGoneEvent)
 
 
-class StorageRequirerData(Data):
+class StorageRequirerData(Data, Generic[BackendType]):
     """Helper for managing requirer-side storage connection data and secrets.
 
     This class encapsulates reading/writing relation data, tracking which
@@ -1583,6 +1597,45 @@ class StorageRequirerData(Data):
         if provided_secrets:
             self._local_secret_fields = provided_secrets
 
+    @overload
+    def get_storage_connection_info(
+        self: StorageRequirerData[S3], relation: Relation | None = None
+    ) -> S3Info: ...
+
+    @overload
+    def get_storage_connection_info(
+        self: StorageRequirerData[GCS], relation: Relation | None = None
+    ) -> GcsInfo: ...
+
+    @overload
+    def get_storage_connection_info(
+        self: StorageRequirerData[AzureStorage], relation: Relation | None = None
+    ) -> AzureStorageInfo: ...
+
+    def get_storage_connection_info(self, relation: Relation | None = None): # type: ignore
+        """Assemble the storage connection info for a relation.
+
+        Combines the provider-published relation data and any readable secrets
+        to produce a flat dictionary usable by the requirer.
+
+        Args:
+            relation: Relation object to read from.
+
+        Returns:
+            dict[str, str]: Connection info (may be empty if relation/app does not exist).
+        """
+        info = {}
+        if not relation:
+            relation = next(iter(self.relations), None)
+        if relation and relation.app:
+            for key, value in self.fetch_relation_data([relation.id])[relation.id].items():
+                try:
+                    info[key] = json.loads(value)
+                except (json.decoder.JSONDecodeError, TypeError):
+                    info[key] = value
+            info.pop(SCHEMA_VERSION_FIELD, None)
+        return info # type: ignore
+                
 
 class StorageRequirerEventHandlers(EventHandlers):
     """Bind the requirer lifecycle to the relation's events.
@@ -1605,7 +1658,7 @@ class StorageRequirerEventHandlers(EventHandlers):
     on = StorageRequirerEvents()  # pyright: ignore[reportAssignmentType]
 
     def __init__(
-        self, charm: CharmBase, relation_data: StorageRequirerData, overrides: dict[str, str]
+        self, charm: CharmBase, relation_data: StorageRequirerData, overrides: dict[str, str] | None = None
     ):
         """Initialize the requirer event handlers.
 
@@ -1631,15 +1684,18 @@ class StorageRequirerEventHandlers(EventHandlers):
         return list(self.charm.model.relations.get(self.relation_name, []))
 
     def _all_required_info_present(self, relation: Relation) -> bool:
-        info = self.get_storage_connection_info(relation)
-        return all(k in info for k in self.contract.required_info)
+        info = cast(StorageRequirerData, self.relation_data).get_storage_connection_info(relation)
+        if self.contract:
+            return all(k in info for k in self.contract.required_info)
+        return False
 
     def _missing_fields(self, relation: Relation) -> list[str]:
-        info = self.get_storage_connection_info(relation)
+        info = cast(StorageRequirerData, self.relation_data).get_storage_connection_info(relation)
         missing = []
-        for k in self.contract.required_info:
-            if k not in info:
-                missing.append(k)
+        if self.contract:
+            for k in self.contract.required_info:
+                if k not in info:
+                    missing.append(k)
         return missing
 
     @staticmethod
@@ -1766,26 +1822,6 @@ class StorageRequirerEventHandlers(EventHandlers):
         payload[SCHEMA_VERSION_FIELD] = str(SCHEMA_VERSION)
         self.relation_data.update_relation_data(event.relation.id, payload)
 
-    def get_storage_connection_info(self, relation: Relation | None = None) -> dict[str, str]:
-        """Assemble the storage connection info for a relation.
-
-        Combines the provider-published relation data and any readable secrets
-        to produce a flat dictionary usable by the requirer.
-
-        Args:
-            relation: Relation object to read from.
-
-        Returns:
-            dict[str, str]: Connection info (may be empty if relation/app does not exist).
-        """
-        if not relation:
-            relation = next(iter(self.relation_data.relations), None)
-        if relation and relation.app:
-            info = self.relation_data.fetch_relation_data([relation.id])[relation.id]
-            info.pop(SCHEMA_VERSION_FIELD, None)
-            return info
-        return {}
-
     def _on_relation_changed_event(self, event: RelationChangedEvent) -> None:
         """Validate fields on relation-changed and emit requirer events."""
         logger.info("Storage relation (%s) changed", event.relation.name)
@@ -1826,10 +1862,11 @@ class StorageRequirerEventHandlers(EventHandlers):
             logger.info("Secret changed event ignored for Secret Owner")
             return
 
-        remote_unit = None
+        remote_unit: Optional[Unit] = None
         for unit in relation.units:
             if unit.app != self.charm.app:
                 remote_unit = unit
+                break
 
         if self._all_required_info_present(relation):
             getattr(self.on, "storage_connection_info_changed").emit(
@@ -1867,8 +1904,10 @@ class StorageProviderData(Data):
         self._remote_secret_fields = list(self.SECRET_FIELDS)
 
     def is_protocol_ready(self, relation: Relation) -> bool:
-        """Check whether the protocol has been initialized by the requirer and
-        now the provider is ready to start sharing the data.
+        """Check whether the protocol has been initialized by the requirer.
+
+        This means that the requirer has set up the necessary data, and now
+        the provider is ready to start sharing the data.
 
         Args:
             relation (Relation): The relation to check.
@@ -1876,9 +1915,7 @@ class StorageProviderData(Data):
         Returns:
             bool: True if the protocol has been initialized, False otherwise.
         """
-        return (
-            self.fetch_relation_field(relation.id, self.PROTOCOL_INITIATOR_FIELD) is not None
-        )
+        return self.fetch_relation_field(relation.id, self.PROTOCOL_INITIATOR_FIELD) is not None
 
     def _update_relation_data(self, relation: Relation, data: Dict[str, str]) -> None:
         """Set values for fields not caring whether it's a secret or not."""
@@ -1929,7 +1966,7 @@ class StorageProviderEventHandlers(EventHandlers):
         """
         super().__init__(charm, relation_data, unique_key)
 
-    def _on_relation_created_event(self, event: RelationJoinedEvent) -> None:
+    def _on_relation_created_event(self, event: RelationCreatedEvent) -> None:
         """Event emitted when the S3 relation is created."""
         logger.debug(f"S3 relation ({event.relation.name}) created on provider side...")
         event_data = {
@@ -1949,7 +1986,7 @@ class StorageProviderEventHandlers(EventHandlers):
         if provided_secrets is not None:
             self.relation_data._remote_secret_fields = provided_secrets
 
-        if not self.relation_data.is_protocol_ready(event.relation):
+        if not cast(StorageProviderData, self.relation_data).is_protocol_ready(event.relation):
             logger.info(
                 "Protocol not ready for relation %s, thus not emitting storage_connection_info_requested event.",
                 event.relation.name,
@@ -1958,7 +1995,6 @@ class StorageProviderEventHandlers(EventHandlers):
         self.on.storage_connection_info_requested.emit(
             relation=event.relation, app=event.app, unit=event.unit
         )
-
 
     def set_storage_connection_info(self, relation_id: str, data: Dict[str, Optional[str]]) -> None:
         """Set the storage connection info for a relation.
@@ -1973,7 +2009,6 @@ class StorageProviderEventHandlers(EventHandlers):
             relation_id=relation_id, data=data
         )
 
-
 ############################################################################
 # Storage Cloud specific provider and requirer classes
 ############################################################################
@@ -1982,7 +2017,8 @@ class StorageProviderEventHandlers(EventHandlers):
 # S3 related classes
 #
 
-class S3Requirer(StorageRequirerData, StorageRequirerEventHandlers):
+
+class S3Requirer(StorageRequirerData[S3], StorageRequirerEventHandlers):
     """Requirer helper preconfigured for the S3 backend.
 
     Args:
@@ -2005,9 +2041,7 @@ class S3Requirer(StorageRequirerData, StorageRequirerEventHandlers):
 
     def is_provider_schema_v0(self, relation: Relation) -> bool:
         """Check if the S3 provider is using schema v0."""
-        provider_data = self.relation_data.fetch_relation_data([relation.id])[
-            relation.id
-        ]
+        provider_data = self.relation_data.fetch_relation_data([relation.id])[relation.id]
         if len(provider_data) > 0 and SCHEMA_VERSION_FIELD not in provider_data:
             # This means that provider has written something on its part of relation data,
             # but that something is not the schema version -- this means provider will never write schema version
@@ -2020,11 +2054,10 @@ class S3Requirer(StorageRequirerData, StorageRequirerEventHandlers):
             return True
         return False
 
-
     def _on_relation_changed_event(self, event: RelationChangedEvent) -> None:
-        if self.is_provider_schema_v0(event.relation) and not self.relation_data.fetch_my_relation_field(
-            event.relation.id, "bucket"
-        ):
+        if self.is_provider_schema_v0(
+            event.relation
+        ) and self.charm.unit.is_leader() and not self.relation_data.fetch_my_relation_field(event.relation.id, "bucket"):
             # The following line exists here due to compatibility for v1 requirer to work with v0 provider
             # The v0 provider will still wait for `bucket` to appear in the databag, and if it does not exist,
             # the provider will simply not write any data to the databag.
@@ -2048,8 +2081,10 @@ class S3Provider(StorageProviderData, StorageProviderEventHandlers):
         StorageProviderEventHandlers.__init__(self, charm, self)
 
     def is_protocol_ready(self, relation: Relation) -> bool:
-        """Check whether the protocol has been initialized by the requirer and
-        now the provider is ready to start sharing the data.
+        """Check whether the protocol has been initialized by the requirer.
+
+        This means that the requirer has set up the necessary data, and now
+        the provider is ready to start sharing the data.
 
         Args:
             relation (Relation): The relation to check.
@@ -2057,25 +2092,28 @@ class S3Provider(StorageProviderData, StorageProviderEventHandlers):
         Returns:
             bool: True if the protocol has been initialized, False otherwise.
         """
-        # IMPORTANT! 
-        # Use super().fetch_relation_data instead of self.fetch_relation_data 
-        # to avoid the override in this class which discards the 'bucket' field 
-        data = super().fetch_relation_data([relation.id], [self.PROTOCOL_INITIATOR_FIELD, self.LEGACY_PROTOCOL_INITIATOR_FIELD], relation.name)
+        # IMPORTANT!
+        # Use super().fetch_relation_data instead of self.fetch_relation_data
+        # to avoid the override in this class which discards the 'bucket' field
+        data = super().fetch_relation_data(
+            [relation.id],
+            [self.PROTOCOL_INITIATOR_FIELD, self.LEGACY_PROTOCOL_INITIATOR_FIELD],
+            relation.name,
+        )
         return (
             data.get(relation.id, {}).get(self.PROTOCOL_INITIATOR_FIELD) is not None
-            or
-            data.get(relation.id, {}).get(self.LEGACY_PROTOCOL_INITIATOR_FIELD) is not None
+            or data.get(relation.id, {}).get(self.LEGACY_PROTOCOL_INITIATOR_FIELD) is not None
         )
 
-
-    def is_requirer_schema_v0(self, relation_id: int, relation_name: str) -> bool:
+    def is_requirer_schema_v0(self, relation_id: int, relation_name: str | None = None) -> bool:
         """Check if the S3 requirer is using schema v0."""
-        secret_fields = super().fetch_relation_data([relation_id], [REQ_SECRET_FIELDS], relation_name)
+        secret_fields = super().fetch_relation_data(
+            [relation_id], [REQ_SECRET_FIELDS], relation_name
+        )
         if not secret_fields.get(relation_id, {}).get(REQ_SECRET_FIELDS):
             return True
         return False
 
-    
     def fetch_relation_data(
         self,
         relation_ids: list[int] | None = None,
@@ -2105,7 +2143,7 @@ class S3Provider(StorageProviderData, StorageProviderEventHandlers):
 #
 
 
-class GcsStorageRequires(StorageRequirerData, StorageRequirerEventHandlers):
+class GcsStorageRequires(StorageRequirerData[GCS], StorageRequirerEventHandlers):
     """Requirer helper preconfigured for the GCS backend.
 
     Args:
@@ -2117,7 +2155,7 @@ class GcsStorageRequires(StorageRequirerData, StorageRequirerEventHandlers):
     def __init__(
         self,
         charm: CharmBase,
-        relation_name: str = DEFAULT_REL_GCS,
+        relation_name: str,
         overrides: dict[str, str] | None = None,
     ) -> None:
         StorageRequirerData.__init__(self, charm.model, relation_name, backend="gcs")
@@ -2164,7 +2202,7 @@ class GcsStorageProviderEventHandlers(StorageProviderEventHandlers):
     def __init__(
         self,
         charm: CharmBase,
-        relation_name: str = DEFAULT_REL_GCS,
+        relation_name: str,
         unique_key: str = "",
     ):
         super().__init__(
@@ -2178,7 +2216,7 @@ class GcsStorageProviderEventHandlers(StorageProviderEventHandlers):
 # Azure Storage related classes
 # 
 
-class AzureStorageRequirer(StorageRequirerData, StorageRequirerEventHandlers):
+class AzureStorageRequirer(StorageRequirerData[AzureStorage], StorageRequirerEventHandlers):
     """Requirer helper preconfigured for the Azure Storage backend.
 
     Args:
@@ -2264,7 +2302,7 @@ class AzureStorageProvider(StorageProviderData, StorageProviderEventHandlers):
         )
 
 
-    def is_requirer_schema_v0(self, relation_id: int, relation_name: str) -> bool:
+    def is_requirer_schema_v0(self, relation_id: int, relation_name: Optional[str]) -> bool:
         """Check if the Azure requirer is using older schema."""
         version_field = super().fetch_relation_data([relation_id], [SCHEMA_VERSION_FIELD], relation_name)
         if not version_field.get(relation_id, {}).get(SCHEMA_VERSION_FIELD):
@@ -2294,4 +2332,3 @@ class AzureStorageProvider(StorageProviderData, StorageProviderEventHandlers):
                 )
                 data[relation_id].pop("bucket", None)
         return data
-
