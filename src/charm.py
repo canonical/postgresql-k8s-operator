@@ -123,6 +123,7 @@ from constants import (
     MONITORING_USER,
     PATRONI_PASSWORD_KEY,
     PEER,
+    PGBACKREST_METRICS_PORT,
     PLUGIN_OVERRIDES,
     POSTGRES_LOG_FILES,
     REPLICATION_PASSWORD_KEY,
@@ -236,6 +237,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.pgbackrest_server_service = "pgbackrest server"
         self.ldap_sync_service = "ldap-sync"
         self.metrics_service = "metrics_server"
+        self.pgbackrest_metrics_service = "pgbackrest_metrics_service"
         self._unit = self.model.unit.name
         self._name = self.model.app.name
         self._namespace = self.model.name
@@ -456,6 +458,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Generate spec for Prometheus scraping."""
         return [
             {"static_configs": [{"targets": [f"*:{METRICS_PORT}"]}]},
+            {"static_configs": [{"targets": [f"*:{PGBACKREST_METRICS_PORT}"]}]},
             {
                 "static_configs": [{"targets": ["*:8008"]}],
                 "scheme": "https",
@@ -2045,6 +2048,18 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             },
         }
 
+    def _generate_pgbackrest_metrics_service(self) -> ServiceDict:
+        """Generate the pgbackrest metrics service definition."""
+        return {
+            "override": "replace",
+            "summary": "pgbackrest metrics exporter",
+            "command": "/usr/bin/pgbackrest_exporter",
+            "startup": "enabled",
+            "after": [self.postgresql_service],
+            "user": WORKLOAD_OS_USER,
+            "group": WORKLOAD_OS_GROUP,
+        }
+
     def _postgresql_layer(self) -> Layer:
         """Returns a Pebble configuration layer for PostgreSQL."""
         pod_name = self._unit_name_to_pod_name(self._unit)
@@ -2089,6 +2104,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     "startup": "disabled",
                 },
                 self.metrics_service: self._generate_metrics_service(),
+                self.pgbackrest_metrics_service: self._generate_pgbackrest_metrics_service(),
                 self.rotate_logs_service: {
                     "override": "replace",
                     "summary": "rotate logs",
@@ -2451,7 +2467,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         return result
 
-    def _api_update_config(self, available_cpu_cores: int) -> None:
+    def _api_update_config(self, available_cpu_cores: int) -> bool:
         # Use config value if set, calculate otherwise
         if self.config.experimental_max_connections:
             max_connections = self.config.experimental_max_connections
@@ -2483,7 +2499,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         }
         if primary_endpoint := self.async_replication.get_primary_cluster_endpoint():
             base_patch["standby_cluster"] = {"host": primary_endpoint}
-        self._patroni.bulk_update_parameters_controller_by_patroni(cfg_patch, base_patch)
+        try:
+            self._patroni.bulk_update_parameters_controller_by_patroni(cfg_patch, base_patch)
+        except RetryError:
+            return False
+        return True
 
     def _build_postgresql_parameters(
         self, available_cpu_cores: int, available_memory: int
@@ -2584,7 +2604,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("Early exit update_config: Patroni not started yet")
             return False
 
-        self._api_update_config(available_cpu_cores)
+        if not self._api_update_config(available_cpu_cores):
+            logger.warning("Early exit update_config: Unable to patch Patroni API")
+            return False
 
         self._patroni.ensure_slots_controller_by_patroni(replication_slots)
 
