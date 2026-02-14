@@ -1,0 +1,48 @@
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:22 Clearing continuous writes
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju run --model testing --format json postgresql-test-app/0 clear-continuous-writes --wait 120s
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:25 Starting continuous writes
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju run --model testing --format json postgresql-test-app/0 start-continuous-writes
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m root:test_upgrade.py:99 Run pre-refresh-check action
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju run --model testing --format json postgresql-k8s/0 pre-refresh-check
+[32mINFO    [0m root:test_upgrade.py:110 Inject dependency fault
+[32mINFO    [0m root:test_upgrade.py:113 Refresh the charm
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju refresh --model testing postgresql-k8s --path /root/snap/juju/common/tmp0tmrrn9a/_temp.charm --resource postgresql-image=ghcr.io/canonical/charmed-postgresql@sha256:fcb648db2c418403fbf5f58f04892c4677f113526097ca7314cbd9f527bb1baf
+[32mINFO    [0m root:test_upgrade.py:122 Wait for upgrade to fail last unit to fail
+[32mINFO    [0m root:test_upgrade.py:128 Ensure continuous writes on all active units
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju run --model testing --format json postgresql-k8s/0 get-primary --wait 300s
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju show-secret --model testing secret:d67t0t15a44s7bl84deg --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju show-secret --model testing secret:d67t0t15a44s7bl84deg --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju show-secret --model testing secret:d67t0t15a44s7bl84deg --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m root:test_upgrade.py:131 Re-refresh the charm
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju refresh --model testing postgresql-k8s --path /root/snap/juju/common/tmpcer1y4f3/_temp.charm --resource postgresql-image=ghcr.io/canonical/charmed-postgresql@sha256:fcb648db2c418403fbf5f58f04892c4677f113526097ca7314cbd9f527bb1baf
+[32mINFO    [0m root:test_upgrade.py:146 Run resume-refresh action
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju run --model testing --format json postgresql-k8s/0 resume-refresh --wait 300s
+[32mINFO    [0m root:test_upgrade.py:149 Wait for upgrade to complete
+[32mINFO    [0m root:test_upgrade.py:154 Ensure continuous writes after rollback procedure
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju run --model testing --format json postgresql-k8s/0 get-primary --wait 300s
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju show-secret --model testing secret:d67t0t15a44s7bl84deg --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju show-secret --model testing secret:d67t0t15a44s7bl84deg --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju show-secret --model testing secret:d67t0t15a44s7bl84deg --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju show-secret --model testing secret:d67t0t15a44s7bl84deg --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:36 Clearing continuous writes
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju run --model testing --format json postgresql-test-app/0 clear-continuous-writes --wait 120s

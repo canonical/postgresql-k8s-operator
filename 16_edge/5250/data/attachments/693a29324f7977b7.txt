@@ -1,0 +1,51 @@
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m integration.test_predefined_roles:test_predefined_roles.py:46 Deploying database charm
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju deploy --model testing /root/snap/juju/common/tmpi8fmdocm/_temp.charm --config profile=testing --resource postgresql-image=ghcr.io/canonical/charmed-postgresql@sha256:fcb648db2c418403fbf5f58f04892c4677f113526097ca7314cbd9f527bb1baf --trust
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m integration.test_predefined_roles:test_predefined_roles.py:75 Deploying data integrator charm without extra user roles
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju deploy --model testing data-integrator data-integrator --config database-name=requested-database --config extra-user-roles=
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m integration.test_predefined_roles:test_predefined_roles.py:87 Adding relation between charms
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju integrate --model testing data-integrator postgresql-k8s
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m integration.test_predefined_roles:test_predefined_roles.py:75 Deploying data integrator charm with extra user roles: charmed_stats
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju deploy --model testing data-integrator data-integrator-charmed-stats --config database-name=requested-database-charmed-stats --config extra-user-roles=charmed_stats
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m integration.test_predefined_roles:test_predefined_roles.py:87 Adding relation between charms
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju integrate --model testing data-integrator-charmed-stats postgresql-k8s
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m integration.test_predefined_roles:test_predefined_roles.py:75 Deploying data integrator charm with extra user roles: charmed_read
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju deploy --model testing data-integrator data-integrator-charmed-read --config database-name=requested-database-charmed-read --config extra-user-roles=charmed_read
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m integration.test_predefined_roles:test_predefined_roles.py:87 Adding relation between charms
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju integrate --model testing data-integrator-charmed-read postgresql-k8s
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m integration.test_predefined_roles:test_predefined_roles.py:75 Deploying data integrator charm with extra user roles: charmed_dml
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju deploy --model testing data-integrator data-integrator-charmed-dml --config database-name=requested-database-charmed-dml --config extra-user-roles=charmed_dml
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m integration.test_predefined_roles:test_predefined_roles.py:87 Adding relation between charms
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju integrate --model testing data-integrator-charmed-dml postgresql-k8s
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m integration.test_predefined_roles:test_predefined_roles.py:75 Deploying data integrator charm with extra user roles: charmed_admin
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju deploy --model testing data-integrator data-integrator-charmed-admin --config database-name=requested-database-charmed-admin --config extra-user-roles=charmed_admin
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m integration.test_predefined_roles:test_predefined_roles.py:87 Adding relation between charms
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju integrate --model testing data-integrator-charmed-admin postgresql-k8s
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m integration.test_predefined_roles:test_predefined_roles.py:75 Deploying data integrator charm with extra user roles: charmed_admin, CREATEDB
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju deploy --model testing data-integrator data-integrator-charmed-admin-createdb --config database-name=requested-database-charmed-admin-createdb --config extra-user-roles=charmed_admin,CREATEDB
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m integration.test_predefined_roles:test_predefined_roles.py:87 Adding relation between charms
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju integrate --model testing data-integrator-charmed-admin-createdb postgresql-k8s
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m integration.test_predefined_roles:test_predefined_roles.py:75 Deploying data integrator charm without extra user roles
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju deploy --model testing data-integrator data-integrator-charmed-backup --config database-name=requested-database-charmed-backup --config extra-user-roles=
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m integration.test_predefined_roles:test_predefined_roles.py:87 Adding relation between charms
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju integrate --model testing data-integrator-charmed-backup postgresql-k8s
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m integration.test_predefined_roles:test_predefined_roles.py:75 Deploying data integrator charm without extra user roles
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju deploy --model testing data-integrator data-integrator-charmed-dba --config database-name=requested-database-charmed-dba --config extra-user-roles=
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju status --model testing --format json
+[32mINFO    [0m integration.test_predefined_roles:test_predefined_roles.py:87 Adding relation between charms
+[32mINFO    [0m jubilant:_juju.py:394 cli: juju integrate --model testing data-integrator-charmed-dba postgresql-k8s

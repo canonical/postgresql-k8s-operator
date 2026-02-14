@@ -1,0 +1,131 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/focal/indico-299
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/redis-k8s-42
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/redis-k8s-42
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for database availability
+[32mINFO    [0m integration.new_relations.test_new_relations_2:test_new_relations_2.py:172 Verifying that the charm doesn't block when the extensions are enabled
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] active: Primary
+  database/1 [idle] active: 
+  database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary
+  database/1 [idle] active: 
+  database/2 [idle] active: 
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary
+  database/1 [idle] active: 
+  database/2 [idle] active: 
+  indico/0 [executing] waiting: Waiting for database availability
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] active: Primary
+  database/1 [idle] active: 
+  database/2 [idle] active: 
+  indico/0 [idle] waiting: Waiting for database availability
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary
+  database/1 [executing] active: 
+  database/2 [executing] active: 
+  indico/0 [executing] waiting: Waiting for pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  01:39:51Z
+
+App           Version  Status  Scale  Charm           Channel      Rev  Address         Exposed  Message
+database      16.11    active      3  postgresql-k8s                 0  10.152.183.94   no       
+indico        3.3.9    active      1  indico          latest/edge  299  10.152.183.165  no       
+redis-broker  7.2.5    active      1  redis-k8s       latest/edge   42  10.152.183.158  no       
+redis-cache   7.2.5    active      1  redis-k8s       latest/edge   42  10.152.183.25   no       
+
+Unit             Workload  Agent  Address      Ports  Message
+database/0*      active    idle   10.1.119.15         Primary
+database/1       active    idle   10.1.119.22         
+database/2       active    idle   10.1.119.21         
+indico/0*        active    idle   10.1.119.28         
+redis-broker/0*  active    idle   10.1.119.26         
+redis-cache/0*   active    idle   10.1.119.27         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-database-0: 01:32:13 ERROR unit.database/0.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-0/charm/src/charm.py", line 3080, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/lib/python3.12/site-packages/ops/__init__.py", line 360, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 507, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 491, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 423, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 920, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1028, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 946, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-database-0/charm/src/charm.py", line 1238, in _on_postgresql_pebble_ready
+    if self.unit.is_leader() and not self._initialize_cluster(event):
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 946, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-database-0/charm/src/charm.py", line 1325, in _initialize_cluster
+    self._setup_users()
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 946, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-database-0/charm/src/charm.py", line 1352, in _setup_users
+    self.postgresql.create_predefined_instance_roles()
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 946, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 554, in create_predefined_instance_roles
+    with self._connect_to_database(
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-database-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 946, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 306, in _connect_to_database
+    connection = psycopg2.connect(
+                 ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-database-0/charm/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "database-primary.testing.svc.cluster.local" (10.152.183.208), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-database-0: 01:32:14 ERROR juju.worker.uniter.operation hook "logs-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+unit-database-1: 01:34:16 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:34:16 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:34:24 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:34:25 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:34:34 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:34:36 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:34:46 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:34:47 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:34:55 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:35:03 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-redis-cache-0: 01:36:43 ERROR unit.redis-cache/0.juju-log redis-peers:5: Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-cache-0: 01:36:43 ERROR unit.redis-cache/0.juju-log redis-peers:5: Unit redis-cache/0 doesn't agree on tracked master
+unit-redis-cache-0: 01:36:43 ERROR unit.redis-cache/0.juju-log redis-peers:5: Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-redis-broker-0: 01:36:43 ERROR unit.redis-broker/0.juju-log redis-peers:4: Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-broker-0: 01:36:43 ERROR unit.redis-broker/0.juju-log redis-peers:4: Unit redis-broker/0 doesn't agree on tracked master
+unit-redis-broker-0: 01:36:43 ERROR unit.redis-broker/0.juju-log redis-peers:4: Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
