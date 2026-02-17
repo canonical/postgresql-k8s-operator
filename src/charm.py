@@ -56,8 +56,6 @@ from charms.postgresql_k8s.v0.postgresql import (
 from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
-from charms.tempo_coordinator_k8s.v0.charm_tracing import trace_charm
-from charms.tempo_coordinator_k8s.v0.tracing import TracingEndpointRequirer
 from lightkube import ApiError, Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
@@ -91,6 +89,7 @@ from ops.pebble import (
     ServiceInfo,
     ServiceStatus,
 )
+from ops_tracing import Tracing
 from requests import ConnectionError as RequestsConnectionError
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
@@ -121,7 +120,6 @@ from constants import (
     TLS_CA_FILE,
     TLS_CERT_FILE,
     TLS_KEY_FILE,
-    TRACING_PROTOCOL,
     TRACING_RELATION_NAME,
     UNIT_SCOPE,
     USER,
@@ -138,7 +136,7 @@ from relations.async_replication import (
 )
 from relations.db import EXTENSIONS_BLOCKING_MESSAGE, DbProvides
 from relations.postgresql_provider import PostgreSQLProvider
-from relations.tls_transfer import TLSTransfer
+from relations.tls_transfer import TLS_TRANSFER_RELATION, TLSTransfer
 from upgrade import PostgreSQLUpgrade, get_postgresql_k8s_dependencies_model
 from utils import any_cpu_to_cores, any_memory_to_bytes, new_password
 
@@ -165,25 +163,6 @@ class CannotConnectError(Exception):
     """Cannot run smoke check on connected Database."""
 
 
-@trace_charm(
-    tracing_endpoint="tracing_endpoint",
-    extra_types=(
-        DbProvides,
-        GrafanaDashboardProvider,
-        LogProxyConsumer,
-        MetricsEndpointProvider,
-        Patroni,
-        PostgreSQL,
-        PostgreSQLAsyncReplication,
-        PostgreSQLBackups,
-        PostgreSQLLDAP,
-        PostgreSQLProvider,
-        PostgreSQLTLS,
-        TLSTransfer,
-        PostgreSQLUpgrade,
-        RollingOpsManager,
-    ),
-)
 class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     """Charmed Operator for the PostgreSQL database."""
 
@@ -288,8 +267,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self.unit.set_ports(5432, 8008)
             except ModelError:
                 logger.exception("failed to open port")
-        self.tracing = TracingEndpointRequirer(
-            self, relation_name=TRACING_RELATION_NAME, protocols=[TRACING_PROTOCOL]
+        self.tracing = Tracing(
+            self,
+            tracing_relation_name=TRACING_RELATION_NAME,
+            ca_relation_name=TLS_TRANSFER_RELATION,
         )
 
     def _on_databases_change(self, _):
@@ -299,12 +280,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         timestamp = datetime.now()
         self._peers.data[self.unit].update({"pg_hba_needs_update_timestamp": str(timestamp)})
         logger.debug(f"authorisation rules changed at {timestamp}")
-
-    @property
-    def tracing_endpoint(self) -> str | None:
-        """Otlp http endpoint for charm instrumentation."""
-        if self.tracing.is_ready():
-            return self.tracing.get_endpoint(TRACING_PROTOCOL)
 
     def _generate_metrics_jobs(self, enable_tls: bool) -> dict:
         """Generate spec for Prometheus scraping."""
