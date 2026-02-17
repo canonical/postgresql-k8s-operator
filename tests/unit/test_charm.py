@@ -770,7 +770,7 @@ def test_postgresql_layer(harness):
                 POSTGRESQL_SERVICE: {
                     "override": "replace",
                     "summary": "entrypoint of the postgresql + patroni image",
-                    "command": "patroni /var/lib/postgresql/data/patroni.yml",
+                    "command": "patroni /var/lib/pg/data/patroni.yml",
                     "startup": "enabled",
                     "on-failure": "restart",
                     "user": "postgres",
@@ -1527,17 +1527,54 @@ def test_create_pgdata(harness):
     container = MagicMock()
     container.exists.return_value = False
     harness.charm._create_pgdata(container)
-    container.make_dir.assert_called_once_with(
-        "/var/lib/postgresql/data/pgdata", permissions=448, user="postgres", group="postgres"
-    )
+    # When directories don't exist, all three should be created
+    container.make_dir.assert_has_calls([
+        call(
+            "/var/lib/pg/data/16/main",
+            permissions=448,
+            user="postgres",
+            group="postgres",
+            make_parents=True,
+        ),
+        call(
+            "/var/lib/pg/logs/16/main/pg_wal",
+            permissions=448,
+            user="postgres",
+            group="postgres",
+            make_parents=True,
+        ),
+        call(
+            "/var/lib/pg/temp/16/main/pgsql_tmp",
+            permissions=448,
+            user="postgres",
+            group="postgres",
+            make_parents=True,
+        ),
+        call(
+            "/var/lib/postgresql/16",
+            user="postgres",
+            group="postgres",
+            make_parents=True,
+        ),
+    ])
     container.exec.assert_has_calls([
-        call(["chown", "postgres:postgres", "/var/lib/postgresql/archive"]),
+        call([
+            "bash",
+            "-c",
+            "[ -L /var/lib/postgresql/16/main ] || rm -rf /var/lib/postgresql/16/main",
+        ]),
         call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/postgresql/data"]),
+        call(["ln", "-sfn", "/var/lib/pg/data/16/main", "/var/lib/postgresql/16/main"]),
         call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/postgresql/logs"]),
+        call(["chown", "-h", "postgres:postgres", "/var/lib/postgresql/16/main"]),
         call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/postgresql/temp"]),
+        call(["chown", "postgres:postgres", "/var/lib/pg/archive"]),
+        call().wait(),
+        call(["chown", "postgres:postgres", "/var/lib/pg/data"]),
+        call().wait(),
+        call(["chown", "postgres:postgres", "/var/lib/pg/logs"]),
+        call().wait(),
+        call(["chown", "postgres:postgres", "/var/lib/pg/temp"]),
         call().wait(),
     ])
 
@@ -1545,15 +1582,33 @@ def test_create_pgdata(harness):
     container.exec.reset_mock()
     container.exists.return_value = True
     harness.charm._create_pgdata(container)
-    container.make_dir.assert_not_called()
+    # When directories exist, none should be created (except the symlink parent and symlink itself)
+    container.make_dir.assert_has_calls([
+        call(
+            "/var/lib/postgresql/16",
+            user="postgres",
+            group="postgres",
+            make_parents=True,
+        ),
+    ])
     container.exec.assert_has_calls([
-        call(["chown", "postgres:postgres", "/var/lib/postgresql/archive"]),
+        call([
+            "bash",
+            "-c",
+            "[ -L /var/lib/postgresql/16/main ] || rm -rf /var/lib/postgresql/16/main",
+        ]),
         call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/postgresql/data"]),
+        call(["ln", "-sfn", "/var/lib/pg/data/16/main", "/var/lib/postgresql/16/main"]),
         call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/postgresql/logs"]),
+        call(["chown", "-h", "postgres:postgres", "/var/lib/postgresql/16/main"]),
         call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/postgresql/temp"]),
+        call(["chown", "postgres:postgres", "/var/lib/pg/archive"]),
+        call().wait(),
+        call(["chown", "postgres:postgres", "/var/lib/pg/data"]),
+        call().wait(),
+        call(["chown", "postgres:postgres", "/var/lib/pg/logs"]),
+        call().wait(),
+        call(["chown", "postgres:postgres", "/var/lib/pg/temp"]),
         call().wait(),
     ])
 
