@@ -28,7 +28,7 @@ on:
 jobs:
   lint:
     name: Lint
-    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v41.1.2
+    uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v42.0.0
     permissions: {}
 
   unit-test:
@@ -56,7 +56,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Install prometheus snap
         run: sudo snap install prometheus
       - name: Check validity of prometheus alert rules
@@ -67,7 +67,7 @@ jobs:
 
   build:
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v41.1.2
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v42.0.0
     permissions: {}
 
   integration-test:
