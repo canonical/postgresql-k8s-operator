@@ -186,22 +186,6 @@ class CannotConnectError(Exception):
     """Cannot run smoke check on connected Database."""
 
 
-# @trace_charm(
-#     tracing_endpoint="tracing_endpoint",
-#     extra_types=(
-#         GrafanaDashboardProvider,
-#         LogProxyConsumer,
-#         MetricsEndpointProvider,
-#         Patroni,
-#         PostgreSQL,
-#         PostgreSQLAsyncReplication,
-#         PostgreSQLBackups,
-#         PostgreSQLLDAP,
-#         PostgreSQLProvider,
-#         TLS,
-#         RollingOpsManager,
-#     ),
-# )
 class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     """Charmed Operator for the PostgreSQL database."""
 
