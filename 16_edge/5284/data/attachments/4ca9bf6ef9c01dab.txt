@@ -1,0 +1,38 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/self-signed-certificates-317
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/glauth-k8s-58
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/postgresql-k8s-495
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-self-signed-certificates/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-postgresql-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-k8s/0 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-postgresql-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-self-signed-certificates/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  01:34:20Z
+
+App                              Version  Status   Scale  Charm                     Channel      Rev  Address         Exposed  Message
+glauth-k8s                                error        1  glauth-k8s                latest/edge   58  10.152.183.241  no       hook failed: "start"
+glauth-postgresql-k8s                     waiting      1  postgresql-k8s            14/stable    495  10.152.183.236  no       installing agent
+glauth-self-signed-certificates           active       1  self-signed-certificates  1/stable     317  10.152.183.251  no       
+postgresql-k8s                   16.11    active       1  postgresql-k8s                           0  10.152.183.40   no       
+
+Unit                                Workload  Agent      Address      Ports  Message
+glauth-k8s/0*                       error     idle       10.1.119.17         hook failed: "start"
+glauth-postgresql-k8s/0*            unknown   executing  10.1.119.16         
+glauth-self-signed-certificates/0*  active    idle       10.1.119.13         
+postgresql-k8s/0*                   active    idle       10.1.119.12         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-glauth-k8s-0: 01:33:54 ERROR unit.glauth-k8s/0.juju-log Error fetching ConfigMap: configmaps "glauth-k8s" not found
+unit-glauth-self-signed-certificates-0: 01:33:55 ERROR unit.glauth-self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
