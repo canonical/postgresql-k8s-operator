@@ -5,10 +5,7 @@ import socket
 from unittest.mock import MagicMock, call, patch
 
 import pytest
-from charms.postgresql_k8s.v0.postgresql_tls import (
-    TLS_CREATION_RELATION,
-    TLS_TRANSFER_RELATION,
-)
+from charms.postgresql_k8s.v0.postgresql_tls import TLS_CREATION_RELATION
 from ops.pebble import ConnectionError as PebbleConnectionError
 from ops.testing import Harness
 
@@ -80,13 +77,6 @@ def no_secrets(_harness, include_certificate: bool = True):
     if include_certificate:
         secrets.append(_harness.charm.get_secret(SCOPE, "cert"))
     return all(secret is None for secret in secrets)
-
-
-def relate_to_ca_certificates_operator(_harness):
-    # Relate the charm to the send CA certificates operator.
-    rel_id = _harness.add_relation(TLS_TRANSFER_RELATION, "ca-certificates-operator")
-    _harness.add_relation_unit(rel_id, "ca-certificates-operator/0")
-    return rel_id
 
 
 def relate_to_tls_certificates_operator(_harness):
@@ -262,48 +252,6 @@ def test_on_tls_certificate_expiring(harness):
         emit_tls_certificate_expiring_event(harness)
         assert no_secrets(harness, include_certificate=False)
         _request_certificate_renewal.assert_called_once()
-
-
-def test_on_ca_certificate_added(harness):
-    with (
-        patch("ops.framework.EventBase.defer") as _defer,
-        patch(
-            "charm.PostgresqlOperatorCharm.push_ca_file_into_workload"
-        ) as _push_ca_file_into_workload,
-    ):
-        rel_id = relate_to_ca_certificates_operator(harness)
-
-        emit_ca_certificate_added_event(harness, rel_id)
-        _push_ca_file_into_workload.assert_called_once()
-        _defer.assert_not_called()
-
-        _push_ca_file_into_workload.reset_mock()
-        _push_ca_file_into_workload.side_effect = PebbleConnectionError
-
-        emit_ca_certificate_added_event(harness, rel_id)
-        _push_ca_file_into_workload.assert_called_once()
-        _defer.assert_called_once()
-
-
-def test_on_ca_certificate_removed(harness):
-    with (
-        patch("ops.framework.EventBase.defer") as _defer,
-        patch(
-            "charm.PostgresqlOperatorCharm.clean_ca_file_from_workload"
-        ) as _clean_ca_file_from_workload,
-    ):
-        rel_id = relate_to_ca_certificates_operator(harness)
-
-        emit_ca_certificate_removed_event(harness, rel_id)
-        _clean_ca_file_from_workload.assert_called_once()
-        _defer.assert_not_called()
-
-        _clean_ca_file_from_workload.reset_mock()
-        _clean_ca_file_from_workload.side_effect = PebbleConnectionError
-
-        emit_ca_certificate_removed_event(harness, rel_id)
-        _clean_ca_file_from_workload.assert_called_once()
-        _defer.assert_called_once()
 
 
 def test_get_sans(harness):

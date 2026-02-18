@@ -10,7 +10,7 @@ import psycopg2
 import pytest
 from charms.postgresql_k8s.v0.postgresql import PostgreSQLUpdateUserPasswordError
 from lightkube import ApiError
-from lightkube.resources.core_v1 import Endpoints, Pod, Service
+from lightkube.resources.core_v1 import Endpoints, Pod
 from ops import JujuVersion
 from ops.model import (
     ActiveStatus,
@@ -293,9 +293,6 @@ def test_on_config_changed(harness):
             "charm.PostgreSQLUpgrade.idle", return_value=False, new_callable=PropertyMock
         ) as _idle,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
-        patch(
-            "charm.PostgresqlOperatorCharm.updated_synchronous_node_count", return_value=True
-        ) as _updated_synchronous_node_count,
         patch("charm.Patroni.member_started", return_value=True, new_callable=PropertyMock),
         patch("charm.Patroni.get_primary"),
         patch(
@@ -338,14 +335,6 @@ def test_on_config_changed(harness):
         harness.charm._on_config_changed(mock_event)
         assert isinstance(harness.charm.unit.status, ActiveStatus)
         assert not _enable_disable_extensions.called
-        _updated_synchronous_node_count.assert_called_once_with()
-
-        # Deferst on update sync nodes failure
-        _updated_synchronous_node_count.return_value = False
-        harness.charm._on_config_changed(mock_event)
-        mock_event.defer.assert_called_once_with()
-        mock_event.defer.reset_mock()
-        _updated_synchronous_node_count.return_value = True
 
         # Leader enables extensions
         with harness.hooks_disabled():
@@ -1025,18 +1014,15 @@ def test_on_stop(harness):
                 )
                 _client.return_value.list.side_effect = [
                     [MagicMock(metadata=MagicMock(name="fakeName1", namespace="fakeNamespace"))],
+                    [],
                     [MagicMock(metadata=MagicMock(name="fakeName2", namespace="fakeNamespace"))],
+                    [],
                 ]
                 harness.charm.on.stop.emit()
                 _client.return_value.get.assert_called_once_with(
                     res=Pod, name="postgresql-k8s-0", namespace=harness.charm.model.name
                 )
-                for kind in [Endpoints, Service]:
-                    _client.return_value.list.assert_any_call(
-                        kind,
-                        namespace=harness.charm.model.name,
-                        labels={"app.juju.is/created-by": harness.charm.app.name},
-                    )
+                assert _client.return_value.list.call_count == 4
                 assert _client.return_value.apply.call_count == 2
                 assert harness.get_relation_data(rel_id, harness.charm.unit) == relation_data
                 _client.reset_mock()
@@ -1057,12 +1043,6 @@ def test_on_stop(harness):
         _client.return_value.list.side_effect = [[], _FakeApiError]
         with tc.assertLogs("charm", "ERROR") as logs:
             harness.charm.on.stop.emit()
-            for kind in [Endpoints, Service]:
-                _client.return_value.list.assert_any_call(
-                    kind,
-                    namespace=harness.charm.model.name,
-                    labels={"app.juju.is/created-by": harness.charm.app.name},
-                )
             _client.return_value.apply.assert_not_called()
             assert "failed to get the k8s resources created by the charm and Patroni" in "".join(
                 logs.output
@@ -1074,7 +1054,9 @@ def test_on_stop(harness):
         )
         _client.return_value.list.side_effect = [
             [MagicMock(metadata=MagicMock(name="fakeName1", namespace="fakeNamespace"))],
+            [],
             [MagicMock(metadata=MagicMock(name="fakeName2", namespace="fakeNamespace"))],
+            [],
         ]
         _client.return_value.apply.side_effect = [None, _FakeApiError]
         with tc.assertLogs("charm", "ERROR") as logs:
@@ -1400,9 +1382,6 @@ def test_on_peer_relation_changed(harness):
         ) as _start_stop_pgbackrest_service,
         patch("backups.PostgreSQLBackups.coordinate_stanza_fields") as _coordinate_stanza_fields,
         patch("charm.Patroni.reinitialize_postgresql") as _reinitialize_postgresql,
-        patch(
-            "charm.Patroni.member_replication_lag", new_callable=PropertyMock
-        ) as _member_replication_lag,
         patch("charm.PostgresqlOperatorCharm.is_primary") as _is_primary,
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
@@ -1478,16 +1457,15 @@ def test_on_peer_relation_changed(harness):
         # Test when Patroni has already started but this is a replica with a
         # huge or unknown lag.
         _member_started.return_value = True
-        for values in itertools.product([True, False], ["0", "1000", "1001", "unknown"]):
+        for values in [True, False]:
             _set_active_status.reset_mock()
             _defer.reset_mock()
             _coordinate_stanza_fields.reset_mock()
             _start_stop_pgbackrest_service.reset_mock()
-            _is_primary.return_value = values[0]
-            _member_replication_lag.return_value = values[1]
+            _is_primary.return_value = values
             harness.charm.unit.status = ActiveStatus()
             harness.charm.on.database_peers_relation_changed.emit(relation)
-            if _is_primary.return_value == values[0] or int(values[1]) <= 1000:
+            if _is_primary.return_value == values:
                 _defer.assert_not_called()
                 _coordinate_stanza_fields.assert_called_once()
                 _start_stop_pgbackrest_service.assert_called_once()
@@ -1503,7 +1481,6 @@ def test_on_peer_relation_changed(harness):
         _defer.reset_mock()
         _set_active_status.reset_mock()
         _is_primary.return_value = True
-        _member_replication_lag.return_value = "0"
         _start_stop_pgbackrest_service.return_value = False
         harness.charm.unit.status = MaintenanceStatus()
         with harness.hooks_disabled():
@@ -1587,6 +1564,7 @@ def test_update_config(harness):
             "charm.PostgresqlOperatorCharm._is_workload_running", new_callable=PropertyMock
         ) as _is_workload_running,
         patch("charm.Patroni.render_patroni_yml_file") as _render_patroni_yml_file,
+        patch("charm.Patroni.reload_patroni_configuration"),
         patch("charm.PostgreSQLUpgrade") as _upgrade,
         patch("charm.PostgresqlOperatorCharm.is_primary", return_value=False),
         patch(
@@ -1691,7 +1669,7 @@ def test_update_config(harness):
         _handle_postgresql_restart_need.assert_not_called()
         _restart_metrics_service.assert_not_called()
         _restart_ldap_sync_service.assert_not_called()
-        assert "tls" not in harness.get_relation_data(rel_id, harness.charm.unit.name)
+        assert harness.get_relation_data(rel_id, harness.charm.unit.name)["tls"] == "enabled"
 
 
 def test_handle_postgresql_restart_need(harness):
@@ -1699,6 +1677,7 @@ def test_handle_postgresql_restart_need(harness):
         patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock,
         patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_acquire_lock") as _restart,
         patch("charm.PostgresqlOperatorCharm._generate_metrics_jobs") as _generate_metrics_jobs,
+        patch("charm.Patroni.get_patroni_health"),
         patch("charm.wait_fixed", return_value=wait_fixed(0)),
         patch("charm.Patroni.reload_patroni_configuration") as _reload_patroni_configuration,
         patch(
