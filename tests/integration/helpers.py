@@ -45,7 +45,7 @@ try:
     check_call(["kubectl", "version", "--client=true"])
     KUBECTL = "kubectl"
 except FileNotFoundError:
-    KUBECTL = "microk8s kubectl"
+    KUBECTL = "sudo k8s kubectl"
 
 logger = logging.getLogger(__name__)
 
