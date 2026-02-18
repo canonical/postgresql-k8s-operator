@@ -23,7 +23,6 @@ from lightkube import ApiError, Client
 from lightkube.resources.core_v1 import Endpoints, Service
 from ops import (
     ActionEvent,
-    ActiveStatus,
     Application,
     BlockedStatus,
     MaintenanceStatus,
@@ -128,7 +127,6 @@ class PostgreSQLAsyncReplication(Object):
                             "promoted-cluster-counter": ""
                         })
                         self._set_app_status()
-                        self.charm._set_active_status()
                 except (StandbyClusterAlreadyPromotedError, ClusterNotPromotedError) as e:
                     event.fail(str(e))
                 return False
@@ -408,7 +406,7 @@ class PostgreSQLAsyncReplication(Object):
 
     def handle_read_only_mode(self) -> None:
         """Handle read-only mode (standby cluster that lost the relation with the primary cluster)."""
-        if not self.charm.is_blocked:
+        if not self.charm.is_blocked and not self.charm.unit.is_leader():
             self.charm._set_active_status()
 
         if self.charm.unit.is_leader():
@@ -676,16 +674,7 @@ class PostgreSQLAsyncReplication(Object):
         if self.charm._peers.data[self.charm.app].get("promoted-cluster-counter") == "0":
             self.charm.app.status = BlockedStatus(READ_ONLY_MODE_BLOCKING_MESSAGE)
             return
-        if self._relation is None:
-            self.charm.app.status = ActiveStatus()
-            return
-        primary_cluster = self.get_primary_cluster()
-        if primary_cluster is None:
-            self.charm.app.status = ActiveStatus()
-        else:
-            self.charm.app.status = ActiveStatus(
-                "Primary" if self.charm.app == primary_cluster else "Standby"
-            )
+        self.charm._set_active_status()
 
     def _stop_database(self, event: RelationChangedEvent) -> bool:
         """Stop the database."""
