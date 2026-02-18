@@ -5,6 +5,8 @@ providers:
   k8s:
     enable: true
     bootstrap: true
+    features:
+      local-storage:
 host:
   snaps:
     jhack:
