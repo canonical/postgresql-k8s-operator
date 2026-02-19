@@ -121,6 +121,7 @@ from constants import (
     TLS_CERT_FILE,
     TLS_KEY_FILE,
     TRACING_RELATION_NAME,
+    TRACING_TRANSFER_RELATION_NAME,
     UNIT_SCOPE,
     USER,
     USER_PASSWORD_KEY,
@@ -136,7 +137,7 @@ from relations.async_replication import (
 )
 from relations.db import EXTENSIONS_BLOCKING_MESSAGE, DbProvides
 from relations.postgresql_provider import PostgreSQLProvider
-from relations.tls_transfer import TLS_TRANSFER_RELATION, TLSTransfer
+from relations.tls_transfer import TLSTransfer
 from upgrade import PostgreSQLUpgrade, get_postgresql_k8s_dependencies_model
 from utils import any_cpu_to_cores, any_memory_to_bytes, new_password
 
@@ -270,7 +271,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.tracing = Tracing(
             self,
             tracing_relation_name=TRACING_RELATION_NAME,
-            ca_relation_name=TLS_TRANSFER_RELATION,
+            ca_relation_name=TRACING_TRANSFER_RELATION_NAME,
         )
 
     def _on_databases_change(self, _):
