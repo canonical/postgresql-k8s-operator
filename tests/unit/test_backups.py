@@ -433,6 +433,17 @@ def test_empty_data_files(harness):
         for call, expected in zip(_exec.call_args_list, expected_calls, strict=True):
             assert call[0] == expected
 
+        # Test when exec raises ExecError with "No such file or directory" — should not raise.
+        _exec.reset_mock()
+        _exec.side_effect = ExecError(
+            command=["find", "/var/lib/pg/archive", "-mindepth", "1", "-delete"],
+            exit_code=1,
+            stdout="",
+            stderr="find: '/var/lib/pg/archive': No such file or directory",
+        )
+        # Should complete without raising.
+        harness.charm.backup._empty_data_files()
+
 
 def test_change_connectivity_to_database(harness):
     with patch("charm.PostgresqlOperatorCharm.update_config") as _update_config:
