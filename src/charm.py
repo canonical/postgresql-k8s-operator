@@ -84,6 +84,7 @@ from ops.model import (
 )
 from ops.pebble import (
     ChangeError,
+    CheckStatus,
     ExecError,
     Layer,
     PathError,
@@ -1547,19 +1548,41 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("on_update_status early exit: Service has not been added nor started yet")
             return
 
+        # Check health status in addition to service status
+        service_unhealthy = False
+        try:
+            checks = container.pebble.get_checks(names=[self.postgresql_service])
+            if checks and checks[0].status != CheckStatus.UP:
+                service_unhealthy = True
+                logger.warning(
+                    f"PostgreSQL health check failing: {checks[0].status} "
+                    f"(failures: {checks[0].failures}/{checks[0].threshold})"
+                )
+        except Exception as e:
+            logger.debug(f"Could not get health check status: {e}")
+
         if (
             not self.is_cluster_restoring_backup
             and not self.is_cluster_restoring_to_time
             and not self.is_unit_stopped
-            and services[0].current != ServiceStatus.ACTIVE
+            and (services[0].current != ServiceStatus.ACTIVE or service_unhealthy)
         ):
             logger.warning(
-                f"{self.postgresql_service} pebble service inactive, restarting service"
+                f"{self.postgresql_service} pebble service inactive or unhealthy, restarting service"
             )
+
+            # Collect diagnostic logs before restart attempt
+            logger.error(
+                "PostgreSQL service is inactive or unhealthy. Collecting diagnostic information..."
+            )
+            self._get_postgresql_startup_logs(container)
+
             try:
                 container.restart(self.postgresql_service)
             except ChangeError:
                 logger.exception("Failed to restart patroni")
+                # Collect logs after failed restart for additional diagnosis
+                self._get_postgresql_startup_logs(container)
             # If service doesn't recover fast, exit and wait for next hook run to re-check
             if not self._patroni.member_started:
                 self.unit.status = MaintenanceStatus("Database service inactive, restarting")
@@ -2736,6 +2759,42 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.info(f"Last completed transaction was at {log_time[-1]}")
         else:
             logger.error("Can't tell last completed transaction time")
+
+    def _get_postgresql_startup_logs(self, container: Container) -> None:
+        """Collect and log PostgreSQL/Patroni diagnostic information.
+
+        Args:
+            container: The workload container to collect logs from.
+        """
+        try:
+            # Get recent Pebble logs for the postgresql service
+            log_exec = container.pebble.exec(
+                ["pebble", "logs", "postgresql", "-n", "100"], combine_stderr=True
+            )
+            logs = log_exec.wait_output()[0]
+            logger.error(f"Recent PostgreSQL/Patroni logs:\n{logs}")
+        except ExecError as e:
+            logger.error(f"Failed to get pebble logs: {e}")
+            # Fallback to direct log file for older Juju versions
+            try:
+                log_exec = container.pebble.exec([
+                    "tail",
+                    "-n",
+                    "100",
+                    "/var/log/postgresql/patroni.log",
+                ])
+                logs = log_exec.wait_output()[0]
+                logger.error(f"Recent Patroni logs:\n{logs}")
+            except ExecError as e2:
+                logger.error(f"Failed to get patroni.log: {e2}")
+
+        # Also get PostgreSQL logs if available
+        postgresql_logs = self._patroni.last_postgresql_logs()
+        if postgresql_logs:
+            # Only log last portion to avoid overwhelming the logs
+            log_lines = postgresql_logs.split("\n")
+            recent_lines = "\n".join(log_lines[-50:]) if len(log_lines) > 50 else postgresql_logs
+            logger.error(f"Recent PostgreSQL logs:\n{recent_lines}")
 
     def get_plugins(self) -> list[str]:
         """Return a list of installed plugins."""
