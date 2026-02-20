@@ -60,7 +60,7 @@ backends:
       # For example, with microk8s, using `concierge restore` takes twice as long as this (e.g. 6
       # min instead of 3 min between every spread job)
       juju destroy-model --force --no-wait --destroy-storage --no-prompt testing
-      juju kill-controller --no-prompt concierge-microk8s
+      juju kill-controller --no-prompt concierge-k8s
     restore: |
       rm -rf "$SPREAD_PATH"
 
@@ -83,8 +83,11 @@ backends:
 
       ADDRESS localhost
 
-      sudo mkdir -p /var/snap/microk8s/common/default-storage
-      sudo mount --bind /mnt /var/snap/microk8s/common/default-storage
+      # sudo mkdir -p /var/snap/microk8s/common/default-storage
+      # sudo mount --bind /mnt /var/snap/microk8s/common/default-storage
+
+      sudo apt purge containerd.io docker-ce-cli docker-ce
+      sudo rm -r /run/containerd
     # HACK: spread does not pass environment variables set on runner
     # Manually pass specific environment variables
     environment:
