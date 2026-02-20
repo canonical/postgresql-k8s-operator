@@ -121,7 +121,6 @@ from constants import (
     TLS_CERT_FILE,
     TLS_KEY_FILE,
     TRACING_RELATION_NAME,
-    TRACING_TRANSFER_RELATION_NAME,
     UNIT_SCOPE,
     USER,
     USER_PASSWORD_KEY,
@@ -268,11 +267,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self.unit.set_ports(5432, 8008)
             except ModelError:
                 logger.exception("failed to open port")
-        self.tracing = Tracing(
-            self,
-            tracing_relation_name=TRACING_RELATION_NAME,
-            ca_relation_name=TRACING_TRANSFER_RELATION_NAME,
-        )
+        self.tracing = Tracing(self, tracing_relation_name=TRACING_RELATION_NAME)
 
     def _on_databases_change(self, _):
         """Handle databases change event."""
