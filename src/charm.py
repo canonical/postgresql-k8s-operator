@@ -139,7 +139,6 @@ from constants import (
     TLS_CERT_FILE,
     TLS_KEY_FILE,
     TRACING_RELATION_NAME,
-    TRACING_TRANSFER_RELATION_NAME,
     UNIT_SCOPE,
     USER,
     USER_PASSWORD_KEY,
@@ -322,11 +321,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logs_scheme={"postgresql": {"log-files": POSTGRES_LOG_FILES}},
             relation_name="logging",
         )
-        self.tracing = Tracing(
-            self,
-            tracing_relation_name=TRACING_RELATION_NAME,
-            ca_relation_name=TRACING_TRANSFER_RELATION_NAME,
-        )
+        self.tracing = Tracing(self, tracing_relation_name=TRACING_RELATION_NAME)
 
     def reconcile(self):
         """Reconcile the unit state on refresh."""
