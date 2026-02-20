@@ -13,14 +13,17 @@ from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQLDeleteUserError,
     PostgreSQLGetPostgreSQLVersionError,
 )
-from ops.charm import (
+from ops import (
+    ActiveStatus,
+    BlockedStatus,
     CharmBase,
+    Object,
+    Relation,
     RelationBrokenEvent,
     RelationChangedEvent,
     RelationDepartedEvent,
+    Unit,
 )
-from ops.framework import Object
-from ops.model import ActiveStatus, BlockedStatus, Relation, Unit
 from pgconnstr import ConnectionString
 
 from constants import (

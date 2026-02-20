@@ -1051,6 +1051,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     self.app_peer_data["s3-initialization-block-message"]
                 )
                 return
+            if not self.upgrade.idle:
+                return
             if (
                 self._patroni.get_primary(unit_name_pattern=True) == self.unit.name
                 or self.is_standby_leader
