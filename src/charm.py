@@ -49,8 +49,6 @@ from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v1.loki_push_api import LogProxyConsumer
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
-from charms.tempo_coordinator_k8s.v0.charm_tracing import trace_charm
-from charms.tempo_coordinator_k8s.v0.tracing import TracingEndpointRequirer
 from lightkube import ApiError, Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
@@ -90,6 +88,7 @@ from ops.pebble import (
     ServiceInfo,
     ServiceStatus,
 )
+from ops_tracing import Tracing
 from requests import ConnectionError as RequestsConnectionError
 from single_kernel_postgresql.config.literals import (
     Substrates,
@@ -139,7 +138,6 @@ from constants import (
     TLS_CA_FILE,
     TLS_CERT_FILE,
     TLS_KEY_FILE,
-    TRACING_PROTOCOL,
     TRACING_RELATION_NAME,
     UNIT_SCOPE,
     USER,
@@ -188,22 +186,6 @@ class CannotConnectError(Exception):
     """Cannot run smoke check on connected Database."""
 
 
-@trace_charm(
-    tracing_endpoint="tracing_endpoint",
-    extra_types=(
-        GrafanaDashboardProvider,
-        LogProxyConsumer,
-        MetricsEndpointProvider,
-        Patroni,
-        PostgreSQL,
-        PostgreSQLAsyncReplication,
-        PostgreSQLBackups,
-        PostgreSQLLDAP,
-        PostgreSQLProvider,
-        TLS,
-        RollingOpsManager,
-    ),
-)
 class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     """Charmed Operator for the PostgreSQL database."""
 
@@ -339,9 +321,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logs_scheme={"postgresql": {"log-files": POSTGRES_LOG_FILES}},
             relation_name="logging",
         )
-        self.tracing = TracingEndpointRequirer(
-            self, relation_name=TRACING_RELATION_NAME, protocols=[TRACING_PROTOCOL]
-        )
+        self.tracing = Tracing(self, tracing_relation_name=TRACING_RELATION_NAME)
 
     def reconcile(self):
         """Reconcile the unit state on refresh."""
@@ -447,12 +427,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         timestamp = datetime.now()
         self.unit_peer_data.update({"pg_hba_needs_update_timestamp": str(timestamp)})
         logger.debug(f"authorisation rules changed at {timestamp}")
-
-    @property
-    def tracing_endpoint(self) -> str | None:
-        """Otlp http endpoint for charm instrumentation."""
-        if self.tracing.is_ready():
-            return self.tracing.get_endpoint(TRACING_PROTOCOL)
 
     def _generate_metrics_jobs(self, enable_tls: bool) -> list[dict]:
         """Generate spec for Prometheus scraping."""
