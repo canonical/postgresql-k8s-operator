@@ -1,0 +1,53 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1181 Cluster members are: [{'name': 'postgresql-k8s-0', 'role': 'leader', 'state': 'running', 'api_url': 'http://postgresql-k8s-0.postgresql-k8s-endpoints:8008/patroni', 'host': 'postgresql-k8s-0.postgresql-k8s-endpoints', 'port': 5432, 'timeline': 1}, {'name': 'postgresql-k8s-1', 'role': 'sync_standby', 'state': 'streaming', 'api_url': 'http://postgresql-k8s-1.postgresql-k8s-endpoints:8008/patroni', 'host': 'postgresql-k8s-1.postgresql-k8s-endpoints', 'port': 5432, 'timeline': 1, 'lag': 0}, {'name': 'postgresql-k8s-2', 'role': 'sync_standby', 'state': 'streaming', 'api_url': 'http://postgresql-k8s-2.postgresql-k8s-endpoints:8008/patroni', 'host': 'postgresql-k8s-2.postgresql-k8s-endpoints', 'port': 5432, 'timeline': 1, 'lag': 0}]
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  00:14:09Z
+
+App             Version  Status  Scale  Charm           Channel  Rev  Address        Exposed  Message
+postgresql-k8s  14.20    active      3  postgresql-k8s             0  10.152.183.72  no       
+
+Unit               Workload  Agent  Address      Ports  Message
+postgresql-k8s/0*  active    idle   10.1.76.141         Primary
+postgresql-k8s/1   active    idle   10.1.76.143         
+postgresql-k8s/2   active    idle   10.1.76.142         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-0: 00:10:54 ERROR unit.postgresql-k8s/0.juju-log failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 442, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 946, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 184, in _connect_to_database
+    connection = psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.testing.svc.cluster.local" (10.152.183.191), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/charm.py", line 783, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/lib/charms/tempo_coordinator_k8s/v0/charm_tracing.py", line 946, in wrapped_function
+    return callable(*args, **kwargs)  # type: ignore
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 471, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+charms.postgresql_k8s.v0.postgresql.PostgreSQLEnableDisableExtensionError
+unit-postgresql-k8s-2: 00:11:54 ERROR unit.postgresql-k8s/2.juju-log database-peers:1: Failed to list PostgreSQL database users: connection to server at "postgresql-k8s-2.postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.76.142), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
