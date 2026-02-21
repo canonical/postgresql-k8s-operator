@@ -28,7 +28,6 @@ ops = ">=2.0.0"
 # data_platform_libs/v0/upgrade.py
 poetry-core = "*"
 # data_platform_libs/v0/data_models.py
-# tempo_coordinator_k8s/v0/tracing.py requires pydantic
 pydantic = "*"
 # loki_k8s/v1/loki_push_api.py and prometheus_k8s/v0/prometheus_scrape.py
 cosl = ">=0.0.50"
