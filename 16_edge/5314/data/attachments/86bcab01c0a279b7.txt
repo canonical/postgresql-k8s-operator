@@ -1,0 +1,7 @@
+[32mINFO    [0m integration.test_backups_gcp:test_backups_gcp.py:224 Getting original backup config
+[32mINFO    [0m integration.test_backups_gcp:test_backups_gcp.py:231 Deleting the pod
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: DELETE https://10.1.0.201:16443/api/v1/namespaces/testing/pods/new-postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  new-postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  new-postgresql-k8s/0 [idle] maintenance:
