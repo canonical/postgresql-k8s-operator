@@ -566,42 +566,28 @@ class PostgreSQLBackups(Object):
         )
 
     @staticmethod
-    def _extract_error_message(
-        stdout: str | None, stderr: str | None, *, for_status: bool = False
-    ) -> str | None:
-        """Extract key error message from pgBackRest output.
+    def _extract_error_message(stderr: str | None, *, for_status: bool = False) -> str | None:
+        """Extract key error message from pgBackRest stderr output.
 
         Args:
-            stdout: Standard output from pgBackRest command.
             stderr: Standard error from pgBackRest command.
             for_status: If True, return None instead of a generic fallback message.
 
         Returns:
             Extracted error message, prioritizing ERROR/WARN lines from output.
         """
-        combined_output = f"{stdout or ''}\n{stderr or ''}".strip()
-        if not combined_output:
+        if not stderr or not stderr.strip():
             if for_status:
                 return None
             return f"Unknown error occurred. Please check the logs at {PGBACKREST_LOGS_PATH}"
 
         error_lines = []
-        for line in combined_output.splitlines():
+        for line in stderr.strip().splitlines():
             if "ERROR:" in line or "WARN:" in line:
                 cleaned = re.sub(r"^.*?(ERROR:|WARN:)", r"\1", line).strip()
                 error_lines.append(cleaned)
 
-        if error_lines:
-            result = "; ".join(error_lines)
-        elif stderr and stderr.strip():
-            result = stderr.strip().splitlines()[-1]
-        elif stdout and stdout.strip():
-            result = stdout.strip().splitlines()[-1]
-        elif for_status:
-            return None
-        else:
-            return f"Unknown error occurred. Please check the logs at {PGBACKREST_LOGS_PATH}"
-
+        result = "; ".join(error_lines) if error_lines else stderr.strip().splitlines()[-1]
         return result[:120]
 
     def _initialise_stanza(self, event: HookEvent) -> bool:
@@ -635,7 +621,7 @@ class PostgreSQLBackups(Object):
                     ])
         except ExecError as e:
             logger.error("Failed to initialise stanza: stdout=%s, stderr=%s", e.stdout, e.stderr)
-            error_hint = self._extract_error_message(e.stdout, e.stderr, for_status=True)
+            error_hint = self._extract_error_message(e.stderr, for_status=True)
             block_message = (
                 f"{FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE}: {error_hint}"
                 if error_hint
@@ -681,7 +667,7 @@ class PostgreSQLBackups(Object):
             self.charm._set_active_status()
         except ExecError as e:
             logger.error("Failed to check stanza: stdout=%s, stderr=%s", e.stdout, e.stderr)
-            error_hint = self._extract_error_message(e.stdout, e.stderr, for_status=True)
+            error_hint = self._extract_error_message(e.stderr, for_status=True)
             block_message = (
                 f"{FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE}: {error_hint}"
                 if error_hint
