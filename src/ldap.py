@@ -11,9 +11,7 @@ from charms.glauth_k8s.v0.ldap import (
     LdapRequirer,
     LdapUnavailableEvent,
 )
-from ops import Relation
-from ops.framework import Object
-from ops.model import ActiveStatus
+from ops import Object, Relation
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +42,7 @@ class PostgreSQLLDAP(Object):
             self.charm.app_peer_data.update({"ldap_enabled": "True"})
 
         self.charm.update_config()
-        self.charm.unit.status = ActiveStatus()
+        self.charm._set_active_status()
 
     def _on_ldap_unavailable(self, _: LdapUnavailableEvent) -> None:
         """Handler for the LDAP unavailable event."""

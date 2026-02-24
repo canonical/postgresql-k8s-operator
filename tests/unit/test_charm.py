@@ -615,6 +615,7 @@ def test_enable_disable_extensions(harness):
             return_value=False,
             new_callable=PropertyMock,
         ),
+        patch("charm.PostgreSQLUpgrade.idle", new_callable=PropertyMock, return_value=True),
     ):
         # Early exit if no primary
         harness.charm.enable_disable_extensions()
@@ -1718,6 +1719,7 @@ def test_set_active_status(harness):
             "charm.PostgresqlOperatorCharm.is_standby_leader", new_callable=PropertyMock
         ) as _is_standby_leader,
         patch("charm.Patroni.get_primary") as _get_primary,
+        patch("charm.PostgreSQLUpgrade.idle", new_callable=PropertyMock, return_value=True),
     ):
         for values in itertools.product(
             [
