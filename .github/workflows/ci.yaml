@@ -91,7 +91,7 @@ jobs:
       - unit-test
       - alert-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/release_charm_pr.yaml@v40.0.2
+    uses: canonical/data-platform-workflows/.github/workflows/release_charm_pr.yaml@v42.0.0
     with:
       track: 16
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
