@@ -491,7 +491,7 @@ class Patroni:
         """
         if not base_parameters:
             base_parameters = {}
-        requests.patch(
+        r = requests.patch(
             f"{self._patroni_url}/config",
             verify=self._verify,
             json={
@@ -503,8 +503,14 @@ class Patroni:
                 **base_parameters,
             },
             auth=self._patroni_auth,
-            timeout=API_REQUEST_TIMEOUT,
+            timeout=PATRONI_TIMEOUT,
         )
+        logger.debug(
+            "API bulk_update_parameters_controller_by_patroni: %s (%s)",
+            r,
+            r.elapsed.total_seconds(),
+        )
+        r.raise_for_status()
 
     def promote_standby_cluster(self) -> None:
         """Promote a standby cluster to be a regular cluster."""

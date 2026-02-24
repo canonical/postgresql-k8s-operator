@@ -1051,6 +1051,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     self.app_peer_data["s3-initialization-block-message"]
                 )
                 return
+            if not self.upgrade.idle:
+                return
             if (
                 self._patroni.get_primary(unit_name_pattern=True) == self.unit.name
                 or self.is_standby_leader
@@ -2182,7 +2184,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         return result
 
-    def _api_update_config(self, available_cpu_cores: int) -> None:
+    def _api_update_config(self, available_cpu_cores: int) -> bool:
         # Use config value if set, calculate otherwise
         if self.config.experimental_max_connections:
             max_connections = self.config.experimental_max_connections
@@ -2214,7 +2216,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         }
         if primary_endpoint := self.async_replication.get_primary_cluster_endpoint():
             base_patch["standby_cluster"] = {"host": primary_endpoint}
-        self._patroni.bulk_update_parameters_controller_by_patroni(cfg_patch, base_patch)
+        try:
+            self._patroni.bulk_update_parameters_controller_by_patroni(cfg_patch, base_patch)
+        except RetryError:
+            return False
+        return True
 
     def _build_postgresql_parameters(
         self, available_cpu_cores: int, available_memory: int
@@ -2306,10 +2312,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if not self._patroni.member_started:
             # Potentially expired cert reloading and deferring
             self._patroni.reload_patroni_configuration()
+            self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
             logger.debug("Early exit update_config: Patroni not started yet")
             return False
 
-        self._api_update_config(available_cpu_cores)
+        if not self._api_update_config(available_cpu_cores):
+            logger.warning("Early exit update_config: Unable to patch Patroni API")
+            return False
 
         self._handle_postgresql_restart_need(
             self.unit_peer_data.get("config_hash") != self.generate_config_hash
