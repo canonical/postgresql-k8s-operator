@@ -1973,6 +1973,21 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Start or stop the pgBackRest TLS server service when TLS certificate change.
         self.backup.start_stop_pgbackrest_service()
 
+        if not self.upgrade.idle:
+            match self.upgrade.state:
+                case "recovery":
+                    self.unit.status = BlockedStatus("ready to rollback application")
+                case "failed":
+                    self.upgrade.set_unit_failed()
+                case "ready":
+                    self.upgrade.set_unit_ready()
+                case "upgrading":
+                    self.unit.status = MaintenanceStatus("upgrading unit")
+                case "completed":
+                    self.upgrade.set_unit_completed()
+                case _:
+                    pass
+
     def _restart_metrics_service(self) -> None:
         """Restart the monitoring service if the password was rotated."""
         container = self.unit.get_container("postgresql")
