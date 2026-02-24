@@ -1951,8 +1951,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     self.unit.status = BlockedStatus("ready to rollback application")
                 case "failed":
                     self.upgrade.set_unit_failed()
-                case "ready":
-                    self.upgrade.set_unit_ready()
                 case "upgrading":
                     self.unit.status = MaintenanceStatus("upgrading unit")
                 case "completed":

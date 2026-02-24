@@ -2202,3 +2202,52 @@ def test_calculate_worker_process_config_all_workers_validation_blocking(harness
 
     result = harness.charm._calculate_worker_process_config(cpu_cores)
     assert result["max_parallel_workers"] == "18"  # Should accept valid value
+
+
+def test_reset_upgrade_statuses(harness):
+    with (
+        patch(
+            "charm.PostgreSQLUpgrade.idle", new_callable=PropertyMock, return_value=True
+        ) as _idle,
+        patch(
+            "charm.PostgreSQLUpgrade.state", new_callable=PropertyMock, return_value="idle"
+        ) as _state,
+        patch("charm.PostgreSQLUpgrade.set_unit_failed") as _set_unit_failed,
+        patch("charm.PostgreSQLUpgrade.set_unit_completed") as _set_unit_completed,
+    ):
+        # Upgrade idle
+        harness.charm.unit.status = BlockedStatus("TEST")
+
+        harness.charm._reset_upgrade_statuses()
+
+        assert harness.charm.unit.status == BlockedStatus("TEST")
+
+        _idle.return_value = False
+
+        # Recovery
+        _state.return_value = "recovery"
+
+        harness.charm._reset_upgrade_statuses()
+
+        assert harness.charm.unit.status == BlockedStatus("ready to rollback application")
+
+        # Upgrading
+        _state.return_value = "upgrading"
+
+        harness.charm._reset_upgrade_statuses()
+
+        assert harness.charm.unit.status == MaintenanceStatus("upgrading unit")
+
+        # Completed
+        _state.return_value = "completed"
+
+        harness.charm._reset_upgrade_statuses()
+
+        _set_unit_completed.assert_called_once_with()
+
+        # Failed
+        _state.return_value = "failed"
+
+        harness.charm._reset_upgrade_statuses()
+
+        _set_unit_failed.assert_called_once_with()
