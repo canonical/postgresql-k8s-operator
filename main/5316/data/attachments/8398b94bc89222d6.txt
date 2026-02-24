@@ -1,0 +1,80 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/focal/indico-301
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/redis-k8s-42
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/redis-k8s-42
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [idle] waiting: Waiting for database availability
+[32mINFO    [0m integration.new_relations.test_new_relations_2:test_new_relations_2.py:171 Verifying that the charm doesn't block when the extensions are enabled
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] active: 
+  database/1 [executing] active: Primary
+  database/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: 
+  database/1 [idle] active: Primary
+  database/2 [idle] active: 
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: 
+  database/1 [idle] active: Primary
+  database/2 [idle] active: 
+  indico/0 [executing] waiting: Waiting for database availability
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] active: 
+  database/1 [executing] active: Primary
+  database/2 [executing] active: 
+  indico/0 [executing] waiting: Waiting for database availability
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  indico/0 [executing] maintenance: Adding indico layer to pebble
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: 
+  database/1 [idle] active: Primary
+  database/2 [idle] active: 
+  indico/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  00:26:35Z
+
+App                  Version  Status  Scale  Charm           Channel        Rev  Address         Exposed  Message
+database             14.20    active      3  postgresql-k8s                   0  10.152.183.66   no       
+indico               3.3.9    active      1  indico          latest/edge    301  10.152.183.32   no       
+other-discourse-k8s  3.5.3    active      1  discourse-k8s   latest/stable  229  10.152.183.150  no       
+redis-broker         7.2.5    active      1  redis-k8s       latest/edge     42  10.152.183.50   no       
+redis-cache          7.2.5    active      1  redis-k8s       latest/edge     42  10.152.183.151  no       
+redis-k8s            7.2.5    active      1  redis-k8s       latest/edge     42  10.152.183.248  no       
+
+Unit                    Workload  Agent  Address      Ports  Message
+database/0              active    idle   10.1.76.139         
+database/1*             active    idle   10.1.76.141         Primary
+database/2              active    idle   10.1.76.140         
+indico/0*               active    idle   10.1.76.146         
+other-discourse-k8s/0*  active    idle   10.1.76.145         
+redis-broker/0*         active    idle   10.1.76.150         
+redis-cache/0*          active    idle   10.1.76.149         
+redis-k8s/0*            active    idle   10.1.76.144         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-database-0: 00:13:01 ERROR unit.database/0.juju-log upgrade:2: Failed to list PostgreSQL database users: connection to server at "database-0.database-endpoints.testing.svc.cluster.local" (10.1.76.139), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-redis-k8s-0: 00:14:38 ERROR unit.redis-k8s/0.juju-log redis-peers:3: Error when connecting to sentinel: Error 111 connecting to 0.0.0.0:26379. Connection refused.
+unit-redis-k8s-0: 00:14:38 ERROR unit.redis-k8s/0.juju-log redis-peers:3: Unit redis-k8s/0 doesn't agree on tracked master
+unit-redis-k8s-0: 00:14:38 ERROR unit.redis-k8s/0.juju-log redis-peers:3: Error when connecting to sentinel: Error 111 connecting to localhost:26379. Connection refused.
+unit-database-1: 00:22:02 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-other-discourse-k8s-0: 00:22:02 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 00:22:03 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-2: 00:22:03 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-redis-k8s-0: 00:22:08 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-1: 00:25:39 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-other-discourse-k8s-0: 00:25:55 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-2: 00:26:05 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 00:26:05 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
