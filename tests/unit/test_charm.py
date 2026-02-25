@@ -2214,6 +2214,9 @@ def test_reset_upgrade_statuses(harness):
         ) as _state,
         patch("charm.PostgreSQLUpgrade.set_unit_failed") as _set_unit_failed,
         patch("charm.PostgreSQLUpgrade.set_unit_completed") as _set_unit_completed,
+        patch(
+            "charm.PostgreSQLUpgrade.app_units", new_callable=PropertyMock, return_value=[]
+        ) as _app_units,
     ):
         # Upgrade idle
         harness.charm.unit.status = BlockedStatus("TEST")
@@ -2251,3 +2254,17 @@ def test_reset_upgrade_statuses(harness):
         harness.charm._reset_upgrade_statuses()
 
         _set_unit_failed.assert_called_once_with()
+
+        # Last unit completed
+        mock_unit_1 = Mock()
+        mock_unit_1.name = "test/-1"
+        mock_unit_2 = Mock()
+        mock_unit_2.name = "test/0"
+        _app_units.return_value = [mock_unit_2, mock_unit_1]
+        _state.return_value = "completed"
+
+        harness.charm._reset_upgrade_statuses()
+
+        assert harness.charm.unit.status == MaintenanceStatus(
+            "upgrade completed, run resume-upgrade to proceed"
+        )

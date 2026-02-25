@@ -1954,7 +1954,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 case "upgrading":
                     self.unit.status = MaintenanceStatus("upgrading unit")
                 case "completed":
-                    self.upgrade.set_unit_completed()
+                    if len(self.upgrade.app_units) > 1 and int(
+                        self.unit.name.split("/")[1]
+                    ) == max(int(unit.name.split("/")[1]) for unit in self.upgrade.app_units):
+                        # If the last unit resets the status, make sure to inform the user to
+                        # continue the upgrade
+                        self.unit.status = MaintenanceStatus(
+                            "upgrade completed, run resume-upgrade to proceed"
+                        )
+                    else:
+                        self.upgrade.set_unit_completed()
 
     def _restart(self, event: RunWithLock) -> None:
         """Restart PostgreSQL."""
