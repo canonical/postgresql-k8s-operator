@@ -2091,3 +2091,72 @@ def test_upload_content_to_s3(harness, tls_ca_chain_filename):
         )
         _named_temporary_file.assert_called_once()
         upload_file.assert_called_once_with("/tmp/test-file", "test-path/test-file.")
+
+
+def test_extract_error_message(harness):
+    extract = harness.charm.backup._extract_error_message
+
+    # Test with None stderr and for_status=False (default) - should return fallback message.
+    result = extract(None)
+    assert result == "Unknown error occurred. Please check the logs at /var/log/pgbackrest"
+
+    # Test with None stderr and for_status=True - should return None.
+    assert extract(None, for_status=True) is None
+
+    # Test with empty string stderr.
+    assert extract("", for_status=True) is None
+    assert extract("") == "Unknown error occurred. Please check the logs at /var/log/pgbackrest"
+
+    # Test with whitespace-only stderr.
+    assert extract("   \n  ", for_status=True) is None
+
+    # Test with stderr containing ERROR lines.
+    stderr = "P00 INFO: some info\nP00 ERROR: connection refused\n"
+    assert extract(stderr) == "ERROR: connection refused"
+    assert extract(stderr, for_status=True) == "ERROR: connection refused"
+
+    # Test with stderr containing WARN lines.
+    stderr = "P00 WARN: deprecated option\n"
+    assert extract(stderr) == "WARN: deprecated option"
+
+    # Test with multiple ERROR/WARN lines joined by semicolons.
+    stderr = "P00 ERROR: first error\nP00 WARN: a warning\nP00 ERROR: second error\n"
+    assert extract(stderr) == "ERROR: first error; WARN: a warning; ERROR: second error"
+
+    # Test with stderr containing no ERROR/WARN - should fall back to last line.
+    stderr = "some info line\nanother info line\nfinal line"
+    assert extract(stderr) == "final line"
+
+    # Test truncation to 120 characters.
+    long_error = "P00 ERROR: " + "x" * 200
+    result = extract(long_error)
+    assert len(result) == 120
+    assert result == ("ERROR: " + "x" * 200)[:120]
+
+    # Test realistic pgBackRest error (HTTPS format error from issue #888).
+    stderr = (
+        "P00 ERROR: [FormatError] expected protocol 'https' in URL 'http://10.152.183.109:9000'"
+    )
+    result = extract(stderr)
+    assert result.startswith("ERROR: [FormatError]")
+    assert "https" in result
+
+
+def test_is_s3_block_message():
+    from backups import is_s3_block_message
+
+    # Exact match should return True.
+    assert is_s3_block_message(ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE) is True
+    assert is_s3_block_message(FAILED_TO_ACCESS_CREATE_BUCKET_ERROR_MESSAGE) is True
+    assert is_s3_block_message(FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE) is True
+
+    # Messages with appended error hints should still match.
+    assert (
+        is_s3_block_message(f"{FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE}: some error detail")
+        is True
+    )
+    assert is_s3_block_message(f"{ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE}: extra info") is True
+
+    # Unrelated messages should not match.
+    assert is_s3_block_message("some other blocked state") is False
+    assert is_s3_block_message("") is False
