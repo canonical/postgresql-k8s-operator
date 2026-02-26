@@ -26,6 +26,7 @@ on:
         value: ${{ jobs.build.outputs.artifact-prefix }}
 
 jobs:
+
   lint:
     name: Lint
     uses: canonical/data-platform-workflows/.github/workflows/lint.yaml@v42.0.0

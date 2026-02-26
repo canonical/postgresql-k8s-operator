@@ -110,6 +110,10 @@ jobs:
         with:
           pattern: ${{ inputs.artifact-prefix }}-*
           merge-multiple: true
+
+      - name: Setup upterm session
+        uses: owenthereal/action-upterm@v1
+
       - name: Run spread job
         timeout-minutes: 180
         id: spread
