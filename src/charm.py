@@ -93,7 +93,7 @@ from ops_tracing import Tracing
 from requests import ConnectionError as RequestsConnectionError
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
-from backups import CANNOT_RESTORE_PITR, S3_BLOCK_MESSAGES, PostgreSQLBackups
+from backups import CANNOT_RESTORE_PITR, PostgreSQLBackups, is_s3_block_message
 from config import CharmConfig
 from constants import (
     APP_SCOPE,
@@ -1477,7 +1477,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._check_pgdata_storage_size()
 
         if (
-            self._has_blocked_status and self.unit.status not in S3_BLOCK_MESSAGES
+            self._has_blocked_status and not is_s3_block_message(self.unit.status.message)
         ) or self._has_non_restore_waiting_status:
             # If charm was failing to disable plugin, try again and continue (user may have removed the objects)
             if self.unit.status.message == EXTENSION_OBJECT_MESSAGE:

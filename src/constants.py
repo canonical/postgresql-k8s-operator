@@ -63,3 +63,4 @@ ENDPOINT_SIMULTANEOUSLY_BLOCKING_MESSAGE = (
 )
 
 PGBACKREST_LOGROTATE_FILE = "/etc/logrotate.d/pgbackrest.logrotate"
+PGBACKREST_LOGS_PATH = "/var/log/pgbackrest"
