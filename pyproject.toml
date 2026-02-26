@@ -7,7 +7,7 @@ requires-poetry = ">=2.0.0"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-ops = "^3.5.2"
+ops = {extras = ["tracing"], version = "^3.5.2"}
 boto3 = "^1.42.55"
 pgconnstr = "^1.0.1"
 requests = "^2.32.5"
@@ -28,12 +28,9 @@ ops = ">=2.0.0"
 # data_platform_libs/v0/upgrade.py
 poetry-core = "*"
 # data_platform_libs/v0/data_models.py
-# tempo_coordinator_k8s/v0/tracing.py requires pydantic
 pydantic = "*"
 # loki_k8s/v1/loki_push_api.py and prometheus_k8s/v0/prometheus_scrape.py
 cosl = ">=0.0.50"
-# tempo_coordinator_k8s/v0/charm_tracing.py
-opentelemetry-exporter-otlp-proto-http = "1.21.0"
 # certificate_transfer_interface/v0/certificate_transfer.py
 jsonschema = "*"
 
