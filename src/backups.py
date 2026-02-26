@@ -199,14 +199,9 @@ class PostgreSQLBackups(Object):
 
         for stanza in json.loads(output):
             if (stanza_name := stanza.get("name")) and stanza_name == "[invalid]":
-                repo_message = next(
-                    (
-                        repo["status"]["message"]
-                        for repo in stanza.get("repo", [])
-                        if repo.get("status", {}).get("message")
-                    ),
-                    "",
-                )[:120]
+                messages = (repo.get("status", {}).get("message") for repo in stanza.get("repo", []))
+                messages = (message for message in messages if message is not None)
+                repo_message = next(messages, "")[:120]
                 logger.error("Invalid stanza name from s3: %s", repo_message)
                 error_message = (
                     f"{FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE}: {repo_message}"
