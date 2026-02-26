@@ -1943,6 +1943,28 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         return self.update_config()
 
+    def _reset_upgrade_statuses(self) -> None:
+        """Reset upgrade statuses if upgrade is not idle to preserve them during rolling restart."""
+        if not self.upgrade.idle:
+            match self.upgrade.state:
+                case "recovery":
+                    self.unit.status = BlockedStatus("ready to rollback application")
+                case "failed":
+                    self.upgrade.set_unit_failed()
+                case "upgrading":
+                    self.unit.status = MaintenanceStatus("upgrading unit")
+                case "completed":
+                    if len(self.upgrade.app_units) > 1 and int(
+                        self.unit.name.split("/")[1]
+                    ) == max(int(unit.name.split("/")[1]) for unit in self.upgrade.app_units):
+                        # If the last unit resets the status, make sure to inform the user to
+                        # continue the upgrade
+                        self.unit.status = MaintenanceStatus(
+                            "upgrade completed, run resume-upgrade to proceed"
+                        )
+                    else:
+                        self.upgrade.set_unit_completed()
+
     def _restart(self, event: RunWithLock) -> None:
         """Restart PostgreSQL."""
         if not self._patroni.are_all_members_ready():
@@ -1972,6 +1994,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         # Start or stop the pgBackRest TLS server service when TLS certificate change.
         self.backup.start_stop_pgbackrest_service()
+
+        self._reset_upgrade_statuses()
 
     def _restart_metrics_service(self) -> None:
         """Restart the monitoring service if the password was rotated."""

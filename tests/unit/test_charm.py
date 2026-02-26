@@ -2202,3 +2202,69 @@ def test_calculate_worker_process_config_all_workers_validation_blocking(harness
 
     result = harness.charm._calculate_worker_process_config(cpu_cores)
     assert result["max_parallel_workers"] == "18"  # Should accept valid value
+
+
+def test_reset_upgrade_statuses(harness):
+    with (
+        patch(
+            "charm.PostgreSQLUpgrade.idle", new_callable=PropertyMock, return_value=True
+        ) as _idle,
+        patch(
+            "charm.PostgreSQLUpgrade.state", new_callable=PropertyMock, return_value="idle"
+        ) as _state,
+        patch("charm.PostgreSQLUpgrade.set_unit_failed") as _set_unit_failed,
+        patch("charm.PostgreSQLUpgrade.set_unit_completed") as _set_unit_completed,
+        patch(
+            "charm.PostgreSQLUpgrade.app_units", new_callable=PropertyMock, return_value=[]
+        ) as _app_units,
+    ):
+        # Upgrade idle
+        harness.charm.unit.status = BlockedStatus("TEST")
+
+        harness.charm._reset_upgrade_statuses()
+
+        assert harness.charm.unit.status == BlockedStatus("TEST")
+
+        _idle.return_value = False
+
+        # Recovery
+        _state.return_value = "recovery"
+
+        harness.charm._reset_upgrade_statuses()
+
+        assert harness.charm.unit.status == BlockedStatus("ready to rollback application")
+
+        # Upgrading
+        _state.return_value = "upgrading"
+
+        harness.charm._reset_upgrade_statuses()
+
+        assert harness.charm.unit.status == MaintenanceStatus("upgrading unit")
+
+        # Completed
+        _state.return_value = "completed"
+
+        harness.charm._reset_upgrade_statuses()
+
+        _set_unit_completed.assert_called_once_with()
+
+        # Failed
+        _state.return_value = "failed"
+
+        harness.charm._reset_upgrade_statuses()
+
+        _set_unit_failed.assert_called_once_with()
+
+        # Last unit completed
+        mock_unit_1 = Mock()
+        mock_unit_1.name = "test/-1"
+        mock_unit_2 = Mock()
+        mock_unit_2.name = "test/0"
+        _app_units.return_value = [mock_unit_2, mock_unit_1]
+        _state.return_value = "completed"
+
+        harness.charm._reset_upgrade_statuses()
+
+        assert harness.charm.unit.status == MaintenanceStatus(
+            "upgrade completed, run resume-upgrade to proceed"
+        )
