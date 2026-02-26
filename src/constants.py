@@ -52,7 +52,6 @@ PLUGIN_OVERRIDES = {"audit": "pgaudit", "uuid_ossp": '"uuid-ossp"'}
 SPI_MODULE = ["refint", "autoinc", "insert_username", "moddatetime"]
 
 TRACING_RELATION_NAME = "tracing"
-TRACING_PROTOCOL = "otlp_http"
 
 DATABASE = "database"
 LEGACY_DB = "db"
