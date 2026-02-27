@@ -7,17 +7,17 @@ The following are the minimum software and hardware requirements to run Charmed 
 
 ### Juju
 
-The charm supports several Juju releases, starting from [2.9 LTS](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-2-9). The table below shows which minor versions of each major Juju release are supported by Charmed PostgreSQL.
+The charm supports several Juju releases, starting from [2.9 LTS](https://documentation.ubuntu.com/juju/3.6/releasenotes/juju_2.9.x/#juju-2-9-0). The table below shows which minor versions of each major Juju release are supported by Charmed PostgreSQL.
 
 | Juju major release | Supported minor versions | Compatible charm revisions |Comment |
 |:--------|:-----|:-----|:-----|
 | ![3.6 LTS] | `3.6.1+` | [444/445]+ | Recommended for production. |
-| [![3.5]](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-5) | `3.5.1+` | [280]+  | [Known Juju issue](https://bugs.launchpad.net/juju/+bug/2066517) in `3.5.0` |
-| [![3.4]](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-4) | `3.4.3+` | [280]+  | Know Juju issues with previous minor versions |
-| [![3.3]](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-3) | `3.3.0+` | from [177] to [193]  | No known issues |
-| [![3.2]](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-2) | `3.2.0+` | from [177] to [193] | No known issues |
-| [![3.1]](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-3-1) | `3.1.7+` | from [177] to [193]| Juju secrets were stabilised in `3.1.7` |
-| [![2.9 LTS]](https://documentation.ubuntu.com/juju/3.6/reference/juju/juju-roadmap-and-releases/#juju-2-9) | `2.9.49+` | [73]+ |
+| [![3.5]](https://documentation.ubuntu.com/juju/3.6/releasenotes/unsupported/juju_3.x.x/#juju-3-5) | `3.5.1+` | [280]+  | [Known Juju issue](https://bugs.launchpad.net/juju/+bug/2066517) in `3.5.0` |
+| [![3.4]](https://documentation.ubuntu.com/juju/3.6/releasenotes/unsupported/juju_3.x.x/#juju-3-4) | `3.4.3+` | [280]+  | Know Juju issues with previous minor versions |
+| [![3.3]](https://documentation.ubuntu.com/juju/3.6/releasenotes/unsupported/juju_3.x.x/#juju-3-3) | `3.3.0+` | from [177] to [193]  | No known issues |
+| [![3.2]](https://documentation.ubuntu.com/juju/3.6/releasenotes/unsupported/juju_3.x.x/#juju-3-2) | `3.2.0+` | from [177] to [193] | No known issues |
+| [![3.1]](https://documentation.ubuntu.com/juju/3.6/releasenotes/unsupported/juju_3.x.x/#juju-3-1) | `3.1.7+` | from [177] to [193]| Juju secrets were stabilised in `3.1.7` |
+| [![2.9 LTS]](https://documentation.ubuntu.com/juju/3.6/releasenotes/juju_2.9.x/#) | `2.9.49+` | [73]+ |
 |  | `2.9.32+` | [73] to [193] | No tests for older Juju versions. |
 
 ### Kubernetes
