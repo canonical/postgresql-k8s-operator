@@ -211,7 +211,8 @@ linkcheck_ignore = [
     "https://matrix.to/*",
     "https://developer.hashicorp.com/*",
     "https://www.terraform.io/*",
-    "https://www.percona.com/*"
+    "https://www.percona.com/*",
+    "https://kubernetes.io/*"
     ]
 
 # A regex list of URLs where anchors are ignored by 'make linkcheck'
