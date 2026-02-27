@@ -12,6 +12,5 @@ Charmed PostgreSQL K8s is an open source project that warmly welcomes community 
 * [Charmed PostgreSQL K8s](https://charmhub.io/postgresql-k8s)
 * [Git sources for Charmed PostgreSQL K8s](https://github.com/canonical/postgresql-k8s-operator)
 * [Canonical Data on Launchpad](https://launchpad.net/~data-platform)
-* [Canonical Data on Matrix](https://matrix.to/#/#charmhub-data-platform:ubuntu.com) 
-* [Mailing list on Launchpad](https://lists.launchpad.net/data-platform/)
+* [Canonical Data on Matrix](https://matrix.to/#/#charmhub-data-platform:ubuntu.com)
 
