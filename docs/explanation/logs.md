@@ -78,7 +78,7 @@ The naming convention of the Pgbackrest logs is `<model name>.patroni-<postgresq
 2023-10-11 13:07:45.146 P00   INFO: expire command end: completed successfully (353ms)
 root@pg-0:/# cat /var/log/pgbackrest/discourse.patroni-pg-backup.log 
 -------------------PROCESS START-------------------
-2023-10-11 13:06:29.857 P00   INFO: backup command begin 2.47: --no-backup-standby --exec-id=843-b0d896e1 --log-level-console=debug --pg1-path=/var/lib/postgresql/data/pgdata --pg1-user=backup --repo1-path=/postgresql-test --repo1-retention-full=9999999 --repo1-s3-bucket=dragop-test-bucket --repo1-s3-endpoint=https://s3.eu-central-1.amazonaws.com --repo1-s3-key=<redacted> --repo1-s3-key-secret=<redacted> --repo1-s3-region=eu-central-1 --repo1-s3-uri-style=host --repo1-type=s3 --stanza=discourse.patroni-pg --start-fast --type=full
+2023-10-11 13:06:29.857 P00   INFO: backup command begin 2.47: --no-backup-standby --exec-id=843-b0d896e1 --log-level-console=debug --pg1-path=/var/lib/pg/data/16/main --pg1-user=backup --repo1-path=/postgresql-test --repo1-retention-full=9999999 --repo1-s3-bucket=dragop-test-bucket --repo1-s3-endpoint=https://s3.eu-central-1.amazonaws.com --repo1-s3-key=<redacted> --repo1-s3-key-secret=<redacted> --repo1-s3-region=eu-central-1 --repo1-s3-uri-style=host --repo1-type=s3 --stanza=discourse.patroni-pg --start-fast --type=full
 2023-10-11 13:06:30.869 P00   INFO: execute non-exclusive backup start: backup begins after the requested immediate checkpoint completes
 2023-10-11 13:06:31.671 P00   INFO: backup start archive = 000000010000000000000004, lsn = 0/4000060
 2023-10-11 13:06:31.671 P00   INFO: check archive for prior segment 000000010000000000000003

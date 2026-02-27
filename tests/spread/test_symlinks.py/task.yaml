@@ -1,10 +1,7 @@
-summary: test_upgrade.py
+summary: test_symlinks.py
 environment:
-  TEST_MODULE: high_availability/test_upgrade.py
+  TEST_MODULE: test_symlinks.py
 execute: |
   tox run -e integration -- "tests/integration/$TEST_MODULE" --model testing --alluredir="$SPREAD_TASK/allure-results"
-systems:
-  - -ubuntu-24.04
-  - -ubuntu-24.04-arm
 artifacts:
   - allure-results

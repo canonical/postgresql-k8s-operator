@@ -67,7 +67,7 @@ def test_tls_ca_chain_filename(harness):
         )
     assert (
         harness.charm.backup._tls_ca_chain_filename
-        == "/var/lib/postgresql/data/pgbackrest-tls-ca-chain.crt"
+        == "/var/lib/pg/data/pgbackrest-tls-ca-chain.crt"
     )
 
 
@@ -310,7 +310,7 @@ def test_construct_endpoint(harness):
 
 
 @pytest.mark.parametrize(
-    "tls_ca_chain_filename", ["", "/var/lib/postgresql/data/pgbackrest-tls-ca-chain.crt"]
+    "tls_ca_chain_filename", ["", "/var/lib/pg/data/pgbackrest-tls-ca-chain.crt"]
 )
 def test_create_bucket_if_not_exists(harness, tls_ca_chain_filename):
     with (
@@ -399,21 +399,39 @@ def test_create_bucket_if_not_exists(harness, tls_ca_chain_filename):
 
 def test_empty_data_files(harness):
     with patch("ops.model.Container.exec") as _exec:
-        # Test when the removal of the data files fails.
-        command = ["rm", "-r", "/var/lib/postgresql/data/pgdata"]
-        _exec.side_effect = ExecError(command=command, exit_code=1, stdout="", stderr="fake error")
+        # Mock the wait_output method
+        mock_process = MagicMock()
+        mock_process.wait_output.return_value = ("", "")
+        _exec.return_value = mock_process
+
+        # Test when the removal of data files fails on the first directory.
+        _exec.side_effect = ExecError(
+            command=["find", "/var/lib/pg/archive", "-mindepth", "1", "-delete"],
+            exit_code=1,
+            stdout="",
+            stderr="fake error",
+        )
         try:
             harness.charm.backup._empty_data_files()
             assert False
         except ExecError:
             pass
-        _exec.assert_called_once_with(command)
 
-        # Test when data files are successfully removed.
+        # Test when data files are successfully removed from all directories.
         _exec.reset_mock()
         _exec.side_effect = None
+        _exec.return_value = mock_process
         harness.charm.backup._empty_data_files()
-        _exec.assert_called_once_with(command)
+        # Should be called 4 times: archive, data, logs, temp
+        assert _exec.call_count == 4
+        expected_calls = [
+            (["find", "/var/lib/pg/archive", "-mindepth", "1", "-delete"],),
+            (["find", "/var/lib/pg/data/16/main", "-mindepth", "1", "-delete"],),
+            (["find", "/var/lib/pg/logs", "-mindepth", "1", "-delete"],),
+            (["find", "/var/lib/pg/temp", "-mindepth", "1", "-delete"],),
+        ]
+        for call, expected in zip(_exec.call_args_list, expected_calls, strict=True):
+            assert call[0] == expected
 
 
 def test_change_connectivity_to_database(harness):
@@ -443,7 +461,7 @@ def test_change_connectivity_to_database(harness):
 
 def test_execute_command(harness):
     with patch("ops.model.Container.exec") as _exec:
-        command = ["rm", "-r", "/var/lib/postgresql/data/pgdata"]
+        command = ["rm", "-r", "/var/lib/postgresql/16/main"]
         _exec.return_value.wait_output.return_value = ("fake stdout", "")
 
         # Test when the command runs successfully.
@@ -1720,9 +1738,11 @@ def test_pre_restore_checks(harness):
 
 
 @pytest.mark.parametrize(
-    "tls_ca_chain_filename", ["", "/var/lib/postgresql/data/pgbackrest-tls-ca-chain.crt"]
+    "tls_ca_chain_filename", ["", "/var/lib/pg/data/pgbackrest-tls-ca-chain.crt"]
 )
 def test_render_pgbackrest_conf_file(harness, tls_ca_chain_filename):
+    mock_pebble = MagicMock()
+    mock_pebble.get_services.return_value = [MagicMock()]
     with (
         patch("ops.model.Container.start") as _start,
         patch("ops.model.Container.push") as _push,
@@ -1732,6 +1752,7 @@ def test_render_pgbackrest_conf_file(harness, tls_ca_chain_filename):
         ) as _tls_ca_chain_filename,
         patch("charm.PostgreSQLBackups._retrieve_s3_parameters") as _retrieve_s3_parameters,
         patch("charm.PostgresqlOperatorCharm.get_available_resources", return_value=(4, 1024)),
+        patch("ops.model.Container.pebble", new_callable=PropertyMock(return_value=mock_pebble)),
     ):
         # Set up a mock for the `open` method, set returned data to postgresql.conf template.
         with open("templates/pgbackrest.conf.j2") as f:
@@ -1781,6 +1802,7 @@ def test_render_pgbackrest_conf_file(harness, tls_ca_chain_filename):
             secret_key="test-secret-key",
             stanza=harness.charm.backup.stanza_name,
             storage_path=harness.charm._storage_path,
+            pgdata_path=harness.charm.pgdata_path,
             user="backup",
             retention_full=30,
             process_max=2,
@@ -2015,7 +2037,7 @@ def test_start_stop_pgbackrest_service(harness):
 
 
 @pytest.mark.parametrize(
-    "tls_ca_chain_filename", ["", "/var/lib/postgresql/data/pgbackrest-tls-ca-chain.crt"]
+    "tls_ca_chain_filename", ["", "/var/lib/pg/data/pgbackrest-tls-ca-chain.crt"]
 )
 def test_upload_content_to_s3(harness, tls_ca_chain_filename):
     with (

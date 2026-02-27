@@ -31,9 +31,13 @@ from ops.pebble import ChangeError, ExecError, ServiceStatus
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from constants import (
+    ARCHIVE_PATH,
     BACKUP_TYPE_OVERRIDES,
     BACKUP_USER,
+    LOGS_STORAGE_PATH,
     PGBACKREST_LOGROTATE_FILE,
+    POSTGRESQL_DATA_PATH,
+    TEMP_STORAGE_PATH,
     WORKLOAD_OS_GROUP,
     WORKLOAD_OS_USER,
 )
@@ -195,7 +199,7 @@ class PostgreSQLBackups(Object):
 
             system_identifier_from_instance, error = self._execute_command([
                 f"/usr/lib/postgresql/{self.charm._patroni.rock_postgresql_version.split('.')[0]}/bin/pg_controldata",
-                "/var/lib/postgresql/data/pgdata",
+                POSTGRESQL_DATA_PATH,
             ])
             if error != "":
                 raise Exception(error)
@@ -272,15 +276,24 @@ class PostgreSQLBackups(Object):
 
     def _empty_data_files(self) -> None:
         """Empty the PostgreSQL data directory in preparation of backup restore."""
-        try:
-            self.container.exec(["rm", "-r", "/var/lib/postgresql/data/pgdata"]).wait_output()
-        except ExecError as e:
-            # If previous PITR restore was unsuccessful, there is no such directory.
-            if "No such file or directory" not in str(e.stderr):
-                logger.exception(
-                    "Failed to empty data directory in prep for backup restore", exc_info=e
-                )
-                raise
+        # Clear all storage directories, not just data. The logs directory must be cleared
+        # so that when new replicas join after restore, pg_basebackup can use the --waldir
+        # option (which requires an empty directory).
+        for path in [
+            ARCHIVE_PATH,
+            self.charm._actual_pgdata_path,
+            LOGS_STORAGE_PATH,
+            TEMP_STORAGE_PATH,
+        ]:
+            try:
+                self.container.exec(["find", path, "-mindepth", "1", "-delete"]).wait_output()
+            except ExecError as e:
+                # If previous PITR restore was unsuccessful, there may be no such directory.
+                if "No such file or directory" not in str(e.stderr):
+                    logger.exception(
+                        f"Failed to empty {path} in prep for backup restore", exc_info=e
+                    )
+                    raise
 
     def _change_connectivity_to_database(self, connectivity: bool) -> None:
         """Enable or disable the connectivity to the database."""
@@ -1212,6 +1225,7 @@ Stderr:
             secret_key=s3_parameters["secret-key"],
             stanza=self.stanza_name,
             storage_path=self.charm._storage_path,
+            pgdata_path=POSTGRESQL_DATA_PATH,
             user=BACKUP_USER,
             retention_full=s3_parameters["delete-older-than-days"],
             process_max=max(cpu_count - 2, 1),
@@ -1234,7 +1248,9 @@ Stderr:
                 "/home/postgres/rotate_logs.py",
                 f.read(),
             )
-        self.container.start(self.charm.rotate_logs_service)
+        services = self.container.pebble.get_services(names=[self.charm.rotate_logs_service])
+        if services:
+            self.container.start(self.charm.rotate_logs_service)
 
         return True
 

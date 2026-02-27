@@ -10,7 +10,7 @@ from pytest_operator.plugin import OpsTest
 from . import markers
 from .helpers import (
     DATABASE_APP_NAME,
-    STORAGE_PATH,
+    PGDATA_PATH,
     build_and_deploy,
     get_primary,
     run_command_on_unit,
@@ -46,7 +46,7 @@ async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest, charm):
     await run_command_on_unit(
         ops_test,
         primary,
-        f"FREE_SPACE=$(df --output=avail {STORAGE_PATH}/pgdata | tail -1) && dd if=/dev/urandom of={STORAGE_PATH}/pgdata/tmp bs=1M count=$(( (FREE_SPACE * 91 / 100) / 1024 ))",
+        f"FREE_SPACE=$(df --output=avail {PGDATA_PATH} | tail -1) && dd if=/dev/urandom of={PGDATA_PATH}/tmp bs=1M count=$(( (FREE_SPACE * 91 / 100) / 1024 ))",
     )
 
     # wait for charm to get blocked
@@ -61,7 +61,7 @@ async def test_filling_and_emptying_pgdata_storage(ops_test: OpsTest, charm):
         )
 
     # Delete big file to release storage space
-    await run_command_on_unit(ops_test, primary, f"rm {STORAGE_PATH}/pgdata/tmp")
+    await run_command_on_unit(ops_test, primary, f"rm {PGDATA_PATH}/tmp")
 
     # wait for charm to resolve
     await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active", timeout=1000)

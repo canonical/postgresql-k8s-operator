@@ -19,7 +19,7 @@ API_REQUEST_TIMEOUT = 5
 PATRONI_CLUSTER_STATUS_ENDPOINT = "cluster"
 PATRONI_CONFIG_STATUS_ENDPOINT = "config"
 TLS_CA_BUNDLE_FILE = "peer_ca_bundle.pem"
-PATRONI_CONF_FILE_PATH = "/var/lib/postgresql/data/patroni.yml"
+PATRONI_CONF_FILE_PATH = "/var/lib/pg/data/patroni.yml"
 
 # File path for the spawned cluster topology observer process to write logs.
 LOG_FILE_PATH = "/var/log/authorisation_rules_observer.log"

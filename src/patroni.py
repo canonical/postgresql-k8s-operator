@@ -33,6 +33,7 @@ from tenacity import (
 
 from constants import (
     API_REQUEST_TIMEOUT,
+    LOGS_STORAGE_PATH,
     PATRONI_CLUSTER_STATUS_ENDPOINT,
     POSTGRESQL_LOGS_PATH,
     POSTGRESQL_LOGS_PATTERN,
@@ -99,6 +100,7 @@ class Patroni:
         primary_endpoint: str,
         namespace: str,
         storage_path: str,
+        pgdata_path: str,
         superuser_password: str | None,
         replication_password: str | None,
         rewind_password: str | None,
@@ -110,6 +112,7 @@ class Patroni:
         self._primary_endpoint = primary_endpoint
         self._namespace = namespace
         self._storage_path = storage_path
+        self._pgdata_path = pgdata_path
         self._members_count = len(self._endpoints)
         self._superuser_password = superuser_password
         self._replication_password = replication_password
@@ -540,29 +543,38 @@ class Patroni:
         )
         r.raise_for_status()
 
-    def ensure_slots_controller_by_patroni(self, slots: dict[str, str]) -> None:
+    def ensure_slots_controller_by_patroni(self, slots: dict[str, str]) -> bool:
         """Synchronises slots controlled by Patroni with the provided state by removing unneeded slots and creating new ones.
 
         Args:
             slots: dictionary of slots in the {slot: database} format.
+
+        Returns:
+            True if successful, False if Patroni API is not ready.
         """
-        for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
-            with attempt:
-                current_config = requests.get(
-                    f"{self._patroni_url}/config",
-                    verify=self._verify,
-                    timeout=API_REQUEST_TIMEOUT,
-                    auth=self._patroni_auth,
-                )
-                logger.debug(
-                    "API ensure_slots_controller_by_patroni: %s (%s)",
-                    current_config,
-                    current_config.elapsed.total_seconds(),
-                )
-                if current_config.status_code != 200:
-                    raise Exception(
-                        f"Failed to get current Patroni config: {current_config.status_code} {current_config.text}"
+        try:
+            for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
+                with attempt:
+                    current_config = requests.get(
+                        f"{self._patroni_url}/config",
+                        verify=self._verify,
+                        timeout=API_REQUEST_TIMEOUT,
+                        auth=self._patroni_auth,
                     )
+                    logger.debug(
+                        "API ensure_slots_controller_by_patroni: %s (%s)",
+                        current_config,
+                        current_config.elapsed.total_seconds(),
+                    )
+                    if current_config.status_code in (502, 503):
+                        raise Exception(f"Patroni API not ready: {current_config.status_code}")
+                    if current_config.status_code != 200:
+                        raise Exception(
+                            f"Failed to get current Patroni config: {current_config.status_code} {current_config.text}"
+                        )
+        except RetryError:
+            logger.warning("Patroni config API not ready after retries, will retry later")
+            return False
 
         slots_patch: dict[str, dict[str, str] | None] = dict.fromkeys(
             current_config.json().get("slots", ()) or {}
@@ -580,6 +592,7 @@ class Patroni:
             auth=self._patroni_auth,
             timeout=API_REQUEST_TIMEOUT,
         )
+        return True
 
     def promote_standby_cluster(self) -> None:
         """Promote a standby cluster to be a regular cluster."""
@@ -690,6 +703,8 @@ class Patroni:
             is_no_sync_member=is_no_sync_member,
             namespace=self._namespace,
             storage_path=self._storage_path,
+            logs_storage_path=LOGS_STORAGE_PATH,
+            pgdata_path=self._pgdata_path,
             superuser_password=self._superuser_password,
             replication_password=self._replication_password,
             rewind_user=REWIND_USER,

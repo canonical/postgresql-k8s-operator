@@ -12,9 +12,9 @@ from ops.testing import Harness
 from tenacity import RetryError, stop_after_delay, wait_fixed
 
 from charm import PostgresqlOperatorCharm
-from constants import API_REQUEST_TIMEOUT, REWIND_USER
+from constants import API_REQUEST_TIMEOUT, LOGS_STORAGE_PATH, REWIND_USER
 from patroni import Patroni, SwitchoverFailedError, SwitchoverNotSyncError
-from tests.helpers import STORAGE_PATH
+from tests.helpers import PGDATA_PATH, STORAGE_PATH
 
 
 @pytest.fixture(autouse=True)
@@ -35,6 +35,7 @@ def patroni(harness):
         "postgresql-k8s-primary.dev.svc.cluster.local",
         "test-model",
         STORAGE_PATH,
+        PGDATA_PATH,
         "superuser-password",
         "replication-password",
         "rewind-password",
@@ -224,6 +225,8 @@ def test_render_patroni_yml_file(harness, patroni):
             endpoints=patroni._endpoints,
             namespace=patroni._namespace,
             storage_path=patroni._storage_path,
+            logs_storage_path=LOGS_STORAGE_PATH,
+            pgdata_path=patroni._pgdata_path,
             superuser_password=patroni._superuser_password,
             replication_password=patroni._replication_password,
             rewind_user=REWIND_USER,
@@ -261,6 +264,8 @@ def test_render_patroni_yml_file(harness, patroni):
             endpoints=patroni._endpoints,
             namespace=patroni._namespace,
             storage_path=patroni._storage_path,
+            logs_storage_path=LOGS_STORAGE_PATH,
+            pgdata_path=patroni._pgdata_path,
             superuser_password=patroni._superuser_password,
             replication_password=patroni._replication_password,
             rewind_user=REWIND_USER,
@@ -288,9 +293,9 @@ def test_render_patroni_yml_file(harness, patroni):
         # Also, ensure the right parameters are in the expected content
         # (as it was already validated with the above render file call).
         assert "ssl: on" in expected_content_with_tls
-        assert "ssl_ca_file: /var/lib/postgresql/data/ca.pem" in expected_content_with_tls
-        assert "ssl_cert_file: /var/lib/postgresql/data/cert.pem" in expected_content_with_tls
-        assert "ssl_key_file: /var/lib/postgresql/data/key.pem" in expected_content_with_tls
+        assert "ssl_ca_file: /var/lib/pg/data/ca.pem" in expected_content_with_tls
+        assert "ssl_cert_file: /var/lib/pg/data/cert.pem" in expected_content_with_tls
+        assert "ssl_key_file: /var/lib/pg/data/key.pem" in expected_content_with_tls
 
 
 def test_primary_endpoint_ready(harness, patroni):
