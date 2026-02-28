@@ -1,0 +1,24 @@
+[32mINFO    [0m integration.test_charm:test_charm.py:332 connecting to primary postgresql-k8s/0 on 10.1.114.89
+[32mINFO    [0m httpx:_client.py:1740 HTTP Request: DELETE https://10.1.0.57:16443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.test_charm:test_charm.py:341 primary pod deleted
+[32mINFO    [0m integration.test_charm:test_charm.py:344 wait for juju to reset postgres container
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary (degraded)
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] maintenance: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m integration.test_charm:test_charm.py:353 juju has reset postgres container
+[32mINFO    [0m integration.test_charm:test_charm.py:359 connecting to the database host: 10.1.114.96
+[32mINFO    [0m integration.test_charm:test_charm.py:359 connecting to the database host: 10.1.114.87
+[32mINFO    [0m integration.test_charm:test_charm.py:359 connecting to the database host: 10.1.114.90
