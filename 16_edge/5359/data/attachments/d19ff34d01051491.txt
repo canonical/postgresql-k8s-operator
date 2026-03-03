@@ -1,0 +1,72 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/glauth-k8s-58
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/self-signed-certificates-317
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/postgresql-k8s-774
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-postgresql-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-self-signed-certificates/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-self-signed-certificates/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-postgresql-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-k8s/0 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-postgresql-k8s/0 [executing] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-k8s/0 [executing] blocked: Backend integration (`pg-database` or `ldap-client`) missing
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-k8s/0 [idle] blocked: Backend integration (`pg-database` or `ldap-client`) missing
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m integration.test_ldap:test_ldap.py:70 Adding relations to GLAuth
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  01:35:32Z
+
+App                              Version  Status   Scale  Charm                     Channel      Rev  Address         Exposed  Message
+glauth-k8s                                blocked      1  glauth-k8s                latest/edge   58  10.152.183.164  no       Backend integration (`pg-database` or `ldap-client`) missing
+glauth-postgresql-k8s            14.20    active       1  postgresql-k8s            14/stable    774  10.152.183.62   no       
+glauth-self-signed-certificates           active       1  self-signed-certificates  1/stable     317  10.152.183.199  no       
+postgresql-k8s                   16.11    active       1  postgresql-k8s                           0  10.152.183.60   no       
+
+Unit                                Workload  Agent      Address      Ports  Message
+glauth-k8s/0*                       blocked   executing  10.1.114.87         Backend integration (`pg-database` or `ldap-client`) missing
+glauth-postgresql-k8s/0*            active    idle       10.1.114.85         Primary
+glauth-self-signed-certificates/0*  active    executing  10.1.114.81         
+postgresql-k8s/0*                   active    idle       10.1.114.79         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-0: 01:33:03 ERROR unit.postgresql-k8s/0.juju-log __main__:failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 806, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 306, in _connect_to_database
+    connection = psycopg2.connect(
+                 ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.testing.svc.cluster.local" (10.152.183.108), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/charm.py", line 906, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 835, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+single_kernel_postgresql.utils.postgresql.PostgreSQLEnableDisableExtensionError
+unit-glauth-self-signed-certificates-0: 01:34:05 ERROR unit.glauth-self-signed-certificates/0.juju-log At least 1 matching relation ID not found with the relation name 'send-ca-cert'
+unit-glauth-k8s-0: 01:34:11 ERROR unit.glauth-k8s/0.juju-log Error fetching ConfigMap: configmaps "glauth-k8s" not found
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
