@@ -26,7 +26,7 @@ In the context of this documentation, the pertinent changes are as follows:
 |`run`|`exec`|
 |`run-action --wait`|`run`|
 
-See the [Juju 3.0 release notes](https://documentation.ubuntu.com/juju/3.6/releasenotes/unsupported/juju_3.x.x/#juju-3-0) for the comprehensive list of changes.
+See the [Juju 3.0 release notes](https://documentation.ubuntu.com/juju/3.6/releasenotes/) for the comprehensive list of changes.
 
 Example substitutions:
 

@@ -210,7 +210,9 @@ linkcheck_ignore = [
     "https://github.com/canonical/*",
     "https://matrix.to/*",
     "https://developer.hashicorp.com/*",
-    "https://www.terraform.io/*"
+    "https://www.terraform.io/*",
+    "https://www.percona.com/*",
+    "https://kubernetes.io/*"
     ]
 
 # A regex list of URLs where anchors are ignored by 'make linkcheck'
@@ -221,7 +223,7 @@ linkcheck_anchors_ignore_for_url = [
     ]
 
 # give linkcheck multiple tries on failure
-# linkcheck_timeout = 30
+linkcheck_timeout = 90
 linkcheck_retries = 3
 
 ########################

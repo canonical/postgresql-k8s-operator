@@ -3,7 +3,6 @@
 from unittest.mock import Mock, PropertyMock, patch
 
 import pytest
-from charms.tempo_coordinator_k8s.v0.charm_tracing import charm_tracing_disabled
 
 
 # This causes every test defined in this file to run 2 times, each with
@@ -11,12 +10,6 @@ from charms.tempo_coordinator_k8s.v0.charm_tracing import charm_tracing_disabled
 @pytest.fixture(autouse=True)
 def juju_has_secrets(request, monkeypatch):
     monkeypatch.setattr("ops.JujuVersion.has_secrets", PropertyMock(return_value=True))
-
-
-@pytest.fixture(autouse=True)
-def disable_charm_tracing():
-    with charm_tracing_disabled():
-        yield
 
 
 @pytest.fixture(autouse=True)
