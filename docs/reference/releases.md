@@ -46,20 +46,20 @@ Check the tables below, or use [`juju info`](https://juju.is/docs/juju/juju-info
 
 | Revision | amd64 | arm64 | Ubuntu 22.04 LTS
 |:--------:|:-----:|:-----:|:-----:|
-|[494] |         | ![check] |  ![check]  |
-|[495] | ![check] |         |  ![check]  |
-|[462] |![check] |          | ![check] |
-|[463] |         | ![check] | ![check] |
-|[445] |         | ![check] | ![check] |
-|[444] |![check] |          | ![check] |
-|[382] |         | ![check] | ![check] |
-|[381] |![check] |          | ![check] |
-|[281] |![check] |          | ![check] |
-|[280] |         |![check]  | ![check] |
-|[193] |![check] |          | ![check] |
-|[177] |![check] |          | ![check] |
-|[158] |![check] |          | ![check] |
-|[73]  |![check] |          | ![check] |
+|[495] | ![check] |          |  ![check]  |
+|[494] |          | ![check] |  ![check]  |
+|[463] |          | ![check] | ![check] |
+|[462] |![check]  |          | ![check] |
+|[445] |          | ![check] | ![check] |
+|[444] |![check]  |          | ![check] |
+|[382] |          | ![check] | ![check] |
+|[381] |![check]  |          | ![check] |
+|[281] |![check]  |          | ![check] |
+|[280] |          |![check]  | ![check] |
+|[193] |![check]  |          | ![check] |
+|[177] |![check]  |          | ![check] |
+|[158] |![check]  |          | ![check] |
+|[73]  |![check]  |          | ![check] |
 
 </details>
 
@@ -71,8 +71,8 @@ For a list of all plugins supported for each revision, see the reference page [P
 > **Note** Our release notes are an ongoing work in progress. If there is any additional information about releases that you would like to see or suggestions for other improvements, don't hesitate to contact us on [Matrix ](https://matrix.to/#/#charmhub-data-platform:ubuntu.com) or [leave a comment](https://discourse.charmhub.io/t/charmed-postgresql-k8s-reference-release-notes/11872).
 
 <!-- LINKS -->
-[717]:
-[718]:
+[774]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev774
+[775]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev774
 
 [494]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev494
 [495]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev494
