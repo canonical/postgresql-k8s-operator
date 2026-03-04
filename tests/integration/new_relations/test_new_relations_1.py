@@ -188,7 +188,7 @@ async def test_two_applications_doesnt_share_the_same_relation_data(ops_test: Op
         APPLICATION_APP_NAME,
         application_name=another_application_app_name,
         channel="latest/edge",
-        sereis="jammy",
+        series="jammy",
     )
 
     # Relate the new application with the database
