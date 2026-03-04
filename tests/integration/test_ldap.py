@@ -69,7 +69,9 @@ async def test_glauth_integration(ops_test: OpsTest):
         # Add both relations to GLAuth (PostgreSQL and self-signed-certificates)
         logger.info("Adding relations to GLAuth")
         await asyncio.gather(
-            ops_test.model.add_relation(GLAUTH_APP_NAME, glauth_psql_app_name),
+            ops_test.model.add_relation(
+                f"{GLAUTH_APP_NAME}:pg-database", f"{glauth_psql_app_name}:database"
+            ),
             ops_test.model.add_relation(GLAUTH_APP_NAME, glauth_cert_app_name),
         )
         await asyncio.gather(
