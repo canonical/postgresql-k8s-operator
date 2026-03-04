@@ -168,8 +168,8 @@ async def test_two_applications_doesnt_share_the_same_relation_data(ops_test: Op
     await ops_test.model.deploy(
         APPLICATION_APP_NAME,
         application_name=another_application_app_name,
-        base=CHARM_BASE,
         channel="latest/edge",
+        series="noble",
     )
 
     # Relate the new application with the database
