@@ -109,10 +109,7 @@ async def test_finos_waltz_db(ops_test: OpsTest, charm) -> None:
 # (and this test depends on previous test with finos-waltz-k8s charm)
 async def test_extensions_blocking(ops_test: OpsTest) -> None:
     await ops_test.model.deploy(
-        APPLICATION_NAME,
-        application_name=APPLICATION_NAME,
-        base=CHARM_BASE,
-        channel="latest/edge",
+        APPLICATION_NAME, application_name=APPLICATION_NAME, channel="latest/edge", series="jammy"
     )
     await ops_test.model.deploy(
         APPLICATION_NAME,
