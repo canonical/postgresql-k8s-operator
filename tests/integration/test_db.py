@@ -112,13 +112,13 @@ async def test_extensions_blocking(ops_test: OpsTest) -> None:
         APPLICATION_NAME,
         application_name=APPLICATION_NAME,
         base=CHARM_BASE,
-        channel="edge",
+        channel="lastest/edge",
     )
     await ops_test.model.deploy(
         APPLICATION_NAME,
         application_name=f"{APPLICATION_NAME}2",
         base=CHARM_BASE,
-        channel="edge",
+        channel="latest/edge",
     )
 
     await ops_test.model.wait_for_idle(
