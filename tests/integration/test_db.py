@@ -9,7 +9,6 @@ from pytest_operator.plugin import OpsTest
 from . import markers
 from .helpers import (
     APPLICATION_NAME,
-    CHARM_BASE,
     DATABASE_APP_NAME,
     build_and_deploy,
     check_database_creation,
@@ -114,8 +113,8 @@ async def test_extensions_blocking(ops_test: OpsTest) -> None:
     await ops_test.model.deploy(
         APPLICATION_NAME,
         application_name=f"{APPLICATION_NAME}2",
-        base=CHARM_BASE,
         channel="latest/edge",
+        series="jammy",
     )
 
     await ops_test.model.wait_for_idle(
