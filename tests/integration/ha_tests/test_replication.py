@@ -9,7 +9,6 @@ from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from ..helpers import (
     APPLICATION_NAME,
-    CHARM_BASE,
     DATABASE_APP_NAME,
     app_name,
     build_and_deploy,
