@@ -14,14 +14,14 @@ For a given release, this table shows:
    > This charm still supports older versions of Juju down to 2.9. See the [system requirements](/reference/system-requirements) for more details
 * Support for specific features
 
-| Revision | PostgreSQL version | Juju version | [TLS encryption](/how-to/enable-tls)* | [COS monitoring](/how-to/monitoring-cos/index) | [Minor version upgrades](/how-to/upgrade/index) | [Cross-regional async replication](/how-to/cross-regional-async-replication/index) | [Point-in-time recovery](/how-to/back-up-and-restore/restore-a-backup) | [PITR Timelines](/how-to/back-up-and-restore/restore-a-backup) |
+| Revision</br>(`amd`,`arm`) | PostgreSQL version | Juju version | [TLS encryption](/how-to/enable-tls)* | [COS monitoring](/how-to/monitoring-cos/index) | [Minor version upgrades](/how-to/upgrade/index) | [Cross-regional async replication](/how-to/cross-regional-async-replication/index) | [Point-in-time recovery](/how-to/back-up-and-restore/restore-a-backup) | [PITR Timelines](/how-to/back-up-and-restore/restore-a-backup) |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| [717], [718] | 14.20 | `3.6.1+` | ![check] | ![check] | ![check] | ![check] | ![check] | ![check] |
-| [494], [495] | 14.15 | `3.6.1+` | ![check] | ![check] | ![check] | ![check] | ![check] | ![check] |
+| [774], [775] | 14.20 | `3.6.14+` | ![check] | ![check] | ![check] | ![check] | ![check] | ![check] |
+| [495], [494] | 14.15 | `3.6.1+` | ![check] | ![check] | ![check] | ![check] | ![check] | ![check] |
 | [462], [463] | 14.13 | `3.6.1+` | ![check] | ![check] | ![check] | ![check] | ![check] | ![check] |
 | [444], [445] | 14.12 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] | ![check] | |
 | [381], [382] | 14.12 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] | ![check] | |
-| [280], [281] | 14.11 | `3.4.2+` | ![check] | ![check] | ![check] | ![check] | |
+| [281], [280] | 14.11 | `3.4.2+` | ![check] | ![check] | ![check] | ![check] | |
 | [193] | 14.10 | `3.4.2+` | ![check] | ![check] | ![check] | ![check] | |
 | [177] | 14.9 | `3.1.6+` |  | ![check] | ![check] | |
 | [158] | 14.9 | `3.1.5+` |  | ![check] | ![check] | |
@@ -40,13 +40,6 @@ If you deploy with the `--revision` flag, **you must make sure the revision matc
 
 Check the tables below, or use [`juju info`](https://juju.is/docs/juju/juju-info).
 ```
-
-### Release 717, 718
-
-| Revision | amd64 | arm64 | Ubuntu 22.04 LTS
-|:--------:|:-----:|:-----:|:-----:|
-|[718]    |        | ![check] |  ![check]  |
-|[717]    | ![check] | |  ![check]  |
 
 <details>
 <summary>Older releases</summary>
