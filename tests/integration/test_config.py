@@ -38,6 +38,7 @@ async def test_config_parameters(ops_test: OpsTest, charm) -> None:
         },  # config option is one of `all`, `minority` or `majority`
         {"connection_authentication_timeout": ["0", "60"]},  # config option is from 1 and 600
         {"connection_statement_timeout": ["-1", "0"]},  # config option is from 0 to 2147483647
+        {"durability_maximum_lag_on_failover": ["-1", "1024"]},  # config option is integer
         {
             "durability_synchronous_commit": [test_string, "on"]
         },  # config option is one of `on`, `remote_apply` or `remote_write`

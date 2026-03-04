@@ -56,8 +56,6 @@ from charms.postgresql_k8s.v0.postgresql import (
 from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
-from charms.tempo_coordinator_k8s.v0.charm_tracing import trace_charm
-from charms.tempo_coordinator_k8s.v0.tracing import TracingEndpointRequirer
 from lightkube import ApiError, Client
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
@@ -91,10 +89,11 @@ from ops.pebble import (
     ServiceInfo,
     ServiceStatus,
 )
+from ops_tracing import Tracing
 from requests import ConnectionError as RequestsConnectionError
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
-from backups import CANNOT_RESTORE_PITR, S3_BLOCK_MESSAGES, PostgreSQLBackups
+from backups import CANNOT_RESTORE_PITR, PostgreSQLBackups, is_s3_block_message
 from config import CharmConfig
 from constants import (
     APP_SCOPE,
@@ -121,7 +120,6 @@ from constants import (
     TLS_CA_FILE,
     TLS_CERT_FILE,
     TLS_KEY_FILE,
-    TRACING_PROTOCOL,
     TRACING_RELATION_NAME,
     UNIT_SCOPE,
     USER,
@@ -165,25 +163,6 @@ class CannotConnectError(Exception):
     """Cannot run smoke check on connected Database."""
 
 
-@trace_charm(
-    tracing_endpoint="tracing_endpoint",
-    extra_types=(
-        DbProvides,
-        GrafanaDashboardProvider,
-        LogProxyConsumer,
-        MetricsEndpointProvider,
-        Patroni,
-        PostgreSQL,
-        PostgreSQLAsyncReplication,
-        PostgreSQLBackups,
-        PostgreSQLLDAP,
-        PostgreSQLProvider,
-        PostgreSQLTLS,
-        TLSTransfer,
-        PostgreSQLUpgrade,
-        RollingOpsManager,
-    ),
-)
 class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     """Charmed Operator for the PostgreSQL database."""
 
@@ -288,9 +267,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self.unit.set_ports(5432, 8008)
             except ModelError:
                 logger.exception("failed to open port")
-        self.tracing = TracingEndpointRequirer(
-            self, relation_name=TRACING_RELATION_NAME, protocols=[TRACING_PROTOCOL]
-        )
+        self.tracing = Tracing(self, tracing_relation_name=TRACING_RELATION_NAME)
 
     def _on_databases_change(self, _):
         """Handle databases change event."""
@@ -299,12 +276,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         timestamp = datetime.now()
         self._peers.data[self.unit].update({"pg_hba_needs_update_timestamp": str(timestamp)})
         logger.debug(f"authorisation rules changed at {timestamp}")
-
-    @property
-    def tracing_endpoint(self) -> str | None:
-        """Otlp http endpoint for charm instrumentation."""
-        if self.tracing.is_ready():
-            return self.tracing.get_endpoint(TRACING_PROTOCOL)
 
     def _generate_metrics_jobs(self, enable_tls: bool) -> dict:
         """Generate spec for Prometheus scraping."""
@@ -712,10 +683,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.unit.status = BlockedStatus("Configuration Error. Please check the logs")
             logger.error("Invalid configuration: %s", str(e))
             return
-        if not self.updated_synchronous_node_count():
-            logger.debug("Defer on_config_changed: unable to set synchronous node count")
-            event.defer()
-            return
 
         if self.is_blocked and "Configuration Error" in self.unit.status.message:
             self._set_active_status()
@@ -1054,6 +1021,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 self.unit.status = BlockedStatus(
                     self.app_peer_data["s3-initialization-block-message"]
                 )
+                return
+            if not self.upgrade.idle:
                 return
             if (
                 self._patroni.get_primary(unit_name_pattern=True) == self.unit.name
@@ -1508,7 +1477,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._check_pgdata_storage_size()
 
         if (
-            self._has_blocked_status and self.unit.status not in S3_BLOCK_MESSAGES
+            self._has_blocked_status and not is_s3_block_message(self.unit.status.message)
         ) or self._has_non_restore_waiting_status:
             # If charm was failing to disable plugin, try again and continue (user may have removed the objects)
             if self.unit.status.message == EXTENSION_OBJECT_MESSAGE:
@@ -1945,6 +1914,28 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         return self.update_config()
 
+    def _reset_upgrade_statuses(self) -> None:
+        """Reset upgrade statuses if upgrade is not idle to preserve them during rolling restart."""
+        if not self.upgrade.idle:
+            match self.upgrade.state:
+                case "recovery":
+                    self.unit.status = BlockedStatus("ready to rollback application")
+                case "failed":
+                    self.upgrade.set_unit_failed()
+                case "upgrading":
+                    self.unit.status = MaintenanceStatus("upgrading unit")
+                case "completed":
+                    if len(self.upgrade.app_units) > 1 and int(
+                        self.unit.name.split("/")[1]
+                    ) == max(int(unit.name.split("/")[1]) for unit in self.upgrade.app_units):
+                        # If the last unit resets the status, make sure to inform the user to
+                        # continue the upgrade
+                        self.unit.status = MaintenanceStatus(
+                            "upgrade completed, run resume-upgrade to proceed"
+                        )
+                    else:
+                        self.upgrade.set_unit_completed()
+
     def _restart(self, event: RunWithLock) -> None:
         """Restart PostgreSQL."""
         if not self._patroni.are_all_members_ready():
@@ -1974,6 +1965,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         # Start or stop the pgBackRest TLS server service when TLS certificate change.
         self.backup.start_stop_pgbackrest_service()
+
+        self._reset_upgrade_statuses()
 
     def _restart_metrics_service(self) -> None:
         """Restart the monitoring service if the password was rotated."""
@@ -2053,21 +2046,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return str(min(8, 2 * cpu_cores))
         elif self.config.cpu_max_worker_processes is not None:
             value = self.config.cpu_max_worker_processes
-            if value < 2:
-                from pydantic import ValidationError
-                from pydantic_core import InitErrorDetails
-
-                raise ValidationError.from_exception_data(
-                    "ValidationError",
-                    [
-                        InitErrorDetails(
-                            type="greater_than_equal",
-                            ctx={"ge": 2},
-                            input=value,
-                            loc=("cpu_max_worker_processes",),
-                        )
-                    ],
-                )
             cap = 10 * cpu_cores
             if value > cap:
                 raise ValueError(
@@ -2092,21 +2070,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             ValidationError: If value is less than 2
             ValueError: If value exceeds 10 * vCores
         """
-        if value < 2:
-            from pydantic import ValidationError
-            from pydantic_core import InitErrorDetails
-
-            raise ValidationError.from_exception_data(
-                "ValidationError",
-                [
-                    InitErrorDetails(
-                        type="greater_than_equal",
-                        ctx={"ge": 2},
-                        input=value,
-                        loc=(param_name,),
-                    )
-                ],
-            )
         cap = 10 * cpu_cores
         if value > cap:
             raise ValueError(
@@ -2216,6 +2179,44 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         return result
 
+    def _api_update_config(self, available_cpu_cores: int) -> bool:
+        # Use config value if set, calculate otherwise
+        if self.config.experimental_max_connections:
+            max_connections = self.config.experimental_max_connections
+        else:
+            max_connections = max(4 * available_cpu_cores, 100)
+
+        cfg_patch = {
+            "max_connections": max_connections,
+            "max_prepared_transactions": self.config.memory_max_prepared_transactions,
+            "max_replication_slots": 25,
+            "max_wal_senders": 25,
+            "shared_buffers": self.config.memory_shared_buffers,
+            "wal_keep_size": self.config.durability_wal_keep_size,
+        }
+
+        # Add restart-required worker process parameters via Patroni API
+        worker_configs = self._calculate_worker_process_config(available_cpu_cores)
+        if "max_worker_processes" in worker_configs:
+            cfg_patch["max_worker_processes"] = worker_configs["max_worker_processes"]
+
+        if "max_logical_replication_workers" in worker_configs:
+            cfg_patch["max_logical_replication_workers"] = worker_configs[
+                "max_logical_replication_workers"
+            ]
+
+        base_patch = {
+            **self._patroni.synchronous_configuration,
+            "maximum_lag_on_failover": self.config.durability_maximum_lag_on_failover,
+        }
+        if primary_endpoint := self.async_replication.get_primary_cluster_endpoint():
+            base_patch["standby_cluster"] = {"host": primary_endpoint}
+        try:
+            self._patroni.bulk_update_parameters_controller_by_patroni(cfg_patch, base_patch)
+        except RetryError:
+            return False
+        return True
+
     def _build_postgresql_parameters(
         self, available_cpu_cores: int, available_memory: int
     ) -> dict | None:
@@ -2254,6 +2255,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             pg_parameters = dict(worker_configs)
             pg_parameters["wal_compression"] = cpu_wal_compression
             logger.debug(f"pg_parameters set to worker_configs = {pg_parameters}")
+        pg_parameters.pop("maximum_lag_on_failover", None)
 
         return pg_parameters
 
@@ -2271,9 +2273,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         postgresql_parameters = self._build_postgresql_parameters(
             available_cpu_cores, available_memory
         )
-
-        # Extract worker configs for later use in Patroni API
-        worker_configs = self._calculate_worker_process_config(available_cpu_cores)
 
         logger.info("Updating Patroni config file")
         # Update and reload configuration based on TLS files availability.
@@ -2308,32 +2307,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if not self._patroni.member_started:
             # Potentially expired cert reloading and deferring
             self._patroni.reload_patroni_configuration()
+            self.unit_peer_data.update({"tls": "enabled" if self.is_tls_enabled else ""})
             logger.debug("Early exit update_config: Patroni not started yet")
             return False
 
-        # Use config value if set, calculate otherwise
-        if self.config.experimental_max_connections:
-            max_connections = self.config.experimental_max_connections
-        else:
-            max_connections = max(4 * available_cpu_cores, 100)
-
-        # Build the config patch with restart-required parameters
-        config_patch = {
-            "max_connections": max_connections,
-            "max_prepared_transactions": self.config.memory_max_prepared_transactions,
-            "shared_buffers": self.config.memory_shared_buffers,
-            "wal_keep_size": self.config.durability_wal_keep_size,
-        }
-
-        # Add restart-required worker process parameters via Patroni API
-        if "max_worker_processes" in worker_configs:
-            config_patch["max_worker_processes"] = worker_configs["max_worker_processes"]
-        if "max_logical_replication_workers" in worker_configs:
-            config_patch["max_logical_replication_workers"] = worker_configs[
-                "max_logical_replication_workers"
-            ]
-
-        self._patroni.bulk_update_parameters_controller_by_patroni(config_patch)
+        if not self._api_update_config(available_cpu_cores):
+            logger.warning("Early exit update_config: Unable to patch Patroni API")
+            return False
 
         self._handle_postgresql_restart_need(
             self.unit_peer_data.get("config_hash") != self.generate_config_hash

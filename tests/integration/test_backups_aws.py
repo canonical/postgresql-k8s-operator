@@ -7,10 +7,10 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_attempt, wait_exponential
 
+from .backup_helpers import backup_operations
 from .conftest import AWS
 from .helpers import (
     DATABASE_APP_NAME,
-    backup_operations,
     db_connect,
     get_password,
     get_primary,
@@ -29,12 +29,10 @@ S3_INTEGRATOR_APP_NAME = "s3-integrator"
 if juju_major_version < 3:
     tls_certificates_app_name = "tls-certificates-operator"
     tls_channel = "legacy/stable"
-    tls_base = "ubuntu@22.04"
     tls_config = {"generate-self-signed-certificates": "true", "ca-common-name": "Test CA"}
 else:
     tls_certificates_app_name = "self-signed-certificates"
     tls_channel = "1/stable"
-    tls_base = "ubuntu@24.04"
     tls_config = {"ca-common-name": "Test CA"}
 
 logger = logging.getLogger(__name__)
@@ -53,7 +51,6 @@ async def test_backup_aws(ops_test: OpsTest, charm, aws_cloud_configs: tuple[dic
         tls_certificates_app_name,
         tls_config,
         tls_channel,
-        tls_base,
         credentials,
         AWS,
         config,

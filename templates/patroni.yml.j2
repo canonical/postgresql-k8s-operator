@@ -1,8 +1,10 @@
 bootstrap:
   dcs:
-    synchronous_mode: true
     failsafe_mode: true
     synchronous_node_count: {{ synchronous_node_count }}
+    maximum_lag_on_failover: {{ maximum_lag_on_failover }}
+    synchronous_mode: true
+    synchronous_mode_strict: false
     postgresql:
       use_pg_rewind: true
       remove_data_directory_on_rewind_failure: false

@@ -1,7 +1,7 @@
 resource "juju_application" "k8s_postgresql" {
-  name  = var.app_name
-  model = var.juju_model_name
-  trust = true
+  name       = var.app_name
+  model_uuid = var.model_uuid
+  trust      = true
 
   charm {
     name     = "postgresql-k8s"
@@ -10,9 +10,7 @@ resource "juju_application" "k8s_postgresql" {
     base     = var.base
   }
 
-  storage_directives = {
-    pgdata = var.storage_size
-  }
+  storage_directives = var.storage_directives
 
   units       = var.units
   constraints = var.constraints

@@ -293,9 +293,6 @@ def test_on_config_changed(harness):
             "charm.PostgreSQLUpgrade.idle", return_value=False, new_callable=PropertyMock
         ) as _idle,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
-        patch(
-            "charm.PostgresqlOperatorCharm.updated_synchronous_node_count", return_value=True
-        ) as _updated_synchronous_node_count,
         patch("charm.Patroni.member_started", return_value=True, new_callable=PropertyMock),
         patch("charm.Patroni.get_primary"),
         patch(
@@ -338,14 +335,6 @@ def test_on_config_changed(harness):
         harness.charm._on_config_changed(mock_event)
         assert isinstance(harness.charm.unit.status, ActiveStatus)
         assert not _enable_disable_extensions.called
-        _updated_synchronous_node_count.assert_called_once_with()
-
-        # Deferst on update sync nodes failure
-        _updated_synchronous_node_count.return_value = False
-        harness.charm._on_config_changed(mock_event)
-        mock_event.defer.assert_called_once_with()
-        mock_event.defer.reset_mock()
-        _updated_synchronous_node_count.return_value = True
 
         # Leader enables extensions
         with harness.hooks_disabled():
@@ -626,6 +615,7 @@ def test_enable_disable_extensions(harness):
             return_value=False,
             new_callable=PropertyMock,
         ),
+        patch("charm.PostgreSQLUpgrade.idle", new_callable=PropertyMock, return_value=True),
     ):
         # Early exit if no primary
         harness.charm.enable_disable_extensions()
@@ -1680,7 +1670,7 @@ def test_update_config(harness):
         _handle_postgresql_restart_need.assert_not_called()
         _restart_metrics_service.assert_not_called()
         _restart_ldap_sync_service.assert_not_called()
-        assert "tls" not in harness.get_relation_data(rel_id, harness.charm.unit.name)
+        assert harness.get_relation_data(rel_id, harness.charm.unit.name)["tls"] == "enabled"
 
 
 def test_handle_postgresql_restart_need(harness):
@@ -1729,6 +1719,7 @@ def test_set_active_status(harness):
             "charm.PostgresqlOperatorCharm.is_standby_leader", new_callable=PropertyMock
         ) as _is_standby_leader,
         patch("charm.Patroni.get_primary") as _get_primary,
+        patch("charm.PostgreSQLUpgrade.idle", new_callable=PropertyMock, return_value=True),
     ):
         for values in itertools.product(
             [
@@ -2211,3 +2202,69 @@ def test_calculate_worker_process_config_all_workers_validation_blocking(harness
 
     result = harness.charm._calculate_worker_process_config(cpu_cores)
     assert result["max_parallel_workers"] == "18"  # Should accept valid value
+
+
+def test_reset_upgrade_statuses(harness):
+    with (
+        patch(
+            "charm.PostgreSQLUpgrade.idle", new_callable=PropertyMock, return_value=True
+        ) as _idle,
+        patch(
+            "charm.PostgreSQLUpgrade.state", new_callable=PropertyMock, return_value="idle"
+        ) as _state,
+        patch("charm.PostgreSQLUpgrade.set_unit_failed") as _set_unit_failed,
+        patch("charm.PostgreSQLUpgrade.set_unit_completed") as _set_unit_completed,
+        patch(
+            "charm.PostgreSQLUpgrade.app_units", new_callable=PropertyMock, return_value=[]
+        ) as _app_units,
+    ):
+        # Upgrade idle
+        harness.charm.unit.status = BlockedStatus("TEST")
+
+        harness.charm._reset_upgrade_statuses()
+
+        assert harness.charm.unit.status == BlockedStatus("TEST")
+
+        _idle.return_value = False
+
+        # Recovery
+        _state.return_value = "recovery"
+
+        harness.charm._reset_upgrade_statuses()
+
+        assert harness.charm.unit.status == BlockedStatus("ready to rollback application")
+
+        # Upgrading
+        _state.return_value = "upgrading"
+
+        harness.charm._reset_upgrade_statuses()
+
+        assert harness.charm.unit.status == MaintenanceStatus("upgrading unit")
+
+        # Completed
+        _state.return_value = "completed"
+
+        harness.charm._reset_upgrade_statuses()
+
+        _set_unit_completed.assert_called_once_with()
+
+        # Failed
+        _state.return_value = "failed"
+
+        harness.charm._reset_upgrade_statuses()
+
+        _set_unit_failed.assert_called_once_with()
+
+        # Last unit completed
+        mock_unit_1 = Mock()
+        mock_unit_1.name = "test/-1"
+        mock_unit_2 = Mock()
+        mock_unit_2.name = "test/0"
+        _app_units.return_value = [mock_unit_2, mock_unit_1]
+        _state.return_value = "completed"
+
+        harness.charm._reset_upgrade_statuses()
+
+        assert harness.charm.unit.status == MaintenanceStatus(
+            "upgrade completed, run resume-upgrade to proceed"
+        )
