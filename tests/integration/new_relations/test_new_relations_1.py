@@ -50,8 +50,8 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest, charm):
                 APPLICATION_APP_NAME,
                 application_name=APPLICATION_APP_NAME,
                 num_units=2,
-                base=CHARM_BASE,
                 channel="latest/edge",
+                series="noble",
             ),
             ops_test.model.deploy(
                 charm,
