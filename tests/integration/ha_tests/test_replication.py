@@ -9,7 +9,7 @@ from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from ..helpers import (
     APPLICATION_NAME,
-    CHARM_BASE,
+    CHARM_BASE_NOBLE,
     DATABASE_APP_NAME,
     app_name,
     build_and_deploy,
@@ -43,8 +43,8 @@ async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
             await ops_test.model.deploy(
                 APPLICATION_NAME,
                 application_name=APPLICATION_NAME,
-                base=CHARM_BASE,
-                channel="edge",
+                base=CHARM_BASE_NOBLE,
+                channel="latest/edge",
             )
 
     if wait_for_apps:
