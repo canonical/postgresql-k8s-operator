@@ -14,13 +14,14 @@ For a given release, this table shows:
    > This charm still supports older versions of Juju down to 2.9. See the [system requirements](/reference/system-requirements) for more details
 * Support for specific features
 
-| Revision | PostgreSQL version | Juju version | [TLS encryption](/how-to/enable-tls)* | [COS monitoring](/how-to/monitoring-cos/index) | [Minor version upgrades](/how-to/upgrade/index) | [Cross-regional async replication](/how-to/cross-regional-async-replication/index) | [Point-in-time recovery](/how-to/back-up-and-restore/restore-a-backup) | [PITR Timelines](/how-to/back-up-and-restore/restore-a-backup) |
+| Revision</br>(`amd`,`arm`) | PostgreSQL version | Juju version | [TLS encryption](/how-to/enable-tls)* | [COS monitoring](/how-to/monitoring-cos/index) | [Minor version upgrades](/how-to/upgrade/index) | [Cross-regional async replication](/how-to/cross-regional-async-replication/index) | [Point-in-time recovery](/how-to/back-up-and-restore/restore-a-backup) | [PITR Timelines](/how-to/back-up-and-restore/restore-a-backup) |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| [494], [495] | 14.15 | `3.6.1+` | ![check] | ![check] | ![check] | ![check] | ![check] | ![check] |
+| [774], [775] | 14.20 | `3.6.14+` | ![check] | ![check] | ![check] | ![check] | ![check] | ![check] |
+| [495], [494] | 14.15 | `3.6.1+` | ![check] | ![check] | ![check] | ![check] | ![check] | ![check] |
 | [462], [463] | 14.13 | `3.6.1+` | ![check] | ![check] | ![check] | ![check] | ![check] | ![check] |
 | [444], [445] | 14.12 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] | ![check] | |
 | [381], [382] | 14.12 | `3.4.3+` | ![check] | ![check] | ![check] | ![check] | ![check] | |
-| [280], [281] | 14.11 | `3.4.2+` | ![check] | ![check] | ![check] | ![check] | |
+| [281], [280] | 14.11 | `3.4.2+` | ![check] | ![check] | ![check] | ![check] | |
 | [193] | 14.10 | `3.4.2+` | ![check] | ![check] | ![check] | ![check] | |
 | [177] | 14.9 | `3.1.6+` |  | ![check] | ![check] | |
 | [158] | 14.9 | `3.1.5+` |  | ![check] | ![check] | |
@@ -40,31 +41,25 @@ If you deploy with the `--revision` flag, **you must make sure the revision matc
 Check the tables below, or use [`juju info`](https://juju.is/docs/juju/juju-info).
 ```
 
-
-### Release 494, 495
-
-| Revision | amd64 | arm64 | Ubuntu 22.04 LTS
-|:--------:|:-----:|:-----:|:-----:|
-|[494]  |   | ![check] |  ![check]  |
-|[495] | ![check] | |  ![check]  |
-
 <details>
 <summary>Older releases</summary>
 
 | Revision | amd64 | arm64 | Ubuntu 22.04 LTS
 |:--------:|:-----:|:-----:|:-----:|
-|[462] |![check] |          | ![check] |
-|[463] |         | ![check] | ![check] |
-|[445] |         | ![check] | ![check] |
-|[444] |![check] |          | ![check] |
-|[382] |         | ![check] | ![check] |
-|[381] |![check] |          | ![check] |
-|[281] |![check] |          | ![check] |
-|[280] |         |![check]  | ![check] |
-|[193] |![check] |          | ![check] |
-|[177] |![check] |          | ![check] |
-|[158] |![check] |          | ![check] |
-|[73]  |![check] |          | ![check] |
+|[495] | ![check] |          |  ![check]  |
+|[494] |          | ![check] |  ![check]  |
+|[463] |          | ![check] | ![check] |
+|[462] |![check]  |          | ![check] |
+|[445] |          | ![check] | ![check] |
+|[444] |![check]  |          | ![check] |
+|[382] |          | ![check] | ![check] |
+|[381] |![check]  |          | ![check] |
+|[281] |![check]  |          | ![check] |
+|[280] |          |![check]  | ![check] |
+|[193] |![check]  |          | ![check] |
+|[177] |![check]  |          | ![check] |
+|[158] |![check]  |          | ![check] |
+|[73]  |![check]  |          | ![check] |
 
 </details>
 
@@ -76,6 +71,9 @@ For a list of all plugins supported for each revision, see the reference page [P
 > **Note** Our release notes are an ongoing work in progress. If there is any additional information about releases that you would like to see or suggestions for other improvements, don't hesitate to contact us on [Matrix ](https://matrix.to/#/#charmhub-data-platform:ubuntu.com) or [leave a comment](https://discourse.charmhub.io/t/charmed-postgresql-k8s-reference-release-notes/11872).
 
 <!-- LINKS -->
+[774]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev774
+[775]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev774
+
 [494]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev494
 [495]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/rev494
 
