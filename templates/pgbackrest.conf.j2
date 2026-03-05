@@ -33,7 +33,7 @@ tls-server-key-file={{ storage_path }}/peer_key.pem
 {%- endif %}
 
 [{{ stanza }}]
-pg1-path={{ storage_path }}/pgdata
+pg1-path={{ pgdata_path }}
 pg1-user={{ user }}
 {%- if enable_tls %}
 {% set ns = namespace(count=2) %}
@@ -43,7 +43,7 @@ pg{{ ns.count }}-host-ca-file={{ storage_path }}/peer_ca.pem
 pg{{ ns.count }}-host-cert-file={{ storage_path }}/peer_cert.pem
 pg{{ ns.count }}-host-key-file={{ storage_path }}/peer_key.pem
 pg{{ ns.count }}-host={{ peer_endpoint }}
-pg{{ ns.count }}-path={{ storage_path }}/pgdata
+pg{{ ns.count }}-path={{ pgdata_path }}
 pg{{ ns.count }}-user={{ user }}
 {% set ns.count = ns.count + 1 %}
 {%- endfor %}
