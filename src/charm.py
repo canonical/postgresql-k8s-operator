@@ -1132,6 +1132,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         waldir_path = f"{logs_path}/16/main/pg_wal"
         temp_path = str(self.meta.storages["temp"].location)
         temp_tablespace_path = f"{temp_path}/16/main/pgsql_tmp"
+        archive_path = f"{self.meta.storages['archive'].location}/16/main"
 
         # Clear stale storage directories when a replica joins an initialized cluster.
         # This is needed because PersistentVolumes may retain data from previous pods,
@@ -1173,6 +1174,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if not container.exists(temp_tablespace_path):
             container.make_dir(
                 temp_tablespace_path,
+                permissions=0o700,
+                user=WORKLOAD_OS_USER,
+                group=WORKLOAD_OS_GROUP,
+                make_parents=True,
+            )
+        # Create the archive directory (e.g., /var/lib/pg/archive/16/main)
+        if not container.exists(archive_path):
+            container.make_dir(
+                archive_path,
                 permissions=0o700,
                 user=WORKLOAD_OS_USER,
                 group=WORKLOAD_OS_GROUP,

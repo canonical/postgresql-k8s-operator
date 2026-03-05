@@ -1527,7 +1527,7 @@ def test_create_pgdata(harness):
     container = MagicMock()
     container.exists.return_value = False
     harness.charm._create_pgdata(container)
-    # When directories don't exist, all three should be created
+    # When directories don't exist, all four should be created
     container.make_dir.assert_has_calls([
         call(
             "/var/lib/pg/data/16/main",
@@ -1545,6 +1545,13 @@ def test_create_pgdata(harness):
         ),
         call(
             "/var/lib/pg/temp/16/main/pgsql_tmp",
+            permissions=448,
+            user="postgres",
+            group="postgres",
+            make_parents=True,
+        ),
+        call(
+            "/var/lib/pg/archive/16/main",
             permissions=448,
             user="postgres",
             group="postgres",
