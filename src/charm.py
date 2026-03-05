@@ -134,6 +134,7 @@ from constants import (
     SECRET_KEY_OVERRIDES,
     SPI_MODULE,
     SYSTEM_USERS,
+    TEMP_STORAGE_PATH,
     TLS_CA_BUNDLE_FILE,
     TLS_CA_FILE,
     TLS_CERT_FILE,
@@ -249,7 +250,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         self._certs_path = "/usr/local/share/ca-certificates"
         self._storage_path = str(self.meta.storages["data"].location)
-        self.pgdata_path = f"{self._storage_path}/pgdata"
+        self._actual_pgdata_path = f"{self._storage_path}/16/main"
+        self.pgdata_path = "/var/lib/postgresql/16/main"
 
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.postgresql_client_relation = PostgreSQLProvider(self)
@@ -1109,17 +1111,108 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 raise e
         return True
 
+    def _replica_can_start(self) -> bool:
+        """Check whether this replica is ready to start Patroni.
+
+        Returns False if the cluster hasn't been bootstrapped yet, or if the
+        leader hasn't added this unit's endpoint to the members list (which
+        controls the pg_hba replication entries on the primary).
+        """
+        if not self.is_cluster_initialised:
+            logger.debug("Replica not ready: cluster not initialized")
+            return False
+        if self._endpoint not in self._endpoints:
+            logger.debug("Replica not ready: endpoint not yet in members list")
+            return False
+        return True
+
     def _create_pgdata(self, container: Container):
-        """Create the PostgreSQL data directory."""
-        if not container.exists(self.pgdata_path):
+        """Create the PostgreSQL data directories."""
+        logs_path = str(self.meta.storages["logs"].location)
+        waldir_path = f"{logs_path}/16/main/pg_wal"
+        temp_path = str(self.meta.storages["temp"].location)
+        temp_tablespace_path = f"{temp_path}/16/main/pgsql_tmp"
+
+        # Clear stale storage directories when a replica joins an initialized cluster.
+        # This is needed because PersistentVolumes may retain data from previous pods,
+        # and pg_basebackup requires empty --waldir and --tablespace directories.
+        # Clear on every call until pgdata is populated (PG_VERSION exists), since
+        # pg_basebackup can fail and leave stale files that prevent retries.
+        pgdata_populated = container.exists(f"{self._actual_pgdata_path}/PG_VERSION")
+        if not self.unit.is_leader() and self.is_cluster_initialised and not pgdata_populated:
+            for path in [waldir_path, temp_tablespace_path]:
+                if container.exists(path):
+                    try:
+                        container.exec(["find", path, "-mindepth", "1", "-delete"]).wait_output()
+                        logger.info(
+                            f"Cleared stale content from {path} for replica initialization"
+                        )
+                    except ExecError as e:
+                        if "No such file or directory" not in str(e.stderr):
+                            logger.warning(f"Failed to clear {path}: {e}")
+
+        # Create the pgdata directory on the storage mount (e.g., /var/lib/pg/data/16/main)
+        if not container.exists(self._actual_pgdata_path):
             container.make_dir(
-                self.pgdata_path, permissions=0o700, user=WORKLOAD_OS_USER, group=WORKLOAD_OS_GROUP
+                self._actual_pgdata_path,
+                permissions=0o700,
+                user=WORKLOAD_OS_USER,
+                group=WORKLOAD_OS_GROUP,
+                make_parents=True,
             )
+        # Create the WAL directory (e.g., /var/lib/pg/logs/16/main/pg_wal)
+        if not container.exists(waldir_path):
+            container.make_dir(
+                waldir_path,
+                permissions=0o700,
+                user=WORKLOAD_OS_USER,
+                group=WORKLOAD_OS_GROUP,
+                make_parents=True,
+            )
+        # Create the temp tablespace directory (e.g., /var/lib/pg/temp/16/main/pgsql_tmp)
+        if not container.exists(temp_tablespace_path):
+            container.make_dir(
+                temp_tablespace_path,
+                permissions=0o700,
+                user=WORKLOAD_OS_USER,
+                group=WORKLOAD_OS_GROUP,
+                make_parents=True,
+            )
+        # Create a symlink from the default PostgreSQL data directory to our data directory
+        # (e.g., /var/lib/postgresql/16/main -> /var/lib/pg/data/16/main)
+        # Patroni and other tools will use the symlink path (self.pgdata_path)
+        # Note: This symlink is on ephemeral storage and may not persist across container restarts.
+        # It gets recreated on each pebble-ready event.
+        # The OCI image ships /var/lib/postgresql/16/main as a real directory, so we must
+        # remove it first if it exists as a non-symlink (e.g., on replicas).
+        container.make_dir(
+            "/var/lib/postgresql/16",
+            user=WORKLOAD_OS_USER,
+            group=WORKLOAD_OS_GROUP,
+            make_parents=True,
+        )
+        container.exec([
+            "bash",
+            "-c",
+            f"[ -L {self.pgdata_path} ] || rm -rf {self.pgdata_path}",
+        ]).wait()
+        container.exec([
+            "ln",
+            "-sfn",
+            self._actual_pgdata_path,
+            self.pgdata_path,
+        ]).wait()
+        container.exec([
+            "chown",
+            "-h",
+            f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
+            self.pgdata_path,
+        ]).wait()
         # Also, fix the permissions from the parent directory.
         container.exec([
             "chown",
             f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
-            "/var/lib/postgresql/archive",
+            str(self.meta.storages["archive"].location),
         ]).wait()
         container.exec([
             "chown",
@@ -1129,12 +1222,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         container.exec([
             "chown",
             f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
-            "/var/lib/postgresql/logs",
+            logs_path,
         ]).wait()
         container.exec([
             "chown",
             f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
-            "/var/lib/postgresql/temp",
+            temp_path,
         ]).wait()
 
     def _on_start(self, _) -> None:
@@ -1170,15 +1263,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # where the volume is mounted with more restrictive permissions.
         self._create_pgdata(container)
 
-        # Defer the initialization of the workload in the replicas
-        # if the cluster hasn't been bootstrap on the primary yet.
-        # Otherwise, each unit will create a different cluster and
-        # any update in the members list on the units won't have effect
-        # on fixing that.
-        if not self.unit.is_leader() and not self.is_cluster_initialised:
-            logger.debug(
-                "Deferring on_postgresql_pebble_ready: Not leader and cluster not initialized"
-            )
+        # Defer the initialization of the workload in the replicas if the cluster
+        # hasn't been bootstrapped on the primary yet, or the leader hasn't added
+        # this unit's endpoint to the cluster members list yet.  The endpoint
+        # controls pg_hba replication entries on the primary — without it,
+        # pg_basebackup is rejected, triggering retries and remove_data_directory()
+        # calls that can race with _create_pgdata() and break the pg_wal symlink
+        # created by --waldir.
+        if not self.unit.is_leader() and not self._replica_can_start():
             event.defer()
             return
 
@@ -1337,7 +1429,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 extra_user_roles=["pg_monitor"],
             )
 
-        self.postgresql.set_up_database(temp_location="/var/lib/postgresql/temp")
+        self.postgresql.set_up_database(temp_location=f"{TEMP_STORAGE_PATH}/16/main/pgsql_tmp")
 
         access_groups = self.postgresql.list_access_groups()
         if access_groups != set(ACCESS_GROUPS):
@@ -1587,6 +1679,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Recreate k8s resources and add labels required for replication
         # when the pod loses them (like when it's deleted).
         self.push_tls_files_to_workload()
+
         if self.refresh is not None and not self.refresh.in_progress:
             try:
                 self._create_services()
@@ -1733,9 +1826,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def _check_pgdata_storage_size(self) -> None:
         """Asserts that pgdata volume has at least 10% free space and blocks charm if not."""
         try:
-            total_size, _, free_size = shutil.disk_usage(self.pgdata_path)
+            total_size, _, free_size = shutil.disk_usage(self._actual_pgdata_path)
         except FileNotFoundError:
-            logger.error("pgdata folder not found in %s", self.pgdata_path)
+            logger.error("pgdata folder not found in %s", self._actual_pgdata_path)
             return
 
         logger.debug(
@@ -1870,6 +1963,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.primary_endpoint,
             self._namespace,
             self._storage_path,
+            self.pgdata_path,
             self.get_secret(APP_SCOPE, USER_PASSWORD_KEY),
             self.get_secret(APP_SCOPE, REPLICATION_PASSWORD_KEY),
             self.get_secret(APP_SCOPE, REWIND_PASSWORD_KEY),
@@ -2582,7 +2676,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.warning("Early exit update_config: Unable to patch Patroni API")
             return False
 
-        self._patroni.ensure_slots_controller_by_patroni(replication_slots)
+        if not self._patroni.ensure_slots_controller_by_patroni(replication_slots):
+            logger.warning(
+                "Failed to sync replication slots with Patroni — will retry on next config update"
+            )
 
         self._handle_postgresql_restart_need(
             self.unit_peer_data.get("config_hash") != self.generate_config_hash

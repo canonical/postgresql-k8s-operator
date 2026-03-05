@@ -67,7 +67,7 @@ bootstrap:
   method: pgbackrest
   pgbackrest:
     command: >
-      pgbackrest --stanza={{ restore_stanza }} --pg1-path={{ storage_path }}/pgdata
+      pgbackrest --stanza={{ restore_stanza }} --pg1-path={{ pgdata_path }}
       {%- if backup_id %} --set={{ backup_id }} {%- endif %}
       {%- if restore_timeline %} --target-timeline="0x{{ restore_timeline }}" {% endif %}
       {%- if restore_to_latest %} --type=default {%- else %}
@@ -87,7 +87,7 @@ bootstrap:
   - auth-local: trust
   - encoding: UTF8
   - data-checksums
-  - waldir: /var/lib/postgresql/logs
+  - waldir: {{ logs_storage_path }}/16/main/pg_wal
   {%- endif %}
   pg_hba:
   - {{ 'hostssl' if enable_tls else 'host' }} all all 0.0.0.0/0 {{ instance_password_encryption }}
@@ -118,9 +118,9 @@ ctl:
 pod_ip: '{{ endpoint }}'
 postgresql:
   basebackup:
-    - waldir: /var/lib/postgresql/logs
+    - waldir: {{ logs_storage_path }}/16/main/pg_wal
   connect_address: '{{ endpoint }}:5432'
-  data_dir: {{ storage_path }}/pgdata
+  data_dir: {{ pgdata_path }}
   bin_dir: /usr/lib/postgresql/{{ version }}/bin
   listen: 0.0.0.0:5432
   parameters:

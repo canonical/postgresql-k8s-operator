@@ -20,7 +20,7 @@ from .ha_tests.helpers import get_cluster_roles
 from .helpers import (
     CHARM_BASE,
     METADATA,
-    STORAGE_PATH,
+    PGDATA_PATH,
     build_and_deploy,
     convert_records_to_dict,
     db_connect,
@@ -147,7 +147,7 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
     assert settings["archive_mode"] == "on"
     assert settings["autovacuum"] == "on"
     assert settings["cluster_name"] == f"patroni-{APP_NAME}"
-    assert settings["data_directory"] == f"{STORAGE_PATH}/pgdata"
+    assert settings["data_directory"] == f"{PGDATA_PATH}"
     assert settings["data_checksums"] == "on"
     assert settings["fsync"] == "on"
     assert settings["full_page_writes"] == "on"
@@ -368,7 +368,7 @@ async def test_automatic_failover_after_leader_issue(ops_test: OpsTest) -> None:
     primary = await get_primary(ops_test)
 
     # Crash PostgreSQL by removing the data directory.
-    await ops_test.model.units.get(primary).run(f"rm -rf {STORAGE_PATH}/pgdata")
+    await ops_test.model.units.get(primary).run(f"rm -rf {PGDATA_PATH}")
 
     # Wait for charm to stabilise
     await ops_test.model.wait_for_idle(
@@ -500,7 +500,7 @@ async def test_storage_with_more_restrictive_permissions(ops_test: OpsTest, char
             )
 
         # Restrict the permissions of the storage.
-        command = "chmod 755 /var/lib/postgresql/data"
+        command = "chmod 755 /var/lib/pg/data"
         complete_command = f"ssh --container postgresql {app_name}/0 {command}"
         for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3), reraise=True):
             with attempt:

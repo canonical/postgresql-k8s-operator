@@ -13,7 +13,7 @@ from tenacity import Retrying, stop_after_attempt, wait_fixed
 from constants import DATABASE_DEFAULT_NAME
 
 from ..helpers import (
-    CHARM_BASE,
+    CHARM_BASE_NOBLE,
     DATA_INTEGRATOR_APP_NAME,
     check_database_users_existence,
     scale_application,
@@ -50,8 +50,8 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest, charm):
                 APPLICATION_APP_NAME,
                 application_name=APPLICATION_APP_NAME,
                 num_units=2,
+                base=CHARM_BASE_NOBLE,
                 channel="latest/edge",
-                series="noble",
             ),
             ops_test.model.deploy(
                 charm,
@@ -62,7 +62,7 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest, charm):
                 },
                 application_name=DATABASE_APP_NAME,
                 num_units=3,
-                base=CHARM_BASE,
+                base=CHARM_BASE_NOBLE,
                 trust=True,
                 config={"profile": "testing"},
             ),
@@ -75,7 +75,7 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest, charm):
                 },
                 application_name=ANOTHER_DATABASE_APP_NAME,
                 num_units=3,
-                base=CHARM_BASE,
+                base=CHARM_BASE_NOBLE,
                 trust=True,
                 config={"profile": "testing"},
             ),
@@ -168,8 +168,8 @@ async def test_two_applications_doesnt_share_the_same_relation_data(ops_test: Op
     await ops_test.model.deploy(
         APPLICATION_APP_NAME,
         application_name=another_application_app_name,
+        base=CHARM_BASE_NOBLE,
         channel="latest/edge",
-        series="noble",
     )
 
     # Relate the new application with the database
