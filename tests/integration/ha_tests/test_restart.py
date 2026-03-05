@@ -36,7 +36,9 @@ async def test_deploy(ops_test: OpsTest, charm) -> None:
     """Build and deploy a PostgreSQL cluster and a test application."""
     await build_and_deploy(ops_test, charm, CLUSTER_SIZE, wait_for_idle=False)
     if not await app_name(ops_test, APPLICATION_NAME):
-        await ops_test.model.deploy(APPLICATION_NAME, num_units=1, channel="edge")
+        await ops_test.model.deploy(
+            APPLICATION_NAME, num_units=1, channel="latest/edge", series="noble"
+        )
 
     await ops_test.model.relate(DATABASE_APP_NAME, f"{APPLICATION_NAME}:database")
 
