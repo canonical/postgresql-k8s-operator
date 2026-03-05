@@ -2,7 +2,7 @@
 # See LICENSE file for licensing details.
 
 import json
-from unittest.mock import PropertyMock, patch
+from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
 from ops.testing import Harness
@@ -386,3 +386,144 @@ def test_on_secret_changed(harness, relation_name):
             harness.get_relation_data(rel_id, harness.charm.app.name).get("primary-cluster-data")
         )
         assert primary_cluster_data.get("secret-id") != updated_cluster_data.get("secret-id")
+
+
+def test_clear_pgdata(harness):
+    with (
+        patch("ops.model.Container.exec") as _exec,
+        patch("charm.PostgresqlOperatorCharm._create_pgdata") as _create_pgdata,
+    ):
+        mock_process = MagicMock()
+        mock_process.wait_output.return_value = ("", "")
+        _exec.return_value = mock_process
+
+        harness.set_can_connect("postgresql", True)
+        harness.charm.async_replication._clear_pgdata()
+
+        # Should be called 4 times: archive, actual pgdata, logs, temp
+        assert _exec.call_count == 4
+        _exec.assert_any_call(["find", "/var/lib/pg/archive", "-mindepth", "1", "-delete"])
+        _exec.assert_any_call(["find", "/var/lib/pg/data/16/main", "-mindepth", "1", "-delete"])
+        _exec.assert_any_call(["find", "/var/lib/pg/logs", "-mindepth", "1", "-delete"])
+        _exec.assert_any_call(["find", "/var/lib/pg/temp", "-mindepth", "1", "-delete"])
+        _create_pgdata.assert_called_once()
+
+
+def test_stop_database_leader_clears_pgdata(harness):
+    with (
+        patch(
+            "relations.async_replication.PostgreSQLAsyncReplication._get_unit_ip",
+            return_value="1.1.1.1",
+        ),
+    ):
+        peer_rel_id = harness.add_relation(PEER, harness.charm.app.name)
+
+    with (
+        patch("ops.model.Container.stop") as _stop,
+        patch(
+            "charm.PostgresqlOperatorCharm.is_unit_stopped",
+            new_callable=PropertyMock,
+            return_value=False,
+        ),
+        patch(
+            "relations.async_replication.PostgreSQLAsyncReplication._is_following_promoted_cluster",
+            return_value=False,
+        ),
+        patch("ops.model.Container.exists", return_value=True),
+        patch(
+            "relations.async_replication.PostgreSQLAsyncReplication._configure_standby_cluster",
+            return_value=True,
+        ),
+        patch(
+            "relations.async_replication.PostgreSQLAsyncReplication._clear_pgdata"
+        ) as _clear_pgdata,
+    ):
+        harness.set_can_connect("postgresql", True)
+
+        event = MagicMock()
+        result = harness.charm.async_replication._stop_database(event)
+
+        assert result is True
+        _stop.assert_called_once()
+        _clear_pgdata.assert_called_once()
+        assert (
+            harness.get_relation_data(peer_rel_id, harness.charm.unit.name).get("stopped")
+            == "True"
+        )
+
+
+def test_wait_for_standby_leader_non_leader_clears_pgdata(harness):
+    with (
+        patch(
+            "relations.async_replication.PostgreSQLAsyncReplication._get_unit_ip",
+            return_value="1.1.1.1",
+        ),
+    ):
+        peer_rel_id = harness.add_relation(PEER, harness.charm.app.name)
+        harness.add_relation(
+            REPLICATION_OFFER_RELATION,
+            harness.charm.app.name,
+            unit_data={"unit-address": "10.1.1.10"},
+        )
+
+    with (
+        patch(
+            "charm.Patroni.get_standby_leader",
+            return_value="postgresql-k8s-0",
+        ),
+        patch(
+            "relations.async_replication.PostgreSQLAsyncReplication._clear_pgdata"
+        ) as _clear_pgdata,
+    ):
+        harness.set_leader(False)
+
+        event = MagicMock()
+        result = harness.charm.async_replication._wait_for_standby_leader(event)
+
+        assert result is False
+        _clear_pgdata.assert_called_once()
+        assert (
+            harness.get_relation_data(peer_rel_id, harness.charm.unit.name).get(
+                "standby-pgdata-cleared"
+            )
+            == "True"
+        )
+
+
+def test_wait_for_standby_leader_non_leader_skips_if_already_cleared(harness):
+    with (
+        patch(
+            "relations.async_replication.PostgreSQLAsyncReplication._get_unit_ip",
+            return_value="1.1.1.1",
+        ),
+    ):
+        peer_rel_id = harness.add_relation(PEER, harness.charm.app.name)
+        harness.add_relation(
+            REPLICATION_OFFER_RELATION,
+            harness.charm.app.name,
+            unit_data={"unit-address": "10.1.1.10"},
+        )
+
+    with harness.hooks_disabled():
+        harness.update_relation_data(
+            peer_rel_id,
+            harness.charm.unit.name,
+            {"standby-pgdata-cleared": "True"},
+        )
+
+    with (
+        patch(
+            "charm.Patroni.get_standby_leader",
+            return_value="postgresql-k8s-0",
+        ),
+        patch(
+            "relations.async_replication.PostgreSQLAsyncReplication._clear_pgdata"
+        ) as _clear_pgdata,
+    ):
+        harness.set_leader(False)
+
+        event = MagicMock()
+        result = harness.charm.async_replication._wait_for_standby_leader(event)
+
+        assert result is False
+        _clear_pgdata.assert_not_called()

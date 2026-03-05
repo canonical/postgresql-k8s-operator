@@ -2031,3 +2031,151 @@ def test_calculate_worker_process_config_all_workers_validation_blocking(harness
 
     result = harness.charm._calculate_worker_process_config(cpu_cores)
     assert result["max_parallel_workers"] == "18"  # Should accept valid value
+
+
+def test_replica_can_start(harness):
+    with (
+        patch(
+            "charm.PostgresqlOperatorCharm.is_cluster_initialised",
+            new_callable=PropertyMock,
+        ) as _is_cluster_initialised,
+        patch(
+            "charm.PostgresqlOperatorCharm._endpoint",
+            new_callable=PropertyMock,
+        ) as _endpoint,
+        patch(
+            "charm.PostgresqlOperatorCharm._endpoints",
+            new_callable=PropertyMock,
+        ) as _endpoints,
+    ):
+        # Returns False when cluster is not initialised.
+        _is_cluster_initialised.return_value = False
+        _endpoint.return_value = "postgresql-k8s-0"
+        _endpoints.return_value = ["postgresql-k8s-0"]
+        assert harness.charm._replica_can_start() is False
+
+        # Returns False when endpoint is not in members list.
+        _is_cluster_initialised.return_value = True
+        _endpoint.return_value = "postgresql-k8s-1"
+        _endpoints.return_value = ["postgresql-k8s-0"]
+        assert harness.charm._replica_can_start() is False
+
+        # Returns True when both conditions are met.
+        _endpoint.return_value = "postgresql-k8s-0"
+        _endpoints.return_value = ["postgresql-k8s-0", "postgresql-k8s-1"]
+        assert harness.charm._replica_can_start() is True
+
+
+def test_create_pgdata_clears_stale_dirs_on_replica(harness):
+    container = MagicMock()
+
+    # Simulate: waldir and temp exist, but PG_VERSION does not (pgdata not populated).
+    def exists_side_effect(path):
+        if path.endswith("PG_VERSION"):
+            return False
+        return "pg_wal" in path or "pgsql_tmp" in path
+
+    container.exists.side_effect = exists_side_effect
+
+    with (
+        patch(
+            "charm.PostgresqlOperatorCharm.is_cluster_initialised",
+            new_callable=PropertyMock,
+            return_value=True,
+        ),
+    ):
+        harness.set_leader(False)
+        harness.charm._create_pgdata(container)
+
+    # Verify that find -delete was called for waldir and temp_tablespace paths.
+    find_calls = [c for c in container.exec.call_args_list if "find" in str(c)]
+    assert len(find_calls) >= 2
+    container.exec.assert_any_call(
+        ["find", "/var/lib/pg/logs/16/main/pg_wal", "-mindepth", "1", "-delete"]
+    )
+    container.exec.assert_any_call(
+        ["find", "/var/lib/pg/temp/16/main/pgsql_tmp", "-mindepth", "1", "-delete"]
+    )
+
+
+def test_create_pgdata_stale_dir_clearing_reraises_unexpected_exec_error(harness):
+    from ops.pebble import ExecError
+
+    container = MagicMock()
+
+    def exists_side_effect(path):
+        if path.endswith("PG_VERSION"):
+            return False
+        return "pg_wal" in path
+
+    container.exists.side_effect = exists_side_effect
+
+    # Make exec raise ExecError with a non "No such file or directory" message.
+    mock_process = MagicMock()
+    mock_process.wait_output.side_effect = ExecError(
+        command=["find"], exit_code=1, stdout="", stderr="Permission denied"
+    )
+    container.exec.return_value = mock_process
+
+    with (
+        patch(
+            "charm.PostgresqlOperatorCharm.is_cluster_initialised",
+            new_callable=PropertyMock,
+            return_value=True,
+        ),
+    ):
+        harness.set_leader(False)
+        # Should NOT raise — the ExecError with non "No such file" stderr is logged as warning
+        # but not re-raised.
+        harness.charm._create_pgdata(container)
+
+
+def test_create_pgdata_stale_dir_clearing_ignores_no_such_file(harness):
+    from ops.pebble import ExecError
+
+    container = MagicMock()
+
+    def exists_side_effect(path):
+        if path.endswith("PG_VERSION"):
+            return False
+        return "pg_wal" in path
+
+    container.exists.side_effect = exists_side_effect
+
+    # Make exec raise ExecError with "No such file or directory" message.
+    mock_process = MagicMock()
+    mock_process.wait_output.side_effect = ExecError(
+        command=["find"], exit_code=1, stdout="", stderr="No such file or directory"
+    )
+    container.exec.return_value = mock_process
+
+    with (
+        patch(
+            "charm.PostgresqlOperatorCharm.is_cluster_initialised",
+            new_callable=PropertyMock,
+            return_value=True,
+        ),
+    ):
+        harness.set_leader(False)
+        # Should not raise — graceful handling of missing directory.
+        harness.charm._create_pgdata(container)
+
+
+def test_on_postgresql_pebble_ready_defers_when_replica_not_ready(harness):
+    with (
+        patch("charm.PostgresqlOperatorCharm._create_pgdata") as _create_pgdata,
+        patch("charm.PostgresqlOperatorCharm._replica_can_start", return_value=False),
+        patch(
+            "charm.PostgresqlOperatorCharm._update_pebble_layers"
+        ) as _update_pebble_layers,
+    ):
+        harness.set_leader(False)
+        harness.set_can_connect(POSTGRESQL_CONTAINER, True)
+        mock_event = MagicMock()
+        mock_event.workload = harness.model.unit.get_container(POSTGRESQL_CONTAINER)
+
+        harness.charm._on_postgresql_pebble_ready(mock_event)
+
+        _create_pgdata.assert_called_once()
+        mock_event.defer.assert_called_once()
+        _update_pebble_layers.assert_not_called()
