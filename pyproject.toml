@@ -45,7 +45,7 @@ optional = true
 
 [tool.poetry.group.lint.dependencies]
 codespell = "^2.4.1"
-ty = "^0.0.18"
+ty = "^0.0.21"
 
 [tool.poetry.group.unit]
 optional = true
