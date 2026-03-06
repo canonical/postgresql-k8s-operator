@@ -115,7 +115,7 @@ postgresql-k8s:
   username: mylogin
   password: mypassword
   uris: postgresql://mylogin:mypassword@10.218.34.199:5432/mydbname
-  version: "16.11"
+  version: "16.13"
   ...
 
 $ psql postgresql://mylogin:mypassword@10.218.34.199:5432/mydbname -c "SELECT SESSION_USER, CURRENT_USER"
