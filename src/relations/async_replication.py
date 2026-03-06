@@ -808,7 +808,8 @@ class PostgreSQLAsyncReplication(Object):
         if async_relation.name == REPLICATION_OFFER_RELATION:  # type: ignore
             secret = self._get_secret()
             secret.grant(async_relation)  # type: ignore
-            primary_cluster_data["secret-id"] = secret.id
+            if secret.id is not None:
+                primary_cluster_data["secret-id"] = secret.id
 
         if system_identifier is not None:
             primary_cluster_data["system-id"] = system_identifier
