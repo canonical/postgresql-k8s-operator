@@ -1,0 +1,78 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-test-app/0 [executing] active: received database credentials of the second database
+  postgresql-test-app/1 [idle] active: received database credentials of the second database
+  database/0 [executing] active: Primary
+  database/1 [executing] active: 
+  database/2 [executing] active: 
+  another-database/0 [idle] active: Primary
+  another-database/1 [idle] active: 
+  another-database/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] active: Primary
+  database/1 [idle] active: 
+  database/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: Primary
+  database/1 [idle] active: 
+  database/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  01:53:28Z
+
+App                  Version  Status  Scale  Charm                Channel      Rev  Address         Exposed  Message
+another-application           active      1  postgresql-test-app  latest/edge  451  10.152.183.200  no       received database credentials of the first database
+another-database     16.11    active      3  postgresql-k8s                      1  10.152.183.251  no       
+database             16.11    active      3  postgresql-k8s                      0  10.152.183.124  no       
+postgresql-test-app           active      2  postgresql-test-app  latest/edge  451  10.152.183.162  no       received database credentials of the second database
+
+Unit                    Workload  Agent  Address      Ports  Message
+another-application/0*  active    idle   10.1.161.40         received database credentials of the first database
+another-database/0*     active    idle   10.1.161.33         Primary
+another-database/1      active    idle   10.1.161.39         
+another-database/2      active    idle   10.1.161.38         
+database/0*             active    idle   10.1.161.17         Primary
+database/1              active    idle   10.1.161.41         
+database/2              active    idle   10.1.161.42         
+postgresql-test-app/0*  active    idle   10.1.161.8          received database credentials of the second database
+postgresql-test-app/1   active    idle   10.1.161.9          received database credentials of the second database
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-database-1: 01:35:59 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:36:14 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-1: 01:36:22 ERROR unit.another-database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:36:22 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-1: 01:36:27 ERROR unit.another-database/1.juju-log single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-1.another-database-endpoints.testing.svc.cluster.local" (10.1.161.39), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-database-1: 01:36:31 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:36:41 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:36:52 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-2: 01:36:58 ERROR unit.another-database/2.juju-log database-peers:4: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-2.another-database-endpoints.testing.svc.cluster.local" (10.1.161.38), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-database-1: 01:37:01 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:37:12 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:37:23 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:38:24 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-2: 01:38:32 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-postgresql-test-app-1: 01:47:48 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-1: 01:47:48 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-0: 01:47:48 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-2: 01:47:49 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-application-0: 01:47:50 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 01:47:51 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-0: 01:47:54 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-1: 01:50:26 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-2: 01:50:29 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-1: 01:50:29 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-2: 01:50:33 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-1: 01:50:34 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-0: 01:50:38 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-2: 01:51:33 ERROR unit.database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-0: 01:52:50 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-0: 01:52:50 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-application-0: 01:52:53 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
