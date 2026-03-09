@@ -44,7 +44,7 @@ def test_deploy_latest(juju: Juju) -> None:
     juju.deploy(
         charm=DB_TEST_APP_NAME,
         app=DB_TEST_APP_NAME,
-        base="ubuntu@22.04",
+        base="ubuntu@24.04",
         channel="latest/edge",
         num_units=1,
     )
@@ -164,7 +164,7 @@ def inject_dependency_fault(juju: Juju, app_name: str, charm_file: str | Path) -
         versions = tomli.load(file)
 
     versions["charm"] = "16/0.0.0"
-    versions["workload"] = "16.11"
+    versions["workload"] = "16.13"
 
     # Overwrite refresh_versions.toml with incompatible version.
     with zipfile.ZipFile(charm_file, mode="a") as charm_zip:

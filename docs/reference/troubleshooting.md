@@ -119,9 +119,9 @@ postgresql         enabled   active    today at 12:29 UTC
 root@postgresql-k8s-0:/# ps auxww
 USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
 root           1  0.0  0.0 718264 10916 ?        Ssl  12:29   0:00 /charm/bin/pebble run --create-dirs --hold --http :38813 --verbose
-postgres      14  0.1  0.1 565020 39412 ?        Sl   12:29   0:01 python3 /usr/bin/patroni /var/lib/postgresql/data/patroni.yml
+postgres      14  0.1  0.1 565020 39412 ?        Sl   12:29   0:01 python3 /usr/bin/patroni /var/lib/pg/data/patroni.yml
 postgres      30  0.0  0.0 1082704 9076 ?        Sl   12:30   0:00 /usr/bin/prometheus-postgres-exporter
-postgres      48  0.0  0.0 215488 28912 ?        S    12:30   0:00 /usr/lib/postgresql/14/bin/postgres -D /var/lib/postgresql/data/pgdata --config-file=/var/lib/postgresql/data/pgdata/postgresql.conf --listen_addresses=0.0.0.0 --port=5432 --cluster_name=patroni-postgresql-k8s --wal_level=logical --hot_standby=on --max_connections=100 --max_wal_senders=10 --max_prepared_transactions=0 --max_locks_per_transaction=64 --track_commit_timestamp=off --max_replication_slots=10 --max_worker_processes=8 --wal_log_hints=on
+postgres      48  0.0  0.0 215488 28912 ?        S    12:30   0:00 /usr/lib/postgresql/16/bin/postgres -D /var/lib/pg/data/16/main --config-file=/var/lib/pg/data/16/main/postgresql.conf --listen_addresses=0.0.0.0 --port=5432 --cluster_name=patroni-postgresql-k8s --wal_level=logical --hot_standby=on --max_connections=100 --max_wal_senders=10 --max_prepared_transactions=0 --max_locks_per_transaction=64 --track_commit_timestamp=off --max_replication_slots=10 --max_worker_processes=8 --wal_log_hints=on
 postgres      50  0.0  0.0  70080  7488 ?        Ss   12:30   0:00 postgres: patroni-postgresql-k8s: logger 
 postgres      52  0.0  0.0 215592  9136 ?        Ss   12:30   0:00 postgres: patroni-postgresql-k8s: checkpointer 
 postgres      53  0.0  0.0 215604  9632 ?        Ss   12:30   0:00 postgres: patroni-postgresql-k8s: background writer 
