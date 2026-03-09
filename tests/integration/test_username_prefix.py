@@ -168,7 +168,11 @@ def test_readd_db_from_prefix(juju: jubilant.Juju) -> None:
 def test_no_prefix_dbs(juju: jubilant.Juju) -> None:
     db_ip = get_unit_ip(juju, DATABASE_APP_NAME, get_app_leader(juju, DATABASE_APP_NAME))
 
+    # Remove relations one at a time, waiting for idle after each.
+    # Removing both then waiting once is racy: Juju fires hooks sequentially
+    # and all_agents_idle can return in the gap between them.
     juju.remove_relation(f"{DATABASE_APP_NAME}", "di1")
+    juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
     juju.remove_relation(f"{DATABASE_APP_NAME}", "di2")
     juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
 
