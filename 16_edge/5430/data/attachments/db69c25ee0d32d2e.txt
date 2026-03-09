@@ -1,0 +1,86 @@
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:806 Connecting to existing model concierge-microk8s:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHSession received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHTunneler received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-0
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [allocating] waiting: installing agent
+  postgresql-k8s/1 [allocating] waiting: installing agent
+  postgresql-k8s/2 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] maintenance: installing charm software
+  postgresql-k8s/1 [allocating] waiting: agent initialising
+  postgresql-k8s/2 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+  postgresql-k8s/1 [executing] maintenance: installing charm software
+  postgresql-k8s/2 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+  postgresql-k8s/1 [executing] unknown: 
+  postgresql-k8s/2 [executing] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+  postgresql-k8s/1 [idle] unknown: 
+  postgresql-k8s/2 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] active: Primary (degraded)
+  postgresql-k8s/1 [idle] unknown: 
+  postgresql-k8s/2 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] active: Primary (degraded)
+  postgresql-k8s/1 [idle] waiting: awaiting for member to start
+  postgresql-k8s/2 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] active: Primary (degraded)
+  postgresql-k8s/1 [idle] waiting: awaiting for member to start
+  postgresql-k8s/2 [executing] unknown:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  01:35:28Z
+
+App             Version  Status   Scale  Charm           Channel  Rev  Address        Exposed  Message
+postgresql-k8s  16.13    waiting      3  postgresql-k8s             0  10.152.183.73  no       installing agent
+
+Unit               Workload  Agent  Address      Ports  Message
+postgresql-k8s/0*  active    idle   10.1.161.15         Primary (degraded)
+postgresql-k8s/1   active    idle   10.1.161.21         
+postgresql-k8s/2   error     idle   10.1.161.23         hook failed: "database-peers-relation-changed"
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-1: 01:34:44 ERROR unit.postgresql-k8s/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-postgresql-k8s-1: 01:34:55 ERROR unit.postgresql-k8s/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-postgresql-k8s-2: 01:35:23 ERROR unit.postgresql-k8s/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-postgresql-k8s-2: 01:35:27 ERROR unit.postgresql-k8s/2.juju-log database-peers:2: root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/charm.py", line 3161, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.12/site-packages/ops/__init__.py", line 360, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 507, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 491, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 423, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 920, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1028, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/charm.py", line 1274, in _on_postgresql_pebble_ready
+    self._create_pgdata(container)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/charm.py", line 1208, in _create_pgdata
+    ]).wait()
+       ^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 1782, in wait
+    raise ExecError(self._command, exit_code, None, None)
+ops.pebble.ExecError: non-zero exit code 1 executing 'bash'
+unit-postgresql-k8s-2: 01:35:27 ERROR juju.worker.uniter.operation hook "database-peers-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
