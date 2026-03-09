@@ -14,6 +14,7 @@ from .helpers import (
     DATABASE_APP_NAME,
     METADATA,
 )
+from .jubilant_helpers import retry_if_cli_error
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ def test_build_and_deploy(juju: jubilant.Juju, charm):
                 return False
         return True
 
-    juju.wait(_all_active_idle, timeout=1500)
+    retry_if_cli_error(lambda: juju.wait(_all_active_idle, timeout=1500))
     status = juju.status()
     for unit_id in UNIT_IDS:
         unit_name = f"{APP_NAME}/{unit_id}"
