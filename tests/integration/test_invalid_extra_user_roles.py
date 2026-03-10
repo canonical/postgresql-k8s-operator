@@ -13,7 +13,7 @@ from .helpers import (
     DATABASE_APP_NAME,
     METADATA,
 )
-from .jubilant_helpers import relations
+from .jubilant_helpers import relations, retry_if_cli_error
 
 logger = logging.getLogger(__name__)
 
@@ -134,5 +134,7 @@ def test_extra_user_roles(
         juju.remove_relation(f"{DATA_INTEGRATOR_APP_NAME}:{RELATION_ENDPOINT}", DATABASE_APP_NAME)
 
         logger.info("Waiting for the database charm to become active again")
-        juju.wait(lambda status: database_active(status), timeout=TIMEOUT)
+        retry_if_cli_error(
+            lambda: juju.wait(lambda status: database_active(status), timeout=TIMEOUT)
+        )
         juju.wait(lambda status: data_integrator_blocked(status), timeout=TIMEOUT)

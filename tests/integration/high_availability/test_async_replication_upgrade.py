@@ -12,7 +12,6 @@ from jubilant import Juju
 from tenacity import Retrying, stop_after_attempt
 
 from .. import architecture
-from ..helpers import METADATA
 from ..jubilant_helpers import retry_if_cli_error
 from .high_availability_helpers_new import (
     get_app_leader,
@@ -22,6 +21,7 @@ from .high_availability_helpers_new import (
     wait_for_apps_status,
 )
 
+DB_APP_NAME = "postgresql-k8s"
 DB_APP_1 = "db1"
 DB_APP_2 = "db2"
 DB_TEST_APP_NAME = "postgresql-test-app"
@@ -85,29 +85,27 @@ def test_deploy(first_model: str, second_model: str, charm: str) -> None:
     """Simple test to ensure that the PostgreSQL application charms get deployed."""
     configuration = {"profile": "testing"}
     constraints = {"arch": architecture.architecture}
-    resources = {"postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]}
 
-    # TODO Deploy from edge
     logging.info("Deploying postgresql clusters")
     model_1 = Juju(model=first_model)
     model_1.deploy(
-        charm=charm,
+        charm=DB_APP_NAME,
         app=DB_APP_1,
         base="ubuntu@24.04",
+        channel="16/beta",
         config=configuration,
         constraints=constraints,
-        resources=resources,
         num_units=3,
         trust=True,
     )
     model_2 = Juju(model=second_model)
     model_2.deploy(
-        charm=charm,
+        charm=DB_APP_NAME,
         app=DB_APP_2,
         base="ubuntu@24.04",
+        channel="16/beta",
         config=configuration,
         constraints=constraints,
-        resources=resources,
         num_units=3,
         trust=True,
     )
