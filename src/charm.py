@@ -328,6 +328,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def reconcile(self):
         """Reconcile the unit state on refresh."""
         self.set_unit_status(MaintenanceStatus("starting services"))
+        self._create_pgdata(self._container)
         self._update_pebble_layers(replan=True)
 
         if not self._patroni.member_started:
