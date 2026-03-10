@@ -243,18 +243,18 @@ typecheck = ["mypy"]
 
 [[package]]
 name = "boto3"
-version = "1.42.63"
+version = "1.42.64"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.9"
 groups = ["main", "integration"]
 files = [
-    {file = "boto3-1.42.63-py3-none-any.whl", hash = "sha256:d502a89a0acc701692ae020d15981f2a82e9eb3485acc651cfd0cf1a3afe79ee"},
-    {file = "boto3-1.42.63.tar.gz", hash = "sha256:cd008cfd0d7ea30f1c5e22daf0998c55b7c6c68cb68eea05110e33fe641173d5"},
+    {file = "boto3-1.42.64-py3-none-any.whl", hash = "sha256:2ca6b472937a54ba74af0b4bede582ba98c070408db1061fc26d5c3aa8e6e7e6"},
+    {file = "boto3-1.42.64.tar.gz", hash = "sha256:58d47897a26adbc22f6390d133dab772fb606ba72695291a8c9e20cba1c7fd23"},
 ]
 
 [package.dependencies]
-botocore = ">=1.42.63,<1.43.0"
+botocore = ">=1.42.64,<1.43.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.16.0,<0.17.0"
 
@@ -263,14 +263,14 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.42.63"
+version = "1.42.64"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.9"
 groups = ["main", "integration"]
 files = [
-    {file = "botocore-1.42.63-py3-none-any.whl", hash = "sha256:83f39d04f2b316bdfc59a3cac2d12238bde7126ac99d9a57d910dbd86d58c528"},
-    {file = "botocore-1.42.63.tar.gz", hash = "sha256:1fdfc33cff58d21e8622cf620ba2bba3cff324557932aaf935b5374e4610f059"},
+    {file = "botocore-1.42.64-py3-none-any.whl", hash = "sha256:f77c5cb76ed30576ed0bc73b591265d03dddffff02a9208d3ee0c790f43d3cd2"},
+    {file = "botocore-1.42.64.tar.gz", hash = "sha256:4ee2aece227b9171ace8b749af694a77ab984fceab1639f2626bd0d6fb1aa69d"},
 ]
 
 [package.dependencies]
@@ -629,14 +629,14 @@ files = [
 
 [[package]]
 name = "cosl"
-version = "1.6.0"
+version = "1.6.1"
 description = "Utils for COS Lite charms"
 optional = false
 python-versions = ">=3.8"
 groups = ["charm-libs"]
 files = [
-    {file = "cosl-1.6.0-py3-none-any.whl", hash = "sha256:5a3baa8a5930fc763be0ef093b679f325e1c84b43fd0fdf95df2488a15fa2b6b"},
-    {file = "cosl-1.6.0.tar.gz", hash = "sha256:6a70aa0b6f87716014ff98f7ef91ffd2617ff52b9a920f7116912ce0cbaf82fe"},
+    {file = "cosl-1.6.1-py3-none-any.whl", hash = "sha256:12db85a81317c5b056171642098be91c09e78e04875ed1262b99681dea43b533"},
+    {file = "cosl-1.6.1.tar.gz", hash = "sha256:f96a6a978dfdee4a3b460cc48fa18514663bbc1c3a4f323315e3dbe3e6a2a596"},
 ]
 
 [package.dependencies]
@@ -2944,4 +2944,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "43550f9a3b24bce75659d03ff74c296dcd0dcdc7f6f19126862702b769471ae6"
+content-hash = "f84bf6c58c7b8e50630dcd648848d57d3e33275f5d166d6f7ae7406b7b44a16b"
