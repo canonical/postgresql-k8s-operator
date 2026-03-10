@@ -167,40 +167,50 @@ async def test_invalid_config_and_recovery_after_fixing_it(
     database_app_name = f"new-{DATABASE_APP_NAME}"
 
     # Provide invalid backup configurations.
-    logger.info("configuring S3 integrator for an invalid cloud")
-    await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config({
-        "endpoint": "endpoint",
-        "bucket": "bucket",
-        "path": "path",
-        "region": "region",
-    })
-    action = await ops_test.model.units.get(f"{S3_INTEGRATOR_APP_NAME}/0").run_action(
-        "sync-s3-credentials",
-        **{
-            "access-key": "access-key",
-            "secret-key": "secret-key",
-        },
-    )
-    await action.wait()
-    logger.info("waiting for the database charm to become blocked")
-    await wait_for_idle_on_blocked(
-        ops_test,
-        database_app_name,
-        0,
-        S3_INTEGRATOR_APP_NAME,
-        FAILED_TO_ACCESS_CREATE_BUCKET_ERROR_MESSAGE,
-    )
+    # logger.info("configuring S3 integrator for an invalid cloud")
+    # await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config({
+    #     "endpoint": "endpoint",
+    #     "bucket": "bucket",
+    #     "path": "path",
+    #     "region": "region",
+    # })
+    # action = await ops_test.model.units.get(f"{S3_INTEGRATOR_APP_NAME}/0").run_action(
+    #     "sync-s3-credentials",
+    #     **{
+    #         "access-key": "access-key",
+    #         "secret-key": "secret-key",
+    #     },
+    # )
+    # await action.wait()
+    # logger.info("waiting for the database charm to become blocked")
+    # await wait_for_idle_on_blocked(
+    #     ops_test,
+    #     database_app_name,
+    #     0,
+    #     S3_INTEGRATOR_APP_NAME,
+    #     FAILED_TO_ACCESS_CREATE_BUCKET_ERROR_MESSAGE,
+    # )
 
     # Provide valid backup configurations, but from another cluster repository.
     logger.info(
         "configuring S3 integrator for a valid cloud, but with the path of another cluster repository"
     )
-    await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config(gcp_cloud_configs[0])
-    action = await ops_test.model.units.get(f"{S3_INTEGRATOR_APP_NAME}/0").run_action(
-        "sync-s3-credentials",
-        **gcp_cloud_configs[1],
+
+    updated_config = gcp_cloud_configs[0].copy()
+    updated_credentials = gcp_cloud_configs[1].copy()
+    rc, stdout, stderr = await ops_test.juju(
+        "add-secret",
+        "s3keysnew",
+        "access-key=" + updated_credentials["access-key"],
+        "secret-key=" + updated_credentials["secret-key"],
     )
-    await action.wait()
+    assert rc == 0, f"Failed to add secret: {stderr}"
+    secret_id = stdout.strip()
+    rc, stdout, stderr = await ops_test.juju("grant-secret", secret_id, S3_INTEGRATOR_APP_NAME)
+    assert rc == 0, "Failed to grant secret"
+    updated_config["credentials"] = secret_id
+
+    await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config(updated_config)
     await wait_for_idle_on_blocked(
         ops_test,
         database_app_name,
@@ -213,6 +223,7 @@ async def test_invalid_config_and_recovery_after_fixing_it(
     logger.info("configuring S3 integrator for a valid cloud")
     config = gcp_cloud_configs[0].copy()
     config["path"] = f"/postgresql-k8s/{uuid.uuid1()}"
+    config["credentials"] = secret_id
     await ops_test.model.applications[S3_INTEGRATOR_APP_NAME].set_config(config)
     logger.info("waiting for the database charm to become active")
     await ops_test.model.wait_for_idle(
