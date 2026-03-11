@@ -1,0 +1,92 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [executing] active: 
+  postgresql-k8s/2 [executing] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [executing] active: 
+  postgresql-k8s/2 [executing] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [executing] maintenance: Executing restart operation
+  postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  01:40:52Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Address         Exposed  Message
+postgresql-k8s            16.13    active      3  postgresql-k8s                        0  10.152.183.222  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  10.152.183.138  no       
+
+Unit                         Workload  Agent  Address      Ports  Message
+postgresql-k8s/0*            active    idle   10.1.161.16         
+postgresql-k8s/1             active    idle   10.1.161.23         
+postgresql-k8s/2             active    idle   10.1.161.25         Primary
+self-signed-certificates/0*  active    idle   10.1.161.15         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-1: 01:31:56 ERROR unit.postgresql-k8s/1.juju-log peer-certificates:3: root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 3578, in _wrap_hookcmd
+    yield
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 3929, in secret_get
+    return hookcmds.secret_get(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.12/site-packages/ops/hookcmds/_secret.py", line 153, in secret_get
+    stdout = run('secret-get', '--format=json', *args)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.12/site-packages/ops/hookcmds/_utils.py", line 53, in run
+    raise Error(returncode=e.returncode, cmd=e.cmd, stdout=e.stdout, stderr=e.stderr) from None
+ops.hookcmds._utils.Error: command ('secret-get', '--format=json', '--label', 'afd8c2bccf834997afce12c2706d2ede-private-key-1-client-certificates') exited with status 1
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/src/charm.py", line 3161, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.12/site-packages/ops/__init__.py", line 360, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 505, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 318, in __init__
+    self.charm = self._charm_class(self.framework)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/src/charm.py", line 319, in __init__
+    jobs=self._generate_metrics_jobs(self.is_tls_enabled),
+                                     ^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/src/charm.py", line 2011, in is_tls_enabled
+    return all(self.tls.get_client_tls_files())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/src/relations/tls.py", line 190, in get_client_tls_files
+    certs, private_key = self.client_certificate.get_assigned_certificates()
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.12/site-packages/charmlibs/interfaces/tls_certificates/_tls_certificates.py", line 2692, in get_assigned_certificates
+    if (cert := self._find_certificate_in_relation_data(requirer_csr))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.12/site-packages/charmlibs/interfaces/tls_certificates/_tls_certificates.py", line 2711, in _find_certificate_in_relation_data
+    private_key = self._get_private_key_for_mode(try_mode)
+                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.12/site-packages/charmlibs/interfaces/tls_certificates/_tls_certificates.py", line 2017, in _get_private_key_for_mode
+    secret = self.charm.model.get_secret(label=self._get_private_key_secret_label(mode))
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 309, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 3928, in secret_get
+    with self._wrap_hookcmd('secret-get', id=id, label=label, refresh=refresh, peek=peek):
+  File "/usr/lib/python3.12/contextlib.py", line 158, in __exit__
+    self.gen.throw(value)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-1/charm/venv/lib/python3.12/site-packages/ops/model.py", line 3588, in _wrap_hookcmd
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR secrets "d6occ2e2571c7bpu77pg-1" is forbidden: User "system:serviceaccount:testing:unit-postgresql-k8s-1" cannot get resource "secrets" in API group "" in the namespace "testing"
+
+unit-postgresql-k8s-1: 01:31:57 ERROR juju.worker.uniter.operation hook "peer-certificates-relation-created" (via hook dispatching script: dispatch) failed: exit status 1
+unit-postgresql-k8s-2: 01:36:46 ERROR unit.postgresql-k8s/2.juju-log single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "postgresql-k8s-2.postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.161.25), port 5432 failed: FATAL:  could not open file "global/pg_filenode.map": No such file or directory
+connection to server at "postgresql-k8s-2.postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.161.25), port 5432 failed: FATAL:  could not open file "global/pg_filenode.map": No such file or directory
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...

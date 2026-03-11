@@ -1,0 +1,50 @@
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:259 stopping database from postgresql-k8s/0
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:263 removing data from postgresql-k8s/0
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:275 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.245:16443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.245:16443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:243 Initial writes {'testing.postgresql-k8s-1': 26, 'testing.postgresql-k8s-2': 26}
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.245:16443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.245:16443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:249 Retry writes {'testing.postgresql-k8s-1': 28, 'testing.postgresql-k8s-2': 28}
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:281 checking whether a new primary was elected
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:289 enabling WAL rotation on postgresql-k8s/0
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:289 enabling WAL rotation on postgresql-k8s/0
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:293 rotating WAL segments on postgresql-k8s/2
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  02:09:09Z
+
+App                  Version  Status  Scale  Charm                Channel      Rev  Address         Exposed  Message
+postgresql-k8s       16.13    active      3  postgresql-k8s                      0  10.152.183.206  no       
+postgresql-test-app           active      1  postgresql-test-app  latest/edge  455  10.152.183.228  no       received database credentials of the first database
+
+Unit                    Workload  Agent  Address      Ports  Message
+postgresql-k8s/0*       active    idle   10.1.161.15         Primary
+postgresql-k8s/1        active    idle   10.1.161.22         
+postgresql-k8s/2        active    idle   10.1.161.23         
+postgresql-test-app/0*  active    idle   10.1.161.17         received database credentials of the first database
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-2: 02:03:22 ERROR unit.postgresql-k8s/2.juju-log __main__:Failed to restart patroni
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/charm.py", line 1877, in _on_update_status
+    self._container.restart(self.postgresql_service)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2621, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2401, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "postgresql" (cannot start service while terminating)
+----- Logs from task 0 -----
+2026-03-11T02:03:22Z INFO Service "postgresql" already stopping.
+----- Logs from task 1 -----
+2026-03-11T02:03:22Z ERROR cannot start service while terminating
+-----
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
