@@ -328,7 +328,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def reconcile(self):
         """Reconcile the unit state on refresh."""
         self.set_unit_status(MaintenanceStatus("starting services"))
-        self._create_pgdata(self._container)
+        self._ensure_pgdata_dirs_and_symlinks(self._container)
         self._update_pebble_layers(replan=True)
 
         if not self._patroni.member_started:
@@ -1128,12 +1128,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         return True
 
     def _create_pgdata(self, container: Container):
-        """Create the PostgreSQL data directories."""
+        """Create the PostgreSQL data directories, clearing stale data if needed."""
         logs_path = str(self.meta.storages["logs"].location)
         waldir_path = f"{logs_path}/16/main/pg_wal"
         temp_path = str(self.meta.storages["temp"].location)
         temp_tablespace_path = f"{temp_path}/16/main/pgsql_tmp"
-        archive_path = f"{self.meta.storages['archive'].location}/16/main"
 
         # Clear stale storage directories when a replica joins an initialized cluster.
         # This is needed because PersistentVolumes may retain data from previous pods,
@@ -1152,6 +1151,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     except ExecError as e:
                         if "No such file or directory" not in str(e.stderr):
                             logger.warning(f"Failed to clear {path}: {e}")
+
+        self._ensure_pgdata_dirs_and_symlinks(container)
+
+    def _ensure_pgdata_dirs_and_symlinks(self, container: Container):
+        """Create storage directories and symlinks for PostgreSQL data paths."""
+        logs_path = str(self.meta.storages["logs"].location)
+        waldir_path = f"{logs_path}/16/main/pg_wal"
+        temp_path = str(self.meta.storages["temp"].location)
+        temp_tablespace_path = f"{temp_path}/16/main/pgsql_tmp"
+        archive_path = f"{self.meta.storages['archive'].location}/16/main"
 
         # Create the pgdata directory on the storage mount (e.g., /var/lib/pg/data/16/main)
         if not container.exists(self._actual_pgdata_path):
