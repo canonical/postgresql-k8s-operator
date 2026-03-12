@@ -48,7 +48,7 @@ bootstrap:
         log_truncate_on_rotation: 'on'
         logging_collector: 'on'
         wal_level: logical
-        shared_preload_libraries: 'timescaledb,pgaudit'
+        shared_preload_libraries: 'timescaledb,pgaudit,pg_stat_statements'
   {%- if restoring_backup %}
   method: pgbackrest
   pgbackrest:
@@ -113,7 +113,7 @@ postgresql:
   bin_dir: /usr/lib/postgresql/{{ version }}/bin
   listen: 0.0.0.0:5432
   parameters:
-    shared_preload_libraries: 'timescaledb,pgaudit'
+    shared_preload_libraries: 'timescaledb,pgaudit,pg_stat_statements'
     {%- if enable_pgbackrest_archiving %}
     archive_command: 'pgbackrest --stanza={{ stanza }} archive-push %p'
     {% else %}
@@ -125,6 +125,7 @@ postgresql:
     ssl_cert_file: {{ storage_path }}/cert.pem
     ssl_key_file: {{ storage_path }}/key.pem
     {%- endif %}
+    pg_stat_statements.max: 10000
     {%- if pg_parameters %}
     {%- for key, value in pg_parameters.items() %}
     {{key}}: {{value}}
