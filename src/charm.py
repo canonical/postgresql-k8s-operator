@@ -764,6 +764,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("on_peer_relation_changed early exit: Backup restore check failed")
             return
 
+        # Ensure headless service exists before checking Patroni health.
+        try:
+            self._ensure_headless_service()
+        except ApiError:
+            logger.exception("failed to check/recreate headless service")
+
         # Validate the status of the member before setting an ActiveStatus.
         if not self._patroni.member_started:
             logger.debug("Deferring on_peer_relation_changed: Waiting for member to start")
@@ -1488,6 +1494,39 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             obj=patch,
         )
 
+    def _ensure_headless_service(self) -> bool:
+        """Ensure the headless endpoint service exists, recreating if needed.
+
+        Returns True if the service was recreated.
+        """
+        client = Client()
+        svc_name = f"{self.app.name}-endpoints"
+        try:
+            client.get(Service, name=svc_name, namespace=self.model.name)
+            return False
+        except ApiError as e:
+            if e.status.code != 404:
+                raise
+        logger.warning("Headless service %s not found, recreating", svc_name)
+        service = Service(
+            metadata=ObjectMeta(
+                name=svc_name,
+                namespace=self.model.name,
+                labels={"app.kubernetes.io/name": self.app.name},
+                annotations={
+                    "service.alpha.kubernetes.io/tolerate-unready-endpoints": "true",
+                },
+            ),
+            spec=ServiceSpec(
+                clusterIP="None",
+                publishNotReadyAddresses=True,
+                selector={"app.kubernetes.io/name": self.app.name},
+            ),
+        )
+        client.create(service)
+        logger.info("Recreated headless service %s", svc_name)
+        return True
+
     def _create_services(self) -> None:
         """Create kubernetes services for primary and replicas endpoints."""
         client = Client()
@@ -1826,6 +1865,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return False
 
         self._check_pgdata_storage_size()
+
+        # Check if headless service is missing (could explain waiting status).
+        try:
+            if self._ensure_headless_service():
+                return True
+        except ApiError:
+            logger.exception("failed to check/recreate headless service")
 
         if (
             self._has_blocked_status and self.unit.status not in S3_BLOCK_MESSAGES
