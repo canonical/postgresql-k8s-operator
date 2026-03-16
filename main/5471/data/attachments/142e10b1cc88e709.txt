@@ -1,0 +1,117 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/glauth-k8s-58
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/self-signed-certificates-586
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/postgresql-k8s-774
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-postgresql-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-self-signed-certificates/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-postgresql-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-self-signed-certificates/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-k8s/0 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-postgresql-k8s/0 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-k8s/0 [executing] maintenance: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-postgresql-k8s/0 [executing] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-k8s/0 [executing] maintenance: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-k8s/0 [idle] blocked: Backend integration (`pg-database` or `ldap-client`) missing
+[32mINFO    [0m integration.test_ldap:test_ldap.py:70 Adding relations to GLAuth
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-k8s/0 [idle] blocked: Backend integration (`pg-database` or `ldap-client`) missing
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-self-signed-certificates/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.14   unsupported  00:14:04Z
+
+App                              Version  Status  Scale  Charm                     Channel      Rev  Address         Exposed  Message
+glauth-k8s                                error       1  glauth-k8s                latest/edge   58  10.152.183.44   no       hook failed: "certificates-relation-joined"
+glauth-postgresql-k8s            14.20    active      1  postgresql-k8s            14/stable    774  10.152.183.252  no       
+glauth-self-signed-certificates           active      1  self-signed-certificates  1/stable     586  10.152.183.211  no       
+postgresql-k8s                   14.22    active      1  postgresql-k8s                           0  10.152.183.199  no       
+
+Unit                                Workload  Agent      Address      Ports  Message
+glauth-k8s/0*                       error     idle       10.1.161.17         hook failed: "certificates-relation-joined"
+glauth-postgresql-k8s/0*            active    executing  10.1.161.15         Primary
+glauth-self-signed-certificates/0*  active    executing  10.1.161.12         
+postgresql-k8s/0*                   active    idle       10.1.161.11         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-glauth-k8s-0: 00:12:23 ERROR unit.glauth-k8s/0.juju-log Error fetching ConfigMap: configmaps "glauth-k8s" not found
+unit-glauth-k8s-0: 00:12:31 ERROR juju.worker.uniter pebble poll failed for container "glauth": failed to send pebble-ready event: terminated
+unit-glauth-k8s-0: 00:13:08 ERROR juju.worker.uniter pebble poll failed for container "glauth": failed to send pebble-ready event: terminated
+unit-glauth-k8s-0: 00:13:09 ERROR juju.worker.uniter container "glauth": WaitNotices error, waiting 1s: cannot communicate with server: Get "http://localhost/v1/notices?timeout=30s": EOF
+unit-glauth-k8s-0: 00:14:03 ERROR unit.glauth-k8s/0.juju-log certificates:6: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/model.py", line 3570, in _wrap_hookcmd
+    yield
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/model.py", line 3921, in secret_get
+    return hookcmds.secret_get(
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/hookcmds/_secret.py", line 153, in secret_get
+    stdout = run('secret-get', '--format=json', *args)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/hookcmds/_utils.py", line 53, in run
+    raise Error(returncode=e.returncode, cmd=e.cmd, stdout=e.stdout, stderr=e.stderr) from None
+ops.hookcmds._utils.Error: command ('secret-get', '--format=json', '--label', 'afd8c2bccf834997afce12c2706d2ede-private-key-0-certificates') exited with status 1
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/./src/charm.py", line 433, in <module>
+    main(GLAuthCharm)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/__init__.py", line 360, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/_main.py", line 507, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/_main.py", line 491, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/_main.py", line 423, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/framework.py", line 920, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/framework.py", line 1028, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/./src/charm.py", line 349, in _on_pebble_ready
+    self.__on_pebble_ready(event)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/src/utils.py", line 132, in wrapper
+    return func(charm, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/./src/charm.py", line 354, in __on_pebble_ready
+    self._certs_integration.update_certificates()
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/src/integrations.py", line 275, in update_certificates
+    if not self.certs_ready():
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/src/integrations.py", line 284, in certs_ready
+    certs, private_key = self.cert_requirer.get_assigned_certificate(self.csr_attributes)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/lib/charms/tls_certificates_interface/v4/tls_certificates.py", line 1578, in get_assigned_certificate
+    return self._find_certificate_in_relation_data(requirer_csr), self.private_key
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/lib/charms/tls_certificates_interface/v4/tls_certificates.py", line 1595, in _find_certificate_in_relation_data
+    if not self.private_key:
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/lib/charms/tls_certificates_interface/v4/tls_certificates.py", line 1358, in private_key
+    if not self._private_key_generated():
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/lib/charms/tls_certificates_interface/v4/tls_certificates.py", line 1418, in _private_key_generated
+    secret = self.charm.model.get_secret(label=self._get_private_key_secret_label())
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/model.py", line 309, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/model.py", line 3920, in secret_get
+    with self._wrap_hookcmd('secret-get', id=id, label=label, refresh=refresh, peek=peek):
+  File "/usr/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/ops/model.py", line 3580, in _wrap_hookcmd
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR secrets "d6rkmibutc8c7bnfnjq0-1" is forbidden: User "system:serviceaccount:testing:unit-glauth-k8s-0" cannot get resource "secrets" in API group "" in the namespace "testing"
+
+unit-glauth-k8s-0: 00:14:04 ERROR juju.worker.uniter.operation hook "certificates-relation-joined" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
