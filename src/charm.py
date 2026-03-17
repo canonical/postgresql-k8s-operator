@@ -1211,13 +1211,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             group=WORKLOAD_OS_GROUP,
             make_parents=True,
         )
-        # container.isdir() returns False for symlinks (unlike os.path.isdir),
-        # so this only triggers for real directories, not existing symlinks.
-        if container.isdir(self.pgdata_path):
-            timestamp = str(datetime.now()).replace(" ", "-").replace(":", "-")
-            backup_path = f"{self._storage_path}/pgdata-backup-{timestamp}"
-            logger.info("Moving %s to %s", self.pgdata_path, backup_path)
-            container.exec(["mv", self.pgdata_path, backup_path]).wait_output()
+        if container.exists(self.pgdata_path):
+            try:
+                container.exec(["test", "-L", self.pgdata_path]).wait()
+            except ExecError:
+                # Not a symlink — move the real directory aside
+                timestamp = str(datetime.now()).replace(" ", "-").replace(":", "-")
+                backup_path = f"{self._storage_path}/pgdata-backup-{timestamp}"
+                logger.info("Moving %s to %s", self.pgdata_path, backup_path)
+                container.exec(["mv", self.pgdata_path, backup_path]).wait_output()
         container.exec([
             "ln",
             "-sfn",

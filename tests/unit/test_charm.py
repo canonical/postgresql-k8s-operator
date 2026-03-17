@@ -19,7 +19,7 @@ from ops.model import (
     RelationDataTypeError,
     WaitingStatus,
 )
-from ops.pebble import ChangeError, ServiceStatus
+from ops.pebble import ChangeError, ExecError, ServiceStatus
 from ops.testing import Harness
 from requests import ConnectionError as RequestsConnectionError
 from tenacity import RetryError, wait_fixed
@@ -1527,7 +1527,6 @@ def test_set_active_status(harness):
 def test_create_pgdata(harness):
     container = MagicMock()
     container.exists.return_value = False
-    container.isdir.return_value = False
     harness.charm._create_pgdata(container)
     # When directories don't exist, all four should be created
     container.make_dir.assert_has_calls([
@@ -1586,10 +1585,16 @@ def test_create_pgdata(harness):
     ])
 
     # When pgdata_path is a real directory (not a symlink), it should be backed up
-    container.make_dir.reset_mock()
-    container.exec.reset_mock()
+    container = MagicMock()
     container.exists.return_value = True
-    container.isdir.return_value = True
+
+    # Make "test -L" raise ExecError (path is not a symlink), other exec calls work normally
+    def exec_side_effect(cmd, *args, **kwargs):
+        if cmd == ["test", "-L", "/var/lib/postgresql/16/main"]:
+            raise ExecError(cmd, 1, None, None)
+        return MagicMock()
+
+    container.exec.side_effect = exec_side_effect
     harness.charm._create_pgdata(container)
     container.make_dir.assert_has_calls([
         call(
@@ -1600,27 +1605,21 @@ def test_create_pgdata(harness):
         ),
     ])
     # Verify directory is moved to PV-backed storage
-    mv_call = next(c for c in container.exec.call_args_list if "mv" in str(c[0][0]))
-    mv_dest = mv_call[0][0][2]
+    exec_cmds = [c[0][0] for c in container.exec.call_args_list]
+    mv_cmd = next(c for c in exec_cmds if c[0] == "mv")
     assert re.fullmatch(
-        r"/var/lib/pg/data/pgdata-backup-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.\d+", mv_dest
-    ), f"Unexpected mv destination format: {mv_dest}"
-    container.exec.assert_has_calls([
-        call(["mv", "/var/lib/postgresql/16/main", mv_dest]),
-        call().wait_output(),
-        call(["ln", "-sfn", "/var/lib/pg/data/16/main", "/var/lib/postgresql/16/main"]),
-        call().wait(),
-        call(["chown", "-h", "postgres:postgres", "/var/lib/postgresql/16/main"]),
-        call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/pg/archive"]),
-        call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/pg/data"]),
-        call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/pg/logs"]),
-        call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/pg/temp"]),
-        call().wait(),
-    ])
+        r"/var/lib/pg/data/pgdata-backup-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}-\d{2}\.\d+", mv_cmd[2]
+    ), f"Unexpected mv destination format: {mv_cmd[2]}"
+    assert exec_cmds == [
+        ["test", "-L", "/var/lib/postgresql/16/main"],
+        ["mv", "/var/lib/postgresql/16/main", mv_cmd[2]],
+        ["ln", "-sfn", "/var/lib/pg/data/16/main", "/var/lib/postgresql/16/main"],
+        ["chown", "-h", "postgres:postgres", "/var/lib/postgresql/16/main"],
+        ["chown", "postgres:postgres", "/var/lib/pg/archive"],
+        ["chown", "postgres:postgres", "/var/lib/pg/data"],
+        ["chown", "postgres:postgres", "/var/lib/pg/logs"],
+        ["chown", "postgres:postgres", "/var/lib/pg/temp"],
+    ]
 
 
 def test_get_plugins(harness):
