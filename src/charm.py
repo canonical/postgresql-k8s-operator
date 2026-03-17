@@ -1204,18 +1204,20 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Note: This symlink is on ephemeral storage and may not persist across container restarts.
         # It gets recreated on each pebble-ready event.
         # The OCI image ships /var/lib/postgresql/16/main as a real directory, so we must
-        # remove it first if it exists as a non-symlink (e.g., on replicas).
+        # move it aside if it exists as a non-symlink.
         container.make_dir(
             "/var/lib/postgresql/16",
             user=WORKLOAD_OS_USER,
             group=WORKLOAD_OS_GROUP,
             make_parents=True,
         )
-        container.exec([
-            "bash",
-            "-c",
-            f"[ -L {self.pgdata_path} ] || rm -rf {self.pgdata_path}",
-        ]).wait()
+        # container.isdir() returns False for symlinks (unlike os.path.isdir),
+        # so this only triggers for real directories, not existing symlinks.
+        if container.isdir(self.pgdata_path):
+            timestamp = str(datetime.now()).replace(" ", "-").replace(":", "-")
+            backup_path = f"{self._storage_path}/pgdata-backup-{timestamp}"
+            logger.info("Moving %s to %s", self.pgdata_path, backup_path)
+            container.exec(["mv", self.pgdata_path, backup_path]).wait_output()
         container.exec([
             "ln",
             "-sfn",
