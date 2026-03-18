@@ -1359,7 +1359,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     )
                 )
             elif self._patroni.member_started:
-                self.set_unit_status(ActiveStatus())
+                if self._patroni.cached_patroni_health.get("state") == "starting":
+                    self.set_unit_status(WaitingStatus("waiting for PostgreSQL to start"))
+                else:
+                    self.set_unit_status(ActiveStatus())
         except (RetryError, RequestsConnectionError) as e:
             logger.error(f"failed to get primary with error {e}")
 

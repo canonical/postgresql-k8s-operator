@@ -389,11 +389,16 @@ def test_scale_up(first_model: str, second_model: str) -> None:
         )
     )
 
-    results = get_db_max_written_values(first_model, second_model, first_model, DB_TEST_APP_1)
+    for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(3), reraise=True):
+        with attempt:
+            results = get_db_max_written_values(
+                first_model, second_model, first_model, DB_TEST_APP_1
+            )
+            logging.info(f"Results: {results}")
 
-    assert len(results) == 6
-    assert all(results[0] == x for x in results), "Data is not consistent across units"
-    assert results[0] > 1, "No data was written to the database"
+            assert len(results) == 6
+            assert all(results[0] == x for x in results), "Data is not consistent across units"
+            assert results[0] > 1, "No data was written to the database"
 
 
 def get_db_max_written_values(
