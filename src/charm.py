@@ -1203,23 +1203,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Patroni and other tools will use the symlink path (self.pgdata_path)
         # Note: This symlink is on ephemeral storage and may not persist across container restarts.
         # It gets recreated on each pebble-ready event.
-        # The OCI image ships /var/lib/postgresql/16/main as a real directory, so we must
-        # move it aside if it exists as a non-symlink.
         container.make_dir(
             "/var/lib/postgresql/16",
             user=WORKLOAD_OS_USER,
             group=WORKLOAD_OS_GROUP,
             make_parents=True,
         )
-        if container.exists(self.pgdata_path):
-            try:
-                container.exec(["test", "-L", self.pgdata_path]).wait()
-            except ExecError:
-                # Not a symlink — move the real directory aside
-                timestamp = str(datetime.now()).replace(" ", "-").replace(":", "-")
-                backup_path = f"{self._storage_path}/pgdata-backup-{timestamp}"
-                logger.info("Moving %s to %s", self.pgdata_path, backup_path)
-                container.exec(["mv", self.pgdata_path, backup_path]).wait_output()
         container.exec([
             "ln",
             "-sfn",
