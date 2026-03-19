@@ -1616,7 +1616,10 @@ def test_create_pgdata(harness):
             make_parents=True,
         ),
     ])
+    # test -L check should be called since the path exists
     container.exec.assert_has_calls([
+        call(["test", "-L", "/var/lib/postgresql/16/main"]),
+        call().wait(),
         call(["ln", "-sfn", "/var/lib/pg/data/16/main", "/var/lib/postgresql/16/main"]),
         call().wait(),
         call(["chown", "-h", "postgres:postgres", "/var/lib/postgresql/16/main"]),

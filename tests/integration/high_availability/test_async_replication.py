@@ -213,6 +213,19 @@ def test_data_replication(
 ) -> None:
     """Test to write to primary, and read the same data back from replicas."""
     logging.info("Testing data replication")
+    model_1 = Juju(model=first_model)
+    model_2 = Juju(model=second_model)
+    retry_if_cli_error(
+        lambda: model_1.wait(
+            ready=wait_for_apps_status(jubilant.all_active, DB_APP_1), timeout=20 * MINUTE_SECS
+        )
+    )
+    retry_if_cli_error(
+        lambda: model_2.wait(
+            ready=wait_for_apps_status(jubilant.all_active, DB_APP_2), timeout=20 * MINUTE_SECS
+        )
+    )
+
     results = get_db_max_written_values(first_model, second_model, first_model, DB_TEST_APP_1)
 
     assert len(results) == 6
@@ -232,6 +245,18 @@ def test_standby_promotion(first_model: str, second_model: str) -> None:
     promotion_task.raise_on_failure()
 
     rerelate_test_app(model_2, DB_APP_2, DB_TEST_APP_2)
+
+    model_1 = Juju(model=first_model)
+    retry_if_cli_error(
+        lambda: model_1.wait(
+            ready=wait_for_apps_status(jubilant.all_active, DB_APP_1), timeout=20 * MINUTE_SECS
+        )
+    )
+    retry_if_cli_error(
+        lambda: model_2.wait(
+            ready=wait_for_apps_status(jubilant.all_active, DB_APP_2), timeout=20 * MINUTE_SECS
+        )
+    )
 
     results = get_db_max_written_values(first_model, second_model, second_model, DB_TEST_APP_2)
     assert len(results) == 6
@@ -389,16 +414,11 @@ def test_scale_up(first_model: str, second_model: str) -> None:
         )
     )
 
-    for attempt in Retrying(stop=stop_after_attempt(10), wait=wait_fixed(3), reraise=True):
-        with attempt:
-            results = get_db_max_written_values(
-                first_model, second_model, first_model, DB_TEST_APP_1
-            )
-            logging.info(f"Results: {results}")
+    results = get_db_max_written_values(first_model, second_model, first_model, DB_TEST_APP_1)
 
-            assert len(results) == 6
-            assert all(results[0] == x for x in results), "Data is not consistent across units"
-            assert results[0] > 1, "No data was written to the database"
+    assert len(results) == 6
+    assert all(results[0] == x for x in results), "Data is not consistent across units"
+    assert results[0] > 1, "No data was written to the database"
 
 
 def get_db_max_written_values(
