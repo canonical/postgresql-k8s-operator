@@ -1359,7 +1359,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     )
                 )
             elif self._patroni.member_started:
-                if self._patroni.cached_patroni_health.get("state") == "starting":
+                if self._patroni.cached_patroni_health.get("state") == "starting" and (
+                    self.refresh is None or not self.refresh.in_progress
+                ):
                     self.set_unit_status(WaitingStatus("waiting for PostgreSQL to start"))
                 else:
                     self.set_unit_status(ActiveStatus())
@@ -1572,6 +1574,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Returns whether the unit is in a waiting state and there is no restore process ongoing."""
         return (
             isinstance(self.unit.status, WaitingStatus)
+            and self.unit.status.message != "waiting for PostgreSQL to start"
             and not self.is_cluster_restoring_backup
             and not self.is_cluster_restoring_to_time
         )
