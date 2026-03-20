@@ -17,7 +17,7 @@ this operator.
   - test coverage
   - user experience for Juju administrators of this charm.
 - Please help us out in ensuring easy to review branches by rebasing your pull request branch onto
-  the `main` branch. This also avoids merge commits and creates a linear Git commit history.
+  the `16/edge` branch. This also avoids merge commits and creates a linear Git commit history.
 
 ## Developing
 
@@ -59,8 +59,8 @@ juju model-config logging-config="<root>=INFO;unit=DEBUG"
 microk8s enable rbac
 
 # Deploy the charm
-juju deploy ./postgresql-k8s_ubuntu-24.04-amd64.charm --trust \
-    --resource postgresql-image=$(yq '(.resources.postgresql-image.upstream-source)' metadata.yaml)
+juju deploy ./postgresql-k8s_ubuntu@24.04-amd64.charm --trust \
+    --resource postgresql-image=$(yq -r '.["resources"]["postgresql-image"]["upstream-source"]' metadata.yaml)
 ```
 
 ## Canonical Contributor Agreement
