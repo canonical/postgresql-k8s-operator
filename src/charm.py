@@ -172,6 +172,7 @@ logging.getLogger("botocore").setLevel(logging.WARNING)
 EXTENSIONS_DEPENDENCY_MESSAGE = "Unsatisfied plugin dependencies. Please check the logs"
 EXTENSION_OBJECT_MESSAGE = "Cannot disable plugins: Existing objects depend on it. See logs"
 INSUFFICIENT_SIZE_WARNING = "<10% free space on pgdata volume."
+POSTGRESQL_STARTING_MESSAGE = "waiting for PostgreSQL to start"
 
 ORIGINAL_PATRONI_ON_FAILURE_CONDITION = "restart"
 
@@ -1373,7 +1374,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 if self._patroni.cached_patroni_health.get("state") == "starting" and (
                     self.refresh is None or not self.refresh.in_progress
                 ):
-                    self.set_unit_status(WaitingStatus("waiting for PostgreSQL to start"))
+                    self.set_unit_status(WaitingStatus(POSTGRESQL_STARTING_MESSAGE))
                 else:
                     self.set_unit_status(ActiveStatus())
         except (RetryError, RequestsConnectionError) as e:
@@ -1585,7 +1586,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Returns whether the unit is in a waiting state and there is no restore process ongoing."""
         return (
             isinstance(self.unit.status, WaitingStatus)
-            and self.unit.status.message != "waiting for PostgreSQL to start"
+            and self.unit.status.message != POSTGRESQL_STARTING_MESSAGE
             and not self.is_cluster_restoring_backup
             and not self.is_cluster_restoring_to_time
         )
