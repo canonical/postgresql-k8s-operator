@@ -172,6 +172,7 @@ logging.getLogger("botocore").setLevel(logging.WARNING)
 EXTENSIONS_DEPENDENCY_MESSAGE = "Unsatisfied plugin dependencies. Please check the logs"
 EXTENSION_OBJECT_MESSAGE = "Cannot disable plugins: Existing objects depend on it. See logs"
 INSUFFICIENT_SIZE_WARNING = "<10% free space on pgdata volume."
+POSTGRESQL_STARTING_MESSAGE = "waiting for PostgreSQL to start"
 
 ORIGINAL_PATRONI_ON_FAILURE_CONDITION = "restart"
 
@@ -1203,19 +1204,23 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Patroni and other tools will use the symlink path (self.pgdata_path)
         # Note: This symlink is on ephemeral storage and may not persist across container restarts.
         # It gets recreated on each pebble-ready event.
-        # The OCI image ships /var/lib/postgresql/16/main as a real directory, so we must
-        # remove it first if it exists as a non-symlink (e.g., on replicas).
         container.make_dir(
             "/var/lib/postgresql/16",
             user=WORKLOAD_OS_USER,
             group=WORKLOAD_OS_GROUP,
             make_parents=True,
         )
-        container.exec([
-            "bash",
-            "-c",
-            f"[ -L {self.pgdata_path} ] || rm -rf {self.pgdata_path}",
-        ]).wait()
+        # Patroni's remove_data_directory() can delete the symlink during failed
+        # pg_basebackup retries, and the retry recreates the path as a real directory.
+        # ln -sfn cannot replace a real directory, so move it aside first.
+        if container.exists(self.pgdata_path):
+            try:
+                container.exec(["test", "-L", self.pgdata_path]).wait()
+            except ExecError:
+                timestamp = str(datetime.now()).replace(" ", "-").replace(":", "-")
+                backup_path = f"{self._storage_path}/pgdata-backup-{timestamp}"
+                logger.info("Moving %s to %s", self.pgdata_path, backup_path)
+                container.exec(["mv", self.pgdata_path, backup_path]).wait_output()
         container.exec([
             "ln",
             "-sfn",
@@ -1366,7 +1371,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     )
                 )
             elif self._patroni.member_started:
-                self.set_unit_status(ActiveStatus())
+                if self._patroni.cached_patroni_health.get("state") == "starting" and (
+                    self.refresh is None or not self.refresh.in_progress
+                ):
+                    self.set_unit_status(WaitingStatus(POSTGRESQL_STARTING_MESSAGE))
+                else:
+                    self.set_unit_status(ActiveStatus())
         except (RetryError, RequestsConnectionError) as e:
             logger.error(f"failed to get primary with error {e}")
 
@@ -1576,6 +1586,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Returns whether the unit is in a waiting state and there is no restore process ongoing."""
         return (
             isinstance(self.unit.status, WaitingStatus)
+            and self.unit.status.message != POSTGRESQL_STARTING_MESSAGE
             and not self.is_cluster_restoring_backup
             and not self.is_cluster_restoring_to_time
         )
