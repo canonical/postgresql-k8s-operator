@@ -1,0 +1,94 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  untrusted-postgresql-k8s/0 [executing] maintenance: installing charm software
+  untrusted-postgresql-k8s/1 [allocating] waiting: installing agent
+  untrusted-postgresql-k8s/2 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  untrusted-postgresql-k8s/0 [executing] active: Primary (degraded)
+  untrusted-postgresql-k8s/1 [executing] maintenance: installing charm software
+  untrusted-postgresql-k8s/2 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  untrusted-postgresql-k8s/0 [executing] active: Primary (degraded)
+  untrusted-postgresql-k8s/1 [executing] waiting: awaiting for member to start
+  untrusted-postgresql-k8s/2 [executing] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  untrusted-postgresql-k8s/0 [executing] active: Primary (degraded)
+  untrusted-postgresql-k8s/1 [executing] active: 
+  untrusted-postgresql-k8s/2 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] active: Primary
+  untrusted-postgresql-k8s/1 [idle] active: 
+  untrusted-postgresql-k8s/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.19   unsupported  01:34:29Z
+
+App                       Version  Status  Scale  Charm           Channel  Rev  Address         Exposed  Message
+untrusted-postgresql-k8s  16.13    active      3  postgresql-k8s             0  10.152.183.185  no       
+
+Unit                         Workload  Agent  Address      Ports  Message
+untrusted-postgresql-k8s/0*  active    idle   10.1.144.79         Primary
+untrusted-postgresql-k8s/1   active    idle   10.1.144.86         
+untrusted-postgresql-k8s/2   active    idle   10.1.144.85         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-untrusted-postgresql-k8s-0: 01:32:22 ERROR unit.untrusted-postgresql-k8s/0.juju-log __main__:
+            Access to k8s cluster resources is not authorized. This happens when RBAC is enabled and the deployed application was not trusted by the juju admin.
+            To fix this issue, run `juju trust untrusted-postgresql-k8s --scope=cluster` (or remove & re-deploy untrusted-postgresql-k8s with `--trust`)
+            
+unit-untrusted-postgresql-k8s-0: 01:32:22 ERROR unit.untrusted-postgresql-k8s/0.juju-log __main__:
+            Access to k8s cluster resources is not authorized. This happens when RBAC is enabled and the deployed application was not trusted by the juju admin.
+            To fix this issue, run `juju trust untrusted-postgresql-k8s --scope=cluster` (or remove & re-deploy untrusted-postgresql-k8s with `--trust`)
+            
+unit-untrusted-postgresql-k8s-0: 01:32:38 ERROR unit.untrusted-postgresql-k8s/0.juju-log __main__:failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 812, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 306, in _connect_to_database
+    connection = psycopg2.connect(
+                 ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "untrusted-postgresql-k8s-primary.testing.svc.cluster.local" (10.152.183.33), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/src/charm.py", line 909, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 841, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+single_kernel_postgresql.utils.postgresql.PostgreSQLEnableDisableExtensionError
+unit-untrusted-postgresql-k8s-0: 01:32:50 ERROR unit.untrusted-postgresql-k8s/0.juju-log __main__:failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 812, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 306, in _connect_to_database
+    connection = psycopg2.connect(
+                 ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "untrusted-postgresql-k8s-primary.testing.svc.cluster.local" (10.152.183.33), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/src/charm.py", line 909, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 841, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+single_kernel_postgresql.utils.postgresql.PostgreSQLEnableDisableExtensionError
+unit-untrusted-postgresql-k8s-2: 01:33:41 ERROR unit.untrusted-postgresql-k8s/2.juju-log restart:0: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "untrusted-postgresql-k8s-2.untrusted-postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.144.85), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
