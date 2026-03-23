@@ -127,26 +127,39 @@ Unit           	  Workload  Agent  Address   Ports  Message
 postgresql-k8s/0*  active	idle   10.1.110.80     	Primary
 ```
 
-The user we will connect to in this tutorial will be 'operator'. To retrieve its associated password, run the juju action `get-password`:
+The user we will connect to in this tutorial will be 'operator'. 
+
+To retrieve its associated password, we must access the secrets:
 
 ```text
-juju run postgresql-k8s/leader get-password
+juju secrets
 ```
 
 The command above should output something like this:
 
-```text
-Running operation 1 with 1 task
-  - task 2 on unit-postgresql-k8s-0
-
-Waiting for task 2...
-password: 66hDfCMm3ofT0yrG
+```text 
+ID                    Name  Owner             Rotation  Revision  Last updated
+d6so1jnmp25c79kttu40  -     postgresql-k8s    never            1  23 hours ago  
+d6so1lfmp25c79kttu4g  -     postgresql-k8s/0  never            1  23 hours ago 
 ```
 
-In order to retrieve the password of a user other than `operator`, use the `username` option:
+Look for the operator password in the postgresql-k8s secret:
 
 ```text
-juju run postgresql-k8s/leader get-password username=replication
+juju show-secret d6so1jnmp25c79kttu40 --reveal | grep operator
+```
+
+and you'll get something like:
+
+```text
+    operator-password: 66hDfCMm3ofT0yrG
+```
+
+The secret contains also passwords for other users than `operator`, just grep for `replication` for example or show everything:
+
+```text
+juju show-secret d6so1jnmp25c79kttu40 --reveal | grep replication
+juju show-secret d6so1jnmp25c79kttu40 --reveal 
 ```
 
 At this point, we have all the information required to access PostgreSQL. Run the command below to enter the leader unit's shell as root:
@@ -340,51 +353,6 @@ postgresql-k8s/1   active    idle   10.1.188.209
 ```
 
 ## Manage passwords
-
-When we accessed PostgreSQL earlier in this tutorial, we needed to use a password manually. Passwords help to secure our database and are essential for security. Over time, it is a good practice to change the password frequently. 
-
-The operator's password can be retrieved by running the `get-password` action on the PostgreSQL application:
-
-```text
-juju run postgresql-k8s/leader get-password
-```
-
-Running the command above should output something like:
-```yaml
-unit-postgresql-k8s-0:
-  UnitId: postgresql-k8s/0
-  id: "6"
-  results:
-    password: SYhCduijXTAfg9mU
-  status: completed
-  timing:
-    completed: 2023-03-20 11:10:33 +0000 UTC
-    enqueued: 2023-03-20 11:10:32 +0000 UTC
-    started: 2023-03-20 11:10:33 +0000 UTC
-```
-
-You can change the operator's password to a new random password by entering:
-
-```text
-juju run postgresql-k8s/leader set-password
-```
-
-Running the command above should output something like:
-
-```yaml
-unit-postgresql-k8s-0:
-  UnitId: postgresql-k8s/0
-  id: "8"
-  results:
-    password: 7CYrRiBrC4du3ToX
-  status: completed
-  timing:
-    completed: 2023-03-20 11:10:47 +0000 UTC
-    enqueued: 2023-03-20 11:10:46 +0000 UTC
-    started: 2023-03-20 11:10:47 +0000 UTC
-```
-
-The `status: completed` element in the output above indicates that the password has been successfully updated. The new password should be different from the previous password.
 
 Learn more about managing user credentials in [](/how-to/manage-passwords) and [](/explanation/users).
 
