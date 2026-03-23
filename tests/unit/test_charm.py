@@ -340,6 +340,11 @@ def test_on_update_status(harness):
             "charm.PostgresqlOperatorCharm.enable_disable_extensions"
         ) as _enable_disable_extensions,
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
+        patch(
+            "charm.Patroni.cached_patroni_health",
+            new_callable=PropertyMock,
+            return_value={"state": "running"},
+        ),
         patch("charm.Patroni.get_primary") as _get_primary,
         patch("ops.model.Container.pebble") as _pebble,
         patch("ops.model.Container.restart") as _restart,
