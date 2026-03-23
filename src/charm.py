@@ -1217,7 +1217,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             try:
                 container.exec(["test", "-L", self.pgdata_path]).wait()
             except ExecError:
-                timestamp = str(datetime.now()).replace(" ", "-").replace(":", "-")
+                timestamp = datetime.now(UTC).strftime("%Y-%m-%d-%H-%M-%S.%f")
                 backup_path = f"{self._storage_path}/pgdata-backup-{timestamp}"
                 logger.info("Moving %s to %s", self.pgdata_path, backup_path)
                 container.exec(["mv", self.pgdata_path, backup_path]).wait_output()
