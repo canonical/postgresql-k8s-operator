@@ -1,3 +1,7 @@
+---
+relatedlinks: "[Charmhub](https://charmhub.io/postgresql-k8s?channel=14/stable)"
+---
+
 # Charmed PostgreSQL K8s documentation
 
 Charmed PostgreSQL K8s is an open-source software operator designed to deploy and operate object-relational databases on Kubernetes. It packages the powerful database management system [PostgreSQL](https://www.postgresql.org/) into a charmed operator for deployment with [Juju](https://juju.is/docs/juju).
