@@ -56,6 +56,7 @@ FreezeMinAgeInt = Annotated[int, Field(ge=0, le=1000000000)]
 AutovacuumNapTimeInt = Annotated[int, Field(ge=1, le=2147483)]
 DeadlockTimeoutInt = Annotated[int, Field(ge=1, le=2147483647)]
 
+
 class CharmConfig(BaseConfigModel):
     """Manager for the structured configuration."""
 
