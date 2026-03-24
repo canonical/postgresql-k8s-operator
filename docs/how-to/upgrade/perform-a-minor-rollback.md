@@ -1,3 +1,4 @@
+(perform-a-minor-rollback)=
 # How to perform a minor rollback
 
 **Example**: PostgreSQL 14.9 -> PostgreSQL 14.8<br/>

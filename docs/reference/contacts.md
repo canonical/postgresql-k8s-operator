@@ -1,3 +1,4 @@
+(contacts)=
 # Contact
 
 Charmed PostgreSQL K8s is an open source project that warmly welcomes community contributions, suggestions, fixes, and constructive feedback:

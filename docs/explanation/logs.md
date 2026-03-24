@@ -1,3 +1,4 @@
+(logs)=
 # Logs
 
 This page summarises all log types in Charmed PostgreSQL to simplify troubleshooting.
