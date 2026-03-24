@@ -1,3 +1,4 @@
+(alert-rules)=
 # Alert rules
 
 This page contains a markdown version of the alert rules described in the `postgresql-k8s-operator` repository.  The following file(s) are the source of truth:
