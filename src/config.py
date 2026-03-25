@@ -46,6 +46,8 @@ BgwriterLruMaxpagesInt = Annotated[int, Field(ge=0, le=1073741823)]
 BgwriterLruMultiplierFloat = Annotated[float, Field(ge=0, le=10)]
 TrackActivityQuerySizeInt = Annotated[int, Field(ge=100, le=1048576)]
 GinPendingListLimitInt = Annotated[int, Field(ge=64, le=2147483647)]
+AutoVacuumCostDelayFloat = Annotated[float, Field(ge=-1, le=100)]
+AutoVacuumCostLimitInt = Annotated[int, Field(ge=-1, le=10000)]
 VacuumCostDelayFloat = Annotated[float, Field(ge=0, le=100)]
 VacuumCostLimitInt = Annotated[int, Field(ge=1, le=10000)]
 VacuumCostInt = Annotated[int, Field(ge=0, le=10000)]
@@ -229,8 +231,8 @@ class CharmConfig(BaseConfigModel):
     vacuum_autovacuum_analyze_threshold: PgIntMax | None
     vacuum_autovacuum_freeze_max_age: FreezeMaxAgeInt | None
     vacuum_autovacuum_naptime: AutovacuumNapTimeInt | None
-    vacuum_autovacuum_vacuum_cost_delay: VacuumCostDelayFloat | None
-    vacuum_autovacuum_vacuum_cost_limit: VacuumCostLimitInt | None
+    vacuum_autovacuum_vacuum_cost_delay: AutoVacuumCostDelayFloat | None
+    vacuum_autovacuum_vacuum_cost_limit: AutoVacuumCostLimitInt | None
     vacuum_autovacuum_vacuum_insert_scale_factor: PercentFloat | None
     vacuum_autovacuum_vacuum_insert_threshold: PgSignedIntMax | None
     vacuum_autovacuum_vacuum_scale_factor: PercentFloat | None
