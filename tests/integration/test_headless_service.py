@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 
 import logging
-import time
 
 import jubilant
 import pytest
@@ -11,6 +10,7 @@ from jubilant import Juju
 from lightkube.core.client import Client
 from lightkube.core.exceptions import ApiError
 from lightkube.resources.core_v1 import Service
+from tenacity import RetryError, Retrying, retry_if_exception, stop_after_delay, wait_fixed
 
 from .helpers import CHARM_BASE_NOBLE, METADATA
 
@@ -61,19 +61,24 @@ def test_headless_service_recreated(juju: Juju):
 
     # Poll for the service to be recreated (avoids issues from the headless
     # service deletion disrupting K8s networking for Juju connections).
-    deadline = time.time() + 600
-    recreated = False
-    while time.time() < deadline:
-        try:
-            svc = client.get(Service, name=svc_name)
-            if svc.spec.clusterIP == "None":
-                recreated = True
-                break
-        except ApiError:
-            pass
-        time.sleep(10)
-
-    assert recreated, f"Headless service {svc_name} was not recreated within timeout"
+    try:
+        for attempt in Retrying(
+            stop=stop_after_delay(600),
+            wait=wait_fixed(10),
+            retry=retry_if_exception(
+                lambda e: (
+                    isinstance(e, ValueError) or (isinstance(e, ApiError) and e.status.code == 404)
+                )
+            ),
+        ):
+            with attempt:
+                svc = client.get(Service, name=svc_name)
+                if svc.spec.clusterIP != "None":
+                    raise ValueError("service exists but is not headless yet")
+    except RetryError as e:
+        raise AssertionError(
+            f"Headless service {svc_name} was not recreated within timeout"
+        ) from e
     logger.info("Headless service %s was recreated", svc_name)
 
     # Wait for units to settle back to active/idle.
