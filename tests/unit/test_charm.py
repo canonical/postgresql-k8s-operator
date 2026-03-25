@@ -732,6 +732,35 @@ def test_create_services(harness):
             tc.assertEqual(_client.return_value.apply.call_count, 2)
 
 
+def test_ensure_headless_service(harness):
+    with patch("charm.Client") as _client:
+        # Test when the service already exists.
+        _client.return_value.get.return_value = MagicMock()
+        result = harness.charm._ensure_headless_service()
+        tc.assertFalse(result)
+        _client.return_value.apply.assert_not_called()
+
+        # Test when the service is missing (404) and gets recreated.
+        _client.reset_mock()
+        _client.return_value.get.side_effect = _FakeApiError(404)
+        result = harness.charm._ensure_headless_service()
+        tc.assertTrue(result)
+        _client.return_value.apply.assert_called_once()
+
+        # Test when get raises a non-404 error (should propagate).
+        _client.reset_mock()
+        _client.return_value.get.side_effect = _FakeApiError(403)
+        with tc.assertRaises(_FakeApiError):
+            harness.charm._ensure_headless_service()
+
+        # Test when apply raises an error (should propagate).
+        _client.reset_mock()
+        _client.return_value.get.side_effect = _FakeApiError(404)
+        _client.return_value.apply.side_effect = _FakeApiError
+        with tc.assertRaises(_FakeApiError):
+            harness.charm._ensure_headless_service()
+
+
 def test_patch_pod_labels(harness):
     with patch("charm.Client") as _client:
         member = harness.charm._unit.replace("/", "-")

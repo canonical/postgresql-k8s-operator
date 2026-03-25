@@ -1497,6 +1497,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def _ensure_headless_service(self) -> bool:
         """Ensure the headless endpoint service exists, recreating if needed.
 
+        Workaround for https://github.com/canonical/postgresql-k8s-operator/issues/392
+        Can be removed once Juju properly reconciles deleted headless services.
+
         Returns True if the service was recreated.
         """
         client = Client()
@@ -1512,7 +1515,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             metadata=ObjectMeta(
                 name=svc_name,
                 namespace=self.model.name,
-                labels={"app.kubernetes.io/name": self.app.name},
+                labels={
+                    "app.kubernetes.io/name": self.app.name,
+                    "app.kubernetes.io/managed-by": "juju",
+                },
                 annotations={
                     "service.alpha.kubernetes.io/tolerate-unready-endpoints": "true",
                 },
@@ -1523,7 +1529,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 selector={"app.kubernetes.io/name": self.app.name},
             ),
         )
-        client.create(service)
+        client.apply(service, field_manager=self.app.name, force=True)
         logger.info("Recreated headless service %s", svc_name)
         return True
 
@@ -1867,9 +1873,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._check_pgdata_storage_size()
 
         # Check if headless service is missing (could explain waiting status).
+        # If recreated, defer to next update-status cycle to let it stabilize.
         try:
             if self._ensure_headless_service():
-                return True
+                return False
         except ApiError:
             logger.exception("failed to check/recreate headless service")
 
