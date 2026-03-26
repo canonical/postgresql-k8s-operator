@@ -1,3 +1,4 @@
+(upgrade)=
 # Upgrade
 
 This charm does not support in-place upgrades for major version changes, and there are currently no minor versions of Charmed PostgreSQL 16 to upgrade or rollback.

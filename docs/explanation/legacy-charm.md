@@ -1,3 +1,4 @@
+(legacy-charm)=
 # Legacy charm
 
 There are [two types of charms](https://documentation.ubuntu.com/juju/3.6/reference/charm/#by-generation) stored under the same charm name `postgresql-k8s`:

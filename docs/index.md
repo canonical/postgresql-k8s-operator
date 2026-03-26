@@ -1,3 +1,7 @@
+---
+relatedlinks: "[Charmhub](https://charmhub.io/postgresql?channel=16/edge)"
+---
+
 # Charmed PostgreSQL K8s documentation
 
 ```{caution}
