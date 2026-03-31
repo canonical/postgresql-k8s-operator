@@ -2539,13 +2539,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     "rewind",
                 ):
                     continue
-                user_database_map[user] = ",".join(
-                    sorted(
-                        self.postgresql.list_accessible_databases_for_user(
-                            user, current_host=self.is_connectivity_enabled
-                        )
+                if databases := ",".join(
+                    self.postgresql.list_accessible_databases_for_user(
+                        user, current_host=self.is_connectivity_enabled
                     )
-                )
+                ):
+                    user_database_map[user] = databases
+                else:
+                    logger.debug(f"User {user} has no databases to connect to")
+
             if self.postgresql.list_access_groups(
                 current_host=self.is_connectivity_enabled
             ) != set(ACCESS_GROUPS):
