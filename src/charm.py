@@ -1115,15 +1115,24 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def _replica_can_start(self) -> bool:
         """Check whether this replica is ready to start Patroni.
 
-        Returns False if the cluster hasn't been bootstrapped yet, or if the
+        Returns False if the cluster hasn't been bootstrapped yet, if the
         leader hasn't added this unit's endpoint to the members list (which
-        controls the pg_hba replication entries on the primary).
+        controls the pg_hba replication entries on the primary), or if the
+        primary's Patroni hasn't yet reloaded pg_hba with this unit's
+        replication entry (which would cause pg_basebackup to be rejected,
+        triggering Patroni's remove_data_directory() and destroying the
+        pgdata symlink).
         """
         if not self.is_cluster_initialised:
             logger.debug("Replica not ready: cluster not initialized")
             return False
         if self._endpoint not in self._endpoints:
             logger.debug("Replica not ready: endpoint not yet in members list")
+            return False
+        if not self._patroni.is_replication_hba_ready():
+            logger.debug(
+                "Replica not ready: primary pg_hba not yet reloaded with replication entry"
+            )
             return False
         return True
 

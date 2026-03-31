@@ -13,6 +13,8 @@ from functools import cached_property
 from ssl import CERT_NONE, create_default_context
 from typing import Any, TypedDict
 
+import psycopg2
+import psycopg2.extras
 import requests
 import yaml
 from httpx import AsyncClient, BasicAuth, HTTPError
@@ -435,6 +437,33 @@ class Patroni:
 
         logger.debug("replication is healthy")
         return True
+
+    def is_replication_hba_ready(self) -> bool:
+        """Check whether the primary's pg_hba allows replication from this unit.
+
+        Attempts a physical replication connection to the primary.  If it
+        succeeds the primary's Patroni has already reloaded pg_hba with this
+        unit's endpoint, meaning pg_basebackup will not be rejected and
+        Patroni can safely start.
+
+        Returns True if the connection is accepted, False otherwise.
+        """
+        try:
+            conn = psycopg2.connect(
+                host=self._primary_endpoint,
+                port=5432,
+                user="replication",
+                password=self._replication_password,
+                dbname="replication",
+                connect_timeout=1,
+                connection_factory=psycopg2.extras.PhysicalReplicationConnection,
+            )
+            conn.close()
+            logger.debug("Replication HBA check passed: primary accepts replication connection")
+            return True
+        except psycopg2.OperationalError as e:
+            logger.debug("Replication HBA check failed: %s", e)
+            return False
 
     @property
     def primary_endpoint_ready(self) -> bool:
