@@ -3,7 +3,6 @@
 import itertools
 import json
 import logging
-from pathlib import PurePosixPath
 from unittest import TestCase
 from unittest.mock import MagicMock, Mock, PropertyMock, call, patch, sentinel
 
@@ -19,7 +18,7 @@ from ops.model import (
     RelationDataTypeError,
     WaitingStatus,
 )
-from ops.pebble import ChangeError, FileInfo, FileType, ServiceStatus
+from ops.pebble import ChangeError, ServiceStatus
 from ops.testing import Harness
 from requests import ConnectionError as RequestsConnectionError
 from tenacity import RetryError, wait_fixed
@@ -1583,9 +1582,6 @@ def test_create_pgdata(harness):
     container.make_dir.reset_mock()
     container.exec.reset_mock()
     container.exists.return_value = True
-    symlink_info = MagicMock(spec=FileInfo)
-    symlink_info.type = FileType.SYMLINK
-    container.list_files.return_value = [symlink_info]
     harness.charm._create_pgdata(container)
     # When directories exist, none should be created (except the symlink parent)
     container.make_dir.assert_has_calls([
@@ -1596,10 +1592,6 @@ def test_create_pgdata(harness):
             make_parents=True,
         ),
     ])
-    # list_files is called by ContainerPath.is_symlink() to check if the path is a symlink
-    container.list_files.assert_called_once_with(
-        PurePosixPath("/var/lib/postgresql/16"), pattern="main"
-    )
     container.exec.assert_has_calls([
         call(["ln", "-sfn", "/var/lib/pg/data/16/main", "/var/lib/postgresql/16/main"]),
         call().wait(),

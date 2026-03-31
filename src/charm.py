@@ -13,14 +13,12 @@ import re
 import shutil
 import sys
 import time
-from datetime import UTC, datetime
+from datetime import datetime
 from functools import cached_property
 from hashlib import shake_128
 from pathlib import Path
 from typing import Literal, get_args
 from urllib.parse import urlparse
-
-from charmlibs.pathops import ContainerPath
 
 from authorisation_rules_observer import (
     AuthorisationRulesChangeCharmEvents,
@@ -1211,17 +1209,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             group=WORKLOAD_OS_GROUP,
             make_parents=True,
         )
-        # Patroni's remove_data_directory() can delete the symlink during failed
-        # pg_basebackup retries, and the retry recreates the path as a real directory.
-        # ln -sfn cannot replace a real directory, so move it aside first.
-        if (
-            container.exists(self.pgdata_path)
-            and not ContainerPath(self.pgdata_path, container=container).is_symlink()
-        ):
-            timestamp = datetime.now(UTC).strftime("%Y-%m-%d-%H-%M-%S.%f")
-            backup_path = f"{self._storage_path}/pgdata-backup-{timestamp}"
-            logger.info("Moving %s to %s", self.pgdata_path, backup_path)
-            container.exec(["mv", self.pgdata_path, backup_path]).wait_output()
         container.exec([
             "ln",
             "-sfn",
