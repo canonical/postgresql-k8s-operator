@@ -13,8 +13,6 @@ from functools import cached_property
 from ssl import CERT_NONE, create_default_context
 from typing import Any, TypedDict
 
-import psycopg2
-import psycopg2.extras
 import requests
 import yaml
 from httpx import AsyncClient, BasicAuth, HTTPError
@@ -448,6 +446,9 @@ class Patroni:
 
         Returns True if the connection is accepted, False otherwise.
         """
+        import psycopg2
+        import psycopg2.extras
+
         try:
             conn = psycopg2.connect(
                 host=self._primary_endpoint,
