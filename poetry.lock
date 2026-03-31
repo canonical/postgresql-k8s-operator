@@ -474,21 +474,6 @@ ops = "*"
 pydantic = "*"
 
 [[package]]
-name = "charmlibs-pathops"
-version = "1.2.1"
-description = "A pathlib-like interface for Juju K8s charms to interact with files in their workload container."
-optional = false
-python-versions = ">=3.10"
-groups = ["main"]
-files = [
-    {file = "charmlibs_pathops-1.2.1-py3-none-any.whl", hash = "sha256:36dc4e5f76ae3eb89020df916c14e169f71ba856f71a430dab94b0b7948e9b10"},
-    {file = "charmlibs_pathops-1.2.1.tar.gz", hash = "sha256:00fa50f95bb7fbfbe3d5507de94e583f7333f63ec6ef42a49600b641aabbcfd3"},
-]
-
-[package.dependencies]
-ops = ">=2.19,<4"
-
-[[package]]
 name = "charset-normalizer"
 version = "3.4.6"
 description = "The Real First Universal Charset Detector. Open, modern and actively maintained alternative to Chardet."
@@ -2961,4 +2946,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "13b8abb5eedeca18be121ee3805ae6592baac0bcc163d4297ecaf7f301de55c3"
+content-hash = "981c950244ed4f24a770dc6ed888db69652d825675b482967d49fc94e4467504"
