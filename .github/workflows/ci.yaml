@@ -68,6 +68,8 @@ jobs:
     name: Build charm
     uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v42.0.1
     permissions: {}
+    with:
+      cache: false
 
   integration-test:
     name: Integration test charm
