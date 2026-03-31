@@ -266,11 +266,6 @@ def test_on_config_changed(harness):
         ) as _validate_config_options,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
         patch("charm.Patroni.member_started", return_value=True, new_callable=PropertyMock),
-        patch(
-            "charm.Patroni.cached_patroni_health",
-            new_callable=PropertyMock,
-            return_value={"state": "running"},
-        ),
         patch("charm.Patroni.get_primary"),
         patch(
             "charm.PostgresqlOperatorCharm.is_standby_leader",
@@ -341,11 +336,6 @@ def test_on_update_status(harness):
             "charm.PostgresqlOperatorCharm.enable_disable_extensions"
         ) as _enable_disable_extensions,
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
-        patch(
-            "charm.Patroni.cached_patroni_health",
-            new_callable=PropertyMock,
-            return_value={"state": "running"},
-        ),
         patch("charm.Patroni.get_primary") as _get_primary,
         patch("ops.model.Container.pebble") as _pebble,
         patch("ops.model.Container.restart") as _restart,
@@ -483,11 +473,6 @@ def test_enable_disable_extensions(harness):
         patch("charm.PostgreSQL.enable_disable_extensions") as _enable_disable_extensions,
         patch("charm.Patroni.get_primary", return_value=None) as _get_primary,
         patch("charm.Patroni.member_started", return_value=True, new_callable=PropertyMock),
-        patch(
-            "charm.Patroni.cached_patroni_health",
-            new_callable=PropertyMock,
-            return_value={"state": "running"},
-        ),
         patch(
             "charm.PostgresqlOperatorCharm.is_standby_leader",
             return_value=False,
@@ -1483,7 +1468,6 @@ def test_handle_postgresql_restart_need(harness):
 def test_set_active_status(harness):
     with (
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
-        patch("charm.Patroni.cached_patroni_health", new_callable=PropertyMock) as _cached_health,
         patch("charm.Patroni.get_running_cluster_members", return_value=["test"]),
         patch(
             "charm.PostgresqlOperatorCharm.is_standby_leader", new_callable=PropertyMock
@@ -1507,7 +1491,6 @@ def test_set_active_status(harness):
         ):
             harness.charm.unit.status = MaintenanceStatus("fake status")
             _member_started.return_value = values[2]
-            _cached_health.return_value = {"state": "running" if values[2] else "stopped"}
             if isinstance(values[0], str):
                 _get_primary.side_effect = None
                 _get_primary.return_value = values[0]
@@ -1539,18 +1522,6 @@ def test_set_active_status(harness):
                 _get_primary.return_value = None
                 harness.charm._set_active_status()
                 assert isinstance(harness.charm.unit.status, MaintenanceStatus)
-
-        # Test WaitingStatus when member is in "starting" state
-        _get_primary.side_effect = None
-        _get_primary.return_value = f"{harness.charm.app.name}/2"
-        _is_standby_leader.side_effect = None
-        _is_standby_leader.return_value = False
-        _member_started.return_value = True
-        _cached_health.return_value = {"state": "starting"}
-        harness.charm.unit.status = MaintenanceStatus("fake status")
-        harness.charm._set_active_status()
-        assert isinstance(harness.charm.unit.status, WaitingStatus)
-        assert harness.charm.unit.status.message == "waiting for PostgreSQL to start"
 
 
 def test_create_pgdata(harness):
