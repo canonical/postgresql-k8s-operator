@@ -1,0 +1,34 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [executing] active: 
+  postgresql-k8s/2 [executing] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] active: 
+  postgresql-k8s/1 [executing] active: 
+  postgresql-k8s/2 [executing] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.20   unsupported  01:42:43Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Address         Exposed  Message
+postgresql-k8s            16.13    active      3  postgresql-k8s                        0  10.152.183.208  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  10.152.183.124  no       
+
+Unit                         Workload  Agent  Address      Ports  Message
+postgresql-k8s/0*            active    idle   10.1.233.16         
+postgresql-k8s/1             active    idle   10.1.233.25         
+postgresql-k8s/2             active    idle   10.1.233.23         Primary
+self-signed-certificates/0*  active    idle   10.1.233.12         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-2: 01:38:36 ERROR unit.postgresql-k8s/2.juju-log single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "postgresql-k8s-2.postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.233.23), port 5432 failed: FATAL:  could not open file "global/pg_filenode.map": No such file or directory
+connection to server at "postgresql-k8s-2.postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.233.23), port 5432 failed: FATAL:  could not open file "global/pg_filenode.map": No such file or directory
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
