@@ -1129,10 +1129,17 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if self._endpoint not in self._endpoints:
             logger.debug("Replica not ready: endpoint not yet in members list")
             return False
-        if not self._patroni.is_replication_hba_ready():
-            logger.debug(
-                "Replica not ready: primary pg_hba not yet reloaded with replication entry"
-            )
+
+        hba_endpoint = self.primary_endpoint
+        if not self.async_replication.is_primary_cluster():
+            if standby_leader := self._patroni.get_standby_leader():
+                hba_endpoint = self._get_hostname_from_unit(standby_leader)
+            else:
+                logger.debug("Replica not ready: no standby leader")
+                return False
+
+        if not self._patroni.is_replication_hba_ready(hba_endpoint):
+            logger.debug("Replica not ready: pg_hba not yet reloaded with replication entry")
             return False
         return True
 
