@@ -1131,7 +1131,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return False
 
         hba_endpoint = self.primary_endpoint
-        if not self.async_replication.is_primary_cluster():
+        if self.async_replication._relation and not self.async_replication.is_primary_cluster():
             if standby_leader := self._patroni.get_standby_leader():
                 hba_endpoint = self._get_hostname_from_unit(standby_leader)
             else:
