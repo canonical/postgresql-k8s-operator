@@ -9,7 +9,7 @@ from collections.abc import Generator
 import jubilant
 import pytest
 from jubilant import Juju
-from tenacity import Retrying, stop_after_attempt, wait_fixed
+from tenacity import Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
 from .. import architecture
 from ..helpers import METADATA
@@ -440,12 +440,20 @@ def get_db_max_written_values(
 
     logging.info(f"Querying max value on all {DB_APP_1} units")
     for unit_name in get_app_units(model_1, DB_APP_1):
-        unit_max_value = get_db_max_written_value(model_1, DB_APP_1, unit_name, db_name)
+        for attempt in Retrying(
+            stop=stop_after_delay(5 * MINUTE_SECS), wait=wait_fixed(10), reraise=True
+        ):
+            with attempt:
+                unit_max_value = get_db_max_written_value(model_1, DB_APP_1, unit_name, db_name)
         results.append(unit_max_value)
 
     logging.info(f"Querying max value on all {DB_APP_2} units")
     for unit_name in get_app_units(model_2, DB_APP_2):
-        unit_max_value = get_db_max_written_value(model_2, DB_APP_2, unit_name, db_name)
+        for attempt in Retrying(
+            stop=stop_after_delay(5 * MINUTE_SECS), wait=wait_fixed(10), reraise=True
+        ):
+            with attempt:
+                unit_max_value = get_db_max_written_value(model_2, DB_APP_2, unit_name, db_name)
         results.append(unit_max_value)
 
     return results
