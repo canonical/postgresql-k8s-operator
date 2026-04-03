@@ -1,0 +1,36 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [executing] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] active: 
+  postgresql-k8s/1 [executing] active: 
+  postgresql-k8s/2 [executing] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [executing] maintenance: Executing restart operation
+  postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.20   unsupported  01:41:35Z
+
+App                       Version  Status  Scale  Charm                     Channel   Rev  Address         Exposed  Message
+postgresql-k8s            16.13    active      3  postgresql-k8s                        0  10.152.183.122  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable  586  10.152.183.120  no       
+
+Unit                         Workload  Agent  Address      Ports  Message
+postgresql-k8s/0*            active    idle   10.1.233.16         
+postgresql-k8s/1             active    idle   10.1.233.24         
+postgresql-k8s/2             active    idle   10.1.233.23         Primary
+self-signed-certificates/0*  active    idle   10.1.233.8          
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-1: 01:36:09 ERROR unit.postgresql-k8s/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-postgresql-k8s-2: 01:36:38 ERROR unit.postgresql-k8s/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-postgresql-k8s-1: 01:40:44 ERROR unit.postgresql-k8s/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-postgresql-k8s-1: 01:40:51 ERROR unit.postgresql-k8s/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-postgresql-k8s-1: 01:41:01 ERROR unit.postgresql-k8s/1.juju-log __main__:calling self.fix_leader_annotation()
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...

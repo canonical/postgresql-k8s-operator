@@ -1,0 +1,64 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-test-app/0 [executing] active: received database credentials of the second database
+  postgresql-test-app/1 [executing] active: received database credentials of the second database
+  database/0 [executing] active: Primary
+  database/1 [executing] active: 
+  database/2 [executing] active: 
+  another-database/0 [idle] active: Primary
+  another-database/1 [idle] active: 
+  another-database/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.20   unsupported  01:53:09Z
+
+App                  Version  Status   Scale  Charm                Channel      Rev  Address         Exposed  Message
+another-application           active       1  postgresql-test-app  latest/edge  468  10.152.183.35   no       received database credentials of the first database
+another-database     16.13    active       3  postgresql-k8s                      1  10.152.183.136  no       
+database             16.13    active       3  postgresql-k8s                      0  10.152.183.226  no       
+postgresql-test-app           blocked      2  postgresql-test-app  latest/edge  468  10.152.183.250  no       No database integration available
+
+Unit                    Workload  Agent  Address      Ports  Message
+another-application/0*  active    idle   10.1.233.40         received database credentials of the first database
+another-database/0*     active    idle   10.1.233.17         Primary
+another-database/1      active    idle   10.1.233.28         
+another-database/2      active    idle   10.1.233.24         
+database/0*             active    idle   10.1.233.32         Primary
+database/1              active    idle   10.1.233.42         
+database/2              active    idle   10.1.233.41         
+postgresql-test-app/0*  blocked   idle   10.1.233.9          No database integration available
+postgresql-test-app/1   active    idle   10.1.233.8          received database credentials of the second database
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-test-app-0: 01:31:13 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-postgresql-test-app-1: 01:31:13 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-another-database-1: 01:35:29 ERROR unit.another-database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-database-2: 01:35:55 ERROR unit.another-database/2.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:36:16 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:36:58 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:37:05 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:37:13 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:37:23 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:37:33 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:37:43 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-database-1: 01:37:52 ERROR unit.database/1.juju-log __main__:calling self.fix_leader_annotation()
+unit-another-application-0: 01:39:36 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-postgresql-test-app-0: 01:48:03 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-1: 01:48:03 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-application-0: 01:48:03 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-2: 01:48:03 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-1: 01:48:05 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 01:48:08 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-0: 01:48:09 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-2: 01:51:28 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-1: 01:51:30 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-1: 01:52:51 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-postgresql-test-app-0: 01:52:52 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-0: 01:52:53 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-1: 01:52:53 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-database-0: 01:52:55 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-database-2: 01:52:56 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-another-application-0: 01:53:01 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
