@@ -19,8 +19,13 @@ jobs:
   ci-tests:
     name: Tests
     uses: ./.github/workflows/ci.yaml
-    secrets: inherit
+    secrets:
+      AWS_ACCESS_KEY: ${{ secrets.AWS_ACCESS_KEY }}
+      AWS_SECRET_KEY: ${{ secrets.AWS_SECRET_KEY }}
+      GCP_ACCESS_KEY: ${{ secrets.GCP_ACCESS_KEY }}
+      GCP_SECRET_KEY: ${{ secrets.GCP_SECRET_KEY }}
     permissions:
+      actions: read  # Needed for GitHub API call to get workflow version
       contents: write  # Needed for Allure Report
 
   release-libraries:
@@ -29,27 +34,33 @@ jobs:
       - ci-tests
     runs-on: ubuntu-latest
     timeout-minutes: 60
-    permissions: {}
+    environment:
+      name: edge
+      # Re-use edge token without creating new deployment (release_charm_edge.yaml job will create deployment)
+      deployment: false
     steps:
       - name: Checkout
         uses: actions/checkout@v6
         with:
+          persist-credentials: false
           fetch-depth: 0
       - name: Release charm libraries
         uses: canonical/charming-actions/release-libraries@2.7.0
         with:
           credentials: "${{ secrets.CHARMHUB_TOKEN }}"
           github-token: "${{ secrets.GITHUB_TOKEN }}"
+    permissions: {}
 
   release:
     name: Release charm
     needs:
       - ci-tests
-    uses: canonical/data-platform-workflows/.github/workflows/release_charm_edge.yaml@v42.0.1
+    uses: canonical/data-platform-workflows/.github/workflows/release_charm_edge.yaml@v48.0.4
     with:
       track: 14
       artifact-prefix: ${{ needs.ci-tests.outputs.artifact-prefix }}
     secrets:
       charmhub-token: ${{ secrets.CHARMHUB_TOKEN }}
     permissions:
+      actions: read  # Needed for GitHub API call to get workflow version
       contents: write  # Needed to create git tags
