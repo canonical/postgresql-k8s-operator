@@ -9,7 +9,7 @@ from collections.abc import Generator
 import jubilant
 import pytest
 from jubilant import Juju
-from tenacity import Retrying, stop_after_attempt, wait_fixed
+from tenacity import Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
 from .. import architecture
 from ..helpers import METADATA
@@ -213,6 +213,19 @@ def test_data_replication(
 ) -> None:
     """Test to write to primary, and read the same data back from replicas."""
     logging.info("Testing data replication")
+    model_1 = Juju(model=first_model)
+    model_2 = Juju(model=second_model)
+    retry_if_cli_error(
+        lambda: model_1.wait(
+            ready=wait_for_apps_status(jubilant.all_active, DB_APP_1), timeout=20 * MINUTE_SECS
+        )
+    )
+    retry_if_cli_error(
+        lambda: model_2.wait(
+            ready=wait_for_apps_status(jubilant.all_active, DB_APP_2), timeout=20 * MINUTE_SECS
+        )
+    )
+
     results = get_db_max_written_values(first_model, second_model, first_model, DB_TEST_APP_1)
 
     assert len(results) == 6
@@ -232,6 +245,18 @@ def test_standby_promotion(first_model: str, second_model: str) -> None:
     promotion_task.raise_on_failure()
 
     rerelate_test_app(model_2, DB_APP_2, DB_TEST_APP_2)
+
+    model_1 = Juju(model=first_model)
+    retry_if_cli_error(
+        lambda: model_1.wait(
+            ready=wait_for_apps_status(jubilant.all_active, DB_APP_1), timeout=20 * MINUTE_SECS
+        )
+    )
+    retry_if_cli_error(
+        lambda: model_2.wait(
+            ready=wait_for_apps_status(jubilant.all_active, DB_APP_2), timeout=20 * MINUTE_SECS
+        )
+    )
 
     results = get_db_max_written_values(first_model, second_model, second_model, DB_TEST_APP_2)
     assert len(results) == 6
@@ -415,12 +440,20 @@ def get_db_max_written_values(
 
     logging.info(f"Querying max value on all {DB_APP_1} units")
     for unit_name in get_app_units(model_1, DB_APP_1):
-        unit_max_value = get_db_max_written_value(model_1, DB_APP_1, unit_name, db_name)
+        for attempt in Retrying(
+            stop=stop_after_delay(5 * MINUTE_SECS), wait=wait_fixed(10), reraise=True
+        ):
+            with attempt:
+                unit_max_value = get_db_max_written_value(model_1, DB_APP_1, unit_name, db_name)
         results.append(unit_max_value)
 
     logging.info(f"Querying max value on all {DB_APP_2} units")
     for unit_name in get_app_units(model_2, DB_APP_2):
-        unit_max_value = get_db_max_written_value(model_2, DB_APP_2, unit_name, db_name)
+        for attempt in Retrying(
+            stop=stop_after_delay(5 * MINUTE_SECS), wait=wait_fixed(10), reraise=True
+        ):
+            with attempt:
+                unit_max_value = get_db_max_written_value(model_2, DB_APP_2, unit_name, db_name)
         results.append(unit_max_value)
 
     return results

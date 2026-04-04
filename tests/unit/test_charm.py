@@ -1565,12 +1565,6 @@ def test_create_pgdata(harness):
         ),
     ])
     container.exec.assert_has_calls([
-        call([
-            "bash",
-            "-c",
-            "[ -L /var/lib/postgresql/16/main ] || rm -rf /var/lib/postgresql/16/main",
-        ]),
-        call().wait(),
         call(["ln", "-sfn", "/var/lib/pg/data/16/main", "/var/lib/postgresql/16/main"]),
         call().wait(),
         call(["chown", "-h", "postgres:postgres", "/var/lib/postgresql/16/main"]),
@@ -1589,7 +1583,7 @@ def test_create_pgdata(harness):
     container.exec.reset_mock()
     container.exists.return_value = True
     harness.charm._create_pgdata(container)
-    # When directories exist, none should be created (except the symlink parent and symlink itself)
+    # When directories exist, none should be created (except the symlink parent)
     container.make_dir.assert_has_calls([
         call(
             "/var/lib/postgresql/16",
@@ -1599,12 +1593,6 @@ def test_create_pgdata(harness):
         ),
     ])
     container.exec.assert_has_calls([
-        call([
-            "bash",
-            "-c",
-            "[ -L /var/lib/postgresql/16/main ] || rm -rf /var/lib/postgresql/16/main",
-        ]),
-        call().wait(),
         call(["ln", "-sfn", "/var/lib/pg/data/16/main", "/var/lib/postgresql/16/main"]),
         call().wait(),
         call(["chown", "-h", "postgres:postgres", "/var/lib/postgresql/16/main"]),

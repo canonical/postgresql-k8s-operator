@@ -436,6 +436,38 @@ class Patroni:
         logger.debug("replication is healthy")
         return True
 
+    def is_replication_hba_ready(self, endpoint: str | None = None) -> bool:
+        """Check whether the pg_hba allows replication from this unit.
+
+        Attempts a physical replication connection. If it succeeds, the pg_hba
+        has been reloaded with this unit's endpoint.
+
+        Args:
+            endpoint: The host to connect to. If None, uses self._primary_endpoint.
+
+        Returns True if the connection is accepted, False otherwise.
+        """
+        import psycopg2
+        import psycopg2.extras
+
+        host = endpoint if endpoint is not None else self._primary_endpoint
+        try:
+            conn = psycopg2.connect(
+                host=host,
+                port=5432,
+                user="replication",
+                password=self._replication_password,
+                dbname="replication",
+                connect_timeout=1,
+                connection_factory=psycopg2.extras.PhysicalReplicationConnection,
+            )
+            conn.close()
+            logger.debug("Replication HBA check passed: %s accepts replication connection", host)
+            return True
+        except psycopg2.OperationalError as e:
+            logger.debug("Replication HBA check failed: %s", e)
+            return False
+
     @property
     def primary_endpoint_ready(self) -> bool:
         """Is the primary endpoint redirecting connections to the primary pod.
