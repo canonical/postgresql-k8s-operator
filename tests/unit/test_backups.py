@@ -483,7 +483,7 @@ def test_execute_command(harness):
 
 def test_format_backup_list(harness):
     with patch(
-        "charms.data_platform_libs.v0.s3.S3Requirer.get_s3_connection_info"
+        "charms.data_platform_libs.v0.object_storage.S3Requirer.get_storage_connection_info"
     ) as _get_s3_connection_info:
         # Test when there are no backups.
         _get_s3_connection_info.return_value = {
@@ -553,7 +553,7 @@ backup-id            | action              | status   | reference-backup-id  | L
 def test_generate_backup_list_output(harness):
     with (
         patch(
-            "charms.data_platform_libs.v0.s3.S3Requirer.get_s3_connection_info"
+            "charms.data_platform_libs.v0.object_storage.S3Requirer.get_storage_connection_info"
         ) as _get_s3_connection_info,
         patch("charm.PostgreSQLBackups._execute_command") as _execute_command,
     ):
@@ -970,7 +970,7 @@ def test_on_s3_credential_changed(harness):
             "charm.PostgreSQLBackups._on_s3_credential_changed_primary"
         ) as _on_s3_credential_changed_primary,
         patch(
-            "backups.S3Requirer.get_s3_connection_info", return_value={}
+            "backups.S3Requirer.get_storage_connection_info", return_value={}
         ) as _get_s3_connection_info,
         patch("ops.framework.EventBase.defer") as _defer,
         patch(
@@ -982,7 +982,7 @@ def test_on_s3_credential_changed(harness):
         peer_rel_id = harness.model.get_relation(PEER).id
         # Early exit when no s3 creds
         s3_rel_id = harness.add_relation(S3_PARAMETERS_RELATION, "s3-integrator")
-        harness.charm.backup.s3_client.on.credentials_changed.emit(
+        harness.charm.backup.s3_client.on.storage_connection_info_changed.emit(
             relation=harness.model.get_relation(S3_PARAMETERS_RELATION, s3_rel_id)
         )
         _defer.assert_not_called()
@@ -990,7 +990,7 @@ def test_on_s3_credential_changed(harness):
 
         # Test when the cluster was not initialised yet.
         _get_s3_connection_info.return_value = {"creds": "value"}
-        harness.charm.backup.s3_client.on.credentials_changed.emit(
+        harness.charm.backup.s3_client.on.storage_connection_info_changed.emit(
             relation=harness.model.get_relation(S3_PARAMETERS_RELATION, s3_rel_id)
         )
         _defer.assert_called_once()
@@ -1006,7 +1006,7 @@ def test_on_s3_credential_changed(harness):
                 {"cluster_initialised": "True"},
             )
         _render_pgbackrest_conf_file.return_value = False
-        harness.charm.backup.s3_client.on.credentials_changed.emit(
+        harness.charm.backup.s3_client.on.storage_connection_info_changed.emit(
             relation=harness.model.get_relation(S3_PARAMETERS_RELATION, s3_rel_id)
         )
         _defer.assert_not_called()
@@ -1016,7 +1016,7 @@ def test_on_s3_credential_changed(harness):
         # Test when it's not possible to initialise the stanza in this unit.
         _render_pgbackrest_conf_file.return_value = True
         _can_initialise_stanza.return_value = False
-        harness.charm.backup.s3_client.on.credentials_changed.emit(
+        harness.charm.backup.s3_client.on.storage_connection_info_changed.emit(
             relation=harness.model.get_relation(S3_PARAMETERS_RELATION, s3_rel_id)
         )
         _can_initialise_stanza.assert_called_once()
@@ -1026,7 +1026,7 @@ def test_on_s3_credential_changed(harness):
         # Test when unit is not a leader and can't do any peer data changes
         _is_primary.return_value = False
         _can_initialise_stanza.return_value = True
-        harness.charm.backup.s3_client.on.credentials_changed.emit(
+        harness.charm.backup.s3_client.on.storage_connection_info_changed.emit(
             relation=harness.model.get_relation(S3_PARAMETERS_RELATION, s3_rel_id)
         )
         _is_standby_leader.assert_called_once()
@@ -1038,7 +1038,7 @@ def test_on_s3_credential_changed(harness):
         _is_standby_leader.reset_mock()
         with harness.hooks_disabled():
             harness.set_leader()
-        harness.charm.backup.s3_client.on.credentials_changed.emit(
+        harness.charm.backup.s3_client.on.storage_connection_info_changed.emit(
             relation=harness.model.get_relation(S3_PARAMETERS_RELATION, s3_rel_id)
         )
         _set_active_status.assert_called_once()
@@ -1055,7 +1055,7 @@ def test_on_s3_credential_changed(harness):
         _set_active_status.reset_mock()
         with harness.hooks_disabled():
             harness.set_leader()
-        harness.charm.backup.s3_client.on.credentials_changed.emit(
+        harness.charm.backup.s3_client.on.storage_connection_info_changed.emit(
             relation=harness.model.get_relation(S3_PARAMETERS_RELATION, s3_rel_id)
         )
         _on_s3_credential_changed_primary.assert_called_once()
@@ -1861,7 +1861,7 @@ def test_retrieve_s3_parameters(
     harness,
 ):
     with patch(
-        "charms.data_platform_libs.v0.s3.S3Requirer.get_s3_connection_info"
+        "charms.data_platform_libs.v0.object_storage.S3Requirer.get_storage_connection_info"
     ) as _get_s3_connection_info:
         # Test when there are missing S3 parameters.
         _get_s3_connection_info.return_value = {}
