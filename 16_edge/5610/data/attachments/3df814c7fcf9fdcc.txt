@@ -1,0 +1,1 @@
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju ssh --model testing --container postgresql postgresql-k8s/0 readlink -f /var/lib/postgresql/16/main/pg_wal
