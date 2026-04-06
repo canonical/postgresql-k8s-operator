@@ -613,6 +613,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("on_peer_relation_changed early exit: Backup restore check failed")
             return
 
+        self._check_headless_service()
+
         # Validate the status of the member before setting an ActiveStatus.
         if not self._patroni.member_started:
             logger.debug("Deferring on_peer_relation_changed: Waiting for member to start")
@@ -1128,6 +1130,29 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             obj=patch,
         )
 
+    def _check_headless_service(self) -> None:
+        """Raise if the headless endpoint service is missing.
+
+        Puts the unit into error state so the operator can recreate the
+        service and run ``juju resolve``.
+
+        See https://github.com/canonical/postgresql-k8s-operator/issues/392
+        """
+        client = Client()
+        svc_name = f"{self.app.name}-endpoints"
+        try:
+            client.get(Service, name=svc_name, namespace=self.model.name)
+        except ApiError as e:
+            if e.status.code == 404:
+                logger.error(
+                    "error: headless service %r is missing - recreate it and run "
+                    "'juju resolve' on each unit. See "
+                    "https://github.com/canonical/postgresql-k8s-operator/issues/392",
+                    svc_name,
+                )
+                raise RuntimeError from None
+            raise
+
     def _create_services(self) -> None:
         """Create kubernetes services for primary and replicas endpoints."""
         client = Client()
@@ -1513,6 +1538,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         container = self.unit.get_container("postgresql")
         if not self._on_update_status_early_exit_checks(container):
             return
+
+        self._check_headless_service()
 
         services = container.pebble.get_services(names=[self.postgresql_service])
         if len(services) == 0:

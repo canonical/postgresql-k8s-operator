@@ -10,7 +10,7 @@ import psycopg2
 import pytest
 from charms.postgresql_k8s.v0.postgresql import PostgreSQLUpdateUserPasswordError
 from lightkube import ApiError
-from lightkube.resources.core_v1 import Endpoints, Pod
+from lightkube.resources.core_v1 import Endpoints, Pod, Service
 from ops import JujuVersion
 from ops.model import (
     ActiveStatus,
@@ -880,6 +880,30 @@ def test_create_services(harness):
                 res=Pod, name="postgresql-k8s-0", namespace=harness.charm.model.name
             )
             tc.assertEqual(_client.return_value.apply.call_count, 2)
+
+
+def test_check_headless_service(harness):
+    with patch("charm.Client") as _client:
+        # Test when the service exists — no exception.
+        _client.return_value.get.return_value = MagicMock()
+        harness.charm._check_headless_service()
+        _client.return_value.get.assert_called_once_with(
+            Service,
+            name=f"{harness.charm.app.name}-endpoints",
+            namespace=harness.charm.model.name,
+        )
+
+        # Test when the service is missing (404) — RuntimeError.
+        _client.reset_mock()
+        _client.return_value.get.side_effect = _FakeApiError(404)
+        with tc.assertRaises(RuntimeError, msg="Headless service"):
+            harness.charm._check_headless_service()
+
+        # Test when get raises a non-404 error — propagates ApiError.
+        _client.reset_mock()
+        _client.return_value.get.side_effect = _FakeApiError(403)
+        with tc.assertRaises(_FakeApiError):
+            harness.charm._check_headless_service()
 
 
 def test_patch_pod_labels(harness):
