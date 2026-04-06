@@ -85,9 +85,9 @@ class DbProvides(Object):
         Generate password and handle user and database creation for the related application.
         """
         # Check for some conditions before trying to access the PostgreSQL instance.
-        if not self.charm.is_cluster_initialised or not self.charm._patroni.member_started:
+        if not self.charm.is_cluster_initialised or not self.charm._patroni.primary_endpoint_ready:
             logger.debug(
-                "Deferring on_relation_changed: Cluster not initialized or patroni not running"
+                "Deferring on_relation_changed: Cluster not initialized or primary endpoint not ready"
             )
             event.defer()
             return
