@@ -1,0 +1,79 @@
+[32mINFO    [0m integration.test_backups_gcp:test_backups_gcp.py:253 waiting for the database charm to become blocked
+[32mINFO    [0m integration.conftest:conftest.py:60 deleting the previously created backups
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.20   unsupported  01:56:21Z
+
+App                 Version  Status  Scale  Charm           Channel        Rev  Address         Exposed  Message
+new-postgresql-k8s  16.13    active      1  postgresql-k8s                   2  10.152.183.212  no       
+s3-integrator                active      1  s3-integrator   latest/stable  145  10.152.183.226  no       
+
+Unit                   Workload  Agent  Address       Ports  Message
+new-postgresql-k8s/0*  blocked   idle   10.1.166.160         failed to initialize stanza, check your S3 settings
+s3-integrator/0*       active    idle   10.1.166.136         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-gcp-1: 01:37:54 ERROR unit.postgresql-k8s-gcp/1.juju-log single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "postgresql-k8s-gcp-1.postgresql-k8s-gcp-endpoints.testing.svc.cluster.local" (10.1.166.149), port 5432 failed: FATAL:  could not open file "global/pg_filenode.map": No such file or directory
+connection to server at "postgresql-k8s-gcp-1.postgresql-k8s-gcp-endpoints.testing.svc.cluster.local" (10.1.166.149), port 5432 failed: FATAL:  could not open file "global/pg_filenode.map": No such file or directory
+
+unit-postgresql-k8s-gcp-0: 01:48:26 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-self-signed-certificates-0: 01:48:34 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-s3-integrator-0: 01:48:34 ERROR juju.worker.dependency "log-sender" manifold worker returned unexpected error: sending log message: websocket: close 1005 (no status): websocket: close sent
+unit-old-postgresql-k8s-gcp-0: 01:50:35 ERROR unit.old-postgresql-k8s-gcp/0.juju-log single_kernel_postgresql.utils.postgresql:Failed to create predefined instance roles: connection to server at "old-postgresql-k8s-gcp-primary.testing.svc.cluster.local" (10.152.183.247), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-old-postgresql-k8s-gcp-0: 01:50:35 ERROR unit.old-postgresql-k8s-gcp/0.juju-log __main__:Failed to create pre-defined roles
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-old-postgresql-k8s-gcp-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 597, in create_predefined_instance_roles
+    with self._connect_to_database(
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-old-postgresql-k8s-gcp-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 306, in _connect_to_database
+    connection = psycopg2.connect(
+                 ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-old-postgresql-k8s-gcp-0/charm/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "old-postgresql-k8s-gcp-primary.testing.svc.cluster.local" (10.152.183.247), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-old-postgresql-k8s-gcp-0/charm/src/charm.py", line 1411, in _initialize_cluster
+    self._setup_users()
+  File "/var/lib/juju/agents/unit-old-postgresql-k8s-gcp-0/charm/src/charm.py", line 1438, in _setup_users
+    self.postgresql.create_predefined_instance_roles()
+  File "/var/lib/juju/agents/unit-old-postgresql-k8s-gcp-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 612, in create_predefined_instance_roles
+    raise PostgreSQLCreatePredefinedRolesError() from e
+single_kernel_postgresql.utils.postgresql.PostgreSQLCreatePredefinedRolesError
+unit-new-postgresql-k8s-0: 01:51:05 ERROR unit.new-postgresql-k8s/0.juju-log __main__:failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 812, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 306, in _connect_to_database
+    connection = psycopg2.connect(
+                 ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "new-postgresql-k8s-primary.testing.svc.cluster.local" (10.152.183.46), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/src/charm.py", line 909, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 841, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+single_kernel_postgresql.utils.postgresql.PostgreSQLEnableDisableExtensionError
+unit-old-postgresql-k8s-gcp-0: 01:51:24 ERROR unit.old-postgresql-k8s-gcp/0.juju-log __main__:calling self.fix_leader_annotation()
+controller-0: 01:51:29 ERROR juju.worker.caasapplicationprovisioner.runner exited "old-postgresql-k8s-gcp": getting OCI image resources: unable to fetch OCI image resources for old-postgresql-k8s-gcp: application "old-postgresql-k8s-gcp" dying or dead
+unit-new-postgresql-k8s-0: 01:56:14 ERROR unit.new-postgresql-k8s/0.juju-log s3-parameters:14: backups:Invalid stanza name from s3
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
