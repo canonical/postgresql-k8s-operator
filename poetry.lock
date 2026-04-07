@@ -18,14 +18,14 @@ pytest = ">=4.5.0"
 
 [[package]]
 name = "allure-pytest-default-results"
-version = "0.1.3"
+version = "0.1.4"
 description = "Generate default \"unknown\" results to show in Allure Report if test case does not run"
 optional = false
 python-versions = ">=3.8"
 groups = ["integration"]
 files = [
-    {file = "allure_pytest_default_results-0.1.3-py3-none-any.whl", hash = "sha256:750de894d3713a3f890e62dbda3993b522cb52c4072651e12662e7df26d7dd4c"},
-    {file = "allure_pytest_default_results-0.1.3.tar.gz", hash = "sha256:e9031d19bd7e799da289ab53a56ec5b4ca974e21fef1533f6626249a3c856725"},
+    {file = "allure_pytest_default_results-0.1.4-py3-none-any.whl", hash = "sha256:b9cfc442e6108552c2cc0c3d818f61f8d718bca219ec60041273aa4ae57f0c04"},
+    {file = "allure_pytest_default_results-0.1.4.tar.gz", hash = "sha256:2eeaacf7836105724df549042e13b740b91013b2a53258ac456ea5fd82f3faa0"},
 ]
 
 [package.dependencies]
@@ -243,18 +243,18 @@ typecheck = ["mypy"]
 
 [[package]]
 name = "boto3"
-version = "1.42.82"
+version = "1.42.84"
 description = "The AWS SDK for Python"
 optional = false
 python-versions = ">=3.9"
 groups = ["main", "integration"]
 files = [
-    {file = "boto3-1.42.82-py3-none-any.whl", hash = "sha256:804341c8197c556e8e7ceb82388ee120f319a4efbb9dc368f6059760a11cfc7d"},
-    {file = "boto3-1.42.82.tar.gz", hash = "sha256:6df9ca0f5047c6afe6bd42244d8e059cde69e2cdb719ebd68d52c7d7beb529b2"},
+    {file = "boto3-1.42.84-py3-none-any.whl", hash = "sha256:4d03ad3211832484037337292586f71f48707141288d9ac23049c04204f4ab03"},
+    {file = "boto3-1.42.84.tar.gz", hash = "sha256:6a84b3293a5d8b3adf827a54588e7dcffcf0a85410d7dadca615544f97d27579"},
 ]
 
 [package.dependencies]
-botocore = ">=1.42.82,<1.43.0"
+botocore = ">=1.42.84,<1.43.0"
 jmespath = ">=0.7.1,<2.0.0"
 s3transfer = ">=0.16.0,<0.17.0"
 
@@ -263,14 +263,14 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.42.82"
+version = "1.42.84"
 description = "Low-level, data-driven core of boto 3."
 optional = false
 python-versions = ">=3.9"
 groups = ["main", "integration"]
 files = [
-    {file = "botocore-1.42.82-py3-none-any.whl", hash = "sha256:824dbb58c99d894f193ed1dd75cf59650e25c1b5adb9d3a66b39fdede46f259b"},
-    {file = "botocore-1.42.82.tar.gz", hash = "sha256:a2bfe8537e95462ec06a46cc29c327f84746722bb4ce106491bfd3af8075ceed"},
+    {file = "botocore-1.42.84-py3-none-any.whl", hash = "sha256:15f3fe07dfa6545e46a60c4b049fe2bdf63803c595ae4a4eec90e8f8172764f3"},
+    {file = "botocore-1.42.84.tar.gz", hash = "sha256:234064604c80d9272a5e9f6b3566d260bcaa053a5e05246db90d7eca1c2cf44b"},
 ]
 
 [package.dependencies]
@@ -393,26 +393,26 @@ pycparser = {version = "*", markers = "implementation_name != \"PyPy\""}
 
 [[package]]
 name = "charm-api"
+version = "0.1.3"
+description = ""
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "charm_api-0.1.3-py3-none-any.whl", hash = "sha256:4dba74e33f3de4608e88db2e08e41b0681221e7d3c2cd6913e0ebeb3dbdf8d92"},
+    {file = "charm_api-0.1.3.tar.gz", hash = "sha256:a90a926b89fce834e9fb2184b96e07ec46f4dd56f3cd50e0209c0fd0ff35a29e"},
+]
+
+[[package]]
+name = "charm-json"
 version = "0.1.2"
 description = ""
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "charm_api-0.1.2-py3-none-any.whl", hash = "sha256:f76806f8d8e1e39ae4a812711350399168cd26b319a01e73a5816ef8fb9f7ed4"},
-    {file = "charm_api-0.1.2.tar.gz", hash = "sha256:5d74418a3ffdee189dec1eaf648ba1bd7cff7449c3cdd2334a724e6722204c9d"},
-]
-
-[[package]]
-name = "charm-json"
-version = "0.1.1"
-description = ""
-optional = false
-python-versions = ">=3.8"
-groups = ["main"]
-files = [
-    {file = "charm_json-0.1.1-py3-none-any.whl", hash = "sha256:a3fac62d45821d1a8c14058632e21333ec4e2cd41d0d00d6a73d00fc9a656eef"},
-    {file = "charm_json-0.1.1.tar.gz", hash = "sha256:cb2eb24f6135d226ad04b0a17288ca2e027160d8af288083ef701bf4b137154e"},
+    {file = "charm_json-0.1.2-py3-none-any.whl", hash = "sha256:1cad028a92831c61d6dcb99127c5216c333f90ec58d06b9f73fd0fd7355d1b3c"},
+    {file = "charm_json-0.1.2.tar.gz", hash = "sha256:f91255858cd6721ec491d09450f37a0cdecf1addbfcfbd41f3e27c58dd95092e"},
 ]
 
 [package.dependencies]
@@ -420,14 +420,14 @@ charm-api = ">=0.1.1"
 
 [[package]]
 name = "charm-refresh"
-version = "3.1.1.3"
+version = "3.1.1.4"
 description = "In-place rolling refreshes (upgrades) of stateful charmed applications"
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "charm_refresh-3.1.1.3-py3-none-any.whl", hash = "sha256:4ef022b398498f46b992a777708e16a078d414c9b71d4c7522c7da574062345b"},
-    {file = "charm_refresh-3.1.1.3.tar.gz", hash = "sha256:f610642c652dd109b544d3e7e1010ebb15c0c2f97220b6c9676b4b28da47c3b2"},
+    {file = "charm_refresh-3.1.1.4-py3-none-any.whl", hash = "sha256:6ff6e04170c03b3fe3f23bbf32a288a0de3da0d44bf2e8dd850ee02925bf2ec6"},
+    {file = "charm_refresh-3.1.1.4.tar.gz", hash = "sha256:d33f66e5b65fd356a30bfbc634710e5538086199da93c30c86246370a66570be"},
 ]
 
 [package.dependencies]
@@ -442,14 +442,14 @@ tomli = ">=2.0.1"
 
 [[package]]
 name = "charm-refresh-build-version"
-version = "0.4.0"
+version = "0.4.1"
 description = "Write `charm` version in refresh_versions.toml from git tag"
 optional = false
 python-versions = ">=3.8"
 groups = ["build-refresh-version"]
 files = [
-    {file = "charm_refresh_build_version-0.4.0-py3-none-any.whl", hash = "sha256:94b666380b8800fae278e23601ef41e5049d469af1413aefda3ba9a3ee8fc04f"},
-    {file = "charm_refresh_build_version-0.4.0.tar.gz", hash = "sha256:4fcf083ef25c5516fc98caa2879f95beffcb34b60121043b8d3216c8dfaaa41b"},
+    {file = "charm_refresh_build_version-0.4.1-py3-none-any.whl", hash = "sha256:0cd115e6c659d460975afeaf74139dd6feda2845584bce0f49ef0ad00c2173ad"},
+    {file = "charm_refresh_build_version-0.4.1.tar.gz", hash = "sha256:b07846a88e9dd03cb09d5ea7c77f556ab06ed67339f66b3bf1a777a9a558ee1d"},
 ]
 
 [package.dependencies]
@@ -870,14 +870,14 @@ files = [
 
 [[package]]
 name = "dunamai"
-version = "1.26.0"
+version = "1.26.1"
 description = "Dynamic version generation"
 optional = false
 python-versions = ">=3.5"
 groups = ["build-refresh-version"]
 files = [
-    {file = "dunamai-1.26.0-py3-none-any.whl", hash = "sha256:f584edf0fda0d308cce0961f807bc90a8fe3d9ff4d62f94e72eca7b43f0ed5f6"},
-    {file = "dunamai-1.26.0.tar.gz", hash = "sha256:5396ac43aa20ed059040034e9f9798c7464cf4334c6fc3da3732e29273a2f97d"},
+    {file = "dunamai-1.26.1-py3-none-any.whl", hash = "sha256:2727d939c5b4257cb01ea404372803b477f5176e5a347c43beaf89cd5072e853"},
+    {file = "dunamai-1.26.1.tar.gz", hash = "sha256:3b46007bd65b00b4824ead0a1aee365fd22d0ec2b9c219497d4fd48f52860c8b"},
 ]
 
 [package.dependencies]
@@ -1097,14 +1097,14 @@ files = [
 
 [[package]]
 name = "invoke"
-version = "2.2.1"
+version = "3.0.2"
 description = "Pythonic task execution"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.9"
 groups = ["integration"]
 files = [
-    {file = "invoke-2.2.1-py3-none-any.whl", hash = "sha256:2413bc441b376e5cd3f55bb5d364f973ad8bdd7bf87e53c79de3c11bf3feecc8"},
-    {file = "invoke-2.2.1.tar.gz", hash = "sha256:515bf49b4a48932b79b024590348da22f39c4942dff991ad1fb8b8baea1be707"},
+    {file = "invoke-3.0.2-py3-none-any.whl", hash = "sha256:2a74699f3059c05774e155c90d6de1f71e5cae4aeeded394818a1b6eec907464"},
+    {file = "invoke-3.0.2.tar.gz", hash = "sha256:a4613e79ad35b5d9f9781af09452b8d505a3ecdc0169b729bf0426574700f817"},
 ]
 
 [[package]]
