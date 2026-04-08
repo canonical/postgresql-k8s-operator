@@ -1115,15 +1115,31 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def _replica_can_start(self) -> bool:
         """Check whether this replica is ready to start Patroni.
 
-        Returns False if the cluster hasn't been bootstrapped yet, or if the
+        Returns False if the cluster hasn't been bootstrapped yet, if the
         leader hasn't added this unit's endpoint to the members list (which
-        controls the pg_hba replication entries on the primary).
+        controls the pg_hba replication entries on the primary), or if the
+        primary's Patroni hasn't yet reloaded pg_hba with this unit's
+        replication entry (which would cause pg_basebackup to be rejected,
+        triggering Patroni's remove_data_directory() and destroying the
+        pgdata symlink).
         """
         if not self.is_cluster_initialised:
             logger.debug("Replica not ready: cluster not initialized")
             return False
         if self._endpoint not in self._endpoints:
             logger.debug("Replica not ready: endpoint not yet in members list")
+            return False
+
+        hba_endpoint = self.primary_endpoint
+        if self.async_replication._relation and not self.async_replication.is_primary_cluster():
+            if standby_leader := self._patroni.get_standby_leader():
+                hba_endpoint = self._get_hostname_from_unit(standby_leader)
+            else:
+                logger.debug("Replica not ready: no standby leader")
+                return False
+
+        if not self._patroni.is_replication_hba_ready(hba_endpoint):
+            logger.debug("Replica not ready: pg_hba not yet reloaded with replication entry")
             return False
         return True
 
@@ -1203,19 +1219,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Patroni and other tools will use the symlink path (self.pgdata_path)
         # Note: This symlink is on ephemeral storage and may not persist across container restarts.
         # It gets recreated on each pebble-ready event.
-        # The OCI image ships /var/lib/postgresql/16/main as a real directory, so we must
-        # remove it first if it exists as a non-symlink (e.g., on replicas).
         container.make_dir(
             "/var/lib/postgresql/16",
             user=WORKLOAD_OS_USER,
             group=WORKLOAD_OS_GROUP,
             make_parents=True,
         )
-        container.exec([
-            "bash",
-            "-c",
-            f"[ -L {self.pgdata_path} ] || rm -rf {self.pgdata_path}",
-        ]).wait()
         container.exec([
             "ln",
             "-sfn",
