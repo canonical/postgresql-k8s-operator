@@ -79,6 +79,7 @@ from ops import (
 from ops.log import JujuLogHandler
 from ops.pebble import (
     ChangeError,
+    CheckDict,
     ExecError,
     Layer,
     LayerDict,
@@ -2155,7 +2156,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             "summary": "postgresql + patroni layer",
             "description": "pebble config layer for postgresql + patroni",
             "services": {
-                self.postgresql_service: {
+                self.postgresql_service: ServiceDict({
                     "override": "replace",
                     "summary": "entrypoint of the postgresql + patroni image",
                     "command": f"patroni {self._storage_path}/patroni.yml",
@@ -2176,32 +2177,32 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                         "PATRONI_REPLICATION_USERNAME": REPLICATION_USER,
                         "PATRONI_SUPERUSER_USERNAME": USER,
                     },
-                },
-                self.pgbackrest_server_service: {
+                }),
+                self.pgbackrest_server_service: ServiceDict({
                     "override": "replace",
                     "summary": "pgBackRest server",
                     "command": self.pgbackrest_server_service,
                     "startup": "disabled",
                     "user": WORKLOAD_OS_USER,
                     "group": WORKLOAD_OS_GROUP,
-                },
-                self.ldap_sync_service: {
+                }),
+                self.ldap_sync_service: ServiceDict({
                     "override": "replace",
                     "summary": "synchronize LDAP users",
                     "command": "/start-ldap-synchronizer.sh",
                     "startup": "disabled",
-                },
+                }),
                 self.metrics_service: self._generate_metrics_service(),
                 self.pgbackrest_metrics_service: self._generate_pgbackrest_metrics_service(),
-                self.rotate_logs_service: {
+                self.rotate_logs_service: ServiceDict({
                     "override": "replace",
                     "summary": "rotate logs",
                     "command": "python3 /home/postgres/rotate_logs.py",
                     "startup": "disabled",
-                },
+                }),
             },
             "checks": {
-                self.postgresql_service: {
+                self.postgresql_service: CheckDict({
                     "override": "replace",
                     "level": "ready",
                     "exec": {
@@ -2211,7 +2212,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                             "ENDPOINT": f"{self._patroni._patroni_url}/health",
                         },
                     },
-                }
+                })
             },
         })
         return Layer(layer_config)
