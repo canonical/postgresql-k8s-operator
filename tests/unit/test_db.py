@@ -95,11 +95,15 @@ def test_on_relation_changed(harness):
         patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock,
         patch("charm.DbProvides.set_up_relation") as _set_up_relation,
         patch.object(EventBase, "defer") as _defer,
+        patch(
+            "charm.Patroni.primary_endpoint_ready", new_callable=PropertyMock
+        ) as _primary_endpoint_ready,
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
     ):
         peer_rel_id = harness.model.get_relation(PEER).id
         # Set some side effects to test multiple situations.
-        _member_started.side_effect = [False, False, True, True, True, True]
+        _primary_endpoint_ready.side_effect = [False, False, True, True]
+        _member_started.return_value = True
         postgresql_mock.list_users.return_value = {"relation_id_0"}
 
         # Request a database before the cluster is initialised.
@@ -129,6 +133,46 @@ def test_on_relation_changed(harness):
         # Request it again in a leader unit.
         with harness.hooks_disabled():
             harness.set_leader()
+        request_database(harness)
+        _defer.assert_not_called()
+        _set_up_relation.assert_called_once()
+
+
+def test_on_relation_changed_defers_before_relation_setup_when_primary_not_ready(harness):
+    with (
+        patch("charm.PostgresqlOperatorCharm.update_config"),
+        patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock,
+        patch("charm.DbProvides.set_up_relation") as _set_up_relation,
+        patch.object(EventBase, "defer") as _defer,
+        patch(
+            "charm.Patroni.primary_endpoint_ready", new_callable=PropertyMock
+        ) as _primary_endpoint_ready,
+        patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
+    ):
+        # This reproduces the problematic state from GH issue #1416:
+        # local member is started, but primary service endpoint is not ready yet.
+        _member_started.return_value = True
+        _primary_endpoint_ready.side_effect = [False, True]
+        postgresql_mock.is_user_in_hba.return_value = True
+        harness.model.unit.status = ActiveStatus()
+
+        # If relation setup runs while endpoint is unready, it would block the unit.
+        def _failing_relation_setup(_):
+            harness.model.unit.status = BlockedStatus("Failed to initialize db relation")
+            return False
+
+        _set_up_relation.side_effect = _failing_relation_setup
+
+        request_database(harness)
+        _defer.assert_called_once()
+        _set_up_relation.assert_not_called()
+        assert not isinstance(harness.model.unit.status, BlockedStatus)
+
+        # Once the endpoint is ready, relation setup is allowed.
+        _set_up_relation.side_effect = None
+        _set_up_relation.return_value = True
+        _defer.reset_mock()
+
         request_database(harness)
         _defer.assert_not_called()
         _set_up_relation.assert_called_once()
