@@ -19,7 +19,6 @@ WORKLOAD_OS_GROUP = "postgres"
 WORKLOAD_OS_USER = "postgres"
 METRICS_PORT = "9187"
 PGBACKREST_METRICS_PORT = "9854"
-POSTGRESQL_DATA_PATH = "/var/lib/postgresql/16/main"
 POSTGRESQL_LOGS_PATH = "/var/log/postgresql"
 
 # Storage mount paths (must match metadata.yaml storage locations).
@@ -28,6 +27,7 @@ ARCHIVE_PATH = f"{STORAGE_PATH}/archive"
 DATA_STORAGE_PATH = f"{STORAGE_PATH}/data"
 LOGS_STORAGE_PATH = f"{STORAGE_PATH}/logs"
 TEMP_STORAGE_PATH = f"{STORAGE_PATH}/temp"
+POSTGRESQL_DATA_PATH = f"{DATA_STORAGE_PATH}/16/main"
 POSTGRESQL_LOGS_PATTERN = "postgresql*.log"
 POSTGRES_LOG_FILES = [
     "/var/log/pgbackrest/*",

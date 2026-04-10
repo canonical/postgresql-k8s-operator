@@ -697,6 +697,7 @@ class Patroni:
         parameters: dict[str, str] | None = None,
         user_databases_map: dict[str, str] | None = None,
         slots: dict[str, str] | None = None,
+        nofailover: bool = False,
     ) -> None:
         """Render the Patroni configuration file.
 
@@ -717,6 +718,7 @@ class Patroni:
             parameters: PostgreSQL parameters to be added to the postgresql.conf file.
             user_databases_map: map of databases to be accessible by each user.
             slots: replication slots (keys) with assigned database name (values).
+            nofailover: whether to set the nofailover tag in the configuration.
         """
         # Open the template patroni.yml file.
         with open("templates/patroni.yml.j2") as file:
@@ -761,6 +763,7 @@ class Patroni:
             user_databases_map=user_databases_map,
             slots=slots,
             instance_password_encryption=self._charm.config.instance_password_encryption,
+            nofailover=nofailover,
         )
         self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
 

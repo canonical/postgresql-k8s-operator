@@ -461,7 +461,7 @@ def test_change_connectivity_to_database(harness):
 
 def test_execute_command(harness):
     with patch("ops.model.Container.exec") as _exec:
-        command = ["rm", "-r", "/var/lib/postgresql/16/main"]
+        command = ["rm", "-r", "/var/lib/pg/data/16/main"]
         _exec.return_value.wait_output.return_value = ("fake stdout", "")
 
         # Test when the command runs successfully.

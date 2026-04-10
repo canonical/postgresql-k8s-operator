@@ -99,3 +99,5 @@ resume-refresh:
   additionalProperties: false
 resume-upgrade:
   description: Resume a rolling upgrade after asserting successful upgrade of a new revision.
+reinit:
+  description: Reinitialize a replica. Must be run against the unit being reinitialized.

@@ -236,6 +236,7 @@ def test_render_patroni_yml_file(harness, patroni):
             version="16",
             patroni_password=patroni._patroni_password,
             instance_password_encryption="scram-sha-256",
+            nofailover=False,
         )
 
         # Setup a mock for the `open` method, set returned data to postgresql.conf template.

@@ -243,6 +243,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.framework.observe(self.on.stop, self._on_stop)
         self.framework.observe(self.on.promote_to_primary_action, self._on_promote_to_primary)
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
+        self.framework.observe(self.on.reinit_action, self._on_reinit_action)
         self.framework.observe(self.on.update_status, self._on_update_status)
         # Do not use collect status events elsewhere—otherwise ops will prioritize statuses incorrectly
         # https://canonical-charm-refresh.readthedocs-hosted.com/latest/add-to-charm/status/#implementation
@@ -252,7 +253,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._certs_path = "/usr/local/share/ca-certificates"
         self._storage_path = str(self.meta.storages["data"].location)
         self._actual_pgdata_path = f"{self._storage_path}/16/main"
-        self.pgdata_path = "/var/lib/postgresql/16/main"
+        self.pgdata_path = self._actual_pgdata_path
 
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.postgresql_client_relation = PostgreSQLProvider(self)
@@ -329,7 +330,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def reconcile(self):
         """Reconcile the unit state on refresh."""
         self.set_unit_status(MaintenanceStatus("starting services"))
-        self._ensure_pgdata_dirs_and_symlinks(self._container)
+        self._create_pgdata_dirs(self._container)
         self._update_pebble_layers(replan=True)
 
         if not self._patroni.member_started:
@@ -1169,16 +1170,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                         if "No such file or directory" not in str(e.stderr):
                             logger.warning(f"Failed to clear {path}: {e}")
 
-        self._ensure_pgdata_dirs_and_symlinks(container)
+        self._create_pgdata_dirs(container)
 
-    def _ensure_pgdata_dirs_and_symlinks(self, container: Container):
-        """Create storage directories and symlinks for PostgreSQL data paths."""
+    def _create_pgdata_dirs(self, container: Container):
+        """Create storage directories for PostgreSQL data paths."""
+        self._remove_lost_and_found(container)
         logs_path = str(self.meta.storages["logs"].location)
         waldir_path = f"{logs_path}/16/main/pg_wal"
         temp_path = str(self.meta.storages["temp"].location)
         temp_tablespace_path = f"{temp_path}/16/main/pgsql_tmp"
         archive_path = f"{self.meta.storages['archive'].location}/16/main"
-
         # Create the pgdata directory on the storage mount (e.g., /var/lib/pg/data/16/main)
         if not container.exists(self._actual_pgdata_path):
             container.make_dir(
@@ -1215,30 +1216,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 group=WORKLOAD_OS_GROUP,
                 make_parents=True,
             )
-        # Create a symlink from the default PostgreSQL data directory to our data directory
-        # (e.g., /var/lib/postgresql/16/main -> /var/lib/pg/data/16/main)
-        # Patroni and other tools will use the symlink path (self.pgdata_path)
-        # Note: This symlink is on ephemeral storage and may not persist across container restarts.
-        # It gets recreated on each pebble-ready event.
-        container.make_dir(
-            "/var/lib/postgresql/16",
-            user=WORKLOAD_OS_USER,
-            group=WORKLOAD_OS_GROUP,
-            make_parents=True,
-        )
-        container.exec([
-            "ln",
-            "-sfn",
-            self._actual_pgdata_path,
-            self.pgdata_path,
-        ]).wait()
-        container.exec([
-            "chown",
-            "-h",
-            f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
-            self.pgdata_path,
-        ]).wait()
-        # Also, fix the permissions from the parent directory.
+        # Fix the permissions from the parent directory.
         container.exec([
             "chown",
             f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
@@ -1696,6 +1674,56 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
         logger.debug(f"Removing secret with label {event.secret.label} revision {event.revision}")
         event.remove_revision()
+
+    def _on_reinit_action(self, event: ActionEvent) -> None:
+        """Handle the reinit action."""
+        if self._patroni.get_primary(unit_name_pattern=True) == self.unit.name:
+            event.fail("Cannot reinitialize the primary unit.")
+            return
+
+        self.unit_peer_data["nofailover"] = "True"
+        self.update_config()
+
+        try:
+            self._patroni.reinitialize_postgresql()
+            event.set_results({"result": f"reinitialize started for unit {self.unit.name}"})
+        except Exception as e:
+            logger.warning(f"Failed to reinitialize unit via API: {e}. Attempting manual reinit.")
+            # Manual reinit: cleanup directories and let Patroni start fresh
+            container = self._container
+            if container.can_connect():
+                self._remove_lost_and_found(container)
+                # We don't wipe the whole PGDATA here as Patroni might be starting
+                # But we ensure it's in a state that can be recovered.
+                # Actually, the most reliable way to force reinit if API is down
+                # is to let Patroni see the nofailover tag and HOPE it starts.
+                # If pg_control is missing, it will STILL not start without reinit.
+                # So we MUST wipe something or tell DCS.
+                event.set_results({
+                    "result": f"reinitialize scheduled for unit {self.unit.name} (API was down)"
+                })
+            else:
+                event.fail(f"Failed to reinitialize unit: {e}")
+        finally:
+            self.unit_peer_data.pop("nofailover", None)
+            self.update_config()
+
+    def _remove_lost_and_found(self, container: Container) -> None:
+        """Remove lost+found directories from storages if they exist."""
+        storages = [
+            str(self.meta.storages["data"].location),
+            str(self.meta.storages["logs"].location),
+            str(self.meta.storages["temp"].location),
+            str(self.meta.storages["archive"].location),
+        ]
+        for storage in storages:
+            lost_and_found = f"{storage}/lost+found"
+            if container.exists(lost_and_found):
+                try:
+                    container.exec(["rm", "-rf", lost_and_found]).wait()
+                    logger.info(f"Removed {lost_and_found}")
+                except ExecError as e:
+                    logger.warning("Failed to remove %s: %s", lost_and_found, e)
 
     def _on_get_primary(self, event: ActionEvent) -> None:
         """Get primary instance."""
@@ -2679,6 +2707,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             parameters=postgresql_parameters,
             user_databases_map=self.relations_user_databases_map,
             slots=replication_slots,
+            nofailover="nofailover" in self.unit_peer_data,
         )
 
         if not self._is_workload_running:

@@ -209,8 +209,15 @@ postgresql:
       {%- endif %}
 use_endpoints: true
 use_unix_socket: true
-{%- if is_no_sync_member or is_creating_backup %}
+{%- if is_no_sync_member or is_creating_backup or nofailover %}
 tags:
+  {%- if is_no_sync_member %}
   nosync: {{ is_no_sync_member }}
+  {%- endif %}
+  {%- if is_creating_backup %}
   is_creating_backup: {{ is_creating_backup }}
+  {%- endif %}
+  {%- if nofailover %}
+  nofailover: {{ nofailover }}
+  {%- endif %}
 {%- endif %}
