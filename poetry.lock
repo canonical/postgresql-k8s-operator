@@ -393,26 +393,26 @@ pycparser = {version = "*", markers = "implementation_name != \"PyPy\""}
 
 [[package]]
 name = "charm-api"
+version = "0.1.3"
+description = ""
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "charm_api-0.1.3-py3-none-any.whl", hash = "sha256:4dba74e33f3de4608e88db2e08e41b0681221e7d3c2cd6913e0ebeb3dbdf8d92"},
+    {file = "charm_api-0.1.3.tar.gz", hash = "sha256:a90a926b89fce834e9fb2184b96e07ec46f4dd56f3cd50e0209c0fd0ff35a29e"},
+]
+
+[[package]]
+name = "charm-json"
 version = "0.1.2"
 description = ""
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "charm_api-0.1.2-py3-none-any.whl", hash = "sha256:f76806f8d8e1e39ae4a812711350399168cd26b319a01e73a5816ef8fb9f7ed4"},
-    {file = "charm_api-0.1.2.tar.gz", hash = "sha256:5d74418a3ffdee189dec1eaf648ba1bd7cff7449c3cdd2334a724e6722204c9d"},
-]
-
-[[package]]
-name = "charm-json"
-version = "0.1.1"
-description = ""
-optional = false
-python-versions = ">=3.8"
-groups = ["main"]
-files = [
-    {file = "charm_json-0.1.1-py3-none-any.whl", hash = "sha256:a3fac62d45821d1a8c14058632e21333ec4e2cd41d0d00d6a73d00fc9a656eef"},
-    {file = "charm_json-0.1.1.tar.gz", hash = "sha256:cb2eb24f6135d226ad04b0a17288ca2e027160d8af288083ef701bf4b137154e"},
+    {file = "charm_json-0.1.2-py3-none-any.whl", hash = "sha256:1cad028a92831c61d6dcb99127c5216c333f90ec58d06b9f73fd0fd7355d1b3c"},
+    {file = "charm_json-0.1.2.tar.gz", hash = "sha256:f91255858cd6721ec491d09450f37a0cdecf1addbfcfbd41f3e27c58dd95092e"},
 ]
 
 [package.dependencies]
@@ -420,14 +420,14 @@ charm-api = ">=0.1.1"
 
 [[package]]
 name = "charm-refresh"
-version = "3.1.1.3"
+version = "3.1.1.4"
 description = "In-place rolling refreshes (upgrades) of stateful charmed applications"
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
 files = [
-    {file = "charm_refresh-3.1.1.3-py3-none-any.whl", hash = "sha256:4ef022b398498f46b992a777708e16a078d414c9b71d4c7522c7da574062345b"},
-    {file = "charm_refresh-3.1.1.3.tar.gz", hash = "sha256:f610642c652dd109b544d3e7e1010ebb15c0c2f97220b6c9676b4b28da47c3b2"},
+    {file = "charm_refresh-3.1.1.4-py3-none-any.whl", hash = "sha256:6ff6e04170c03b3fe3f23bbf32a288a0de3da0d44bf2e8dd850ee02925bf2ec6"},
+    {file = "charm_refresh-3.1.1.4.tar.gz", hash = "sha256:d33f66e5b65fd356a30bfbc634710e5538086199da93c30c86246370a66570be"},
 ]
 
 [package.dependencies]
@@ -870,14 +870,14 @@ files = [
 
 [[package]]
 name = "dunamai"
-version = "1.26.0"
+version = "1.26.1"
 description = "Dynamic version generation"
 optional = false
 python-versions = ">=3.5"
 groups = ["build-refresh-version"]
 files = [
-    {file = "dunamai-1.26.0-py3-none-any.whl", hash = "sha256:f584edf0fda0d308cce0961f807bc90a8fe3d9ff4d62f94e72eca7b43f0ed5f6"},
-    {file = "dunamai-1.26.0.tar.gz", hash = "sha256:5396ac43aa20ed059040034e9f9798c7464cf4334c6fc3da3732e29273a2f97d"},
+    {file = "dunamai-1.26.1-py3-none-any.whl", hash = "sha256:2727d939c5b4257cb01ea404372803b477f5176e5a347c43beaf89cd5072e853"},
+    {file = "dunamai-1.26.1.tar.gz", hash = "sha256:3b46007bd65b00b4824ead0a1aee365fd22d0ec2b9c219497d4fd48f52860c8b"},
 ]
 
 [package.dependencies]
@@ -1097,14 +1097,14 @@ files = [
 
 [[package]]
 name = "invoke"
-version = "2.2.1"
+version = "3.0.2"
 description = "Pythonic task execution"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.9"
 groups = ["integration"]
 files = [
-    {file = "invoke-2.2.1-py3-none-any.whl", hash = "sha256:2413bc441b376e5cd3f55bb5d364f973ad8bdd7bf87e53c79de3c11bf3feecc8"},
-    {file = "invoke-2.2.1.tar.gz", hash = "sha256:515bf49b4a48932b79b024590348da22f39c4942dff991ad1fb8b8baea1be707"},
+    {file = "invoke-3.0.2-py3-none-any.whl", hash = "sha256:2a74699f3059c05774e155c90d6de1f71e5cae4aeeded394818a1b6eec907464"},
+    {file = "invoke-3.0.2.tar.gz", hash = "sha256:a4613e79ad35b5d9f9781af09452b8d505a3ecdc0169b729bf0426574700f817"},
 ]
 
 [[package]]
