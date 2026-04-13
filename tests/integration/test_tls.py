@@ -12,9 +12,9 @@ from .ha_tests.helpers import (
     change_patroni_setting,
 )
 from .helpers import (
+    ACTUAL_PGDATA_PATH,
     CHARM_BASE_NOBLE,
     DATABASE_APP_NAME,
-    PGDATA_PATH,
     build_and_deploy,
     check_tls,
     check_tls_patroni_api,
@@ -120,7 +120,7 @@ async def test_tls(ops_test: OpsTest) -> None:
                 await run_command_on_unit(
                     ops_test,
                     replica,
-                    f'su postgres -c "/usr/lib/postgresql/16/bin/pg_ctl -D {PGDATA_PATH} promote"',
+                    f'su postgres -c "/usr/lib/postgresql/16/bin/pg_ctl -D {ACTUAL_PGDATA_PATH} promote"',
                 )
 
                 # Check that the replica was promoted.

@@ -461,7 +461,7 @@ def test_change_connectivity_to_database(harness):
 
 def test_execute_command(harness):
     with patch("ops.model.Container.exec") as _exec:
-        command = ["rm", "-r", "/var/lib/postgresql/16/main"]
+        command = ["rm", "-r", "/var/lib/pg/data/16/main"]
         _exec.return_value.wait_output.return_value = ("fake stdout", "")
 
         # Test when the command runs successfully.
@@ -1802,7 +1802,7 @@ def test_render_pgbackrest_conf_file(harness, tls_ca_chain_filename):
             secret_key="test-secret-key",
             stanza=harness.charm.backup.stanza_name,
             storage_path=harness.charm._storage_path,
-            pgdata_path=harness.charm.pgdata_path,
+            pgdata_path=harness.charm._actual_pgdata_path,
             user="backup",
             retention_full=30,
             process_max=2,
