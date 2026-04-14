@@ -10,9 +10,9 @@ import jubilant
 import pytest
 
 from .helpers import (
-    ACTUAL_PGDATA_PATH,
     DATABASE_APP_NAME,
     METADATA,
+    STORAGE_PATH,
 )
 from .jubilant_helpers import retry_if_cli_error
 
@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 APP_NAME = DATABASE_APP_NAME
 UNIT_IDS = [0, 1, 2]
-PGDATA_SYMLINK_PATH = "/var/lib/postgresql/16/main"
+PGDATA_SYMLINK_PATH = "/var/lib/postgresql/16"
 
 
 @pytest.mark.abort_on_fail
@@ -66,8 +66,9 @@ def test_pgdata_symlinks(juju: jubilant.Juju, unit_id: int):
     pgdata_symlink_check = juju.ssh(
         unit_name, "readlink", "-f", PGDATA_SYMLINK_PATH, container="postgresql"
     )
-    assert pgdata_symlink_check.strip() == ACTUAL_PGDATA_PATH, (
-        f"Expected pgdata symlink to point to {ACTUAL_PGDATA_PATH}, got {pgdata_symlink_check.strip()}"
+    expected_target = f"{STORAGE_PATH}/16"
+    assert pgdata_symlink_check.strip() == expected_target, (
+        f"Expected pgdata symlink to point to {expected_target}, got {pgdata_symlink_check.strip()}"
     )
 
     # Verify symlink is owned by postgres:postgres
@@ -85,7 +86,7 @@ def test_pg_wal_symlink(juju: jubilant.Juju, unit_id: int):
     unit_name = f"{APP_NAME}/{unit_id}"
 
     # Check pg_wal symlink exists and points to correct location
-    pg_wal_symlink_path = f"{PGDATA_SYMLINK_PATH}/pg_wal"
+    pg_wal_symlink_path = f"{PGDATA_SYMLINK_PATH}/main/pg_wal"
     expected_target = "/var/lib/pg/logs/16/main/pg_wal"
     result = juju.ssh(unit_name, "readlink", "-f", pg_wal_symlink_path, container="postgresql")
     assert result.strip() == expected_target, (

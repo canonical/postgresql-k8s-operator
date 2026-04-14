@@ -1215,28 +1215,26 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 group=WORKLOAD_OS_GROUP,
                 make_parents=True,
             )
-        # Create a symlink from the default PostgreSQL data directory to our data directory
-        # (e.g., /var/lib/postgresql/16/main -> /var/lib/pg/data/16/main)
-        # Patroni and other tools will use the symlink path (self.pgdata_path)
+        # Create a debian-style symlink at the version level:
+        # /var/lib/postgresql/16 -> /var/lib/pg/data/16
+        # This means /var/lib/postgresql/16/main still resolves to the real pgdata
+        # directory (self._actual_pgdata_path), so Patroni and other tools continue
+        # to use self.pgdata_path (/var/lib/postgresql/16/main) unchanged.
         # Note: This symlink is on ephemeral storage and may not persist across container restarts.
         # It gets recreated on each pebble-ready event.
-        container.make_dir(
-            "/var/lib/postgresql/16",
-            user=WORKLOAD_OS_USER,
-            group=WORKLOAD_OS_GROUP,
-            make_parents=True,
-        )
+        # /var/lib/postgresql is created by the postgresql Debian package and exists in the
+        # container image, so no make_dir is needed before creating the symlink.
         container.exec([
             "ln",
             "-sfn",
-            self._actual_pgdata_path,
-            self.pgdata_path,
+            f"{self._storage_path}/16",
+            "/var/lib/postgresql/16",
         ]).wait()
         container.exec([
             "chown",
             "-h",
             f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
-            self.pgdata_path,
+            "/var/lib/postgresql/16",
         ]).wait()
         # Also, fix the permissions from the parent directory.
         container.exec([
