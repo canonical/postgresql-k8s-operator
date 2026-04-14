@@ -18,9 +18,9 @@ from locales import ROCK_LOCALES
 
 from .ha_tests.helpers import get_cluster_roles
 from .helpers import (
-    ACTUAL_PGDATA_PATH,
     CHARM_BASE,
     METADATA,
+    PGDATA_PATH,
     build_and_deploy,
     convert_records_to_dict,
     db_connect,
@@ -147,7 +147,7 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
     assert settings["archive_mode"] == "on"
     assert settings["autovacuum"] == "on"
     assert settings["cluster_name"] == f"patroni-{APP_NAME}"
-    assert settings["data_directory"] == f"{ACTUAL_PGDATA_PATH}"
+    assert settings["data_directory"] == f"{PGDATA_PATH}"
     assert settings["data_checksums"] == "on"
     assert settings["fsync"] == "on"
     assert settings["full_page_writes"] == "on"
@@ -368,7 +368,7 @@ async def test_automatic_failover_after_leader_issue(ops_test: OpsTest) -> None:
     primary = await get_primary(ops_test)
 
     # Crash PostgreSQL by removing the data directory.
-    await ops_test.model.units.get(primary).run(f"rm -rf {ACTUAL_PGDATA_PATH}")
+    await ops_test.model.units.get(primary).run(f"rm -rf {PGDATA_PATH}")
 
     # Wait for charm to stabilise
     await ops_test.model.wait_for_idle(

@@ -36,6 +36,7 @@ from constants import (
     BACKUP_USER,
     LOGS_STORAGE_PATH,
     PGBACKREST_LOGROTATE_FILE,
+    POSTGRESQL_DATA_PATH,
     TEMP_STORAGE_PATH,
     WORKLOAD_OS_GROUP,
     WORKLOAD_OS_USER,
@@ -198,7 +199,7 @@ class PostgreSQLBackups(Object):
 
             system_identifier_from_instance, error = self._execute_command([
                 f"/usr/lib/postgresql/{self.charm._patroni.rock_postgresql_version.split('.')[0]}/bin/pg_controldata",
-                self.charm._actual_pgdata_path,
+                POSTGRESQL_DATA_PATH,
             ])
             if error != "":
                 raise Exception(error)
@@ -1224,7 +1225,7 @@ Stderr:
             secret_key=s3_parameters["secret-key"],
             stanza=self.stanza_name,
             storage_path=self.charm._storage_path,
-            pgdata_path=self.charm._actual_pgdata_path,
+            pgdata_path=POSTGRESQL_DATA_PATH,
             user=BACKUP_USER,
             retention_full=s3_parameters["delete-older-than-days"],
             process_max=max(cpu_count - 2, 1),

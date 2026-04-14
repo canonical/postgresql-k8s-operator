@@ -252,6 +252,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._certs_path = "/usr/local/share/ca-certificates"
         self._storage_path = str(self.meta.storages["data"].location)
         self._actual_pgdata_path = f"{self._storage_path}/16/main"
+        self.pgdata_path = "/var/lib/postgresql/16/main"
 
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.postgresql_client_relation = PostgreSQLProvider(self)
@@ -328,7 +329,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def reconcile(self):
         """Reconcile the unit state on refresh."""
         self.set_unit_status(MaintenanceStatus("starting services"))
-        self._ensure_pgdata_dirs(self._container)
+        self._ensure_pgdata_dirs_and_symlinks(self._container)
         self._update_pebble_layers(replan=True)
 
         if not self._patroni.member_started:
@@ -1120,7 +1121,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         controls the pg_hba replication entries on the primary), or if the
         primary's Patroni hasn't yet reloaded pg_hba with this unit's
         replication entry (which would cause pg_basebackup to be rejected,
-        triggering Patroni's remove_data_directory()).
+        triggering Patroni's remove_data_directory() and destroying the
+        pgdata symlink).
         """
         if not self.is_cluster_initialised:
             logger.debug("Replica not ready: cluster not initialized")
@@ -1167,10 +1169,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                         if "No such file or directory" not in str(e.stderr):
                             logger.warning(f"Failed to clear {path}: {e}")
 
-        self._ensure_pgdata_dirs(container)
+        self._ensure_pgdata_dirs_and_symlinks(container)
 
-    def _ensure_pgdata_dirs(self, container: Container):
-        """Create storage directories for PostgreSQL data paths."""
+    def _ensure_pgdata_dirs_and_symlinks(self, container: Container):
+        """Create storage directories and symlinks for PostgreSQL data paths."""
         logs_path = str(self.meta.storages["logs"].location)
         waldir_path = f"{logs_path}/16/main/pg_wal"
         temp_path = str(self.meta.storages["temp"].location)
@@ -1213,7 +1215,30 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 group=WORKLOAD_OS_GROUP,
                 make_parents=True,
             )
-        # Fix the permissions from the parent directory.
+        # Create a symlink from the default PostgreSQL data directory to our data directory
+        # (e.g., /var/lib/postgresql/16/main -> /var/lib/pg/data/16/main)
+        # Patroni and other tools will use the symlink path (self.pgdata_path)
+        # Note: This symlink is on ephemeral storage and may not persist across container restarts.
+        # It gets recreated on each pebble-ready event.
+        container.make_dir(
+            "/var/lib/postgresql/16",
+            user=WORKLOAD_OS_USER,
+            group=WORKLOAD_OS_GROUP,
+            make_parents=True,
+        )
+        container.exec([
+            "ln",
+            "-sfn",
+            self._actual_pgdata_path,
+            self.pgdata_path,
+        ]).wait()
+        container.exec([
+            "chown",
+            "-h",
+            f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
+            self.pgdata_path,
+        ]).wait()
+        # Also, fix the permissions from the parent directory.
         container.exec([
             "chown",
             f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
@@ -1968,7 +1993,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.primary_endpoint,
             self._namespace,
             self._storage_path,
-            self._actual_pgdata_path,
+            self.pgdata_path,
             self.get_secret(APP_SCOPE, USER_PASSWORD_KEY),
             self.get_secret(APP_SCOPE, REPLICATION_PASSWORD_KEY),
             self.get_secret(APP_SCOPE, REWIND_PASSWORD_KEY),
