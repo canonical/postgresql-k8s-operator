@@ -252,7 +252,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._certs_path = "/usr/local/share/ca-certificates"
         self._storage_path = str(self.meta.storages["data"].location)
         self._actual_pgdata_path = f"{self._storage_path}/16/main"
-        self.pgdata_path = "/var/lib/postgresql/16/main"
 
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.postgresql_client_relation = PostgreSQLProvider(self)
@@ -1121,8 +1120,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         controls the pg_hba replication entries on the primary), or if the
         primary's Patroni hasn't yet reloaded pg_hba with this unit's
         replication entry (which would cause pg_basebackup to be rejected,
-        triggering Patroni's remove_data_directory() and destroying the
-        pgdata symlink).
+        triggering Patroni's remove_data_directory() and clearing the
+        pgdata directory).
         """
         if not self.is_cluster_initialised:
             logger.debug("Replica not ready: cluster not initialized")
@@ -1217,9 +1216,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             )
         # Create a debian-style symlink at the version level:
         # /var/lib/postgresql/16 -> /var/lib/pg/data/16
-        # This means /var/lib/postgresql/16/main still resolves to the real pgdata
-        # directory (self._actual_pgdata_path), so Patroni and other tools continue
-        # to use self.pgdata_path (/var/lib/postgresql/16/main) unchanged.
+        # This keeps /var/lib/postgresql/16/main as a valid alias for the real pgdata
+        # directory (self._actual_pgdata_path) for any tools that rely on the
+        # traditional Debian path layout.
         # Note: This symlink is on ephemeral storage and may not persist across container restarts.
         # It gets recreated on each pebble-ready event.
         # /var/lib/postgresql is created by the postgresql Debian package and exists in the
@@ -1991,7 +1990,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.primary_endpoint,
             self._namespace,
             self._storage_path,
-            self.pgdata_path,
+            self._actual_pgdata_path,
             self.get_secret(APP_SCOPE, USER_PASSWORD_KEY),
             self.get_secret(APP_SCOPE, REPLICATION_PASSWORD_KEY),
             self.get_secret(APP_SCOPE, REWIND_PASSWORD_KEY),

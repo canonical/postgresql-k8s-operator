@@ -19,7 +19,6 @@ WORKLOAD_OS_GROUP = "postgres"
 WORKLOAD_OS_USER = "postgres"
 METRICS_PORT = "9187"
 PGBACKREST_METRICS_PORT = "9854"
-POSTGRESQL_DATA_PATH = "/var/lib/postgresql/16/main"
 POSTGRESQL_LOGS_PATH = "/var/log/postgresql"
 
 # Storage mount paths (must match metadata.yaml storage locations).
