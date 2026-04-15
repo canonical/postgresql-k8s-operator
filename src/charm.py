@@ -3134,22 +3134,17 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if relation_data is None:
             return {}
 
-        params = {
+        return {
             "ldapbasedn": relation_data.base_dn,
             "ldapbinddn": relation_data.bind_dn,
             "ldapbindpasswd": relation_data.bind_password,
             "ldaptls": relation_data.starttls,
             "ldapurl": relation_data.urls[0],
-        }
-
-        # LDAP authentication parameters that are exclusive to
-        # one of the two supported modes (simple bind or search+bind)
-        # must be put at the very end of the parameters string
-        params.update({
+            # LDAP authentication parameters that are exclusive to
+            # one of the two supported modes (simple bind or search+bind)
+            # must be put at the very end of the parameters string
             "ldapsearchfilter": self.config.ldap_search_filter,
-        })
-
-        return params
+        }
 
     def is_restart_pending(self) -> bool:
         """Query pg_settings for pending restart."""
