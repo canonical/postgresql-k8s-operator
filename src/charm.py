@@ -121,11 +121,14 @@ from constants import (
     METRICS_PORT,
     MONITORING_PASSWORD_KEY,
     MONITORING_USER,
+    PATRONI_LOGS_PATH,
     PATRONI_PASSWORD_KEY,
     PEER,
     PGBACKREST_METRICS_PORT,
     PLUGIN_OVERRIDES,
     POSTGRES_LOG_FILES,
+    POSTGRESQL_LOGS_PATH,
+    POSTGRESQL_LOGS_SYMLINK_PATH,
     REPLICATION_PASSWORD_KEY,
     REPLICATION_USER,
     REWIND_PASSWORD_KEY,
@@ -1174,9 +1177,33 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Create storage directories and symlinks for PostgreSQL data paths."""
         logs_path = str(self.meta.storages["logs"].location)
         waldir_path = f"{logs_path}/16/main/pg_wal"
+        postgresql_logs_path = POSTGRESQL_LOGS_PATH
+        patroni_logs_path = PATRONI_LOGS_PATH
+        pgbackrest_logs_path = f"{logs_path}/16/main/pgbackrest_logs"
         temp_path = str(self.meta.storages["temp"].location)
         temp_tablespace_path = f"{temp_path}/16/main/pgsql_tmp"
         archive_path = f"{self.meta.storages['archive'].location}/16/main"
+        postgresql_logs_mode = "700"
+        postgresql_logs_owner = WORKLOAD_OS_USER
+        postgresql_logs_group = WORKLOAD_OS_GROUP
+
+        if container.exists(POSTGRESQL_LOGS_SYMLINK_PATH):
+            try:
+                stat_exec = container.exec([
+                    "stat",
+                    "-c",
+                    "%a:%U:%G",
+                    POSTGRESQL_LOGS_SYMLINK_PATH,
+                ])
+                stat_output, _ = stat_exec.wait_output()
+                postgresql_logs_mode, postgresql_logs_owner, postgresql_logs_group = (
+                    stat_output.strip().split(":")
+                )
+            except (ExecError, ValueError):
+                logger.debug(
+                    "Unable to read owner/group/permissions from %s",
+                    POSTGRESQL_LOGS_SYMLINK_PATH,
+                )
 
         # Create the pgdata directory on the storage mount (e.g., /var/lib/pg/data/16/main)
         if not container.exists(self._actual_pgdata_path):
@@ -1196,6 +1223,21 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 group=WORKLOAD_OS_GROUP,
                 make_parents=True,
             )
+        for path in [postgresql_logs_path, patroni_logs_path, pgbackrest_logs_path]:
+            if not container.exists(path):
+                container.make_dir(
+                    path,
+                    permissions=int(postgresql_logs_mode, 8),
+                    user=postgresql_logs_owner,
+                    group=postgresql_logs_group,
+                    make_parents=True,
+                )
+            container.exec(["chmod", postgresql_logs_mode, path]).wait()
+            container.exec([
+                "chown",
+                f"{postgresql_logs_owner}:{postgresql_logs_group}",
+                path,
+            ]).wait()
         # Create the temp tablespace directory (e.g., /var/lib/pg/temp/16/main/pgsql_tmp)
         if not container.exists(temp_tablespace_path):
             container.make_dir(
@@ -1235,6 +1277,39 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
             "/var/lib/postgresql/16",
         ]).wait()
+        if not container.exists(POSTGRESQL_LOGS_SYMLINK_PATH):
+            container.exec([
+                "ln",
+                "-sfn",
+                postgresql_logs_path,
+                POSTGRESQL_LOGS_SYMLINK_PATH,
+            ]).wait()
+            container.exec([
+                "chown",
+                "-h",
+                f"{postgresql_logs_owner}:{postgresql_logs_group}",
+                POSTGRESQL_LOGS_SYMLINK_PATH,
+            ]).wait()
+        else:
+            try:
+                container.exec(["test", "-L", POSTGRESQL_LOGS_SYMLINK_PATH]).wait()
+                container.exec([
+                    "ln",
+                    "-sfn",
+                    postgresql_logs_path,
+                    POSTGRESQL_LOGS_SYMLINK_PATH,
+                ]).wait()
+                container.exec([
+                    "chown",
+                    "-h",
+                    f"{postgresql_logs_owner}:{postgresql_logs_group}",
+                    POSTGRESQL_LOGS_SYMLINK_PATH,
+                ]).wait()
+            except ExecError:
+                logger.info(
+                    "Skipping symlink update for %s because it already exists as a directory",
+                    POSTGRESQL_LOGS_SYMLINK_PATH,
+                )
         # Also, fix the permissions from the parent directory.
         container.exec([
             "chown",
@@ -3055,7 +3130,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     re.MULTILINE,
                 )
             except ExecError:  # For Juju 2.
-                log_exec = container.pebble.exec(["cat", "/var/log/postgresql/patroni.log"])
+                log_exec = container.pebble.exec(["cat", f"{PATRONI_LOGS_PATH}/patroni.log"])
                 patroni_logs = log_exec.wait_output()[0]
                 patroni_exceptions = re.findall(
                     r"^([0-9- :]+) UTC \[[0-9]+\]: INFO: removing initialize key after failed attempt to bootstrap the cluster",
@@ -3067,7 +3142,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 # If no match, look at older logs
                 log_exec = container.pebble.exec([
                     "find",
-                    "/var/log/postgresql/",
+                    f"{PATRONI_LOGS_PATH}/",
                     "-name",
                     "'patroni.log.*'",
                     "-exec",

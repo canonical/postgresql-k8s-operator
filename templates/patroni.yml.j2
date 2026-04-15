@@ -28,7 +28,7 @@ bootstrap:
         log_autovacuum_min_duration: 60000
         log_checkpoints: 'on'
         log_destination: 'stderr'
-        log_directory: '/var/log/postgresql'
+        log_directory: '{{ logs_storage_path }}/16/main/pg_logs'
         log_error_verbosity: 'verbose'
         log_file_mode: '0600'
         log_filename: 'postgresql-%w_%H%M.log'
@@ -97,7 +97,7 @@ bootstrap:
   {%- endfor %}
 bypass_api_service: true
 log:
-  dir: /var/log/postgresql
+  dir: {{ logs_storage_path }}/16/main/patroni_logs
   dateformat: "%Y-%m-%d %H:%M:%S %Z"
   format: "%(asctime)s [%(process)d]: %(levelname)s: %(message)s "
   file_num: 10080
