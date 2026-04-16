@@ -1953,6 +1953,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 f"{self.postgresql_service} pebble service inactive, restarting service"
             )
             try:
+                self._ensure_pgdata_dirs_and_symlinks(self._container)
                 self._container.restart(self.postgresql_service)
             except ChangeError:
                 logger.exception("Failed to restart patroni")

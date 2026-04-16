@@ -334,10 +334,14 @@ def test_on_update_status(harness):
         patch(
             "charm.PostgresqlOperatorCharm.enable_disable_extensions"
         ) as _enable_disable_extensions,
+        patch("charm.PostgresqlOperatorCharm.fix_leader_annotation") as _fix_leader_annotation,
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
         patch("charm.Patroni.get_primary") as _get_primary,
         patch("ops.model.Container.pebble") as _pebble,
         patch("ops.model.Container.restart") as _restart,
+        patch(
+            "charm.PostgresqlOperatorCharm._ensure_pgdata_dirs_and_symlinks"
+        ) as _ensure_pgdata_dirs_and_symlinks,
         patch(
             "charm.PostgresqlOperatorCharm.is_standby_leader",
             new_callable=PropertyMock,
@@ -365,6 +369,8 @@ def test_on_update_status(harness):
         harness.charm.on.update_status.emit()
         _enable_disable_extensions.assert_not_called()
         _pebble.get_services.assert_not_called()
+        _fix_leader_annotation.assert_called_once_with()
+        _fix_leader_annotation.reset_mock()
 
         # Test unit in blocked status due to blocking extensions.
         harness.model.unit.status = BlockedStatus(EXTENSION_OBJECT_MESSAGE)
@@ -374,8 +380,16 @@ def test_on_update_status(harness):
 
         # Test when a failure need to be handled.
         _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.INACTIVE)]
+        restart_order = Mock()
+        restart_order.attach_mock(_ensure_pgdata_dirs_and_symlinks, "ensure_dirs")
+        restart_order.attach_mock(_restart, "restart")
         harness.charm.on.update_status.emit()
+        assert restart_order.mock_calls == [
+            call.ensure_dirs(harness.charm._container),
+            call.restart("postgresql"),
+        ]
         _restart.assert_called_once_with("postgresql")
+        _ensure_pgdata_dirs_and_symlinks.reset_mock()
         _restart.reset_mock()
         _get_primary.assert_called_once_with(unit_name_pattern=True)
         _get_primary.reset_mock()
@@ -384,6 +398,7 @@ def test_on_update_status(harness):
         _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.INACTIVE)]
         _restart.side_effect = ChangeError(err=None, change=None)
         harness.charm.on.update_status.emit()
+        _ensure_pgdata_dirs_and_symlinks.assert_called_once_with(harness.charm._container)
         _restart.assert_called_once_with("postgresql")
         _logger.exception.assert_called_once_with("Failed to restart patroni")
         _restart.reset_mock()
