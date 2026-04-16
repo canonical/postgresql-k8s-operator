@@ -1,6 +1,6 @@
-summary: test_symlinks.py
+summary: test_filesystem_layout.py
 environment:
-  TEST_MODULE: test_symlinks.py
+  TEST_MODULE: test_filesystem_layout.py
 execute: |
   tox run -e integration -- "tests/integration/$TEST_MODULE" --model testing --alluredir="$SPREAD_TASK/allure-results"
 artifacts:

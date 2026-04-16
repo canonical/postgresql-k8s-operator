@@ -109,21 +109,16 @@ def test_log_directories_exist(juju: jubilant.Juju, unit_id: int):
 
 @pytest.mark.parametrize("unit_id", UNIT_IDS)
 def test_postgresql_log_path(juju: jubilant.Juju, unit_id: int):
-    """Test the PostgreSQL log path entry."""
+    """Test that /var/log/postgresql is a symlink pointing to the pg_logs directory."""
     unit_name = f"{APP_NAME}/{unit_id}"
     path_type = juju.ssh(
         unit_name, "stat", "-c", "%F", POSTGRESQL_LOGS_PATH, container="postgresql"
     ).strip()
-    if path_type == "symbolic link":
-        target = juju.ssh(
-            unit_name, "readlink", "-f", POSTGRESQL_LOGS_PATH, container="postgresql"
-        )
-        assert target.strip() == POSTGRESQL_LOGS_TARGET_PATH, (
-            f"Expected {POSTGRESQL_LOGS_PATH} to point to {POSTGRESQL_LOGS_TARGET_PATH}, "
-            f"got {target.strip()}"
-        )
-    else:
-        assert path_type == "directory", (
-            f"Expected {POSTGRESQL_LOGS_PATH} to remain an existing directory when "
-            "symlink replacement is not allowed"
-        )
+    assert path_type == "symbolic link", (
+        f"Expected {POSTGRESQL_LOGS_PATH} to be a symbolic link, got: {path_type}"
+    )
+    target = juju.ssh(unit_name, "readlink", "-f", POSTGRESQL_LOGS_PATH, container="postgresql")
+    assert target.strip() == POSTGRESQL_LOGS_TARGET_PATH, (
+        f"Expected {POSTGRESQL_LOGS_PATH} to point to {POSTGRESQL_LOGS_TARGET_PATH}, "
+        f"got {target.strip()}"
+    )

@@ -1606,7 +1606,9 @@ def test_create_pgdata(harness):
         assert expected_call in container.exec.call_args_list
 
 
-def test_create_pgdata_does_not_replace_existing_postgresql_log_directory(harness):
+def test_create_pgdata_replaces_existing_directory_with_symlink(harness):
+    # When /var/log/postgresql is a plain directory (not a symlink), it should be
+    # removed and replaced with a symlink pointing to the new log location.
     container = MagicMock()
     container.exists.return_value = True
 
@@ -1625,7 +1627,8 @@ def test_create_pgdata_does_not_replace_existing_postgresql_log_directory(harnes
 
     harness.charm._create_pgdata(container)
 
-    assert call(["ln", "-sfn", "/var/lib/pg/logs/16/main/pg_logs", "/var/log/postgresql"]) not in (
+    assert call(["rm", "-rf", "/var/log/postgresql"]) in container.exec.call_args_list
+    assert call(["ln", "-sfn", "/var/lib/pg/logs/16/main/pg_logs", "/var/log/postgresql"]) in (
         container.exec.call_args_list
     )
 

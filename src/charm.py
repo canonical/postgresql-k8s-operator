@@ -1277,39 +1277,26 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
             "/var/lib/postgresql/16",
         ]).wait()
-        if not container.exists(POSTGRESQL_LOGS_SYMLINK_PATH):
-            container.exec([
-                "ln",
-                "-sfn",
-                postgresql_logs_path,
-                POSTGRESQL_LOGS_SYMLINK_PATH,
-            ]).wait()
-            container.exec([
-                "chown",
-                "-h",
-                f"{postgresql_logs_owner}:{postgresql_logs_group}",
-                POSTGRESQL_LOGS_SYMLINK_PATH,
-            ]).wait()
-        else:
+        if container.exists(POSTGRESQL_LOGS_SYMLINK_PATH):
             try:
                 container.exec(["test", "-L", POSTGRESQL_LOGS_SYMLINK_PATH]).wait()
-                container.exec([
-                    "ln",
-                    "-sfn",
-                    postgresql_logs_path,
-                    POSTGRESQL_LOGS_SYMLINK_PATH,
-                ]).wait()
-                container.exec([
-                    "chown",
-                    "-h",
-                    f"{postgresql_logs_owner}:{postgresql_logs_group}",
-                    POSTGRESQL_LOGS_SYMLINK_PATH,
-                ]).wait()
             except ExecError:
-                logger.info(
-                    "Skipping symlink update for %s because it already exists as a directory",
-                    POSTGRESQL_LOGS_SYMLINK_PATH,
-                )
+                # It's a plain directory (typically the empty one baked into the container
+                # image).  The directory is on ephemeral storage and contains no persistent
+                # log data, so it is safe to remove and replace with a symlink.
+                container.exec(["rm", "-rf", POSTGRESQL_LOGS_SYMLINK_PATH]).wait()
+        container.exec([
+            "ln",
+            "-sfn",
+            postgresql_logs_path,
+            POSTGRESQL_LOGS_SYMLINK_PATH,
+        ]).wait()
+        container.exec([
+            "chown",
+            "-h",
+            f"{postgresql_logs_owner}:{postgresql_logs_group}",
+            POSTGRESQL_LOGS_SYMLINK_PATH,
+        ]).wait()
         # Also, fix the permissions from the parent directory.
         container.exec([
             "chown",
