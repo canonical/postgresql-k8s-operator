@@ -1,0 +1,32 @@
+[32mINFO    [0m root:test_async_replication.py:463 Reintegrating db1 and test-app1
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju remove-relation --model testing db1 test-app1:database
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju integrate --model testing db1:database test-app1:database
+[32mINFO    [0m root:test_async_replication.py:481 Clearing continuous writes
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju run --model testing --format json test-app1/0 clear-continuous-writes --wait 120s
+[32mINFO    [0m root:test_async_replication.py:489 Starting continuous writes
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju run --model testing --format json test-app1/0 start-continuous-writes
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju remove-unit --model testing --no-prompt db1 --num-units 1
+[32mINFO    [0m root:test_async_replication.py:433 Stopping continuous writes
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju run --model testing --format json test-app1/0 stop-continuous-writes
+[32mINFO    [0m root:test_async_replication.py:441 Querying max value on all db1 units
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju show-secret --model testing secret:e6fne079c01hh7e07hlg --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju show-secret --model testing secret:e6fne079c01hh7e07hlg --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing --format json
+[32mINFO    [0m root:test_async_replication.py:450 Querying max value on all db2 units
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju secrets --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju show-secret --model testing-other secret:n5h9i4udvcadar5hjno0 --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju secrets --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju show-secret --model testing-other secret:n5h9i4udvcadar5hjno0 --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju secrets --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju show-secret --model testing-other secret:n5h9i4udvcadar5hjno0 --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing-other --format json
+[32mINFO    [0m root:test_async_replication.py:358 Results: [185, 185, 185, 185, 185]
