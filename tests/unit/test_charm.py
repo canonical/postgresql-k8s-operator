@@ -18,7 +18,7 @@ from ops.model import (
     RelationDataTypeError,
     WaitingStatus,
 )
-from ops.pebble import ChangeError, ExecError, ServiceStatus
+from ops.pebble import ChangeError, FileType, ServiceStatus
 from ops.testing import Harness
 from requests import ConnectionError as RequestsConnectionError
 from tenacity import RetryError, wait_fixed
@@ -1541,6 +1541,7 @@ def test_set_active_status(harness):
 def test_create_pgdata(harness):
     container = MagicMock()
     container.exists.return_value = False
+    container.list_files.return_value = []
     harness.charm._create_pgdata(container)
     # When directories don't exist, all required directories should be created.
     container.make_dir.assert_has_calls([
@@ -1608,14 +1609,18 @@ def test_create_pgdata(harness):
 
     container.make_dir.reset_mock()
     container.exec.reset_mock()
+    container.list_files.reset_mock()
     container.exists.return_value = True
+    container.exec.return_value.wait_output.return_value = ("700:postgres:postgres", "")
+    container.list_files.return_value = [MagicMock(type=FileType.SYMLINK)]
     harness.charm._create_pgdata(container)
     # When directories exist, none should be created
     container.make_dir.assert_not_called()
+    container.list_files.assert_any_call("/var/log", pattern="postgresql")
+    container.remove_path.assert_not_called()
     for expected_call in [
         call(["stat", "-c", "%a:%U:%G", "/var/log/postgresql"]),
         call(["ln", "-sfn", "/var/lib/pg/data/16", "/var/lib/postgresql/16"]),
-        call(["test", "-L", "/var/log/postgresql"]),
         call(["ln", "-sfn", "/var/lib/pg/logs/16/main/pg_logs", "/var/log/postgresql"]),
     ]:
         assert expected_call in container.exec.call_args_list
@@ -1626,24 +1631,42 @@ def test_create_pgdata_replaces_existing_directory_with_symlink(harness):
     # removed and replaced with a symlink pointing to the new log location.
     container = MagicMock()
     container.exists.return_value = True
+    container.exec.return_value.wait_output.return_value = ("755:postgres:postgres", "")
 
-    def _exec(command, **_kwargs):
-        process = MagicMock()
-        if command == ["stat", "-c", "%a:%U:%G", "/var/log/postgresql"]:
-            process.wait_output.return_value = ("755:postgres:postgres", "")
-            return process
-        if command == ["test", "-L", "/var/log/postgresql"]:
-            raise ExecError(command, 1, "", "not a symlink")
-        process.wait.return_value = None
-        process.wait_output.return_value = ("", "")
-        return process
+    def _list_files(path, *, pattern=None, itself=False):
+        assert not itself
+        if path == "/var/log" and pattern == "postgresql":
+            return [MagicMock(type=FileType.DIRECTORY)]
+        assert path == "/var/log/postgresql"
+        assert pattern is None
+        return []
 
-    container.exec.side_effect = _exec
+    container.list_files.side_effect = _list_files
 
     harness.charm._create_pgdata(container)
 
-    assert call(["rm", "-rf", "/var/log/postgresql"]) in container.exec.call_args_list
+    container.list_files.assert_has_calls([
+        call("/var/log", pattern="postgresql"),
+        call("/var/log/postgresql"),
+    ])
+    container.remove_path.assert_called_once_with("/var/log/postgresql")
     assert call(["ln", "-sfn", "/var/lib/pg/logs/16/main/pg_logs", "/var/log/postgresql"]) in (
+        container.exec.call_args_list
+    )
+
+
+def test_create_pgdata_raises_for_existing_non_directory(harness):
+    container = MagicMock()
+    container.exists.return_value = True
+    container.exec.return_value.wait_output.return_value = ("755:postgres:postgres", "")
+    container.list_files.return_value = [MagicMock(type=FileType.FILE)]
+
+    with pytest.raises(RuntimeError):
+        harness.charm._create_pgdata(container)
+
+    container.list_files.assert_called_once_with("/var/log", pattern="postgresql")
+    container.remove_path.assert_not_called()
+    assert call(["ln", "-sfn", "/var/lib/pg/logs/16/main/pg_logs", "/var/log/postgresql"]) not in (
         container.exec.call_args_list
     )
 

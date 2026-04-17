@@ -81,6 +81,8 @@ from ops.pebble import (
     ChangeError,
     CheckDict,
     ExecError,
+    FileInfo,
+    FileType,
     Layer,
     LayerDict,
     PathError,
@@ -1173,6 +1175,61 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         self._ensure_pgdata_dirs_and_symlinks(container)
 
+    def _ensure_postgresql_logs_symlink(
+        self,
+        container: Container,
+        postgresql_logs_path: str,
+        postgresql_logs_owner: str,
+        postgresql_logs_group: str,
+    ) -> None:
+        """Ensure /var/log/postgresql points to the logs storage path."""
+        path_info = self._get_container_path_info(container, POSTGRESQL_LOGS_SYMLINK_PATH)
+        if path_info is not None:
+            if path_info.type == FileType.DIRECTORY:
+                self._remove_empty_postgresql_logs_directory(container)
+            elif path_info.type != FileType.SYMLINK:
+                logger.error(
+                    "error: %s exists but is neither a symlink nor a directory and cannot"
+                    " be replaced with a symlink to the logs storage - remove it manually"
+                    " and run 'juju resolve' on each unit to recover.",
+                    POSTGRESQL_LOGS_SYMLINK_PATH,
+                )
+                raise RuntimeError from None
+
+        container.exec([
+            "ln",
+            "-sfn",
+            postgresql_logs_path,
+            POSTGRESQL_LOGS_SYMLINK_PATH,
+        ]).wait()
+        container.exec([
+            "chown",
+            "-h",
+            f"{postgresql_logs_owner}:{postgresql_logs_group}",
+            POSTGRESQL_LOGS_SYMLINK_PATH,
+        ]).wait()
+
+    def _get_container_path_info(self, container: Container, path: str) -> FileInfo | None:
+        """Return file info for a specific container path without dereferencing symlinks."""
+        path_obj = pathlib.PurePosixPath(path)
+        path_infos = container.list_files(str(path_obj.parent), pattern=path_obj.name)
+        if not path_infos:
+            return None
+        return path_infos[0]
+
+    def _remove_empty_postgresql_logs_directory(self, container: Container) -> None:
+        """Remove /var/log/postgresql only when it is an empty directory."""
+        if container.list_files(POSTGRESQL_LOGS_SYMLINK_PATH):
+            logger.error(
+                "error: %s is a non-empty directory and cannot be replaced with a"
+                " symlink to the logs storage - move or remove its contents manually"
+                " and run 'juju resolve' on each unit to recover.",
+                POSTGRESQL_LOGS_SYMLINK_PATH,
+            )
+            raise RuntimeError from None
+
+        container.remove_path(POSTGRESQL_LOGS_SYMLINK_PATH)
+
     def _ensure_pgdata_dirs_and_symlinks(self, container: Container):
         """Create storage directories and symlinks for PostgreSQL data paths."""
         logs_path = str(self.meta.storages["logs"].location)
@@ -1277,26 +1334,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
             "/var/lib/postgresql/16",
         ]).wait()
-        if container.exists(POSTGRESQL_LOGS_SYMLINK_PATH):
-            try:
-                container.exec(["test", "-L", POSTGRESQL_LOGS_SYMLINK_PATH]).wait()
-            except ExecError:
-                # It's a plain directory (typically the empty one baked into the container
-                # image).  The directory is on ephemeral storage and contains no persistent
-                # log data, so it is safe to remove and replace with a symlink.
-                container.exec(["rm", "-rf", POSTGRESQL_LOGS_SYMLINK_PATH]).wait()
-        container.exec([
-            "ln",
-            "-sfn",
+        self._ensure_postgresql_logs_symlink(
+            container,
             postgresql_logs_path,
-            POSTGRESQL_LOGS_SYMLINK_PATH,
-        ]).wait()
-        container.exec([
-            "chown",
-            "-h",
-            f"{postgresql_logs_owner}:{postgresql_logs_group}",
-            POSTGRESQL_LOGS_SYMLINK_PATH,
-        ]).wait()
+            postgresql_logs_owner,
+            postgresql_logs_group,
+        )
         # Also, fix the permissions from the parent directory.
         container.exec([
             "chown",
