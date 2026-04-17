@@ -1595,17 +1595,19 @@ def test_create_pgdata(harness):
             make_parents=True,
         ),
     ])
-    for expected_call in [
-        call(["chmod", "700", "/var/lib/pg/logs/16/main/pg_logs"]),
-        call(["chown", "postgres:postgres", "/var/lib/pg/logs/16/main/pg_logs"]),
-        call(["chmod", "700", "/var/lib/pg/logs/16/main/patroni_logs"]),
-        call(["chown", "postgres:postgres", "/var/lib/pg/logs/16/main/patroni_logs"]),
-        call(["chmod", "700", "/var/lib/pg/logs/16/main/pgbackrest_logs"]),
-        call(["chown", "postgres:postgres", "/var/lib/pg/logs/16/main/pgbackrest_logs"]),
-        call(["ln", "-sfn", "/var/lib/pg/data/16", "/var/lib/postgresql/16"]),
-        call(["ln", "-sfn", "/var/lib/pg/logs/16/main/pg_logs", "/var/log/postgresql"]),
-    ]:
-        assert expected_call in container.exec.call_args_list
+    container.exec.assert_has_calls(
+        [
+            call(["chmod", "700", "/var/lib/pg/logs/16/main/pg_logs"]),
+            call(["chown", "postgres:postgres", "/var/lib/pg/logs/16/main/pg_logs"]),
+            call(["chmod", "700", "/var/lib/pg/logs/16/main/patroni_logs"]),
+            call(["chown", "postgres:postgres", "/var/lib/pg/logs/16/main/patroni_logs"]),
+            call(["chmod", "700", "/var/lib/pg/logs/16/main/pgbackrest_logs"]),
+            call(["chown", "postgres:postgres", "/var/lib/pg/logs/16/main/pgbackrest_logs"]),
+            call(["ln", "-sfn", "/var/lib/pg/data/16", "/var/lib/postgresql/16"]),
+            call(["ln", "-sfn", "/var/lib/pg/logs/16/main/pg_logs", "/var/log/postgresql"]),
+        ],
+        any_order=True,
+    )
 
     container.make_dir.reset_mock()
     container.exec.reset_mock()
@@ -1618,12 +1620,14 @@ def test_create_pgdata(harness):
     container.make_dir.assert_not_called()
     container.list_files.assert_any_call("/var/log", pattern="postgresql")
     container.remove_path.assert_not_called()
-    for expected_call in [
-        call(["stat", "-c", "%a:%U:%G", "/var/log/postgresql"]),
-        call(["ln", "-sfn", "/var/lib/pg/data/16", "/var/lib/postgresql/16"]),
-        call(["ln", "-sfn", "/var/lib/pg/logs/16/main/pg_logs", "/var/log/postgresql"]),
-    ]:
-        assert expected_call in container.exec.call_args_list
+    container.exec.assert_has_calls(
+        [
+            call(["stat", "-c", "%a:%U:%G", "/var/log/postgresql"]),
+            call(["ln", "-sfn", "/var/lib/pg/data/16", "/var/lib/postgresql/16"]),
+            call(["ln", "-sfn", "/var/lib/pg/logs/16/main/pg_logs", "/var/log/postgresql"]),
+        ],
+        any_order=True,
+    )
 
 
 def test_create_pgdata_replaces_existing_directory_with_symlink(harness):

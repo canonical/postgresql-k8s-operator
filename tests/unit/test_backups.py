@@ -1831,7 +1831,7 @@ def test_render_pgbackrest_conf_file(harness, tls_ca_chain_filename):
         # Get the expected content from a file.
         with open("templates/pgbackrest.logrotate.j2") as file:
             template = Template(file.read())
-        log_rotation_expected_content = template.render()
+        log_rotation_expected_content = template.render(pgbackrest_logs_path=PGBACKREST_LOGS_PATH)
 
         # Ensure the correct rendered template is sent to _render_file method.
         calls = [

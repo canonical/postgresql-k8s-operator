@@ -1243,7 +1243,9 @@ Stderr:
         # Render the logrotate configuration file.
         with open("templates/pgbackrest.logrotate.j2") as file:
             template = Template(file.read())
-        self.container.push(PGBACKREST_LOGROTATE_FILE, template.render())
+        self.container.push(
+            PGBACKREST_LOGROTATE_FILE, template.render(pgbackrest_logs_path=PGBACKREST_LOGS_PATH)
+        )
         with open("scripts/rotate_logs.py") as f:
             self.container.push(
                 "/home/postgres/rotate_logs.py",

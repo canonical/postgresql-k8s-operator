@@ -126,6 +126,7 @@ from constants import (
     PATRONI_LOGS_PATH,
     PATRONI_PASSWORD_KEY,
     PEER,
+    PGBACKREST_LOGS_PATH,
     PGBACKREST_METRICS_PORT,
     PLUGIN_OVERRIDES,
     POSTGRES_LOG_FILES,
@@ -1236,7 +1237,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         waldir_path = f"{logs_path}/16/main/pg_wal"
         postgresql_logs_path = POSTGRESQL_LOGS_PATH
         patroni_logs_path = PATRONI_LOGS_PATH
-        pgbackrest_logs_path = f"{logs_path}/16/main/pgbackrest_logs"
+        pgbackrest_logs_path = PGBACKREST_LOGS_PATH
         temp_path = str(self.meta.storages["temp"].location)
         temp_tablespace_path = f"{temp_path}/16/main/pgsql_tmp"
         archive_path = f"{self.meta.storages['archive'].location}/16/main"
