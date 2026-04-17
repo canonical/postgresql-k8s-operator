@@ -746,8 +746,8 @@ class PostgreSQLAsyncReplication(Object):
 
     def _clear_pgdata(self) -> None:
         """Remove and recreate the pgdata folder to enable replication."""
-        # Note: Use _actual_pgdata_path instead of POSTGRESQL_DATA_PATH because
-        # POSTGRESQL_DATA_PATH is a symlink, and find doesn't follow symlinks by default.
+        # Note: Use _actual_pgdata_path instead of the Debian compatibility symlink
+        # (/var/lib/postgresql/16/main), because find doesn't follow symlinks by default.
         for path in [
             ARCHIVE_PATH,
             self.charm._actual_pgdata_path,
