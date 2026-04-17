@@ -5,6 +5,7 @@ bootstrap:
     synchronous_mode: true
     synchronous_mode_strict: false
     synchronous_node_count: {{ synchronous_node_count }}
+    max_timelines_history: 50
     postgresql:
       use_pg_rewind: true
       remove_data_directory_on_rewind_failure: false

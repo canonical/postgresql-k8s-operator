@@ -8,18 +8,18 @@ requires-poetry = ">=2.0.0"
 [tool.poetry.dependencies]
 python = "^3.12"
 ops = {extras = ["tracing"], version = "^3.7.0"}
-boto3 = "^1.42.84"
+boto3 = "^1.42.89"
 pgconnstr = "^1.0.1"
 requests = "^2.33.1"
 tenacity = "^9.1.4"
-pydantic = "^2.12.5"
+pydantic = "^2.13.0"
 jinja2 = "^3.1.6"
 lightkube = "^0.19.1"
 lightkube-models = "^1.28.1.4"
 psycopg2 = "^2.9.11"
 httpx = "^0.28.1"
 charmlibs-interfaces-tls-certificates = "^1.8.1"
-postgresql-charms-single-kernel = "16.1.9"
+postgresql-charms-single-kernel = "16.1.11"
 charm-refresh = "^3.1.1.2"
 
 [tool.poetry.group.charm-libs.dependencies]
@@ -38,21 +38,21 @@ jsonschema = "*"
 optional = true
 
 [tool.poetry.group.format.dependencies]
-ruff = "^0.15.9"
+ruff = "^0.15.10"
 
 [tool.poetry.group.lint]
 optional = true
 
 [tool.poetry.group.lint.dependencies]
 codespell = "^2.4.2"
-ty = "^0.0.29"
+ty = "^0.0.30"
 
 [tool.poetry.group.unit]
 optional = true
 
 [tool.poetry.group.unit.dependencies]
 coverage = {extras = ["toml"], version = "^7.13.5"}
-pytest = "^9.0.2"
+pytest = "^9.0.3"
 pytest-asyncio = "*"
 
 [tool.poetry.group.integration]
@@ -60,7 +60,7 @@ optional = true
 
 [tool.poetry.group.integration.dependencies]
 lightkube = "^0.19.1"
-pytest = "^9.0.2"
+pytest = "^9.0.3"
 pytest-operator = "^0.43.2"
 allure-pytest-default-results = "^0.1.4"
 # renovate caret doesn't work: https://github.com/renovatebot/renovate/issues/26940
