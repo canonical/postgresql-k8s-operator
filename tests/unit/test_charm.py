@@ -1561,21 +1561,21 @@ def test_create_pgdata(harness):
         ),
         call(
             "/var/lib/pg/logs/16/main/pg_logs",
-            permissions=448,
+            permissions=493,
             user="postgres",
             group="postgres",
             make_parents=True,
         ),
         call(
             "/var/lib/pg/logs/16/main/patroni_logs",
-            permissions=448,
+            permissions=493,
             user="postgres",
             group="postgres",
             make_parents=True,
         ),
         call(
             "/var/lib/pg/logs/16/main/pgbackrest_logs",
-            permissions=448,
+            permissions=493,
             user="postgres",
             group="postgres",
             make_parents=True,
@@ -1597,11 +1597,11 @@ def test_create_pgdata(harness):
     ])
     container.exec.assert_has_calls(
         [
-            call(["chmod", "700", "/var/lib/pg/logs/16/main/pg_logs"]),
+            call(["chmod", "755", "/var/lib/pg/logs/16/main/pg_logs"]),
             call(["chown", "postgres:postgres", "/var/lib/pg/logs/16/main/pg_logs"]),
-            call(["chmod", "700", "/var/lib/pg/logs/16/main/patroni_logs"]),
+            call(["chmod", "755", "/var/lib/pg/logs/16/main/patroni_logs"]),
             call(["chown", "postgres:postgres", "/var/lib/pg/logs/16/main/patroni_logs"]),
-            call(["chmod", "700", "/var/lib/pg/logs/16/main/pgbackrest_logs"]),
+            call(["chmod", "755", "/var/lib/pg/logs/16/main/pgbackrest_logs"]),
             call(["chown", "postgres:postgres", "/var/lib/pg/logs/16/main/pgbackrest_logs"]),
             call(["ln", "-sfn", "/var/lib/pg/data/16", "/var/lib/postgresql/16"]),
             call(["ln", "-sfn", "/var/lib/pg/logs/16/main/pg_logs", "/var/log/postgresql"]),
@@ -1613,7 +1613,6 @@ def test_create_pgdata(harness):
     container.exec.reset_mock()
     container.list_files.reset_mock()
     container.exists.return_value = True
-    container.exec.return_value.wait_output.return_value = ("700:postgres:postgres", "")
     container.list_files.return_value = [MagicMock(type=FileType.SYMLINK)]
     harness.charm._create_pgdata(container)
     # When directories exist, none should be created
@@ -1622,7 +1621,6 @@ def test_create_pgdata(harness):
     container.remove_path.assert_not_called()
     container.exec.assert_has_calls(
         [
-            call(["stat", "-c", "%a:%U:%G", "/var/log/postgresql"]),
             call(["ln", "-sfn", "/var/lib/pg/data/16", "/var/lib/postgresql/16"]),
             call(["ln", "-sfn", "/var/lib/pg/logs/16/main/pg_logs", "/var/log/postgresql"]),
         ],

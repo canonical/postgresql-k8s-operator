@@ -1180,8 +1180,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self,
         container: Container,
         postgresql_logs_path: str,
-        postgresql_logs_owner: str,
-        postgresql_logs_group: str,
     ) -> None:
         """Ensure /var/log/postgresql points to the logs storage path."""
         path_info = self._get_container_path_info(container, POSTGRESQL_LOGS_SYMLINK_PATH)
@@ -1206,7 +1204,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         container.exec([
             "chown",
             "-h",
-            f"{postgresql_logs_owner}:{postgresql_logs_group}",
+            f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
             POSTGRESQL_LOGS_SYMLINK_PATH,
         ]).wait()
 
@@ -1238,27 +1236,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         temp_path = str(self.meta.storages["temp"].location)
         temp_tablespace_path = f"{temp_path}/16/main/pgsql_tmp"
         archive_path = f"{self.meta.storages['archive'].location}/16/main"
-        postgresql_logs_mode = "700"
-        postgresql_logs_owner = WORKLOAD_OS_USER
-        postgresql_logs_group = WORKLOAD_OS_GROUP
-
-        if container.exists(POSTGRESQL_LOGS_SYMLINK_PATH):
-            try:
-                stat_exec = container.exec([
-                    "stat",
-                    "-c",
-                    "%a:%U:%G",
-                    POSTGRESQL_LOGS_SYMLINK_PATH,
-                ])
-                stat_output, _ = stat_exec.wait_output()
-                postgresql_logs_mode, postgresql_logs_owner, postgresql_logs_group = (
-                    stat_output.strip().split(":")
-                )
-            except (ExecError, ValueError):
-                logger.debug(
-                    "Unable to read owner/group/permissions from %s",
-                    POSTGRESQL_LOGS_SYMLINK_PATH,
-                )
 
         # Create the pgdata directory on the storage mount (e.g., /var/lib/pg/data/16/main)
         if not container.exists(self._actual_pgdata_path):
@@ -1282,15 +1259,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             if not container.exists(path):
                 container.make_dir(
                     path,
-                    permissions=int(postgresql_logs_mode, 8),
-                    user=postgresql_logs_owner,
-                    group=postgresql_logs_group,
+                    permissions=0o755,
+                    user=WORKLOAD_OS_USER,
+                    group=WORKLOAD_OS_GROUP,
                     make_parents=True,
                 )
-            container.exec(["chmod", postgresql_logs_mode, path]).wait()
+            container.exec(["chmod", "755", path]).wait()
             container.exec([
                 "chown",
-                f"{postgresql_logs_owner}:{postgresql_logs_group}",
+                f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
                 path,
             ]).wait()
         # Create the temp tablespace directory (e.g., /var/lib/pg/temp/16/main/pgsql_tmp)
@@ -1335,8 +1312,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._ensure_postgresql_logs_symlink(
             container,
             POSTGRESQL_LOGS_PATH,
-            postgresql_logs_owner,
-            postgresql_logs_group,
         )
         # Also, fix the permissions from the parent directory.
         container.exec([
