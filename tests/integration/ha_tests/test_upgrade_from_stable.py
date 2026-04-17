@@ -149,3 +149,4 @@ async def test_upgrade_from_stable(ops_test: OpsTest, charm, continuous_writes):
             "Number of switchovers is greater than 2"
         )
         assert await get_patroni_setting(ops_test, "failsafe_mode")
+        assert await get_patroni_setting(ops_test, "max_timelines_history") == 50
