@@ -81,6 +81,8 @@ from ops.pebble import (
     ChangeError,
     CheckDict,
     ExecError,
+    FileInfo,
+    FileType,
     Layer,
     LayerDict,
     PathError,
@@ -121,11 +123,15 @@ from constants import (
     METRICS_PORT,
     MONITORING_PASSWORD_KEY,
     MONITORING_USER,
+    PATRONI_LOGS_PATH,
     PATRONI_PASSWORD_KEY,
     PEER,
+    PGBACKREST_LOGS_PATH,
     PGBACKREST_METRICS_PORT,
     PLUGIN_OVERRIDES,
     POSTGRES_LOG_FILES,
+    POSTGRESQL_LOGS_PATH,
+    POSTGRESQL_LOGS_SYMLINK_PATH,
     REPLICATION_PASSWORD_KEY,
     REPLICATION_USER,
     REWIND_PASSWORD_KEY,
@@ -252,7 +258,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._certs_path = "/usr/local/share/ca-certificates"
         self._storage_path = str(self.meta.storages["data"].location)
         self._actual_pgdata_path = f"{self._storage_path}/16/main"
-        self.pgdata_path = "/var/lib/postgresql/16/main"
 
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.postgresql_client_relation = PostgreSQLProvider(self)
@@ -1121,8 +1126,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         controls the pg_hba replication entries on the primary), or if the
         primary's Patroni hasn't yet reloaded pg_hba with this unit's
         replication entry (which would cause pg_basebackup to be rejected,
-        triggering Patroni's remove_data_directory() and destroying the
-        pgdata symlink).
+        triggering Patroni's remove_data_directory() and clearing the
+        pgdata directory).
         """
         if not self.is_cluster_initialised:
             logger.debug("Replica not ready: cluster not initialized")
@@ -1171,6 +1176,59 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         self._ensure_pgdata_dirs_and_symlinks(container)
 
+    def _ensure_postgresql_logs_symlink(
+        self,
+        container: Container,
+        postgresql_logs_path: str,
+    ) -> None:
+        """Ensure /var/log/postgresql points to the logs storage path."""
+        path_info = self._get_container_path_info(container, POSTGRESQL_LOGS_SYMLINK_PATH)
+        if path_info is not None:
+            if path_info.type == FileType.DIRECTORY:
+                self._remove_empty_postgresql_logs_directory(container)
+            elif path_info.type != FileType.SYMLINK:
+                logger.error(
+                    "error: %s exists but is neither a symlink nor a directory and cannot"
+                    " be replaced with a symlink to the logs storage - remove it manually"
+                    " and run 'juju resolve' on each unit to recover.",
+                    POSTGRESQL_LOGS_SYMLINK_PATH,
+                )
+                raise RuntimeError from None
+
+        container.exec([
+            "ln",
+            "-sfn",
+            postgresql_logs_path,
+            POSTGRESQL_LOGS_SYMLINK_PATH,
+        ]).wait()
+        container.exec([
+            "chown",
+            "-h",
+            f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
+            POSTGRESQL_LOGS_SYMLINK_PATH,
+        ]).wait()
+
+    def _get_container_path_info(self, container: Container, path: str) -> FileInfo | None:
+        """Return file info for a specific container path without dereferencing symlinks."""
+        path_obj = pathlib.PurePosixPath(path)
+        path_infos = container.list_files(str(path_obj.parent), pattern=path_obj.name)
+        if not path_infos:
+            return None
+        return path_infos[0]
+
+    def _remove_empty_postgresql_logs_directory(self, container: Container) -> None:
+        """Remove /var/log/postgresql only when it is an empty directory."""
+        if container.list_files(POSTGRESQL_LOGS_SYMLINK_PATH):
+            logger.error(
+                "error: %s is a non-empty directory and cannot be replaced with a"
+                " symlink to the logs storage - move or remove its contents manually"
+                " and run 'juju resolve' on each unit to recover.",
+                POSTGRESQL_LOGS_SYMLINK_PATH,
+            )
+            raise RuntimeError from None
+
+        container.remove_path(POSTGRESQL_LOGS_SYMLINK_PATH)
+
     def _ensure_pgdata_dirs_and_symlinks(self, container: Container):
         """Create storage directories and symlinks for PostgreSQL data paths."""
         logs_path = str(self.meta.storages["logs"].location)
@@ -1197,6 +1255,21 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 group=WORKLOAD_OS_GROUP,
                 make_parents=True,
             )
+        for path in [POSTGRESQL_LOGS_PATH, PATRONI_LOGS_PATH, PGBACKREST_LOGS_PATH]:
+            if not container.exists(path):
+                container.make_dir(
+                    path,
+                    permissions=0o755,
+                    user=WORKLOAD_OS_USER,
+                    group=WORKLOAD_OS_GROUP,
+                    make_parents=True,
+                )
+            container.exec(["chmod", "755", path]).wait()
+            container.exec([
+                "chown",
+                f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
+                path,
+            ]).wait()
         # Create the temp tablespace directory (e.g., /var/lib/pg/temp/16/main/pgsql_tmp)
         if not container.exists(temp_tablespace_path):
             container.make_dir(
@@ -1215,29 +1288,31 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 group=WORKLOAD_OS_GROUP,
                 make_parents=True,
             )
-        # Create a symlink from the default PostgreSQL data directory to our data directory
-        # (e.g., /var/lib/postgresql/16/main -> /var/lib/pg/data/16/main)
-        # Patroni and other tools will use the symlink path (self.pgdata_path)
+        # Create a debian-style symlink at the version level:
+        # /var/lib/postgresql/16 -> /var/lib/pg/data/16
+        # This keeps /var/lib/postgresql/16/main as a valid alias for the real pgdata
+        # directory (self._actual_pgdata_path) for any tools that rely on the
+        # traditional Debian path layout.
         # Note: This symlink is on ephemeral storage and may not persist across container restarts.
         # It gets recreated on each pebble-ready event.
-        container.make_dir(
-            "/var/lib/postgresql/16",
-            user=WORKLOAD_OS_USER,
-            group=WORKLOAD_OS_GROUP,
-            make_parents=True,
-        )
+        # /var/lib/postgresql is created by the postgresql Debian package and exists in the
+        # container image, so no make_dir is needed before creating the symlink.
         container.exec([
             "ln",
             "-sfn",
-            self._actual_pgdata_path,
-            self.pgdata_path,
+            f"{self._storage_path}/16",
+            "/var/lib/postgresql/16",
         ]).wait()
         container.exec([
             "chown",
             "-h",
             f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
-            self.pgdata_path,
+            "/var/lib/postgresql/16",
         ]).wait()
+        self._ensure_postgresql_logs_symlink(
+            container,
+            POSTGRESQL_LOGS_PATH,
+        )
         # Also, fix the permissions from the parent directory.
         container.exec([
             "chown",
@@ -1894,6 +1969,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 f"{self.postgresql_service} pebble service inactive, restarting service"
             )
             try:
+                self._ensure_pgdata_dirs_and_symlinks(self._container)
                 self._container.restart(self.postgresql_service)
             except ChangeError:
                 logger.exception("Failed to restart patroni")
@@ -1993,7 +2069,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.primary_endpoint,
             self._namespace,
             self._storage_path,
-            self.pgdata_path,
+            self._actual_pgdata_path,
             self.get_secret(APP_SCOPE, USER_PASSWORD_KEY),
             self.get_secret(APP_SCOPE, REPLICATION_PASSWORD_KEY),
             self.get_secret(APP_SCOPE, REWIND_PASSWORD_KEY),
@@ -3058,7 +3134,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     re.MULTILINE,
                 )
             except ExecError:  # For Juju 2.
-                log_exec = container.pebble.exec(["cat", "/var/log/postgresql/patroni.log"])
+                log_exec = container.pebble.exec(["cat", f"{PATRONI_LOGS_PATH}/patroni.log"])
                 patroni_logs = log_exec.wait_output()[0]
                 patroni_exceptions = re.findall(
                     r"^([0-9- :]+) UTC \[[0-9]+\]: INFO: removing initialize key after failed attempt to bootstrap the cluster",
@@ -3070,7 +3146,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 # If no match, look at older logs
                 log_exec = container.pebble.exec([
                     "find",
-                    "/var/log/postgresql/",
+                    f"{PATRONI_LOGS_PATH}/",
                     "-name",
                     "'patroni.log.*'",
                     "-exec",

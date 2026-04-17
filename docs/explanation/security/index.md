@@ -90,11 +90,11 @@ For more implementation details, see the [PostgreSQL documentation](https://www.
 
 Charmed PostgreSQL K8s provides native integration with the [Canonical Observability Stack (COS)](https://charmhub.io/topics/canonical-observability-stack). To reduce the blast radius of infrastructure disruptions, the general recommendation is to deploy COS and the observed application into separate environments, isolated from one another. Refer to the [COS production deployments best practices](https://charmhub.io/topics/canonical-observability-stack/reference/best-practices) for more information or see the How to guides for PostgreSQL [monitoring](https://canonical.com/data/docs/postgresql/k8s/h-enable-monitoring), [alert rules](https://canonical.com/data/docs/postgresql/k8s/h-enable-alert-rules), and [tracing](https://canonical.com/data/docs/postgresql/k8s/h-enable-tracing) for practical instructions.
 
-PostgreSQL logs are stored in `/var/log/postgresql` within the postgresql container of each unit. It’s recommended to integrate the charm with [COS](https://canonical.com/data/docs/postgresql/k8s/h-enable-monitoring), from where the logs can be easily persisted and queried using [Loki](https://charmhub.io/loki-k8s)/[Grafana](https://charmhub.io/grafana).
+PostgreSQL logs are stored in `/var/lib/pg/logs/16/main/pg_logs` within the `postgresql` container of each unit. The legacy `/var/log/postgresql` path is kept as a compatibility symlink to that directory. It’s recommended to integrate the charm with [COS](https://canonical.com/data/docs/postgresql/k8s/h-enable-monitoring), from where the logs can be easily persisted and queried using [Loki](https://charmhub.io/loki-k8s)/[Grafana](https://charmhub.io/grafana).
 
 ### Security event logging
 
-Charmed PostgreSQL K8s provides [PostgreSQL Audit Extension (or pgAudit)](https://www.pgaudit.org/) enabled by default. These logs are stored in the `/var/log/postgresql/` directory of each unit along with the regular workload logs, and rotated minutely. If COS is enabled, audit logs are also persisted there.
+Charmed PostgreSQL K8s provides [PostgreSQL Audit Extension (or pgAudit)](https://www.pgaudit.org/) enabled by default. These logs are stored in `/var/lib/pg/logs/16/main/pg_logs` along with the regular PostgreSQL workload logs, and rotated minutely. If COS is enabled, audit logs are also persisted there.
 
 The following information is configured to be logged:
 
@@ -105,7 +105,7 @@ The following information is configured to be logged:
 
 Other events, like connections and disconnections, are logged depending on the value of the charm configuration options related to them. For more information, check the configuration options with the `logging` prefix in the [configuration reference](https://charmhub.io/postgresql-k8s/configurations?channel=16/edge#logging-log-connections).
 
-Also, all operations performed by the charm as a result of user actions — such as enabling or disabling plugins, managing TLS, creating or restoring backups, and configuring replication between clusters (asynchronous or logical) — are executed through the underlying workload components (PostgreSQL, Patroni, or pgBackRest). Consequently, these operations are recorded in the respective workload log files, which are accessible in the `/var/log/postgresql` directory and also forwarded to COS.
+Also, all operations performed by the charm as a result of user actions — such as enabling or disabling plugins, managing TLS, creating or restoring backups, and configuring replication between clusters (asynchronous or logical) — are executed through the underlying workload components (PostgreSQL, Patroni, or pgBackRest). Consequently, these operations are recorded in the respective workload log files under `/var/lib/pg/logs/16/main/` and also forwarded to COS.
 
 No secrets are logged.
 

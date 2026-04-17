@@ -12,7 +12,7 @@ from ops.testing import Harness
 from tenacity import RetryError, stop_after_delay, wait_fixed
 
 from charm import PostgresqlOperatorCharm
-from constants import API_REQUEST_TIMEOUT, LOGS_STORAGE_PATH, REWIND_USER
+from constants import API_REQUEST_TIMEOUT, LOGS_STORAGE_PATH, POSTGRESQL_LOGS_PATH, REWIND_USER
 from patroni import Patroni, SwitchoverFailedError, SwitchoverNotSyncError
 from tests.helpers import PGDATA_PATH, STORAGE_PATH
 
@@ -42,7 +42,7 @@ def patroni(harness):
         "patroni-password",
     )
     root = harness.get_filesystem_root("postgresql")
-    (root / "var" / "log" / "postgresql").mkdir(parents=True, exist_ok=True)
+    (root / POSTGRESQL_LOGS_PATH.lstrip("/")).mkdir(parents=True, exist_ok=True)
 
     yield patroni
 
@@ -490,20 +490,21 @@ def test_last_postgresql_logs(harness, patroni):
 
     # Test when there are multiple files in the logs directory.
     root = harness.get_filesystem_root("postgresql")
-    with (root / "var" / "log" / "postgresql" / "postgresql.1.log").open("w") as fd:
+    logs_dir = root / POSTGRESQL_LOGS_PATH.lstrip("/")
+    with (logs_dir / "postgresql.1.log").open("w") as fd:
         fd.write("fake-logs1")
-    with (root / "var" / "log" / "postgresql" / "postgresql.2.log").open("w") as fd:
+    with (logs_dir / "postgresql.2.log").open("w") as fd:
         fd.write("fake-logs2")
-    with (root / "var" / "log" / "postgresql" / "postgresql.3.log").open("w") as fd:
+    with (logs_dir / "postgresql.3.log").open("w") as fd:
         fd.write("fake-logs3")
 
     assert patroni.last_postgresql_logs() == "fake-logs3"
 
     # Test when the charm fails to read the logs.
-    (root / "var" / "log" / "postgresql" / "postgresql.1.log").unlink()
-    (root / "var" / "log" / "postgresql" / "postgresql.2.log").unlink()
-    (root / "var" / "log" / "postgresql" / "postgresql.3.log").unlink()
-    (root / "var" / "log" / "postgresql").rmdir()
+    (logs_dir / "postgresql.1.log").unlink()
+    (logs_dir / "postgresql.2.log").unlink()
+    (logs_dir / "postgresql.3.log").unlink()
+    logs_dir.rmdir()
     assert patroni.last_postgresql_logs() == ""
 
 

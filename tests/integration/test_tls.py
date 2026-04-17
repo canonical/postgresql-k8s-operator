@@ -51,7 +51,7 @@ async def check_tls_rewind(ops_test: OpsTest) -> None:
             logs = await run_command_on_unit(
                 ops_test,
                 unit.name,
-                "grep rewind /var/log/postgresql/postgresql-*.log",
+                "grep rewind /var/lib/pg/logs/16/main/pg_logs/postgresql-*.log",
             )
         except Exception:
             continue

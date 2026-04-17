@@ -10,9 +10,9 @@ import jubilant
 import pytest
 
 from .helpers import (
-    ACTUAL_PGDATA_PATH,
     DATABASE_APP_NAME,
     METADATA,
+    STORAGE_PATH,
 )
 from .jubilant_helpers import retry_if_cli_error
 
@@ -20,7 +20,11 @@ logger = logging.getLogger(__name__)
 
 APP_NAME = DATABASE_APP_NAME
 UNIT_IDS = [0, 1, 2]
-PGDATA_SYMLINK_PATH = "/var/lib/postgresql/16/main"
+PGDATA_SYMLINK_PATH = "/var/lib/postgresql/16"
+POSTGRESQL_LOGS_TARGET_PATH = "/var/lib/pg/logs/16/main/pg_logs"
+PATRONI_LOGS_PATH = "/var/lib/pg/logs/16/main/patroni_logs"
+PGBACKREST_LOGS_PATH = "/var/lib/pg/logs/16/main/pgbackrest_logs"
+POSTGRESQL_LOGS_PATH = "/var/log/postgresql"
 
 
 @pytest.mark.abort_on_fail
@@ -66,8 +70,9 @@ def test_pgdata_symlinks(juju: jubilant.Juju, unit_id: int):
     pgdata_symlink_check = juju.ssh(
         unit_name, "readlink", "-f", PGDATA_SYMLINK_PATH, container="postgresql"
     )
-    assert pgdata_symlink_check.strip() == ACTUAL_PGDATA_PATH, (
-        f"Expected pgdata symlink to point to {ACTUAL_PGDATA_PATH}, got {pgdata_symlink_check.strip()}"
+    expected_target = f"{STORAGE_PATH}/16"
+    assert pgdata_symlink_check.strip() == expected_target, (
+        f"Expected pgdata symlink to point to {expected_target}, got {pgdata_symlink_check.strip()}"
     )
 
     # Verify symlink is owned by postgres:postgres
@@ -85,9 +90,35 @@ def test_pg_wal_symlink(juju: jubilant.Juju, unit_id: int):
     unit_name = f"{APP_NAME}/{unit_id}"
 
     # Check pg_wal symlink exists and points to correct location
-    pg_wal_symlink_path = f"{PGDATA_SYMLINK_PATH}/pg_wal"
+    pg_wal_symlink_path = f"{PGDATA_SYMLINK_PATH}/main/pg_wal"
     expected_target = "/var/lib/pg/logs/16/main/pg_wal"
     result = juju.ssh(unit_name, "readlink", "-f", pg_wal_symlink_path, container="postgresql")
     assert result.strip() == expected_target, (
         f"Expected pg_wal symlink to point to {expected_target}, got {result.strip()}"
+    )
+
+
+@pytest.mark.parametrize("unit_id", UNIT_IDS)
+def test_log_directories_exist(juju: jubilant.Juju, unit_id: int):
+    """Test that dedicated PostgreSQL, Patroni and pgBackRest log directories exist."""
+    unit_name = f"{APP_NAME}/{unit_id}"
+    for log_path in [POSTGRESQL_LOGS_TARGET_PATH, PATRONI_LOGS_PATH, PGBACKREST_LOGS_PATH]:
+        result = juju.ssh(unit_name, "stat", "-c", "%F", log_path, container="postgresql")
+        assert result.strip() == "directory", f"Expected {log_path} directory to exist"
+
+
+@pytest.mark.parametrize("unit_id", UNIT_IDS)
+def test_postgresql_log_path(juju: jubilant.Juju, unit_id: int):
+    """Test that /var/log/postgresql is a symlink pointing to the pg_logs directory."""
+    unit_name = f"{APP_NAME}/{unit_id}"
+    path_type = juju.ssh(
+        unit_name, "stat", "-c", "%F", POSTGRESQL_LOGS_PATH, container="postgresql"
+    ).strip()
+    assert path_type == "symbolic link", (
+        f"Expected {POSTGRESQL_LOGS_PATH} to be a symbolic link, got: {path_type}"
+    )
+    target = juju.ssh(unit_name, "readlink", "-f", POSTGRESQL_LOGS_PATH, container="postgresql")
+    assert target.strip() == POSTGRESQL_LOGS_TARGET_PATH, (
+        f"Expected {POSTGRESQL_LOGS_PATH} to point to {POSTGRESQL_LOGS_TARGET_PATH}, "
+        f"got {target.strip()}"
     )
