@@ -1235,9 +1235,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Create storage directories and symlinks for PostgreSQL data paths."""
         logs_path = str(self.meta.storages["logs"].location)
         waldir_path = f"{logs_path}/16/main/pg_wal"
-        postgresql_logs_path = POSTGRESQL_LOGS_PATH
-        patroni_logs_path = PATRONI_LOGS_PATH
-        pgbackrest_logs_path = PGBACKREST_LOGS_PATH
         temp_path = str(self.meta.storages["temp"].location)
         temp_tablespace_path = f"{temp_path}/16/main/pgsql_tmp"
         archive_path = f"{self.meta.storages['archive'].location}/16/main"
@@ -1281,7 +1278,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 group=WORKLOAD_OS_GROUP,
                 make_parents=True,
             )
-        for path in [postgresql_logs_path, patroni_logs_path, pgbackrest_logs_path]:
+        for path in [POSTGRESQL_LOGS_PATH, PATRONI_LOGS_PATH, PGBACKREST_LOGS_PATH]:
             if not container.exists(path):
                 container.make_dir(
                     path,
@@ -1337,7 +1334,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         ]).wait()
         self._ensure_postgresql_logs_symlink(
             container,
-            postgresql_logs_path,
+            POSTGRESQL_LOGS_PATH,
             postgresql_logs_owner,
             postgresql_logs_group,
         )
