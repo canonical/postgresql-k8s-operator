@@ -30,6 +30,8 @@ jobs:
           # https://github.com/mgeier/sphinx-last-updated-by-git/blob/a34a9b4eb9e3a57a15b1ff47d9412c01cc573c7f/README.rst?plain=1#L61-L95
           fetch-depth: 0
       - run: make install
+      - name: Install aspell for spell check
+        run: sudo apt-get update && sudo apt-get install -y aspell aspell-en
       - name: Spell check
         run: make spelling
       - name: Inclusive language check
