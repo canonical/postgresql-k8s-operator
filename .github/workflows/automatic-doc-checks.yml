@@ -26,6 +26,9 @@ jobs:
         uses: actions/checkout@v6
         with:
           persist-credentials: false
+          # Required by sphinx-last-updated-by-git in shallow GitHub Actions checkouts:
+          # https://github.com/mgeier/sphinx-last-updated-by-git/blob/a34a9b4eb9e3a57a15b1ff47d9412c01cc573c7f/README.rst?plain=1#L61-L95
+          fetch-depth: 0
       - run: make install
       - name: Spell check
         run: make spelling
