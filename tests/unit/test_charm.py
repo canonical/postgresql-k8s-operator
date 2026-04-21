@@ -18,7 +18,7 @@ from ops.model import (
     RelationDataTypeError,
     WaitingStatus,
 )
-from ops.pebble import ChangeError, ServiceStatus
+from ops.pebble import ChangeError, FileType, ServiceStatus
 from ops.testing import Harness
 from requests import ConnectionError as RequestsConnectionError
 from tenacity import RetryError, wait_fixed
@@ -334,10 +334,14 @@ def test_on_update_status(harness):
         patch(
             "charm.PostgresqlOperatorCharm.enable_disable_extensions"
         ) as _enable_disable_extensions,
+        patch("charm.PostgresqlOperatorCharm.fix_leader_annotation") as _fix_leader_annotation,
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
         patch("charm.Patroni.get_primary") as _get_primary,
         patch("ops.model.Container.pebble") as _pebble,
         patch("ops.model.Container.restart") as _restart,
+        patch(
+            "charm.PostgresqlOperatorCharm._ensure_pgdata_dirs_and_symlinks"
+        ) as _ensure_pgdata_dirs_and_symlinks,
         patch(
             "charm.PostgresqlOperatorCharm.is_standby_leader",
             new_callable=PropertyMock,
@@ -365,6 +369,8 @@ def test_on_update_status(harness):
         harness.charm.on.update_status.emit()
         _enable_disable_extensions.assert_not_called()
         _pebble.get_services.assert_not_called()
+        _fix_leader_annotation.assert_called_once_with()
+        _fix_leader_annotation.reset_mock()
 
         # Test unit in blocked status due to blocking extensions.
         harness.model.unit.status = BlockedStatus(EXTENSION_OBJECT_MESSAGE)
@@ -374,8 +380,16 @@ def test_on_update_status(harness):
 
         # Test when a failure need to be handled.
         _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.INACTIVE)]
+        restart_order = Mock()
+        restart_order.attach_mock(_ensure_pgdata_dirs_and_symlinks, "ensure_dirs")
+        restart_order.attach_mock(_restart, "restart")
         harness.charm.on.update_status.emit()
+        assert restart_order.mock_calls == [
+            call.ensure_dirs(harness.charm._container),
+            call.restart("postgresql"),
+        ]
         _restart.assert_called_once_with("postgresql")
+        _ensure_pgdata_dirs_and_symlinks.reset_mock()
         _restart.reset_mock()
         _get_primary.assert_called_once_with(unit_name_pattern=True)
         _get_primary.reset_mock()
@@ -384,6 +398,7 @@ def test_on_update_status(harness):
         _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.INACTIVE)]
         _restart.side_effect = ChangeError(err=None, change=None)
         harness.charm.on.update_status.emit()
+        _ensure_pgdata_dirs_and_symlinks.assert_called_once_with(harness.charm._container)
         _restart.assert_called_once_with("postgresql")
         _logger.exception.assert_called_once_with("Failed to restart patroni")
         _restart.reset_mock()
@@ -1550,8 +1565,9 @@ def test_set_active_status(harness):
 def test_create_pgdata(harness):
     container = MagicMock()
     container.exists.return_value = False
+    container.list_files.return_value = []
     harness.charm._create_pgdata(container)
-    # When directories don't exist, all four should be created
+    # When directories don't exist, all required directories should be created.
     container.make_dir.assert_has_calls([
         call(
             "/var/lib/pg/data/16/main",
@@ -1563,6 +1579,27 @@ def test_create_pgdata(harness):
         call(
             "/var/lib/pg/logs/16/main/pg_wal",
             permissions=448,
+            user="postgres",
+            group="postgres",
+            make_parents=True,
+        ),
+        call(
+            "/var/lib/pg/logs/16/main/pg_logs",
+            permissions=493,
+            user="postgres",
+            group="postgres",
+            make_parents=True,
+        ),
+        call(
+            "/var/lib/pg/logs/16/main/patroni_logs",
+            permissions=493,
+            user="postgres",
+            group="postgres",
+            make_parents=True,
+        ),
+        call(
+            "/var/lib/pg/logs/16/main/pgbackrest_logs",
+            permissions=493,
             user="postgres",
             group="postgres",
             make_parents=True,
@@ -1581,55 +1618,83 @@ def test_create_pgdata(harness):
             group="postgres",
             make_parents=True,
         ),
-        call(
-            "/var/lib/postgresql/16",
-            user="postgres",
-            group="postgres",
-            make_parents=True,
-        ),
     ])
-    container.exec.assert_has_calls([
-        call(["ln", "-sfn", "/var/lib/pg/data/16/main", "/var/lib/postgresql/16/main"]),
-        call().wait(),
-        call(["chown", "-h", "postgres:postgres", "/var/lib/postgresql/16/main"]),
-        call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/pg/archive"]),
-        call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/pg/data"]),
-        call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/pg/logs"]),
-        call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/pg/temp"]),
-        call().wait(),
-    ])
+    container.exec.assert_has_calls(
+        [
+            call(["chmod", "755", "/var/lib/pg/logs/16/main/pg_logs"]),
+            call(["chown", "postgres:postgres", "/var/lib/pg/logs/16/main/pg_logs"]),
+            call(["chmod", "755", "/var/lib/pg/logs/16/main/patroni_logs"]),
+            call(["chown", "postgres:postgres", "/var/lib/pg/logs/16/main/patroni_logs"]),
+            call(["chmod", "755", "/var/lib/pg/logs/16/main/pgbackrest_logs"]),
+            call(["chown", "postgres:postgres", "/var/lib/pg/logs/16/main/pgbackrest_logs"]),
+            call(["ln", "-sfn", "/var/lib/pg/data/16", "/var/lib/postgresql/16"]),
+            call(["ln", "-sfn", "/var/lib/pg/logs/16/main/pg_logs", "/var/log/postgresql"]),
+        ],
+        any_order=True,
+    )
 
     container.make_dir.reset_mock()
     container.exec.reset_mock()
+    container.list_files.reset_mock()
     container.exists.return_value = True
+    container.list_files.return_value = [MagicMock(type=FileType.SYMLINK)]
     harness.charm._create_pgdata(container)
-    # When directories exist, none should be created (except the symlink parent)
-    container.make_dir.assert_has_calls([
-        call(
-            "/var/lib/postgresql/16",
-            user="postgres",
-            group="postgres",
-            make_parents=True,
-        ),
+    # When directories exist, none should be created
+    container.make_dir.assert_not_called()
+    container.list_files.assert_any_call("/var/log", pattern="postgresql")
+    container.remove_path.assert_not_called()
+    container.exec.assert_has_calls(
+        [
+            call(["ln", "-sfn", "/var/lib/pg/data/16", "/var/lib/postgresql/16"]),
+            call(["ln", "-sfn", "/var/lib/pg/logs/16/main/pg_logs", "/var/log/postgresql"]),
+        ],
+        any_order=True,
+    )
+
+
+def test_create_pgdata_replaces_existing_directory_with_symlink(harness):
+    # When /var/log/postgresql is a plain directory (not a symlink), it should be
+    # removed and replaced with a symlink pointing to the new log location.
+    container = MagicMock()
+    container.exists.return_value = True
+    container.exec.return_value.wait_output.return_value = ("755:postgres:postgres", "")
+
+    def _list_files(path, *, pattern=None, itself=False):
+        assert not itself
+        if path == "/var/log" and pattern == "postgresql":
+            return [MagicMock(type=FileType.DIRECTORY)]
+        assert path == "/var/log/postgresql"
+        assert pattern is None
+        return []
+
+    container.list_files.side_effect = _list_files
+
+    harness.charm._create_pgdata(container)
+
+    container.list_files.assert_has_calls([
+        call("/var/log", pattern="postgresql"),
+        call("/var/log/postgresql"),
     ])
-    container.exec.assert_has_calls([
-        call(["ln", "-sfn", "/var/lib/pg/data/16/main", "/var/lib/postgresql/16/main"]),
-        call().wait(),
-        call(["chown", "-h", "postgres:postgres", "/var/lib/postgresql/16/main"]),
-        call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/pg/archive"]),
-        call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/pg/data"]),
-        call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/pg/logs"]),
-        call().wait(),
-        call(["chown", "postgres:postgres", "/var/lib/pg/temp"]),
-        call().wait(),
-    ])
+    container.remove_path.assert_called_once_with("/var/log/postgresql")
+    assert call(["ln", "-sfn", "/var/lib/pg/logs/16/main/pg_logs", "/var/log/postgresql"]) in (
+        container.exec.call_args_list
+    )
+
+
+def test_create_pgdata_raises_for_existing_non_directory(harness):
+    container = MagicMock()
+    container.exists.return_value = True
+    container.exec.return_value.wait_output.return_value = ("755:postgres:postgres", "")
+    container.list_files.return_value = [MagicMock(type=FileType.FILE)]
+
+    with pytest.raises(RuntimeError):
+        harness.charm._create_pgdata(container)
+
+    container.list_files.assert_called_once_with("/var/log", pattern="postgresql")
+    container.remove_path.assert_not_called()
+    assert call(["ln", "-sfn", "/var/lib/pg/logs/16/main/pg_logs", "/var/log/postgresql"]) not in (
+        container.exec.call_args_list
+    )
 
 
 def test_get_plugins(harness):

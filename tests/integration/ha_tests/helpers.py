@@ -1061,7 +1061,7 @@ async def check_system_id_mismatch(ops_test: OpsTest, unit_name: str) -> bool:
     stdout = await run_command_on_unit(
         ops_test,
         unit_name,
-        """cat /var/log/postgresql/*""",
+        "cat /var/lib/pg/logs/16/main/patroni_logs/patroni.log*",
     )
 
     return log_str in str(stdout)

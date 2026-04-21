@@ -133,7 +133,7 @@ async def test_no_password_exposed_on_logs(ops_test: OpsTest) -> None:
             logs = await run_command_on_unit(
                 ops_test,
                 unit.name,
-                "grep PASSWORD /var/log/postgresql/postgresql-*.log",
+                "grep PASSWORD /var/lib/pg/logs/16/main/pg_logs/postgresql-*.log",
             )
         except Exception:
             continue

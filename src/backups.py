@@ -36,7 +36,7 @@ from constants import (
     BACKUP_USER,
     LOGS_STORAGE_PATH,
     PGBACKREST_LOGROTATE_FILE,
-    POSTGRESQL_DATA_PATH,
+    PGBACKREST_LOGS_PATH,
     TEMP_STORAGE_PATH,
     WORKLOAD_OS_GROUP,
     WORKLOAD_OS_USER,
@@ -199,7 +199,7 @@ class PostgreSQLBackups(Object):
 
             system_identifier_from_instance, error = self._execute_command([
                 f"/usr/lib/postgresql/{self.charm._patroni.rock_postgresql_version.split('.')[0]}/bin/pg_controldata",
-                POSTGRESQL_DATA_PATH,
+                self.charm._actual_pgdata_path,
             ])
             if error != "":
                 raise Exception(error)
@@ -1225,7 +1225,8 @@ Stderr:
             secret_key=s3_parameters["secret-key"],
             stanza=self.stanza_name,
             storage_path=self.charm._storage_path,
-            pgdata_path=POSTGRESQL_DATA_PATH,
+            pgdata_path=self.charm._actual_pgdata_path,
+            pgbackrest_logs_path=PGBACKREST_LOGS_PATH,
             user=BACKUP_USER,
             retention_full=s3_parameters["delete-older-than-days"],
             process_max=max(cpu_count - 2, 1),
@@ -1242,7 +1243,9 @@ Stderr:
         # Render the logrotate configuration file.
         with open("templates/pgbackrest.logrotate.j2") as file:
             template = Template(file.read())
-        self.container.push(PGBACKREST_LOGROTATE_FILE, template.render())
+        self.container.push(
+            PGBACKREST_LOGROTATE_FILE, template.render(pgbackrest_logs_path=PGBACKREST_LOGS_PATH)
+        )
         with open("scripts/rotate_logs.py") as f:
             self.container.push(
                 "/home/postgres/rotate_logs.py",
