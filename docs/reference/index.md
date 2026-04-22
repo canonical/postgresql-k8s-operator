@@ -3,17 +3,43 @@
 
 Information about releases, charm options, technical specifications, and other reference material for quick lookup. 
 
+## Releases
+
+All stable revisions of Charmed PostgreSQL 16 for bare metal/virtual machines:
+
 ```{toctree}
 :titlesonly:
 
 Releases <releases>
-System requirements <system-requirements>
-Software testing <software-testing>
-Performance and resources <performance-and-resources>
-Troubleshooting <troubleshooting>
-Plugins/extensions <plugins-extensions>
-Alert rules <alert-rules>
-Statuses <statuses>
-Contacts <contacts>
 ```
 
+## Requirements and operations
+
+Technical specifications, performance guidance, software testing approaches, and troubleshooting resources.
+
+```{toctree}
+:titlesonly:
+
+System requirements <system-requirements>
+Performance and resources <performance-and-resources>
+Troubleshooting <troubleshooting>
+Charm statuses <statuses>
+```
+
+## Integrations
+
+Available plugins and extensions, Prometheus alert rules, and testing information.
+
+```{toctree}
+:titlesonly:
+
+Plugins/extensions <plugins-extensions>
+Alert rules <alert-rules>
+Software testing <software-testing>
+```
+
+```{toctree}
+:hidden:
+
+Contacts <contacts>
+```
