@@ -1,3 +1,4 @@
+(logs)=
 # Logs
 
 This page summarises all log types in Charmed PostgreSQL to simplify troubleshooting.
@@ -6,10 +7,14 @@ For an overview of all charm components, see [](/explanation/architecture).
 
 ## Core logs
 
-PostgreSQL and Patroni logs can be found in `/var/log/postgresql` within the `postgresql` container of each unit:
+PostgreSQL and Patroni logs can be found in the following directories inside the `postgresql`
+container of each unit:
+
+- PostgreSQL: `/var/lib/pg/logs/16/main/pg_logs`
+- Patroni: `/var/lib/pg/logs/16/main/patroni_logs`
 
 ```text
-> ls -alh /var/log/postgresql/
+> ls -alh /var/lib/pg/logs/16/main/pg_logs/
 total 60K
 drwxr-xr-x 1 postgres root     4.0K Oct 11 11:45 .
 drwxr-xr-x 1 root     root     4.0K Aug 18 12:53 ..
@@ -33,7 +38,7 @@ drwxr-xr-x 1 root     root     4.0K Aug 18 12:53 ..
 The PostgreSQL log naming convention  is `postgresql-<weekday>_<hour><minute>.log`. The log message format is `<date> <time> UTC [<pid>]: <connection details> <level>: <message>`. E.g:
 
 ```text
-> cat /var/log/postgresql/postgresql-3_1140.log
+> cat /var/lib/pg/logs/16/main/pg_logs/postgresql-3_1140.log
 2023-10-11 11:40:12 UTC [49]: user=,db=,app=,client=,line=3 LOG:  starting PostgreSQL 14.9 (Ubuntu 14.9-0ubuntu0.22.04.1) on x86_64-pc-linux-gnu, compiled by gcc (Ubuntu 11.4.0-1ubuntu1~22.04) 11.4.0, 64-bit
 2023-10-11 11:40:12 UTC [49]: user=,db=,app=,client=,line=4 LOG:  listening on IPv4 address "0.0.0.0", port 5432
 2023-10-11 11:40:12 UTC [49]: user=,db=,app=,client=,line=5 LOG:  listening on Unix socket "/var/run/postgresql/.s.PGSQL.5432"
@@ -45,7 +50,7 @@ The PostgreSQL log naming convention  is `postgresql-<weekday>_<hour><minute>.lo
 The Patroni log message format is `<date> <time> UTC [<pid>]: <level>: <message>`. E.g:
 
 ```text
-> cat /var/log/postgresql/patroni.log.27
+> cat /var/lib/pg/logs/16/main/patroni_logs/patroni.log.27
 2023-10-11 11:40:09 UTC [15]: INFO: No PostgreSQL configuration items changed, nothing to reload. 
 2023-10-11 11:40:09 UTC [15]: INFO: Lock owner: None; I am pg-0 
 2023-10-11 11:40:10 UTC [15]: INFO: trying to bootstrap a new cluster 
@@ -58,9 +63,10 @@ All timestamps are in UTC.
 
 ## Optional logs
 
-If S3 backups are enabled, Pgbackrest logs would be located in `/var/log/pgbackrest` in the `postgresql` container:
+If S3 backups are enabled, Pgbackrest logs are located in
+`/var/lib/pg/logs/16/main/pgbackrest_logs` in the `postgresql` container:
 ```text
-> ls -alh /var/log/pgbackrest/
+> ls -alh /var/lib/pg/logs/16/main/pgbackrest_logs/
 total 24K
 drwxr-xr-x 1 postgres root     4.0K Oct 11 13:07 .
 drwxr-xr-x 1 root     root     4.0K Aug 18 12:53 ..
@@ -72,11 +78,11 @@ drwxr-xr-x 1 root     root     4.0K Aug 18 12:53 ..
 The naming convention of the Pgbackrest logs is `<model name>.patroni-<postgresql app name>-<action>.log`. Log output should look similar to:
 
 ```text
-> cat /var/log/pgbackrest/discourse.patroni-pg-expire.log 
+> cat /var/lib/pg/logs/16/main/pgbackrest_logs/discourse.patroni-pg-expire.log 
 -------------------PROCESS START-------------------
 2023-10-11 13:07:44.793 P00   INFO: expire command begin 2.47: --exec-id=843-b0d896e1 --log-level-console=debug --repo1-path=/postgresql-test --repo1-retention-full=9999999 --repo1-s3-bucket=dragop-test-bucket --repo1-s3-endpoint=https://s3.eu-central-1.amazonaws.com --repo1-s3-key=<redacted> --repo1-s3-key-secret=<redacted> --repo1-s3-region=eu-central-1 --repo1-s3-uri-style=host --repo1-type=s3 --stanza=discourse.patroni-pg
 2023-10-11 13:07:45.146 P00   INFO: expire command end: completed successfully (353ms)
-root@pg-0:/# cat /var/log/pgbackrest/discourse.patroni-pg-backup.log 
+root@pg-0:/# cat /var/lib/pg/logs/16/main/pgbackrest_logs/discourse.patroni-pg-backup.log 
 -------------------PROCESS START-------------------
 2023-10-11 13:06:29.857 P00   INFO: backup command begin 2.47: --no-backup-standby --exec-id=843-b0d896e1 --log-level-console=debug --pg1-path=/var/lib/pg/data/16/main --pg1-user=backup --repo1-path=/postgresql-test --repo1-retention-full=9999999 --repo1-s3-bucket=dragop-test-bucket --repo1-s3-endpoint=https://s3.eu-central-1.amazonaws.com --repo1-s3-key=<redacted> --repo1-s3-key-secret=<redacted> --repo1-s3-region=eu-central-1 --repo1-s3-uri-style=host --repo1-type=s3 --stanza=discourse.patroni-pg --start-fast --type=full
 2023-10-11 13:06:30.869 P00   INFO: execute non-exclusive backup start: backup begins after the requested immediate checkpoint completes
@@ -97,4 +103,3 @@ Charmed PostgreSQL is configured to rotate PostgreSQL text logs every minute and
 For PostgreSQL, logs will be truncated when the week turns and the same minute of the same hour of the same weekday comes to pass. E.g. at 12:01 UTC on Monday either a new log file will be created or last week's log will be overwritten.
 
 Due to Patroni only supporting size based rotation, it has been configured to retain logs for a comparatively similar time frame as PostgreSQL. The assumed size of a minute of Patroni logs is 600 bytes, but the estimation is bound to be imprecise. Patroni will retain 10,080 log files (for every minute of a week). The current log is `patroni.log`, when rotating Patroni will append a number to the name of the file and remove logs over the limit.
-

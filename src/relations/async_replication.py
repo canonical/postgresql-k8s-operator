@@ -44,7 +44,6 @@ from constants import (
     ARCHIVE_PATH,
     LOGS_STORAGE_PATH,
     PEER,
-    POSTGRESQL_DATA_PATH,
     TEMP_STORAGE_PATH,
     WORKLOAD_OS_GROUP,
     WORKLOAD_OS_USER,
@@ -196,10 +195,11 @@ class PostgreSQLAsyncReplication(Object):
         if system_identifier != relation.data[relation.app].get("system-id"):
             # Store current data in a tar.gz file.
             logger.info("Creating backup of pgdata folder")
-            filename = f"{POSTGRESQL_DATA_PATH}-{str(datetime.now()).replace(' ', '-').replace(':', '-')}.tar.gz"
-            self.container.exec(
-                f"tar -zcf {filename} {POSTGRESQL_DATA_PATH}".split()
-            ).wait_output()
+            actual_pgdata = self.charm._actual_pgdata_path
+            filename = (
+                f"{actual_pgdata}-{str(datetime.now()).replace(' ', '-').replace(':', '-')}.tar.gz"
+            )
+            self.container.exec(f"tar -zcf {filename} {actual_pgdata}".split()).wait_output()
             logger.warning("Please review the backup file %s and handle its removal", filename)
         self._remove_previous_cluster_information()
         return True
@@ -238,7 +238,7 @@ class PostgreSQLAsyncReplication(Object):
             }.items():
                 databag = relation_data[app]
                 relation_promoted_cluster_counter = databag.get("promoted-cluster-counter", "0")
-                if relation_promoted_cluster_counter > promoted_cluster_counter:
+                if int(relation_promoted_cluster_counter) > int(promoted_cluster_counter):
                     promoted_cluster_counter = relation_promoted_cluster_counter
                     primary_cluster = app
         return primary_cluster
@@ -324,7 +324,7 @@ class PostgreSQLAsyncReplication(Object):
             system_identifier, error = self.container.exec(
                 [
                     f"/usr/lib/postgresql/{self.charm._patroni.rock_postgresql_version.split('.')[0]}/bin/pg_controldata",
-                    POSTGRESQL_DATA_PATH,
+                    self.charm._actual_pgdata_path,
                 ],
                 user=WORKLOAD_OS_USER,
                 group=WORKLOAD_OS_GROUP,
@@ -721,7 +721,9 @@ class PostgreSQLAsyncReplication(Object):
     def _stop_database(self, event: RelationChangedEvent) -> bool:
         """Stop the database."""
         if not self.charm.is_unit_stopped and not self._is_following_promoted_cluster():
-            if not self.charm.unit.is_leader() and not self.container.exists(POSTGRESQL_DATA_PATH):
+            if not self.charm.unit.is_leader() and not self.container.exists(
+                self.charm._actual_pgdata_path
+            ):
                 logger.debug("Early exit on_async_relation_changed: following promoted cluster.")
                 return False
 
@@ -744,8 +746,8 @@ class PostgreSQLAsyncReplication(Object):
 
     def _clear_pgdata(self) -> None:
         """Remove and recreate the pgdata folder to enable replication."""
-        # Note: Use _actual_pgdata_path instead of POSTGRESQL_DATA_PATH because
-        # POSTGRESQL_DATA_PATH is a symlink, and find doesn't follow symlinks by default.
+        # Note: Use _actual_pgdata_path instead of the Debian compatibility symlink
+        # (/var/lib/postgresql/16/main), because find doesn't follow symlinks by default.
         for path in [
             ARCHIVE_PATH,
             self.charm._actual_pgdata_path,

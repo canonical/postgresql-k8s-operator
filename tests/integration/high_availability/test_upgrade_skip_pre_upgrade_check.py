@@ -32,8 +32,7 @@ def test_deploy_stable(juju: Juju) -> None:
         charm=DB_APP_NAME,
         app=DB_APP_NAME,
         base="ubuntu@24.04",
-        # TODO Switch channel after stable release
-        channel="16/edge",
+        channel="16/beta",
         config={"profile": "testing"},
         num_units=3,
         trust=True,

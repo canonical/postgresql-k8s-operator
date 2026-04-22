@@ -5,6 +5,7 @@ bootstrap:
     synchronous_mode: true
     synchronous_mode_strict: false
     synchronous_node_count: {{ synchronous_node_count }}
+    max_timelines_history: 50
     postgresql:
       use_pg_rewind: true
       remove_data_directory_on_rewind_failure: false
@@ -28,7 +29,7 @@ bootstrap:
         log_autovacuum_min_duration: 60000
         log_checkpoints: 'on'
         log_destination: 'stderr'
-        log_directory: '/var/log/postgresql'
+        log_directory: '{{ logs_storage_path }}/16/main/pg_logs'
         log_error_verbosity: 'verbose'
         log_file_mode: '0600'
         log_filename: 'postgresql-%w_%H%M.log'
@@ -48,7 +49,7 @@ bootstrap:
         log_truncate_on_rotation: 'on'
         logging_collector: 'on'
         wal_level: logical
-        shared_preload_libraries: 'timescaledb,pgaudit,set_user'
+        shared_preload_libraries: 'timescaledb,pgaudit,set_user,pg_stat_statements'
         session_preload_libraries: 'login_hook'
         set_user.block_log_statement: 'on'
         set_user.exit_on_error: 'on'
@@ -97,7 +98,7 @@ bootstrap:
   {%- endfor %}
 bypass_api_service: true
 log:
-  dir: /var/log/postgresql
+  dir: {{ logs_storage_path }}/16/main/patroni_logs
   dateformat: "%Y-%m-%d %H:%M:%S %Z"
   format: "%(asctime)s [%(process)d]: %(levelname)s: %(message)s "
   file_num: 10080
@@ -124,7 +125,7 @@ postgresql:
   bin_dir: /usr/lib/postgresql/{{ version }}/bin
   listen: 0.0.0.0:5432
   parameters:
-    shared_preload_libraries: 'timescaledb,pgaudit,set_user'
+    shared_preload_libraries: 'timescaledb,pgaudit,set_user,pg_stat_statements'
     session_preload_libraries: 'login_hook'
     set_user.block_log_statement: 'on'
     set_user.exit_on_error: 'on'
@@ -141,6 +142,7 @@ postgresql:
     ssl_key_file: {{ storage_path }}/key.pem
     {%- endif %}
     temp_tablespaces: temp
+    pg_stat_statements.max: 10000
     {%- if pg_parameters %}
     {%- for key, value in pg_parameters.items() %}
     {{key}}: {{value}}

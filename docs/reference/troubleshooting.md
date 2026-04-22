@@ -1,3 +1,4 @@
+(troubleshooting)=
 # Troubleshooting
 
 This page goes over some recommended tools and approaches to troubleshooting the charm.
@@ -39,15 +40,16 @@ Consider enabling the `DEBUG` log level if you are troubleshooting unusual charm
 juju model-config 'logging-config=<root>=INFO;unit=DEBUG'
 ```
 
-The Patroni/PostgreSQL logs are located in `workload` container:
+The Patroni/PostgreSQL logs are located in the `workload` container:
 ```text
-> ls -la /var/log/postgresql/
--rw-r--r-- 1 postgres postgres 23863 Sep 15 13:10 patroni.log
+> ls -la /var/lib/pg/logs/16/main/pg_logs/
 -rw------- 1 postgres postgres  2215 Sep 15 12:57 postgresql.log
+> ls -la /var/lib/pg/logs/16/main/patroni_logs/
+-rw-r--r-- 1 postgres postgres 23863 Sep 15 13:10 patroni.log
 ```
 If backups are enabled, Pgbackrest logs can also be found in the `workload` container:
 ```text
-> ls -la /var/log/pgbackrest/
+> ls -la /var/lib/pg/logs/16/main/pgbackrest_logs/
 -rw-r----- 1 postgres postgres 2949 Sep 18 10:42 all-server.log
 -rw-r----- 1 postgres postgres 3219 Sep 18 10:41 test3.patroni-postgresql-k8s-stanza-create.log
 ```
@@ -179,4 +181,3 @@ root@postgresql-k8s-0:/#
 ```{tip}
 Always remove manually installed components at the end of troubleshooting. Keep the house clean!
 ```
-

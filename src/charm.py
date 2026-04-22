@@ -79,7 +79,10 @@ from ops import (
 from ops.log import JujuLogHandler
 from ops.pebble import (
     ChangeError,
+    CheckDict,
     ExecError,
+    FileInfo,
+    FileType,
     Layer,
     LayerDict,
     PathError,
@@ -120,11 +123,15 @@ from constants import (
     METRICS_PORT,
     MONITORING_PASSWORD_KEY,
     MONITORING_USER,
+    PATRONI_LOGS_PATH,
     PATRONI_PASSWORD_KEY,
     PEER,
+    PGBACKREST_LOGS_PATH,
     PGBACKREST_METRICS_PORT,
     PLUGIN_OVERRIDES,
     POSTGRES_LOG_FILES,
+    POSTGRESQL_LOGS_PATH,
+    POSTGRESQL_LOGS_SYMLINK_PATH,
     REPLICATION_PASSWORD_KEY,
     REPLICATION_USER,
     REWIND_PASSWORD_KEY,
@@ -251,7 +258,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self._certs_path = "/usr/local/share/ca-certificates"
         self._storage_path = str(self.meta.storages["data"].location)
         self._actual_pgdata_path = f"{self._storage_path}/16/main"
-        self.pgdata_path = "/var/lib/postgresql/16/main"
 
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
         self.postgresql_client_relation = PostgreSQLProvider(self)
@@ -328,6 +334,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def reconcile(self):
         """Reconcile the unit state on refresh."""
         self.set_unit_status(MaintenanceStatus("starting services"))
+        self._ensure_pgdata_dirs_and_symlinks(self._container)
         self._update_pebble_layers(replan=True)
 
         if not self._patroni.member_started:
@@ -763,6 +770,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("on_peer_relation_changed early exit: Backup restore check failed")
             return
 
+        self._check_headless_service()
+
         # Validate the status of the member before setting an ActiveStatus.
         if not self._patroni.member_started:
             logger.debug("Deferring on_peer_relation_changed: Waiting for member to start")
@@ -1114,9 +1123,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def _replica_can_start(self) -> bool:
         """Check whether this replica is ready to start Patroni.
 
-        Returns False if the cluster hasn't been bootstrapped yet, or if the
+        Returns False if the cluster hasn't been bootstrapped yet, if the
         leader hasn't added this unit's endpoint to the members list (which
-        controls the pg_hba replication entries on the primary).
+        controls the pg_hba replication entries on the primary), or if the
+        primary's Patroni hasn't yet reloaded pg_hba with this unit's
+        replication entry (which would cause pg_basebackup to be rejected,
+        triggering Patroni's remove_data_directory() and clearing the
+        pgdata directory).
         """
         if not self.is_cluster_initialised:
             logger.debug("Replica not ready: cluster not initialized")
@@ -1124,15 +1137,26 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if self._endpoint not in self._endpoints:
             logger.debug("Replica not ready: endpoint not yet in members list")
             return False
+
+        hba_endpoint = self.primary_endpoint
+        if self.async_replication._relation and not self.async_replication.is_primary_cluster():
+            if standby_leader := self._patroni.get_standby_leader():
+                hba_endpoint = self._get_hostname_from_unit(standby_leader)
+            else:
+                logger.debug("Replica not ready: no standby leader")
+                return False
+
+        if not self._patroni.is_replication_hba_ready(hba_endpoint):
+            logger.debug("Replica not ready: pg_hba not yet reloaded with replication entry")
+            return False
         return True
 
     def _create_pgdata(self, container: Container):
-        """Create the PostgreSQL data directories."""
+        """Create the PostgreSQL data directories, clearing stale data if needed."""
         logs_path = str(self.meta.storages["logs"].location)
         waldir_path = f"{logs_path}/16/main/pg_wal"
         temp_path = str(self.meta.storages["temp"].location)
         temp_tablespace_path = f"{temp_path}/16/main/pgsql_tmp"
-        archive_path = f"{self.meta.storages['archive'].location}/16/main"
 
         # Clear stale storage directories when a replica joins an initialized cluster.
         # This is needed because PersistentVolumes may retain data from previous pods,
@@ -1152,6 +1176,69 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                         if "No such file or directory" not in str(e.stderr):
                             logger.warning(f"Failed to clear {path}: {e}")
 
+        self._ensure_pgdata_dirs_and_symlinks(container)
+
+    def _ensure_postgresql_logs_symlink(
+        self,
+        container: Container,
+        postgresql_logs_path: str,
+    ) -> None:
+        """Ensure /var/log/postgresql points to the logs storage path."""
+        path_info = self._get_container_path_info(container, POSTGRESQL_LOGS_SYMLINK_PATH)
+        if path_info is not None:
+            if path_info.type == FileType.DIRECTORY:
+                self._remove_empty_postgresql_logs_directory(container)
+            elif path_info.type != FileType.SYMLINK:
+                logger.error(
+                    "error: %s exists but is neither a symlink nor a directory and cannot"
+                    " be replaced with a symlink to the logs storage - remove it manually"
+                    " and run 'juju resolve' on each unit to recover.",
+                    POSTGRESQL_LOGS_SYMLINK_PATH,
+                )
+                raise RuntimeError from None
+
+        container.exec([
+            "ln",
+            "-sfn",
+            postgresql_logs_path,
+            POSTGRESQL_LOGS_SYMLINK_PATH,
+        ]).wait()
+        container.exec([
+            "chown",
+            "-h",
+            f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
+            POSTGRESQL_LOGS_SYMLINK_PATH,
+        ]).wait()
+
+    def _get_container_path_info(self, container: Container, path: str) -> FileInfo | None:
+        """Return file info for a specific container path without dereferencing symlinks."""
+        path_obj = pathlib.PurePosixPath(path)
+        path_infos = container.list_files(str(path_obj.parent), pattern=path_obj.name)
+        if not path_infos:
+            return None
+        return path_infos[0]
+
+    def _remove_empty_postgresql_logs_directory(self, container: Container) -> None:
+        """Remove /var/log/postgresql only when it is an empty directory."""
+        if container.list_files(POSTGRESQL_LOGS_SYMLINK_PATH):
+            logger.error(
+                "error: %s is a non-empty directory and cannot be replaced with a"
+                " symlink to the logs storage - move or remove its contents manually"
+                " and run 'juju resolve' on each unit to recover.",
+                POSTGRESQL_LOGS_SYMLINK_PATH,
+            )
+            raise RuntimeError from None
+
+        container.remove_path(POSTGRESQL_LOGS_SYMLINK_PATH)
+
+    def _ensure_pgdata_dirs_and_symlinks(self, container: Container):
+        """Create storage directories and symlinks for PostgreSQL data paths."""
+        logs_path = str(self.meta.storages["logs"].location)
+        waldir_path = f"{logs_path}/16/main/pg_wal"
+        temp_path = str(self.meta.storages["temp"].location)
+        temp_tablespace_path = f"{temp_path}/16/main/pgsql_tmp"
+        archive_path = f"{self.meta.storages['archive'].location}/16/main"
+
         # Create the pgdata directory on the storage mount (e.g., /var/lib/pg/data/16/main)
         if not container.exists(self._actual_pgdata_path):
             container.make_dir(
@@ -1170,6 +1257,21 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 group=WORKLOAD_OS_GROUP,
                 make_parents=True,
             )
+        for path in [POSTGRESQL_LOGS_PATH, PATRONI_LOGS_PATH, PGBACKREST_LOGS_PATH]:
+            if not container.exists(path):
+                container.make_dir(
+                    path,
+                    permissions=0o755,
+                    user=WORKLOAD_OS_USER,
+                    group=WORKLOAD_OS_GROUP,
+                    make_parents=True,
+                )
+            container.exec(["chmod", "755", path]).wait()
+            container.exec([
+                "chown",
+                f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
+                path,
+            ]).wait()
         # Create the temp tablespace directory (e.g., /var/lib/pg/temp/16/main/pgsql_tmp)
         if not container.exists(temp_tablespace_path):
             container.make_dir(
@@ -1188,36 +1290,31 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 group=WORKLOAD_OS_GROUP,
                 make_parents=True,
             )
-        # Create a symlink from the default PostgreSQL data directory to our data directory
-        # (e.g., /var/lib/postgresql/16/main -> /var/lib/pg/data/16/main)
-        # Patroni and other tools will use the symlink path (self.pgdata_path)
+        # Create a debian-style symlink at the version level:
+        # /var/lib/postgresql/16 -> /var/lib/pg/data/16
+        # This keeps /var/lib/postgresql/16/main as a valid alias for the real pgdata
+        # directory (self._actual_pgdata_path) for any tools that rely on the
+        # traditional Debian path layout.
         # Note: This symlink is on ephemeral storage and may not persist across container restarts.
         # It gets recreated on each pebble-ready event.
-        # The OCI image ships /var/lib/postgresql/16/main as a real directory, so we must
-        # remove it first if it exists as a non-symlink (e.g., on replicas).
-        container.make_dir(
-            "/var/lib/postgresql/16",
-            user=WORKLOAD_OS_USER,
-            group=WORKLOAD_OS_GROUP,
-            make_parents=True,
-        )
-        container.exec([
-            "bash",
-            "-c",
-            f"[ -L {self.pgdata_path} ] || rm -rf {self.pgdata_path}",
-        ]).wait()
+        # /var/lib/postgresql is created by the postgresql Debian package and exists in the
+        # container image, so no make_dir is needed before creating the symlink.
         container.exec([
             "ln",
             "-sfn",
-            self._actual_pgdata_path,
-            self.pgdata_path,
+            f"{self._storage_path}/16",
+            "/var/lib/postgresql/16",
         ]).wait()
         container.exec([
             "chown",
             "-h",
             f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
-            self.pgdata_path,
+            "/var/lib/postgresql/16",
         ]).wait()
+        self._ensure_postgresql_logs_symlink(
+            container,
+            POSTGRESQL_LOGS_PATH,
+        )
         # Also, fix the permissions from the parent directory.
         container.exec([
             "chown",
@@ -1477,6 +1574,29 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             namespace=self._namespace,
             obj=patch,
         )
+
+    def _check_headless_service(self) -> None:
+        """Raise if the headless endpoint service is missing.
+
+        Puts the unit into error state so the operator can recreate the
+        service and run ``juju resolve``.
+
+        See https://github.com/canonical/postgresql-k8s-operator/issues/392
+        """
+        client = Client()
+        svc_name = f"{self.app.name}-endpoints"
+        try:
+            client.get(Service, name=svc_name, namespace=self.model.name)
+        except ApiError as e:
+            if e.status.code == 404:
+                logger.error(
+                    "error: headless service %r is missing - recreate it and run "
+                    "'juju resolve' on each unit. See "
+                    "https://github.com/canonical/postgresql-k8s-operator/issues/392",
+                    svc_name,
+                )
+                raise RuntimeError from None
+            raise
 
     def _create_services(self) -> None:
         """Create kubernetes services for primary and replicas endpoints."""
@@ -1858,6 +1978,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if not self._on_update_status_early_exit_checks(self._container):
             return
 
+        self._check_headless_service()
+
         services = self._container.pebble.get_services(names=[self.postgresql_service])
         if len(services) == 0:
             # Service has not been added nor started yet, so don't try to check Patroni API.
@@ -1874,6 +1996,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 f"{self.postgresql_service} pebble service inactive, restarting service"
             )
             try:
+                self._ensure_pgdata_dirs_and_symlinks(self._container)
                 self._container.restart(self.postgresql_service)
             except ChangeError:
                 logger.exception("Failed to restart patroni")
@@ -1973,7 +2096,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.primary_endpoint,
             self._namespace,
             self._storage_path,
-            self.pgdata_path,
+            self._actual_pgdata_path,
             self.get_secret(APP_SCOPE, USER_PASSWORD_KEY),
             self.get_secret(APP_SCOPE, REPLICATION_PASSWORD_KEY),
             self.get_secret(APP_SCOPE, REWIND_PASSWORD_KEY),
@@ -2145,7 +2268,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             "summary": "postgresql + patroni layer",
             "description": "pebble config layer for postgresql + patroni",
             "services": {
-                self.postgresql_service: {
+                self.postgresql_service: ServiceDict({
                     "override": "replace",
                     "summary": "entrypoint of the postgresql + patroni image",
                     "command": f"patroni {self._storage_path}/patroni.yml",
@@ -2166,32 +2289,32 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                         "PATRONI_REPLICATION_USERNAME": REPLICATION_USER,
                         "PATRONI_SUPERUSER_USERNAME": USER,
                     },
-                },
-                self.pgbackrest_server_service: {
+                }),
+                self.pgbackrest_server_service: ServiceDict({
                     "override": "replace",
                     "summary": "pgBackRest server",
                     "command": self.pgbackrest_server_service,
                     "startup": "disabled",
                     "user": WORKLOAD_OS_USER,
                     "group": WORKLOAD_OS_GROUP,
-                },
-                self.ldap_sync_service: {
+                }),
+                self.ldap_sync_service: ServiceDict({
                     "override": "replace",
                     "summary": "synchronize LDAP users",
                     "command": "/start-ldap-synchronizer.sh",
                     "startup": "disabled",
-                },
+                }),
                 self.metrics_service: self._generate_metrics_service(),
                 self.pgbackrest_metrics_service: self._generate_pgbackrest_metrics_service(),
-                self.rotate_logs_service: {
+                self.rotate_logs_service: ServiceDict({
                     "override": "replace",
                     "summary": "rotate logs",
                     "command": "python3 /home/postgres/rotate_logs.py",
                     "startup": "disabled",
-                },
+                }),
             },
             "checks": {
-                self.postgresql_service: {
+                self.postgresql_service: CheckDict({
                     "override": "replace",
                     "level": "ready",
                     "exec": {
@@ -2201,7 +2324,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                             "ENDPOINT": f"{self._patroni._patroni_url}/health",
                         },
                     },
-                }
+                })
             },
         })
         return Layer(layer_config)
@@ -2621,7 +2744,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             pg_parameters = dict(worker_configs)
             pg_parameters["wal_compression"] = cpu_wal_compression
             logger.debug(f"pg_parameters set to worker_configs = {pg_parameters}")
-        pg_parameters.pop("maximum_lag_on_failover", None)
 
         return pg_parameters
 
@@ -3039,7 +3161,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     re.MULTILINE,
                 )
             except ExecError:  # For Juju 2.
-                log_exec = container.pebble.exec(["cat", "/var/log/postgresql/patroni.log"])
+                log_exec = container.pebble.exec(["cat", f"{PATRONI_LOGS_PATH}/patroni.log"])
                 patroni_logs = log_exec.wait_output()[0]
                 patroni_exceptions = re.findall(
                     r"^([0-9- :]+) UTC \[[0-9]+\]: INFO: removing initialize key after failed attempt to bootstrap the cluster",
@@ -3051,7 +3173,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 # If no match, look at older logs
                 log_exec = container.pebble.exec([
                     "find",
-                    "/var/log/postgresql/",
+                    f"{PATRONI_LOGS_PATH}/",
                     "-name",
                     "'patroni.log.*'",
                     "-exec",
@@ -3115,29 +3237,26 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if relation_data is None:
             return {}
 
-        params = {
+        return {
             "ldapbasedn": relation_data.base_dn,
             "ldapbinddn": relation_data.bind_dn,
             "ldapbindpasswd": relation_data.bind_password,
             "ldaptls": relation_data.starttls,
             "ldapurl": relation_data.urls[0],
-        }
-
-        # LDAP authentication parameters that are exclusive to
-        # one of the two supported modes (simple bind or search+bind)
-        # must be put at the very end of the parameters string
-        params.update({
+            # LDAP authentication parameters that are exclusive to
+            # one of the two supported modes (simple bind or search+bind)
+            # must be put at the very end of the parameters string
             "ldapsearchfilter": self.config.ldap_search_filter,
-        })
-
-        return params
+        }
 
     def is_restart_pending(self) -> bool:
         """Query pg_settings for pending restart."""
         connection = None
         try:
             with (
-                self.postgresql._connect_to_database() as connection,
+                self.postgresql._connect_to_database(
+                    database_host=self.postgresql.current_host
+                ) as connection,
                 connection.cursor() as cursor,
             ):
                 cursor.execute("SELECT COUNT(*) FROM pg_settings WHERE pending_restart=True;")

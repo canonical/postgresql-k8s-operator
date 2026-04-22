@@ -56,7 +56,7 @@ async def test_audit_plugin(ops_test: OpsTest, charm) -> None:
                 logs = await run_command_on_unit(
                     ops_test,
                     unit_name,
-                    "grep AUDIT /var/log/postgresql/postgresql-*.log",
+                    "grep AUDIT /var/lib/pg/logs/16/main/pg_logs/postgresql-*.log",
                 )
                 assert "MISC,BEGIN,,,BEGIN" in logs
                 assert (
@@ -74,7 +74,9 @@ async def test_audit_plugin(ops_test: OpsTest, charm) -> None:
     await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active")
 
     logger.info("Removing the previous logs")
-    await run_command_on_unit(ops_test, unit_name, "rm /var/log/postgresql/postgresql-*.log")
+    await run_command_on_unit(
+        ops_test, unit_name, "rm /var/lib/pg/logs/16/main/pg_logs/postgresql-*.log"
+    )
 
     logger.info("Checking that the audit plugin is disabled")
     try:
@@ -90,7 +92,7 @@ async def test_audit_plugin(ops_test: OpsTest, charm) -> None:
         logs = await run_command_on_unit(
             ops_test,
             unit_name,
-            "grep AUDIT /var/log/postgresql/postgresql-*.log",
+            "grep AUDIT /var/lib/pg/logs/16/main/pg_logs/postgresql-*.log",
         )
     except Exception:
         pass

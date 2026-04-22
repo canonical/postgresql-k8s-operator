@@ -13,7 +13,7 @@ from ops.testing import Harness
 from tenacity import RetryError, wait_fixed
 
 from charm import PostgresqlOperatorCharm
-from constants import PEER
+from constants import PEER, PGBACKREST_LOGS_PATH
 from tests.unit.helpers import _FakeApiError
 
 ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE = "the S3 repository has backups from another cluster"
@@ -1754,9 +1754,20 @@ def test_render_pgbackrest_conf_file(harness, tls_ca_chain_filename):
         patch("charm.PostgresqlOperatorCharm.get_available_resources", return_value=(4, 1024)),
         patch("ops.model.Container.pebble", new_callable=PropertyMock(return_value=mock_pebble)),
     ):
-        # Set up a mock for the `open` method, set returned data to postgresql.conf template.
+        # Set up a mock for the `open` method with pgBackRest and logrotate templates.
         with open("templates/pgbackrest.conf.j2") as f:
-            mock = mock_open(read_data=f.read())
+            pgbackrest_conf_template = f.read()
+        with open("templates/pgbackrest.logrotate.j2") as f:
+            pgbackrest_logrotate_template = f.read()
+        with open("scripts/rotate_logs.py") as f:
+            rotate_logs_script = f.read()
+
+        mock = mock_open()
+        mock.side_effect = [
+            mock_open(read_data=pgbackrest_conf_template).return_value,
+            mock_open(read_data=pgbackrest_logrotate_template).return_value,
+            mock_open(read_data=rotate_logs_script).return_value,
+        ]
 
         # Test when there are missing S3 parameters.
         _retrieve_s3_parameters.return_value = [], ["bucket", "access-key", "secret-key"]
@@ -1802,7 +1813,8 @@ def test_render_pgbackrest_conf_file(harness, tls_ca_chain_filename):
             secret_key="test-secret-key",
             stanza=harness.charm.backup.stanza_name,
             storage_path=harness.charm._storage_path,
-            pgdata_path=harness.charm.pgdata_path,
+            pgdata_path=harness.charm._actual_pgdata_path,
+            pgbackrest_logs_path=PGBACKREST_LOGS_PATH,
             user="backup",
             retention_full=30,
             process_max=2,
@@ -1817,9 +1829,9 @@ def test_render_pgbackrest_conf_file(harness, tls_ca_chain_filename):
         assert mock.call_args_list[0][0] == ("templates/pgbackrest.conf.j2",)
 
         # Get the expected content from a file.
-        with open("templates/pgbackrest.conf.j2") as file:
+        with open("templates/pgbackrest.logrotate.j2") as file:
             template = Template(file.read())
-        log_rotation_expected_content = template.render()
+        log_rotation_expected_content = template.render(pgbackrest_logs_path=PGBACKREST_LOGS_PATH)
 
         # Ensure the correct rendered template is sent to _render_file method.
         calls = [

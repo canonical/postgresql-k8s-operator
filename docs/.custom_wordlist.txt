@@ -75,6 +75,7 @@ libs
 lifecycle
 MicroK8s
 MinIO
+misconfiguration
 Multipass
 nameserver
 nameservers
