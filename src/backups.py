@@ -836,7 +836,6 @@ Juju Version: {juju_version!s}
                 "pgbackrest",
                 f"--stanza={self.stanza_name}",
                 "--log-level-console=debug",
-                "--log-level-file=debug",
                 "--log-subprocess",
                 f"--type={BACKUP_TYPE_OVERRIDES[backup_type]}",
                 "backup",
