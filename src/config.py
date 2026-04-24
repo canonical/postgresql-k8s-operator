@@ -19,8 +19,6 @@ WorkerProcessInt = Annotated[int, Field(ge=2)]
 PgIntMax = Annotated[int, Field(ge=0, le=2147483647)]
 PgPositiveIntMax = Annotated[int, Field(ge=1, le=2147483647)]
 PgSignedIntMax = Annotated[int, Field(ge=-1, le=2147483647)]
-PgCostFloat = Annotated[float, Field(ge=0, le=1.80e308)]
-PgSignedCostFloat = Annotated[float, Field(ge=-1, le=1.80e308)]
 PercentFloat = Annotated[float, Field(ge=0, le=100)]
 UnitIntervalFloat = Annotated[float, Field(ge=0, le=1)]
 PgHugeFloat = Annotated[float, Field(ge=0, le=1.80e308)]
@@ -57,6 +55,7 @@ FailsafeAgeInt = Annotated[int, Field(ge=0, le=2100000000)]
 FreezeMinAgeInt = Annotated[int, Field(ge=0, le=1000000000)]
 AutovacuumNapTimeInt = Annotated[int, Field(ge=1, le=2147483)]
 DeadlockTimeoutInt = Annotated[int, Field(ge=1, le=2147483647)]
+ProfileLimitMemoryInt = Annotated[int, Field(ge=128, le=9999999)]
 
 
 class CharmConfig(BaseConfigModel):
@@ -197,7 +196,7 @@ class CharmConfig(BaseConfigModel):
     plugin_uuid_ossp_enable: bool
     plugin_vector_enable: bool
     profile: str
-    profile_limit_memory: int | None
+    profile_limit_memory: ProfileLimitMemoryInt | None
     request_array_nulls: bool | None
     request_backslash_quote: str | None
     request_date_style: str | None
@@ -292,17 +291,6 @@ class CharmConfig(BaseConfigModel):
         """Check profile config option is one of `testing` or `production`."""
         if value not in ["testing", "production"]:
             raise ValueError("Value not one of 'testing' or 'production'")
-
-        return value
-
-    @validator("profile_limit_memory")
-    @classmethod
-    def profile_limit_memory_validator(cls, value: int) -> int | None:
-        """Check profile limit memory."""
-        if value < 128:
-            raise ValueError("PostgreSQL Charm requires at least 128MB")
-        if value > 9999999:
-            raise ValueError("`profile_limit_memory` limited to 7 digits (9999999MB)")
 
         return value
 
