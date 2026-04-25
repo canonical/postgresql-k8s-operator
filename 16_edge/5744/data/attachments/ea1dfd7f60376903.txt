@@ -1,0 +1,64 @@
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing --format json
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:22 Clearing continuous writes
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju run --model testing --format json postgresql-test-app/0 clear-continuous-writes --wait 120s
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:25 Starting continuous writes
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju run --model testing --format json postgresql-test-app/0 start-continuous-writes
+[32mINFO    [0m integration.high_availability.test_patroni_reinit:test_patroni_reinit.py:81 Identifying primary and replica units
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju run --model testing --format json postgresql-k8s/0 get-primary --wait 300s
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing --format json
+[32mINFO    [0m integration.high_availability.test_patroni_reinit:test_patroni_reinit.py:86 Primary: postgresql-k8s/0 | Replica under test: postgresql-k8s/1
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing --format json
+[32mINFO    [0m integration.high_availability.test_patroni_reinit:test_patroni_reinit.py:98 Verifying initial health of replica postgresql-k8s/1
+[32mINFO    [0m integration.high_availability.test_patroni_reinit:test_patroni_reinit.py:106 Verifying continuous writes are flowing
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju run --model testing --format json postgresql-k8s/0 get-primary --wait 300s
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju show-secret --model testing secret:ggosqj2bge4d5inqo900 --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju show-secret --model testing secret:ggosqj2bge4d5inqo900 --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju show-secret --model testing secret:ggosqj2bge4d5inqo900 --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju show-secret --model testing secret:ggosqj2bge4d5inqo900 --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing --format json
+[32mINFO    [0m integration.high_availability.test_patroni_reinit:test_patroni_reinit.py:109 Stopping Patroni on postgresql-k8s/1
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju ssh --model testing --container postgresql postgresql-k8s/1 '/charm/bin/pebble stop postgresql'
+[32mINFO    [0m integration.high_availability.test_patroni_reinit:test_patroni_reinit.py:112 Deleting pg_control at /var/lib/pg/data/16/main/global/pg_control on postgresql-k8s/1
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju ssh --model testing --container postgresql postgresql-k8s/1 'rm /var/lib/pg/data/16/main/global/pg_control'
+[32mINFO    [0m integration.high_availability.test_patroni_reinit:test_patroni_reinit.py:115 Starting Patroni on postgresql-k8s/1 (pg_control is now missing)
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju ssh --model testing --container postgresql postgresql-k8s/1 '/charm/bin/pebble start postgresql'
+[32mINFO    [0m integration.high_availability.test_patroni_reinit:test_patroni_reinit.py:121 Verifying pebble logs show a pg_control startup failure on postgresql-k8s/1
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju ssh --model testing --container postgresql postgresql-k8s/1 '/charm/bin/pebble logs postgresql -n all 2>&1 || true'
+[32mINFO    [0m integration.high_availability.test_patroni_reinit:test_patroni_reinit.py:136 Confirmed pg_control startup failure recorded in pebble logs on postgresql-k8s/1
+[32mINFO    [0m integration.high_availability.test_patroni_reinit:test_patroni_reinit.py:141 Running patronictl reinit on postgresql-k8s/1
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju ssh --model testing --container postgresql postgresql-k8s/1 'PATRONI_SCOPE=patroni-postgresql-k8s PATRONI_KUBERNETES_NAMESPACE=testing PATRONI_KUBERNETES_USE_ENDPOINTS=true PATRONI_KUBERNETES_LEADER_LABEL_VALUE=primary PATRONI_KUBERNETES_LABELS='"'"'{application: patroni, cluster-name: patroni-postgresql-k8s}'"'"' patronictl -c /var/lib/pg/data/patroni.yml reinit patroni-postgresql-k8s postgresql-k8s-1 --force'
+[32mINFO    [0m integration.high_availability.test_patroni_reinit:test_patroni_reinit.py:154 Waiting for postgresql-k8s/1 to recover after patronictl reinit
+[32mINFO    [0m integration.high_availability.test_patroni_reinit:test_patroni_reinit.py:175 Replica postgresql-k8s/1 is healthy and streaming after reinit
+[32mINFO    [0m integration.high_availability.test_patroni_reinit:test_patroni_reinit.py:177 Verifying pg_control exists in data directory of postgresql-k8s/1 after reinit
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju ssh --model testing --container postgresql postgresql-k8s/1 'test -f /var/lib/pg/data/16/main/global/pg_control && echo exists || echo missing'
+[32mINFO    [0m integration.high_availability.test_patroni_reinit:test_patroni_reinit.py:186 pg_control is present at /var/lib/pg/data/16/main/global/pg_control on postgresql-k8s/1
+[32mINFO    [0m integration.high_availability.test_patroni_reinit:test_patroni_reinit.py:188 Verifying data integrity on all units after reinit
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju run --model testing --format json postgresql-k8s/0 get-primary --wait 300s
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju show-secret --model testing secret:ggosqj2bge4d5inqo900 --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju show-secret --model testing secret:ggosqj2bge4d5inqo900 --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju show-secret --model testing secret:ggosqj2bge4d5inqo900 --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju show-secret --model testing secret:ggosqj2bge4d5inqo900 --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju status --model testing --format json
+[32mINFO    [0m integration.high_availability.test_patroni_reinit:test_patroni_reinit.py:190 Data integrity verified: all units (including postgresql-k8s/1) have consistent data
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:36 Clearing continuous writes
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju run --model testing --format json postgresql-test-app/0 clear-continuous-writes --wait 120s
