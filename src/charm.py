@@ -124,9 +124,11 @@ from constants import (
     MONITORING_PASSWORD_KEY,
     MONITORING_USER,
     PATRONI_LOGS_PATH,
+    PATRONI_LOGS_SYMLINK_PATH,
     PATRONI_PASSWORD_KEY,
     PEER,
     PGBACKREST_LOGS_PATH,
+    PGBACKREST_LOGS_SYMLINK_PATH,
     PGBACKREST_METRICS_PORT,
     PLUGIN_OVERRIDES,
     POSTGRES_LOG_FILES,
@@ -1178,36 +1180,37 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         self._ensure_pgdata_dirs_and_symlinks(container)
 
-    def _ensure_postgresql_logs_symlink(
+    def _ensure_log_symlink(
         self,
         container: Container,
-        postgresql_logs_path: str,
+        target: str,
+        symlink_path: str,
     ) -> None:
-        """Ensure /var/log/postgresql points to the logs storage path."""
-        path_info = self._get_container_path_info(container, POSTGRESQL_LOGS_SYMLINK_PATH)
+        """Ensure symlink_path points to target in the logs storage."""
+        path_info = self._get_container_path_info(container, symlink_path)
         if path_info is not None:
             if path_info.type == FileType.DIRECTORY:
-                self._remove_empty_postgresql_logs_directory(container)
+                self._remove_empty_log_directory(container, symlink_path)
             elif path_info.type != FileType.SYMLINK:
                 logger.error(
                     "error: %s exists but is neither a symlink nor a directory and cannot"
                     " be replaced with a symlink to the logs storage - remove it manually"
                     " and run 'juju resolve' on each unit to recover.",
-                    POSTGRESQL_LOGS_SYMLINK_PATH,
+                    symlink_path,
                 )
                 raise RuntimeError from None
 
         container.exec([
             "ln",
             "-sfn",
-            postgresql_logs_path,
-            POSTGRESQL_LOGS_SYMLINK_PATH,
+            target,
+            symlink_path,
         ]).wait()
         container.exec([
             "chown",
             "-h",
             f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
-            POSTGRESQL_LOGS_SYMLINK_PATH,
+            symlink_path,
         ]).wait()
 
     def _get_container_path_info(self, container: Container, path: str) -> FileInfo | None:
@@ -1218,18 +1221,18 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return None
         return path_infos[0]
 
-    def _remove_empty_postgresql_logs_directory(self, container: Container) -> None:
-        """Remove /var/log/postgresql only when it is an empty directory."""
-        if container.list_files(POSTGRESQL_LOGS_SYMLINK_PATH):
+    def _remove_empty_log_directory(self, container: Container, symlink_path: str) -> None:
+        """Remove a log directory at symlink_path only when it is empty."""
+        if container.list_files(symlink_path):
             logger.error(
                 "error: %s is a non-empty directory and cannot be replaced with a"
                 " symlink to the logs storage - move or remove its contents manually"
                 " and run 'juju resolve' on each unit to recover.",
-                POSTGRESQL_LOGS_SYMLINK_PATH,
+                symlink_path,
             )
             raise RuntimeError from None
 
-        container.remove_path(POSTGRESQL_LOGS_SYMLINK_PATH)
+        container.remove_path(symlink_path)
 
     def _ensure_pgdata_dirs_and_symlinks(self, container: Container):
         """Create storage directories and symlinks for PostgreSQL data paths."""
@@ -1311,10 +1314,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             f"{WORKLOAD_OS_USER}:{WORKLOAD_OS_GROUP}",
             "/var/lib/postgresql/16",
         ]).wait()
-        self._ensure_postgresql_logs_symlink(
-            container,
-            POSTGRESQL_LOGS_PATH,
-        )
+        self._ensure_log_symlink(container, POSTGRESQL_LOGS_PATH, POSTGRESQL_LOGS_SYMLINK_PATH)
+        self._ensure_log_symlink(container, PATRONI_LOGS_PATH, PATRONI_LOGS_SYMLINK_PATH)
+        self._ensure_log_symlink(container, PGBACKREST_LOGS_PATH, PGBACKREST_LOGS_SYMLINK_PATH)
         # Also, fix the permissions from the parent directory.
         container.exec([
             "chown",
