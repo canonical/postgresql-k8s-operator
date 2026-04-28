@@ -37,7 +37,7 @@ on:
 jobs:
   lint-workflows:
     name: Lint .github/workflows/
-    uses: canonical/data-platform-workflows/.github/workflows/lint_workflows.yaml@v48.1.2
+    uses: canonical/data-platform-workflows/.github/workflows/lint_workflows.yaml@v49.0.1
     permissions:
       contents: read
 
@@ -94,7 +94,7 @@ jobs:
 
   build:
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v48.1.2
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v49.0.1
     permissions:
       actions: read  # Needed for GitHub API call to get workflow version
       contents: read
@@ -125,7 +125,7 @@ jobs:
       - unit-test
       - alert-test
       - build
-    uses: canonical/data-platform-workflows/.github/workflows/release_charm_pr.yaml@v40.0.2
+    uses: canonical/data-platform-workflows/.github/workflows/release_charm_pr.yaml@v49.0.1
     with:
       track: 16
       artifact-prefix: ${{ needs.build.outputs.artifact-prefix }}
