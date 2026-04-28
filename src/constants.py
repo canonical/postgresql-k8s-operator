@@ -19,6 +19,8 @@ WORKLOAD_OS_GROUP = "postgres"
 WORKLOAD_OS_USER = "postgres"
 METRICS_PORT = "9187"
 PGBACKREST_METRICS_PORT = "9854"
+PATRONI_LOGS_SYMLINK_PATH = "/var/log/patroni"
+PGBACKREST_LOGS_SYMLINK_PATH = "/var/log/pgbackrest"
 POSTGRESQL_LOGS_SYMLINK_PATH = "/var/log/postgresql"
 
 # Storage mount paths (must match metadata.yaml storage locations).

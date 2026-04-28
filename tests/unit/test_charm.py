@@ -1629,6 +1629,16 @@ def test_create_pgdata(harness):
             call(["chown", "postgres:postgres", "/var/lib/pg/logs/16/main/pgbackrest_logs"]),
             call(["ln", "-sfn", "/var/lib/pg/data/16", "/var/lib/postgresql/16"]),
             call(["ln", "-sfn", "/var/lib/pg/logs/16/main/pg_logs", "/var/log/postgresql"]),
+            call(["chown", "-h", "postgres:postgres", "/var/log/postgresql"]),
+            call(["ln", "-sfn", "/var/lib/pg/logs/16/main/patroni_logs", "/var/log/patroni"]),
+            call(["chown", "-h", "postgres:postgres", "/var/log/patroni"]),
+            call([
+                "ln",
+                "-sfn",
+                "/var/lib/pg/logs/16/main/pgbackrest_logs",
+                "/var/log/pgbackrest",
+            ]),
+            call(["chown", "-h", "postgres:postgres", "/var/log/pgbackrest"]),
         ],
         any_order=True,
     )
@@ -1642,11 +1652,20 @@ def test_create_pgdata(harness):
     # When directories exist, none should be created
     container.make_dir.assert_not_called()
     container.list_files.assert_any_call("/var/log", pattern="postgresql")
+    container.list_files.assert_any_call("/var/log", pattern="patroni")
+    container.list_files.assert_any_call("/var/log", pattern="pgbackrest")
     container.remove_path.assert_not_called()
     container.exec.assert_has_calls(
         [
             call(["ln", "-sfn", "/var/lib/pg/data/16", "/var/lib/postgresql/16"]),
             call(["ln", "-sfn", "/var/lib/pg/logs/16/main/pg_logs", "/var/log/postgresql"]),
+            call(["ln", "-sfn", "/var/lib/pg/logs/16/main/patroni_logs", "/var/log/patroni"]),
+            call([
+                "ln",
+                "-sfn",
+                "/var/lib/pg/logs/16/main/pgbackrest_logs",
+                "/var/log/pgbackrest",
+            ]),
         ],
         any_order=True,
     )
@@ -1661,8 +1680,12 @@ def test_create_pgdata_replaces_existing_directory_with_symlink(harness):
 
     def _list_files(path, *, pattern=None, itself=False):
         assert not itself
-        if path == "/var/log" and pattern == "postgresql":
-            return [MagicMock(type=FileType.DIRECTORY)]
+        if path == "/var/log":
+            if pattern == "postgresql":
+                return [MagicMock(type=FileType.DIRECTORY)]
+            # patroni and pgbackrest paths are already symlinks — no replacement needed
+            return [MagicMock(type=FileType.SYMLINK)]
+        # list_files(symlink_path) is called to check whether the directory is empty
         assert path == "/var/log/postgresql"
         assert pattern is None
         return []
@@ -1671,10 +1694,8 @@ def test_create_pgdata_replaces_existing_directory_with_symlink(harness):
 
     harness.charm._create_pgdata(container)
 
-    container.list_files.assert_has_calls([
-        call("/var/log", pattern="postgresql"),
-        call("/var/log/postgresql"),
-    ])
+    container.list_files.assert_any_call("/var/log", pattern="postgresql")
+    container.list_files.assert_any_call("/var/log/postgresql")
     container.remove_path.assert_called_once_with("/var/log/postgresql")
     assert call(["ln", "-sfn", "/var/lib/pg/logs/16/main/pg_logs", "/var/log/postgresql"]) in (
         container.exec.call_args_list
@@ -1697,7 +1718,70 @@ def test_create_pgdata_raises_for_existing_non_directory(harness):
     )
 
 
-def test_get_plugins(harness):
+@pytest.mark.parametrize(
+    "symlink_path,target",
+    [
+        ("/var/log/patroni", "/var/lib/pg/logs/16/main/patroni_logs"),
+        ("/var/log/pgbackrest", "/var/lib/pg/logs/16/main/pgbackrest_logs"),
+    ],
+)
+def test_create_pgdata_replaces_existing_directory_for_extra_log_symlinks(
+    harness, symlink_path, target
+):
+    """Existing empty directories at patroni/pgbackrest symlink paths are replaced."""
+    container = MagicMock()
+    container.exists.return_value = True
+    container.exec.return_value.wait_output.return_value = ("755:postgres:postgres", "")
+    parent = "/var/log"
+    name = symlink_path.rsplit("/", 1)[-1]
+
+    def _list_files(path, *, pattern=None, itself=False):
+        assert not itself
+        if path == parent:
+            if pattern == name:
+                return [MagicMock(type=FileType.DIRECTORY)]
+            return [MagicMock(type=FileType.SYMLINK)]
+        # empty-directory check
+        if path == symlink_path:
+            assert pattern is None
+            return []
+        return [MagicMock(type=FileType.SYMLINK)]
+
+    container.list_files.side_effect = _list_files
+
+    harness.charm._create_pgdata(container)
+
+    container.remove_path.assert_called_once_with(symlink_path)
+    assert call(["ln", "-sfn", target, symlink_path]) in container.exec.call_args_list
+
+
+@pytest.mark.parametrize(
+    "symlink_path",
+    ["/var/log/patroni", "/var/log/pgbackrest"],
+)
+def test_create_pgdata_raises_for_existing_non_directory_extra_log_symlinks(harness, symlink_path):
+    """A non-symlink, non-directory file at patroni/pgbackrest paths causes RuntimeError."""
+    container = MagicMock()
+    container.exists.return_value = True
+    container.exec.return_value.wait_output.return_value = ("755:postgres:postgres", "")
+    parent = "/var/log"
+    name = symlink_path.rsplit("/", 1)[-1]
+
+    def _list_files(path, *, pattern=None, itself=False):
+        assert not itself
+        if path == parent:
+            if pattern == name:
+                return [MagicMock(type=FileType.FILE)]
+            return [MagicMock(type=FileType.SYMLINK)]
+        return []
+
+    container.list_files.side_effect = _list_files
+
+    with pytest.raises(RuntimeError):
+        harness.charm._create_pgdata(container)
+
+    container.remove_path.assert_not_called()
+
     with patch("charm.PostgresqlOperatorCharm._on_config_changed"):
         # Test when the charm has no plugins enabled.
         assert harness.charm.get_plugins() == ["pgaudit"]

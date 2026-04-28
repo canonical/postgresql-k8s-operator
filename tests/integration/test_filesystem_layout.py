@@ -122,3 +122,37 @@ def test_postgresql_log_path(juju: jubilant.Juju, unit_id: int):
         f"Expected {POSTGRESQL_LOGS_PATH} to point to {POSTGRESQL_LOGS_TARGET_PATH}, "
         f"got {target.strip()}"
     )
+
+
+@pytest.mark.parametrize("unit_id", UNIT_IDS)
+def test_patroni_log_symlink(juju: jubilant.Juju, unit_id: int):
+    """Test that /var/log/patroni is a symlink pointing to the patroni_logs directory."""
+    unit_name = f"{APP_NAME}/{unit_id}"
+    symlink_path = "/var/log/patroni"
+    path_type = juju.ssh(
+        unit_name, "stat", "-c", "%F", symlink_path, container="postgresql"
+    ).strip()
+    assert path_type == "symbolic link", (
+        f"Expected {symlink_path} to be a symbolic link, got: {path_type}"
+    )
+    target = juju.ssh(unit_name, "readlink", "-f", symlink_path, container="postgresql")
+    assert target.strip() == PATRONI_LOGS_PATH, (
+        f"Expected {symlink_path} to point to {PATRONI_LOGS_PATH}, got {target.strip()}"
+    )
+
+
+@pytest.mark.parametrize("unit_id", UNIT_IDS)
+def test_pgbackrest_log_symlink(juju: jubilant.Juju, unit_id: int):
+    """Test that /var/log/pgbackrest is a symlink pointing to the pgbackrest_logs directory."""
+    unit_name = f"{APP_NAME}/{unit_id}"
+    symlink_path = "/var/log/pgbackrest"
+    path_type = juju.ssh(
+        unit_name, "stat", "-c", "%F", symlink_path, container="postgresql"
+    ).strip()
+    assert path_type == "symbolic link", (
+        f"Expected {symlink_path} to be a symbolic link, got: {path_type}"
+    )
+    target = juju.ssh(unit_name, "readlink", "-f", symlink_path, container="postgresql")
+    assert target.strip() == PGBACKREST_LOGS_PATH, (
+        f"Expected {symlink_path} to point to {PGBACKREST_LOGS_PATH}, got {target.strip()}"
+    )
