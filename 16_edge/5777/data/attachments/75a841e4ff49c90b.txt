@@ -1,0 +1,2 @@
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju ssh --model testing --container postgresql postgresql-k8s/0 stat -c %F /var/log/postgresql
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju ssh --model testing --container postgresql postgresql-k8s/0 readlink -f /var/log/postgresql
