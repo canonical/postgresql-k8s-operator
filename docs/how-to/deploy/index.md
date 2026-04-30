@@ -20,7 +20,7 @@ juju add-model <model name>
 Then, use the [`juju deploy`](https://canonical-juju.readthedocs-hosted.com/en/latest/user/reference/juju-cli/list-of-juju-cli-commands/deploy/) command:
 
 ```shell
-juju deploy postgresql-k8s --channel 16/edge -n <number_of_replicas> --trust
+juju deploy postgresql-k8s --channel 16/stable -n <number_of_replicas> --trust
 ```
 
 If you are not sure where to start or would like a more guided walkthrough for setting up your environment, see the {ref}`tutorial`.

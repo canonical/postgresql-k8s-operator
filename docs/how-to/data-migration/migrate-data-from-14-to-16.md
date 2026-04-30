@@ -33,7 +33,7 @@ PGPASSWORD="${OLD_PASSWORD}" pg_dump -j 4 -Fd -h "${OLD_IP}" -U "${OLD_USER}" -d
 Deploy one unit of Charmed PostgreSQL 16. This will simplify the migration and can be scaled later.
 
 ```shell
-juju deploy postgresql-k8s --channel 16/edge --trust
+juju deploy postgresql-k8s --channel 16/stable --trust
 ```
 
 Define the following variables for the new database:
