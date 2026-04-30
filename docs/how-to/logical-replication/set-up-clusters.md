@@ -7,8 +7,8 @@ This feature is only available for revision 630 or higher, which is not yet in t
 
 Start by deploying two PostgreSQL clusters:
 ```sh
-juju deploy postgresql-k8s --channel 16/edge --trust postgresql1
-juju deploy postgresql-k8s --channel 16/edge --trust postgresql2
+juju deploy postgresql-k8s --channel 16/stable --trust postgresql1
+juju deploy postgresql-k8s --channel 16/stable --trust postgresql2
 ```
 
 For testing purposes, you can deploy two applications of the [data integrator charm](https://charmhub.io/data-integrator) and then integrate them to the two PostgreSQL clusters you want to replicate data between.

@@ -106,7 +106,7 @@ For the manual OCI import, please follow [the official Charmhub guide](https://d
 
  Deploy and operate Juju charms normally:
 ```text
-juju deploy postgresql-k8s --channel 16/edge --trust
+juju deploy postgresql-k8s --channel 16/stable --trust
 ```
 ```{note}
 All the charms revisions and OCI resources tags/revisions deployed in the air-gapped environment must match the official Charmhub revisions/tags. 
