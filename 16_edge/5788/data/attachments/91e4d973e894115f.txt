@@ -1,0 +1,3 @@
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju ssh --model testing --container postgresql postgresql-k8s/1 stat -c %F /var/lib/pg/logs/16/main/pg_logs
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju ssh --model testing --container postgresql postgresql-k8s/1 stat -c %F /var/lib/pg/logs/16/main/patroni_logs
+[32mINFO    [0m jubilant:_juju.py:398 cli: juju ssh --model testing --container postgresql postgresql-k8s/1 stat -c %F /var/lib/pg/logs/16/main/pgbackrest_logs
