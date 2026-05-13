@@ -80,7 +80,7 @@ async def test_rollback_without_pre_refresh_check(
     """Test refresh back to stable channel."""
     # Early Jubilant 1.X.Y versions do not support the `switch` option
     logging.info("Refresh the charm to stable channel")
-    juju.cli("refresh", "--channel=16/edge", f"--switch={DB_APP_NAME}", DB_APP_NAME)
+    juju.cli("refresh", "--channel=16/stable", f"--switch={DB_APP_NAME}", DB_APP_NAME)
 
     logging.info("Wait for refresh to block as paused or incompatible")
     units = get_app_units(juju, DB_APP_NAME)
