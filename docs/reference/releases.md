@@ -17,7 +17,7 @@ For a given release, this table shows:
 
 | Revision | PostgreSQL version | Juju version | [TLS encryption](/how-to/enable-tls)* | [COS monitoring](/how-to/monitoring-cos/index) | [Minor version upgrades](/how-to/upgrade/index) | [Cross-regional async replication](/how-to/cross-regional-async-replication/index) | [Point-in-time recovery](/how-to/back-up-and-restore/restore-a-backup) | [PITR Timelines](/how-to/back-up-and-restore/restore-a-backup) |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-|   |   |   | ![check] | ![check] | ![check] | ![check] | ![check] |
+| [901], [902] | 16.13 | `3.6.14+` | ![check] | ![check] | ![check] | ![check] | ![check] |
 
 \* **TLS encryption***: Support for **`v2` or higher** of the [`tls-certificates` interface](https://charmhub.io/tls-certificates-interface/libraries/tls_certificates). This means that you can integrate with [modern TLS charms](https://charmhub.io/topics/security-with-x-509-certificates).
 
@@ -44,3 +44,6 @@ For a list of all plugins supported for each revision, see the reference page [P
 <!--BADGES-->
 [check]: https://img.icons8.com/color/20/checkmark--v1.png
 
+<!-- LINKS -->
+[901]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/v16%2F1.111.0
+[902]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/v16%2F1.111.0
