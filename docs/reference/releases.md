@@ -10,16 +10,13 @@ To see all releases and commits, check the [Charmed PostgreSQL Releases on GitHu
 ## Dependencies and supported features
 
 For a given release, this table shows:
-* The PostgreSQL 14 version packaged inside
+* The PostgreSQL 16 version packaged inside
 * The minimum Juju version required to reliably operate **all** features of the release
-   > This charm still supports older versions of Juju down to 2.9. See the [system requirements](/reference/system-requirements) for more details
 * Support for specific features
 
 | Revision | PostgreSQL version | Juju version | [TLS encryption](/how-to/enable-tls)* | [COS monitoring](/how-to/monitoring-cos/index) | [Minor version upgrades](/how-to/upgrade/index) | [Cross-regional async replication](/how-to/cross-regional-async-replication/index) | [Point-in-time recovery](/how-to/back-up-and-restore/restore-a-backup) | [PITR Timelines](/how-to/back-up-and-restore/restore-a-backup) |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-| [901], [902] | 16.13 | `3.6.14+` | ![check] | ![check] | ![check] | ![check] | ![check] |
-
-\* **TLS encryption***: Support for **`v2` or higher** of the [`tls-certificates` interface](https://charmhub.io/tls-certificates-interface/libraries/tls_certificates). This means that you can integrate with [modern TLS charms](https://charmhub.io/topics/security-with-x-509-certificates).
+| [901], [902] | 16.13 | `3.6.21+` | ![check] | ![check] | ![check] | ![check] | ![check] | ![check] |
 
 ## Architecture and base
 
@@ -30,7 +27,7 @@ If you do not specify a revision on deploy time, Juju will automatically choose 
 ```{caution}
 If you deploy with the `--revision` flag, **you must make sure the revision matches your base and architecture**. 
 
-Check the tables below, or use [`juju info`](https://juju.is/docs/juju/juju-info).
+Check the table in release notes, or use [`juju info`](https://juju.is/docs/juju/juju-info).
 ```
 
 ## Plugins/extensions
