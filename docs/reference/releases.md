@@ -10,27 +10,24 @@ To see all releases and commits, check the [Charmed PostgreSQL Releases on GitHu
 ## Dependencies and supported features
 
 For a given release, this table shows:
-* The PostgreSQL 14 version packaged inside
+* The PostgreSQL 16 version packaged inside
 * The minimum Juju version required to reliably operate **all** features of the release
-   > This charm still supports older versions of Juju down to 2.9. See the [system requirements](/reference/system-requirements) for more details
 * Support for specific features
 
-| Revision | PostgreSQL version | Juju version | [TLS encryption](/how-to/enable-tls)* | [COS monitoring](/how-to/monitoring-cos/index) | [Minor version upgrades](/how-to/upgrade/index) | [Cross-regional async replication](/how-to/cross-regional-async-replication/index) | [Point-in-time recovery](/how-to/back-up-and-restore/restore-a-backup) | [PITR Timelines](/how-to/back-up-and-restore/restore-a-backup) |
+| Revisions | PostgreSQL version | Juju version | [TLS encryption](/how-to/enable-tls) | [COS monitoring](/how-to/monitoring-cos/index) | [Minor version upgrades](/how-to/upgrade/index) | [Cross-regional async replication](/how-to/cross-regional-async-replication/index) | [Point-in-time recovery](/how-to/back-up-and-restore/restore-a-backup) | [PITR Timelines](/how-to/back-up-and-restore/restore-a-backup) |
 |:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
-|   |   |   | ![check] | ![check] | ![check] | ![check] | ![check] |
-
-\* **TLS encryption***: Support for **`v2` or higher** of the [`tls-certificates` interface](https://charmhub.io/tls-certificates-interface/libraries/tls_certificates). This means that you can integrate with [modern TLS charms](https://charmhub.io/topics/security-with-x-509-certificates).
+| [901], [902] | 16.13 | `3.6.21+` | ![check] | ![check] | ![check] | ![check] | ![check] | ![check] |
 
 ## Architecture and base
 
-Several [revisions](https://documentation.ubuntu.com/juju/3.6/reference/charm/#charm-revision) are released simultaneously for different [bases/series](https://juju.is/docs/juju/base) using the same charm code. In other words, one release contains multiple revisions.
+Several [revisions](https://documentation.ubuntu.com/juju/3.6/reference/charm/#charm-revision) are released simultaneously for different architectures using the same charm code.
 
 If you do not specify a revision on deploy time, Juju will automatically choose the revision that matches your base and architecture.
 
 ```{caution}
 If you deploy with the `--revision` flag, **you must make sure the revision matches your base and architecture**. 
 
-Check the tables below, or use [`juju info`](https://juju.is/docs/juju/juju-info).
+Check the table in release notes, or use [`juju info`](https://juju.is/docs/juju/juju-info).
 ```
 
 ## Plugins/extensions
@@ -44,3 +41,6 @@ For a list of all plugins supported for each revision, see the reference page [P
 <!--BADGES-->
 [check]: https://img.icons8.com/color/20/checkmark--v1.png
 
+<!-- LINKS -->
+[901]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/v16%2F1.111.0
+[902]: https://github.com/canonical/postgresql-k8s-operator/releases/tag/v16%2F1.111.0
