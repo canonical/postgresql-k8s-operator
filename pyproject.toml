@@ -19,8 +19,8 @@ lightkube-models = "^1.28.1.4"
 psycopg2 = "^2.9.12"
 httpx = "^0.28.1"
 charmlibs-interfaces-tls-certificates = "^1.8.1"
-postgresql-charms-single-kernel = "16.1.11"
 charm-refresh = "^3.1.1.2"
+postgresql-charms-single-kernel = "16.1.12"
 
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py
