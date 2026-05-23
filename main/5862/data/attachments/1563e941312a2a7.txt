@@ -1,0 +1,16 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.23   unsupported  00:27:51Z
+
+App             Version  Status  Scale  Charm           Channel  Rev  Address        Exposed  Message
+postgresql-k8s           error     0/2  postgresql-k8s             0  10.152.183.84  no       OCI image pull error: failed to pull and unpack image "ghcr.io/juju/charm-base:ubuntu-22.04": failed to resolve image...
+
+Unit              Workload  Agent  Address      Ports  Message
+postgresql-k8s/0  error     lost   10.1.124.12         OCI image pull error: failed to pull and unpack image "ghcr.io/juju/charm-base:ubuntu-22.04": failed to resolve image...
+postgresql-k8s/1  error     lost   10.1.124.13         OCI image pull error: failed to pull and unpack image "ghcr.io/juju/charm-base:ubuntu-22.04": failed to resolve image...
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
