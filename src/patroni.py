@@ -5,8 +5,6 @@
 """Helper class used to manage interactions with Patroni API and configuration files."""
 
 import logging
-import os
-import pwd
 from functools import cached_property
 from typing import Any, TypedDict
 
@@ -16,8 +14,8 @@ from httpx import BasicAuth
 from jinja2 import Template
 from ops.pebble import Error
 from requests.auth import HTTPBasicAuth
-from single_kernel_postgresql.config.literals import API_REQUEST_TIMEOUT
-from single_kernel_postgresql.utils import label2name, parallel_patroni_get_request
+from single_kernel_postgresql.config.literals import API_REQUEST_TIMEOUT, Substrates
+from single_kernel_postgresql.utils import label2name, parallel_patroni_get_request, render_file
 from tenacity import (
     Future,
     RetryError,
@@ -303,7 +301,6 @@ class Patroni:
             return {member["name"] for member in self.cluster_status()}
         except Exception:
             return set()
-        return set()
 
     def get_running_cluster_members(self) -> list[str]:
         """List running patroni members."""
@@ -315,7 +312,6 @@ class Patroni:
             ]
         except Exception:
             return []
-        return []
 
     def are_all_members_ready(self) -> bool:
         """Check if all members are correctly running Patroni and PostgreSQL.
@@ -623,28 +619,6 @@ class Patroni:
             timeout=API_REQUEST_TIMEOUT,
         )
 
-    def _render_file(self, path: str, content: str, mode: int) -> None:
-        """Write a content rendered from a template to a file.
-
-        Args:
-            path: the path to the file.
-            content: the data to be written to the file.
-            mode: access permission mask applied to the
-              file using chmod (e.g. 0o640).
-        """
-        with open(path, "w+") as file:
-            file.write(content)
-        # Ensure correct permissions are set on the file.
-        os.chmod(path, mode)
-        try:
-            # Get the uid/gid for the postgres user.
-            u = pwd.getpwnam("postgres")
-            # Set the correct ownership for the file.
-            os.chown(path, uid=u.pw_uid, gid=u.pw_gid)
-        except KeyError:
-            # Ignore non existing user error when it wasn't created yet.
-            pass
-
     def render_patroni_yml_file(
         self,
         connectivity: bool = False,
@@ -727,7 +701,7 @@ class Patroni:
             slots=slots,
             instance_password_encryption=self._charm.config.instance_password_encryption,
         )
-        self._render_file(f"{self._storage_path}/patroni.yml", rendered, 0o644)
+        render_file(Substrates.K8S, f"{self._storage_path}/patroni.yml", rendered, 0o644)
 
     @retry(stop=stop_after_attempt(20), wait=wait_exponential(multiplier=1, min=2, max=30))
     def reload_patroni_configuration(self) -> None:
