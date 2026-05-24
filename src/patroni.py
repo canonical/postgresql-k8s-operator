@@ -7,18 +7,17 @@
 import logging
 import os
 import pwd
-from asyncio import as_completed, create_task, run, wait
-from contextlib import suppress
 from functools import cached_property
-from ssl import CERT_NONE, create_default_context
 from typing import Any, TypedDict
 
 import requests
 import yaml
-from httpx import AsyncClient, BasicAuth, HTTPError
+from httpx import BasicAuth
 from jinja2 import Template
 from ops.pebble import Error
 from requests.auth import HTTPBasicAuth
+from single_kernel_postgresql.config.literals import API_REQUEST_TIMEOUT
+from single_kernel_postgresql.utils import label2name, parallel_patroni_get_request
 from tenacity import (
     Future,
     RetryError,
@@ -32,7 +31,6 @@ from tenacity import (
 )
 
 from constants import (
-    API_REQUEST_TIMEOUT,
     LOGS_STORAGE_PATH,
     PATRONI_CLUSTER_STATUS_ENDPOINT,
     POSTGRESQL_LOGS_PATH,
@@ -40,7 +38,6 @@ from constants import (
     REWIND_USER,
     TLS_CA_BUNDLE_FILE,
 )
-from utils import label2name
 
 STARTED_STATES = ["running", "streaming"]
 RUNNING_STATES = [*STARTED_STATES, "starting"]
@@ -166,66 +163,34 @@ class Patroni:
         """Cached cluster status."""
         return self.cluster_status()
 
-    def cluster_status(self, alternative_endpoints: list | None = None) -> list[ClusterMember]:
+    def cluster_status(
+        self, alternative_endpoints: list[str] | None = None
+    ) -> list[ClusterMember]:
         """Query the cluster status."""
+        # TODO we don't know the other cluster's ca
+        verify = not bool(alternative_endpoints)
+        if alternative_endpoints:
+            endpoints = alternative_endpoints
+        else:
+            endpoints = []
+            if self._endpoint:
+                endpoints.append(self._endpoint)
+            for endpoint in self._endpoints:
+                endpoints.append(endpoint)
+
         # Request info from cluster endpoint (which returns all members of the cluster).
-        if response := self.parallel_patroni_get_request(
-            f"/{PATRONI_CLUSTER_STATUS_ENDPOINT}", alternative_endpoints
+        if response := parallel_patroni_get_request(
+            f"/{PATRONI_CLUSTER_STATUS_ENDPOINT}",
+            endpoints,
+            f"/tmp/{TLS_CA_BUNDLE_FILE}",  # noqa: S108
+            self._patroni_async_auth,
+            verify,
         ):
             logger.debug("API cluster_status: %s", response["members"])
             return response["members"]
         raise RetryError(
             last_attempt=Future.construct(1, Exception("Unable to reach any units"), True)
         )
-
-    async def _httpx_get_request(self, url: str, verify: bool = True) -> dict[str, Any] | None:
-        if not self._patroni_async_auth:
-            return None
-        ssl_ctx = create_default_context()
-        if verify:
-            with suppress(FileNotFoundError):
-                # Cert bundles are not secret
-                ssl_ctx.load_verify_locations(cafile=f"/tmp/{TLS_CA_BUNDLE_FILE}")  # noqa: S108
-        else:
-            ssl_ctx.check_hostname = False
-            ssl_ctx.verify_mode = CERT_NONE
-        async with AsyncClient(
-            auth=self._patroni_async_auth, timeout=API_REQUEST_TIMEOUT, verify=ssl_ctx
-        ) as client:
-            try:
-                return (await client.get(url)).raise_for_status().json()
-            except (HTTPError, ValueError):
-                return None
-
-    async def _async_get_request(
-        self, uri: str, endpoints: list[str], verify: bool = True
-    ) -> dict[str, Any] | None:
-        tasks = [
-            create_task(self._httpx_get_request(f"https://{ip}:8008{uri}", verify))
-            for ip in endpoints
-        ]
-        for task in as_completed(tasks):
-            if result := await task:
-                for task in tasks:
-                    task.cancel()
-                await wait(tasks)
-                return result
-
-    def parallel_patroni_get_request(
-        self, uri: str, endpoints: list[str] | None = None
-    ) -> dict[str, Any] | None:
-        """Call all possible patroni endpoints in parallel."""
-        if not endpoints:
-            endpoints = []
-            if self._endpoint:
-                endpoints.append(self._endpoint)
-            for endpoint in self._endpoints:
-                endpoints.append(endpoint)
-            verify = True
-        else:
-            # TODO we don't know the other cluster's ca
-            verify = False
-        return run(self._async_get_request(uri, endpoints, verify))
 
     @cached_property
     def _synchronous_node_count(self) -> int:

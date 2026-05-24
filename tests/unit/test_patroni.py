@@ -9,10 +9,11 @@ import requests
 import tenacity
 from jinja2 import Template
 from ops.testing import Harness
+from single_kernel_postgresql.config.literals import API_REQUEST_TIMEOUT
 from tenacity import RetryError, stop_after_delay, wait_fixed
 
 from charm import PostgresqlOperatorCharm
-from constants import API_REQUEST_TIMEOUT, LOGS_STORAGE_PATH, POSTGRESQL_LOGS_PATH, REWIND_USER
+from constants import LOGS_STORAGE_PATH, POSTGRESQL_LOGS_PATH, REWIND_USER
 from patroni import Patroni, SwitchoverFailedError, SwitchoverNotSyncError
 from tests.helpers import PGDATA_PATH, STORAGE_PATH
 
@@ -91,7 +92,7 @@ def test_dict_to_hba_string(harness, patroni):
 
 def test_get_primary(harness, patroni):
     with patch(
-        "charm.Patroni.parallel_patroni_get_request", return_value=None
+        "patroni.parallel_patroni_get_request", return_value=None
     ) as _parallel_patroni_get_request:
         # Mock Patroni cluster API.
         _parallel_patroni_get_request.return_value = {
@@ -105,18 +106,30 @@ def test_get_primary(harness, patroni):
         # Test returning pod name.
         primary = patroni.get_primary()
         assert primary == "postgresql-k8s-1"
-        _parallel_patroni_get_request.assert_called_once_with("/cluster", None)
+        _parallel_patroni_get_request.assert_called_once_with(
+            "/cluster",
+            ["postgresql-k8s-0", "postgresql-k8s-0", "postgresql-k8s-1", "postgresql-k8s-2"],
+            "/tmp/peer_ca_bundle.pem",
+            patroni._patroni_async_auth,
+            True,
+        )
 
         # Test returning unit name.
         _parallel_patroni_get_request.reset_mock()
         primary = patroni.get_primary(unit_name_pattern=True)
         assert primary == "postgresql-k8s/1"
-        _parallel_patroni_get_request.assert_called_once_with("/cluster", None)
+        _parallel_patroni_get_request.assert_called_once_with(
+            "/cluster",
+            ["postgresql-k8s-0", "postgresql-k8s-0", "postgresql-k8s-1", "postgresql-k8s-2"],
+            "/tmp/peer_ca_bundle.pem",
+            patroni._patroni_async_auth,
+            True,
+        )
 
 
 def test_is_creating_backup(harness, patroni):
     with patch(
-        "charm.Patroni.parallel_patroni_get_request", return_value=None
+        "patroni.parallel_patroni_get_request", return_value=None
     ) as _parallel_patroni_get_request:
         # Test when one member is creating a backup.
         _parallel_patroni_get_request.return_value = {
