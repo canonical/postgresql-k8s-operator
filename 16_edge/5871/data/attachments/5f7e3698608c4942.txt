@@ -1,0 +1,16 @@
+[32mINFO    [0m root:test_async_replication.py:272 Remove async relation
+[32mINFO    [0m jubilant:_juju.py:474 cli: juju remove-relation --model testing-other db1 db2:replication
+[32mINFO    [0m root:test_async_replication.py:275 Waiting for the applications to settle
+[32mINFO    [0m root:test_async_replication.py:289 Re-relating the two postgresql clusters
+[32mINFO    [0m jubilant:_juju.py:474 cli: juju integrate --model testing-other db1 db2:replication
+[32mINFO    [0m jubilant:_juju.py:474 cli: juju integrate --model testing-other db1 db2:replication
+[32mINFO    [0m jubilant:_juju.py:474 cli: juju integrate --model testing-other db1 db2:replication
+[32mINFO    [0m jubilant:_juju.py:474 cli: juju integrate --model testing-other db1 db2:replication
+[32mINFO    [0m jubilant:_juju.py:474 cli: juju integrate --model testing-other db1 db2:replication
+[32mINFO    [0m jubilant:_juju.py:474 cli: juju integrate --model testing-other db1 db2:replication
+[32mINFO    [0m jubilant:_juju.py:474 cli: juju integrate --model testing-other db1 db2:replication
+[32mINFO    [0m jubilant:_juju.py:474 cli: juju integrate --model testing-other db1 db2:replication
+[32mINFO    [0m jubilant:_juju.py:474 cli: juju integrate --model testing-other db1 db2:replication
+[32mINFO    [0m jubilant:_juju.py:474 cli: juju integrate --model testing-other db1 db2:replication
+[32mINFO    [0m root:test_async_replication.py:53 Destroying model: testing-other
+[32mINFO    [0m jubilant:_juju.py:474 cli: juju destroy-model testing-other --no-prompt --destroy-storage --force
