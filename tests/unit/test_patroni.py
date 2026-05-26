@@ -9,10 +9,11 @@ import requests
 import tenacity
 from jinja2 import Template
 from ops.testing import Harness
+from single_kernel_postgresql.config.literals import API_REQUEST_TIMEOUT, Substrates
 from tenacity import RetryError, stop_after_delay, wait_fixed
 
 from charm import PostgresqlOperatorCharm
-from constants import API_REQUEST_TIMEOUT, LOGS_STORAGE_PATH, POSTGRESQL_LOGS_PATH, REWIND_USER
+from constants import LOGS_STORAGE_PATH, POSTGRESQL_LOGS_PATH, REWIND_USER
 from patroni import Patroni, SwitchoverFailedError, SwitchoverNotSyncError
 from tests.helpers import PGDATA_PATH, STORAGE_PATH
 
@@ -91,7 +92,7 @@ def test_dict_to_hba_string(harness, patroni):
 
 def test_get_primary(harness, patroni):
     with patch(
-        "charm.Patroni.parallel_patroni_get_request", return_value=None
+        "patroni.parallel_patroni_get_request", return_value=None
     ) as _parallel_patroni_get_request:
         # Mock Patroni cluster API.
         _parallel_patroni_get_request.return_value = {
@@ -105,18 +106,30 @@ def test_get_primary(harness, patroni):
         # Test returning pod name.
         primary = patroni.get_primary()
         assert primary == "postgresql-k8s-1"
-        _parallel_patroni_get_request.assert_called_once_with("/cluster", None)
+        _parallel_patroni_get_request.assert_called_once_with(
+            "/cluster",
+            ["postgresql-k8s-0", "postgresql-k8s-0", "postgresql-k8s-1", "postgresql-k8s-2"],
+            "/tmp/peer_ca_bundle.pem",
+            patroni._patroni_async_auth,
+            True,
+        )
 
         # Test returning unit name.
         _parallel_patroni_get_request.reset_mock()
         primary = patroni.get_primary(unit_name_pattern=True)
         assert primary == "postgresql-k8s/1"
-        _parallel_patroni_get_request.assert_called_once_with("/cluster", None)
+        _parallel_patroni_get_request.assert_called_once_with(
+            "/cluster",
+            ["postgresql-k8s-0", "postgresql-k8s-0", "postgresql-k8s-1", "postgresql-k8s-2"],
+            "/tmp/peer_ca_bundle.pem",
+            patroni._patroni_async_auth,
+            True,
+        )
 
 
 def test_is_creating_backup(harness, patroni):
     with patch(
-        "charm.Patroni.parallel_patroni_get_request", return_value=None
+        "patroni.parallel_patroni_get_request", return_value=None
     ) as _parallel_patroni_get_request:
         # Test when one member is creating a backup.
         _parallel_patroni_get_request.return_value = {
@@ -178,42 +191,12 @@ def test_member_streaming(harness, patroni):
         assert not patroni.member_streaming
 
 
-def test_render_file(harness, patroni):
-    with (
-        patch("os.chmod") as _chmod,
-        patch("os.chown") as _chown,
-        patch("pwd.getpwnam") as _pwnam,
-        patch("tempfile.NamedTemporaryFile") as _temp_file,
-    ):
-        # Set a mocked temporary filename.
-        filename = "/tmp/temporaryfilename"
-        _temp_file.return_value.name = filename
-        # Setup a mock for the `open` method.
-        mock = mock_open()
-        # Patch the `open` method with our mock.
-        with patch("builtins.open", mock, create=True):
-            # Set the uid/gid return values for lookup of 'postgres' user.
-            _pwnam.return_value.pw_uid = 35
-            _pwnam.return_value.pw_gid = 35
-            # Call the method using a temporary configuration file.
-            patroni._render_file(filename, "rendered-content", 0o640)
-
-        # Check the rendered file is opened with "w+" mode.
-        assert mock.call_args_list[0][0] == (filename, "w+")
-        # Ensure that the correct user is lookup up.
-        _pwnam.assert_called_with("postgres")
-        # Ensure the file is chmod'd correctly.
-        _chmod.assert_called_with(filename, 0o640)
-        # Ensure the file is chown'd correctly.
-        _chown.assert_called_with(filename, uid=35, gid=35)
-
-
 def test_render_patroni_yml_file(harness, patroni):
     with (
         patch(
             "charm.Patroni.rock_postgresql_version", new_callable=PropertyMock
         ) as _rock_postgresql_version,
-        patch("charm.Patroni._render_file") as _render_file,
+        patch("patroni.render_file") as _render_file,
     ):
         _rock_postgresql_version.return_value = "16.6"
 
@@ -251,9 +234,7 @@ def test_render_patroni_yml_file(harness, patroni):
         assert mock.call_args_list[0][0] == ("templates/patroni.yml.j2",)
         # Ensure the correct rendered template is sent to _render_file method.
         _render_file.assert_called_once_with(
-            f"{STORAGE_PATH}/patroni.yml",
-            expected_content,
-            0o644,
+            Substrates.K8S, f"{STORAGE_PATH}/patroni.yml", expected_content, 0o644
         )
 
         # Then test the rendering of the file with TLS enabled.
@@ -285,9 +266,7 @@ def test_render_patroni_yml_file(harness, patroni):
 
         # Ensure the correct rendered template is sent to _render_file method.
         _render_file.assert_called_once_with(
-            f"{STORAGE_PATH}/patroni.yml",
-            expected_content_with_tls,
-            0o644,
+            Substrates.K8S, f"{STORAGE_PATH}/patroni.yml", expected_content_with_tls, 0o644
         )
 
         # Also, ensure the right parameters are in the expected content

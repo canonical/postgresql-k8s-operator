@@ -25,9 +25,8 @@ from ops import (
     SecretChangedEvent,
     SecretNotFoundError,
 )
+from single_kernel_postgresql.utils import new_password
 from tenacity import Retrying, stop_after_delay, wait_fixed
-
-from utils import new_password
 
 if TYPE_CHECKING:
     from charm import PostgresqlOperatorCharm
