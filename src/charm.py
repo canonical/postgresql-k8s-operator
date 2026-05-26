@@ -1,6 +1,6 @@
 #!/usr/bin/env -S LD_LIBRARY_PATH=lib python3
 # Copyright 2021 Canonical Ltd.
-# See LICENSE file for licensing details.
+# See LICENSE file for licensing details. test
 
 """Charmed Kubernetes Operator for the PostgreSQL database."""
 
