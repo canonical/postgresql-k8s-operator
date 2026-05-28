@@ -133,13 +133,17 @@ async def test_restore_on_new_cluster(
     ):
         with attempt:
             logger.info("restoring the backup")
-            # Filter out blank lines and entries that are restore/timeline records
-            # which cannot be used without the restore-to-time parameter.
-            backup_lines = [line.strip() for line in backups.splitlines() if line.strip()]
+            # The list-backups output contains real backup entries (action = "full backup",
+            # "differential backup", "incremental backup") as well as restore/timeline entries
+            # (action = "restore") that cannot be used without the restore-to-time parameter.
+            # Select only lines where the action column contains "backup" to avoid picking
+            # a timeline entry that would cause: "Cannot restore to the timeline without
+            # restore-to-time parameter".
             real_backup_lines = [
                 line
-                for line in backup_lines
-                if "action: restore" not in line.lower() and "timeline" not in line.lower()
+                for line in backups.splitlines()
+                for parts in [line.split("|")]
+                if len(parts) > 1 and "backup" in parts[1].lower()
             ]
             assert real_backup_lines, (
                 f"No valid backup entry found in list-backups output:\n{backups}"
