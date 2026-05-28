@@ -34,7 +34,7 @@ resources:
   postgresql-image:
     type: oci-image
     description: OCI image for PostgreSQL
-    upstream-source: ghcr.io/taurus-forever/charmed-postgresql:14.23-2
+    upstream-source: ghcr.io/taurus-forever/charmed-postgresql:14.23-7
 
 peers:
   database-peers:
