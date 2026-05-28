@@ -133,15 +133,24 @@ async def test_restore_on_new_cluster(
     ):
         with attempt:
             logger.info("restoring the backup")
-            # Last two entries are 'action: restore', that cannot be used without restore-to-time parameter
-            most_recent_real_backup = backups.split("\n")[-3]
-            backup_id = most_recent_real_backup.split()[0]
+            # Filter out blank lines and entries that are restore/timeline records
+            # which cannot be used without the restore-to-time parameter.
+            backup_lines = [line.strip() for line in backups.splitlines() if line.strip()]
+            real_backup_lines = [
+                line
+                for line in backup_lines
+                if "action: restore" not in line.lower() and "timeline" not in line.lower()
+            ]
+            assert real_backup_lines, (
+                f"No valid backup entry found in list-backups output:\n{backups}"
+            )
+            backup_id = real_backup_lines[-1].split()[0]
             action = await ops_test.model.units.get(f"{database_app_name}/0").run_action(
                 "restore", **{"backup-id": backup_id}
             )
             await action.wait()
             restore_status = action.results.get("restore-status")
-            assert restore_status, "restore hasn't succeeded"
+            assert restore_status, f"restore hasn't succeeded: {action.results}"
 
     # Wait for the restore to complete.
     async with ops_test.fast_forward():
