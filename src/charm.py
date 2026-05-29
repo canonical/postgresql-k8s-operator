@@ -1914,7 +1914,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 resource.metadata.ownerReferences = pod0.metadata.ownerReferences
                 resource.metadata.managedFields = None
                 client.apply(
-                    obj=resource,
+                    obj=resource,  # type: ignore
                     name=resource.metadata.name,
                     namespace=resource.metadata.namespace,
                     force=True,
