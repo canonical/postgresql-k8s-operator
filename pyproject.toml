@@ -7,8 +7,8 @@ requires-poetry = ">=2.0.0"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-ops = {extras = ["tracing"], version = "^3.7.0"}
-boto3 = "^1.43.10"
+ops = {extras = ["tracing"], version = "^3.7.1"}
+boto3 = "^1.43.17"
 pgconnstr = "^1.0.1"
 requests = "^2.34.2"
 tenacity = "^9.1.4"
@@ -19,7 +19,7 @@ lightkube-models = "^1.28.1.4"
 psycopg2 = "^2.9.12"
 charmlibs-interfaces-tls-certificates = "^1.8.1"
 charm-refresh = "^3.1.1.2"
-postgresql-charms-single-kernel = {extras = ["postgresql"], version="16.2.1"}
+postgresql-charms-single-kernel = {extras = ["postgresql"], version="16.2.2"}
 
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py
@@ -37,20 +37,20 @@ jsonschema = "*"
 optional = true
 
 [tool.poetry.group.format.dependencies]
-ruff = "^0.15.13"
+ruff = "^0.15.15"
 
 [tool.poetry.group.lint]
 optional = true
 
 [tool.poetry.group.lint.dependencies]
 codespell = "^2.4.2"
-ty = "^0.0.37"
+ty = "^0.0.40"
 
 [tool.poetry.group.unit]
 optional = true
 
 [tool.poetry.group.unit.dependencies]
-coverage = {extras = ["toml"], version = "^7.14.0"}
+coverage = {extras = ["toml"], version = "^7.14.1"}
 pytest = "^9.0.3"
 pytest-asyncio = "*"
 
@@ -68,7 +68,7 @@ psycopg2-binary = "^2.9.12"
 boto3 = "*"
 tenacity = "^9.1.4"
 allure-pytest = "^2.16.0"
-jubilant = "^1.9.0"
+jubilant = "^1.10.0"
 tomli-w = "^1.2.0"
 tomli = "^2.4.1"
 
@@ -79,7 +79,7 @@ optional = true
 charm-refresh-build-version = "^0.4.1"
 
 [build-system]
-requires = ["poetry-core>=2.4.0"]
+requires = ["poetry-core>=2.4.1"]
 build-backend = "poetry.core.masonry.api"
 
 # Testing tools configuration
