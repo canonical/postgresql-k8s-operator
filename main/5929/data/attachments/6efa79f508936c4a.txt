@@ -1,0 +1,145 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] maintenance: installing charm software
+  untrusted-postgresql-k8s/1 [executing] maintenance: installing charm software
+  untrusted-postgresql-k8s/2 [idle] blocked: Insufficient permissions, try: `juju trust untrusted-postgresql-k8s --scope=cluster`
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  untrusted-postgresql-k8s/0 [idle] unknown: 
+  untrusted-postgresql-k8s/1 [idle] unknown: 
+  untrusted-postgresql-k8s/2 [executing] active: Primary (degraded)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  untrusted-postgresql-k8s/0 [executing] active: 
+  untrusted-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+  untrusted-postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  untrusted-postgresql-k8s/1 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.23   unsupported  00:28:07Z
+
+App                       Version  Status  Scale  Charm           Channel  Rev  Address        Exposed  Message
+untrusted-postgresql-k8s  14.23    active      3  postgresql-k8s             0  10.152.183.68  no       
+
+Unit                         Workload  Agent  Address       Ports  Message
+untrusted-postgresql-k8s/0   active    idle   10.1.241.204         
+untrusted-postgresql-k8s/1   active    idle   10.1.241.205         
+untrusted-postgresql-k8s/2*  active    idle   10.1.241.206         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-untrusted-postgresql-k8s-2: 00:26:32 ERROR unit.untrusted-postgresql-k8s/2.juju-log 
+            Access to k8s cluster resources is not authorized. This happens when RBAC is enabled and the deployed application was not trusted by the juju admin.
+            To fix this issue, run `juju trust untrusted-postgresql-k8s --scope=cluster` (or remove & re-deploy untrusted-postgresql-k8s with `--trust`)
+            
+unit-untrusted-postgresql-k8s-2: 00:26:32 ERROR unit.untrusted-postgresql-k8s/2.juju-log 
+            Access to k8s cluster resources is not authorized. This happens when RBAC is enabled and the deployed application was not trusted by the juju admin.
+            To fix this issue, run `juju trust untrusted-postgresql-k8s --scope=cluster` (or remove & re-deploy untrusted-postgresql-k8s with `--trust`)
+            
+unit-untrusted-postgresql-k8s-2: 00:26:33 ERROR unit.untrusted-postgresql-k8s/2.juju-log failed to create k8s services
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 267, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '403 Forbidden' for url 'https://10.152.183.1/api/v1/namespaces/testing/services/untrusted-postgresql-k8s-primary?force=true&fieldManager=untrusted-postgresql-k8s'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/403
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/src/charm.py", line 1397, in _fix_pod
+    self._create_services()
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/src/charm.py", line 1200, in _create_services
+    client.apply(
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 862, in apply
+    return self.patch(
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 479, in patch
+    return self._client.request(
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 347, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 281, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 269, in raise_for_status
+    raise transform_exception(e) from e
+lightkube.core.exceptions.ApiError: services "untrusted-postgresql-k8s-primary" is forbidden: User "system:serviceaccount:testing:untrusted-postgresql-k8s" cannot create resource "services" in API group "" in the namespace "testing"
+unit-untrusted-postgresql-k8s-2: 00:26:34 ERROR unit.untrusted-postgresql-k8s/2.juju-log 
+            Access to k8s cluster resources is not authorized. This happens when RBAC is enabled and the deployed application was not trusted by the juju admin.
+            To fix this issue, run `juju trust untrusted-postgresql-k8s --scope=cluster` (or remove & re-deploy untrusted-postgresql-k8s with `--trust`)
+            
+unit-untrusted-postgresql-k8s-2: 00:26:35 ERROR unit.untrusted-postgresql-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/src/charm.py", line 2810, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 360, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 507, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 491, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 426, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 470, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 337, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 910, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1028, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/src/charm.py", line 992, in _on_postgresql_pebble_ready
+    self._update_pebble_layers()
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/src/charm.py", line 2450, in _update_pebble_layers
+    container.replan()
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/model.py", line 2601, in replan
+    self._pebble.replan_services()
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2326, in replan_services
+    return self._services_action('replan', [], timeout, delay)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2428, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "postgresql" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-06-01T00:26:35Z INFO Most recent service output:
+    Traceback (most recent call last):
+      File "/usr/bin/patroni", line 33, in <module>
+        sys.exit(load_entry_point('patroni==3.3.8', 'console_scripts', 'patroni')())
+      File "/usr/lib/python3/dist-packages/patroni/__main__.py", line 358, in main
+        return patroni_main(args.configfile)
+      File "/usr/lib/python3/dist-packages/patroni/__main__.py", line 246, in patroni_main
+        abstract_main(Patroni, configfile)
+      File "/usr/lib/python3/dist-packages/patroni/daemon.py", line 172, in abstract_main
+        controller = cls(config)
+      File "/usr/lib/python3/dist-packages/patroni/__main__.py", line 76, in __init__
+        self.postgresql = Postgresql(self.config['postgresql'], self.dcs.mpp)
+      File "/usr/lib/python3/dist-packages/patroni/postgresql/__init__.py", line 69, in __init__
+        self._data_dir: str = config['data_dir']
+    KeyError: 'data_dir'
+2026-06-01T00:26:35Z ERROR service start attempt: exited quickly with code 1, will restart
+-----
+unit-untrusted-postgresql-k8s-2: 00:26:35 ERROR juju.worker.uniter.operation hook "postgresql-pebble-ready" (via hook dispatching script: dispatch) failed: exit status 1
+unit-untrusted-postgresql-k8s-2: 00:26:35 ERROR juju.worker.uniter pebble poll failed for container "postgresql": failed to send pebble-ready event: hook failed
+unit-untrusted-postgresql-k8s-2: 00:26:48 ERROR unit.untrusted-postgresql-k8s/2.juju-log failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 442, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 184, in _connect_to_database
+    connection = psycopg2.connect(
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "untrusted-postgresql-k8s-primary.testing.svc.cluster.local" (10.152.183.238), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/src/charm.py", line 756, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-untrusted-postgresql-k8s-2/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 471, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+charms.postgresql_k8s.v0.postgresql.PostgreSQLEnableDisableExtensionError
+unit-untrusted-postgresql-k8s-1: 00:27:22 ERROR unit.untrusted-postgresql-k8s/1.juju-log upgrade:0: Failed to list PostgreSQL database users: connection to server at "untrusted-postgresql-k8s-1.untrusted-postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.241.205), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
