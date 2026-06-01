@@ -6,8 +6,9 @@ providers:
     enable: true
     bootstrap: true
     features:
-      dns:
-      load-balancer:
+      local-storage: {}
+      network: {}
+      dns: {}
 host:
   snaps:
     jhack:
