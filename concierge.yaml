@@ -7,8 +7,6 @@ providers:
     bootstrap: true
     features:
       dns:
-        upstream-nameservers: 8.8.8.8
-      local-storage:
       load-balancer:
 host:
   snaps:
