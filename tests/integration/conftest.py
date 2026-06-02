@@ -6,6 +6,7 @@ import logging
 import os
 import socket
 import subprocess
+import time
 import uuid
 
 import boto3
@@ -109,6 +110,36 @@ class ConnectionInformation:
     cert: str
 
 
+def _wait_for_rgw_admin_ready(timeout: int = 180, interval: int = 5) -> None:
+    """Wait for microceph RGW admin commands to become available."""
+    command = ["sudo", "microceph.radosgw-admin", "user", "list"]
+    deadline = time.monotonic() + timeout
+    attempt = 0
+    result: subprocess.CompletedProcess[str] | None = None
+
+    while time.monotonic() < deadline:
+        attempt += 1
+        result = subprocess.run(command, capture_output=True, text=True)
+        if result.returncode == 0:
+            logger.info("RGW admin ready after %s attempt(s)", attempt)
+            return
+        logger.info(
+            "Waiting for RGW admin readiness (attempt %s): rc=%s stdout=%r stderr=%r",
+            attempt,
+            result.returncode,
+            result.stdout.strip(),
+            result.stderr.strip(),
+        )
+        time.sleep(interval)
+
+    raise RuntimeError(
+        "RGW admin did not become ready within "
+        f"{timeout}s; rc={result.returncode if result else 'n/a'} "
+        f"stdout={result.stdout.strip() if result else 'n/a'!r} "
+        f"stderr={result.stderr.strip() if result else 'n/a'!r}"
+    )
+
+
 @pytest.fixture(scope="session")
 def microceph():
     if not os.environ.get("CI") == "true":
@@ -189,6 +220,7 @@ def microceph():
         shell=True,
         check=True,
     )
+    _wait_for_rgw_admin_ready()
     output = subprocess.run(
         [
             "sudo",
