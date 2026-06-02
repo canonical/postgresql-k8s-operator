@@ -7,6 +7,7 @@ providers:
     bootstrap: true
     features:
       local-storage:
+      network:
       load-balancer:
         enabled: true
         l2-mode: true
