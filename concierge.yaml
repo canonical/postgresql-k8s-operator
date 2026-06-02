@@ -7,6 +7,12 @@ providers:
     bootstrap: true
     features:
       local-storage:
+      load-balancer:
+        enabled: true
+        l2-mode: true
+        cidrs: 10.20.30.40/32
+    bootstrap-constraints:
+      root-disk: 5G
 host:
   snaps:
     jhack:
