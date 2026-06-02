@@ -1,0 +1,83 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: Update PR failure link
+
+on:
+  workflow_run:
+    workflows:
+      - Tests
+    types:
+      - completed
+
+jobs:
+  update-pr-description:
+    name: Update PR with CI/CD failure link
+    if: ${{ github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.pull_requests[0] }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - name: Update PR body
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const workflowRun = context.payload.workflow_run;
+            const pullRequests = workflowRun.pull_requests || [];
+
+            if (pullRequests.length === 0) {
+              core.info("No pull request is associated with this workflow run.");
+              return;
+            }
+
+            const failureConclusions = new Set([
+              "action_required",
+              "cancelled",
+              "failure",
+              "startup_failure",
+              "timed_out",
+            ]);
+            const isFailure = failureConclusions.has(workflowRun.conclusion);
+            const markerStart = "<!-- ci-failure-link:start -->";
+            const markerEnd = "<!-- ci-failure-link:end -->";
+            const escapedMarkerStart = markerStart.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const escapedMarkerEnd = markerEnd.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            const markerRegex = new RegExp(
+              `${escapedMarkerStart}[\\s\\S]*?${escapedMarkerEnd}\\n?`,
+              "m"
+            );
+
+            for (const pullRequest of pullRequests) {
+              const { data: currentPullRequest } = await github.rest.pulls.get({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pullRequest.number,
+              });
+
+              const currentBody = currentPullRequest.body || "";
+              const bodyWithoutFailureLink = currentBody.replace(markerRegex, "").trimEnd();
+              const failureMessage = [
+                markerStart,
+                `⚠️ CI/CD failed in [${workflowRun.name} #${workflowRun.run_number}](${workflowRun.html_url}).`,
+                markerEnd,
+              ].join("\n");
+
+              const nextBody = isFailure
+                ? [bodyWithoutFailureLink, failureMessage].filter(Boolean).join("\n\n")
+                : bodyWithoutFailureLink;
+
+              if (nextBody === currentBody) {
+                core.info(`PR #${pullRequest.number}: no body change needed.`);
+                continue;
+              }
+
+              await github.rest.pulls.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pullRequest.number,
+                body: nextBody,
+              });
+
+              core.info(`PR #${pullRequest.number}: body updated.`);
+            }
