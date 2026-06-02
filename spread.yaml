@@ -139,4 +139,15 @@ prepare-each: |
   # Unable to set constraint on all models because of Juju bug:
   # https://bugs.launchpad.net/juju/+bug/2065050
   juju set-model-constraints arch="$(dpkg --print-architecture)"
-# Only restore on lxd backend—no need to restore on CI
+
+  # Wait for Juju controller and API to be reachable
+  for i in $(seq 1 30); do
+    sudo k8s status --wait-ready && break
+    juju controllers && juju models && break
+    sleep 10
+  done
+
+  # Validate k8s DNS / API access
+  sudo k8s kubectl get nodes
+  sudo k8s kubectl get svc -A
+  sudo k8s kubectl get pods -A

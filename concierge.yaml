@@ -6,12 +6,9 @@ providers:
     enable: true
     bootstrap: true
     features:
-      local-storage:
+      dns:
       network:
-      load-balancer:
-        enabled: true
-        l2-mode: true
-        cidrs: 10.20.30.40/32
+      local-storage:
     bootstrap-constraints:
       root-disk: 5G
 host:
