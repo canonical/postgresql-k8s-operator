@@ -44,10 +44,7 @@ async def test_deploy_stable(ops_test: OpsTest) -> None:
             base=CHARM_BASE,
         ),
         ops_test.model.deploy(
-            APPLICATION_NAME,
-            num_units=1,
-            channel="latest/edge",
-            base=CHARM_BASE,
+            APPLICATION_NAME, num_units=1, channel="latest/edge", series="jammy"
         ),
     )
     await ops_test.model.relate(DATABASE_APP_NAME, f"{APPLICATION_NAME}:database")
@@ -152,3 +149,4 @@ async def test_upgrade_from_stable(ops_test: OpsTest, charm, continuous_writes):
             "Number of switchovers is greater than 2"
         )
         assert await get_patroni_setting(ops_test, "failsafe_mode")
+        assert await get_patroni_setting(ops_test, "max_timelines_history") == 50

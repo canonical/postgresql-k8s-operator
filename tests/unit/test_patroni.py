@@ -499,6 +499,21 @@ def test_set_failsafe_mode(harness, patroni):
         )
 
 
+def test_set_max_timelines_history(harness, patroni):
+    with (
+        patch("requests.patch") as _patch,
+    ):
+        patroni.set_max_timelines_history()
+
+        _patch.assert_called_once_with(
+            f"{patroni._patroni_url}/config",
+            json={"max_timelines_history": 50},
+            verify=True,
+            auth=patroni._patroni_auth,
+            timeout=10,
+        )
+
+
 def test_reload_patroni_configuration(harness, patroni):
     with (
         patch("ops.model.Container.send_signal") as _send_signal,

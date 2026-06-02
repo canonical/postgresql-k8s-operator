@@ -124,6 +124,7 @@ class PostgreSQLUpgrade(DataUpgrade):
             self._set_up_new_credentials_for_legacy()
             self._set_up_new_access_roles_for_legacy()
             self._patch_failsafe_mode()
+            self._patch_max_timelines_history()
 
         try:
             for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(10)):
@@ -303,6 +304,12 @@ class PostgreSQLUpgrade(DataUpgrade):
             self.charm._patroni.set_failsafe_mode()
         except Exception:
             logger.warning("Unable to patch in failsafe mode")
+
+    def _patch_max_timelines_history(self):
+        try:
+            self.charm._patroni.set_max_timelines_history()
+        except Exception:
+            logger.warning("Unable to patch in max_timelines_history")
 
     @property
     def unit_upgrade_data(self) -> RelationDataContent:

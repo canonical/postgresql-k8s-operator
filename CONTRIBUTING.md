@@ -59,8 +59,8 @@ juju model-config logging-config="<root>=INFO;unit=DEBUG"
 microk8s enable rbac
 
 # Deploy the charm
-juju deploy ./postgresql-k8s_ubuntu-22.04-amd64.charm --trust \
-    --resource postgresql-image=$(yq '(.resources.postgresql-image.upstream-source)' metadata.yaml)
+juju deploy ./postgresql-k8s_ubuntu@22.04-amd64.charm --trust \
+    --resource postgresql-image=$(yq -r '.["resources"]["postgresql-image"]["upstream-source"]' metadata.yaml)
 ```
 
 ## Canonical Contributor Agreement

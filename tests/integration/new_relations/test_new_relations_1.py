@@ -48,8 +48,8 @@ async def test_database_relation_with_charm_libraries(ops_test: OpsTest, charm):
                 APPLICATION_APP_NAME,
                 application_name=APPLICATION_APP_NAME,
                 num_units=2,
-                base=CHARM_BASE,
                 channel="latest/edge",
+                series="jammy",
                 config={"extra_user_roles": "CREATEDB,CREATEROLE"},
             ),
             ops_test.model.deploy(
@@ -187,8 +187,8 @@ async def test_two_applications_doesnt_share_the_same_relation_data(ops_test: Op
     await ops_test.model.deploy(
         APPLICATION_APP_NAME,
         application_name=another_application_app_name,
-        base=CHARM_BASE,
-        channel="edge",
+        channel="latest/edge",
+        series="jammy",
     )
 
     # Relate the new application with the database

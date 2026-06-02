@@ -33,8 +33,8 @@ async def test_deploy_charms(ops_test: OpsTest, charm):
                 APPLICATION_APP_NAME,
                 application_name=APPLICATION_APP_NAME,
                 num_units=1,
-                base=CHARM_BASE,
                 channel="latest/edge",
+                series="jammy",
             ),
             ops_test.model.deploy(
                 charm,

@@ -1,3 +1,4 @@
+(flowcharts-backups)=
 # Backup flowcharts
 
 This document contains backups management flowchart, including all major hooks. This sources can be found at [src/backups.py](https://github.com/canonical/postgresql-k8s-operator/blob/main/src/backups.py).

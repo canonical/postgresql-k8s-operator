@@ -1,3 +1,4 @@
+(flowcharts-charm)=
 # Charm flowcharts
 
 The file `charm.py` is the entrypoint for the charm. It contains functions for its basic operation, including its major hooks and file management. This file can be found at [src/charm.py](https://github.com/canonical/postgresql-k8s-operator/blob/main/src/charm.py).

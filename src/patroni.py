@@ -544,6 +544,16 @@ class Patroni:
             timeout=PATRONI_TIMEOUT,
         )
 
+    def set_max_timelines_history(self) -> None:
+        """Patch the DCS with max_timelines_history limit."""
+        requests.patch(
+            f"{self._patroni_url}/config",
+            verify=self._verify,
+            json={"max_timelines_history": 50},
+            auth=self._patroni_auth,
+            timeout=PATRONI_TIMEOUT,
+        )
+
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))
     def reinitialize_postgresql(self) -> None:
         """Reinitialize PostgreSQL."""

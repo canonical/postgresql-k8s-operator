@@ -13,14 +13,17 @@ from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQLDeleteUserError,
     PostgreSQLGetPostgreSQLVersionError,
 )
-from ops.charm import (
+from ops import (
+    ActiveStatus,
+    BlockedStatus,
     CharmBase,
+    Object,
+    Relation,
     RelationBrokenEvent,
     RelationChangedEvent,
     RelationDepartedEvent,
+    Unit,
 )
-from ops.framework import Object
-from ops.model import ActiveStatus, BlockedStatus, Relation, Unit
 from pgconnstr import ConnectionString
 
 from constants import (
@@ -82,9 +85,9 @@ class DbProvides(Object):
         Generate password and handle user and database creation for the related application.
         """
         # Check for some conditions before trying to access the PostgreSQL instance.
-        if not self.charm.is_cluster_initialised or not self.charm._patroni.member_started:
+        if not self.charm.is_cluster_initialised or not self.charm._patroni.primary_endpoint_ready:
             logger.debug(
-                "Deferring on_relation_changed: Cluster not initialized or patroni not running"
+                "Deferring on_relation_changed: Cluster not initialized or primary endpoint not ready"
             )
             event.defer()
             return

@@ -47,10 +47,7 @@ async def test_deploy_latest(ops_test: OpsTest) -> None:
             base=CHARM_BASE,
         ),
         ops_test.model.deploy(
-            APPLICATION_NAME,
-            num_units=1,
-            channel="latest/edge",
-            base=CHARM_BASE,
+            APPLICATION_NAME, num_units=1, channel="latest/edge", series="jammy"
         ),
     )
     await ops_test.model.relate(DATABASE_APP_NAME, f"{APPLICATION_NAME}:database")

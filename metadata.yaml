@@ -34,7 +34,7 @@ resources:
   postgresql-image:
     type: oci-image
     description: OCI image for PostgreSQL
-    upstream-source: ghcr.io/canonical/charmed-postgresql@sha256:876a6efcfd9093d6a02d992f3c6f0b9948dcf17ec6d87fa40f19b9d1db5b0b12 # renovate: oci-image tag: 14.20-22.04_edge
+    upstream-source: ghcr.io/canonical/charmed-postgresql@sha256:e77fc5952a661ea8c4ecf1cc50989011e69925335e2cca85e3f4b70ceba41a47 # renovate: oci-image tag: 14.23-22.04_edge
 
 peers:
   database-peers:
@@ -53,12 +53,16 @@ provides:
     interface: postgresql_client
   db:
     interface: pgsql
+    optional: true
   db-admin:
     interface: pgsql
+    optional: true
   metrics-endpoint:
     interface: prometheus_scrape
+    optional: true
   grafana-dashboard:
     interface: grafana_dashboard
+    optional: true
 
 requires:
   replication:

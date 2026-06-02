@@ -1,3 +1,4 @@
+(deploy)=
 # How to deploy
 
 This page introduces the PostgreSQL deployment process and lists all related guides.

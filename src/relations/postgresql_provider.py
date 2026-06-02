@@ -18,9 +18,16 @@ from charms.postgresql_k8s.v0.postgresql import (
     PostgreSQLDeleteUserError,
     PostgreSQLGetPostgreSQLVersionError,
 )
-from ops.charm import CharmBase, RelationBrokenEvent, RelationChangedEvent, RelationDepartedEvent
-from ops.framework import Object
-from ops.model import ActiveStatus, BlockedStatus, Relation
+from ops import (
+    ActiveStatus,
+    BlockedStatus,
+    CharmBase,
+    Object,
+    Relation,
+    RelationBrokenEvent,
+    RelationChangedEvent,
+    RelationDepartedEvent,
+)
 
 from constants import DATABASE_PORT, ENDPOINT_SIMULTANEOUSLY_BLOCKING_MESSAGE
 from utils import new_password
