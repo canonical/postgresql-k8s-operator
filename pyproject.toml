@@ -8,7 +8,7 @@ requires-poetry = ">=2.0.0"
 [tool.poetry.dependencies]
 python = "^3.12"
 ops = {extras = ["tracing"], version = "^3.7.1"}
-boto3 = "^1.43.17"
+boto3 = "^1.43.19"
 pgconnstr = "^1.0.1"
 requests = "^2.34.2"
 tenacity = "^9.1.4"
@@ -44,7 +44,7 @@ optional = true
 
 [tool.poetry.group.lint.dependencies]
 codespell = "^2.4.2"
-ty = "^0.0.40"
+ty = "^0.0.42"
 
 [tool.poetry.group.unit]
 optional = true
