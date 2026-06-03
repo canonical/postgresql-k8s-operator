@@ -3,6 +3,7 @@ juju:
     logging-config: <root>=INFO; unit=DEBUG
 providers:
   k8s:
+    channel: 1.35-classic/stable
     enable: true
     bootstrap: true
     features:
