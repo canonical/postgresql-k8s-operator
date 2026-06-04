@@ -224,6 +224,8 @@ class PostgreSQLBackups(Object):
             ])
             if error != "":
                 raise Exception(error)
+            if system_identifier_from_instance is None:
+                raise Exception("Failed to get system identifier from instance")
             system_identifier_from_instance = next(
                 line
                 for line in system_identifier_from_instance.splitlines()
@@ -301,7 +303,7 @@ class PostgreSQLBackups(Object):
             self.container.exec(["rm", "-r", "/var/lib/postgresql/data/pgdata"]).wait_output()
         except ExecError as e:
             # If previous PITR restore was unsuccessful, there is no such directory.
-            if "No such file or directory" not in e.stderr:
+            if e.stderr is None or "No such file or directory" not in e.stderr:
                 logger.exception(
                     "Failed to empty data directory in prep for backup restore", exc_info=e
                 )
@@ -387,6 +389,8 @@ class PostgreSQLBackups(Object):
         """
         backup_list = []
         output, _ = self._execute_command(["pgbackrest", "info", "--output=json"])
+        if output is None:
+            return ""
         backups = json.loads(output)[0]["backup"]
         for backup in backups:
             backup_id, backup_type = self._parse_backup_id(backup["label"])
@@ -452,6 +456,8 @@ class PostgreSQLBackups(Object):
                 the S3 bucket.
         """
         output, _ = self._execute_command(["pgbackrest", "info", "--output=json"])
+        if output is None:
+            return dict[str, tuple[str, str]]()
         repository_info = next(iter(json.loads(output)), None)
 
         # If there are no backups, returns an empty dict.
@@ -486,6 +492,8 @@ class PostgreSQLBackups(Object):
             "\\.history$",
             "--output=json",
         ])
+        if output is None:
+            return dict[str, tuple[str, str]]()
 
         repository = json.loads(output).items()
         if repository is None:
@@ -778,7 +786,7 @@ class PostgreSQLBackups(Object):
             return False
         return True
 
-    def _on_s3_credential_changed(self, event: CredentialsChangedEvent) -> bool | None:
+    def _on_s3_credential_changed(self, event: CredentialsChangedEvent) -> None:
         """Call the stanza initialization when the credentials or the connection info change."""
         if not self._on_s3_credentials_checks(event):
             return
@@ -814,7 +822,9 @@ class PostgreSQLBackups(Object):
 
         can_use_s3_repository, validation_message = self.can_use_s3_repository()
         if not can_use_s3_repository:
-            self._s3_initialization_set_failure(validation_message)
+            self._s3_initialization_set_failure(
+                validation_message or ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE
+            )
             return False
 
         if not self._initialise_stanza(event):
@@ -912,7 +922,7 @@ Juju Version: {juju_version!s}
 
             # Recover the backup id from the logs.
             backup_label_stdout_line = re.findall(
-                r"(new backup label = )([0-9]{8}[-][0-9]{6}[F])$", e.stdout, re.MULTILINE
+                r"(new backup label = )([0-9]{8}[-][0-9]{6}[F])$", e.stdout or "", re.MULTILINE
             )
             if len(backup_label_stdout_line) > 0:
                 backup_id = backup_label_stdout_line[0][1]
@@ -1134,7 +1144,7 @@ Stderr:
         if backup_type == "full":
             return datetime.strftime(datetime.now(), "%Y%m%d-%H%M%SF")
         if backup_type == "differential":
-            backups = self._list_backups(show_failed=False, parse=False).keys()
+            backups = list(self._list_backups(show_failed=False, parse=False).keys())
             last_full_backup = None
             for label in backups[::-1]:
                 if label.endswith("F"):
@@ -1145,12 +1155,13 @@ Stderr:
                 raise TypeError("Differential backup requested but no previous full backup")
             return f"{last_full_backup}_{datetime.strftime(datetime.now(), '%Y%m%d-%H%M%SD')}"
         if backup_type == "incremental":
-            backups = self._list_backups(show_failed=False, parse=False).keys()
+            backups = list(self._list_backups(show_failed=False, parse=False).keys())
             if not backups:
                 raise TypeError("Incremental backup requested but no previous successful backup")
             return f"{backups[-1]}_{datetime.strftime(datetime.now(), '%Y%m%d-%H%M%SI')}"
+        raise ValueError(f"Unknown backup type: {backup_type}")
 
-    def _fetch_backup_from_id(self, backup_id: str) -> str:
+    def _fetch_backup_from_id(self, backup_id: str) -> str | None:
         """Fetches backup's pgbackrest label from backup id."""
         timestamp = f"{datetime.strftime(datetime.strptime(backup_id, '%Y-%m-%dT%H:%M:%SZ'), '%Y%m%d-%H%M%S')}"
         backups = self._list_backups(show_failed=False, parse=False).keys()
@@ -1169,7 +1180,7 @@ Stderr:
         are_backup_settings_ok, validation_message = self._are_backup_settings_ok()
         if not are_backup_settings_ok:
             logger.error(f"Restore failed: {validation_message}")
-            event.fail(validation_message)
+            event.fail(validation_message or "Backup settings check failed")
             return False
 
         if not event.params.get("backup-id") and event.params.get("restore-to-time") is None:
