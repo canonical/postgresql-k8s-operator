@@ -1,7 +1,7 @@
 # Charmed PostgreSQL K8s operator
-[![CharmHub Badge](https://charmhub.io/postgresql-k8s/badge.svg)](https://charmhub.io/postgresql-k8s)
-[![Release](https://github.com/canonical/postgresql-k8s-operator/actions/workflows/release.yaml/badge.svg)](https://github.com/canonical/postgresql-k8s-operator/actions/workflows/release.yaml)
-[![Tests](https://github.com/canonical/postgresql-k8s-operator/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/canonical/postgresql-k8s-operator/actions/workflows/ci.yaml?query=branch%3Amain)
+[![CharmHub Badge](https://charmhub.io/postgresql-k8s/badge.svg?channel=16%2Fstable)](https://charmhub.io/postgresql-k8s?channel=16%2Fstable)
+[![Release](https://github.com/canonical/postgresql-k8s-operator/actions/workflows/release.yaml/badge.svg?branch=16%2Fedge)](https://github.com/canonical/postgresql-k8s-operator/actions/workflows/release.yaml?query=branch%3A16%2Fedg)
+[![Tests](https://github.com/canonical/postgresql-k8s-operator/actions/workflows/ci.yaml/badge.svg?branch=16%2Fedge)](https://github.com/canonical/postgresql-k8s-operator/actions/workflows/ci.yaml?query=branch%3A16%2Fedg)
 
 ## Description
 
