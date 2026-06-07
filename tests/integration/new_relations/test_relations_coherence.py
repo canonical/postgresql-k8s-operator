@@ -7,9 +7,8 @@ import string
 
 import psycopg2
 import pytest
-from pytest_operator.plugin import OpsTest
-
 from constants import DATABASE_DEFAULT_NAME
+from pytest_operator.plugin import OpsTest
 
 from ..helpers import DATABASE_APP_NAME, build_and_deploy
 from .helpers import build_connection_string

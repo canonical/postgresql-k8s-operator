@@ -2,13 +2,14 @@ juju:
   model-defaults:
     logging-config: <root>=INFO; unit=DEBUG
 providers:
-  microk8s:
+  k8s:
+    channel: 1.35-classic/stable
     enable: true
     bootstrap: true
-    addons:
-      - dns
-      - hostpath-storage
-      - rbac
+    features:
+      local-storage: {}
+      network: {}
+      dns: {}
 host:
   snaps:
     jhack:

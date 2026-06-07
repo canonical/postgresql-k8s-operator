@@ -10,11 +10,10 @@ import pytest
 import requests
 from lightkube import AsyncClient
 from lightkube.resources.core_v1 import Pod
+from locales import ROCK_LOCALES
 from psycopg2 import sql
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
-
-from locales import ROCK_LOCALES
 
 from .ha_tests.helpers import get_cluster_roles
 from .helpers import (

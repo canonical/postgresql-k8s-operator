@@ -43,7 +43,7 @@ backends:
       CONCIERGE_EXTRA_SNAPS: charmcraft
       CONCIERGE_EXTRA_DEBS: pipx
     systems:
-      - ubuntu-24.04:
+      - ubuntu-22.04:
           username: runner
     prepare: |
       systemctl disable --now unattended-upgrades.service
@@ -60,7 +60,7 @@ backends:
       # For example, with microk8s, using `concierge restore` takes twice as long as this (e.g. 6
       # min instead of 3 min between every spread job)
       juju destroy-model --force --no-wait --destroy-storage --no-prompt testing
-      juju kill-controller --no-prompt concierge-microk8s
+      juju kill-controller --no-prompt concierge-k8s
     restore: |
       rm -rf "$SPREAD_PATH"
 
@@ -76,15 +76,15 @@ backends:
     allocate: |
       sudo tee /etc/ssh/sshd_config.d/10-spread-github-ci.conf << 'EOF'
       PasswordAuthentication yes
-      PermitEmptyPasswords yes
       EOF
 
-      sudo passwd -d runner
+      echo "runner:$SPREAD_PASSWORD" | sudo chpasswd
 
       ADDRESS localhost
 
-      sudo mkdir -p /var/snap/microk8s/common/default-storage
-      sudo mount --bind /mnt /var/snap/microk8s/common/default-storage
+      # Remove Docker/containerd from the runner so k8s can bootstrap cleanly.
+      # sudo apt-get remove -y docker-ce docker-ce-cli containerd.io
+      # sudo rm -rf /run/containerd
     # HACK: spread does not pass environment variables set on runner
     # Manually pass specific environment variables
     environment:
@@ -94,7 +94,7 @@ backends:
       GCP_ACCESS_KEY: '$(HOST: echo $GCP_ACCESS_KEY)'
       GCP_SECRET_KEY: '$(HOST: echo $GCP_SECRET_KEY)'
     systems:
-      - ubuntu-24.04:
+      - ubuntu-22.04:
           username: runner
       - ubuntu-24.04-arm:
           username: runner
@@ -117,6 +117,9 @@ prepare: |
 
   # Install charmcraft & pipx (on lxd-vm backend)
   concierge prepare --trace
+
+  sudo k8s status
+  sudo k8s get dns
 
   pipx install tox poetry
 prepare-each: |

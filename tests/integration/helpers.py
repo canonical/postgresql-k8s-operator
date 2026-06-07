@@ -14,6 +14,7 @@ import botocore
 import psycopg2
 import requests
 import yaml
+from constants import DATABASE_DEFAULT_NAME, PEER, SYSTEM_USERS_PASSWORD_CONFIG
 from juju.model import Model
 from juju.unit import Unit
 from lightkube.core.client import Client
@@ -32,8 +33,6 @@ from tenacity import (
     wait_exponential,
     wait_fixed,
 )
-
-from constants import DATABASE_DEFAULT_NAME, PEER, SYSTEM_USERS_PASSWORD_CONFIG
 
 CHARM_BASE = "ubuntu@22.04"
 CHARM_BASE_NOBLE = "ubuntu@24.04"
@@ -59,7 +58,7 @@ try:
     check_call(["kubectl", "version", "--client=true"])
     KUBECTL = "kubectl"
 except FileNotFoundError:
-    KUBECTL = "microk8s kubectl"
+    KUBECTL = "sudo k8s kubectl"
 
 logger = logging.getLogger(__name__)
 
