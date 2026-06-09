@@ -933,21 +933,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def _create_pgdata(self, container: Container):
         """Create the PostgreSQL data directory."""
         if not container.exists(self.pgdata_path):
-            try:
-                container.make_dir(
-                    self.pgdata_path,
-                    permissions=0o750,
-                    user=WORKLOAD_OS_USER,
-                    group=WORKLOAD_OS_GROUP,
-                )
-            except PathError as e:
-                # This handler can run more than once, e.g. a deferred pebble-ready event is
-                # re-emitted on later hooks. container.exists() may also report the pgdata
-                # directory as missing even when it is present (restrictively-mounted cloud
-                # volumes), so a redundant make_dir() must stay idempotent: ignore "file exists".
-                if "file exists" not in str(e):
-                    raise
-                logger.info("pgdata directory already exists, skipping creation")
+            container.make_dir(
+                self.pgdata_path,
+                permissions=0o750,
+                user=WORKLOAD_OS_USER,
+                group=WORKLOAD_OS_GROUP,
+                make_parents=True,
+            )
         # Also, fix the permissions from the parent directory.
         container.exec([
             "chown",
