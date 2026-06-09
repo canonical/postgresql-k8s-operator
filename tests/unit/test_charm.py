@@ -19,7 +19,7 @@ from ops.model import (
     RelationDataTypeError,
     WaitingStatus,
 )
-from ops.pebble import ChangeError, ServiceStatus
+from ops.pebble import ChangeError, PathError, ServiceStatus
 from ops.testing import Harness
 from requests import ConnectionError as RequestsConnectionError
 from tenacity import RetryError, wait_fixed
@@ -1818,6 +1818,38 @@ def test_create_pgdata(harness):
         "postgres:postgres",
         "/var/lib/postgresql/data",
     ])
+
+
+def test_create_pgdata_is_idempotent_when_dir_already_exists(harness):
+    # _on_postgresql_pebble_ready can run more than once (a deferred event is re-emitted on
+    # later hooks). container.exists() may report the pgdata directory as missing even when it
+    # is present (e.g. restrictively-mounted cloud volumes), so make_dir() raises "file exists".
+    # _create_pgdata must tolerate that and not crash the charm.
+    container = MagicMock()
+    container.exists.return_value = False
+    container.make_dir.side_effect = PathError(
+        "generic-file-error", "mkdir /var/lib/postgresql/data/pgdata: file exists"
+    )
+
+    harness.charm._create_pgdata(container)
+
+    # The parent-directory ownership fix must still run.
+    container.exec.assert_called_once_with([
+        "chown",
+        "postgres:postgres",
+        "/var/lib/postgresql/data",
+    ])
+
+
+def test_create_pgdata_reraises_unexpected_path_error(harness):
+    container = MagicMock()
+    container.exists.return_value = False
+    container.make_dir.side_effect = PathError(
+        "permission-denied", "mkdir /var/lib/postgresql/data/pgdata: permission denied"
+    )
+
+    with pytest.raises(PathError):
+        harness.charm._create_pgdata(container)
 
 
 def test_get_plugins(harness):
