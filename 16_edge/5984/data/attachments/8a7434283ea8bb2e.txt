@@ -1,0 +1,175 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-1
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:171 waiting for idle
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [idle] active: Primary
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:181 get pvc for postgresql-k8s2/0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.1.176:16443/api/v1/namespaces/testing/persistentvolumeclaims "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1088 got pvc for archive storage: postgresql-k8s2-archive-75a126cc-postgresql-k8s2-0
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1088 got pvc for data storage: postgresql-k8s2-data-75a126cc-postgresql-k8s2-0
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1088 got pvc for logs storage: postgresql-k8s2-logs-75a126cc-postgresql-k8s2-0
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1088 got pvc for temp storage: postgresql-k8s2-temp-75a126cc-postgresql-k8s2-0
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:186 scale to 0
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:190 load and change pv-name config for pvc postgresql-k8s2-archive-75a126cc-postgresql-k8s2-0
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:190 load and change pv-name config for pvc postgresql-k8s2-data-75a126cc-postgresql-k8s2-0
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:190 load and change pv-name config for pvc postgresql-k8s2-logs-75a126cc-postgresql-k8s2-0
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:190 load and change pv-name config for pvc postgresql-k8s2-temp-75a126cc-postgresql-k8s2-0
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:196 delete pvc postgresql-k8s2-archive-75a126cc-postgresql-k8s2-0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: DELETE https://10.1.1.176:16443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s2-archive-75a126cc-postgresql-k8s2-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:196 delete pvc postgresql-k8s2-data-75a126cc-postgresql-k8s2-0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: DELETE https://10.1.1.176:16443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s2-data-75a126cc-postgresql-k8s2-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:196 delete pvc postgresql-k8s2-logs-75a126cc-postgresql-k8s2-0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: DELETE https://10.1.1.176:16443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s2-logs-75a126cc-postgresql-k8s2-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:196 delete pvc postgresql-k8s2-temp-75a126cc-postgresql-k8s2-0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: DELETE https://10.1.1.176:16443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s2-temp-75a126cc-postgresql-k8s2-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:200 remove claimref from pv pvc-103761bc-0087-4e5e-bf39-c00a4fd2f139
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH https://10.1.1.176:16443/api/v1/persistentvolumes/pvc-103761bc-0087-4e5e-bf39-c00a4fd2f139 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:200 remove claimref from pv pvc-13e3639f-c35c-416a-b9d2-f93726c00b82
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH https://10.1.1.176:16443/api/v1/persistentvolumes/pvc-13e3639f-c35c-416a-b9d2-f93726c00b82 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:200 remove claimref from pv pvc-6f2e62bd-70b8-46ee-b81b-562354e92eab
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH https://10.1.1.176:16443/api/v1/persistentvolumes/pvc-6f2e62bd-70b8-46ee-b81b-562354e92eab "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:200 remove claimref from pv pvc-c715ebaf-fdcd-49e4-abef-900722a484fd
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH https://10.1.1.176:16443/api/v1/persistentvolumes/pvc-c715ebaf-fdcd-49e4-abef-900722a484fd "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:204 apply pvc postgresql-k8s2-archive-75a126cc-postgresql-k8s2-0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH https://10.1.1.176:16443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s2-archive-75a126cc-postgresql-k8s2-0?fieldManager=lightkube "HTTP/1.1 201 Created"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:204 apply pvc postgresql-k8s2-data-75a126cc-postgresql-k8s2-0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH https://10.1.1.176:16443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s2-data-75a126cc-postgresql-k8s2-0?fieldManager=lightkube "HTTP/1.1 201 Created"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:204 apply pvc postgresql-k8s2-logs-75a126cc-postgresql-k8s2-0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH https://10.1.1.176:16443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s2-logs-75a126cc-postgresql-k8s2-0?fieldManager=lightkube "HTTP/1.1 201 Created"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:204 apply pvc postgresql-k8s2-temp-75a126cc-postgresql-k8s2-0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH https://10.1.1.176:16443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s2-temp-75a126cc-postgresql-k8s2-0?fieldManager=lightkube "HTTP/1.1 201 Created"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:207 scale to 1
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:210 waiting for duplicate application to be blocked
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2 (not enough units yet - 0/1)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [idle] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [idle] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:216 Application is not in blocked state. Checking logs...
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:219 checking operator password auth
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.23   unsupported  02:38:25Z
+
+App              Version  Status   Scale  Charm           Channel  Rev  Address         Exposed  Message
+postgresql-k8s2  16.14    waiting      1  postgresql-k8s             1  10.152.183.171  no       installing agent
+
+Unit                Workload  Agent      Address       Ports  Message
+postgresql-k8s2/0*  waiting   executing  10.1.241.219         awaiting for primary endpoint to be ready
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-0: 02:26:09 ERROR unit.postgresql-k8s/0.juju-log __main__:failed to patch k8s Service patroni-postgresql-k8s-config
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 267, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '409 Conflict' for url 'https://10.152.183.1/api/v1/namespaces/testing/services/patroni-postgresql-k8s-config?force=true&fieldManager=postgresql-k8s'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/409
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/charm.py", line 1916, in _on_stop
+    client.apply(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/lightkube/core/client.py", line 862, in apply
+    return self.patch(
+           ^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/lightkube/core/client.py", line 479, in patch
+    return self._client.request(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 347, in request
+    return self.handle_response(method, resp, br)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 281, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 269, in raise_for_status
+    raise transform_exception(e) from e
+lightkube.core.exceptions.ApiError: Operation cannot be fulfilled on services "patroni-postgresql-k8s-config": the object has been modified; please apply your changes to the latest version and try again
+unit-postgresql-k8s-0: 02:27:10 ERROR unit.postgresql-k8s/0.juju-log __main__:failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 469, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 186, in _connect_to_database
+    connection = psycopg2.connect(
+                 ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.testing.svc.cluster.local" (10.152.183.63), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/charm.py", line 919, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 498, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+single_kernel_postgresql.compat.postgresql.PostgreSQLEnableDisableExtensionError
+unit-postgresql-k8s2-0: 02:29:48 ERROR unit.postgresql-k8s2/0.juju-log __main__:failed to patch k8s Service patroni-postgresql-k8s2-config
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 267, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/venv/lib/python3.12/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '409 Conflict' for url 'https://10.152.183.1/api/v1/namespaces/testing/services/patroni-postgresql-k8s2-config?force=true&fieldManager=postgresql-k8s2'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/409
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/src/charm.py", line 1916, in _on_stop
+    client.apply(
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/venv/lib/python3.12/site-packages/lightkube/core/client.py", line 862, in apply
+    return self.patch(
+           ^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/venv/lib/python3.12/site-packages/lightkube/core/client.py", line 479, in patch
+    return self._client.request(
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 347, in request
+    return self.handle_response(method, resp, br)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 281, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/venv/lib/python3.12/site-packages/lightkube/core/generic_client.py", line 269, in raise_for_status
+    raise transform_exception(e) from e
+lightkube.core.exceptions.ApiError: Operation cannot be fulfilled on services "patroni-postgresql-k8s2-config": the object has been modified; please apply your changes to the latest version and try again
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
