@@ -934,7 +934,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Create the PostgreSQL data directory."""
         if not container.exists(self.pgdata_path):
             container.make_dir(
-                self.pgdata_path, permissions=0o750, user=WORKLOAD_OS_USER, group=WORKLOAD_OS_GROUP
+                self.pgdata_path,
+                permissions=0o750,
+                user=WORKLOAD_OS_USER,
+                group=WORKLOAD_OS_GROUP,
+                make_parents=True,
             )
         # Also, fix the permissions from the parent directory.
         container.exec([

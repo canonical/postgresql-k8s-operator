@@ -4,7 +4,7 @@ import itertools
 import json
 import logging
 from unittest import TestCase
-from unittest.mock import MagicMock, Mock, PropertyMock, patch, sentinel
+from unittest.mock import MagicMock, Mock, PropertyMock, call, patch, sentinel
 
 import psycopg2
 import pytest
@@ -1799,8 +1799,14 @@ def test_create_pgdata(harness):
     container = MagicMock()
     container.exists.return_value = False
     harness.charm._create_pgdata(container)
+    # make_parents=True gives idempotent "mkdir -p" semantics so that a redundant call (e.g. a
+    # re-emitted deferred pebble-ready event) does not crash with "file exists".
     container.make_dir.assert_called_once_with(
-        "/var/lib/postgresql/data/pgdata", permissions=488, user="postgres", group="postgres"
+        "/var/lib/postgresql/data/pgdata",
+        permissions=488,
+        user="postgres",
+        group="postgres",
+        make_parents=True,
     )
     container.exec.assert_called_once_with([
         "chown",
@@ -1818,6 +1824,30 @@ def test_create_pgdata(harness):
         "postgres:postgres",
         "/var/lib/postgresql/data",
     ])
+
+
+def test_create_pgdata_is_idempotent_when_dir_reported_missing(harness):
+    # _on_postgresql_pebble_ready can run more than once (a deferred event is re-emitted on
+    # later hooks), and container.exists() may report the pgdata directory as missing even when
+    # it is present (e.g. restrictively-mounted cloud volumes). In that case make_dir() must be
+    # called with make_parents=True so the underlying "mkdir -p" stays idempotent instead of
+    # crashing the charm with "file exists".
+    container = MagicMock()
+    container.exists.return_value = False
+
+    # Simulate the event being handled twice in a row.
+    harness.charm._create_pgdata(container)
+    harness.charm._create_pgdata(container)
+
+    assert container.make_dir.call_count == 2
+    for actual_call in container.make_dir.call_args_list:
+        assert actual_call == call(
+            "/var/lib/postgresql/data/pgdata",
+            permissions=488,
+            user="postgres",
+            group="postgres",
+            make_parents=True,
+        )
 
 
 def test_get_plugins(harness):
