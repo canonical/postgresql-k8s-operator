@@ -15,6 +15,7 @@ from ssl import CERT_NONE, create_default_context
 from typing import Any, TypedDict
 
 import requests
+import requests.auth
 import yaml
 from httpx import AsyncClient, BasicAuth, HTTPError
 from jinja2 import Template
@@ -391,6 +392,8 @@ class Patroni:
             for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
                 with attempt:
                     primary = self.get_primary()
+                    if primary is None:
+                        raise NotReadyError("primary not found")
                     unit_id = primary.split("-")[-1]
                     primary_endpoint = (
                         f"{self._charm.app.name}-{unit_id}.{self._charm.app.name}-endpoints"
@@ -440,6 +443,7 @@ class Patroni:
 
     def get_patroni_health(self) -> dict[str, str]:
         """Gets, retires and parses the Patroni health endpoint."""
+        result: dict[str, str] = {}
         for attempt in Retrying(stop=stop_after_delay(15), wait=wait_fixed(3)):
             with attempt:
                 r = requests.get(
@@ -449,7 +453,8 @@ class Patroni:
                     auth=self._patroni_auth,
                 )
 
-                return r.json()
+                result = r.json()
+        return result
 
     @property
     def member_started(self) -> bool:
@@ -654,7 +659,7 @@ class Patroni:
             restore_stanza=restore_stanza,
             synchronous_node_count=self._synchronous_node_count,
             maximum_lag_on_failover=self._charm.config.durability_maximum_lag_on_failover,
-            version=self.rock_postgresql_version.split(".")[0],
+            version=(self.rock_postgresql_version or "").split(".")[0],
             pg_parameters=parameters,
             primary_cluster_endpoint=self._charm.async_replication.get_primary_cluster_endpoint(),
             extra_replication_endpoints=self._charm.async_replication.get_standby_endpoints(),

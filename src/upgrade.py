@@ -5,6 +5,7 @@
 
 import json
 import logging
+from typing import TYPE_CHECKING
 
 from charms.data_platform_libs.v0.upgrade import (
     ClusterNotReadyError,
@@ -26,6 +27,9 @@ from constants import APP_SCOPE, MONITORING_PASSWORD_KEY, MONITORING_USER, PATRO
 from patroni import SwitchoverFailedError
 from utils import new_password
 
+if TYPE_CHECKING:
+    from charm import PostgresqlOperatorCharm
+
 logger = logging.getLogger(__name__)
 
 
@@ -46,7 +50,9 @@ def get_postgresql_k8s_dependencies_model() -> PostgreSQLDependencyModel:
 class PostgreSQLUpgrade(DataUpgrade):
     """PostgreSQL upgrade class."""
 
-    def __init__(self, charm, model: BaseModel, **kwargs) -> None:
+    charm: "PostgresqlOperatorCharm"
+
+    def __init__(self, charm: "PostgresqlOperatorCharm", model: BaseModel, **kwargs) -> None:
         """Initialize the class."""
         super().__init__(charm, model, **kwargs)
         self.charm = charm
@@ -68,7 +74,7 @@ class PostgreSQLUpgrade(DataUpgrade):
                 self.charm._patroni.switchover()
             except SwitchoverFailedError as e:
                 logger.warning(f"Switchover failed: {e}")
-        if len(self.charm._peers.units) == 0 or unit_number == 1:
+        if (self.charm._peers is None or len(self.charm._peers.units) == 0) or unit_number == 1:
             # If the unit is the last to be upgraded before unit zero
             # or the only unit in the cluster, update the label.
             self.charm._create_services()
@@ -186,6 +192,8 @@ class PostgreSQLUpgrade(DataUpgrade):
         Raises:
             :class:`ClusterNotReadyError`: if cluster is not ready to upgrade
         """
+        if self.peer_relation is None:
+            raise ClusterNotReadyError("peer relation must exist", "peer relation is missing")
         default_message = "Pre-upgrade check failed and cannot safely upgrade"
         if not self.charm._patroni.are_all_members_ready():
             raise ClusterNotReadyError(
@@ -239,6 +247,8 @@ class PostgreSQLUpgrade(DataUpgrade):
     def _set_list_of_sync_standbys(self) -> None:
         """Set the list of desired sync-standbys in the relation data."""
         if self.charm.app.planned_units() > 2:
+            if self.peer_relation is None:
+                return
             sync_standbys = self.charm._patroni.get_sync_standby_names()
             # Include the first unit as one of the sync-standbys.
             unit_to_become_sync_standby = f"{self.charm.app.name}/0"
@@ -296,7 +306,7 @@ class PostgreSQLUpgrade(DataUpgrade):
             self.charm.postgresql.create_user(
                 MONITORING_USER,
                 self.charm.get_secret(APP_SCOPE, MONITORING_PASSWORD_KEY),
-                extra_user_roles="pg_monitor",
+                extra_user_roles=["pg_monitor"],
             )
 
     def _patch_failsafe_mode(self):
@@ -314,4 +324,6 @@ class PostgreSQLUpgrade(DataUpgrade):
     @property
     def unit_upgrade_data(self) -> RelationDataContent:
         """Return the application upgrade data."""
+        if self.peer_relation is None:
+            raise RuntimeError("peer relation must exist")
         return self.peer_relation.data[self.charm.unit]

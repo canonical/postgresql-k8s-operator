@@ -118,7 +118,7 @@ class AuthorisationRulesObserver(Object):
     def stop_authorisation_rules_observer(self):
         """Stop the authorisation rules observer process."""
         if (
-            self._charm.peers is None
+            self._charm._peers is None
             or "authorisation-rules-observer-pid" not in self._charm.unit_peer_data
         ):
             return

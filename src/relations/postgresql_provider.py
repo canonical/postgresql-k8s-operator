@@ -4,6 +4,7 @@
 """Postgres client relation hooks & helpers."""
 
 import logging
+from typing import TYPE_CHECKING
 
 from charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProvides,
@@ -21,13 +22,15 @@ from charms.postgresql_k8s.v0.postgresql import (
 from ops import (
     ActiveStatus,
     BlockedStatus,
-    CharmBase,
     Object,
     Relation,
     RelationBrokenEvent,
     RelationChangedEvent,
     RelationDepartedEvent,
 )
+
+if TYPE_CHECKING:
+    from charm import PostgresqlOperatorCharm
 
 from constants import DATABASE_PORT, ENDPOINT_SIMULTANEOUSLY_BLOCKING_MESSAGE
 from utils import new_password
@@ -43,7 +46,7 @@ class PostgreSQLProvider(Object):
         - relation-broken
     """
 
-    def __init__(self, charm: CharmBase, relation_name: str = "database") -> None:
+    def __init__(self, charm: "PostgresqlOperatorCharm", relation_name: str = "database") -> None:
         """Constructor for PostgreSQLClientProvides object.
 
         Args:
@@ -96,11 +99,12 @@ class PostgreSQLProvider(Object):
             return
 
         self.charm.update_config()
-        for key in self.charm._peers.data:
+        for key in self.charm._peers.data if self.charm._peers is not None else {}:
             # We skip the leader so we don't have to wait on the defer
             if (
                 key != self.charm.app
                 and key != self.charm.unit
+                and self.charm._peers is not None
                 and self.charm._peers.data[key].get("user_hash", "")
                 != self.charm.generate_user_hash
             ):
@@ -110,6 +114,9 @@ class PostgreSQLProvider(Object):
 
         # Retrieve the database name and extra user roles using the charm library.
         database = event.database
+        if database is None:
+            logger.error("database name must be set in the relation data")
+            return
 
         # Make sure the relation access-group is added to the list
         extra_user_roles = self._sanitize_extra_roles(event.extra_user_roles)
@@ -174,7 +181,7 @@ class PostgreSQLProvider(Object):
             logger.exception(e)
             self.charm.unit.status = BlockedStatus(
                 e.message
-                if issubclass(type(e), PostgreSQLCreateUserError) and e.message is not None
+                if isinstance(e, PostgreSQLCreateUserError) and e.message is not None
                 else f"Failed to initialize {self.relation_name} relation"
             )
             return
@@ -241,7 +248,7 @@ class PostgreSQLProvider(Object):
         # If there are no replicas, remove the read-only endpoint.
         endpoints = (
             f"{self.charm.replicas_endpoint}:{DATABASE_PORT}"
-            if len(self.charm._peers.units) > 0
+            if self.charm._peers is not None and len(self.charm._peers.units) > 0
             else f"{self.charm.primary_endpoint}:{DATABASE_PORT}"
         )
 
