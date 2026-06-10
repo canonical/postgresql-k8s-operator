@@ -8,7 +8,7 @@ requires-poetry = ">=2.0.0"
 [tool.poetry.dependencies]
 python = "^3.12"
 ops = {extras = ["tracing"], version = "^3.7.1"}
-boto3 = "^1.43.25"
+boto3 = "^1.43.17"
 pgconnstr = "^1.0.1"
 requests = "^2.34.2"
 tenacity = "^9.1.4"
@@ -17,9 +17,11 @@ jinja2 = "^3.1.6"
 lightkube = "^0.21.0"
 lightkube-models = "^1.28.1.4"
 psycopg2 = "^2.9.12"
-charmlibs-interfaces-tls-certificates = "^1.8.3"
+charmlibs-interfaces-tls-certificates = "^1.8.1"
 charm-refresh = "^3.1.1.2"
-postgresql-charms-single-kernel = {path = "skl-lib", extras = ["postgresql"], develop = false}
+charmlibs-pathops = "^1.0.1"
+data-platform-helpers = "^0.1.7"
+postgresql-charms-single-kernel = {path = "single_kernel_postgresql"}
 
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py
@@ -37,14 +39,14 @@ jsonschema = "*"
 optional = true
 
 [tool.poetry.group.format.dependencies]
-ruff = "^0.15.16"
+ruff = "^0.15.15"
 
 [tool.poetry.group.lint]
 optional = true
 
 [tool.poetry.group.lint.dependencies]
 codespell = "^2.4.2"
-ty = "^0.0.46"
+ty = "^0.0.40"
 
 [tool.poetry.group.unit]
 optional = true

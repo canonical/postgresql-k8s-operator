@@ -6,8 +6,7 @@ import unittest.mock as mock
 from unittest.mock import patch
 
 import pytest
-
-from arch_utils import is_wrong_architecture
+from single_kernel_postgresql.utils.arch import is_wrong_architecture
 
 real_import = builtins.__import__
 
@@ -21,7 +20,7 @@ def psycopg2_not_found(name, globals=None, locals=None, fromlist=(), level=0):  
 
 def test_on_module_not_found_error(monkeypatch):
     """Checks if is_wrong_architecture is called on ModuleNotFoundError."""
-    with patch("arch_utils.is_wrong_architecture") as _is_wrong_arch:
+    with patch("single_kernel_postgresql.utils.arch.is_wrong_architecture") as _is_wrong_arch:
         # If psycopg2 not there, charm should check architecture
         monkeypatch.delitem(sys.modules, "psycopg2", raising=False)
         monkeypatch.delitem(sys.modules, "charm", raising=False)

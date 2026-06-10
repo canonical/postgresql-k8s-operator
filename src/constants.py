@@ -3,22 +3,34 @@
 
 """File containing constants to be used in the charm."""
 
-DATABASE_DEFAULT_NAME = "postgres"
-DATABASE_PORT = "5432"
+from single_kernel_postgresql.config.literals import (  # noqa: F401
+    BACKUP_TYPE_OVERRIDES,
+    DATABASE,
+    DATABASE_DEFAULT_NAME,
+    DATABASE_MAPPING_LABEL,
+    DATABASE_PORT,
+    METRICS_PORT,
+    PATRONI_CLUSTER_STATUS_ENDPOINT,
+    PGBACKREST_LOGROTATE_FILE,
+    PGBACKREST_METRICS_PORT,
+    PLUGIN_OVERRIDES,
+    SPI_MODULE,
+    TLS_CA_FILE,
+    TLS_CERT_FILE,
+    TLS_KEY_FILE,
+    TRACING_RELATION_NAME,
+    USERNAME_MAPPING_LABEL,
+)
+
 PEER = "database-peers"
 BACKUP_USER = "backup"
 REPLICATION_USER = "replication"
 REWIND_USER = "rewind"
 MONITORING_USER = "monitoring"
-TLS_KEY_FILE = "key.pem"
-TLS_CA_FILE = "ca.pem"
-TLS_CERT_FILE = "cert.pem"
 TLS_CA_BUNDLE_FILE = "peer_ca_bundle.pem"
 USER = "operator"
 WORKLOAD_OS_GROUP = "postgres"
 WORKLOAD_OS_USER = "postgres"
-METRICS_PORT = "9187"
-PGBACKREST_METRICS_PORT = "9854"
 PATRONI_LOGS_SYMLINK_PATH = "/var/log/patroni"
 PGBACKREST_LOGS_SYMLINK_PATH = "/var/log/pgbackrest"
 POSTGRESQL_LOGS_SYMLINK_PATH = "/var/log/postgresql"
@@ -41,8 +53,6 @@ POSTGRES_LOG_FILES = [
 # List of system usernames needed for correct work of the charm/workload.
 SYSTEM_USERS = [BACKUP_USER, REPLICATION_USER, REWIND_USER, USER, MONITORING_USER]
 
-PATRONI_CLUSTER_STATUS_ENDPOINT = "cluster"
-
 # Labels are not confidential
 REPLICATION_PASSWORD_KEY = "replication-password"  # noqa: S105
 REWIND_PASSWORD_KEY = "rewind-password"  # noqa: S105
@@ -55,20 +65,7 @@ SECRET_INTERNAL_LABEL = "internal-secret"  # noqa: S105
 SECRET_DELETED_LABEL = "None"  # noqa: S105
 SYSTEM_USERS_PASSWORD_CONFIG = "system-users"  # noqa: S105
 
-USERNAME_MAPPING_LABEL = "custom-usernames"
-DATABASE_MAPPING_LABEL = "prefix-databases"
-
 APP_SCOPE = "app"
 UNIT_SCOPE = "unit"
 
 SECRET_KEY_OVERRIDES = {"ca": "cauth"}
-BACKUP_TYPE_OVERRIDES = {"full": "full", "differential": "diff", "incremental": "incr"}
-PLUGIN_OVERRIDES = {"audit": "pgaudit", "uuid_ossp": '"uuid-ossp"'}
-
-SPI_MODULE = ["refint", "autoinc", "insert_username", "moddatetime"]
-
-TRACING_RELATION_NAME = "tracing"
-
-DATABASE = "database"
-
-PGBACKREST_LOGROTATE_FILE = "/etc/logrotate.d/pgbackrest.logrotate"

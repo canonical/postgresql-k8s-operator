@@ -7,13 +7,12 @@
 import logging
 from typing import Annotated, Literal
 
-from charms.data_platform_libs.v1.data_models import BaseConfigModel
 from pydantic import Field, NonNegativeInt, PositiveInt
 
-from locales import ROCK_LOCALES
+from single_kernel_postgresql.config.locales import LOCALES
+from single_kernel_postgresql.lib.charms.data_platform_libs.v1.data_models import BaseConfigModel
 
 logger = logging.getLogger(__name__)
-
 
 # Type for worker process parameters that must be >= 2
 WorkerProcessInt = Annotated[int, Field(ge=2)]
@@ -204,9 +203,9 @@ class CharmConfig(BaseConfigModel):
     response_exit_on_error: bool | None = Field(default=None)
     response_extra_float_digits: float | None = Field(ge=-15, le=3, default=None)
     response_gin_fuzzy_search_limit: int | None = Field(ge=0, le=2147483647, default=None)
-    response_lc_monetary: ROCK_LOCALES | None = Field(default=None)
-    response_lc_numeric: ROCK_LOCALES | None = Field(default=None)
-    response_lc_time: ROCK_LOCALES | None = Field(default=None)
+    response_lc_monetary: LOCALES | None = Field(default=None)
+    response_lc_numeric: LOCALES | None = Field(default=None)
+    response_lc_time: LOCALES | None = Field(default=None)
     session_idle_in_transaction_session_timeout: int | None = Field(
         ge=0, le=2147483647, default=None
     )
@@ -247,7 +246,7 @@ class CharmConfig(BaseConfigModel):
     @classmethod
     def keys(cls) -> list[str]:
         """Return config as list items."""
-        return list(cls.__fields__.keys())
+        return list(cls.model_fields.keys())
 
     @classmethod
     def plugin_keys(cls) -> filter:

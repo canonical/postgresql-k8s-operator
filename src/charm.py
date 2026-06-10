@@ -32,8 +32,10 @@ try:
     import psycopg2.errors
 except ModuleNotFoundError:
     from ops.main import main
-
-    from arch_utils import WrongArchitectureWarningCharm, is_wrong_architecture
+    from single_kernel_postgresql.utils.arch import (
+        WrongArchitectureWarningCharm,
+        is_wrong_architecture,
+    )
 
     # If the charm was deployed inside a host with different architecture
     # (possibly due to user specifying an incompatible revision)
@@ -93,9 +95,8 @@ from ops.pebble import (
 )
 from ops_tracing import Tracing
 from requests import ConnectionError as RequestsConnectionError
-from single_kernel_postgresql.config.literals import (
-    Substrates,
-)
+from single_kernel_postgresql.config.enums import Substrates
+from single_kernel_postgresql.core.config import CharmConfig
 from single_kernel_postgresql.events.tls_transfer import TLSTransfer
 from single_kernel_postgresql.utils import any_cpu_to_cores, any_memory_to_bytes, new_password
 from single_kernel_postgresql.utils.postgresql import (
@@ -115,7 +116,6 @@ from single_kernel_postgresql.utils.postgresql import (
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
 from backups import CANNOT_RESTORE_PITR, S3_BLOCK_MESSAGES, PostgreSQLBackups
-from config import CharmConfig
 from constants import (
     APP_SCOPE,
     BACKUP_USER,
