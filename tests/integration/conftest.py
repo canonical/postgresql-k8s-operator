@@ -6,6 +6,7 @@ import logging
 import os
 import socket
 import subprocess
+import time
 import uuid
 
 import boto3
@@ -109,6 +110,68 @@ class ConnectionInformation:
     cert: str
 
 
+def _wait_for_rgw_admin_ready(timeout: int = 180, interval: int = 5) -> None:
+    """Wait for microceph RGW admin commands to become available."""
+    command = ["sudo", "microceph.radosgw-admin", "user", "list"]
+    deadline = time.monotonic() + timeout
+    attempt = 0
+    last_returncode: int | None = None
+    last_stdout: str | None = None
+    last_stderr: str | None = None
+
+    while time.monotonic() < deadline:
+        attempt += 1
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            break
+        command_timeout = max(0.1, min(interval, remaining))
+        try:
+            result = subprocess.run(
+                command,
+                capture_output=True,
+                text=True,
+                timeout=command_timeout,
+            )
+        except subprocess.TimeoutExpired as exc:
+            if isinstance(exc.stdout, bytes):
+                last_stdout = exc.stdout.decode().strip()
+            elif isinstance(exc.stdout, str):
+                last_stdout = exc.stdout.strip()
+            else:
+                last_stdout = None
+            if isinstance(exc.stderr, bytes):
+                last_stderr = exc.stderr.decode().strip()
+            elif isinstance(exc.stderr, str):
+                last_stderr = exc.stderr.strip()
+            else:
+                last_stderr = None
+            logger.info("RGW admin readiness probe timed out on attempt %s", attempt)
+            time.sleep(min(interval, max(0, deadline - time.monotonic())))
+            continue
+
+        if result.returncode == 0:
+            logger.info("RGW admin ready after %s attempt(s)", attempt)
+            return
+        last_returncode = result.returncode
+        last_stdout = result.stdout.strip()
+        last_stderr = result.stderr.strip()
+        logger.info(
+            "Waiting for RGW admin readiness (attempt %s): rc=%s stdout=%r stderr=%r",
+            attempt,
+            result.returncode,
+            last_stdout,
+            last_stderr,
+        )
+        time.sleep(min(interval, max(0, deadline - time.monotonic())))
+
+    raise RuntimeError(
+        "RGW admin did not become ready within "
+        f"{timeout}s; rc={last_returncode if last_returncode is not None else 'n/a'} "
+        f"stdout={last_stdout if last_stdout is not None else 'n/a'} "
+        f"stderr={last_stderr if last_stderr is not None else 'n/a'}"
+    )
+
+
 @pytest.fixture(scope="session")
 def microceph():
     if not os.environ.get("CI") == "true":
@@ -189,6 +252,7 @@ def microceph():
         shell=True,
         check=True,
     )
+    _wait_for_rgw_admin_ready()
     output = subprocess.run(
         [
             "sudo",
