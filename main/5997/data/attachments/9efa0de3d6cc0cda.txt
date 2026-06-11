@@ -1,0 +1,170 @@
+[32mINFO    [0m integration.test_backups_gcp:test_backups_gcp.py:274 waiting for the database charm to become blocked
+[32mINFO    [0m integration.conftest:conftest.py:58 deleting the previously created backups
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.23   unsupported  00:50:03Z
+
+App                 Version  Status  Scale  Charm           Channel        Rev  Address         Exposed  Message
+new-postgresql-k8s  14.23    active      1  postgresql-k8s                   2  10.152.183.247  no       
+s3-integrator                active      1  s3-integrator   latest/stable  145  10.152.183.202  no       
+
+Unit                   Workload  Agent  Address       Ports  Message
+new-postgresql-k8s/0*  blocked   idle   10.1.241.212         failed to initialize stanza, check your S3 settings: [ProtocolError] HTTP request failed with 403 (Forbidden):
+*** Pa...
+s3-integrator/0*  active  idle  10.1.241.201    
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-gcp-0: 00:35:17 ERROR unit.postgresql-k8s-gcp/0.juju-log s3-parameters:5: Failed to read content from S3 bucket=data-charms-testing, path=postgresql-k8s/077c0820-652d-11f1-872b-002248c4c60b/model-uuid.txt
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/src/backups.py", line 1435, in _read_content_from_s3
+    bucket.download_fileobj(processed_s3_path, buf)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/boto3/s3/inject.py", line 904, in bucket_download_fileobj
+    return self.meta.client.download_fileobj(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/boto3/s3/inject.py", line 862, in download_fileobj
+    return future.result()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/s3transfer/futures.py", line 111, in result
+    return self._coordinator.result()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/s3transfer/futures.py", line 287, in result
+    raise self._exception
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/s3transfer/tasks.py", line 142, in __call__
+    return self._execute_main(kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/s3transfer/tasks.py", line 165, in _execute_main
+    return_value = self._main(**kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/s3transfer/download.py", line 809, in _main
+    response = client.get_object(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/botocore/client.py", line 606, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/botocore/client.py", line 1094, in _make_api_call
+    raise error_class(parsed_response, operation_name)
+botocore.errorfactory.NoSuchKey: An error occurred (NoSuchKey) when calling the GetObject operation: The specified key does not exist.
+unit-postgresql-k8s-gcp-1: 00:39:09 ERROR unit.postgresql-k8s-gcp/1.juju-log failed to patch k8s Service patroni-postgresql-k8s-gcp-config
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 267, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '409 Conflict' for url 'https://10.152.183.1/api/v1/namespaces/testing/services/patroni-postgresql-k8s-gcp-config?force=true&fieldManager=postgresql-k8s-gcp'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/409
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/src/charm.py", line 1485, in _on_stop
+    client.apply(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 862, in apply
+    return self.patch(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 479, in patch
+    return self._client.request(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 347, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 281, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 269, in raise_for_status
+    raise transform_exception(e) from e
+lightkube.core.exceptions.ApiError: Operation cannot be fulfilled on services "patroni-postgresql-k8s-gcp-config": the object has been modified; please apply your changes to the latest version and try again
+unit-postgresql-k8s-gcp-0: 00:45:40 ERROR unit.postgresql-k8s-gcp/0.juju-log failed to patch k8s Service patroni-postgresql-k8s-gcp-config
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 267, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '409 Conflict' for url 'https://10.152.183.1/api/v1/namespaces/testing/services/patroni-postgresql-k8s-gcp-config?force=true&fieldManager=postgresql-k8s-gcp'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/409
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/src/charm.py", line 1485, in _on_stop
+    client.apply(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 862, in apply
+    return self.patch(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 479, in patch
+    return self._client.request(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 347, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 281, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 269, in raise_for_status
+    raise transform_exception(e) from e
+lightkube.core.exceptions.ApiError: Operation cannot be fulfilled on services "patroni-postgresql-k8s-gcp-config": the object has been modified; please apply your changes to the latest version and try again
+unit-new-postgresql-k8s-0: 00:48:32 ERROR unit.new-postgresql-k8s/0.juju-log s3-parameters:13: Failed to read content from S3 bucket=data-charms-testing, path=postgresql-k8s/42c5b342-652f-11f1-addb-002248c4c60b/model-uuid.txt
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/src/backups.py", line 1435, in _read_content_from_s3
+    bucket.download_fileobj(processed_s3_path, buf)
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/boto3/s3/inject.py", line 904, in bucket_download_fileobj
+    return self.meta.client.download_fileobj(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/boto3/s3/inject.py", line 862, in download_fileobj
+    return future.result()
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/s3transfer/futures.py", line 111, in result
+    return self._coordinator.result()
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/s3transfer/futures.py", line 287, in result
+    raise self._exception
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/s3transfer/tasks.py", line 142, in __call__
+    return self._execute_main(kwargs)
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/s3transfer/tasks.py", line 165, in _execute_main
+    return_value = self._main(**kwargs)
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/s3transfer/download.py", line 809, in _main
+    response = client.get_object(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/botocore/client.py", line 606, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/botocore/client.py", line 1094, in _make_api_call
+    raise error_class(parsed_response, operation_name)
+botocore.errorfactory.NoSuchKey: An error occurred (NoSuchKey) when calling the GetObject operation: The specified key does not exist.
+unit-new-postgresql-k8s-0: 00:48:57 ERROR unit.new-postgresql-k8s/0.juju-log failed to patch k8s Service patroni-new-postgresql-k8s-config
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 267, in raise_for_status
+    resp.raise_for_status()
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/httpx/_models.py", line 829, in raise_for_status
+    raise HTTPStatusError(message, request=request, response=self)
+httpx.HTTPStatusError: Client error '409 Conflict' for url 'https://10.152.183.1/api/v1/namespaces/testing/services/patroni-new-postgresql-k8s-config?force=true&fieldManager=new-postgresql-k8s'
+For more information check: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status/409
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/src/charm.py", line 1485, in _on_stop
+    client.apply(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 862, in apply
+    return self.patch(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 479, in patch
+    return self._client.request(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 347, in request
+    return self.handle_response(method, resp, br)
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 281, in handle_response
+    self.raise_for_status(resp)
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 269, in raise_for_status
+    raise transform_exception(e) from e
+lightkube.core.exceptions.ApiError: Operation cannot be fulfilled on services "patroni-new-postgresql-k8s-config": the object has been modified; please apply your changes to the latest version and try again
+unit-new-postgresql-k8s-0: 00:49:13 ERROR unit.new-postgresql-k8s/0.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-new-postgresql-k8s-0: 00:49:58 ERROR unit.new-postgresql-k8s/0.juju-log s3-parameters:13: S3 stanza initialization error: [ProtocolError] HTTP request failed with 403 (Forbidden):
+*** Path/Query ***:
+GET /?delimiter=%2F&list-type=2&prefix=postgresql-k8s%2F077c0820-652d-11f1-872b-002248c4c60b%2Fbackup%2F
+*** Request Headers ***:
+authorization: <redacted>
+content-length: 0
+host: data-charms-testing.storage.googleapis.com
+x-amz-content-sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+x-amz-date: <redacted>
+*** Response Headers ***:
+alt-svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+cache-control: private, max-age=0
+content-length: 224
+content-type: application/xml; charset=UTF-8
+date: Thu, 11 Jun 2026 00:49:58 GMT
+expires: Thu, 11 Jun 2026 00:49:58 GMT
+server: UploadServer
+x-guploader-uploadid: AJ5rDhHmpHUX7dShVlUbxmmTZw3ELEoz8ueyj1Nzgo6ZZCQ_bC-KjPKQnO2KpbTmF8tPFR6K
+*** Response Content ***:
+<?xml version='1.0' encoding='UTF-8'?><Error><Code>InvalidSecurity</Code><Message>The provided security credentials are not valid.</Message><Details>Request was not signed or contained a malformed signature</Details></Error>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
