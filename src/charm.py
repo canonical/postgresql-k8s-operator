@@ -1008,9 +1008,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Update the archive command and replication configurations.
         self.update_config()
 
-        # Enable/disable PostgreSQL extensions if they were set before the cluster
-        # was fully initialised.
-        self.enable_disable_extensions()
+        try:
+            # Enable/disable PostgreSQL extensions if they were set before the cluster
+            # was fully initialised.
+            self.enable_disable_extensions()
+        except psycopg2.OperationalError:
+            logger.debug(
+                "Deferring on_postgresql_pebble_ready: Database not ready for extension setup"
+            )
+            event.defer()
+            return
 
         # Enable pgbackrest service
         self.backup.start_stop_pgbackrest_service()
