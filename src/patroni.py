@@ -397,7 +397,9 @@ class Patroni:
                     )
                     for member_endpoint in self._endpoints:
                         endpoint = (
-                            "leader" if member_endpoint == primary_endpoint else "replica?lag=16kB"
+                            "leader"
+                            if member_endpoint == primary_endpoint
+                            else "replica?lag=100MB"
                         )
                         url = self._patroni_url.replace(self._endpoint, member_endpoint)
                         member_status = requests.get(
