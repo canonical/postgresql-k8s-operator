@@ -48,6 +48,14 @@ FAILED_TO_ACCESS_CREATE_BUCKET_ERROR_MESSAGE = (
 )
 FAILED_TO_INITIALIZE_STANZA_ERROR_MESSAGE = "failed to initialize stanza, check your S3 settings"
 CANNOT_RESTORE_PITR = "cannot restore PITR, juju debug-log for details"
+STANDBY_CLUSTER_CREATE_BACKUP_ERROR_MESSAGE = (
+    "Backups are not supported on a standby cluster. "
+    "Run create-backup on the primary cluster instead."
+)
+STANDBY_CLUSTER_LIST_BACKUPS_ERROR_MESSAGE = (
+    "Backups are not supported on a standby cluster. "
+    "Run list-backups on the primary cluster instead."
+)
 
 S3_BLOCK_MESSAGES = [
     ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE,
@@ -149,6 +157,9 @@ class PostgreSQLBackups(Object):
 
     def _can_unit_perform_backup(self) -> tuple[bool, str | None]:
         """Validates whether this unit can perform a backup."""
+        if self._is_standby_cluster():
+            return False, STANDBY_CLUSTER_CREATE_BACKUP_ERROR_MESSAGE
+
         if self.charm.is_blocked:
             return False, "Unit is in a blocking state"
 
@@ -178,6 +189,16 @@ class PostgreSQLBackups(Object):
             return False, "Stanza was not initialised"
 
         return self._are_backup_settings_ok()
+
+    def _is_standby_cluster(self) -> bool:
+        """Return whether this unit belongs to a standby cluster."""
+        if (
+            self.model.get_relation(REPLICATION_CONSUMER_RELATION) is None
+            and self.model.get_relation(REPLICATION_OFFER_RELATION) is None
+        ):
+            return False
+
+        return not self.charm.async_replication.is_primary_cluster()
 
     def can_use_s3_repository(self) -> tuple[bool, str | None]:
         """Returns whether the charm was configured to use another cluster repository."""
@@ -984,6 +1005,11 @@ Stderr:
 
     def _on_list_backups_action(self, event) -> None:
         """List the previously created backups."""
+        if self._is_standby_cluster():
+            logger.warning(STANDBY_CLUSTER_LIST_BACKUPS_ERROR_MESSAGE)
+            event.fail(STANDBY_CLUSTER_LIST_BACKUPS_ERROR_MESSAGE)
+            return
+
         are_backup_settings_ok, validation_message = self._are_backup_settings_ok()
         if not are_backup_settings_ok:
             logger.warning(validation_message)
