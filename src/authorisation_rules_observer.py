@@ -92,7 +92,7 @@ class AuthorisationRulesObserver(Object):
                 break
 
         urls = [
-            self._charm._patroni._patroni_url.replace(self._charm.endpoint, endpoint)
+            self._charm.patroni._patroni_url.replace(self._charm.endpoint, endpoint)
             for endpoint in self._charm._endpoints
         ]
 

@@ -12,6 +12,7 @@ import tempfile
 import time
 from datetime import UTC, datetime
 from io import BytesIO
+from typing import TYPE_CHECKING
 
 from boto3.session import Session
 from botocore.client import Config
@@ -48,6 +49,9 @@ from relations.async_replication import REPLICATION_CONSUMER_RELATION, REPLICATI
 #     LOGICAL_REPLICATION_RELATION,
 # )
 
+if TYPE_CHECKING:
+    from charm import PostgresqlOperatorCharm
+
 logger = logging.getLogger(__name__)
 
 ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE = "the S3 repository has backups from another cluster"
@@ -67,7 +71,7 @@ S3_BLOCK_MESSAGES = [
 class PostgreSQLBackups(Object):
     """In this class, we manage PostgreSQL backups."""
 
-    def __init__(self, charm, relation_name: str):
+    def __init__(self, charm: "PostgresqlOperatorCharm", relation_name: str):
         """Manager of PostgreSQL backups."""
         super().__init__(charm, "backup")
         self.charm = charm
@@ -140,7 +144,9 @@ class PostgreSQLBackups(Object):
         # yet and either hasn't joined the peer relation yet or hasn't configured TLS
         # yet while other unit already has TLS enabled.
         return not (
-            not self.charm._patroni.member_started and (len(self.charm._peers.data.keys()) == 2)
+            not self.charm.patroni.member_started
+            and self.charm._peers
+            and (len(self.charm._peers.data.keys()) == 2)
         )
 
     def _can_unit_perform_backup(self) -> tuple[bool, str | None]:
@@ -159,7 +165,7 @@ class PostgreSQLBackups(Object):
         if is_primary and self.charm.app.planned_units() > 1:
             return False, "Unit cannot perform backups as it is the cluster primary"
 
-        if not self.charm._patroni.member_started:
+        if not self.charm.patroni.member_started:
             return False, "Unit cannot perform backups as it's not in running state"
 
         if "stanza" not in self.charm.app_peer_data:
@@ -198,7 +204,7 @@ class PostgreSQLBackups(Object):
                 return False, ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE
 
             system_identifier_from_instance, error = self._execute_command([
-                f"/usr/lib/postgresql/{self.charm._patroni.rock_postgresql_version.split('.')[0]}/bin/pg_controldata",
+                f"/usr/lib/postgresql/{self.charm.patroni.get_postgresql_version().split('.')[0]}/bin/pg_controldata",
                 self.charm._actual_pgdata_path,
             ])
             if error != "":
@@ -638,7 +644,7 @@ class PostgreSQLBackups(Object):
         ):
             return
 
-        for _unit, unit_data in self.charm._peers.data.items():
+        for _unit, unit_data in self.charm.all_peer_data.items():
             if "s3-initialization-done" not in unit_data:
                 continue
 
@@ -658,7 +664,7 @@ class PostgreSQLBackups(Object):
     def _is_primary_pgbackrest_service_running(self) -> bool:
         """Returns whether the pgBackRest TLS server is running in the primary unit."""
         try:
-            primary = self.charm._patroni.get_primary()
+            primary = self.charm.patroni.get_primary()
         except (RetryError, ConnectionError) as e:
             logger.error(f"failed to get primary with error {e!s}")
             return False
@@ -1316,7 +1322,7 @@ Stderr:
             return False
 
         # Stop the service if TLS is not enabled or there are no replicas.
-        if len(self.charm.peer_members_endpoints) == 0 or self.charm._patroni.get_standby_leader():
+        if len(self.charm.peer_members_endpoints) == 0 or self.charm.patroni.get_standby_leader():
             self.container.stop(self.charm.pgbackrest_server_service)
             return True
 
