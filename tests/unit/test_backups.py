@@ -13,7 +13,7 @@ from ops.testing import Harness
 from tenacity import RetryError, wait_fixed
 
 from charm import PostgresqlOperatorCharm
-from constants import PEER, PGBACKREST_LOGS_PATH
+from constants import PEER_RELATION, PGBACKREST_LOGS_PATH
 from tests.unit.helpers import _FakeApiError
 
 ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE = "the S3 repository has backups from another cluster"
@@ -33,7 +33,7 @@ def harness():
     harness = Harness(PostgresqlOperatorCharm)
 
     # Set up the initial relation and hooks.
-    peer_rel_id = harness.add_relation(PEER, "postgresql-k8s")
+    peer_rel_id = harness.add_relation(PEER_RELATION, "postgresql-k8s")
     harness.add_relation_unit(peer_rel_id, "postgresql-k8s/0")
     harness.begin()
     yield harness
@@ -113,7 +113,7 @@ def test_can_unit_perform_backup(harness):
         ) as _is_primary,
     ):
         # Test when the charm fails to retrieve the primary.
-        peer_rel_id = harness.model.get_relation(PEER).id
+        peer_rel_id = harness.model.get_relation(PEER_RELATION).id
         _is_primary.side_effect = RetryError(last_attempt=1)
         assert harness.charm.backup._can_unit_perform_backup() == (
             False,
@@ -436,7 +436,7 @@ def test_empty_data_files(harness):
 
 def test_change_connectivity_to_database(harness):
     with patch("charm.PostgresqlOperatorCharm.update_config") as _update_config:
-        peer_rel_id = harness.model.get_relation(PEER).id
+        peer_rel_id = harness.model.get_relation(PEER_RELATION).id
         # Ensure that there is no connectivity info in the unit relation databag.
         with harness.hooks_disabled():
             harness.update_relation_data(
@@ -697,7 +697,7 @@ def test_initialise_stanza(harness):
             "charm.PostgreSQLBackups._s3_initialization_set_failure"
         ) as _s3_initialization_set_failure,
     ):
-        peer_rel_id = harness.model.get_relation(PEER).id
+        peer_rel_id = harness.model.get_relation(PEER_RELATION).id
 
         mock_event = MagicMock()
 
@@ -776,7 +776,7 @@ def test_check_stanza(harness):
             "charm.PostgresqlOperatorCharm.is_primary", new_callable=PropertyMock
         ) as _is_primary,
     ):
-        peer_rel_id = harness.model.get_relation(PEER).id
+        peer_rel_id = harness.model.get_relation(PEER_RELATION).id
         # Set peer data flag
         with harness.hooks_disabled():
             harness.update_relation_data(
@@ -822,7 +822,7 @@ def test_coordinate_stanza_fields(harness):
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
         patch("charm.Patroni.reload_patroni_configuration") as _reload_patroni_configuration,
     ):
-        peer_rel_id = harness.model.get_relation(PEER).id
+        peer_rel_id = harness.model.get_relation(PEER_RELATION).id
         stanza_name = f"{harness.charm.model.name}.{harness.charm.app.name}"
 
         peer_data_primary_error = {
@@ -979,7 +979,7 @@ def test_on_s3_credential_changed(harness):
         patch("time.gmtime"),
         patch("time.asctime", return_value="Thu Feb 24 05:00:00 2022"),
     ):
-        peer_rel_id = harness.model.get_relation(PEER).id
+        peer_rel_id = harness.model.get_relation(PEER_RELATION).id
         # Early exit when no s3 creds
         s3_rel_id = harness.add_relation(S3_PARAMETERS_RELATION, "s3-integrator")
         harness.charm.backup.s3_client.on.credentials_changed.emit(
@@ -1132,7 +1132,7 @@ def test_on_s3_credential_gone(harness):
             "s3-initialization-block-message": ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE,
         }
 
-        peer_rel_id = harness.model.get_relation(PEER).id
+        peer_rel_id = harness.model.get_relation(PEER_RELATION).id
         # Test that unrelated blocks will remain
         harness.charm.unit.status = BlockedStatus("test block")
         harness.charm.backup._on_s3_credential_gone(None)
@@ -1431,7 +1431,7 @@ def test_on_restore_action(harness):
             "charm.PostgresqlOperatorCharm.restore_patroni_on_failure_condition"
         ) as _restore_patroni_on_failure_condition,
     ):
-        peer_rel_id = harness.model.get_relation(PEER).id
+        peer_rel_id = harness.model.get_relation(PEER_RELATION).id
         # Test when pre restore checks fail.
         mock_event = MagicMock()
         _pre_restore_checks.return_value = False
@@ -1853,7 +1853,7 @@ def test_restart_database(harness):
         patch("ops.model.Container.start") as _start,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
     ):
-        peer_rel_id = harness.model.get_relation(PEER).id
+        peer_rel_id = harness.model.get_relation(PEER_RELATION).id
         with harness.hooks_disabled():
             harness.update_relation_data(
                 peer_rel_id,

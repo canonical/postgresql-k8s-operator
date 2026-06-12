@@ -10,9 +10,9 @@ import jubilant
 from jubilant import CLIError
 from tenacity import RetryError, Retrying, retry_if_exception_type, stop_after_attempt, wait_fixed
 
-from constants import PEER
-
 from .helpers import DATABASE_APP_NAME, SecretNotFoundError
+
+PEER_RELATION = "database-peers"
 
 
 def retry_if_cli_error[T](fn: Callable[[], T], *, max_attempts: int = 10) -> T:
@@ -84,7 +84,7 @@ def get_password(
     Returns:
         the user password.
     """
-    secret = get_secret_by_label(label=f"{PEER}.{database_app_name}.app")
+    secret = get_secret_by_label(label=f"{PEER_RELATION}.{database_app_name}.app")
     password = secret.get(f"{username}-password")
     print(f"Retrieved password for {username}: {password}")
 

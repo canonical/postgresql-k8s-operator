@@ -9,7 +9,8 @@ import requests
 import tenacity
 from jinja2 import Template
 from ops.testing import Harness
-from single_kernel_postgresql.config.literals import API_REQUEST_TIMEOUT, Substrates
+from single_kernel_postgresql.config.enums import Substrates
+from single_kernel_postgresql.config.literals import API_REQUEST_TIMEOUT
 from tenacity import RetryError, stop_after_delay, wait_fixed
 
 from charm import PostgresqlOperatorCharm

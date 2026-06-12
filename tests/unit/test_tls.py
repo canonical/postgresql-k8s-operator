@@ -7,7 +7,7 @@ import pytest
 from ops.testing import Harness
 
 from charm import PostgresqlOperatorCharm
-from constants import PEER
+from constants import PEER_RELATION
 
 
 @pytest.fixture(autouse=True)
@@ -17,7 +17,7 @@ def harness():
         harness = Harness(PostgresqlOperatorCharm)
 
         # Set up the initial relation and hooks.
-        peer_rel_id = harness.add_relation(PEER, "postgresql-k8s")
+        peer_rel_id = harness.add_relation(PEER_RELATION, "postgresql-k8s")
         harness.add_relation_unit(peer_rel_id, "postgresql-k8s/0")
         harness.begin()
         yield harness

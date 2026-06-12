@@ -32,8 +32,10 @@ try:
     import psycopg2.errors
 except ModuleNotFoundError:
     from ops.main import main
-
-    from arch_utils import WrongArchitectureWarningCharm, is_wrong_architecture
+    from single_kernel_postgresql.utils.arch import (
+        WrongArchitectureWarningCharm,
+        is_wrong_architecture,
+    )
 
     # If the charm was deployed inside a host with different architecture
     # (possibly due to user specifying an incompatible revision)
@@ -93,9 +95,8 @@ from ops.pebble import (
 )
 from ops_tracing import Tracing
 from requests import ConnectionError as RequestsConnectionError
-from single_kernel_postgresql.config.literals import (
-    Substrates,
-)
+from single_kernel_postgresql.config.enums import Substrates
+from single_kernel_postgresql.core.config import CharmConfig
 from single_kernel_postgresql.events.tls_transfer import TLSTransfer
 from single_kernel_postgresql.utils import any_cpu_to_cores, any_memory_to_bytes, new_password
 from single_kernel_postgresql.utils.postgresql import (
@@ -115,7 +116,6 @@ from single_kernel_postgresql.utils.postgresql import (
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
 from backups import CANNOT_RESTORE_PITR, S3_BLOCK_MESSAGES, PostgreSQLBackups
-from config import CharmConfig
 from constants import (
     APP_SCOPE,
     BACKUP_USER,
@@ -127,7 +127,7 @@ from constants import (
     PATRONI_LOGS_PATH,
     PATRONI_LOGS_SYMLINK_PATH,
     PATRONI_PASSWORD_KEY,
-    PEER,
+    PEER_RELATION,
     PGBACKREST_LOGS_PATH,
     PGBACKREST_LOGS_SYMLINK_PATH,
     PGBACKREST_METRICS_PORT,
@@ -213,13 +213,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
 
         self.peer_relation_app = DataPeerData(
             self.model,
-            relation_name=PEER,
+            relation_name=PEER_RELATION,
             secret_field_name=SECRET_INTERNAL_LABEL,
             deleted_label=SECRET_DELETED_LABEL,
         )
         self.peer_relation_unit = DataPeerUnitData(
             self.model,
-            relation_name=PEER,
+            relation_name=PEER_RELATION,
             secret_field_name=SECRET_INTERNAL_LABEL,
             deleted_label=SECRET_DELETED_LABEL,
         )
@@ -240,11 +240,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.framework.observe(self.on.databases_change, self._on_databases_change)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
-        self.framework.observe(self.on[PEER].relation_changed, self._on_peer_relation_changed)
+        self.framework.observe(
+            self.on[PEER_RELATION].relation_changed, self._on_peer_relation_changed
+        )
         self.framework.observe(self.on.secret_changed, self._on_peer_relation_changed)
         # add specific handler for updated system-user secrets
         self.framework.observe(self.on.secret_changed, self._on_secret_changed)
-        self.framework.observe(self.on[PEER].relation_departed, self._on_peer_relation_departed)
+        self.framework.observe(
+            self.on[PEER_RELATION].relation_departed, self._on_peer_relation_departed
+        )
         self.framework.observe(self.on.start, self._on_start)
         self.framework.observe(self.on.postgresql_pebble_ready, self._on_postgresql_pebble_ready)
         self.framework.observe(self.on.data_storage_detaching, self._on_pgdata_storage_detaching)
@@ -265,8 +269,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         self.postgresql_client_relation = PostgreSQLProvider(self)
         self.backup = PostgreSQLBackups(self, "s3-parameters")
         self.ldap = PostgreSQLLDAP(self, "ldap")
-        self.tls = TLS(self, PEER)
-        self.tls_transfer = TLSTransfer(self, PEER)
+        self.tls = TLS(self, PEER_RELATION)
+        self.tls_transfer = TLSTransfer(self, PEER_RELATION)
         self.async_replication = PostgreSQLAsyncReplication(self)
         # self.logical_replication = PostgreSQLLogicalReplication(self)
         self.restart_manager = RollingOpsManager(
@@ -494,7 +498,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if scope not in get_args(Scopes):
             raise RuntimeError("Unknown secret scope.")
 
-        if not (peers := self.model.get_relation(PEER)):
+        if not (peers := self.model.get_relation(PEER_RELATION)):
             return None
 
         secret_key = self._translate_field_to_secret_key(key)
@@ -508,7 +512,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if not value:
             return self.remove_secret(scope, key)
 
-        if not (peers := self.model.get_relation(PEER)):
+        if not (peers := self.model.get_relation(PEER_RELATION)):
             return None
 
         secret_key = self._translate_field_to_secret_key(key)
@@ -519,7 +523,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if scope not in get_args(Scopes):
             raise RuntimeError("Unknown secret scope.")
 
-        if not (peers := self.model.get_relation(PEER)):
+        if not (peers := self.model.get_relation(PEER_RELATION)):
             return None
 
         secret_key = self._translate_field_to_secret_key(key)
@@ -630,7 +634,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Get the IP address of a specific unit."""
         # Check if host is current host.
         if unit == self.unit:
-            if binding := self.model.get_binding(PEER):
+            if binding := self.model.get_binding(PEER_RELATION):
                 return str(binding.network.bind_address)
         # Check if host is a peer.
         elif unit in self.all_peer_data and (
@@ -2339,7 +2343,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
              A :class:`ops.model.Relation` object representing
              the peer relation.
         """
-        return self.model.get_relation(PEER)
+        return self.model.get_relation(PEER_RELATION)
 
     def _push_file_to_workload(self, container: Container, file_path: str, file_data: str) -> None:
         """Uploads a file into the provided container."""

@@ -13,10 +13,9 @@ from jubilant import Juju
 from jubilant.statustypes import Status, UnitStatus
 from tenacity import Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
-from constants import PEER
-
 from ..helpers import METADATA, execute_queries_on_unit
 
+PEER_RELATION = "database-peers"
 MINUTE_SECS = 60
 SERVER_CONFIG_USERNAME = "operator"
 
@@ -248,7 +247,7 @@ def wait_for_unit_message(app_name: str, unit_name: str, unit_message: str) -> J
 def get_user_password(juju: Juju, app_name: str, user: str) -> str | None:
     """Get a system user's password."""
     for secret in juju.secrets():
-        if secret.label == f"{PEER}.{app_name}.app":
+        if secret.label == f"{PEER_RELATION}.{app_name}.app":
             revealed_secret = juju.show_secret(secret.uri, reveal=True)
             return revealed_secret.content.get(f"{user}-password")
 

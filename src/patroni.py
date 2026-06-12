@@ -14,7 +14,8 @@ from httpx import BasicAuth
 from jinja2 import Template
 from ops.pebble import Error
 from requests.auth import HTTPBasicAuth
-from single_kernel_postgresql.config.literals import API_REQUEST_TIMEOUT, Substrates
+from single_kernel_postgresql.config.enums import Substrates
+from single_kernel_postgresql.config.literals import API_REQUEST_TIMEOUT
 from single_kernel_postgresql.utils import label2name, parallel_patroni_get_request, render_file
 from tenacity import (
     Future,

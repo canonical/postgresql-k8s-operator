@@ -33,7 +33,9 @@ from tenacity import (
     wait_fixed,
 )
 
-from constants import DATABASE_DEFAULT_NAME, PEER, SYSTEM_USERS_PASSWORD_CONFIG
+DATABASE_DEFAULT_NAME = "postgres"
+PEER_RELATION = "database-peers"
+SYSTEM_USERS_PASSWORD_CONFIG = "system-users"
 
 CHARM_BASE = "ubuntu@22.04"
 CHARM_BASE_NOBLE = "ubuntu@24.04"
@@ -504,7 +506,7 @@ async def get_password(
     database_app_name: str = DATABASE_APP_NAME,
 ):
     """Retrieve a user password from the secret."""
-    secret = await get_secret_by_label(ops_test, label=f"{PEER}.{database_app_name}.app")
+    secret = await get_secret_by_label(ops_test, label=f"{PEER_RELATION}.{database_app_name}.app")
     password = secret.get(f"{username}-password")
 
     return password
