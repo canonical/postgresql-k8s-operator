@@ -10,7 +10,7 @@ import jubilant
 from jubilant import CLIError
 from tenacity import RetryError, Retrying, retry_if_exception_type, stop_after_attempt, wait_fixed
 
-from constants import PEER
+from constants import PEER_RELATION
 
 from .helpers import DATABASE_APP_NAME, SecretNotFoundError
 
@@ -84,7 +84,7 @@ def get_password(
     Returns:
         the user password.
     """
-    secret = get_secret_by_label(label=f"{PEER}.{database_app_name}.app")
+    secret = get_secret_by_label(label=f"{PEER_RELATION}.{database_app_name}.app")
     password = secret.get(f"{username}-password")
     print(f"Retrieved password for {username}: {password}")
 

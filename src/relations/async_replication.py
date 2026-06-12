@@ -43,7 +43,7 @@ from constants import (
     APP_SCOPE,
     ARCHIVE_PATH,
     LOGS_STORAGE_PATH,
-    PEER,
+    PEER_RELATION,
     TEMP_STORAGE_PATH,
     WORKLOAD_OS_GROUP,
     WORKLOAD_OS_USER,
@@ -276,7 +276,9 @@ class PostgreSQLAsyncReplication(Object):
 
     def _get_secret(self) -> Secret:
         """Return async replication necessary secrets."""
-        app_secret = self.charm.model.get_secret(label=f"{PEER}.{self.model.app.name}.app")
+        app_secret = self.charm.model.get_secret(
+            label=f"{PEER_RELATION}.{self.model.app.name}.app"
+        )
         content = app_secret.peek_content()
 
         # Filter out unnecessary secrets.
@@ -623,7 +625,7 @@ class PostgreSQLAsyncReplication(Object):
 
         if (
             relation.name == REPLICATION_OFFER_RELATION
-            and event.secret.label == f"{PEER}.{self.model.app.name}.app"
+            and event.secret.label == f"{PEER_RELATION}.{self.model.app.name}.app"
         ):
             logger.info("Internal secret changed, updating relation secret")
             secret = self._get_secret()

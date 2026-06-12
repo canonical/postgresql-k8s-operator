@@ -4,26 +4,37 @@
 """File containing constants to be used in the charm."""
 
 from single_kernel_postgresql.config.literals import (  # noqa: F401
+    APP_SCOPE,
     BACKUP_TYPE_OVERRIDES,
+    BACKUP_USER,
     DATABASE,
     DATABASE_DEFAULT_NAME,
     DATABASE_MAPPING_LABEL,
     DATABASE_PORT,
     METRICS_PORT,
+    MONITORING_PASSWORD_KEY,
     PATRONI_CLUSTER_STATUS_ENDPOINT,
+    PATRONI_PASSWORD_KEY,
+    PEER_RELATION,
     PGBACKREST_LOGROTATE_FILE,
     PGBACKREST_METRICS_PORT,
     PLUGIN_OVERRIDES,
+    REPLICATION_PASSWORD_KEY,
+    REWIND_PASSWORD_KEY,
+    SECRET_DELETED_LABEL,
+    SECRET_INTERNAL_LABEL,
+    SECRET_KEY_OVERRIDES,
     SPI_MODULE,
+    SYSTEM_USERS_PASSWORD_CONFIG,
     TLS_CA_FILE,
     TLS_CERT_FILE,
     TLS_KEY_FILE,
     TRACING_RELATION_NAME,
+    UNIT_SCOPE,
+    USER_PASSWORD_KEY,
     USERNAME_MAPPING_LABEL,
 )
 
-PEER = "database-peers"
-BACKUP_USER = "backup"
 REPLICATION_USER = "replication"
 REWIND_USER = "rewind"
 MONITORING_USER = "monitoring"
@@ -54,18 +65,5 @@ POSTGRES_LOG_FILES = [
 SYSTEM_USERS = [BACKUP_USER, REPLICATION_USER, REWIND_USER, USER, MONITORING_USER]
 
 # Labels are not confidential
-REPLICATION_PASSWORD_KEY = "replication-password"  # noqa: S105
-REWIND_PASSWORD_KEY = "rewind-password"  # noqa: S105
-MONITORING_PASSWORD_KEY = "monitoring-password"  # noqa: S105
-PATRONI_PASSWORD_KEY = "patroni-password"  # noqa: S105
-USER_PASSWORD_KEY = "operator-password"  # noqa: S105
 SECRET_LABEL = "secret"  # noqa: S105
 SECRET_CACHE_LABEL = "cache"  # noqa: S105
-SECRET_INTERNAL_LABEL = "internal-secret"  # noqa: S105
-SECRET_DELETED_LABEL = "None"  # noqa: S105
-SYSTEM_USERS_PASSWORD_CONFIG = "system-users"  # noqa: S105
-
-APP_SCOPE = "app"
-UNIT_SCOPE = "unit"
-
-SECRET_KEY_OVERRIDES = {"ca": "cauth"}
