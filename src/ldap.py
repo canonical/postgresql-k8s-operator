@@ -4,6 +4,7 @@
 """LDAP implementation."""
 
 import logging
+from typing import TYPE_CHECKING
 
 from charms.glauth_k8s.v0.ldap import (
     LdapProviderData,
@@ -15,13 +16,16 @@ from ops import Relation
 from ops.framework import Object
 from ops.model import ActiveStatus
 
+if TYPE_CHECKING:
+    from charm import PostgresqlOperatorCharm
+
 logger = logging.getLogger(__name__)
 
 
 class PostgreSQLLDAP(Object):
     """In this class, we manage PostgreSQL LDAP access."""
 
-    def __init__(self, charm, relation_name: str):
+    def __init__(self, charm: "PostgresqlOperatorCharm", relation_name: str):
         """Manager of PostgreSQL LDAP."""
         super().__init__(charm, "ldap")
         self.charm = charm
