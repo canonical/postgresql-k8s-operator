@@ -10,9 +10,9 @@ import jubilant
 from jubilant import CLIError
 from tenacity import RetryError, Retrying, retry_if_exception_type, stop_after_attempt, wait_fixed
 
-from constants import PEER_RELATION
-
 from .helpers import DATABASE_APP_NAME, SecretNotFoundError
+
+PEER_RELATION = "database-peers"
 
 
 def retry_if_cli_error[T](fn: Callable[[], T], *, max_attempts: int = 10) -> T:

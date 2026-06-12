@@ -33,7 +33,9 @@ from tenacity import (
     wait_fixed,
 )
 
-from constants import DATABASE_DEFAULT_NAME, PEER_RELATION, SYSTEM_USERS_PASSWORD_CONFIG
+DATABASE_DEFAULT_NAME = "postgres"
+PEER_RELATION = "database-peers"
+SYSTEM_USERS_PASSWORD_CONFIG = "system-users"
 
 CHARM_BASE = "ubuntu@22.04"
 CHARM_BASE_NOBLE = "ubuntu@24.04"
