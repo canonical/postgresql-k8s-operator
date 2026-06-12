@@ -85,7 +85,7 @@ def _configure_s3_integrator(
             and jubilant.all_agents_idle(status, app_name)
             and jubilant.all_blocked(status, app_name)
         ),
-        timeout=10 * MINUTE_SECS,
+        timeout=15 * MINUTE_SECS,
     )
 
     model.run(
