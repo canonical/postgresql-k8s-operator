@@ -172,10 +172,7 @@ def test_can_use_s3_repository(harness):
         patch("charm.Patroni.reload_patroni_configuration") as _reload_patroni_configuration,
         patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
-        patch(
-            "charm.Patroni.rock_postgresql_version",
-            new_callable=PropertyMock(return_value="16.6"),
-        ) as _rock_postgresql_version,
+        patch("charm.Patroni.get_postgresql_version", return_value="16.6"),
         patch("charm.PostgreSQLBackups._execute_command") as _execute_command,
         patch(
             "charm.PostgreSQLBackups._retrieve_s3_parameters",

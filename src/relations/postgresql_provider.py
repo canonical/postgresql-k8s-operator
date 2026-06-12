@@ -241,7 +241,7 @@ class PostgreSQLProvider(Object):
         Generate password and handle user and database creation for the related application.
         """
         # Check for some conditions before trying to access the PostgreSQL instance.
-        if not self.charm.is_cluster_initialised or not self.charm._patroni.primary_endpoint_ready:
+        if not self.charm.is_cluster_initialised or not self.charm.patroni.primary_endpoint_ready:
             logger.debug(
                 "Deferring on_database_requested: Cluster must be initialized before database can be requested"
             )
@@ -366,7 +366,7 @@ class PostgreSQLProvider(Object):
         if (
             not self.charm._peers
             or not self.charm.is_cluster_initialised
-            or not self.charm._patroni.member_started
+            or not self.charm.patroni.member_started
         ):
             logger.debug(
                 "Deferring on_relation_broken: Cluster must be initialized before user can be deleted"
