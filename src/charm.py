@@ -96,7 +96,7 @@ from ops.pebble import (
 from ops_tracing import Tracing
 from requests import ConnectionError as RequestsConnectionError
 from single_kernel_postgresql.config.enums import Substrates
-from single_kernel_postgresql.core.config import CharmConfig
+from single_kernel_postgresql.core.config import K8SCharmConfig
 from single_kernel_postgresql.events.tls_transfer import TLSTransfer
 from single_kernel_postgresql.utils import any_cpu_to_cores, any_memory_to_bytes, new_password
 from single_kernel_postgresql.utils.postgresql import (
@@ -196,10 +196,10 @@ class CannotConnectError(Exception):
     """Cannot run smoke check on connected Database."""
 
 
-class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
+class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
     """Charmed Operator for the PostgreSQL database."""
 
-    config_type = CharmConfig
+    config_type = K8SCharmConfig
     on: "CharmEvents" = AuthorisationRulesChangeCharmEvents()
 
     def __init__(self, *args):

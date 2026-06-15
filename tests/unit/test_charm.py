@@ -483,7 +483,7 @@ def test_add_cluster_member(harness):
 
 def test_enable_disable_extensions(harness):
     with (
-        patch("charm.CharmConfig.plugin_keys") as _plugin_keys,
+        patch("charm.K8SCharmConfig.plugin_keys") as _plugin_keys,
         patch("charm.PostgreSQL.enable_disable_extensions") as _enable_disable_extensions,
         patch("charm.Patroni.get_primary", return_value=None) as _get_primary,
         patch("charm.Patroni.member_started", return_value=True, new_callable=PropertyMock),
