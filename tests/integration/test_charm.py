@@ -3,7 +3,7 @@
 # See LICENSE file for licensing details.
 
 import logging
-from pathlib import Path
+from typing import get_args
 
 import psycopg2
 import pytest
@@ -12,6 +12,7 @@ from lightkube import AsyncClient
 from lightkube.resources.core_v1 import Pod
 from psycopg2 import sql
 from pytest_operator.plugin import OpsTest
+from single_kernel_postgresql.config.locales import K8S_LOCALES
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from .ha_tests.helpers import get_cluster_roles
@@ -181,8 +182,7 @@ async def test_postgresql_locales(ops_test: OpsTest) -> None:
     # Juju 2 has an extra empty element
     if "" in locales:
         locales.remove("")
-    expected = (Path(__file__).parent / "locales.txt").read_text().splitlines()
-    assert locales == expected
+    assert locales == sorted(get_args(K8S_LOCALES))
 
 
 async def test_postgresql_parameters_change(ops_test: OpsTest) -> None:
