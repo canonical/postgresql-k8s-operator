@@ -1713,20 +1713,19 @@ optional = false
 python-versions = ">=3.8,<4.0"
 groups = ["main"]
 files = [
-    {file = "495660104a98b207c479d367d571211169be9cf4.zip", hash = "sha256:2e27c83da720c6747f0c903cf787670d9de62fe7d7bc8a070374402d301b5917"},
+    {file = "91216b696cda0f8fc7c7fdff8fc836f7c5cd0df4.zip", hash = "sha256:a3416d47c21554ed09480bc986b2149b626bd9f035e7e75b3905a97627cd1d1d"},
 ]
 
 [package.dependencies]
 ops = ">=2.0.0"
-psycopg2 = ">=2.9.10"
 tenacity = ">=9.0.0"
 
 [package.extras]
-postgresql = ["charm-refresh ; python_version >= \"3.12\"", "charmlibs-interfaces-tls-certificates (>=1.8.3) ; python_version >= \"3.12\"", "charmlibs-pathops (>=1.0.1) ; python_version >= \"3.12\"", "charmlibs-rollingops (>=1.1.1) ; python_version >= \"3.12\"", "charmlibs-snap (>=1.0.1) ; python_version >= \"3.12\"", "data-platform-helpers (>=0.1.7) ; python_version >= \"3.12\"", "httpx ; python_version >= \"3.12\"", "jinja2 (>=3.1.6) ; python_version >= \"3.12\"", "pydantic (>=2.0) ; python_version >= \"3.12\"", "requests ; python_version >= \"3.12\"", "tomli ; python_version >= \"3.12\""]
+postgresql = ["charm-refresh ; python_version >= \"3.12\"", "charmlibs-interfaces-tls-certificates (>=1.8.3) ; python_version >= \"3.12\"", "charmlibs-pathops (>=1.0.1) ; python_version >= \"3.12\"", "charmlibs-rollingops (>=1.1.1) ; python_version >= \"3.12\"", "charmlibs-snap (>=1.0.1) ; python_version >= \"3.12\"", "data-platform-helpers (>=0.1.7) ; python_version >= \"3.12\"", "httpx ; python_version >= \"3.12\"", "jinja2 (>=3.1.6) ; python_version >= \"3.12\"", "psycopg2 (>=2.9.10)", "pydantic (>=2.0) ; python_version >= \"3.12\"", "requests ; python_version >= \"3.12\"", "tomli ; python_version >= \"3.12\""]
 
 [package.source]
 type = "url"
-url = "https://github.com/canonical/postgresql-single-kernel-library/archive/495660104a98b207c479d367d571211169be9cf4.zip"
+url = "https://github.com/canonical/postgresql-single-kernel-library/archive/91216b696cda0f8fc7c7fdff8fc836f7c5cd0df4.zip"
 
 [[package]]
 name = "prompt-toolkit"
@@ -2981,4 +2980,4 @@ h11 = ">=0.16.0,<1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "51947a6871be736bfb042da8c4a5a04a1a0d04d8937f777fb3e457b551ef0753"
+content-hash = "3734d49582e5c4f129dd50f799f4455c8d28936d27df68091e450efcb9ab2539"
