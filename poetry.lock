@@ -1716,21 +1716,20 @@ optional = false
 python-versions = ">=3.8,<4.0"
 groups = ["main"]
 files = [
-    {file = "7dda37369b82c3c52d24fcf466bf79625e0fbce0.zip", hash = "sha256:5ab99ffe20bb5d1fe9f8d9f598464c7aa88bf4bb2f87355d222fa7b48ea8aa6e"},
+    {file = "d26d9bbd2487538e0536230cc10dc8d73fa5696b.zip", hash = "sha256:bd7150f1ac53672d0eca95e94f3068e30d5f5bbe8e10bada3597223fc3bb3f66"},
 ]
 
 [package.dependencies]
 ops = ">=2.0.0"
 psycopg2 = ">=2.9.10"
-pydantic = ">=2,<3"
 tenacity = ">=9.0.0"
 
 [package.extras]
-postgresql = ["charmlibs-pathops (>=1.0.1) ; python_version >= \"3.12\"", "data-platform-helpers (>=0.1.7) ; python_version >= \"3.12\"", "httpx ; python_version >= \"3.12\""]
+postgresql = ["charm-refresh ; python_version >= \"3.12\"", "charmlibs-interfaces-tls-certificates (>=1.8.3) ; python_version >= \"3.12\"", "charmlibs-pathops (>=1.0.1) ; python_version >= \"3.12\"", "charmlibs-rollingops (>=1.1.1) ; python_version >= \"3.12\"", "charmlibs-snap (>=1.0.1) ; python_version >= \"3.12\"", "data-platform-helpers (>=0.1.7) ; python_version >= \"3.12\"", "httpx ; python_version >= \"3.12\"", "jinja2 (>=3.1.6) ; python_version >= \"3.12\"", "pydantic (>=2.0) ; python_version >= \"3.12\"", "requests ; python_version >= \"3.12\"", "tomli ; python_version >= \"3.12\""]
 
 [package.source]
 type = "url"
-url = "https://github.com/canonical/postgresql-single-kernel-library/archive/7dda37369b82c3c52d24fcf466bf79625e0fbce0.zip"
+url = "https://github.com/canonical/postgresql-single-kernel-library/archive/d26d9bbd2487538e0536230cc10dc8d73fa5696b.zip"
 
 [[package]]
 name = "prompt-toolkit"
@@ -2985,4 +2984,4 @@ h11 = ">=0.16.0,<1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "a2b29c8bbbc59075900b1565fbcdefb97810e203b5dc27dd83642bf5e5b0b4a3"
+content-hash = "ad81f87255b256a3d6dfb0ca5157c5e496c15373b31f531b7ae7c04a842c91aa"
