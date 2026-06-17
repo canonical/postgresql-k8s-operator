@@ -21,6 +21,11 @@ from lightkube.core.exceptions import ApiError
 from lightkube.generic_resource import GenericNamespacedResource
 from lightkube.resources.core_v1 import Endpoints, Service
 from pytest_operator.plugin import OpsTest
+from single_kernel_postgresql.config.literals import (
+    DATABASE_DEFAULT_NAME,
+    PEER_RELATION,
+    SYSTEM_USERS_PASSWORD_CONFIG,
+)
 from tenacity import (
     RetryError,
     Retrying,
@@ -32,10 +37,6 @@ from tenacity import (
     wait_exponential,
     wait_fixed,
 )
-
-DATABASE_DEFAULT_NAME = "postgres"
-PEER_RELATION = "database-peers"
-SYSTEM_USERS_PASSWORD_CONFIG = "system-users"
 
 CHARM_BASE = "ubuntu@22.04"
 CHARM_BASE_NOBLE = "ubuntu@24.04"

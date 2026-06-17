@@ -8,6 +8,7 @@ import psycopg2
 import pytest
 import yaml
 from pytest_operator.plugin import OpsTest
+from single_kernel_postgresql.config.literals import DATABASE_DEFAULT_NAME
 from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from ..helpers import (
@@ -20,8 +21,6 @@ from .helpers import (
     build_connection_string,
     get_application_relation_data,
 )
-
-DATABASE_DEFAULT_NAME = "postgres"
 
 logger = logging.getLogger(__name__)
 

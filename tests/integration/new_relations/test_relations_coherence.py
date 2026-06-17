@@ -8,12 +8,11 @@ import string
 import psycopg2
 import pytest
 from pytest_operator.plugin import OpsTest
+from single_kernel_postgresql.config.literals import DATABASE_DEFAULT_NAME
 
 from ..helpers import DATABASE_APP_NAME, build_and_deploy
 from .helpers import build_connection_string
 from .test_new_relations_1 import DATA_INTEGRATOR_APP_NAME
-
-DATABASE_DEFAULT_NAME = "postgres"
 
 logger = logging.getLogger(__name__)
 

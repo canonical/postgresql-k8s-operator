@@ -8,11 +8,10 @@ from enum import Enum
 
 import jubilant
 from jubilant import CLIError
+from single_kernel_postgresql.config.literals import PEER_RELATION
 from tenacity import RetryError, Retrying, retry_if_exception_type, stop_after_attempt, wait_fixed
 
 from .helpers import DATABASE_APP_NAME, SecretNotFoundError
-
-PEER_RELATION = "database-peers"
 
 
 def retry_if_cli_error[T](fn: Callable[[], T], *, max_attempts: int = 10) -> T:
