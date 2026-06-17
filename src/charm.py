@@ -108,6 +108,8 @@ from single_kernel_postgresql.config.literals import (
     PEER_RELATION,
     PGBACKREST_METRICS_PORT,
     PLUGIN_OVERRIDES,
+    REPLICATION_CONSUMER_RELATION,
+    REPLICATION_OFFER_RELATION,
     REPLICATION_PASSWORD_KEY,
     REPLICATION_USER,
     REWIND_PASSWORD_KEY,
@@ -165,8 +167,6 @@ from constants import (
 from ldap import PostgreSQLLDAP
 from patroni import NotReadyError, Patroni, SwitchoverFailedError, SwitchoverNotSyncError
 from relations.async_replication import (
-    REPLICATION_CONSUMER_RELATION,
-    REPLICATION_OFFER_RELATION,
     PostgreSQLAsyncReplication,
 )
 

@@ -40,6 +40,8 @@ from ops.pebble import ChangeError
 from single_kernel_postgresql.config.literals import (
     APP_SCOPE,
     PEER_RELATION,
+    REPLICATION_CONSUMER_RELATION,
+    REPLICATION_OFFER_RELATION,
 )
 from single_kernel_postgresql.config.literals import (
     K8S_WORKLOAD_OS_GROUP as WORKLOAD_OS_GROUP,
@@ -60,8 +62,6 @@ logger = logging.getLogger(__name__)
 
 
 READ_ONLY_MODE_BLOCKING_MESSAGE = "Standalone read-only cluster"
-REPLICATION_CONSUMER_RELATION = "replication"
-REPLICATION_OFFER_RELATION = "replication-offer"
 # Labels are not confidential
 SECRET_LABEL = "async-replication-secret"  # noqa: S105
 

@@ -32,6 +32,8 @@ from single_kernel_postgresql.config.literals import (
     BACKUP_TYPE_OVERRIDES,
     BACKUP_USER,
     PGBACKREST_LOGROTATE_FILE,
+    REPLICATION_CONSUMER_RELATION,
+    REPLICATION_OFFER_RELATION,
 )
 from single_kernel_postgresql.config.literals import (
     K8S_WORKLOAD_OS_GROUP as WORKLOAD_OS_GROUP,
@@ -47,7 +49,6 @@ from constants import (
     PGBACKREST_LOGS_PATH,
     TEMP_STORAGE_PATH,
 )
-from relations.async_replication import REPLICATION_CONSUMER_RELATION, REPLICATION_OFFER_RELATION
 
 # from relations.logical_replication import (
 #     LOGICAL_REPLICATION_OFFER_RELATION,
