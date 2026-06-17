@@ -10,10 +10,11 @@ from jinja2 import Template
 from ops import ActiveStatus, BlockedStatus, MaintenanceStatus, Unit
 from ops.pebble import Change, ChangeError, ChangeID, ExecError
 from ops.testing import Harness
+from single_kernel_postgresql.config.literals import PEER_RELATION
 from tenacity import RetryError, wait_fixed
 
 from charm import PostgresqlOperatorCharm
-from constants import PEER_RELATION, PGBACKREST_LOGS_PATH
+from constants import PGBACKREST_LOGS_PATH
 from tests.unit.helpers import _FakeApiError
 
 ANOTHER_CLUSTER_REPOSITORY_ERROR_MESSAGE = "the S3 repository has backups from another cluster"

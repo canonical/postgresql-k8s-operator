@@ -37,13 +37,15 @@ from ops import (
     WaitingStatus,
 )
 from ops.pebble import ChangeError
+from single_kernel_postgresql.config.literals import (
+    APP_SCOPE,
+    PEER_RELATION,
+)
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
 from constants import (
-    APP_SCOPE,
     ARCHIVE_PATH,
     LOGS_STORAGE_PATH,
-    PEER_RELATION,
     TEMP_STORAGE_PATH,
     WORKLOAD_OS_GROUP,
     WORKLOAD_OS_USER,

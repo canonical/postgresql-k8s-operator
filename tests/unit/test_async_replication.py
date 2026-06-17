@@ -6,9 +6,9 @@ from unittest.mock import PropertyMock, patch
 
 import pytest
 from ops.testing import Harness
+from single_kernel_postgresql.config.literals import APP_SCOPE, PEER_RELATION
 
 from charm import PostgresqlOperatorCharm
-from constants import APP_SCOPE, PEER_RELATION
 from relations.async_replication import (
     REPLICATION_CONSUMER_RELATION,
     REPLICATION_OFFER_RELATION,

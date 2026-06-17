@@ -28,14 +28,16 @@ from ops.framework import Object
 from ops.jujuversion import JujuVersion
 from ops.model import ActiveStatus, MaintenanceStatus
 from ops.pebble import ChangeError, ExecError, ServiceStatus
+from single_kernel_postgresql.config.literals import (
+    BACKUP_TYPE_OVERRIDES,
+    BACKUP_USER,
+    PGBACKREST_LOGROTATE_FILE,
+)
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from constants import (
     ARCHIVE_PATH,
-    BACKUP_TYPE_OVERRIDES,
-    BACKUP_USER,
     LOGS_STORAGE_PATH,
-    PGBACKREST_LOGROTATE_FILE,
     PGBACKREST_LOGS_PATH,
     TEMP_STORAGE_PATH,
     WORKLOAD_OS_GROUP,

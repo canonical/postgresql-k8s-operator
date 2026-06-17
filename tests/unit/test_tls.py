@@ -5,9 +5,9 @@ from unittest.mock import Mock, patch, sentinel
 
 import pytest
 from ops.testing import Harness
+from single_kernel_postgresql.config.literals import PEER_RELATION
 
 from charm import PostgresqlOperatorCharm
-from constants import PEER_RELATION
 
 
 @pytest.fixture(autouse=True)

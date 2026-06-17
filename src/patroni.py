@@ -15,7 +15,10 @@ from jinja2 import Template
 from ops.pebble import Error
 from requests.auth import HTTPBasicAuth
 from single_kernel_postgresql.config.enums import Substrates
-from single_kernel_postgresql.config.literals import API_REQUEST_TIMEOUT
+from single_kernel_postgresql.config.literals import (
+    API_REQUEST_TIMEOUT,
+    PATRONI_CLUSTER_STATUS_ENDPOINT,
+)
 from single_kernel_postgresql.utils import label2name, parallel_patroni_get_request, render_file
 from tenacity import (
     Future,
@@ -31,7 +34,6 @@ from tenacity import (
 
 from constants import (
     LOGS_STORAGE_PATH,
-    PATRONI_CLUSTER_STATUS_ENDPOINT,
     POSTGRESQL_LOGS_PATH,
     POSTGRESQL_LOGS_PATTERN,
     REWIND_USER,
