@@ -3,15 +3,6 @@
 
 """File containing constants to be used in the charm."""
 
-from single_kernel_postgresql.config.literals import BACKUP_USER
-
-REPLICATION_USER = "replication"
-REWIND_USER = "rewind"
-MONITORING_USER = "monitoring"
-TLS_CA_BUNDLE_FILE = "peer_ca_bundle.pem"
-USER = "operator"
-WORKLOAD_OS_GROUP = "postgres"
-WORKLOAD_OS_USER = "postgres"
 PATRONI_LOGS_SYMLINK_PATH = "/var/log/patroni"
 PGBACKREST_LOGS_SYMLINK_PATH = "/var/log/pgbackrest"
 POSTGRESQL_LOGS_SYMLINK_PATH = "/var/log/postgresql"
@@ -31,8 +22,6 @@ POSTGRES_LOG_FILES = [
     f"{PATRONI_LOGS_PATH}/patroni.log",
     f"{POSTGRESQL_LOGS_PATH}/postgresql*.log",
 ]
-# List of system usernames needed for correct work of the charm/workload.
-SYSTEM_USERS = [BACKUP_USER, REPLICATION_USER, REWIND_USER, USER, MONITORING_USER]
 
 # Labels are not confidential
 SECRET_LABEL = "secret"  # noqa: S105

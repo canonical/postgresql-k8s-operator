@@ -103,22 +103,34 @@ from single_kernel_postgresql.config.literals import (
     DATABASE_PORT,
     METRICS_PORT,
     MONITORING_PASSWORD_KEY,
+    MONITORING_USER,
     PATRONI_PASSWORD_KEY,
     PEER_RELATION,
     PGBACKREST_METRICS_PORT,
     PLUGIN_OVERRIDES,
     REPLICATION_PASSWORD_KEY,
+    REPLICATION_USER,
     REWIND_PASSWORD_KEY,
+    REWIND_USER,
     SECRET_DELETED_LABEL,
     SECRET_INTERNAL_LABEL,
     SECRET_KEY_OVERRIDES,
     SPI_MODULE,
+    SYSTEM_USERS,
+    TLS_CA_BUNDLE_FILE,
     TLS_CA_FILE,
     TLS_CERT_FILE,
     TLS_KEY_FILE,
     TRACING_RELATION_NAME,
     UNIT_SCOPE,
+    USER,
     USER_PASSWORD_KEY,
+)
+from single_kernel_postgresql.config.literals import (
+    K8S_WORKLOAD_OS_GROUP as WORKLOAD_OS_GROUP,
+)
+from single_kernel_postgresql.config.literals import (
+    K8S_WORKLOAD_OS_USER as WORKLOAD_OS_USER,
 )
 from single_kernel_postgresql.core.config import K8SCharmConfig
 from single_kernel_postgresql.events.tls_transfer import TLSTransfer
@@ -141,7 +153,6 @@ from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay,
 
 from backups import CANNOT_RESTORE_PITR, S3_BLOCK_MESSAGES, PostgreSQLBackups
 from constants import (
-    MONITORING_USER,
     PATRONI_LOGS_PATH,
     PATRONI_LOGS_SYMLINK_PATH,
     PGBACKREST_LOGS_PATH,
@@ -149,14 +160,7 @@ from constants import (
     POSTGRES_LOG_FILES,
     POSTGRESQL_LOGS_PATH,
     POSTGRESQL_LOGS_SYMLINK_PATH,
-    REPLICATION_USER,
-    REWIND_USER,
-    SYSTEM_USERS,
     TEMP_STORAGE_PATH,
-    TLS_CA_BUNDLE_FILE,
-    USER,
-    WORKLOAD_OS_GROUP,
-    WORKLOAD_OS_USER,
 )
 from ldap import PostgreSQLLDAP
 from patroni import NotReadyError, Patroni, SwitchoverFailedError, SwitchoverNotSyncError

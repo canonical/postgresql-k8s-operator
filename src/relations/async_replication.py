@@ -41,14 +41,18 @@ from single_kernel_postgresql.config.literals import (
     APP_SCOPE,
     PEER_RELATION,
 )
+from single_kernel_postgresql.config.literals import (
+    K8S_WORKLOAD_OS_GROUP as WORKLOAD_OS_GROUP,
+)
+from single_kernel_postgresql.config.literals import (
+    K8S_WORKLOAD_OS_USER as WORKLOAD_OS_USER,
+)
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
 from constants import (
     ARCHIVE_PATH,
     LOGS_STORAGE_PATH,
     TEMP_STORAGE_PATH,
-    WORKLOAD_OS_GROUP,
-    WORKLOAD_OS_USER,
 )
 from patroni import ClusterNotPromotedError, NotReadyError, StandbyClusterAlreadyPromotedError
 

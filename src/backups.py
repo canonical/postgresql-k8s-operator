@@ -33,6 +33,12 @@ from single_kernel_postgresql.config.literals import (
     BACKUP_USER,
     PGBACKREST_LOGROTATE_FILE,
 )
+from single_kernel_postgresql.config.literals import (
+    K8S_WORKLOAD_OS_GROUP as WORKLOAD_OS_GROUP,
+)
+from single_kernel_postgresql.config.literals import (
+    K8S_WORKLOAD_OS_USER as WORKLOAD_OS_USER,
+)
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
 from constants import (
@@ -40,8 +46,6 @@ from constants import (
     LOGS_STORAGE_PATH,
     PGBACKREST_LOGS_PATH,
     TEMP_STORAGE_PATH,
-    WORKLOAD_OS_GROUP,
-    WORKLOAD_OS_USER,
 )
 from relations.async_replication import REPLICATION_CONSUMER_RELATION, REPLICATION_OFFER_RELATION
 

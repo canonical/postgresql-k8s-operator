@@ -10,11 +10,11 @@ import tenacity
 from jinja2 import Template
 from ops.testing import Harness
 from single_kernel_postgresql.config.enums import Substrates
-from single_kernel_postgresql.config.literals import API_REQUEST_TIMEOUT
+from single_kernel_postgresql.config.literals import API_REQUEST_TIMEOUT, REWIND_USER
 from tenacity import RetryError, stop_after_delay, wait_fixed
 
 from charm import PostgresqlOperatorCharm
-from constants import LOGS_STORAGE_PATH, POSTGRESQL_LOGS_PATH, REWIND_USER
+from constants import LOGS_STORAGE_PATH, POSTGRESQL_LOGS_PATH
 from patroni import Patroni, SwitchoverFailedError, SwitchoverNotSyncError
 from tests.helpers import PGDATA_PATH, STORAGE_PATH
 

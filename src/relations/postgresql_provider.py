@@ -15,6 +15,7 @@ from single_kernel_postgresql.config.literals import (
     APP_SCOPE,
     DATABASE_MAPPING_LABEL,
     DATABASE_PORT,
+    SYSTEM_USERS,
     USERNAME_MAPPING_LABEL,
 )
 from single_kernel_postgresql.utils import new_password
@@ -28,10 +29,6 @@ from single_kernel_postgresql.utils.postgresql import (
     PostgreSQLCreateUserError,
     PostgreSQLDeleteUserError,
     PostgreSQLGetPostgreSQLVersionError,
-)
-
-from constants import (
-    SYSTEM_USERS,
 )
 
 logger = logging.getLogger(__name__)
