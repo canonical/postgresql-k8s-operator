@@ -22,7 +22,3 @@ POSTGRES_LOG_FILES = [
     f"{PATRONI_LOGS_PATH}/patroni.log",
     f"{POSTGRESQL_LOGS_PATH}/postgresql*.log",
 ]
-
-# Labels are not confidential
-SECRET_LABEL = "secret"  # noqa: S105
-SECRET_CACHE_LABEL = "cache"  # noqa: S105
