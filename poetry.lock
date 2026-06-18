@@ -1710,10 +1710,11 @@ name = "postgresql-charms-single-kernel"
 version = "16.3.0"
 description = "Shared and reusable code for PostgreSQL-related charms"
 optional = false
-python-versions = ">=3.8,<4.0"
+python-versions = "<4.0,>=3.8"
 groups = ["single-kernel"]
 files = [
-    {file = "9e864ce662a5d20a2909c36accf3acfdd7223961.zip", hash = "sha256:7d91796349fb2aaf8cb686148c2861a216b6f3af89f3a4d8dd482b1e519da714"},
+    {file = "postgresql_charms_single_kernel-16.3.0-py3-none-any.whl", hash = "sha256:3f0a392b3f26ce3676ac365b49f25baa6ac812f82143c517689935f42114efbd"},
+    {file = "postgresql_charms_single_kernel-16.3.0.tar.gz", hash = "sha256:7e0d7db80d0b1a5a97baf002809c101d55e4ffe5b9f26a3ae20b9b150c6ae51e"},
 ]
 
 [package.dependencies]
@@ -1721,11 +1722,7 @@ ops = ">=2.0.0"
 tenacity = ">=9.0.0"
 
 [package.extras]
-postgresql = ["charm-refresh ; python_version >= \"3.12\"", "charmlibs-interfaces-tls-certificates (>=1.8.3) ; python_version >= \"3.12\"", "charmlibs-pathops (>=1.0.1) ; python_version >= \"3.12\"", "charmlibs-rollingops (>=1.1.1) ; python_version >= \"3.12\"", "charmlibs-snap (>=1.0.1) ; python_version >= \"3.12\"", "data-platform-helpers (>=0.1.7) ; python_version >= \"3.12\"", "httpx ; python_version >= \"3.12\"", "jinja2 (>=3.1.6) ; python_version >= \"3.12\"", "psycopg2 (>=2.9.10)", "pydantic (>=2.0) ; python_version >= \"3.12\"", "requests ; python_version >= \"3.12\"", "tomli ; python_version >= \"3.12\""]
-
-[package.source]
-type = "url"
-url = "https://github.com/canonical/postgresql-single-kernel-library/archive/9e864ce662a5d20a2909c36accf3acfdd7223961.zip"
+postgresql = ["charm-refresh ; python_full_version >= \"3.12.0\"", "charmlibs-interfaces-tls-certificates (>=1.8.3) ; python_full_version >= \"3.12.0\"", "charmlibs-pathops (>=1.0.1) ; python_full_version >= \"3.12.0\"", "charmlibs-rollingops (>=1.1.1) ; python_full_version >= \"3.12.0\"", "charmlibs-snap (>=1.0.1) ; python_full_version >= \"3.12.0\"", "data-platform-helpers (>=0.1.7) ; python_full_version >= \"3.12.0\"", "httpx ; python_full_version >= \"3.12.0\"", "jinja2 (>=3.1.6) ; python_full_version >= \"3.12.0\"", "psycopg2 (>=2.9.10)", "pydantic (>=2.0) ; python_full_version >= \"3.12.0\"", "requests ; python_full_version >= \"3.12.0\"", "tomli ; python_full_version >= \"3.12.0\""]
 
 [[package]]
 name = "prompt-toolkit"
@@ -2980,4 +2977,4 @@ h11 = ">=0.16.0,<1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "f0a1b9aab8d776ec052af2ba9dc9a5dc5ee984cb139c52feffad070198c40d2f"
+content-hash = "b136c6bbfd53f6d9d8f483d2bcb2927026ce7a485847ac98c7cdaf2ca5796aaf"
