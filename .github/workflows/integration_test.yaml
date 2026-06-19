@@ -115,7 +115,6 @@ jobs:
         # Completely purging Docker requires also
         # deleting the Docker-specific `iptables-nft` rulesets
         # created on installation.
-        if: ${{ inputs.path-to-charm-directory == 'kubernetes' }}
         timeout-minutes: 5
         run: |
           sudo apt-get remove --purge -y docker-ce docker-ce-cli containerd.io docker.io containerd 2>/dev/null || true
@@ -131,7 +130,6 @@ jobs:
         # pods onto the 10.88.0.0/16 bridge instead of the Cilium pod
         # CIDR. Removing the file ensures Cilium is the only CNI plugin
         # from the start.
-        if: ${{ inputs.path-to-charm-directory == 'kubernetes' }}
         timeout-minutes: 1
         run: |
           sudo rm -f /etc/cni/net.d/87-podman-bridge.conflist
