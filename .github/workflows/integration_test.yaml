@@ -24,33 +24,6 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Purge Docker
-        # GitHub-hosted Azure runners ship Docker pre-installed and active.
-        # Canonical K8s requires "A system with no previous installations
-        # of containerd/docker as this may cause conflicts"
-        # (see https://documentation.ubuntu.com/canonical-kubernetes
-        # /release-1.32/snap/tutorial/getting-started/).
-        # Completely purging Docker requires also
-        # deleting the Docker-specific `iptables-nft` rulesets
-        # created on installation.
-        timeout-minutes: 5
-        run: |
-          sudo apt-get remove --purge -y docker-ce docker-ce-cli containerd.io docker.io containerd 2>/dev/null || true
-          sudo nft flush ruleset
-          sudo ip link delete docker0 2>/dev/null || true
-      - name: Remove podman CNI bridge config
-        # Ubuntu 24.04 runners ship podman with a CNI bridge config
-        # (/etc/cni/net.d/87-podman-bridge.conflist) that sorts
-        # lexicographically before Cilium's config (05-cilium.conflist).
-        # When that file is present, containerd picks the podman bridge
-        # as the active CNI before Cilium is ready, bypassing the
-        # node.kubernetes.io/network-unavailable taint and scheduling
-        # pods onto the 10.88.0.0/16 bridge instead of the Cilium pod
-        # CIDR. Removing the file ensures Cilium is the only CNI plugin
-        # from the start.
-        timeout-minutes: 1
-        run: |
-          sudo rm -f /etc/cni/net.d/87-podman-bridge.conflist
       - name: Checkout
         uses: actions/checkout@v6
         with:
@@ -128,11 +101,38 @@ jobs:
     needs:
       - collect-integration-tests
     runs-on: ${{ matrix.job.runner }}
-    timeout-minutes: 216  # Sum of steps `timeout-minutes` + 5
+    timeout-minutes: 222  # Sum of steps `timeout-minutes` + 5
     environment:
       name: integration-test
       deployment: false
     steps:
+      - name: Purge Docker
+        # GitHub-hosted Azure runners ship Docker pre-installed and active.
+        # Canonical K8s requires "A system with no previous installations
+        # of containerd/docker as this may cause conflicts"
+        # (see https://documentation.ubuntu.com/canonical-kubernetes
+        # /release-1.32/snap/tutorial/getting-started/).
+        # Completely purging Docker requires also
+        # deleting the Docker-specific `iptables-nft` rulesets
+        # created on installation.
+        timeout-minutes: 5
+        run: |
+          sudo apt-get remove --purge -y docker-ce docker-ce-cli containerd.io docker.io containerd 2>/dev/null || true
+          sudo nft flush ruleset
+          sudo ip link delete docker0 2>/dev/null || true
+      - name: Remove podman CNI bridge config
+        # Ubuntu 24.04 runners ship podman with a CNI bridge config
+        # (/etc/cni/net.d/87-podman-bridge.conflist) that sorts
+        # lexicographically before Cilium's config (05-cilium.conflist).
+        # When that file is present, containerd picks the podman bridge
+        # as the active CNI before Cilium is ready, bypassing the
+        # node.kubernetes.io/network-unavailable taint and scheduling
+        # pods onto the 10.88.0.0/16 bridge instead of the Cilium pod
+        # CIDR. Removing the file ensures Cilium is the only CNI plugin
+        # from the start.
+        timeout-minutes: 1
+        run: |
+          sudo rm -f /etc/cni/net.d/87-podman-bridge.conflist
       - name: Checkout
         timeout-minutes: 3
         uses: actions/checkout@v6
