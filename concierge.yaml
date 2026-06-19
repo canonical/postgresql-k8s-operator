@@ -5,10 +5,7 @@ providers:
   k8s:
     enable: true
     bootstrap: true
-    features:
-      dns:
-      network:
-      local-storage:
+    channel: 1.32-classic/stable
     bootstrap-constraints:
       root-disk: 5G
 host:
