@@ -1,0 +1,11 @@
+[32mINFO    [0m jubilant:_juju.py:535 cli: juju status --model testing --format json
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:22 Clearing continuous writes
+[32mINFO    [0m jubilant:_juju.py:535 cli: juju run --model testing --format json postgresql-test-app/0 clear-continuous-writes --wait 120s
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:25 Starting continuous writes
+[32mINFO    [0m jubilant:_juju.py:535 cli: juju run --model testing --format json postgresql-test-app/0 start-continuous-writes
+[32mINFO    [0m jubilant:_juju.py:535 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:535 cli: juju status --model testing --format json
+[32mINFO    [0m root:test_upgrade.py:99 Run pre-refresh-check action
+[32mINFO    [0m jubilant:_juju.py:535 cli: juju run --model testing --format json postgresql-k8s/0 pre-refresh-check
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:36 Clearing continuous writes
+[32mINFO    [0m jubilant:_juju.py:535 cli: juju run --model testing --format json postgresql-test-app/0 clear-continuous-writes --wait 120s
