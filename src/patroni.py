@@ -15,11 +15,11 @@ from ssl import CERT_NONE, create_default_context
 from typing import Any, TypedDict
 
 import requests
-import requests.auth
 import yaml
 from httpx import AsyncClient, BasicAuth, HTTPError
 from jinja2 import Template
 from ops.pebble import Error
+from requests.auth import HTTPBasicAuth
 from tenacity import (
     Future,
     RetryError,
@@ -101,10 +101,10 @@ class Patroni:
         primary_endpoint: str,
         namespace: str,
         storage_path: str,
-        superuser_password: str,
-        replication_password: str,
-        rewind_password: str,
-        patroni_password: str,
+        superuser_password: str | None,
+        replication_password: str | None,
+        rewind_password: str | None,
+        patroni_password: str | None,
     ):
         self._charm = charm
         self._endpoint = endpoint
@@ -126,8 +126,9 @@ class Patroni:
         return f"{self._storage_path}/{TLS_CA_FILE}" if self._charm.is_peer_data_tls_set else True
 
     @cached_property
-    def _patroni_auth(self) -> requests.auth.HTTPBasicAuth:
-        return requests.auth.HTTPBasicAuth("patroni", self._patroni_password)
+    def _patroni_auth(self) -> HTTPBasicAuth | None:
+        if self._patroni_password:
+            return HTTPBasicAuth("patroni", self._patroni_password)
 
     @cached_property
     def _patroni_async_auth(self) -> BasicAuth | None:
@@ -445,7 +446,6 @@ class Patroni:
 
     def get_patroni_health(self) -> dict[str, str]:
         """Gets, retires and parses the Patroni health endpoint."""
-        result: dict[str, str] = {}
         for attempt in Retrying(stop=stop_after_delay(15), wait=wait_fixed(3)):
             with attempt:
                 r = requests.get(
@@ -454,9 +454,9 @@ class Patroni:
                     timeout=PATRONI_TIMEOUT,
                     auth=self._patroni_auth,
                 )
+                logger.debug("API get_patroni_health: %s (%s)", r, r.elapsed.total_seconds())
 
-                result = r.json()
-        return result
+        return r.json()
 
     @property
     def member_started(self) -> bool:
