@@ -5,6 +5,7 @@
 
 import logging
 from collections.abc import Iterable
+from typing import TYPE_CHECKING
 
 from charms.postgresql_k8s.v0.postgresql import (
     ACCESS_GROUP_RELATION,
@@ -16,7 +17,6 @@ from charms.postgresql_k8s.v0.postgresql import (
 from ops import (
     ActiveStatus,
     BlockedStatus,
-    CharmBase,
     Object,
     Relation,
     RelationBrokenEvent,
@@ -24,6 +24,9 @@ from ops import (
     RelationDepartedEvent,
     Unit,
 )
+
+if TYPE_CHECKING:
+    from charm import PostgresqlOperatorCharm
 from pgconnstr import ConnectionString
 
 from constants import (
@@ -51,7 +54,7 @@ class DbProvides(Object):
         - relation-broken
     """
 
-    def __init__(self, charm: CharmBase, admin: bool = False):
+    def __init__(self, charm: "PostgresqlOperatorCharm", admin: bool = False):
         """Constructor for DbProvides object.
 
         Args:
@@ -302,10 +305,14 @@ class DbProvides(Object):
         # is removed and receives relation broken events from related applications.
         # This is needed because of https://bugs.launchpad.net/juju/+bug/1979811.
         if event.departing_unit == self.charm.unit:
-            self.charm._peers.data[self.charm.unit].update({"departing": "True"})
+            if self.charm._peers is not None:
+                self.charm._peers.data[self.charm.unit].update({"departing": "True"})
             return
 
         if not self.charm.unit.is_leader():
+            return
+
+        if event.departing_unit is None:
             return
 
         if event.departing_unit.app == self.charm.app:
@@ -420,7 +427,7 @@ class DbProvides(Object):
         Returns:
             The state of this unit. Can be 'standalone', 'master', or 'standby'.
         """
-        if len(self.charm._peers.units) == 0:
+        if self.charm._peers is None or len(self.charm._peers.units) == 0:
             return "standalone"
         if self.charm._patroni.get_primary(unit_name_pattern=True) == self.charm.unit.name:
             return "master"
