@@ -59,6 +59,7 @@ from ops import (
     BlockedStatus,
     CharmEvents,
     Container,
+    ErrorStatus,
     HookEvent,
     JujuVersion,
     LeaderElectedEvent,
@@ -929,7 +930,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if original_status.message == EXTENSION_OBJECT_MESSAGE:
             self._set_active_status()
             return
-        if not isinstance(original_status, UnknownStatus):
+        if not isinstance(original_status, UnknownStatus | ErrorStatus):
             self.set_unit_status(original_status)
 
     def _check_extension_dependencies(self, extension: str, enable: bool) -> bool:
