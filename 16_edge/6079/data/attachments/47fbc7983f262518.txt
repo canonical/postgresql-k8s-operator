@@ -1,0 +1,36 @@
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:103 checking garbage storages
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:109 scale to 1
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s (waiting for exactly 1 units, current : 0)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:113 waiting for idle
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:117 getting primary
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:122 getting storage id
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:130 waiting for postgresql
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:136 checking db
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:139 scale to 0
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:142 changing pv reclaim policy
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH https://10.1.0.195:16443/api/v1/persistentvolumes/pvc-52fc3ad6-4463-44fa-bb7d-637c17055a00 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH https://10.1.0.195:16443/api/v1/persistentvolumes/pvc-7db546df-f5df-468d-b63c-50a1d952c9d3 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH https://10.1.0.195:16443/api/v1/persistentvolumes/pvc-b2adbc53-9e0b-402b-9622-a3734426c530 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH https://10.1.0.195:16443/api/v1/persistentvolumes/pvc-df2c51c8-b3a3-492a-bcc0-e8e39ad15a4f "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:145 remove application
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:149 delete pvc postgresql-k8s-archive-64c2908e-postgresql-k8s-0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: DELETE https://10.1.0.195:16443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s-archive-64c2908e-postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:149 delete pvc postgresql-k8s-data-64c2908e-postgresql-k8s-0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: DELETE https://10.1.0.195:16443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s-data-64c2908e-postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:149 delete pvc postgresql-k8s-logs-64c2908e-postgresql-k8s-0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: DELETE https://10.1.0.195:16443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s-logs-64c2908e-postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:149 delete pvc postgresql-k8s-temp-64c2908e-postgresql-k8s-0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: DELETE https://10.1.0.195:16443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s-temp-64c2908e-postgresql-k8s-0 "HTTP/1.1 200 OK"
