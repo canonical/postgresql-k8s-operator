@@ -23,7 +23,7 @@ jobs:
         working-directory: docs
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
           # Required by sphinx-last-updated-by-git in shallow GitHub Actions checkouts:
