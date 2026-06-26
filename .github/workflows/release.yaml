@@ -22,7 +22,6 @@ jobs:
     with:
       track: '16'
     permissions:
-      actions: read  # Needed for GitHub API call to get workflow version
       contents: write  # Needed to create git tag
 
   ci-tests:
@@ -36,7 +35,6 @@ jobs:
       GCP_ACCESS_KEY: ${{ secrets.GCP_ACCESS_KEY }}
       GCP_SECRET_KEY: ${{ secrets.GCP_SECRET_KEY }}
     permissions:
-      actions: read  # Needed for GitHub API call to get workflow version
       contents: write  # Needed for Allure Report
 
   release:
@@ -51,5 +49,4 @@ jobs:
     secrets:
       charmhub-token: ${{ secrets.CHARMHUB_TOKEN }}
     permissions:
-      actions: read  # Needed for GitHub API call to get workflow version
       contents: write  # Needed to create git tags
