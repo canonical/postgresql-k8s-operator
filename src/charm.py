@@ -99,6 +99,7 @@ from single_kernel_postgresql.config.enums import Substrates
 from single_kernel_postgresql.config.literals import (
     APP_SCOPE,
     BACKUP_USER,
+    CONTAINER_NAME,
     DATABASE_DEFAULT_NAME,
     DATABASE_PORT,
     METRICS_PORT,
@@ -135,7 +136,17 @@ from single_kernel_postgresql.config.literals import (
     K8S_WORKLOAD_OS_USER as WORKLOAD_OS_USER,
 )
 from single_kernel_postgresql.core.config import K8SCharmConfig
+from single_kernel_postgresql.core.state import CharmState
 from single_kernel_postgresql.events.tls_transfer import TLSTransfer
+from single_kernel_postgresql.managers.cluster import ClusterManager
+from single_kernel_postgresql.managers.config import ConfigManager
+from single_kernel_postgresql.managers.patroni import (
+    NotReadyError,
+    PatroniManager,
+    SwitchoverFailedError,
+    SwitchoverNotSyncError,
+)
+from single_kernel_postgresql.managers.tls import TLSManager
 from single_kernel_postgresql.utils import any_cpu_to_cores, any_memory_to_bytes, new_password
 from single_kernel_postgresql.utils.postgresql import (
     ACCESS_GROUP_IDENTITY,
@@ -151,6 +162,8 @@ from single_kernel_postgresql.utils.postgresql import (
     PostgreSQLListUsersError,
     PostgreSQLUpdateUserPasswordError,
 )
+from single_kernel_postgresql.workload.base import BaseWorkload
+from single_kernel_postgresql.workload.k8s import K8sWorkload
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
 from backups import CANNOT_RESTORE_PITR, S3_BLOCK_MESSAGES, PostgreSQLBackups
@@ -165,7 +178,6 @@ from constants import (
     TEMP_STORAGE_PATH,
 )
 from ldap import PostgreSQLLDAP
-from patroni import NotReadyError, Patroni, SwitchoverFailedError, SwitchoverNotSyncError
 from relations.async_replication import (
     PostgreSQLAsyncReplication,
 )
@@ -229,6 +241,23 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             secret_field_name=SECRET_INTERNAL_LABEL,
             deleted_label=SECRET_DELETED_LABEL,
         )
+        self._unit = self.model.unit.name
+        self._name = self.model.app.name
+        self._namespace = self.model.name
+
+        # TODO switch to the abstract class base
+        # State
+        self.state = CharmState(charm=self, substrate=self.substrate)  # type: ignore
+
+        # Managers
+        self.patroni_manager = PatroniManager(state=self.state, workload=self.workload)
+        self.tls_manager = TLSManager(state=self.state, workload=self.workload)
+        self.cluster_manager = ClusterManager(
+            state=self.state, workload=self.workload, client=self.postgresql
+        )
+        self.config_manager = ConfigManager(
+            state=self.state, workload=self.workload, client=self.postgresql
+        )
 
         self.postgresql_service = "postgresql"
         self.rotate_logs_service = "rotate-logs"
@@ -236,9 +265,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         self.ldap_sync_service = "ldap-sync"
         self.metrics_service = "metrics_server"
         self.pgbackrest_metrics_service = "pgbackrest_metrics_service"
-        self._unit = self.model.unit.name
-        self._name = self.model.app.name
-        self._namespace = self.model.name
         self._context = {"namespace": self._namespace, "app_name": self._name}
         self.cluster_name = f"patroni-{self._name}"
 
@@ -343,17 +369,39 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         )
         self.tracing = Tracing(self, tracing_relation_name=TRACING_RELATION_NAME)
 
+    @property
+    def workload(self) -> BaseWorkload:
+        """Access current workload instance.
+
+        Returns the workload object.
+
+        Returns:
+            BaseWorkload: The K8sWorkload instance for this charm
+        """
+        return K8sWorkload(
+            charm_dir=self.charm_dir, container=self.unit.get_container(CONTAINER_NAME)
+        )
+
+    @property
+    def substrate(self) -> Substrates:
+        """Access current substrate type.
+
+        Returns:
+            Substrates: always Substrates.VM for this charm
+        """
+        return Substrates.K8S
+
     def reconcile(self):
         """Reconcile the unit state on refresh."""
         self.set_unit_status(MaintenanceStatus("starting services"))
         self._ensure_pgdata_dirs_and_symlinks(self._container)
         self._update_pebble_layers(replan=True)
 
-        if not self._patroni.member_started:
+        if not self.patroni_manager.member_started:
             logger.debug("Early exit reconcile: Patroni has not started yet")
             return
 
-        if self.unit.is_leader() and not self._patroni.primary_endpoint_ready:
+        if self.unit.is_leader() and not self.patroni_manager.primary_endpoint_ready:
             logger.debug(
                 "Early exit reconcile: current unit is leader but primary endpoint is not ready yet"
             )
@@ -364,8 +412,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(10)):
                 with attempt:
                     if not (
-                        self.unit.name.replace("/", "-") in self._patroni.cluster_members
-                        and self._patroni.is_replication_healthy
+                        self.unit.name.replace("/", "-") in self.patroni_manager.cluster_members
+                        and self.patroni_manager.is_replication_healthy
                     ):
                         logger.error(
                             "Instance not yet back in the cluster or not healthy."
@@ -653,7 +701,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
     def updated_synchronous_node_count(self) -> bool:
         """Tries to update synchronous_node_count configuration and reports the result."""
         try:
-            self._patroni.update_synchronous_node_count()
+            self.patroni_manager.update_synchronous_node_count()
             return True
         except RetryError:
             logger.debug("Unable to set synchronous_node_count")
@@ -682,7 +730,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
     def _on_pgdata_storage_detaching(self, _) -> None:
         # Change the primary if it's the unit that is being removed.
         try:
-            primary = self._patroni.get_primary(unit_name_pattern=True)
+            primary = self.patroni_manager.get_primary(unit_name_pattern=True)
         except RetryError:
             # Ignore the event if the primary couldn't be retrieved.
             # If a switchover is needed, an automatic failover will be triggered
@@ -697,7 +745,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         if self.unit.name != primary:
             return
 
-        if not self._patroni.are_all_members_ready():
+        if not self.patroni_manager.are_all_members_ready():
             logger.warning(
                 "could not switchover because not all members are ready"
                 " - an automatic failover will be triggered"
@@ -708,10 +756,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         # If it doesn't happen on time, Patroni will automatically run a fail-over.
         try:
             # Trigger the switchover.
-            self._patroni.switchover()
+            self.patroni_manager.switchover()
 
             # Wait for the switchover to complete.
-            self._patroni.primary_changed(primary)
+            self.patroni_manager.primary_changed(primary)
 
             logger.info("successful switchover")
         except (RetryError, SwitchoverFailedError) as e:
@@ -785,7 +833,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         self._check_headless_service()
 
         # Validate the status of the member before setting an ActiveStatus.
-        if not self._patroni.member_started:
+        if not self.patroni_manager.member_started:
             logger.debug("Deferring on_peer_relation_changed: Waiting for member to start")
             self.set_unit_status(WaitingStatus("awaiting for member to start"))
             event.defer()
@@ -895,7 +943,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         Args:
             database: optional database where to enable/disable the extension.
         """
-        if self._patroni.get_primary() is None:
+        if self.patroni_manager.get_primary() is None:
             logger.debug("Early exit enable_disable_extensions: standby cluster")
             return
         original_status = self.unit.status
@@ -976,15 +1024,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         try:
             # Compare set of Patroni cluster members and Juju hosts
             # to avoid the unnecessary reconfiguration.
-            if self._patroni.cluster_members == self._hosts:
+            if self.patroni_manager.cluster_members == self._hosts:
                 return
 
             logger.info("Reconfiguring cluster")
             self.set_unit_status(MaintenanceStatus("reconfiguring cluster"))
-            for member in self._hosts - self._patroni.cluster_members:
+            for member in self._hosts - self.patroni_manager.cluster_members:
                 logger.debug("Adding %s to cluster", member)
                 self.add_cluster_member(member)
-            self._patroni.update_synchronous_node_count()
+            self.patroni_manager.update_synchronous_node_count()
         except NotReadyError:
             logger.info("Deferring reconfigure: another member doing sync right now")
             event.defer()
@@ -1000,7 +1048,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         """
         hostname = self._get_hostname_from_unit(member)
 
-        if not self._patroni.are_all_members_ready():
+        if not self.patroni_manager.are_all_members_ready():
             logger.info("not all members are ready")
             raise NotReadyError("not all members are ready")
 
@@ -1152,13 +1200,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
 
         hba_endpoint = self.primary_endpoint
         if self.async_replication._relation and not self.async_replication.is_primary_cluster():
-            if standby_leader := self._patroni.get_standby_leader():
+            if standby_leader := self.patroni_manager.get_standby_leader():
                 hba_endpoint = self._get_hostname_from_unit(standby_leader)
             else:
                 logger.debug("Replica not ready: no standby leader")
                 return False
 
-        if not self._patroni.is_replication_hba_ready(hba_endpoint):
+        if not self.patroni_manager.is_replication_hba_ready(hba_endpoint):
             logger.debug("Replica not ready: pg_hba not yet reloaded with replication entry")
             return False
         return True
@@ -1414,7 +1462,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         self._update_pebble_layers()
 
         # Ensure the member is up and running before marking the cluster as initialised.
-        if not self._patroni.member_started:
+        if not self.patroni_manager.member_started:
             logger.debug("Deferring on_postgresql_pebble_ready: Waiting for cluster to start")
             self.set_unit_status(WaitingStatus("awaiting for cluster to start"))
             event.defer()
@@ -1453,18 +1501,21 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             #     self.set_unit_status(BlockedStatus(LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS))
             #     return
             if (
-                self._patroni.get_primary(unit_name_pattern=True) == self.unit.name
+                self.patroni_manager.get_primary(unit_name_pattern=True) == self.unit.name
                 or self.is_standby_leader
             ):
                 danger_state = ""
-                if len(self._patroni.get_running_cluster_members()) < self.app.planned_units():
+                if (
+                    len(self.patroni_manager.get_running_cluster_members())
+                    < self.app.planned_units()
+                ):
                     danger_state = " (degraded)"
                 self.set_unit_status(
                     ActiveStatus(
                         f"{'Standby' if self.is_standby_leader else 'Primary'}{danger_state}"
                     )
                 )
-            elif self._patroni.member_started:
+            elif self.patroni_manager.member_started:
                 self.set_unit_status(ActiveStatus())
         except (RetryError, RequestsConnectionError) as e:
             logger.error(f"failed to get primary with error {e}")
@@ -1498,7 +1549,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             )
             return True
 
-        if not self._patroni.primary_endpoint_ready:
+        if not self.patroni_manager.primary_endpoint_ready:
             logger.debug(
                 "Deferring on_postgresql_pebble_ready: Waiting for primary endpoint to be ready"
             )
@@ -1704,7 +1755,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
 
     def _update_admin_password(self, admin_secret_id: str) -> None:
         """Check if the password of a system user was changed and update it in the database."""
-        if not self._patroni.are_all_members_ready():
+        if not self.patroni_manager.are_all_members_ready():
             # Ensure all members are ready before reloading Patroni configuration to avoid errors
             # e.g. API not responding in one instance because PostgreSQL / Patroni are not ready
             raise PostgreSQLUpdateUserPasswordError(
@@ -1719,7 +1770,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             and not self.async_replication.is_primary_cluster()
         ):
             other_cluster_endpoints = self.async_replication.get_all_primary_cluster_endpoints()
-            other_cluster_primary = self._patroni.get_primary(
+            other_cluster_primary = self.patroni_manager.get_primary(
                 alternative_endpoints=other_cluster_endpoints
             )
             other_cluster_primary_ip = next(
@@ -1786,7 +1837,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             event.fail("Suprerfluous force flag with unit scope")
         else:
             try:
-                self._patroni.switchover(self.unit.name, wait=False)
+                self.patroni_manager.switchover(self.unit.name, wait=False)
             except SwitchoverNotSyncError:
                 event.fail("Unit is not sync standby")
             except SwitchoverFailedError:
@@ -1812,7 +1863,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
     def _on_get_primary(self, event: ActionEvent) -> None:
         """Get primary instance."""
         try:
-            primary = self._patroni.get_primary(unit_name_pattern=True)
+            primary = self.patroni_manager.get_primary(unit_name_pattern=True)
             event.set_results({"primary": primary})
         except RetryError as e:
             logger.error(f"failed to get primary with error {e}")
@@ -2013,7 +2064,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             except ChangeError:
                 logger.exception("Failed to restart patroni")
             # If service doesn't recover fast, exit and wait for next hook run to re-check
-            if not self._patroni.member_started:
+            if not self.patroni_manager.member_started:
                 self.set_unit_status(MaintenanceStatus("Database service inactive, restarting"))
                 return
 
@@ -2050,7 +2101,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             self.set_unit_status(BlockedStatus("Failed to restore backup"))
             return False
 
-        if not self._patroni.member_started:
+        if not self.patroni_manager.member_started:
             logger.debug("Restore check early exit: Patroni has not started yet")
             return False
 
@@ -2098,23 +2149,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
 
         return True
 
-    @cached_property
-    def _patroni(self):
-        """Returns an instance of the Patroni object."""
-        return Patroni(
-            self,
-            self._endpoint,
-            self._endpoints,
-            self.primary_endpoint,
-            self._namespace,
-            self._storage_path,
-            self._actual_pgdata_path,
-            self.get_secret(APP_SCOPE, USER_PASSWORD_KEY),
-            self.get_secret(APP_SCOPE, REPLICATION_PASSWORD_KEY),
-            self.get_secret(APP_SCOPE, REWIND_PASSWORD_KEY),
-            self.get_secret(APP_SCOPE, PATRONI_PASSWORD_KEY),
-        )
-
     @property
     def is_connectivity_enabled(self) -> bool:
         """Return whether this unit can be connected externally."""
@@ -2133,12 +2167,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
     @property
     def is_primary(self) -> bool:
         """Return whether this unit is the primary instance."""
-        return self._unit == self._patroni.get_primary(unit_name_pattern=True)
+        return self._unit == self.patroni_manager.get_primary(unit_name_pattern=True)
 
     @property
     def is_standby_leader(self) -> bool:
         """Return whether this unit is the standby leader instance."""
-        return self._unit == self._patroni.get_standby_leader(unit_name_pattern=True)
+        return self._unit == self.patroni_manager.get_standby_leader(unit_name_pattern=True)
 
     @property
     def is_tls_enabled(self) -> bool:
@@ -2333,7 +2367,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
                         "command": "python3 /scripts/self-signed-checker.py",
                         "user": WORKLOAD_OS_USER,
                         "environment": {
-                            "ENDPOINT": f"{self._patroni._patroni_url}/health",
+                            "ENDPOINT": f"{self.state.patroni_url}/health",
                         },
                     },
                 })
@@ -2421,14 +2455,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
 
     def _restart(self, event: RunWithLock) -> None:
         """Restart PostgreSQL."""
-        if not self._patroni.are_all_members_ready():
+        if not self.patroni_manager.are_all_members_ready():
             logger.debug("Early exit _restart: not all members ready yet")
             event.defer()
             return
 
         try:
             logger.debug("Restarting PostgreSQL")
-            self._patroni.restart_postgresql()
+            self.patroni_manager.restart_postgresql()
         except RetryError:
             error_message = "failed to restart PostgreSQL"
             logger.exception(error_message)
@@ -2468,7 +2502,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
 
     def _restart_ldap_sync_service(self) -> None:
         """Restart the LDAP sync service in case any configuration changed."""
-        if not self._patroni.member_started:
+        if not self.patroni_manager.member_started:
             logger.debug("Restart LDAP sync early exit: Patroni has not started yet")
             return
 
@@ -2707,13 +2741,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             ]
 
         base_patch = {
-            **self._patroni.synchronous_configuration,
+            **self.state.synchronous_configuration,
             "maximum_lag_on_failover": self.config.durability_maximum_lag_on_failover,
         }
         if primary_endpoint := self.async_replication.get_primary_cluster_endpoint():
             base_patch["standby_cluster"] = {"host": primary_endpoint}
         try:
-            self._patroni.bulk_update_parameters_controller_by_patroni(cfg_patch, base_patch)
+            self.patroni_manager.bulk_update_parameters_controller_by_patroni(
+                cfg_patch, base_patch
+            )
         except RetryError:
             return False
         return True
@@ -2780,19 +2816,27 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
 
         logger.info("Updating Patroni config file")
         # Update and reload configuration based on TLS files availability.
-        self._patroni.render_patroni_yml_file(
-            connectivity=self.is_connectivity_enabled,
+        # TODO move to config manager's update config
+        self.config_manager.render_patroni_yml_file(
+            connectivity=self.state.peer.is_connectivity_enabled,
             is_creating_backup=is_creating_backup,
-            enable_ldap=self.is_ldap_enabled,
+            enable_ldap=self.state.application.is_ldap_enabled,
+            # TODO add rel handler
             enable_tls=self.is_tls_enabled,
-            backup_id=self.app_peer_data.get("restoring-backup"),
-            pitr_target=self.app_peer_data.get("restore-to-time"),
-            restore_timeline=self.app_peer_data.get("restore-timeline"),
-            restore_to_latest=self.app_peer_data.get("restore-to-time", None) == "latest",
-            stanza=self.app_peer_data.get("stanza", self.unit_peer_data.get("stanza")),
-            restore_stanza=self.app_peer_data.get("restore-stanza"),
+            backup_id=self.state.application.data.get("restoring-backup"),
+            pitr_target=self.state.application.data.get("restore-to-time"),
+            restore_timeline=self.state.application.data.get("restore-timeline"),
+            restore_to_latest=self.state.application.data.get("restore-to-time", None) == "latest",
+            stanza=self.state.application.data.get("stanza", self.state.peer.data.get("stanza")),
+            restore_stanza=self.state.application.data.get("restore-stanza"),
             parameters=postgresql_parameters,
+            # TODO add rel handler
             user_databases_map=self.relations_user_databases_map,
+            # TODO add rel handler
+            ldap_parameters=self.get_ldap_parameters(),
+            # TODO add rel handler
+            async_primary_cluster_endpoint=self.async_replication.get_primary_cluster_endpoint(),
+            async_standby_endpoints=self.async_replication.get_standby_endpoints(),
             slots=replication_slots,
         )
 
@@ -2806,7 +2850,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             logger.debug("Early exit update_config: Workload not started yet")
             return True
 
-        if not self._patroni.member_started:
+        if not self.patroni_manager.member_started:
             if self.is_tls_enabled:
                 logger.debug(
                     "Early exit update_config: patroni not responding but TLS is enabled."
@@ -2820,7 +2864,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             logger.warning("Early exit update_config: Unable to patch Patroni API")
             return False
 
-        if not self._patroni.ensure_slots_controller_by_patroni(replication_slots):
+        if not self.patroni_manager.ensure_slots_controller_by_patroni(replication_slots):
             logger.warning(
                 "Failed to sync replication slots with Patroni — will retry on next config update"
             )
@@ -2875,7 +2919,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         else:
             restart_postgresql = False
         try:
-            self._patroni.reload_patroni_configuration()
+            self.patroni_manager.reload_patroni_configuration()
         except Exception as e:
             logger.error(f"Reload patroni call failed! error: {e!s}")
         if config_changed and not restart_postgresql:
@@ -3021,7 +3065,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         try:
             if (
                 not self.is_cluster_initialised
-                or not self._patroni.member_started
+                or not self.patroni_manager.member_started
                 or self.postgresql.list_access_groups(current_host=self.is_connectivity_enabled)
                 != set(ACCESS_GROUPS)
             ):
@@ -3212,7 +3256,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
 
     def log_pitr_last_transaction_time(self) -> None:
         """Log to user last completed transaction time acquired from postgresql logs."""
-        postgresql_logs = self._patroni.last_postgresql_logs()
+        postgresql_logs = self.patroni_manager.last_postgresql_logs()
         log_time = re.findall(
             r"last completed transaction was at log time (.*)$",
             postgresql_logs,

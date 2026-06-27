@@ -14,9 +14,7 @@ from single_kernel_postgresql.config.literals import (
 )
 
 from charm import PostgresqlOperatorCharm
-from relations.async_replication import (
-    SECRET_LABEL,
-)
+from relations.async_replication import SECRET_LABEL
 
 RELATION_NAMES = ["replication-offer", "replication"]
 

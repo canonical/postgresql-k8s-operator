@@ -22,10 +22,14 @@ from ops.pebble import ChangeError, FileType, ServiceStatus
 from ops.testing import Harness
 from requests import ConnectionError as RequestsConnectionError
 from single_kernel_postgresql.config.literals import PEER_RELATION, SECRET_INTERNAL_LABEL
+from single_kernel_postgresql.managers.patroni import (
+    NotReadyError,
+    SwitchoverFailedError,
+    SwitchoverNotSyncError,
+)
 from tenacity import RetryError, wait_fixed
 
 from charm import EXTENSION_OBJECT_MESSAGE, PostgresqlOperatorCharm
-from patroni import NotReadyError, SwitchoverFailedError, SwitchoverNotSyncError
 from tests.unit.helpers import _FakeApiError
 
 POSTGRESQL_CONTAINER = "postgresql"
