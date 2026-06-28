@@ -1,0 +1,50 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.24   unsupported  01:47:20Z
+
+App             Version  Status  Scale  Charm           Channel  Rev  Address         Exposed  Message
+postgresql-k8s  16.14    active      1  postgresql-k8s             0  10.152.183.233  no       
+
+Unit               Workload  Agent  Address     Ports  Message
+postgresql-k8s/0*  active    idle   10.1.71.79         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-0: 01:45:39 ERROR unit.postgresql-k8s/0.juju-log __main__:Invalid configuration: 2 validation errors for K8SCharmConfig
+synchronous_node_count.literal['all','majority']
+  Input should be 'all' or 'majority' [type=literal_error, input_value='0', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.13/v/literal_error
+synchronous_node_count.constrained-int
+  Input should be greater than 0 [type=greater_than, input_value='0', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.13/v/greater_than
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
+[33mWARNING [0m juju.client.connection:connection.py:493 Receiver: Connection closed, reconnecting
+[31m[1mERROR   [0m asyncio:base_events.py:1821 Task exception was never retrieved
+future: <Task finished name='Task-2511' coro=<Connection.reconnect() done, defined at /root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py:697> exception=ProxyNotConnectedError()>
+Traceback (most recent call last):
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 709, in reconnect
+    res = await connector(
+          ^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 800, in _connect_with_login
+    await self._connect(endpoints)
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 743, in _connect
+    result = await task
+             ^^^^^^^^^^
+  File "/usr/lib/python3.12/asyncio/tasks.py", line 631, in _wait_for_one
+    return f.result()  # May raise f.exception().
+           ^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 729, in _try_endpoint
+    return await self._open(endpoint, cacert)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/connection.py", line 328, in _open
+    sock = self.proxy.socket()
+           ^^^^^^^^^^^^^^^^^^^
+  File "/root/spread_project/.tox/integration/lib/python3.12/site-packages/juju/client/proxy/kubernetes/proxy.py", line 80, in socket
+    raise ProxyNotConnectedError()
+juju.client.proxy.proxy.ProxyNotConnectedError
