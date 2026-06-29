@@ -442,7 +442,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         elif self.unit.status.message == last_refresh_unit_status:
             if self.refresh is not None and (
                 refresh_status := self.refresh.unit_status_lower_priority(
-                    workload_is_running=self._is_workload_running
+                    workload_is_running=self.workload.is_patroni_running()
                 )
             ):
                 self.unit.status = refresh_status
