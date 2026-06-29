@@ -38,6 +38,11 @@ from ops import (
     WaitingStatus,
 )
 from ops.pebble import ChangeError
+from single_kernel_postgresql.config.exceptions import (
+    ClusterNotPromotedError,
+    NotReadyError,
+    StandbyClusterAlreadyPromotedError,
+)
 from single_kernel_postgresql.config.literals import (
     APP_SCOPE,
     PEER_RELATION,
@@ -49,11 +54,6 @@ from single_kernel_postgresql.config.literals import (
 )
 from single_kernel_postgresql.config.literals import (
     K8S_WORKLOAD_OS_USER as WORKLOAD_OS_USER,
-)
-from single_kernel_postgresql.managers.patroni import (
-    ClusterNotPromotedError,
-    NotReadyError,
-    StandbyClusterAlreadyPromotedError,
 )
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 

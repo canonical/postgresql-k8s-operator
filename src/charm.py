@@ -96,6 +96,11 @@ from ops.pebble import (
 from ops_tracing import Tracing
 from requests import ConnectionError as RequestsConnectionError
 from single_kernel_postgresql.config.enums import Substrates
+from single_kernel_postgresql.config.exceptions import (
+    NotReadyError,
+    SwitchoverFailedError,
+    SwitchoverNotSyncError,
+)
 from single_kernel_postgresql.config.literals import (
     APP_SCOPE,
     BACKUP_USER,
@@ -140,12 +145,7 @@ from single_kernel_postgresql.core.state import CharmState
 from single_kernel_postgresql.events.tls_transfer import TLSTransfer
 from single_kernel_postgresql.managers.cluster import ClusterManager
 from single_kernel_postgresql.managers.config import ConfigManager
-from single_kernel_postgresql.managers.patroni import (
-    NotReadyError,
-    PatroniManager,
-    SwitchoverFailedError,
-    SwitchoverNotSyncError,
-)
+from single_kernel_postgresql.managers.patroni import PatroniManager
 from single_kernel_postgresql.managers.tls import TLSManager
 from single_kernel_postgresql.utils import any_cpu_to_cores, any_memory_to_bytes, new_password
 from single_kernel_postgresql.utils.postgresql import (
@@ -178,9 +178,7 @@ from constants import (
     TEMP_STORAGE_PATH,
 )
 from ldap import PostgreSQLLDAP
-from relations.async_replication import (
-    PostgreSQLAsyncReplication,
-)
+from relations.async_replication import PostgreSQLAsyncReplication
 
 # from relations.logical_replication import (
 #     LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS,
