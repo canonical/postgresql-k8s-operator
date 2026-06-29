@@ -93,7 +93,9 @@ def test_are_backup_settings_ok(harness):
 
 
 def test_can_initialise_stanza(harness):
-    with patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started:
+    with patch(
+        "charm.PatroniManager.member_started", new_callable=PropertyMock
+    ) as _member_started:
         # Test when Patroni or PostgreSQL hasn't started yet
         # and the unit hasn't joined the peer relation yet.
         _member_started.return_value = False
@@ -107,7 +109,7 @@ def test_can_initialise_stanza(harness):
 def test_can_unit_perform_backup(harness):
     with (
         patch("charm.PostgreSQLBackups._are_backup_settings_ok") as _are_backup_settings_ok,
-        patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
+        patch("charm.PatroniManager.member_started", new_callable=PropertyMock) as _member_started,
         patch("ops.model.Application.planned_units") as _planned_units,
         patch(
             "charm.PostgresqlOperatorCharm.is_primary", new_callable=PropertyMock
@@ -170,13 +172,15 @@ def test_can_unit_perform_backup(harness):
 
 def test_can_use_s3_repository(harness):
     with (
-        patch("charm.Patroni.reload_patroni_configuration") as _reload_patroni_configuration,
-        patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
+        patch(
+            "charm.PatroniManager.reload_patroni_configuration"
+        ) as _reload_patroni_configuration,
+        patch("charm.PatroniManager.member_started", new_callable=PropertyMock) as _member_started,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
         patch(
-            "charm.Patroni.rock_postgresql_version",
-            new_callable=PropertyMock(return_value="16.6"),
-        ) as _rock_postgresql_version,
+            "single_kernel_postgresql.workload.base.BaseWorkload.get_postgresql_version",
+            return_value="16.6",
+        ),
         patch("charm.PostgreSQLBackups._execute_command") as _execute_command,
         patch(
             "charm.PostgreSQLBackups._retrieve_s3_parameters",
@@ -689,8 +693,10 @@ def test_is_psql_timestamp(harness):
 
 def test_initialise_stanza(harness):
     with (
-        patch("charm.Patroni.reload_patroni_configuration") as _reload_patroni_configuration,
-        patch("charm.Patroni.member_started", new_callable=PropertyMock) as _member_started,
+        patch(
+            "charm.PatroniManager.reload_patroni_configuration"
+        ) as _reload_patroni_configuration,
+        patch("charm.PatroniManager.member_started", new_callable=PropertyMock) as _member_started,
         patch("backups.wait_fixed", return_value=wait_fixed(0)),
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
         patch("charm.PostgreSQLBackups._execute_command") as _execute_command,
@@ -767,7 +773,9 @@ def test_check_stanza(harness):
     with (
         patch("charm.PostgresqlOperatorCharm.update_config"),
         patch("backups.wait_fixed", return_value=wait_fixed(0)),
-        patch("charm.Patroni.reload_patroni_configuration") as _reload_patroni_configuration,
+        patch(
+            "charm.PatroniManager.reload_patroni_configuration"
+        ) as _reload_patroni_configuration,
         patch("charm.PostgreSQLBackups._execute_command") as _execute_command,
         patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
         patch(
@@ -821,7 +829,9 @@ def test_check_stanza(harness):
 def test_coordinate_stanza_fields(harness):
     with (
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
-        patch("charm.Patroni.reload_patroni_configuration") as _reload_patroni_configuration,
+        patch(
+            "charm.PatroniManager.reload_patroni_configuration"
+        ) as _reload_patroni_configuration,
     ):
         peer_rel_id = harness.model.get_relation(PEER_RELATION).id
         stanza_name = f"{harness.charm.model.name}.{harness.charm.app.name}"
@@ -924,7 +934,7 @@ def test_is_primary_pgbackrest_service_running(harness):
     with (
         patch("charm.PostgreSQLBackups._execute_command") as _execute_command,
         patch("charm.PostgresqlOperatorCharm._get_hostname_from_unit") as _get_hostname_from_unit,
-        patch("charm.Patroni.get_primary") as _get_primary,
+        patch("charm.PatroniManager.get_primary") as _get_primary,
     ):
         # Test when the charm fails to get the current primary.
         _get_primary.side_effect = RetryError(last_attempt=1)
@@ -1067,7 +1077,9 @@ def test_on_s3_credential_changed(harness):
 def test_on_s3_credential_changed_primary(harness):
     with (
         patch("charm.PostgresqlOperatorCharm.update_config"),
-        patch("charm.Patroni.reload_patroni_configuration") as _reload_patroni_configuration,
+        patch(
+            "charm.PatroniManager.reload_patroni_configuration"
+        ) as _reload_patroni_configuration,
         patch(
             "charm.PostgreSQLBackups._create_bucket_if_not_exists"
         ) as _create_bucket_if_not_exists,
@@ -1943,7 +1955,7 @@ def test_start_stop_pgbackrest_service(harness):
         patch(
             "charm.PostgresqlOperatorCharm.is_primary", new_callable=PropertyMock
         ) as _is_primary,
-        patch("charm.Patroni.get_standby_leader") as _get_standby_leader,
+        patch("charm.PatroniManager.get_standby_leader") as _get_standby_leader,
         patch("ops.model.Container.restart") as _restart,
         patch("ops.model.Container.stop") as _stop,
         patch(

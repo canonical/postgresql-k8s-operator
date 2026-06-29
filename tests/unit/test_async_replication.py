@@ -52,7 +52,7 @@ def test_on_async_relation_broken(harness, is_leader, relation_name):
         patch(
             "relations.async_replication.PostgreSQLAsyncReplication.set_app_status"
         ) as _set_app_status,
-        patch("charm.Patroni.get_standby_leader") as _get_standby_leader,
+        patch("charm.PatroniManager.get_standby_leader") as _get_standby_leader,
         patch(
             "relations.async_replication.PostgreSQLAsyncReplication._on_async_relation_departed"
         ) as _on_async_relation_departed,
@@ -207,7 +207,7 @@ def test_on_async_relation_changed(harness, wait_for_standby):
         patch("lightkube.Client.__init__", return_value=None),
         patch("lightkube.Client.delete") as _lightkube_delete,
         patch(
-            "charm.Patroni.member_started", new_callable=PropertyMock
+            "charm.PatroniManager.member_started", new_callable=PropertyMock
         ) as _patroni_member_started,
         patch("charm.PostgresqlOperatorCharm._create_pgdata") as _create_pgdata,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
@@ -263,7 +263,7 @@ def test_create_replication(harness, relation_name):
             new_callable=PropertyMock,
             return_value="10.1.1.10",
         ),
-        patch("charm.Patroni.get_standby_leader", return_value=None),
+        patch("charm.PatroniManager.get_standby_leader", return_value=None),
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
         patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
     ):
@@ -303,8 +303,8 @@ def test_promote_to_primary(harness, relation_name):
             new_callable=PropertyMock,
             return_value="10.1.1.10",
         ),
-        patch("charm.Patroni.get_primary"),
-        patch("charm.Patroni.get_standby_leader", return_value=None),
+        patch("charm.PatroniManager.get_primary"),
+        patch("charm.PatroniManager.get_standby_leader", return_value=None),
     ):
         with harness.hooks_disabled():
             harness.add_relation(
