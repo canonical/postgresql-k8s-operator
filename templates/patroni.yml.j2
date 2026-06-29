@@ -208,6 +208,10 @@ postgresql:
       sslcert: {{ conf_path }}/nonexistent_cert.pem
       sslkey: {{ conf_path }}/nonexistent_key.pem
       {%- endif %}
+  callbacks:
+    on_role_change: {{ storage_path }}/patroni-callback.sh
+    on_start: {{ storage_path }}/patroni-callback.sh
+    on_stop: {{ storage_path }}/patroni-callback.sh
 use_endpoints: true
 use_unix_socket: true
 {%- if is_no_sync_member or is_creating_backup %}

@@ -22,3 +22,6 @@ POSTGRES_LOG_FILES = [
     f"{PATRONI_LOGS_PATH}/patroni.log",
     f"{POSTGRESQL_LOGS_PATH}/postgresql*.log",
 ]
+
+PATRONI_CALLBACK_SCRIPT = f"{DATA_STORAGE_PATH}/patroni-callback.sh"
+PATRONI_ROLE_CHANGE_NOTICE_KEY = "canonical.com/postgresql-k8s/role-change"

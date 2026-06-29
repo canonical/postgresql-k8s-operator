@@ -64,6 +64,7 @@ from ops import (
     HookEvent,
     JujuVersion,
     LeaderElectedEvent,
+    PebbleCustomNoticeEvent,
     MaintenanceStatus,
     ModelError,
     Relation,
@@ -155,8 +156,10 @@ from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay,
 
 from backups import CANNOT_RESTORE_PITR, S3_BLOCK_MESSAGES, PostgreSQLBackups
 from constants import (
+    PATRONI_CALLBACK_SCRIPT,
     PATRONI_LOGS_PATH,
     PATRONI_LOGS_SYMLINK_PATH,
+    PATRONI_ROLE_CHANGE_NOTICE_KEY,
     PGBACKREST_LOGS_PATH,
     PGBACKREST_LOGS_SYMLINK_PATH,
     POSTGRES_LOG_FILES,
@@ -266,6 +269,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         # https://canonical-charm-refresh.readthedocs-hosted.com/latest/add-to-charm/status/#implementation
         self.framework.observe(self.on.collect_unit_status, self._reconcile_refresh_status)
         self.framework.observe(self.on.secret_remove, self._on_secret_remove)
+
+        self.framework.observe(
+            self.on["postgresql"].pebble_custom_notice,
+            self._on_patroni_role_change_notice,
+        )
 
         self._certs_path = "/usr/local/share/ca-certificates"
         self._storage_path = str(self.meta.storages["data"].location)
@@ -1410,6 +1418,17 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             event.defer()
             return
 
+        # Push Patroni callback script for Pebble role-change notices.
+        # TODO: Move this script into the rock image so it doesn't need pushing.
+        container.push(
+            PATRONI_CALLBACK_SCRIPT,
+            Path("scripts/patroni_callback.sh").read_bytes(),
+            make_dirs=True,
+            permissions=0o755,
+            user=WORKLOAD_OS_USER,
+            group=WORKLOAD_OS_GROUP,
+        )
+
         # Start the database service.
         self._update_pebble_layers()
 
@@ -1468,6 +1487,29 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
                 self.set_unit_status(ActiveStatus())
         except (RetryError, RequestsConnectionError) as e:
             logger.error(f"failed to get primary with error {e}")
+
+    def _on_patroni_role_change_notice(self, event: PebbleCustomNoticeEvent) -> None:
+        """Handle Pebble custom notice from Patroni role-change callback."""
+        if event.notice.key != PATRONI_ROLE_CHANGE_NOTICE_KEY:
+            return
+
+        role = event.notice.last_data.get("role", "")
+        logger.info("Patroni role change notice: role=%s", role)
+
+        if role == "master" or role == "primary":
+            danger_state = ""
+            if (
+                len(self._patroni.get_running_cluster_members())
+                < self.app.planned_units()
+            ):
+                danger_state = " (degraded)"
+            self.set_unit_status(ActiveStatus(f"Primary{danger_state}"))
+        elif role == "replica":
+            self.set_unit_status(ActiveStatus())
+        elif role == "standby_leader":
+            self.set_unit_status(ActiveStatus("Standby"))
+        else:
+            logger.debug("Ignoring role change notice for role=%s", role)
 
     def _initialize_cluster(self, event: HookEvent) -> bool:
         # Add the labels needed for replication in this pod.

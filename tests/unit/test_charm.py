@@ -180,6 +180,9 @@ def test_get_unit_ip(harness):
 def test_on_postgresql_pebble_ready(harness):
     with (
         patch("charm.Path"),
+        patch(
+            "ops.model.Container.push"
+        ) as _container_push,
         patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
         patch(
             "charm.Patroni.primary_endpoint_ready", new_callable=PropertyMock
@@ -2199,3 +2202,53 @@ def test_calculate_worker_process_config_all_workers_validation_blocking(harness
 
     result = harness.charm._calculate_worker_process_config(cpu_cores)
     assert result["max_parallel_workers"] == "18"  # Should accept valid value
+
+
+def test_on_patroni_role_change_notice(harness):
+    """Test that Pebble custom notice handler sets correct unit status."""
+    from charm import PATRONI_ROLE_CHANGE_NOTICE_KEY
+    from ops import PebbleCustomNoticeEvent
+
+    with (
+        patch(
+            "charm.Patroni.get_running_cluster_members",
+            return_value=[harness.charm.unit.name.replace("/", "-")],
+        ),
+    ):
+        harness.charm.app.planned_units = MagicMock(return_value=1)
+
+        # Test 1: role=master → Primary status
+        notice_mock = MagicMock()
+        notice_mock.key = PATRONI_ROLE_CHANGE_NOTICE_KEY
+        notice_mock.last_data = {"role": "master"}
+        event = MagicMock(spec=PebbleCustomNoticeEvent)
+        event.notice = notice_mock
+
+        harness.charm._on_patroni_role_change_notice(event)
+        assert isinstance(harness.charm.unit.status, ActiveStatus)
+        assert harness.charm.unit.status.message == "Primary"
+
+        # Test 2: role=replica → ActiveStatus (no message)
+        notice_mock.last_data = {"role": "replica"}
+        harness.charm._on_patroni_role_change_notice(event)
+        assert isinstance(harness.charm.unit.status, ActiveStatus)
+        assert harness.charm.unit.status.message == ""
+
+        # Test 3: role=standby_leader → Standby status
+        notice_mock.last_data = {"role": "standby_leader"}
+        harness.charm._on_patroni_role_change_notice(event)
+        assert isinstance(harness.charm.unit.status, ActiveStatus)
+        assert harness.charm.unit.status.message == "Standby"
+
+        # Test 4: unrecognized role → status unchanged
+        harness.charm.unit.status = ActiveStatus("previous")
+        notice_mock.last_data = {"role": "unknown"}
+        harness.charm._on_patroni_role_change_notice(event)
+        assert harness.charm.unit.status.message == "previous"
+
+        # Test 5: wrong notice key → ignored
+        harness.charm.unit.status = ActiveStatus("untouched")
+        notice_mock.key = "canonical.com/postgresql/other-thing"
+        notice_mock.last_data = {"role": "master"}
+        harness.charm._on_patroni_role_change_notice(event)
+        assert harness.charm.unit.status.message == "untouched"
