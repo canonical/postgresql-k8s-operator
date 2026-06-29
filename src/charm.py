@@ -24,12 +24,13 @@ from authorisation_rules_observer import (
     AuthorisationRulesChangeCharmEvents,
     AuthorisationRulesObserver,
 )
-from refresh import PostgreSQLRefresh
 
 # First platform-specific import, will fail on wrong architecture
 try:
     import psycopg2
     import psycopg2.errors
+
+    from refresh import PostgreSQLRefresh
 except ModuleNotFoundError:
     from ops.main import main
     from single_kernel_postgresql.utils.arch import (
@@ -104,6 +105,7 @@ from single_kernel_postgresql.config.exceptions import (
 from single_kernel_postgresql.config.literals import (
     APP_SCOPE,
     BACKUP_USER,
+    CONTAINER_NAME,
     DATABASE_DEFAULT_NAME,
     DATABASE_PORT,
     METRICS_PORT,
@@ -370,7 +372,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         Returns:
             BaseWorkload: The K8sWorkload instance for this charm
         """
-        return K8sWorkload(charm_dir=self.charm_dir, unit=self.unit)
+        return K8sWorkload(
+            charm_dir=self.charm_dir, container=self.unit.get_container(CONTAINER_NAME)
+        )
 
     @property
     def substrate(self) -> Substrates:
