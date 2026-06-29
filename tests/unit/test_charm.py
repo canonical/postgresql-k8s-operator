@@ -389,7 +389,7 @@ def test_on_update_status(harness):
         restart_order.attach_mock(_restart, "restart")
         harness.charm.on.update_status.emit()
         assert restart_order.mock_calls == [
-            call.ensure_dirs(harness.charm._container),
+            call.ensure_dirs(harness.charm.workload.container),
             call.restart("postgresql"),
         ]
         _restart.assert_called_once_with("postgresql")
@@ -402,7 +402,7 @@ def test_on_update_status(harness):
         _pebble.get_services.return_value = [MagicMock(current=ServiceStatus.INACTIVE)]
         _restart.side_effect = ChangeError(err=None, change=None)
         harness.charm.on.update_status.emit()
-        _ensure_pgdata_dirs_and_symlinks.assert_called_once_with(harness.charm._container)
+        _ensure_pgdata_dirs_and_symlinks.assert_called_once_with(harness.charm.workload.container)
         _restart.assert_called_once_with("postgresql")
         _logger.exception.assert_called_once_with("Failed to restart patroni")
         _restart.reset_mock()
