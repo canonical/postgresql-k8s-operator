@@ -3,21 +3,19 @@
 # See LICENSE file for licensing details.
 
 import logging
-import time
 from collections.abc import Generator
 
 import jubilant
 import pytest
 from jubilant import Juju
-from tenacity import Retrying, stop_after_attempt, stop_after_delay, wait_fixed
+from tenacity import Retrying, stop_after_attempt, wait_fixed
 
 from .. import architecture
 from ..helpers import METADATA
 from ..jubilant_helpers import retry_if_cli_error
 from .high_availability_helpers_new import (
     get_app_leader,
-    get_app_units,
-    get_db_max_written_value,
+    get_db_max_written_values,
     wait_for_apps_status,
 )
 
@@ -419,44 +417,6 @@ def test_scale_up(first_model: str, second_model: str) -> None:
     assert len(results) == 6
     assert all(results[0] == x for x in results), "Data is not consistent across units"
     assert results[0] > 1, "No data was written to the database"
-
-
-def get_db_max_written_values(
-    first_model: str, second_model: str, test_model: str, test_app: str
-) -> list[int]:
-    """Return list with max written value from all units."""
-    db_name = f"{test_app.replace('-', '_')}_database"
-    model_1 = Juju(model=first_model)
-    model_2 = Juju(model=second_model)
-    test_app_model = model_1 if test_model == first_model else model_2
-
-    logging.info("Stopping continuous writes")
-    test_app_model.run(
-        unit=get_app_leader(test_app_model, test_app), action="stop-continuous-writes"
-    ).raise_on_failure()
-
-    time.sleep(5)
-    results = []
-
-    logging.info(f"Querying max value on all {DB_APP_1} units")
-    for unit_name in get_app_units(model_1, DB_APP_1):
-        for attempt in Retrying(
-            stop=stop_after_delay(5 * MINUTE_SECS), wait=wait_fixed(10), reraise=True
-        ):
-            with attempt:
-                unit_max_value = get_db_max_written_value(model_1, DB_APP_1, unit_name, db_name)
-        results.append(unit_max_value)
-
-    logging.info(f"Querying max value on all {DB_APP_2} units")
-    for unit_name in get_app_units(model_2, DB_APP_2):
-        for attempt in Retrying(
-            stop=stop_after_delay(5 * MINUTE_SECS), wait=wait_fixed(10), reraise=True
-        ):
-            with attempt:
-                unit_max_value = get_db_max_written_value(model_2, DB_APP_2, unit_name, db_name)
-        results.append(unit_max_value)
-
-    return results
 
 
 def rerelate_test_app(juju: Juju, db_name: str, test_app_name: str) -> None:

@@ -5,6 +5,7 @@
 import json
 import logging
 import subprocess
+import time
 from collections.abc import Callable
 
 import jubilant
@@ -18,6 +19,10 @@ from ..helpers import METADATA, execute_queries_on_unit
 
 MINUTE_SECS = 60
 SERVER_CONFIG_USERNAME = "operator"
+
+# Application names for the two clusters paired in the async-replication tests.
+DB_APP_1 = "db1"
+DB_APP_2 = "db2"
 
 JujuModelStatusFn = Callable[[Status], bool]
 JujuAppsStatusFn = Callable[[Status, str], bool]
@@ -209,6 +214,44 @@ def get_db_max_written_value(
         db_name,
     )
     return output[0]
+
+
+def get_db_max_written_values(
+    first_model: str, second_model: str, test_model: str, test_app: str
+) -> list[int]:
+    """Return list with max written value from all units."""
+    db_name = f"{test_app.replace('-', '_')}_database"
+    model_1 = Juju(model=first_model)
+    model_2 = Juju(model=second_model)
+    test_app_model = model_1 if test_model == first_model else model_2
+
+    logging.info("Stopping continuous writes")
+    test_app_model.run(
+        unit=get_app_leader(test_app_model, test_app), action="stop-continuous-writes"
+    ).raise_on_failure()
+
+    time.sleep(5)
+    results = []
+
+    logging.info(f"Querying max value on all {DB_APP_1} units")
+    for unit_name in get_app_units(model_1, DB_APP_1):
+        for attempt in Retrying(
+            stop=stop_after_delay(5 * MINUTE_SECS), wait=wait_fixed(10), reraise=True
+        ):
+            with attempt:
+                unit_max_value = get_db_max_written_value(model_1, DB_APP_1, unit_name, db_name)
+        results.append(unit_max_value)
+
+    logging.info(f"Querying max value on all {DB_APP_2} units")
+    for unit_name in get_app_units(model_2, DB_APP_2):
+        for attempt in Retrying(
+            stop=stop_after_delay(5 * MINUTE_SECS), wait=wait_fixed(10), reraise=True
+        ):
+            with attempt:
+                unit_max_value = get_db_max_written_value(model_2, DB_APP_2, unit_name, db_name)
+        results.append(unit_max_value)
+
+    return results
 
 
 def wait_for_apps_status(jubilant_status_func: JujuAppsStatusFn, *apps: str) -> JujuModelStatusFn:
