@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 
 import charm_refresh
 from charm_refresh import CharmSpecificKubernetes, CharmVersion
-from single_kernel_postgresql.managers.patroni import SwitchoverFailedError
+from single_kernel_postgresql.config.exceptions import SwitchoverFailedError
 
 if TYPE_CHECKING:
     from charm import PostgresqlOperatorCharm
