@@ -2317,7 +2317,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
                 self.postgresql_service: ServiceDict({
                     "override": "replace",
                     "summary": "entrypoint of the postgresql + patroni image",
-                    "command": f"patroni {self._storage_path}/patroni.yml",
+                    "command": f"patroni {self.workload.paths.patroni_conf}/patroni.yaml",
                     "startup": "enabled",
                     "on-failure": self.unit_peer_data.get(
                         "patroni-on-failure-condition-override", None
