@@ -39,14 +39,14 @@ jsonschema = "*"
 optional = true
 
 [tool.poetry.group.format.dependencies]
-ruff = "^0.15.18"
+ruff = "^0.15.20"
 
 [tool.poetry.group.lint]
 optional = true
 
 [tool.poetry.group.lint.dependencies]
 codespell = "^2.4.2"
-ty = "^0.0.52"
+ty = "^0.0.55"
 
 [tool.poetry.group.unit]
 optional = true
@@ -70,7 +70,7 @@ psycopg2-binary = "^2.9.12"
 boto3 = "*"
 tenacity = "^9.1.4"
 allure-pytest = "^2.16.0"
-jubilant = "^1.10.0"
+jubilant = "^1.11.0"
 tomli-w = "^1.2.0"
 tomli = "^2.4.1"
 
