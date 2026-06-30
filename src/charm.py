@@ -363,6 +363,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         )
         self.tracing = Tracing(self, tracing_relation_name=TRACING_RELATION_NAME)
 
+        logger.error(f"!!!!!!!!!!!!!!!{self.all_peer_data}")
+
     @property
     def workload(self) -> K8sWorkload:
         """Access current workload instance.
