@@ -363,8 +363,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         )
         self.tracing = Tracing(self, tracing_relation_name=TRACING_RELATION_NAME)
 
-        logger.error(f"!!!!!!!!!!!!!!!{self.all_peer_data}")
-
     @property
     def workload(self) -> K8sWorkload:
         """Access current workload instance.
@@ -790,7 +788,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             self._add_members(event)
 
         # Don't update this member before it's part of the members list.
-        if self._endpoint not in self._endpoints:
+        if self.state.endpoint not in self._endpoints:
             return
 
         # Update the list of the cluster members in the replicas to make them know each other.
@@ -1117,8 +1115,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
 
         # Add this unit to the list of cluster members
         # (the cluster should start with only this member).
-        if self._endpoint not in self._endpoints:
-            self._add_to_endpoints(self._endpoint)
+        if self.state.endpoint not in self._endpoints:
+            self._add_to_endpoints(self.state.endpoint)
 
         if not self.get_secret(APP_SCOPE, "internal-ca"):
             self.tls.generate_internal_peer_ca()
@@ -1185,7 +1183,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         if not self.is_cluster_initialised:
             logger.debug("Replica not ready: cluster not initialized")
             return False
-        if self._endpoint not in self._endpoints:
+        if self.state.endpoint not in self._endpoints:
             logger.debug("Replica not ready: endpoint not yet in members list")
             return False
 
@@ -1403,7 +1401,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             event.defer()
             return
 
-        if self._endpoint in self._endpoints:
+        if self.state.endpoint in self._endpoints:
             self._fix_pod()
 
         # TODO: move this code to an "_update_layer" method in order to also utilize it in
@@ -2171,18 +2169,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         return all(self.tls.get_client_tls_files())
 
     @property
-    def _endpoint(self) -> str:
-        """Current unit hostname."""
-        return self._get_hostname_from_unit(self._unit_name_to_pod_name(self.unit.name))
-
-    @property
     def _endpoints(self) -> list[str]:
         """Cluster members hostnames."""
         if self._peers:
             return json.loads(self._peers.data[self.app].get("endpoints", "[]"))
         else:
             # If the peer relations was not created yet, return only the current member hostname.
-            return [self._endpoint]
+            return [str(self.state.endpoint)]
 
     @property
     def peer_members_endpoints(self) -> list[str]:
