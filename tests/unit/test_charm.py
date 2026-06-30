@@ -1171,7 +1171,6 @@ def test_on_peer_relation_changed(harness):
             "backups.PostgreSQLBackups.start_stop_pgbackrest_service"
         ) as _start_stop_pgbackrest_service,
         patch("backups.PostgreSQLBackups.coordinate_stanza_fields") as _coordinate_stanza_fields,
-        patch("charm.PatroniManager.reinitialize_postgresql") as _reinitialize_postgresql,
         patch("charm.PostgresqlOperatorCharm.is_primary") as _is_primary,
         patch("charm.PatroniManager.member_started", new_callable=PropertyMock) as _member_started,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,

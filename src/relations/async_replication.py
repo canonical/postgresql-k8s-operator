@@ -334,7 +334,7 @@ class PostgreSQLAsyncReplication(Object):
         try:
             system_identifier, error = self.container.exec(
                 [
-                    f"/usr/lib/postgresql/{self.charm.patroni_manager.get_postgresql_version().split('.')[0]}/bin/pg_controldata",
+                    f"/usr/lib/postgresql/{self.charm.workload.get_postgresql_version().split('.')[0]}/bin/pg_controldata",
                     self.charm._actual_pgdata_path,
                 ],
                 user=WORKLOAD_OS_USER,
