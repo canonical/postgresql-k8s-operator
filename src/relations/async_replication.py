@@ -378,7 +378,7 @@ class PostgreSQLAsyncReplication(Object):
                     # active again (including the health checks from the update status hook).
                     peers = self.charm._peers.units if self.charm._peers else []
                     if all(
-                        self.charm.unit_peer_data.get("unit-promoted-cluster-counter")
+                        self.charm.all_peer_data[unit].get("unit-promoted-cluster-counter")
                         == self._get_highest_promoted_cluster_counter_value()
                         for unit in {*peers, self.charm.unit}
                     ):
