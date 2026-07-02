@@ -316,7 +316,7 @@ class PostgreSQLProvider(Object):
 
             # Set TLS CA
             if self.charm.is_tls_enabled:
-                _, ca, _ = self.charm.tls.get_client_tls_files()
+                _, ca, _ = self.charm.tls_manager.get_client_tls_files()
                 if not ca:
                     ca = ""
                 self.database_provides.set_tls_ca(event.relation.id, ca)
@@ -447,7 +447,7 @@ class PostgreSQLProvider(Object):
         tls = "True" if self.charm.is_tls_enabled else "False"
         ca = None
         if tls == "True":
-            _, ca, _ = self.charm.tls.get_client_tls_files()
+            _, ca, _ = self.charm.tls_manager.get_client_tls_files()
         if not ca:
             ca = ""
 

@@ -82,7 +82,7 @@ def test_on_leader_elected(harness):
         patch("charm.PostgresqlOperatorCharm._patch_pod_labels"),
         patch("charm.PostgresqlOperatorCharm._create_services") as _create_services,
         patch("charm.PostgresqlOperatorCharm.get_secret_from_id", return_value={}),
-        patch("charm.PostgresqlOperatorCharm.get_secret_from_id", return_value={}),
+        patch("charm.TLSManager.generate_internal_peer_ca"),
     ):
         rel_id = harness.model.get_relation(PEER_RELATION).id
         # Check that a new password was generated on leader election and nothing is done
@@ -100,7 +100,10 @@ def test_on_leader_elected(harness):
             [MagicMock(metadata=MagicMock(name="fakeName2", namespace="fakeNamespace"))],
         ]
         harness.set_leader()
-        assert _set_secret.call_count == 7
+        # The internal-CA generation moved into the lib TLSManager (mocked above), so
+        # its two set_secret calls (internal-ca / internal-ca-key) no longer go through
+        # the charm's set_secret — only the 5 system-user passwords do.
+        assert _set_secret.call_count == 5
         _set_secret.assert_any_call("app", "operator-password", "sekr1t")
         _set_secret.assert_any_call("app", "replication-password", "sekr1t")
         _set_secret.assert_any_call("app", "rewind-password", "sekr1t")
@@ -704,7 +707,10 @@ def test_on_upgrade_charm(harness):
             "charm.PostgresqlOperatorCharm._create_services",
             side_effect=[_FakeApiError, None, None],
         ) as _create_services,
-        patch("charm.PostgresqlOperatorCharm.push_tls_files_to_workload"),
+        # _fix_pod now pushes via the lib TLSManager + charm CA-bundle sync
+        # (push_tls_files_to_workload was removed when consuming the lib TLS handler).
+        patch("charm.TLSManager.push_tls_files"),
+        patch("charm.PostgresqlOperatorCharm._sync_tls_trust_store_and_bundle"),
     ):
         # Test with a problem happening when trying to create the k8s resources.
         harness.charm.unit.status = ActiveStatus()

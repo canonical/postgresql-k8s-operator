@@ -128,9 +128,8 @@ from single_kernel_postgresql.config.literals import (
     SPI_MODULE,
     SYSTEM_USERS,
     TLS_CA_BUNDLE_FILE,
-    TLS_CA_FILE,
-    TLS_CERT_FILE,
-    TLS_KEY_FILE,
+    TLS_CLIENT_RELATION,
+    TLS_PEER_RELATION,
     TRACING_RELATION_NAME,
     UNIT_SCOPE,
     USER,
@@ -144,6 +143,7 @@ from single_kernel_postgresql.config.literals import (
 )
 from single_kernel_postgresql.core.config import K8SCharmConfig
 from single_kernel_postgresql.core.state import CharmState
+from single_kernel_postgresql.events.tls import TLS
 from single_kernel_postgresql.events.tls_transfer import TLSTransfer
 from single_kernel_postgresql.managers.cluster import ClusterManager
 from single_kernel_postgresql.managers.config import ConfigManager
@@ -186,7 +186,6 @@ from relations.async_replication import PostgreSQLAsyncReplication
 #     PostgreSQLLogicalReplication,
 # )
 from relations.postgresql_provider import PostgreSQLProvider
-from relations.tls import TLS
 
 logger = logging.getLogger(__name__)
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -246,11 +245,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
 
         # TODO switch to the abstract class base
         # State
-        self.state = CharmState(charm=self, substrate=self.substrate)  # type: ignore
+        self.state = CharmState(charm=self, substrate=self.substrate)
 
         # Managers
         self.patroni_manager = PatroniManager(state=self.state, workload=self.workload)
-        self.tls_manager = TLSManager(state=self.state, workload=self.workload)
         self.cluster_manager = ClusterManager(state=self.state, workload=self.workload)
         self.config_manager = ConfigManager(state=self.state, workload=self.workload)
 
@@ -296,7 +294,31 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         self.postgresql_client_relation = PostgreSQLProvider(self)
         self.backup = PostgreSQLBackups(self, "s3-parameters")
         self.ldap = PostgreSQLLDAP(self, "ldap")
-        self.tls = TLS(self, PEER_RELATION)
+        # TLS events handler owns the two cert requirers; build it before the TLS
+        # manager so the manager can constructor-inject them for its live-fetch getters.
+        self.tls = TLS(self, self.state, self.workload)
+        self.tls_manager = TLSManager(
+            state=self.state,
+            workload=self.workload,
+            client_certificate=self.tls.client_certificate,
+            peer_certificate=self.tls.peer_certificate,
+        )
+        # Bridge the lib TLS handler's requirer events back into a PostgreSQL reload:
+        # the lib handler stores+pushes certs on certificate_available, then we refresh
+        # the K8s trust store + charm-local CA bundle and reload. Also fires on
+        # relation_broken so detaching the TLS operator re-renders Patroni with TLS off.
+        self.framework.observe(
+            self.tls.client_certificate.on.certificate_available, self._reload_tls_after_push
+        )
+        self.framework.observe(
+            self.tls.peer_certificate.on.certificate_available, self._reload_tls_after_push
+        )
+        self.framework.observe(
+            self.on[TLS_CLIENT_RELATION].relation_broken, self._reload_tls_after_push
+        )
+        self.framework.observe(
+            self.on[TLS_PEER_RELATION].relation_broken, self._reload_tls_after_push
+        )
         self.tls_transfer = TLSTransfer(self, PEER_RELATION)
         self.async_replication = PostgreSQLAsyncReplication(self)
         # self.logical_replication = PostgreSQLLogicalReplication(self)
@@ -1120,7 +1142,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             self._add_to_endpoints(self.state.endpoint)
 
         if not self.get_secret(APP_SCOPE, "internal-ca"):
-            self.tls.generate_internal_peer_ca()
+            self.tls_manager.generate_internal_peer_ca()
 
         self._cleanup_old_cluster_resources()
 
@@ -1436,7 +1458,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             event.defer()
             return
         if not self.get_secret(UNIT_SCOPE, "internal-cert"):
-            self.tls.generate_internal_peer_cert()
+            self.tls_manager.generate_internal_peer_cert()
+            # The lib's generate (unlike the old charm method) does not push, so push
+            # the in-container TLS files and sync the K8s-specific CA artifacts here.
+            self.tls_manager.push_tls_files()
+            self._sync_tls_trust_store_and_bundle()
+            # Render the Patroni config with ssl:on immediately on this bootstrap
+            # path (parity with the original charm's generate_internal_peer_cert
+            # -> push_tls_files_to_workload -> update_config), so the first
+            # Patroni start picks up TLS rather than waiting for member_started.
+            self.update_config()
 
         try:
             for ca_secret_name in self.tls_transfer.get_ca_secret_names():
@@ -1861,7 +1892,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
     def _fix_pod(self) -> None:
         # Recreate k8s resources and add labels required for replication
         # when the pod loses them (like when it's deleted).
-        self.push_tls_files_to_workload()
+        if self.get_secret(APP_SCOPE, "internal-ca"):
+            self.tls_manager.push_tls_files()
+            self._sync_tls_trust_store_and_bundle()
+        self.update_config()
 
         if self.refresh is not None and not self.refresh.in_progress:
             try:
@@ -2167,7 +2201,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
     @property
     def is_tls_enabled(self) -> bool:
         """Return whether TLS is enabled."""
-        return all(self.tls.get_client_tls_files())
+        return all(self.tls_manager.get_client_tls_files())
 
     @property
     def _endpoints(self) -> list[str]:
@@ -2381,44 +2415,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             group=WORKLOAD_OS_GROUP,
         )
 
-    def push_tls_files_to_workload(self) -> bool:
-        """Uploads TLS files to the workload container."""
-        key, ca, cert = self.tls.get_client_tls_files()
-        if key is not None:
-            self._push_file_to_workload(
-                self.workload.container, f"{self._storage_path}/{TLS_KEY_FILE}", key
-            )
-        if ca is not None:
-            self._push_file_to_workload(
-                self.workload.container, f"{self._storage_path}/{TLS_CA_FILE}", ca
-            )
-            self._push_file_to_workload(self.workload.container, f"{self._certs_path}/ca.crt", ca)
-            self.workload.container.exec(["update-ca-certificates"]).wait()
-        if cert is not None:
-            self._push_file_to_workload(
-                self.workload.container, f"{self._storage_path}/{TLS_CERT_FILE}", cert
-            )
-
-        key, ca, cert = self.tls.get_peer_tls_files()
-        if key is not None:
-            self._push_file_to_workload(
-                self.workload.container, f"{self._storage_path}/peer_{TLS_KEY_FILE}", key
-            )
-        if ca is not None:
-            self._push_file_to_workload(
-                self.workload.container, f"{self._storage_path}/peer_{TLS_CA_FILE}", ca
-            )
-        if cert is not None:
-            self._push_file_to_workload(
-                self.workload.container, f"{self._storage_path}/peer_{TLS_CERT_FILE}", cert
-            )
-
-        # CA bundle is not secret
-        with open(f"/tmp/{TLS_CA_BUNDLE_FILE}", "w") as fp:  # noqa: S108
-            fp.write(self.tls.get_peer_ca_bundle())
-
-        return self.update_config()
-
     def push_ca_file_into_workload(self, secret_name: str) -> bool:
         """Uploads CA certificate into the workload container."""
         certificates = self.get_secret(UNIT_SCOPE, secret_name)
@@ -2432,6 +2428,59 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             self.workload.container.exec(["update-ca-certificates"]).wait()
 
         return self.update_config()
+
+    def _reload_tls_after_push(self, event) -> None:
+        """Reload PostgreSQL after the lib TLS handler stores+pushes certs.
+
+        The lib handler writes the in-container TLS .pem files (client/peer/CA bundle)
+        into the data dir that Patroni reads from.  On K8s the charm still owns two
+        pieces the lib does not handle: the container system CA trust store and the
+        charm-local CA bundle that this unit's Patroni REST client verifies against.
+        Refresh those, then reload so PostgreSQL/Patroni pick up the new material.
+
+        Mirror the handler's readiness guard: when the internal CA is absent the
+        handler defers its push (no files on disk), so skip the reload to avoid
+        rendering ssl:on against missing TLS files on an already-running unit.
+        """
+        if not self.get_secret(APP_SCOPE, "internal-ca"):
+            return
+        # Don't enable TLS in the config until the lib has written the cert files to
+        # disk (its Pebble push can defer while this local render would still succeed,
+        # which would start Patroni ssl:on against missing files).
+        if self.is_tls_enabled and not self.tls_manager.client_tls_files_on_disk():
+            event.defer()
+            return
+        self._sync_tls_trust_store_and_bundle()
+        try:
+            if not self.update_config():
+                event.defer()
+        except Exception:
+            # Mirror the original charm's broad push-failure guard: a transient
+            # Patroni/render failure should defer and retry rather than propagate
+            # out of the observer and fail the hook.
+            logger.exception("TLS reload (update_config) failed; deferring")
+            event.defer()
+
+    def _sync_tls_trust_store_and_bundle(self) -> None:
+        """Sync the K8s-specific CA artifacts the lib TLSManager does not write.
+
+        - Push the operator client CA into the container system trust store
+          (``update-ca-certificates``), matching the external-CA handling in
+          ``push_ca_file_into_workload``.
+        - Write the composed peer CA bundle to the charm-local path that this
+          unit's Patroni REST client verifies against (``patroni.py`` ``_verify``).
+        The in-container ssl .pem files themselves are written by the lib handler
+        via ``TLSManager.push_tls_files``.
+        """
+        _, ca, _ = self.tls_manager.get_client_tls_files()
+        if ca is not None and self.workload.container.can_connect():
+            self._push_file_to_workload(self.workload.container, f"{self._certs_path}/ca.crt", ca)
+            self.workload.container.exec(["update-ca-certificates"]).wait()
+
+        # CA bundle is not secret; it lives on the charm-local filesystem because the
+        # Patroni REST client (requests, verify=) runs on the unit, not in the container.
+        with open(f"/tmp/{TLS_CA_BUNDLE_FILE}", "w") as fp:  # noqa: S108
+            fp.write(self.tls_manager.get_peer_ca_bundle())
 
     def clean_ca_file_from_workload(self, secret_name: str) -> bool:
         """Cleans up CA certificate from the workload container."""
