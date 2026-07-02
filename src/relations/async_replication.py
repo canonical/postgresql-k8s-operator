@@ -541,8 +541,8 @@ class PostgreSQLAsyncReplication(Object):
 
         peers = self.charm._peers.units if self.charm._peers else []
         if not (self.charm.is_unit_stopped or self._is_following_promoted_cluster()) or not all(
-            "stopped" in self.charm.unit_peer_data
-            or self.charm.unit_peer_data.get("unit-promoted-cluster-counter")
+            "stopped" in self.charm.all_peer_data[unit]
+            or self.charm.all_peer_data[unit].get("unit-promoted-cluster-counter")
             == self._get_highest_promoted_cluster_counter_value()
             for unit in peers
         ):
