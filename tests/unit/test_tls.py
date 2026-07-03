@@ -321,3 +321,29 @@ def test_reload_bridge_no_defer_on_success(harness):
 
     _update_config.assert_called_once_with()
     event.defer.assert_not_called()
+
+
+def test_reload_bridge_defers_until_tls_files_on_disk(harness):
+    """_reload_tls_after_push defers instead of rendering ssl:on before files exist.
+
+    With TLS enabled (client cert material assigned) but the lib's file push not
+    yet landed in the container (e.g. its Pebble push deferred), reloading would
+    render ssl:on against missing files.  The bridge must defer and retry, and
+    must not sync the trust store against not-yet-pushed material either.
+    """
+    with harness.hooks_disabled():
+        harness.set_leader(True)
+        harness.charm.set_secret("app", "internal-ca", "ca-content")
+
+    event = Mock()
+    with (
+        patch("charm.TLSManager.get_client_tls_files", return_value=("key", "ca", "cert")),
+        patch("charm.TLSManager.client_tls_files_on_disk", return_value=False),
+        patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
+        patch("charm.PostgresqlOperatorCharm._sync_tls_trust_store_and_bundle") as _sync,
+    ):
+        harness.charm._reload_tls_after_push(event)
+
+    event.defer.assert_called_once_with()
+    _update_config.assert_not_called()
+    _sync.assert_not_called()
