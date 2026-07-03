@@ -8,6 +8,7 @@ from ops import Unit
 from ops.framework import EventBase
 from ops.model import ActiveStatus, BlockedStatus
 from ops.testing import Harness
+from single_kernel_postgresql.config.literals import PEER_RELATION
 from single_kernel_postgresql.utils.postgresql import (
     ACCESS_GROUP_RELATION,
     PostgreSQLCreateDatabaseError,
@@ -16,7 +17,6 @@ from single_kernel_postgresql.utils.postgresql import (
 )
 
 from charm import PostgresqlOperatorCharm
-from constants import PEER
 
 DATABASE = "test_database"
 EXTRA_USER_ROLES = "CREATEDB,CREATEROLE"
@@ -35,7 +35,7 @@ def harness():
     # Define some relations.
     rel_id = harness.add_relation(RELATION_NAME, "application")
     harness.add_relation_unit(rel_id, "application/0")
-    peer_rel_id = harness.add_relation(PEER, harness.charm.app.name)
+    peer_rel_id = harness.add_relation(PEER_RELATION, harness.charm.app.name)
     harness.add_relation_unit(peer_rel_id, harness.charm.unit.name)
     harness.update_relation_data(
         peer_rel_id,
@@ -79,7 +79,7 @@ def test_on_database_requested(harness):
         patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock,
         patch.object(EventBase, "defer") as _defer,
         patch(
-            "charm.Patroni.primary_endpoint_ready", new_callable=PropertyMock
+            "charm.PatroniManager.primary_endpoint_ready", new_callable=PropertyMock
         ) as _primary_endpoint_ready,
         patch(
             "relations.postgresql_provider.new_password", return_value="test-password"
@@ -167,8 +167,10 @@ def test_on_database_requested(harness):
 
 
 def test_on_relation_departed(harness):
-    with patch("charm.Patroni.member_started", new_callable=PropertyMock(return_value=True)):
-        peer_rel_id = harness.model.get_relation(PEER).id
+    with patch(
+        "charm.PatroniManager.member_started", new_callable=PropertyMock(return_value=True)
+    ):
+        peer_rel_id = harness.model.get_relation(PEER_RELATION).id
         # Test when this unit is departing the relation (due to a scale down event).
         assert "departing" not in harness.get_relation_data(peer_rel_id, harness.charm.unit)
         event = Mock()
@@ -194,11 +196,11 @@ def test_on_relation_broken(harness):
         patch("charm.PostgresqlOperatorCharm.update_config"),
         patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock,
         patch(
-            "charm.Patroni.member_started", new_callable=PropertyMock(return_value=True)
+            "charm.PatroniManager.member_started", new_callable=PropertyMock(return_value=True)
         ) as _member_started,
     ):
         rel_id = harness.model.get_relation(RELATION_NAME).id
-        peer_rel_id = harness.model.get_relation(PEER).id
+        peer_rel_id = harness.model.get_relation(PEER_RELATION).id
         # Test when this unit is departing the relation (due to the relation being broken between the apps).
         event = Mock()
         event.relation.id = rel_id

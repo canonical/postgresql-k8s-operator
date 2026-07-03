@@ -146,7 +146,7 @@ def test_patroni_reinit_after_pg_control_deletion(juju: Juju, continuous_writes)
         f"PATRONI_KUBERNETES_USE_ENDPOINTS=true "
         f"PATRONI_KUBERNETES_LEADER_LABEL_VALUE=primary "
         f"PATRONI_KUBERNETES_LABELS='{k8s_labels}' "
-        f"patronictl -c {STORAGE_PATH}/patroni.yml "
+        f"patronictl -c {STORAGE_PATH}/patroni.yaml "
         f"reinit {cluster_name} {replica_member_name} --force"
     )
     juju.ssh(replica_unit, patronictl_cmd, container="postgresql")

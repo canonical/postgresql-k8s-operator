@@ -6,14 +6,15 @@ from unittest.mock import PropertyMock, patch
 
 import pytest
 from ops.testing import Harness
-
-from charm import PostgresqlOperatorCharm
-from constants import APP_SCOPE, PEER
-from relations.async_replication import (
+from single_kernel_postgresql.config.literals import (
+    APP_SCOPE,
+    PEER_RELATION,
     REPLICATION_CONSUMER_RELATION,
     REPLICATION_OFFER_RELATION,
-    SECRET_LABEL,
 )
+
+from charm import PostgresqlOperatorCharm
+from relations.async_replication import SECRET_LABEL
 
 RELATION_NAMES = ["replication-offer", "replication"]
 
@@ -51,7 +52,7 @@ def test_on_async_relation_broken(harness, is_leader, relation_name):
         patch(
             "relations.async_replication.PostgreSQLAsyncReplication.set_app_status"
         ) as _set_app_status,
-        patch("charm.Patroni.get_standby_leader") as _get_standby_leader,
+        patch("charm.PatroniManager.get_standby_leader") as _get_standby_leader,
         patch(
             "relations.async_replication.PostgreSQLAsyncReplication._on_async_relation_departed"
         ) as _on_async_relation_departed,
@@ -67,7 +68,7 @@ def test_on_async_relation_broken(harness, is_leader, relation_name):
 
         # Test the departing unit.
         with harness.hooks_disabled():
-            peer_rel_id = harness.add_relation(PEER, harness.charm.app.name)
+            peer_rel_id = harness.add_relation(PEER_RELATION, harness.charm.app.name)
             harness.update_relation_data(
                 peer_rel_id,
                 harness.charm.app.name,
@@ -143,7 +144,7 @@ def test_on_async_relation_created(harness, relation_name):
     ):
         # Test in a standby cluster.
         with harness.hooks_disabled():
-            peer_rel_id = harness.add_relation(PEER, harness.charm.app.name)
+            peer_rel_id = harness.add_relation(PEER_RELATION, harness.charm.app.name)
         rel_id = harness.add_relation(relation_name, harness.charm.app.name)
         assert harness.get_relation_data(rel_id, harness.charm.unit.name) == {
             "unit-address": "1.1.1.1"
@@ -167,7 +168,7 @@ def test_on_async_relation_created(harness, relation_name):
 def test_on_async_relation_departed(harness, relation_name):
     # Test the departing unit.
     with harness.hooks_disabled():
-        peer_rel_id = harness.add_relation(PEER, harness.charm.app.name)
+        peer_rel_id = harness.add_relation(PEER_RELATION, harness.charm.app.name)
         rel_id = harness.add_relation(relation_name, harness.charm.app.name)
         harness.add_relation_unit(rel_id, harness.charm.unit.name)
     harness.remove_relation_unit(rel_id, harness.charm.unit.name)
@@ -189,7 +190,7 @@ def test_on_async_relation_changed(harness, wait_for_standby):
         return_value="1.1.1.1",
     ) as _get_unit_ip:
         harness.add_relation(
-            PEER,
+            PEER_RELATION,
             harness.charm.app.name,
             unit_data={"unit-address": "10.1.1.10"},
             app_data={"promoted-cluster-counter": "1"},
@@ -206,7 +207,7 @@ def test_on_async_relation_changed(harness, wait_for_standby):
         patch("lightkube.Client.__init__", return_value=None),
         patch("lightkube.Client.delete") as _lightkube_delete,
         patch(
-            "charm.Patroni.member_started", new_callable=PropertyMock
+            "charm.PatroniManager.member_started", new_callable=PropertyMock
         ) as _patroni_member_started,
         patch("charm.PostgresqlOperatorCharm._create_pgdata") as _create_pgdata,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
@@ -262,7 +263,7 @@ def test_create_replication(harness, relation_name):
             new_callable=PropertyMock,
             return_value="10.1.1.10",
         ),
-        patch("charm.Patroni.get_standby_leader", return_value=None),
+        patch("charm.PatroniManager.get_standby_leader", return_value=None),
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
         patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
     ):
@@ -270,7 +271,7 @@ def test_create_replication(harness, relation_name):
             {"password": "password"}, label="database-peers.postgresql-k8s.app"
         )
         with harness.hooks_disabled():
-            harness.add_relation(PEER, harness.charm.app.name)
+            harness.add_relation(PEER_RELATION, harness.charm.app.name)
         rel_id = harness.add_relation(
             relation_name, harness.charm.app.name, unit_data={"unit-address": "10.1.1.10"}
         )
@@ -302,12 +303,12 @@ def test_promote_to_primary(harness, relation_name):
             new_callable=PropertyMock,
             return_value="10.1.1.10",
         ),
-        patch("charm.Patroni.get_primary"),
-        patch("charm.Patroni.get_standby_leader", return_value=None),
+        patch("charm.PatroniManager.get_primary"),
+        patch("charm.PatroniManager.get_standby_leader", return_value=None),
     ):
         with harness.hooks_disabled():
             harness.add_relation(
-                PEER, harness.charm.app.name, unit_data={"unit-address": "10.1.1.10"}
+                PEER_RELATION, harness.charm.app.name, unit_data={"unit-address": "10.1.1.10"}
             )
             rel_id = harness.add_relation(
                 relation_name, "standby", app_data={"promoted-cluster-counter": "1"}
@@ -331,13 +332,13 @@ def test_on_secret_changed(harness, relation_name):
         return_value="1.1.1.1",
     ) as _get_unit_ip:
         secret_id = harness.add_model_secret("primary", {"operator-password": "old"})
-        peer_rel_id = harness.add_relation(PEER, "primary")
+        peer_rel_id = harness.add_relation(PEER_RELATION, "primary")
         rel_id = harness.add_relation(
             relation_name, harness.charm.app.name, unit_data={"unit-address": "10.1.1.10"}
         )
 
     secret_label = (
-        f"{PEER}.{harness.charm.app.name}.app"
+        f"{PEER_RELATION}.{harness.charm.app.name}.app"
         if relation_name == REPLICATION_OFFER_RELATION
         else SECRET_LABEL
     )

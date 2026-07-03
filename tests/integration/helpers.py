@@ -21,6 +21,11 @@ from lightkube.core.exceptions import ApiError
 from lightkube.generic_resource import GenericNamespacedResource
 from lightkube.resources.core_v1 import Endpoints, Service
 from pytest_operator.plugin import OpsTest
+from single_kernel_postgresql.config.literals import (
+    DATABASE_DEFAULT_NAME,
+    PEER_RELATION,
+    SYSTEM_USERS_PASSWORD_CONFIG,
+)
 from tenacity import (
     RetryError,
     Retrying,
@@ -32,8 +37,6 @@ from tenacity import (
     wait_exponential,
     wait_fixed,
 )
-
-from constants import DATABASE_DEFAULT_NAME, PEER, SYSTEM_USERS_PASSWORD_CONFIG
 
 CHARM_BASE = "ubuntu@22.04"
 CHARM_BASE_NOBLE = "ubuntu@24.04"
@@ -504,7 +507,7 @@ async def get_password(
     database_app_name: str = DATABASE_APP_NAME,
 ):
     """Retrieve a user password from the secret."""
-    secret = await get_secret_by_label(ops_test, label=f"{PEER}.{database_app_name}.app")
+    secret = await get_secret_by_label(ops_test, label=f"{PEER_RELATION}.{database_app_name}.app")
     password = secret.get(f"{username}-password")
 
     return password

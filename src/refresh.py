@@ -9,8 +9,7 @@ from typing import TYPE_CHECKING
 
 import charm_refresh
 from charm_refresh import CharmSpecificKubernetes, CharmVersion
-
-from patroni import SwitchoverFailedError
+from single_kernel_postgresql.config.exceptions import SwitchoverFailedError
 
 if TYPE_CHECKING:
     from charm import PostgresqlOperatorCharm
@@ -52,11 +51,11 @@ class PostgreSQLRefresh(CharmSpecificKubernetes):
     def run_pre_refresh_checks_after_1_unit_refreshed(self) -> None:
         """Implement pre-refresh checks after 1 unit refreshed."""
         logger.debug("Running pre-refresh checks")
-        if self._charm._patroni.is_creating_backup:
+        if self._charm.patroni_manager.is_creating_backup:
             raise charm_refresh.PrecheckFailed("Backup in progress")
 
         # Check if all units except the highest unit (first to be refreshed) are online.
-        running_members = self._charm._patroni.get_running_cluster_members()
+        running_members = self._charm.patroni_manager.get_running_cluster_members()
 
         # The highest unit number is planned_units - 1 (e.g., if 3 units, highest is unit 2).
         # Members are named like "postgresql-k8s-0", "postgresql-k8s-1", etc.
@@ -72,13 +71,13 @@ class PostgreSQLRefresh(CharmSpecificKubernetes):
 
         # Switch primary to last unit to refresh (lowest unit number).
         last_unit_to_refresh = f"{self._charm.app.name}/0"
-        if self._charm._patroni.get_primary(unit_name_pattern=True) == last_unit_to_refresh:
+        if self._charm.patroni_manager.get_primary(unit_name_pattern=True) == last_unit_to_refresh:
             logger.info(
                 f"Unit {last_unit_to_refresh} was already primary during pre-refresh check"
             )
         else:
             try:
-                self._charm._patroni.switchover(
+                self._charm.patroni_manager.switchover(
                     candidate=last_unit_to_refresh,
                     async_cluster=bool(
                         self._charm.async_replication.get_primary_cluster_endpoint()
@@ -94,7 +93,7 @@ class PostgreSQLRefresh(CharmSpecificKubernetes):
 
     def run_pre_refresh_checks_before_any_units_refreshed(self) -> None:
         """Implement pre-refresh checks before any unit refreshed."""
-        if not self._charm._patroni.are_all_members_ready():
+        if not self._charm.patroni_manager.are_all_members_ready():
             raise charm_refresh.PrecheckFailed("PostgreSQL is not running on 1+ units")
 
         self.run_pre_refresh_checks_after_1_unit_refreshed()

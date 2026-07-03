@@ -12,9 +12,8 @@ from lightkube import AsyncClient
 from lightkube.resources.core_v1 import Pod
 from psycopg2 import sql
 from pytest_operator.plugin import OpsTest
+from single_kernel_postgresql.config.locales import K8S_LOCALES
 from tenacity import Retrying, stop_after_delay, wait_fixed
-
-from locales import ROCK_LOCALES
 
 from .ha_tests.helpers import get_cluster_roles
 from .helpers import (
@@ -183,7 +182,7 @@ async def test_postgresql_locales(ops_test: OpsTest) -> None:
     # Juju 2 has an extra empty element
     if "" in locales:
         locales.remove("")
-    assert locales == list(get_args(ROCK_LOCALES))
+    assert locales == sorted(get_args(K8S_LOCALES))
 
 
 async def test_postgresql_parameters_change(ops_test: OpsTest) -> None:

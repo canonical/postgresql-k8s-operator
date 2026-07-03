@@ -11,6 +11,13 @@ from charms.data_platform_libs.v0.data_interfaces import DatabaseProvides, Datab
 from ops.charm import RelationBrokenEvent, RelationDepartedEvent
 from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, ModelError, Relation
+from single_kernel_postgresql.config.literals import (
+    APP_SCOPE,
+    DATABASE_MAPPING_LABEL,
+    DATABASE_PORT,
+    SYSTEM_USERS,
+    USERNAME_MAPPING_LABEL,
+)
 from single_kernel_postgresql.utils import new_password
 from single_kernel_postgresql.utils.postgresql import (
     ACCESS_GROUP_RELATION,
@@ -22,14 +29,6 @@ from single_kernel_postgresql.utils.postgresql import (
     PostgreSQLCreateUserError,
     PostgreSQLDeleteUserError,
     PostgreSQLGetPostgreSQLVersionError,
-)
-
-from constants import (
-    APP_SCOPE,
-    DATABASE_MAPPING_LABEL,
-    DATABASE_PORT,
-    SYSTEM_USERS,
-    USERNAME_MAPPING_LABEL,
 )
 
 logger = logging.getLogger(__name__)
@@ -241,7 +240,10 @@ class PostgreSQLProvider(Object):
         Generate password and handle user and database creation for the related application.
         """
         # Check for some conditions before trying to access the PostgreSQL instance.
-        if not self.charm.is_cluster_initialised or not self.charm._patroni.primary_endpoint_ready:
+        if (
+            not self.charm.is_cluster_initialised
+            or not self.charm.patroni_manager.primary_endpoint_ready
+        ):
             logger.debug(
                 "Deferring on_database_requested: Cluster must be initialized before database can be requested"
             )
@@ -366,7 +368,7 @@ class PostgreSQLProvider(Object):
         if (
             not self.charm._peers
             or not self.charm.is_cluster_initialised
-            or not self.charm._patroni.member_started
+            or not self.charm.patroni_manager.member_started
         ):
             logger.debug(
                 "Deferring on_relation_broken: Cluster must be initialized before user can be deleted"
