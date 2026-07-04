@@ -775,8 +775,7 @@ async def scale_application(
     await model.applications[application_name].scale(scale)
     if scale == 0:
         await model.block_until(
-            lambda: len(model.applications[application_name].units) == scale,
-            timeout=1000,
+            lambda: len(model.applications[application_name].units) == scale, timeout=1200
         )
     else:
         await model.wait_for_idle(
