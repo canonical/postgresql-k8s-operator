@@ -781,7 +781,7 @@ async def scale_application(
         await model.wait_for_idle(
             apps=[application_name],
             status="active",
-            timeout=1000,
+            timeout=1200,
             wait_for_exact_units=scale,
         )
 
