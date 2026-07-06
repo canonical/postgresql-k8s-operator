@@ -1960,12 +1960,31 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
                 or resource.metadata.ownerReferences == pod0.metadata.ownerReferences
             ):
                 continue
-            # Patch the resource.
+            # Reparent the resource onto the StatefulSet (pod0's owner) so it
+            # is garbage-collected when the application is removed.
+            #
+            # Apply only ownerReferences (plus identity) via a targeted
+            # server-side-apply patch, NOT the whole listed object. Patroni
+            # mutates its leader-election Service (e.g. config annotations)
+            # continuously, so the snapshot from client.list() above is already
+            # stale by the time we apply. Sending the whole object would
+            # both (a) carry a stale metadata.resourceVersion, which SSA treats
+            # as an optimistic-concurrency precondition and rejects with
+            # 409 "the object has been modified; please apply your changes to
+            # the latest version", and (b) revert any field Patroni changed
+            # since the list. A minimal body carrying just ownerReferences
+            # avoids both: SSA skips the resourceVersion precondition (absent
+            # from the body) and leaves Patroni-owned fields untouched.
             try:
-                resource.metadata.ownerReferences = pod0.metadata.ownerReferences
-                resource.metadata.managedFields = None
+                patch = type(resource)(
+                    metadata=ObjectMeta(
+                        name=resource.metadata.name,
+                        namespace=resource.metadata.namespace,
+                        ownerReferences=pod0.metadata.ownerReferences,
+                    )
+                )
                 client.apply(
-                    obj=resource,  # type: ignore
+                    obj=patch,  # type: ignore
                     name=resource.metadata.name,
                     namespace=resource.metadata.namespace,
                     force=True,
