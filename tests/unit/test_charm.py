@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, Mock, PropertyMock, call, patch, sentinel
 import psycopg2
 import pytest
 from lightkube import ApiError
+from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Endpoints, Pod, Service
 from ops import JujuVersion
 from ops.model import (
@@ -951,6 +952,12 @@ def test_on_stop(harness):
                 assert _client.return_value.list.call_count == 4
                 # Verify apply() was called for the 2 resources found (fakeName1 and fakeName2)
                 assert _client.return_value.apply.call_count == 2
+                # Verify apply() got a minimal ObjectMeta patch (not the whole resource).
+                for call_args in _client.return_value.apply.call_args_list:
+                    patched = call_args.kwargs["obj"]
+                    assert isinstance(patched.metadata, ObjectMeta)
+                    assert patched.metadata.ownerReferences == "fakeOwnerReferences"
+                    assert patched.metadata.resourceVersion is None
                 assert harness.get_relation_data(rel_id, harness.charm.unit) == relation_data
                 _client.reset_mock()
 
