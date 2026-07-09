@@ -673,7 +673,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("Defer on_config_changed: upgrade in progress")
             event.defer()
             return
-
+        # Recover from a stale "connectivity: off" left by an interrupted backup before
+        # re-rendering the Patroni configuration below.
+        self.reset_stale_connectivity_flag()
         try:
             self._validate_config_options()
             # update config on every run
@@ -963,6 +965,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             )
             event.defer()
             return
+
+        # Recover from a stale "connectivity: off" left by an interrupted backup before
+        # the workload is configured/started.
+        self.reset_stale_connectivity_flag()
 
         # Create the PostgreSQL data directory. This is needed on cloud environments
         # where the volume is mounted with more restrictive permissions.
@@ -1544,6 +1550,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if not self._on_update_status_early_exit_checks(container):
             return
 
+        # Periodic driver for the recovery: a unit left "off" by an interrupted backup
+        # heals on the next tick instead of waiting for a config change or a restart.
+        self.reset_stale_connectivity_flag()
+
         self._check_headless_service()
 
         services = container.pebble.get_services(names=[self.postgresql_service])
@@ -1663,6 +1673,25 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     def is_connectivity_enabled(self) -> bool:
         """Return whether this unit can be connected externally."""
         return self.unit_peer_data.get("connectivity", "on") == "on"
+
+    def reset_stale_connectivity_flag(self) -> None:
+        """Reset a stale "connectivity: off" left by an interrupted backup.
+
+        The flag is written to the unit peer databag during replica backups and survives
+        restarts/upgrades; without this recovery a unit stuck "off" stays externally
+        disconnected (pg_hba rejects peer/replica connections). Skipped while any backup
+        is in progress cluster-wide to avoid un-hiding a unit mid-backup.
+        """
+        if self.unit_peer_data.get("connectivity") != "off":
+            return
+        if self._patroni.is_creating_backup:
+            return
+        logger.info("Resetting stale connectivity flag left by an interrupted backup")
+        self.unit_peer_data["connectivity"] = "on"
+        # Re-render immediately: the flag alone doesn't reopen pg_hba, and callers that
+        # don't update the configuration themselves would otherwise leave the unit
+        # rejecting connections while the databag claims it is reachable.
+        self.update_config()
 
     @property
     def is_ldap_charm_related(self) -> bool:
