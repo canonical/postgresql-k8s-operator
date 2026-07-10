@@ -1479,12 +1479,20 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 ]
             ) or resource.metadata.ownerReferences == pod0.metadata.ownerReferences:
                 continue
-            # Patch the resource.
+            # Reparent onto the StatefulSet (pod0's owner) for GC on removal.
+            # Apply only ownerReferences: the whole listed object would carry a
+            # stale resourceVersion (Patroni churns this Service) and 409, and
+            # would revert Patroni's in-flight changes.
             try:
-                resource.metadata.ownerReferences = pod0.metadata.ownerReferences
-                resource.metadata.managedFields = None
+                patch = type(resource)(
+                    metadata=ObjectMeta(
+                        name=resource.metadata.name,
+                        namespace=resource.metadata.namespace,
+                        ownerReferences=pod0.metadata.ownerReferences,
+                    )
+                )
                 client.apply(
-                    obj=resource,
+                    obj=patch,
                     name=resource.metadata.name,
                     namespace=resource.metadata.namespace,
                     force=True,
