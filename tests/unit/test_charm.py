@@ -25,12 +25,13 @@ from ops.pebble import ChangeError, FileType, ServiceStatus
 from ops.testing import Harness
 from requests import ConnectionError as RequestsConnectionError
 from single_kernel_postgresql.config.exceptions import (
+    DeployedWithoutTrustError,
     NotReadyError,
     SwitchoverFailedError,
     SwitchoverNotSyncError,
 )
 from single_kernel_postgresql.config.literals import PEER_RELATION, SECRET_INTERNAL_LABEL
-from tenacity import RetryError, wait_fixed
+from tenacity import RetryError
 
 from charm import EXTENSION_OBJECT_MESSAGE, PostgresqlOperatorCharm
 from tests.unit.helpers import _FakeApiError
@@ -1361,179 +1362,93 @@ def test_clean_ca_file_from_workload(harness):
         assert ca_exists is False
 
 
-def test_update_config(harness):
+def test_request_restart(harness):
+    """The request_restart bridge refreshes the metrics scrape job and acquires the restart lock."""
     with (
-        patch("ops.model.Container.get_plan") as _get_plan,
-        patch("charm.PostgresqlOperatorCharm.get_available_resources", return_value=(4, 8000000)),
-        patch(
-            "charm.PostgresqlOperatorCharm._handle_postgresql_restart_need"
-        ) as _handle_postgresql_restart_need,
-        patch("charm.PatroniManager.ensure_slots_controller_by_patroni"),
+        patch("charm.PostgresqlOperatorCharm._generate_metrics_jobs") as _generate_metrics_jobs,
+        patch("charm.PostgresqlOperatorCharm.is_tls_enabled", new_callable=PropertyMock),
+        patch("charm.MetricsEndpointProvider.update_scrape_job_spec") as _update_scrape_job_spec,
+        patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_acquire_lock") as _restart,
+    ):
+        harness.charm.request_restart()
+
+        _update_scrape_job_spec.assert_called_once_with(_generate_metrics_jobs.return_value)
+        _restart.assert_called_once()
+
+
+def test_refresh_endpoints(harness):
+    """The refresh_endpoints bridge refreshes the client-relation endpoints."""
+    with patch("charm.PostgreSQLProvider.update_endpoints") as _update_endpoints:
+        harness.charm.refresh_endpoints()
+
+        _update_endpoints.assert_called_once_with()
+
+
+def test_restart_services(harness):
+    """The restart_services bridge restarts both the metrics and LDAP sync pebble services."""
+    with (
         patch(
             "charm.PostgresqlOperatorCharm._restart_metrics_service"
         ) as _restart_metrics_service,
         patch(
             "charm.PostgresqlOperatorCharm._restart_ldap_sync_service"
         ) as _restart_ldap_sync_service,
-        patch("charm.PatroniManager.bulk_update_parameters_controller_by_patroni"),
-        patch("charm.PatroniManager.member_started", new_callable=PropertyMock) as _member_started,
-        patch(
-            "charm.PostgresqlOperatorCharm._is_workload_running", new_callable=PropertyMock
-        ) as _is_workload_running,
-        patch("charm.ConfigManager.render_patroni_yml_file") as _render_patroni_yml_file,
-        patch("charm.PostgresqlOperatorCharm.is_primary", return_value=False),
-        patch(
-            "charm.PostgresqlOperatorCharm.is_tls_enabled", new_callable=PropertyMock
-        ) as _is_tls_enabled,
-        patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock,
     ):
-        rel_id = harness.model.get_relation(PEER_RELATION).id
-        # Mock some properties.
-        harness.set_can_connect(POSTGRESQL_CONTAINER, True)
-        postgresql_mock.is_tls_enabled = PropertyMock(side_effect=[False, False, False, False])
-        _is_workload_running.side_effect = [True, True, False, True]
-        _member_started.side_effect = [True, True, False]
-        postgresql_mock.build_postgresql_parameters.return_value = {"test": "test"}
+        harness.charm.restart_services()
 
-        # Test without TLS files available.
-        with harness.hooks_disabled():
-            harness.update_relation_data(rel_id, harness.charm.unit.name, {"tls": ""})
-        _is_tls_enabled.return_value = False
-        harness.charm.update_config()
-        # Expected parameters include base "test": "test" plus worker configs (auto = 8, since min(8, 2*4) = 8)
-        expected_parameters = {
-            "test": "test",
-            "max_worker_processes": "8",
-            "max_parallel_workers": "8",
-            "max_parallel_maintenance_workers": "8",
-            "max_logical_replication_workers": "8",
-            "max_sync_workers_per_subscription": "8",
-            "max_parallel_apply_workers_per_subscription": "8",
-            "wal_compression": "on",
-        }
-        _render_patroni_yml_file.assert_called_once_with(
-            connectivity=True,
-            is_creating_backup=False,
-            enable_ldap=False,
-            enable_tls=False,
-            # is_no_sync_member=False,
-            backup_id=None,
-            pitr_target=None,
-            restore_timeline=None,
-            restore_to_latest=False,
-            stanza=None,
-            restore_stanza=None,
-            parameters=expected_parameters,
-            user_databases_map={"operator": "all", "replication": "all", "rewind": "all"},
-            ldap_parameters={},
-            async_primary_cluster_endpoint=None,
-            async_standby_endpoints=[],
-            slots={},
-        )
-        _handle_postgresql_restart_need.assert_called_once()
-        _restart_metrics_service.assert_called_once()
-        _restart_ldap_sync_service.assert_called_once()
-        assert "tls" not in harness.get_relation_data(rel_id, harness.charm.unit.name)
-
-        # Test with TLS files available.
-        _handle_postgresql_restart_need.reset_mock()
-        _restart_metrics_service.reset_mock()
-        _restart_ldap_sync_service.reset_mock()
-        harness.update_relation_data(
-            rel_id, harness.charm.unit.name, {"tls": ""}
-        )  # Mock some data in the relation to test that it change.
-        _is_tls_enabled.return_value = True
-        _render_patroni_yml_file.reset_mock()
-        harness.charm.update_config()
-        _render_patroni_yml_file.assert_called_once_with(
-            connectivity=True,
-            is_creating_backup=False,
-            enable_ldap=False,
-            enable_tls=True,
-            # is_no_sync_member=False,
-            backup_id=None,
-            pitr_target=None,
-            restore_timeline=None,
-            restore_to_latest=False,
-            stanza=None,
-            restore_stanza=None,
-            parameters=expected_parameters,
-            user_databases_map={"operator": "all", "replication": "all", "rewind": "all"},
-            ldap_parameters={},
-            async_primary_cluster_endpoint=None,
-            async_standby_endpoints=[],
-            slots={},
-        )
-        _handle_postgresql_restart_need.assert_called_once()
-        _restart_metrics_service.assert_called_once()
-        _restart_ldap_sync_service.assert_called_once()
-        assert "tls" not in harness.get_relation_data(
-            rel_id, harness.charm.unit.name
-        )  # The "tls" flag is set in handle_postgresql_restart_need.
-
-        # Test with workload not running yet.
-        harness.update_relation_data(
-            rel_id, harness.charm.unit.name, {"tls": ""}
-        )  # Mock some data in the relation to test that it change.
-        _handle_postgresql_restart_need.reset_mock()
-        _restart_metrics_service.reset_mock()
-        _restart_ldap_sync_service.reset_mock()
-        harness.charm.update_config()
-        _handle_postgresql_restart_need.assert_not_called()
-        _restart_metrics_service.assert_not_called()
-        _restart_ldap_sync_service.assert_not_called()
-        assert harness.get_relation_data(rel_id, harness.charm.unit.name)["tls"] == "enabled"
-
-        # Test with member not started yet.
-        harness.update_relation_data(
-            rel_id, harness.charm.unit.name, {"tls": ""}
-        )  # Mock some data in the relation to test that it doesn't change.
-        _is_tls_enabled.return_value = False
-        harness.charm.update_config()
-        _handle_postgresql_restart_need.assert_not_called()
-        _restart_metrics_service.assert_not_called()
-        _restart_ldap_sync_service.assert_not_called()
-        assert "tls" not in harness.get_relation_data(rel_id, harness.charm.unit.name)
+        _restart_metrics_service.assert_called_once_with()
+        _restart_ldap_sync_service.assert_called_once_with()
 
 
-def test_handle_postgresql_restart_need(harness):
+def test_update_config_delegates_to_config_manager(harness):
+    """update_config delegates to the lib ConfigManager with the charm-sourced parameters."""
     with (
+        patch("charm.ConfigManager.update_config") as _update_config,
         patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock,
-        patch("charms.rolling_ops.v0.rollingops.RollingOpsManager._on_acquire_lock") as _restart,
-        patch("charm.PostgresqlOperatorCharm._generate_metrics_jobs") as _generate_metrics_jobs,
-        patch("charm.wait_fixed", return_value=wait_fixed(0)),
         patch(
-            "charm.PatroniManager.reload_patroni_configuration"
-        ) as _reload_patroni_configuration,
-        patch("charm.PostgresqlOperatorCharm.is_restart_pending") as _is_restart_pending,
+            "charm.PostgresqlOperatorCharm.relations_user_databases_map",
+            new_callable=PropertyMock,
+        ) as _relations_user_databases_map,
+        patch("charm.PostgresqlOperatorCharm.get_ldap_parameters") as _get_ldap_parameters,
         patch(
-            "charm.PostgresqlOperatorCharm.is_tls_enabled", new_callable=PropertyMock
-        ) as _is_tls_enabled,
+            "charm.PostgreSQLAsyncReplication.get_primary_cluster_endpoint"
+        ) as _get_primary_cluster_endpoint,
+        patch("charm.PostgreSQLAsyncReplication.get_standby_endpoints") as _get_standby_endpoints,
     ):
-        rel_id = harness.model.get_relation(PEER_RELATION).id
-        for values in itertools.product([True, False], [True, False], [True, False]):
-            _reload_patroni_configuration.reset_mock()
-            _generate_metrics_jobs.reset_mock()
-            _restart.reset_mock()
-            with harness.hooks_disabled():
-                harness.update_relation_data(rel_id, harness.charm.unit.name, {"tls": ""})
+        _update_config.return_value = True
+        _relations_user_databases_map.return_value = {"operator": "all"}
+        _get_ldap_parameters.return_value = {"ldap": "params"}
+        _get_primary_cluster_endpoint.return_value = "primary-endpoint"
+        _get_standby_endpoints.return_value = ["standby-endpoint"]
 
-            _is_tls_enabled.return_value = values[0]
-            postgresql_mock.is_tls_enabled = PropertyMock(return_value=values[1])
-            _is_restart_pending.return_value = values[2]
+        result = harness.charm.update_config(is_creating_backup=True)
 
-            harness.charm._handle_postgresql_restart_need(True)
-            _reload_patroni_configuration.assert_called_once()
-            if values[0]:
-                assert "tls" in harness.get_relation_data(rel_id, harness.charm.unit)
-            else:
-                assert "tls" not in harness.get_relation_data(rel_id, harness.charm.unit)
-            if (values[0] != values[1]) or values[2]:
-                _generate_metrics_jobs.assert_called_once_with(values[0])
-                _restart.assert_called_once()
-            else:
-                _generate_metrics_jobs.assert_not_called()
-                _restart.assert_not_called()
+        assert result is True
+        _update_config.assert_called_once_with(
+            postgresql_mock,
+            harness.charm.generate_user_hash,
+            is_creating_backup=True,
+            relations_user_databases_map={"operator": "all"},
+            ldap_parameters={"ldap": "params"},
+            async_primary_cluster_endpoint="primary-endpoint",
+            async_standby_endpoints=["standby-endpoint"],
+        )
+
+
+def test_update_config_catches_deployed_without_trust(harness):
+    """update_config catches DeployedWithoutTrustError, blocks the unit, and returns False."""
+    with (
+        patch("charm.ConfigManager.update_config", side_effect=DeployedWithoutTrustError),
+        patch.object(PostgresqlOperatorCharm, "postgresql", Mock()),
+        patch("charm.PostgresqlOperatorCharm.get_ldap_parameters"),
+        patch("charm.PostgreSQLAsyncReplication.get_primary_cluster_endpoint"),
+        patch("charm.PostgreSQLAsyncReplication.get_standby_endpoints"),
+    ):
+        result = harness.charm.update_config()
+
+        assert result is False
+        assert isinstance(harness.charm.unit.status, BlockedStatus)
+        assert "juju trust" in harness.charm.unit.status.message
 
 
 def test_set_active_status(harness):
@@ -1938,297 +1853,3 @@ def test_on_secret_remove(harness):
         event.secret.label = None
         harness.charm._on_secret_remove(event)
         assert not event.remove_revision.called
-
-
-def test_calculate_worker_process_config_auto_values(harness):
-    """Test worker process config calculation with 'auto' values."""
-    with patch.object(
-        PostgresqlOperatorCharm, "get_available_resources", return_value=(2, 8000000)
-    ):
-        with harness.hooks_disabled():
-            harness.update_config({
-                "cpu-max-worker-processes": "auto",
-                "cpu-max-parallel-workers": "auto",
-                "cpu-max-parallel-maintenance-workers": "auto",
-                "cpu-max-logical-replication-workers": "auto",
-                "cpu-max-sync-workers-per-subscription": "auto",
-                "cpu-max-parallel-apply-workers-per-subscription": "auto",
-            })
-
-        result = harness.charm._calculate_worker_process_config(2)
-
-        # All auto values should resolve to 4 (min(8, 2*2))
-        assert result["max_worker_processes"] == "4"
-        assert result["max_parallel_workers"] == "4"
-        assert result["max_parallel_maintenance_workers"] == "4"
-        assert result["max_logical_replication_workers"] == "4"
-        assert result["max_sync_workers_per_subscription"] == "4"
-        assert result["max_parallel_apply_workers_per_subscription"] == "4"
-
-        # Test with 8 vCPUs (auto should be min(8, 2*8) = 8)
-        result = harness.charm._calculate_worker_process_config(8)
-        assert result["max_worker_processes"] == "8"
-        assert result["max_parallel_workers"] == "8"
-
-        # Test with 1 vCPU (auto should be min(8, 2*1) = 2)
-        result = harness.charm._calculate_worker_process_config(1)
-        assert result["max_worker_processes"] == "2"
-
-
-def test_calculate_worker_process_config_numeric_values(harness):
-    """Test worker process config calculation with numeric values."""
-    with harness.hooks_disabled():
-        harness.update_config({
-            "cpu-max-worker-processes": "10",
-            "cpu-max-parallel-workers": "8",
-            "cpu-max-parallel-maintenance-workers": "8",
-        })
-
-    result = harness.charm._calculate_worker_process_config(4)
-
-    assert result["max_worker_processes"] == "10"
-    assert result["max_parallel_workers"] == "8"
-    assert result["max_parallel_maintenance_workers"] == "8"
-
-
-def test_calculate_worker_process_config_all_workers_numeric(harness):
-    """Test all worker configs with numeric values within limits (not capped)."""
-    with harness.hooks_disabled():
-        harness.update_config({
-            "cpu-max-worker-processes": "20",
-            "cpu-max-parallel-workers": "15",
-            "cpu-max-parallel-maintenance-workers": "10",
-            "cpu-max-logical-replication-workers": "12",
-            "cpu-max-sync-workers-per-subscription": "8",
-            "cpu-max-parallel-apply-workers-per-subscription": "8",
-        })
-
-    result = harness.charm._calculate_worker_process_config(4)  # Cap would be 40
-
-    # All values should pass through unchanged (within cap of 40)
-    assert result["max_worker_processes"] == "20"
-    assert result["max_parallel_workers"] == "15"
-    assert result["max_parallel_maintenance_workers"] == "10"
-    assert result["max_logical_replication_workers"] == "12"
-    assert result["max_sync_workers_per_subscription"] == "8"
-    assert result["max_parallel_apply_workers_per_subscription"] == "8"
-
-
-def test_calculate_worker_process_config_validation_blocking_max_worker_processes(harness):
-    """Test worker process config validation blocks max_worker_processes exceeding values instead of capping."""
-    with harness.hooks_disabled():
-        harness.update_config({"cpu-max-worker-processes": "50"})  # Exceeds cap of 20 (2*10)
-
-    with pytest.raises(
-        ValueError, match="cpu-max-worker-processes value 50 exceeds maximum allowed of 20"
-    ):
-        harness.charm._calculate_worker_process_config(2)
-
-
-def test_calculate_worker_process_config_validation_blocking_max_parallel_workers(harness):
-    """Test worker process config validation blocks max_parallel_workers exceeding values instead of capping."""
-    with harness.hooks_disabled():
-        harness.update_config({"cpu-max-parallel-workers": "30"})  # Exceeds cap of 20 (2*10)
-
-    with pytest.raises(
-        ValueError, match="cpu-max-parallel-workers value 30 exceeds maximum allowed of 20"
-    ):
-        harness.charm._calculate_worker_process_config(2)
-
-
-def test_calculate_worker_process_config_validation_blocking_valid_value(harness):
-    """Test worker process config validation accepts valid values within cap."""
-    with harness.hooks_disabled():
-        harness.update_config({"cpu-max-parallel-maintenance-workers": "15"})  # Within cap of 20
-
-    result = harness.charm._calculate_worker_process_config(2)
-    assert result["max_parallel_maintenance_workers"] == "15"  # Should accept valid value
-
-
-def test_calculate_worker_process_config_edge_cases(harness):
-    """Test worker process config edge cases."""
-    # Test with no worker config set (but wal_compression has default)
-    with harness.hooks_disabled():
-        harness.update_config(
-            unset=[
-                "cpu-max-worker-processes",
-                "cpu-max-parallel-workers",
-                "cpu-max-parallel-maintenance-workers",
-                "cpu-max-logical-replication-workers",
-                "cpu-max-sync-workers-per-subscription",
-                "cpu-max-parallel-apply-workers-per-subscription",
-                "cpu-wal-compression",
-            ]
-        )
-
-    result = harness.charm._calculate_worker_process_config(4)
-    # All worker parameters default to auto, so they get calculated
-    expected = {
-        "max_worker_processes": "8",  # min(8, 2 * 4) = 8
-        "max_parallel_workers": "8",
-        "max_parallel_maintenance_workers": "8",
-        "max_logical_replication_workers": "8",
-        "max_sync_workers_per_subscription": "8",
-        "max_parallel_apply_workers_per_subscription": "8",
-    }
-    assert result == expected
-
-    # Test with only one worker config set
-    with harness.hooks_disabled():
-        harness.update_config({"cpu-max-worker-processes": "10"})
-
-    result = harness.charm._calculate_worker_process_config(4)
-    # Other worker parameters still get auto-calculated since they default to "auto"
-    expected = {
-        "max_worker_processes": "10",
-        "max_parallel_workers": "10",  # auto = base_max_workers (10)
-        "max_parallel_maintenance_workers": "10",
-        "max_logical_replication_workers": "10",
-        "max_sync_workers_per_subscription": "10",
-        "max_parallel_apply_workers_per_subscription": "10",
-    }
-    assert result == expected
-
-    # Test with very high vCPU count (reset config to defaults first)
-    with harness.hooks_disabled():
-        harness.update_config(
-            unset=[
-                "cpu-max-worker-processes",
-                "cpu-max-parallel-workers",
-                "cpu-max-parallel-maintenance-workers",
-                "cpu-max-logical-replication-workers",
-                "cpu-max-sync-workers-per-subscription",
-                "cpu-max-parallel-apply-workers-per-subscription",
-            ]
-        )
-
-    result = harness.charm._calculate_worker_process_config(128)
-    # Should be min(8, 2*128) = 8
-    expected = {
-        "max_worker_processes": "8",
-        "max_parallel_workers": "8",
-        "max_parallel_maintenance_workers": "8",
-        "max_logical_replication_workers": "8",
-        "max_sync_workers_per_subscription": "8",
-        "max_parallel_apply_workers_per_subscription": "8",
-    }
-    assert result == expected
-
-
-def test_calculate_worker_process_config_dependencies(harness):
-    """Test that dependent worker configs properly use max_worker_processes as base."""
-    with harness.hooks_disabled():
-        harness.update_config({
-            "cpu-max-worker-processes": "12",
-            "cpu-max-parallel-workers": "auto",
-            "cpu-max-parallel-maintenance-workers": "auto",
-        })
-
-    result = harness.charm._calculate_worker_process_config(4)
-
-    # Auto values should use max_worker_processes (12) as base
-    assert result["max_worker_processes"] == "12"
-    assert result["max_parallel_workers"] == "12"
-    assert result["max_parallel_maintenance_workers"] == "12"
-
-
-def test_calculate_worker_process_config_wal_compression(harness):
-    """Test that wal_compression is NOT included in worker process config."""
-    # Test with wal_compression enabled - should NOT be in worker config result
-    with harness.hooks_disabled():
-        harness.update_config({"cpu-wal-compression": True})
-
-    result = harness.charm._calculate_worker_process_config(4)
-    assert "wal_compression" not in result  # wal_compression is not part of worker configs
-
-    # Test with wal_compression disabled - should NOT be in worker config result
-    with harness.hooks_disabled():
-        harness.update_config({"cpu-wal-compression": False})
-
-    result = harness.charm._calculate_worker_process_config(4)
-    assert "wal_compression" not in result  # wal_compression is not part of worker configs
-
-    # Test with wal_compression not explicitly set - should NOT be in worker config result
-    with harness.hooks_disabled():
-        harness.update_config(unset=["cpu_wal_compression"])
-
-    result = harness.charm._calculate_worker_process_config(4)
-    assert "wal_compression" not in result  # wal_compression is not part of worker configs
-
-
-def test_calculate_worker_process_config_mixed_auto_and_numeric(harness):
-    """Test worker process config with mixed auto and numeric values."""
-    with harness.hooks_disabled():
-        harness.update_config({
-            "cpu-max-worker-processes": "16",
-            "cpu-max-parallel-workers": "auto",  # Should become 16
-            "cpu-max-parallel-maintenance-workers": "8",  # Explicit value
-            "cpu-max-logical-replication-workers": "auto",  # Should become 16
-        })
-
-    result = harness.charm._calculate_worker_process_config(4)
-
-    assert result["max_worker_processes"] == "16"
-    assert result["max_parallel_workers"] == "16"  # Auto resolved to base
-    assert result["max_parallel_maintenance_workers"] == "8"  # Explicit value
-    assert result["max_logical_replication_workers"] == "16"  # Auto resolved to base
-
-
-def test_calculate_worker_process_config_zero_cpu_count(harness):
-    """Test worker process config when cpu_count is 0 (edge case)."""
-    with harness.hooks_disabled():
-        harness.update_config({"cpu-max-worker-processes": "auto"})
-
-    result = harness.charm._calculate_worker_process_config(0)
-
-    # min(8, 2*0) = 0
-    assert result["max_worker_processes"] == "0"
-
-
-def test_calculate_worker_process_config_all_workers_validation_blocking(harness):
-    """Test that worker configs exceeding limits raise ValueError instead of capping."""
-    cpu_cores = 2  # Cap = 20
-
-    # Test each exceeding parameter individually (since first exception stops execution)
-    exceeding_configs = [
-        ("cpu-max-worker-processes", "25"),
-        ("cpu-max-parallel-maintenance-workers", "22"),
-        ("cpu-max-logical-replication-workers", "30"),
-        ("cpu-max-sync-workers-per-subscription", "25"),
-        ("cpu-max-parallel-apply-workers-per-subscription", "100"),
-    ]
-
-    for param_name, invalid_value in exceeding_configs:
-        # Reset all configs to auto first, then set the specific one we want to test
-        reset_config = {
-            "cpu-max-worker-processes": "auto",
-            "cpu-max-parallel-workers": "auto",
-            "cpu-max-parallel-maintenance-workers": "auto",
-            "cpu-max-logical-replication-workers": "auto",
-            "cpu-max-sync-workers-per-subscription": "auto",
-            "cpu-max-parallel-apply-workers-per-subscription": "auto",
-        }
-        reset_config[param_name] = invalid_value
-
-        with harness.hooks_disabled():
-            harness.update_config(reset_config)
-
-        with pytest.raises(
-            ValueError,
-            match=f"{param_name} value {invalid_value} exceeds maximum allowed of 20",
-        ):
-            harness.charm._calculate_worker_process_config(cpu_cores)
-
-    # Test valid value within cap works - need to set max_worker_processes high enough
-    with harness.hooks_disabled():
-        harness.update_config({
-            "cpu-max-worker-processes": "20",  # Set high enough to allow max_parallel_workers = 18
-            "cpu-max-parallel-workers": "18",  # Within both CPU cap (20) and max_worker_processes (20)
-            "cpu-max-parallel-maintenance-workers": "auto",
-            "cpu-max-logical-replication-workers": "auto",
-            "cpu-max-sync-workers-per-subscription": "auto",
-            "cpu-max-parallel-apply-workers-per-subscription": "auto",
-        })
-
-    result = harness.charm._calculate_worker_process_config(cpu_cores)
-    assert result["max_parallel_workers"] == "18"  # Should accept valid value

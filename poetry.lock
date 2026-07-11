@@ -54,7 +54,7 @@ version = "0.7.0"
 description = "Reusable constraint types to use with typing.Annotated"
 optional = false
 python-versions = ">=3.8"
-groups = ["main", "charm-libs"]
+groups = ["main", "charm-libs", "integration"]
 files = [
     {file = "annotated_types-0.7.0-py3-none-any.whl", hash = "sha256:1f02e8b43a8fbbc3f3e0d4f0f4bfc8131bcb4eebe8849b8e5c773f3a1c582a53"},
     {file = "annotated_types-0.7.0.tar.gz", hash = "sha256:aff07c09a53a08bc8cfccb9c85b05f1aa9a2a6f23728d790723543408344ce89"},
@@ -413,7 +413,7 @@ version = "0.1.3"
 description = ""
 optional = false
 python-versions = ">=3.8"
-groups = ["main"]
+groups = ["main", "integration"]
 files = [
     {file = "charm_api-0.1.3-py3-none-any.whl", hash = "sha256:4dba74e33f3de4608e88db2e08e41b0681221e7d3c2cd6913e0ebeb3dbdf8d92"},
     {file = "charm_api-0.1.3.tar.gz", hash = "sha256:a90a926b89fce834e9fb2184b96e07ec46f4dd56f3cd50e0209c0fd0ff35a29e"},
@@ -425,7 +425,7 @@ version = "0.1.2"
 description = ""
 optional = false
 python-versions = ">=3.8"
-groups = ["main"]
+groups = ["main", "integration"]
 files = [
     {file = "charm_json-0.1.2-py3-none-any.whl", hash = "sha256:1cad028a92831c61d6dcb99127c5216c333f90ec58d06b9f73fd0fd7355d1b3c"},
     {file = "charm_json-0.1.2.tar.gz", hash = "sha256:f91255858cd6721ec491d09450f37a0cdecf1addbfcfbd41f3e27c58dd95092e"},
@@ -440,7 +440,7 @@ version = "3.1.1.6"
 description = "In-place rolling refreshes (upgrades) of stateful charmed applications"
 optional = false
 python-versions = ">=3.8"
-groups = ["main"]
+groups = ["main", "integration"]
 files = [
     {file = "charm_refresh-3.1.1.6-py3-none-any.whl", hash = "sha256:36fa18cadd77b6c1b27e440ae78ca29bb2da7621a2a928665f880c095043332f"},
     {file = "charm_refresh-3.1.1.6.tar.gz", hash = "sha256:a74ab1b7aedf8169cd68162a6ab46e2543b6fd6f2c1b188ca779a25234342dae"},
@@ -478,7 +478,7 @@ version = "1.8.3"
 description = "The charmlibs.interfaces.tls_certificates package."
 optional = false
 python-versions = ">=3.10"
-groups = ["main"]
+groups = ["main", "integration"]
 files = [
     {file = "charmlibs_interfaces_tls_certificates-1.8.3-py3-none-any.whl", hash = "sha256:fa0aa150b4e4513d439c7afb7eb0ceaf00363671143b27b09382758deea8a0cc"},
     {file = "charmlibs_interfaces_tls_certificates-1.8.3.tar.gz", hash = "sha256:6bc35ee330681f2e0c58cf67e41133b144f3281f73d27293714c9ca918ee7cbc"},
@@ -495,7 +495,7 @@ version = "1.3.0.post0"
 description = "A pathlib-like interface for Juju K8s charms to interact with files in their workload container."
 optional = false
 python-versions = ">=3.10"
-groups = ["main"]
+groups = ["main", "integration"]
 files = [
     {file = "charmlibs_pathops-1.3.0.post0-py3-none-any.whl", hash = "sha256:c6fc3e3460ffa03a7d4273cc7784c9d74378609a098c728cd9bbb2ed90bdfa5b"},
     {file = "charmlibs_pathops-1.3.0.post0.tar.gz", hash = "sha256:36ac11b0c7c55b71341a549a1803f5c8d61c2279204862b8d50736041b782f59"},
@@ -510,7 +510,7 @@ version = "1.1.1"
 description = "The charmlibs.rollingops package."
 optional = false
 python-versions = ">=3.12"
-groups = ["main"]
+groups = ["main", "integration"]
 files = [
     {file = "charmlibs_rollingops-1.1.1-py3-none-any.whl", hash = "sha256:1e61347c7792ec11afefa60d36f77a5afccf867832854d5aeef2da0b536afec4"},
     {file = "charmlibs_rollingops-1.1.1.tar.gz", hash = "sha256:831457d2ef12117794f89a483ee9a5c347cb209a87dafe82907e9dede7d4641c"},
@@ -853,7 +853,7 @@ version = "1.1.0"
 description = ""
 optional = false
 python-versions = "<4.0,>=3.10"
-groups = ["main"]
+groups = ["main", "integration"]
 files = [
     {file = "data_platform_helpers-1.1.0-py3-none-any.whl", hash = "sha256:71b2c2ba31d1bc01c55c9da82d02b0cb654b99231172916722ecaf4c469d27c4"},
     {file = "data_platform_helpers-1.1.0.tar.gz", hash = "sha256:7539ef1c1047fec36ee8298aa4c75fe2bb36419544193b691805c12ca407a797"},
@@ -886,7 +886,7 @@ version = "1.0.0"
 description = "The dpcharmlibs.interfaces package."
 optional = false
 python-versions = ">=3.10"
-groups = ["main"]
+groups = ["main", "integration"]
 files = [
     {file = "dpcharmlibs_interfaces-1.0.0-py3-none-any.whl", hash = "sha256:afff80be30e3ff8c31f68557946e9d5959247f1973cbc00e96da55b095f95a21"},
     {file = "dpcharmlibs_interfaces-1.0.0.tar.gz", hash = "sha256:a177653019781a7a165be52cf4293134ee58912cd93686082cdd82da347a3bed"},
@@ -1411,7 +1411,7 @@ version = "4.2.0"
 description = "Python port of markdown-it. Markdown parsing, done right!"
 optional = false
 python-versions = ">=3.10"
-groups = ["main"]
+groups = ["main", "integration"]
 files = [
     {file = "markdown_it_py-4.2.0-py3-none-any.whl", hash = "sha256:9f7ebbcd14fe59494226453aed97c1070d83f8d24b6fc3a3bcf9a38092641c4a"},
     {file = "markdown_it_py-4.2.0.tar.gz", hash = "sha256:04a21681d6fbb623de53f6f364d352309d4094dd4194040a10fd51833e418d49"},
@@ -1552,7 +1552,7 @@ version = "0.1.2"
 description = "Markdown URL utilities"
 optional = false
 python-versions = ">=3.7"
-groups = ["main"]
+groups = ["main", "integration"]
 files = [
     {file = "mdurl-0.1.2-py3-none-any.whl", hash = "sha256:84008a41e51615a49fc9966191ff91509e3c40b939176e643fd50a5c2196b8f8"},
     {file = "mdurl-0.1.2.tar.gz", hash = "sha256:bb413d29f5eea38f31dd4754dd7377d4465116fb207585f97bf925588687c1ba"},
@@ -1782,34 +1782,40 @@ files = [
 
 [[package]]
 name = "postgresql-charms-single-kernel"
-version = "16.3.4"
+version = "16.3.3"
 description = "Shared and reusable code for PostgreSQL-related charms"
 optional = false
-python-versions = "<4.0,>=3.8"
+python-versions = ">=3.8,<4.0"
 groups = ["main", "integration"]
 files = [
-    {file = "postgresql_charms_single_kernel-16.3.4-py3-none-any.whl", hash = "sha256:2a8bd3a789b25df39e8e69a58fa00c943eb309644abf320df3364c5a4520361f"},
-    {file = "postgresql_charms_single_kernel-16.3.4.tar.gz", hash = "sha256:6df3fd4208e1b91869a9a00819b997b6d55213239c6ecb4549bb74010a2cc7e7"},
+    {file = "912b1a44a1158f93e17fcb1e36719a878ff48810.tar.gz", hash = "sha256:6af3973d1b8c5ada5be238527e86fc223657c1ec2b7d9ada58cea7ec43c9f34a"},
 ]
 
 [package.dependencies]
-charm-refresh = {version = "*", optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"postgresql\""}
-charmlibs-interfaces-tls-certificates = {version = ">=1.8.3", optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"postgresql\""}
-charmlibs-pathops = {version = ">=1.0.1", optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"postgresql\""}
-charmlibs-rollingops = {version = ">=1.1.1", optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"postgresql\""}
-data-platform-helpers = {version = ">=0.1.7", optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"postgresql\""}
-httpx = {version = "*", optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"postgresql\""}
-jinja2 = {version = ">=3.1.6", optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"postgresql\""}
+charm-refresh = {version = "*", optional = true, markers = "python_version >= \"3.12\" and extra == \"postgresql\""}
+charmlibs-interfaces-tls-certificates = {version = ">=1.8.3", optional = true, markers = "python_version >= \"3.12\" and extra == \"postgresql\""}
+charmlibs-pathops = {version = ">=1.0.1", optional = true, markers = "python_version >= \"3.12\" and extra == \"postgresql\""}
+charmlibs-rollingops = {version = ">=1.1.1", optional = true, markers = "python_version >= \"3.12\" and extra == \"postgresql\""}
+data-platform-helpers = {version = ">=0.1.7", optional = true, markers = "python_version >= \"3.12\" and extra == \"postgresql\""}
+httpx = {version = "*", optional = true, markers = "python_version >= \"3.12\" and extra == \"postgresql\""}
+jinja2 = {version = ">=3.1.6", optional = true, markers = "python_version >= \"3.12\" and extra == \"postgresql\""}
+lightkube = {version = ">=0.21.0", optional = true, markers = "python_version >= \"3.12\" and extra == \"k8s\""}
+lightkube-models = {version = ">=1.28.1.4", optional = true, markers = "python_version >= \"3.12\" and extra == \"k8s\""}
 ops = ">=2.0.0"
-pydantic = {version = ">=2.0", optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"postgresql\""}
-requests = {version = "*", optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"postgresql\""}
+pydantic = {version = ">=2.0", optional = true, markers = "python_version >= \"3.12\" and extra == \"postgresql\""}
+requests = {version = "*", optional = true, markers = "python_version >= \"3.12\" and extra == \"postgresql\""}
 tenacity = ">=9.0.0"
-tomli = {version = "*", optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"postgresql\""}
+tomli = {version = "*", optional = true, markers = "python_version >= \"3.12\" and extra == \"postgresql\""}
 
 [package.extras]
 db-driver = ["psycopg2 (>=2.9.10)"]
-postgresql = ["charm-refresh ; python_full_version >= \"3.12.0\"", "charmlibs-interfaces-tls-certificates (>=1.8.3) ; python_full_version >= \"3.12.0\"", "charmlibs-pathops (>=1.0.1) ; python_full_version >= \"3.12.0\"", "charmlibs-rollingops (>=1.1.1) ; python_full_version >= \"3.12.0\"", "data-platform-helpers (>=0.1.7) ; python_full_version >= \"3.12.0\"", "httpx ; python_full_version >= \"3.12.0\"", "jinja2 (>=3.1.6) ; python_full_version >= \"3.12.0\"", "pydantic (>=2.0) ; python_full_version >= \"3.12.0\"", "requests ; python_full_version >= \"3.12.0\"", "tomli ; python_full_version >= \"3.12.0\""]
-vm = ["charmlibs-snap (>=1.0.1) ; python_full_version >= \"3.12.0\"", "charmlibs-systemd (>=1.0.0.post0) ; python_full_version >= \"3.12.0\"", "psutil (>=7.2.2) ; python_full_version >= \"3.12.0\"", "pysyncobj (>=0.3.15) ; python_full_version >= \"3.12.0\""]
+k8s = ["lightkube (>=0.21.0) ; python_version >= \"3.12\"", "lightkube-models (>=1.28.1.4) ; python_version >= \"3.12\""]
+postgresql = ["charm-refresh ; python_version >= \"3.12\"", "charmlibs-interfaces-tls-certificates (>=1.8.3) ; python_version >= \"3.12\"", "charmlibs-pathops (>=1.0.1) ; python_version >= \"3.12\"", "charmlibs-rollingops (>=1.1.1) ; python_version >= \"3.12\"", "data-platform-helpers (>=0.1.7) ; python_version >= \"3.12\"", "httpx ; python_version >= \"3.12\"", "jinja2 (>=3.1.6) ; python_version >= \"3.12\"", "pydantic (>=2.0) ; python_version >= \"3.12\"", "requests ; python_version >= \"3.12\"", "tomli ; python_version >= \"3.12\""]
+vm = ["charmlibs-snap (>=1.0.1) ; python_version >= \"3.12\"", "charmlibs-systemd (>=1.0.0.post0) ; python_version >= \"3.12\"", "psutil (>=7.2.2) ; python_version >= \"3.12\"", "pysyncobj (>=0.3.15) ; python_version >= \"3.12\""]
+
+[package.source]
+type = "url"
+url = "https://github.com/canonical/postgresql-single-kernel-library/archive/912b1a44a1158f93e17fcb1e36719a878ff48810.tar.gz"
 
 [[package]]
 name = "prompt-toolkit"
@@ -2048,7 +2054,7 @@ version = "2.13.4"
 description = "Data validation using Python type hints"
 optional = false
 python-versions = ">=3.9"
-groups = ["main", "charm-libs"]
+groups = ["main", "charm-libs", "integration"]
 files = [
     {file = "pydantic-2.13.4-py3-none-any.whl", hash = "sha256:45a282cde31d808236fd7ea9d919b128653c8b38b393d1c4ab335c62924d9aba"},
     {file = "pydantic-2.13.4.tar.gz", hash = "sha256:c40756b57adaa8b1efeeced5c196f3f3b7c435f90e84ea7f443901bec8099ef6"},
@@ -2070,7 +2076,7 @@ version = "2.46.4"
 description = "Core functionality for Pydantic validation and serialization"
 optional = false
 python-versions = ">=3.9"
-groups = ["main", "charm-libs"]
+groups = ["main", "charm-libs", "integration"]
 files = [
     {file = "pydantic_core-2.46.4-cp310-cp310-macosx_10_12_x86_64.whl", hash = "sha256:a396dcc17e5a0b164dbe026896245a4fa9ff402edca1dff0be3d53a517f74de4"},
     {file = "pydantic_core-2.46.4-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:da4b951fe36dc7c3a1ccb4e3cd1747c3542b8c9ceede8fc86cae054e764485f5"},
@@ -2520,7 +2526,7 @@ version = "15.0.0"
 description = "Render rich text, tables, progress bars, syntax highlighting, markdown and more to the terminal"
 optional = false
 python-versions = ">=3.9.0"
-groups = ["main"]
+groups = ["main", "integration"]
 files = [
     {file = "rich-15.0.0-py3-none-any.whl", hash = "sha256:33bd4ef74232fb73fe9279a257718407f169c09b78a87ad3d296f548e27de0bb"},
     {file = "rich-15.0.0.tar.gz", hash = "sha256:edd07a4824c6b40189fb7ac9bc4c52536e9780fbbfbddf6f1e2502c31b068c36"},
@@ -2711,7 +2717,7 @@ version = "1.0.13"
 description = "A generator library for concise, unambiguous and URL-safe UUIDs."
 optional = false
 python-versions = ">=3.6"
-groups = ["main"]
+groups = ["main", "integration"]
 files = [
     {file = "shortuuid-1.0.13-py3-none-any.whl", hash = "sha256:a482a497300b49b4953e15108a7913244e1bb0d41f9d332f5e9925dba33a3c5a"},
     {file = "shortuuid-1.0.13.tar.gz", hash = "sha256:3bb9cf07f606260584b1df46399c0b87dd84773e7b25912b7e391e30797c5e72"},
@@ -2936,7 +2942,7 @@ version = "0.4.2"
 description = "Runtime typing introspection tools"
 optional = false
 python-versions = ">=3.9"
-groups = ["main", "charm-libs"]
+groups = ["main", "charm-libs", "integration"]
 files = [
     {file = "typing_inspection-0.4.2-py3-none-any.whl", hash = "sha256:4ed1cacbdc298c220f1bd249ed5287caa16f34d44ef4e9c3d0cbad5b521545e7"},
     {file = "typing_inspection-0.4.2.tar.gz", hash = "sha256:ba561c48a67c5958007083d386c3295464928b01faa735ab8547c5692e87f464"},
@@ -3129,4 +3135,4 @@ h11 = ">=0.16.0,<1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "d113fc50e37c361cba0fbb18adb17e4d2dc4f0d58cff9ecf7bf98faf0ecb221a"
+content-hash = "bb1e4bf19a765abb3dbe69d2db99b281b7f54a3db3d7e6e1fa24d3ae37737e4f"
