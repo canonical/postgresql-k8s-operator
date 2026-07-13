@@ -1899,7 +1899,7 @@ class ProviderData(Data):
         """Set values for fields not caring whether it's a secret or not."""
         keys = set(data.keys())
         if self.fetch_relation_field(relation.id, self.RESOURCE_FIELD) is None and (
-            keys - {"endpoints", "read-only-endpoints", "replset"}
+            keys - {"endpoints", "read-only-endpoints", "replset", "version"}
         ):
             raise PrematureDataAccessError(
                 "Premature access to relation data, update is forbidden before the connection is initialized."

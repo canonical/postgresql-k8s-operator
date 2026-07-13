@@ -8,6 +8,7 @@ import logging
 from typing import TYPE_CHECKING, TypedDict
 
 from charms.data_platform_libs.v0.data_interfaces import DatabaseProvides, DatabaseRequestedEvent
+from ops import RelationChangedEvent
 from ops.charm import RelationBrokenEvent, RelationDepartedEvent
 from ops.framework import Object
 from ops.model import ActiveStatus, BlockedStatus, ModelError, Relation
@@ -69,6 +70,9 @@ class PostgreSQLProvider(Object):
         self.relation_name = relation_name
 
         super().__init__(charm, self.relation_name)
+        self.framework.observe(
+            charm.on[self.relation_name].relation_created, self._on_relation_created
+        )
         self.framework.observe(
             charm.on[self.relation_name].relation_departed, self._on_relation_departed
         )
@@ -353,6 +357,15 @@ class PostgreSQLProvider(Object):
                 )
             )
             return
+
+    def _on_relation_created(self, event: RelationChangedEvent) -> None:
+        if self.charm.is_cluster_initialised:
+            if self.charm.unit.is_leader():
+                self.database_provides.set_version(
+                    event.relation.id, self.charm.postgresql.get_postgresql_version()
+                )
+        else:
+            event.defer()
 
     def _on_relation_departed(self, event: RelationDepartedEvent) -> None:
         """Set a flag to avoid deleting database users when not wanted."""
