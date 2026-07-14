@@ -1,6 +1,7 @@
 # Copyright 2026 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import os
 import shutil
 from pathlib import Path
 
@@ -8,6 +9,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TERRAFORM_MODULE = REPO_ROOT / "terraform"
+TF_BINARY = os.getenv("TF_BINARY") or "terraform"
 
 
 @pytest.fixture(scope="session")
@@ -18,8 +20,8 @@ def terraform_module() -> Path:
 
 @pytest.fixture(scope="session")
 def terraform_bin() -> str:
-    """Path to the terraform binary; skips the test if absent."""
-    binary = shutil.which("terraform")
+    """Path to the terraform binary (override with ``TF_BINARY``); skips the test if absent."""
+    binary = shutil.which(TF_BINARY)
     if binary is None:
-        pytest.skip("terraform binary not found on PATH")
+        pytest.skip(f"{TF_BINARY} not found on PATH")
     return binary

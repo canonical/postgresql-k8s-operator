@@ -11,6 +11,7 @@ charm via the module's default channel; tests the module wiring, not a
 locally-packed charm.
 """
 
+import os
 import shutil
 import subprocess
 from pathlib import Path
@@ -22,11 +23,12 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 TERRAFORM_MODULE = REPO_ROOT / "terraform"
 APP = "postgresql-k8s"
 TIMEOUT = 20 * 60
+TF_BINARY = os.getenv("TF_BINARY") or "terraform"
 
 
 def _run_terraform(cwd: Path, *args: str) -> subprocess.CompletedProcess:
     return subprocess.run(
-        ["terraform", *args],
+        [TF_BINARY, *args],
         cwd=str(cwd),
         capture_output=True,
         text=True,
@@ -35,8 +37,8 @@ def _run_terraform(cwd: Path, *args: str) -> subprocess.CompletedProcess:
 
 def test_terraform_apply_deploys_postgresql(juju: jubilant.Juju) -> None:
     """The terraform module must apply postgresql-k8s into the model and reach active/idle."""
-    if shutil.which("terraform") is None:
-        pytest.skip("terraform binary not found on PATH")
+    if shutil.which(TF_BINARY) is None:
+        pytest.skip(f"{TF_BINARY} not found on PATH")
 
     model_uuid = juju.show_model().model_uuid
 
