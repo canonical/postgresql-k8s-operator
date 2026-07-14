@@ -23,14 +23,17 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 TERRAFORM_MODULE = REPO_ROOT / "terraform"
 APP = "postgresql-k8s"
 TIMEOUT = 20 * 60
-TF_COMMAND_TIMEOUT = 10 * 60
+# `terraform init` only downloads the provider; `apply` deploys the charm and blocks until
+# it settles, so it needs the same budget as the deploy itself (slower on arm64 substrates).
+INIT_TIMEOUT = 5 * 60
+APPLY_TIMEOUT = TIMEOUT
 TF_BINARY = os.getenv("TF_BINARY") or "terraform"
 
 
-def _run_terraform(cwd: Path, *args: str) -> None:
-    # Bound each call so a registry/network stall fails in minutes instead of hanging
-    # to the spread kill-timeout, and stream output so a stall is visible live in the log.
-    subprocess.run([TF_BINARY, *args], cwd=str(cwd), check=True, timeout=TF_COMMAND_TIMEOUT)
+def _run_terraform(cwd: Path, timeout: int, *args: str) -> None:
+    # Bound each call so a stall fails instead of hanging to the spread kill-timeout, and
+    # stream output (no capture) so progress and any stall are visible live in the log.
+    subprocess.run([TF_BINARY, *args], cwd=str(cwd), check=True, timeout=timeout)
 
 
 def test_terraform_apply_deploys_postgresql(juju: jubilant.Juju) -> None:
@@ -40,9 +43,10 @@ def test_terraform_apply_deploys_postgresql(juju: jubilant.Juju) -> None:
 
     model_uuid = juju.show_model().model_uuid
 
-    _run_terraform(TERRAFORM_MODULE, "init", "-input=false")
+    _run_terraform(TERRAFORM_MODULE, INIT_TIMEOUT, "init", "-input=false")
     _run_terraform(
         TERRAFORM_MODULE,
+        APPLY_TIMEOUT,
         "apply",
         "-auto-approve",
         "-input=false",
