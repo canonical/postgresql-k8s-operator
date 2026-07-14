@@ -55,5 +55,6 @@ def test_terraform_apply_deploys_postgresql(juju: jubilant.Juju) -> None:
 
     juju.wait(
         lambda status: jubilant.all_active(status, APP) and jubilant.all_agents_idle(status, APP),
+        error=lambda status: jubilant.any_error(status, APP),
         timeout=TIMEOUT,
     )
