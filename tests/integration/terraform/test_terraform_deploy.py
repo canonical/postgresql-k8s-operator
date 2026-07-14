@@ -23,16 +23,14 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 TERRAFORM_MODULE = REPO_ROOT / "terraform"
 APP = "postgresql-k8s"
 TIMEOUT = 20 * 60
+TF_COMMAND_TIMEOUT = 10 * 60
 TF_BINARY = os.getenv("TF_BINARY") or "terraform"
 
 
-def _run_terraform(cwd: Path, *args: str) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        [TF_BINARY, *args],
-        cwd=str(cwd),
-        capture_output=True,
-        text=True,
-    )
+def _run_terraform(cwd: Path, *args: str) -> None:
+    # Bound each call so a registry/network stall fails in minutes instead of hanging
+    # to the spread kill-timeout, and stream output so a stall is visible live in the log.
+    subprocess.run([TF_BINARY, *args], cwd=str(cwd), check=True, timeout=TF_COMMAND_TIMEOUT)
 
 
 def test_terraform_apply_deploys_postgresql(juju: jubilant.Juju) -> None:
@@ -42,10 +40,8 @@ def test_terraform_apply_deploys_postgresql(juju: jubilant.Juju) -> None:
 
     model_uuid = juju.show_model().model_uuid
 
-    init = _run_terraform(TERRAFORM_MODULE, "init", "-input=false")
-    assert init.returncode == 0, f"terraform init failed:\n{init.stderr}{init.stdout}"
-
-    apply = _run_terraform(
+    _run_terraform(TERRAFORM_MODULE, "init", "-input=false")
+    _run_terraform(
         TERRAFORM_MODULE,
         "apply",
         "-auto-approve",
@@ -53,7 +49,6 @@ def test_terraform_apply_deploys_postgresql(juju: jubilant.Juju) -> None:
         "-var",
         f"juju_model={model_uuid}",
     )
-    assert apply.returncode == 0, f"terraform apply failed:\n{apply.stderr}{apply.stdout}"
 
     juju.wait(
         lambda status: jubilant.all_active(status, APP) and jubilant.all_agents_idle(status, APP),
