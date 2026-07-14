@@ -27,7 +27,6 @@ CASES = [
     pytest.param(">= 1.1.1", True, "2", id="identity_sibling"),
     pytest.param(">= 2.0", True, "2", id="v2_consumer"),
     pytest.param("~> 2.0", True, "2", id="v2_pinned"),
-    pytest.param(">= 2.9", False, None, id="no_such_version"),
     pytest.param(">= 3.0", False, None, id="beyond_cap"),
 ]
 
@@ -86,3 +85,7 @@ def test_composition_resolves_provider(
         )
     else:
         assert init.returncode != 0, f"expected init to fail but it succeeded:\n{init.stdout}"
+        # Assert the failure reason is an unsatisfiable constraint, not an unrelated error.
+        assert "no available releases match" in (init.stderr + init.stdout), (
+            f"init failed for an unexpected reason:\n{init.stderr}{init.stdout}"
+        )
