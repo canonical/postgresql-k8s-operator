@@ -1,0 +1,80 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-1
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/0 [allocating] waiting: installing agent
+  second-postgresql-k8s/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/0 [allocating] waiting: installing agent
+  second-postgresql-k8s/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/0 [executing] maintenance: Executing restart operation
+  second-postgresql-k8s/1 [executing] maintenance: installing charm software
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.25   unsupported  01:41:26Z
+
+App                    Version  Status       Scale  Charm                Channel      Rev  Address         Exposed  Message
+postgresql-k8s         16.14    active           3  postgresql-k8s                      0  10.152.183.121  no       
+postgresql-test-app             active           1  postgresql-test-app  latest/edge  560  10.152.183.27   no       received database credentials of the first database
+second-postgresql-k8s  16.14    maintenance      2  postgresql-k8s                      1  10.152.183.20   no       Beginning rolling restart
+
+Unit                      Workload  Agent      Address       Ports  Message
+postgresql-k8s/0*         active    idle       10.1.172.153         
+postgresql-k8s/1          active    idle       10.1.172.152         
+postgresql-k8s/2          active    idle       10.1.172.149         Primary
+postgresql-test-app/0*    active    idle       10.1.172.150         received database credentials of the first database
+second-postgresql-k8s/0*  active    executing  10.1.172.164         
+second-postgresql-k8s/1   unknown   executing  10.1.172.165         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-test-app-0: 01:32:11 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-second-postgresql-k8s-0: 01:41:20 ERROR unit.second-postgresql-k8s/0.juju-log single_kernel_postgresql.utils.postgresql:Failed to set up databases: connection to server at "second-postgresql-k8s-primary.testing.svc.cluster.local" (10.152.183.77), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-second-postgresql-k8s-0: 01:41:20 ERROR unit.second-postgresql-k8s/0.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-second-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 810, in set_up_database
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-second-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 186, in _connect_to_database
+    connection = psycopg2.connect(
+                 ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-second-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "second-postgresql-k8s-primary.testing.svc.cluster.local" (10.152.183.77), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-second-postgresql-k8s-0/charm/src/charm.py", line 3331, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-second-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/ops/__init__.py", line 360, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-second-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 522, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-second-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 506, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-second-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 436, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-second-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 926, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-second-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1036, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-second-postgresql-k8s-0/charm/src/charm.py", line 1461, in _on_postgresql_pebble_ready
+    if self.unit.is_leader() and not self._initialize_cluster(event):
+                                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-second-postgresql-k8s-0/charm/src/charm.py", line 1551, in _initialize_cluster
+    self._setup_users()
+  File "/var/lib/juju/agents/unit-second-postgresql-k8s-0/charm/src/charm.py", line 1592, in _setup_users
+    self.postgresql.set_up_database(temp_location=f"{TEMP_STORAGE_PATH}/16/main/pgsql_tmp")
+  File "/var/lib/juju/agents/unit-second-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 821, in set_up_database
+    raise PostgreSQLDatabasesSetupError() from e
+single_kernel_postgresql.utils.postgresql.PostgreSQLDatabasesSetupError
+unit-second-postgresql-k8s-0: 01:41:20 ERROR juju.worker.uniter.operation hook "temp-storage-attached" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
