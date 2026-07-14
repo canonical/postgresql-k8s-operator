@@ -29,10 +29,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v4
-        with:
-          terraform_wrapper: false
+      - name: Install Terraform
+        run: sudo snap install terraform --classic
 
       - name: terraform fmt
         run: terraform -chdir=terraform fmt -check -recursive
