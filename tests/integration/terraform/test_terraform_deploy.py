@@ -6,9 +6,10 @@
 
 Applies the module against the pre-created ``testing`` model (provided by the
 spread/concierge substrate via the ``juju`` fixture) and waits for the deployed
-``postgresql-k8s`` application to reach active/idle. Deploys the published
-charm via the module's default channel; tests the module wiring, not a
-locally-packed charm.
+``postgresql-k8s`` application to reach active/idle. Drives several module
+variables (storage directives, config, the runner's arch) and asserts a module
+output, so the deploy test exercises more than the bare-minimum wiring.
+Deploys the published charm via the module's default channel.
 """
 
 import os
@@ -26,6 +27,10 @@ TIMEOUT = 20 * 60
 # `terraform apply` blocks until the charm's units are created, so give it the deploy budget.
 TF_TIMEOUT = 15 * 60
 TF_BINARY = os.getenv("TF_BINARY") or "terraform"
+# Storage directives for the postgresql-k8s charm: archive, data, logs, temp.
+STORAGE_DIRECTIVES = '{"data"="2G","archive"="1G","logs"="1G","temp"="512M"}'
+# A string-typed postgresql-k8s config option (profile) — drives the `config` variable.
+CONFIG = '{"profile"="testing"}'
 
 
 def _arch() -> str:
@@ -36,14 +41,14 @@ def _arch() -> str:
     ).stdout.strip()
 
 
-def _run_terraform(cwd: Path, timeout: int, *args: str) -> None:
+def _run_terraform(cwd: Path, timeout: int, *args: str) -> subprocess.CompletedProcess:
     # Bound each call so a stall fails instead of hanging to the spread kill-timeout, and
     # stream output (no capture) so progress and any stall are visible live in the log.
-    subprocess.run([TF_BINARY, *args], cwd=str(cwd), check=True, timeout=timeout)
+    return subprocess.run([TF_BINARY, *args], cwd=str(cwd), check=True, timeout=timeout)
 
 
 def test_terraform_apply_deploys_postgresql(juju: jubilant.Juju) -> None:
-    """The terraform module must apply postgresql-k8s into the model and reach active/idle."""
+    """The module must apply postgresql-k8s with storage/config, reach active/idle, and expose outputs."""
     if shutil.which(TF_BINARY) is None:
         pytest.skip(f"{TF_BINARY} not found on PATH")
 
@@ -60,6 +65,10 @@ def test_terraform_apply_deploys_postgresql(juju: jubilant.Juju) -> None:
         f"juju_model={model_uuid}",
         "-var",
         f"constraints=arch={_arch()}",
+        "-var",
+        f"storage_directives={STORAGE_DIRECTIVES}",
+        "-var",
+        f"config={CONFIG}",
     )
 
     juju.wait(
@@ -67,3 +76,7 @@ def test_terraform_apply_deploys_postgresql(juju: jubilant.Juju) -> None:
         error=lambda status: jubilant.any_error(status, APP),
         timeout=TIMEOUT,
     )
+
+    # The module exposes an `application_name` output; assert it reflects the deployed app.
+    output = _run_terraform(TERRAFORM_MODULE, TF_TIMEOUT, "output", "-raw", "application_name")
+    assert output.stdout.strip() == APP, f"application_name output: {output.stdout!r}"

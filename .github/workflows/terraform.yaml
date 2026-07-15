@@ -32,17 +32,11 @@ jobs:
       - name: Install Terraform
         run: sudo snap install terraform --classic
 
-      - name: terraform fmt
-        run: terraform -chdir=terraform fmt -check -recursive
-
-      - name: terraform init
-        run: terraform -chdir=terraform init -backend=false -input=false
-
-      - name: terraform validate
-        run: terraform -chdir=terraform validate -no-color
-
       - name: Install tox & poetry
         run: pipx install tox poetry
+
+      - name: Terraform lint (fmt/init/validate)
+        run: tox run -e lint-terraform
 
       - name: Constraint-composition tests
         run: tox run -e terraform
