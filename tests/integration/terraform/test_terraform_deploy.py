@@ -41,10 +41,20 @@ def _arch() -> str:
     ).stdout.strip()
 
 
-def _run_terraform(cwd: Path, timeout: int, *args: str) -> subprocess.CompletedProcess:
-    # Bound each call so a stall fails instead of hanging to the spread kill-timeout, and
-    # stream output (no capture) so progress and any stall are visible live in the log.
-    return subprocess.run([TF_BINARY, *args], cwd=str(cwd), check=True, timeout=timeout)
+def _run_terraform(
+    cwd: Path, timeout: int, *args: str, capture: bool = False
+) -> subprocess.CompletedProcess:
+    # Bound each call so a stall fails instead of hanging to the spread kill-timeout. Stream
+    # output (no capture) for the slow init/apply so progress and any stall are visible live;
+    # capture only when the caller asserts on stdout (terraform output), else `.stdout` is None.
+    return subprocess.run(
+        [TF_BINARY, *args],
+        cwd=str(cwd),
+        check=True,
+        timeout=timeout,
+        capture_output=capture,
+        text=capture,
+    )
 
 
 def test_terraform_apply_deploys_postgresql(juju: jubilant.Juju) -> None:
@@ -78,5 +88,8 @@ def test_terraform_apply_deploys_postgresql(juju: jubilant.Juju) -> None:
     )
 
     # The module exposes an `application_name` output; assert it reflects the deployed app.
-    output = _run_terraform(TERRAFORM_MODULE, TF_TIMEOUT, "output", "-raw", "application_name")
+    # capture=True so `.stdout` holds the value instead of streaming to the log.
+    output = _run_terraform(
+        TERRAFORM_MODULE, TF_TIMEOUT, "output", "-raw", "application_name", capture=True
+    )
     assert output.stdout.strip() == APP, f"application_name output: {output.stdout!r}"
