@@ -23,11 +23,17 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 TERRAFORM_MODULE = REPO_ROOT / "terraform"
 APP = "postgresql-k8s"
 TIMEOUT = 20 * 60
-# `terraform init` only downloads the provider; `apply` deploys the charm and blocks until
-# it settles, so it needs the same budget as the deploy itself (slower on arm64 substrates).
-INIT_TIMEOUT = 5 * 60
-APPLY_TIMEOUT = TIMEOUT
+# `terraform apply` blocks until the charm's units are created, so give it the deploy budget.
+TF_TIMEOUT = 15 * 60
 TF_BINARY = os.getenv("TF_BINARY") or "terraform"
+
+
+def _arch() -> str:
+    # Juju's arch name (amd64/arm64) for the runner, so the module deploys for this host's
+    # architecture instead of its hardcoded `arch=amd64` default (unschedulable on arm64).
+    return subprocess.run(
+        ["dpkg", "--print-architecture"], capture_output=True, text=True, check=True
+    ).stdout.strip()
 
 
 def _run_terraform(cwd: Path, timeout: int, *args: str) -> None:
@@ -43,15 +49,17 @@ def test_terraform_apply_deploys_postgresql(juju: jubilant.Juju) -> None:
 
     model_uuid = juju.show_model().model_uuid
 
-    _run_terraform(TERRAFORM_MODULE, INIT_TIMEOUT, "init", "-input=false")
+    _run_terraform(TERRAFORM_MODULE, TF_TIMEOUT, "init", "-input=false")
     _run_terraform(
         TERRAFORM_MODULE,
-        APPLY_TIMEOUT,
+        TF_TIMEOUT,
         "apply",
         "-auto-approve",
         "-input=false",
         "-var",
         f"juju_model={model_uuid}",
+        "-var",
+        f"constraints=arch={_arch()}",
     )
 
     juju.wait(
