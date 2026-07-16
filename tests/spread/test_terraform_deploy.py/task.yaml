@@ -1,6 +1,15 @@
 summary: terraform/test_terraform_deploy.py
 environment:
   TEST_MODULE: terraform/test_terraform_deploy.py
+  # tfprov_v1 is a task-local variant: declared via the /variant env suffix, it is collected
+  # additively (spread/project.go evars with "+" prefix) so ONLY this task multiplies onto it
+  # — every other task stays on the inherited juju36 variant alone. It re-declares
+  # CONCIERGE_JUJU_CHANNEL because env.Variant() drops the project's juju36-scoped value for a
+  # non-matching variant, and sets the consumer provider constraint so the test applies the
+  # module under juju/juju v1.x (~> 1.0 intersects the module's >= 1.0, < 3.0 → v1.5.6). The
+  # bare juju36 variant leaves TF_PROVIDER_CONSTRAINT unset → direct v2 apply.
+  CONCIERGE_JUJU_CHANNEL/tfprov_v1: 3.6/stable
+  TF_PROVIDER_CONSTRAINT/tfprov_v1: "~> 1.0"
 execute: |
   # The terraform binary is not part of the concierge substrate; install it for this task only.
   sudo snap install terraform --classic
