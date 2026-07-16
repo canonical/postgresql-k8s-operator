@@ -13,11 +13,21 @@ mode where a downstream module pairs postgres with a juju provider constraint
 the module's own constraint cannot satisfy.
 """
 
+import os
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
 import pytest
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+TERRAFORM_MODULE = REPO_ROOT / "terraform"
+TF_BINARY = os.getenv("TF_BINARY") or "terraform"
+
+pytestmark = pytest.mark.skipif(
+    shutil.which(TF_BINARY) is None, reason=f"{TF_BINARY} not found on PATH"
+)
 
 _INSTALLED_RE = re.compile(r"Installed juju/juju v(\d+)\.(\d+)\.(\d+)")
 
@@ -31,9 +41,9 @@ CASES = [
 ]
 
 
-def _run_terraform(binary: str, cwd: Path, *args: str) -> subprocess.CompletedProcess:
+def _run_terraform(cwd: Path, *args: str) -> subprocess.CompletedProcess:
     return subprocess.run(
-        [binary, *args],
+        [TF_BINARY, *args],
         cwd=str(cwd),
         capture_output=True,
         text=True,
@@ -63,18 +73,13 @@ def _write_root(root: Path, module: Path, constraint: str) -> None:
 
 @pytest.mark.parametrize("constraint,expect_ok,expect_major", CASES)
 def test_composition_resolves_provider(
-    tmp_path: Path,
-    terraform_module: Path,
-    terraform_bin: str,
-    constraint: str,
-    expect_ok: bool,
-    expect_major: str | None,
+    tmp_path: Path, constraint: str, expect_ok: bool, expect_major: str | None
 ) -> None:
     """Assert the module's constraint composes with a sibling juju constraint."""
     root = tmp_path / "root"
-    _write_root(root, terraform_module, constraint)
+    _write_root(root, TERRAFORM_MODULE, constraint)
 
-    init = _run_terraform(terraform_bin, root, "init", "-backend=false", "-input=false")
+    init = _run_terraform(root, "init", "-backend=false", "-input=false")
 
     if expect_ok:
         assert init.returncode == 0, f"init failed:\n{init.stderr}{init.stdout}"
