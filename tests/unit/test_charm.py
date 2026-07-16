@@ -1001,7 +1001,7 @@ def test_postgresql_layer(harness):
                     "user": "postgres",
                     "group": "postgres",
                     "environment": {
-                        "DATA_SOURCE_URI": "/var/run/postgresql:5432/postgres",
+                        "DATA_SOURCE_URI": ":5432/postgres?sslmode=disable",
                         "DATA_SOURCE_USER": "monitoring",
                         "DATA_SOURCE_PASS": harness.charm.get_secret("app", "monitoring-password"),
                     },

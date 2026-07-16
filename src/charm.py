@@ -1809,7 +1809,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             "user": WORKLOAD_OS_USER,
             "group": WORKLOAD_OS_GROUP,
             "environment": {
-                "DATA_SOURCE_URI": "/var/run/postgresql:5432/postgres",
+                "DATA_SOURCE_URI": ":5432/postgres?sslmode=disable",
                 "DATA_SOURCE_USER": MONITORING_USER,
                 "DATA_SOURCE_PASS": self.get_secret("app", MONITORING_PASSWORD_KEY),
             },
