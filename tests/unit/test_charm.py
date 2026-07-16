@@ -995,7 +995,7 @@ def test_postgresql_layer(harness):
                 METRICS_SERVICE: {
                     "override": "replace",
                     "summary": "postgresql metrics exporter",
-                    "command": "/start-exporter.sh",
+                    "command": "/usr/bin/prometheus-postgres-exporter",
                     "startup": "enabled",
                     "after": [POSTGRESQL_SERVICE],
                     "user": "postgres",

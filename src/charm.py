@@ -1799,7 +1799,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         return {
             "override": "replace",
             "summary": "postgresql metrics exporter",
-            "command": "/start-exporter.sh",
+            "command": "/usr/bin/prometheus-postgres-exporter",
             "startup": (
                 "enabled"
                 if self.get_secret("app", MONITORING_PASSWORD_KEY) is not None
