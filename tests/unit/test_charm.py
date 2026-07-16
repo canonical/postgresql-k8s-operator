@@ -869,17 +869,15 @@ def test_postgresql_layer(harness):
                 METRICS_SERVICE: {
                     "override": "replace",
                     "summary": "postgresql metrics exporter",
-                    "command": "/start-exporter.sh",
+                    "command": "/usr/bin/prometheus-postgres-exporter",
                     "startup": "enabled",
                     "after": [POSTGRESQL_SERVICE],
                     "user": "postgres",
                     "group": "postgres",
                     "environment": {
-                        "DATA_SOURCE_NAME": (
-                            f"user=monitoring "
-                            f"password={harness.charm.get_secret('app', 'monitoring-password')} "
-                            "host=/var/run/postgresql port=5432 database=postgres"
-                        ),
+                        "DATA_SOURCE_URI": ":5432/postgres?host=/var/run/postgresql",
+                        "DATA_SOURCE_USER": "monitoring",
+                        "DATA_SOURCE_PASS": harness.charm.get_secret("app", "monitoring-password"),
                     },
                 },
                 PGBACKREST_METRICS_SERVICE: {

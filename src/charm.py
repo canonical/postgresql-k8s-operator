@@ -2304,7 +2304,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         return {
             "override": "replace",
             "summary": "postgresql metrics exporter",
-            "command": "/start-exporter.sh",
+            "command": "/usr/bin/prometheus-postgres-exporter",
             "startup": (
                 "enabled"
                 if self.get_secret("app", MONITORING_PASSWORD_KEY) is not None
@@ -2314,11 +2314,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             "user": WORKLOAD_OS_USER,
             "group": WORKLOAD_OS_GROUP,
             "environment": {
-                "DATA_SOURCE_NAME": (
-                    f"user={MONITORING_USER} "
-                    f"password={self.get_secret('app', MONITORING_PASSWORD_KEY)} "
-                    "host=/var/run/postgresql port=5432 database=postgres"
-                ),
+                "DATA_SOURCE_URI": ":5432/postgres?host=/var/run/postgresql",
+                "DATA_SOURCE_USER": MONITORING_USER,
+                "DATA_SOURCE_PASS": f"{self.get_secret('app', MONITORING_PASSWORD_KEY)}",
             },
         }
 
@@ -2532,11 +2530,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         current_layer = self.workload.container.get_plan()
 
         metrics_service = current_layer.services[self.metrics_service]
-        data_source_name = metrics_service.environment.get("DATA_SOURCE_NAME", "")
+        data_source_pass = metrics_service.environment.get("DATA_SOURCE_PASS", "")
 
-        if metrics_service and not data_source_name.startswith(
-            f"user={MONITORING_USER} password={self.get_secret('app', MONITORING_PASSWORD_KEY)} "
-        ):
+        if metrics_service and data_source_pass != self.get_secret("app", MONITORING_PASSWORD_KEY):
             self.workload.container.add_layer(
                 self.metrics_service,
                 Layer({"services": {self.metrics_service: self._generate_metrics_service()}}),
