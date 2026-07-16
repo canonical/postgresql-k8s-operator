@@ -1,10 +1,8 @@
 summary: terraform/test_terraform_deploy.py
 environment:
   TEST_MODULE: terraform/test_terraform_deploy.py
-  # tfprov_v1: task-local variant (spread collects /variant env additively, so only this task
-  # gains it — others stay on juju36). CONCIERGE_JUJU_CHANNEL redeclared because env.Variant()
-  # drops the juju36-scoped value for a non-matching variant; TF_PROVIDER_CONSTRAINT selects
-  # the v1 consumer root (~> 1.0 → juju v1.5.6). The bare juju36 variant leaves it unset → v2.
+  # tfprov_v1: task-local variant (only this task gains it; others stay juju36). CONCIERGE_JUJU_CHANNEL
+  # is repeated because this variant doesn't inherit the global juju36-scoped value.
   CONCIERGE_JUJU_CHANNEL/tfprov_v1: 3.6/stable
   TF_PROVIDER_CONSTRAINT/tfprov_v1: "~> 1.0"
 execute: |
