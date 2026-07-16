@@ -2012,11 +2012,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         current_layer = container.get_plan()
 
         metrics_service = current_layer.services[self.metrics_service]
-        data_source_name = metrics_service.environment.get("DATA_SOURCE_NAME", "")
+        data_source_pass = metrics_service.environment.get("DATA_SOURCE_PASS", "")
 
-        if metrics_service and not data_source_name.startswith(
-            f"user={MONITORING_USER} password={self.get_secret('app', MONITORING_PASSWORD_KEY)} "
-        ):
+        if metrics_service and data_source_pass != self.get_secret("app", MONITORING_PASSWORD_KEY):
             container.add_layer(
                 self.metrics_service,
                 Layer({"services": {self.metrics_service: self._generate_metrics_service()}}),
