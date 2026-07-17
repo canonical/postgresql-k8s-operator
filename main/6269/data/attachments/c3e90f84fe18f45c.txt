@@ -1,0 +1,322 @@
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:806 Connecting to existing model concierge-microk8s:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHSession received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHTunneler received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SecretsRevoker received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/s3-integrator-145
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/self-signed-certificates-586
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-0
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [allocating] waiting: installing agent
+  postgresql-k8s-gcp/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [allocating] waiting: agent initialising
+  postgresql-k8s-gcp/1 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] maintenance: installing charm software
+  postgresql-k8s-gcp/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] waiting: awaiting for primary endpoint to be ready
+  postgresql-k8s-gcp/1 [executing] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] active: Primary (degraded)
+  postgresql-k8s-gcp/1 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary (degraded)
+  postgresql-k8s-gcp/1 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+  postgresql-k8s-gcp/1 [idle] active: 
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:56 configuring S3 integrator for gcp
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] active: Primary
+  postgresql-k8s-gcp/1 [executing] active: 
+  s3-integrator/0 [executing] blocked: Missing parameters: ['access-key', 'secret-key']
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] active: Primary
+  postgresql-k8s-gcp/1 [executing] active: 
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:301 1: creating table
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:304 1: creating backup b1
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-gcp/0 [executing] active: Primary
+  postgresql-k8s-gcp/1 [idle] active: 
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:574 listing the available backups
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-gcp/0 [idle] active: Primary
+  postgresql-k8s-gcp/1 [idle] active: 
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:313 1: creating test data td1
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:316 1: get timestamp ts1
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:326 1: creating test data td2
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:329 1: switching wal
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:332 1: scaling down to do restore
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp (waiting for exactly 1 units, current : 2)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp (waiting for exactly 1 units, current : 2)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [executing] active: Primary
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:337 1: restoring the backup b1 with bad restore-to-time parameter
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:346 1: restoring the backup b1 with unreachable restore-to-time parameter
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:351 1: waiting for the database charm to become blocked after restore
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:360 1: database charm become in blocked state after restore, as supposed to be with unreachable PITR parameter
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:368 1: restoring to the timestamp ts1
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-gcp/0 [executing] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:377 2: successful restore
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:574 listing the available backups
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-gcp/0 [idle] active: Primary
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:383 2: checking test data td1
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:386 2: checking not test data td2
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:391 2: creating test data td3
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:394 2: get timestamp ts2
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:400 2: creating test data td4
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:403 2: switching wal
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:410 2: restoring the backup b1 to the latest
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-gcp/0 [executing] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:419 3: successful restore
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:574 listing the available backups
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-gcp/0 [idle] active: Primary
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:427 3: checking test data td1
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:430 3: checking test data td2
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:433 3: checking not test data td3
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:438 3: checking not test data td4
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:443 3: switching wal
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:450 3: restoring the timeline 2 to the latest
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-gcp/0 [executing] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:459 4: successful restore
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:574 listing the available backups
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-gcp/0 [idle] active: Primary
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:467 4: checking test data td1
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:470 4: checking not test data td2
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:475 4: checking test data td3
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:478 4: checking test data td4
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:481 4: switching wal
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:488 4: restoring to the timestamp ts2
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-gcp/0 [idle] active: Primary
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:497 5: successful restore
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:574 listing the available backups
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-gcp/0 [idle] active: Primary
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:508 5: checking test data td1
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:511 5: checking not test data td2
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:516 5: checking test data td3
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:519 5: checking not test data td4
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-gcp/0 [idle] active: Primary
+[32mINFO    [0m integration.conftest:conftest.py:58 deleting the previously created backups
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.25   unsupported  00:58:18Z
+
+App            Version  Status  Scale  Charm          Channel        Rev  Address         Exposed  Message
+s3-integrator           active      1  s3-integrator  latest/stable  145  10.152.183.147  no       
+
+Unit              Workload  Agent  Address       Ports  Message
+s3-integrator/0*  active    idle   10.1.203.136         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-gcp-1: 00:28:40 ERROR unit.postgresql-k8s-gcp/1.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3592, in _wrap_hookcmd
+    yield
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3983, in secret_get
+    return hookcmds.secret_get(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/ops/hookcmds/_secret.py", line 153, in secret_get
+    stdout = run('secret-get', '--format=json', *args)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/ops/hookcmds/_utils.py", line 53, in run
+    raise Error(returncode=e.returncode, cmd=e.cmd, stdout=e.stdout, stderr=e.stderr) from None
+ops.hookcmds._utils.Error: command ('secret-get', '--format=json', '--label', 'database-peers.postgresql-k8s-gcp.unit') exited with status 1
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/src/charm.py", line 2823, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 360, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 520, in main
+    manager = _Manager(charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 320, in __init__
+    self.charm = self._charm_class(self.framework)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/src/charm.py", line 258, in __init__
+    jobs=self._generate_metrics_jobs(self.is_tls_enabled),
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/src/charm.py", line 1700, in is_tls_enabled
+    return all(self.tls.get_tls_files())
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/lib/charms/postgresql_k8s/v0/postgresql_tls.py", line 229, in get_tls_files
+    ca = self.charm.get_secret(SCOPE, "ca")
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/src/charm.py", line 365, in get_secret
+    if result := self.peer_relation_data(scope).fetch_my_relation_field(peers.id, key):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1779, in fetch_my_relation_field
+    if relation_data := self.fetch_my_relation_data([relation_id], [field], relation_name):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1768, in fetch_my_relation_data
+    data[relation.id] = self._fetch_my_specific_relation_data(relation, fields)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 664, in wrapper
+    return f(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2852, in _fetch_my_specific_relation_data
+    self.component, self.local_secret_fields, relation, fields
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2474, in local_secret_fields
+    self.static_secret_fields if self.static_secret_fields else self.current_secret_fields
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2498, in current_secret_fields
+    if content := self._get_group_secret_contents(relation, group):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2839, in _get_group_secret_contents
+    result = super()._get_group_secret_contents(relation, group, secret_fields)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 1499, in _get_group_secret_contents
+    if (secret := self._get_relation_secret(relation.id, group)) and (
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 636, in wrapper
+    return f(self, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 2826, in _get_relation_secret
+    return self.secrets.get(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 981, in get
+    if secret.meta:
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/lib/charms/data_platform_libs/v0/data_interfaces.py", line 804, in meta
+    self._secret_meta = self._model.get_secret(label=self.label)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 309, in get_secret
+    content = self._backend.secret_get(id=id, label=label)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3982, in secret_get
+    with self._wrap_hookcmd('secret-get', id=id, label=label, refresh=refresh, peek=peek):
+  File "/usr/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3602, in _wrap_hookcmd
+    raise ModelError(e.stderr) from e
+ops.model.ModelError: ERROR cannot ensure service account "juju-secret-consumer-bc4c3a7c-2d36-4ada-b612-da0bdba5dd4f": rpc error: code = Unknown desc = create transaction failed for key /registry/serviceaccounts/testing/juju-secret-consumer-bc4c3a7c-2d36-4ada-b612-da0bdba5dd4f: exec (try: 500): database is locked
+
+unit-postgresql-k8s-gcp-1: 00:28:41 ERROR juju.worker.uniter.operation hook "secret-remove" (via hook dispatching script: dispatch) failed: exit status 1
+unit-postgresql-k8s-gcp-0: 00:30:41 ERROR unit.postgresql-k8s-gcp/0.juju-log s3-parameters:5: Failed to read content from S3 bucket=data-charms-testing, path=postgresql-k8s/2f84fd7b-8176-11f1-b2c1-6045bdab40be/model-uuid.txt
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/src/backups.py", line 1435, in _read_content_from_s3
+    bucket.download_fileobj(processed_s3_path, buf)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/boto3/s3/inject.py", line 904, in bucket_download_fileobj
+    return self.meta.client.download_fileobj(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/boto3/s3/inject.py", line 862, in download_fileobj
+    return future.result()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/s3transfer/futures.py", line 111, in result
+    return self._coordinator.result()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/s3transfer/futures.py", line 287, in result
+    raise self._exception
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/s3transfer/tasks.py", line 142, in __call__
+    return self._execute_main(kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/s3transfer/tasks.py", line 165, in _execute_main
+    return_value = self._main(**kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/s3transfer/download.py", line 809, in _main
+    response = client.get_object(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/botocore/client.py", line 606, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-0/charm/venv/lib/python3.10/site-packages/botocore/client.py", line 1094, in _make_api_call
+    raise error_class(parsed_response, operation_name)
+botocore.errorfactory.NoSuchKey: An error occurred (NoSuchKey) when calling the GetObject operation: The specified key does not exist.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
