@@ -2316,7 +2316,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             "environment": {
                 "DATA_SOURCE_URI": ":5432/postgres?host=/var/run/postgresql",
                 "DATA_SOURCE_USER": MONITORING_USER,
-                "DATA_SOURCE_PASS": f"{self.get_secret('app', MONITORING_PASSWORD_KEY)}",
+                "DATA_SOURCE_PASS": str(self.get_secret('app', MONITORING_PASSWORD_KEY)),
             },
         }
 
