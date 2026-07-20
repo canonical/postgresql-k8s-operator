@@ -67,6 +67,7 @@ psycopg2-binary = "^2.9.12"
 boto3 = "*"
 tenacity = "^9.1.4"
 allure-pytest = "^2.16.0"
+jubilant = "^1.11.0"
 
 [build-system]
 requires = ["poetry-core>=2.4.1"]

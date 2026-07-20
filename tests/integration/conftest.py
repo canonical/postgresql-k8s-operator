@@ -9,6 +9,7 @@ import subprocess
 import uuid
 
 import boto3
+import jubilant
 import pytest
 from pytest_operator.plugin import OpsTest
 
@@ -98,6 +99,23 @@ async def gcp_cloud_configs(ops_test: OpsTest) -> None:
     yield config, credentials
 
     cleanup_cloud(config, credentials)
+
+
+@pytest.fixture(scope="module")
+def juju(request: pytest.FixtureRequest):
+    """Pytest fixture that wraps :meth:`jubilant.with_model`.
+
+    This adds command line parameter ``--keep-models`` (see help for details).
+    """
+    model = request.config.getoption("--model")
+    keep_models = bool(request.config.getoption("--keep-models"))
+
+    if model:
+        juju = jubilant.Juju(model=model)
+        yield juju
+    else:
+        with jubilant.temp_model(keep=keep_models) as juju:
+            yield juju
 
 
 @dataclasses.dataclass(frozen=True)
