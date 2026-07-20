@@ -28,6 +28,8 @@ from pathlib import Path
 import jubilant
 import pytest
 
+from .. import architecture
+
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TERRAFORM_MODULE = REPO_ROOT / "terraform"
 APP = "postgresql-k8s"
@@ -42,14 +44,6 @@ PROVIDER_CONSTRAINT = os.getenv("TF_PROVIDER_CONSTRAINT")
 STORAGE_DIRECTIVES = '{"data"="2G","archive"="1G","logs"="1G","temp"="512M"}'
 # A string-typed postgresql-k8s config option (profile) — drives the `config` variable.
 CONFIG = '{"profile"="testing"}'
-
-
-def _arch() -> str:
-    # Juju's arch name (amd64/arm64) for the runner, so the module deploys for this host's
-    # architecture instead of its hardcoded `arch=amd64` default (unschedulable on arm64).
-    return subprocess.run(
-        ["dpkg", "--print-architecture"], capture_output=True, text=True, check=True
-    ).stdout.strip()
 
 
 def _run_terraform(
@@ -124,8 +118,9 @@ def test_terraform_apply_deploys_postgresql(juju: jubilant.Juju, tmp_path: Path)
         "-input=false",
         "-var",
         f"juju_model={model_uuid}",
+        # Deploy for the runner's arch, not the module's hardcoded `arch=amd64` (unschedulable on arm64).
         "-var",
-        f"constraints=arch={_arch()}",
+        f"constraints=arch={architecture.architecture}",
         "-var",
         f"storage_directives={STORAGE_DIRECTIVES}",
         "-var",
