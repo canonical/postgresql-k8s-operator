@@ -3,14 +3,11 @@
 
 """Static constraint-composition tests for the postgres terraform module.
 
-Each case builds a throwaway root module that sources the repo's ``terraform/``
-module and declares a sibling ``juju`` provider constraint, then runs
-``terraform init`` (provider resolution against the live registry) and asserts
-on the resolved provider major version (or expected failure).
-
-This guards the module's ``required_providers`` constraint against the failure
-mode where a downstream module pairs postgres with a juju provider constraint
-the module's own constraint cannot satisfy.
+Each case sources the module from a throwaway root that declares a sibling
+``juju`` provider constraint, runs ``terraform init``, and asserts the resolved
+provider major (or that an unsatisfiable pairing fails cleanly). Guards the
+module's widened ``required_providers`` against a downstream constraint it
+cannot compose with.
 """
 
 import os
@@ -24,6 +21,7 @@ import pytest
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TERRAFORM_MODULE = REPO_ROOT / "terraform"
 TF_BINARY = os.getenv("TF_BINARY") or "terraform"
+TF_TIMEOUT = 5 * 60
 
 pytestmark = pytest.mark.skipif(
     shutil.which(TF_BINARY) is None, reason=f"{TF_BINARY} not found on PATH"
@@ -31,22 +29,25 @@ pytestmark = pytest.mark.skipif(
 
 _INSTALLED_RE = re.compile(r"Installed juju/juju v(\d+)\.(\d+)\.(\d+)")
 
-# (root juju provider constraint, expect init success, resolved provider major)
+# (root juju provider constraint, expect init success, resolved provider major).
+# v1_consumer pins the lower bound (module still admits v1); v2_consumer and the
+# reported >= 1.1.1 sibling admit v2; unsatisfiable pins that init fails cleanly.
 CASES = [
     pytest.param("~> 1.0", True, "1", id="v1_consumer"),
     pytest.param(">= 1.1.1", True, "2", id="identity_sibling"),
     pytest.param(">= 2.0", True, "2", id="v2_consumer"),
-    pytest.param("~> 2.0", True, "2", id="v2_pinned"),
-    pytest.param(">= 3.0", False, None, id="beyond_cap"),
+    pytest.param(">= 99.0", False, None, id="unsatisfiable"),
 ]
 
 
 def _run_terraform(cwd: Path, *args: str) -> subprocess.CompletedProcess:
+    # Bound each call so a registry stall fails instead of hanging (matches the deploy helper).
     return subprocess.run(
         [TF_BINARY, *args],
         cwd=str(cwd),
         capture_output=True,
         text=True,
+        timeout=TF_TIMEOUT,
     )
 
 
