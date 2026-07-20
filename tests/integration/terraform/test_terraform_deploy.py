@@ -20,6 +20,7 @@ constraint as a sibling, intersecting it with the module's own — the
 downstream-composition scenario the widened constraint exists to support.
 """
 
+import json
 import os
 import shutil
 import subprocess
@@ -29,6 +30,8 @@ import jubilant
 import pytest
 
 from .. import architecture
+
+_JUJU_PROVIDER = "registry.terraform.io/juju/juju"
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 TERRAFORM_MODULE = REPO_ROOT / "terraform"
@@ -110,6 +113,17 @@ def test_terraform_apply_deploys_postgresql(juju: jubilant.Juju, tmp_path: Path)
         _build_consumer_root(deploy_dir, TERRAFORM_MODULE, PROVIDER_CONSTRAINT)
 
     _run_terraform(deploy_dir, TF_TIMEOUT, "init", "-input=false")
+
+    # Guard against the v1 leg silently degrading to a second v2 run (e.g. if
+    # TF_PROVIDER_CONSTRAINT stopped reaching the test): assert init actually resolved the
+    # juju provider major this leg intends — 1 when pinned to `~> 1.0`, else the module's own.
+    versions = _run_terraform(deploy_dir, TF_TIMEOUT, "version", "-json", capture=True)
+    resolved = json.loads(versions.stdout)["provider_selections"][_JUJU_PROVIDER]
+    expected_major = "1" if PROVIDER_CONSTRAINT == "~> 1.0" else "2"
+    assert resolved.split(".")[0] == expected_major, (
+        f"expected juju provider major {expected_major}, resolved {resolved}"
+    )
+
     _run_terraform(
         deploy_dir,
         TF_TIMEOUT,
