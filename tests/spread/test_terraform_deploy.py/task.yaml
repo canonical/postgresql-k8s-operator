@@ -1,0 +1,18 @@
+summary: terraform/test_terraform_deploy.py
+environment:
+  TEST_MODULE: terraform/test_terraform_deploy.py
+  # tfprov_v1: task-local variant pinning the juju provider to v1 (`~> 1.0`); the module's
+  # widened `>= 1.0, < 3.0` still admits it. CONCIERGE_JUJU_CHANNEL is repeated here so the v1
+  # leg lands on Juju 3.6 even if the variant doesn't inherit the global juju36 channel — the
+  # juju provider v1.x supports Juju 3.x, not 4.x.
+  CONCIERGE_JUJU_CHANNEL/tfprov_v1: 3.6/stable
+  TF_PROVIDER_CONSTRAINT/tfprov_v1: "~> 1.0"
+execute: |
+  # The terraform binary is not part of the concierge substrate; install it for this task only.
+  sudo snap install terraform --classic
+
+  tox run -e integration -- "tests/integration/$TEST_MODULE" --model testing --alluredir="$SPREAD_TASK/allure-results"
+artifacts:
+  - allure-results
+variants:
+  - -juju29

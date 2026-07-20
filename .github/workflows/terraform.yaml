@@ -1,0 +1,42 @@
+# Copyright 2026 Canonical Ltd.
+# See LICENSE file for licensing details.
+name: Terraform
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "terraform/**"
+      - "tests/terraform/**"
+      - "tests/integration/terraform/**"
+      - "tox.ini"
+      - ".github/workflows/terraform.yaml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    name: Static checks + constraint compositions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install Terraform
+        run: sudo snap install terraform --classic
+
+      - name: Install tox & poetry
+        run: pipx install tox poetry
+
+      - name: Terraform lint (fmt/init/validate)
+        run: tox run -e lint-terraform
+
+      - name: Constraint-composition tests
+        run: tox run -e terraform

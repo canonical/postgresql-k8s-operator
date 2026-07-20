@@ -1128,6 +1128,21 @@ files = [
 referencing = ">=0.31.0"
 
 [[package]]
+name = "jubilant"
+version = "1.11.0"
+description = "Juju CLI wrapper, primarily for charm integration testing"
+optional = false
+python-versions = ">=3.8"
+groups = ["integration"]
+files = [
+    {file = "jubilant-1.11.0-py3-none-any.whl", hash = "sha256:900427d616c75f1cfb6ee11212fefe9c7877111209630a87b2b2556a37d626e7"},
+    {file = "jubilant-1.11.0.tar.gz", hash = "sha256:69d13d2a0c9604a146fb7172732b9344f7aa14a35cdc29a37189831a724dc80a"},
+]
+
+[package.dependencies]
+PyYAML = "==6.*"
+
+[[package]]
 name = "juju"
 version = "3.6.1.3"
 description = "Python library for Juju"
@@ -2663,4 +2678,4 @@ h11 = ">=0.16.0,<1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "f7d2d7ae21df5de1286aa0e1002f5a326668608e784272a2c8b8d0a4ffbda847"
+content-hash = "e382daddf73d4f602b699b6d5b0733f66b98105deaaf8e95ad6375c58cc3e71b"
