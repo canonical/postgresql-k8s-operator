@@ -4,20 +4,10 @@
 
 """Real-deploy integration test for the postgres terraform module.
 
-Applies the module against the pre-created ``testing`` model (provided by the
-spread/concierge substrate via the ``juju`` fixture) and waits for the deployed
-``postgresql-k8s`` application to reach active/idle. Drives several module
-variables (storage directives, config, the runner's arch) and asserts a module
-output, so the deploy test exercises more than the bare-minimum wiring.
-Deploys the published charm via the module's default channel.
-
-By default the module is applied directly, so ``terraform init`` resolves the
-juju provider per the module's own ``required_providers`` (currently v2.x). To
-prove the module also works under the v1 provider line, set
-``TF_PROVIDER_CONSTRAINT`` (e.g. ``~> 1.0``): the test then deploys from a
-throwaway consumer root that sources the module and adds that juju provider
-constraint as a sibling, intersecting it with the module's own — the
-downstream-composition scenario the widened constraint exists to support.
+Applies the module into the pre-created ``testing`` model and waits for
+active/idle. With ``TF_PROVIDER_CONSTRAINT`` set (e.g. ``~> 1.0``) it deploys
+from a consumer root pinning that juju provider constraint, so the module is
+exercised under the v1 line as well as its default (v2).
 """
 
 import json
@@ -52,9 +42,8 @@ CONFIG = '{"profile"="testing"}'
 def _run_terraform(
     cwd: Path, timeout: int, *args: str, capture: bool = False
 ) -> subprocess.CompletedProcess:
-    # Bound each call so a stall fails instead of hanging to the spread kill-timeout. Stream
-    # output (no capture) for the slow init/apply so progress and any stall are visible live;
-    # capture only when the caller asserts on stdout (terraform output), else `.stdout` is None.
+    # Stream by default so the slow init/apply show live progress; capture only when the
+    # caller reads stdout (else `.stdout` is None). Timeout so a stall fails fast.
     return subprocess.run(
         [TF_BINARY, *args],
         cwd=str(cwd),
@@ -66,9 +55,8 @@ def _run_terraform(
 
 
 def _build_consumer_root(root: Path, module: Path, constraint: str) -> None:
-    # A downstream root module that sources the repo module and pins the juju provider via a
-    # sibling required_providers constraint; it intersects the module's own, so `terraform init`
-    # resolves the major the consumer asked for. Forwards the same vars the direct apply passes.
+    # A downstream root that sources the module and pins the juju provider via a sibling
+    # constraint, so init resolves the major the consumer asked for. Forwards the deploy vars.
     root.mkdir(parents=True, exist_ok=True)
     (root / "versions.tf").write_text(
         "terraform {\n"
