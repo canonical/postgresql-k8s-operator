@@ -129,8 +129,6 @@ from single_kernel_postgresql.config.literals import (
     SPI_MODULE,
     SYSTEM_USERS,
     TLS_CA_BUNDLE_FILE,
-    TLS_CLIENT_RELATION,
-    TLS_PEER_RELATION,
     TRACING_RELATION_NAME,
     UNIT_SCOPE,
     USER,
@@ -312,22 +310,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             refresh_endpoints=self.refresh_endpoints,
             restart_services=self.restart_services,
         )
-        # Bridge the lib TLS handler's requirer events back into a PostgreSQL reload:
-        # the lib handler stores+pushes certs on certificate_available, then we refresh
-        # the K8s trust store + charm-local CA bundle and reload. Also fires on
-        # relation_broken so detaching the TLS operator re-renders Patroni with TLS off.
-        self.framework.observe(
-            self.tls.client_certificate.on.certificate_available, self._reload_tls_after_push
-        )
-        self.framework.observe(
-            self.tls.peer_certificate.on.certificate_available, self._reload_tls_after_push
-        )
-        self.framework.observe(
-            self.on[TLS_CLIENT_RELATION].relation_broken, self._reload_tls_after_push
-        )
-        self.framework.observe(
-            self.on[TLS_PEER_RELATION].relation_broken, self._reload_tls_after_push
-        )
+        # Reload PostgreSQL after the lib TLS handler has actually pushed the cert files.
+        # tls_files_pushed fires only on a completed push (the handler routes both
+        # certificate_available and relation_broken through it); we then refresh the K8s
+        # trust store + charm-local CA bundle and reload. A deferred push never emits, so it
+        # never triggers a reload against files that were never written.
+        self.framework.observe(self.tls.tls_files_pushed, self._reload_tls_after_push)
         self.tls_transfer = TLSTransfer(self, PEER_RELATION)
         self.async_replication = PostgreSQLAsyncReplication(self)
         # self.logical_replication = PostgreSQLLogicalReplication(self)
@@ -2456,18 +2444,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         charm-local CA bundle that this unit's Patroni REST client verifies against.
         Refresh those, then reload so PostgreSQL/Patroni pick up the new material.
 
-        Mirror the handler's readiness guard: when the internal CA is absent the
-        handler defers its push (no files on disk), so skip the reload to avoid
-        rendering ssl:on against missing TLS files on an already-running unit.
+        Observes the handler's ``tls_files_pushed`` event, which fires only after a
+        successful push, so the files are on disk and the internal CA is present by the
+        time this runs -- no local readiness guard is needed. A transient config-apply
+        failure defers and retries rather than leaving stale TLS state or failing the hook.
         """
-        if not self.get_secret(APP_SCOPE, "internal-ca"):
-            return
-        # Don't enable TLS in the config until the lib has written the cert files to
-        # disk (its Pebble push can defer while this local render would still succeed,
-        # which would start Patroni ssl:on against missing files).
-        if self.is_tls_enabled and not self.tls_manager.client_tls_files_on_disk():
-            event.defer()
-            return
         self._sync_tls_trust_store_and_bundle()
         try:
             if not self.update_config():
