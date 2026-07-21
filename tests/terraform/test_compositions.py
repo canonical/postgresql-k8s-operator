@@ -23,9 +23,11 @@ TERRAFORM_MODULE = REPO_ROOT / "terraform"
 TF_BINARY = os.getenv("TF_BINARY") or "terraform"
 TF_TIMEOUT = 5 * 60
 
-pytestmark = pytest.mark.skipif(
-    shutil.which(TF_BINARY) is None, reason=f"{TF_BINARY} not found on PATH"
-)
+if shutil.which(TF_BINARY) is None:
+    # Fail, not skip: this lane's whole point is to run terraform, so a missing binary
+    # is a broken CI setup, not an optional prereq. Skipping would leave the workflow
+    # green with nothing capturing it.
+    pytest.fail(f"{TF_BINARY} not found on PATH")
 
 _INSTALLED_RE = re.compile(r"Installed juju/juju v(\d+)\.(\d+)\.(\d+)")
 
