@@ -1447,10 +1447,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.exception("failed to get first pod info")
             return
 
+        if not pod0 or not pod0.metadata:
+            logger.error("Failed to get pod0 details")
+            return
+
         try:
             # Get the k8s resources created by the charm and Patroni.
             resources_to_patch = []
             for kind in [Endpoints, Service]:
+                # Get resources with Juju's created-by label
                 resources_to_patch.extend(
                     client.list(
                         kind,
@@ -1458,9 +1463,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                         labels={"app.juju.is/created-by": f"{self._name}"},
                     )
                 )
+
                 # Since Juju 3.6.13 (commit aa38cff0b1), the mutating webhook no longer
-                # processes Endpoints - they were removed from the webhook's resource
-                # allowlist. Query Patroni-created resources separately.
+                # processes Endpoints - they were removed from the webhook's resource allowlist.
+                # Patroni creates its own Endpoints with these labels:
+                # - application: patroni
+                # - cluster-name: patroni-{application}
+                # These resources never get Juju labels, so we must query for them separately.
                 resources_to_patch.extend(
                     client.list(
                         kind,
@@ -1476,24 +1485,25 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.exception("failed to get the k8s resources created by the charm and Patroni")
             return
 
-        pod0_meta = pod0.metadata
         for resource in resources_to_patch:
-            resource_meta = resource.metadata
-            if resource_meta is None:
-                continue
             # Ignore resources created by Juju or the charm
             # (which are already patched).
-            pod0_owner_refs = pod0_meta.ownerReferences if pod0_meta is not None else None
             if (
-                type(resource) is Service
-                and resource_meta.name
-                in [
-                    self._name,
-                    f"{self._name}-endpoints",
-                    f"{self._name}-primary",
-                    f"{self._name}-replicas",
-                ]
-            ) or resource_meta.ownerReferences == pod0_owner_refs:
+                not resource.metadata
+                or not resource.metadata.name
+                or not resource.metadata.namespace
+                or (
+                    type(resource) is Service
+                    and resource.metadata.name
+                    in [
+                        self._name,
+                        f"{self._name}-endpoints",
+                        f"{self._name}-primary",
+                        f"{self._name}-replicas",
+                    ]
+                )
+                or resource.metadata.ownerReferences == pod0.metadata.ownerReferences
+            ):
                 continue
             # Reparent onto the StatefulSet (pod0's owner) for GC on removal.
             # Apply only ownerReferences: the whole listed object would carry a
@@ -1508,7 +1518,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     )
                 )
                 client.apply(
-                    obj=patch,
+                    obj=patch,  # type: ignore
                     name=resource.metadata.name,
                     namespace=resource.metadata.namespace,
                     force=True,
@@ -1516,7 +1526,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             except ApiError:
                 # Only log the exception.
                 logger.exception(
-                    f"failed to patch k8s {type(resource).__name__} {resource_meta.name}"
+                    f"failed to patch k8s {type(resource).__name__} {resource.metadata.name}"
                 )
 
     def _on_update_status_early_exit_checks(self, container) -> bool:
