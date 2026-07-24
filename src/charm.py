@@ -75,6 +75,7 @@ from ops.model import (
     ActiveStatus,
     BlockedStatus,
     Container,
+    ErrorStatus,
     MaintenanceStatus,
     ModelError,
     Relation,
@@ -771,7 +772,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         if original_status.message == EXTENSION_OBJECT_MESSAGE:
             self._set_active_status()
             return
-        if not isinstance(original_status, UnknownStatus):
+        if not isinstance(original_status, UnknownStatus | ErrorStatus):
             self.unit.status = original_status
 
     def _check_extension_dependencies(self, extension: str, enable: bool) -> bool:
@@ -1494,12 +1495,22 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 ]
             ) or resource_meta.ownerReferences == pod0_owner_refs:
                 continue
-            # Patch the resource.
+            # Reparent onto the StatefulSet (pod0's owner) for GC on removal.
+            # Apply only ownerReferences: the whole listed object would carry a
+            # stale resourceVersion (Patroni churns this Service) and 409, and
+            # would revert Patroni's in-flight changes.
             try:
-                resource_meta.ownerReferences = pod0_owner_refs
-                resource_meta.managedFields = None
+                patch = type(resource)(
+                    metadata=ObjectMeta(
+                        name=resource.metadata.name,
+                        namespace=resource.metadata.namespace,
+                        ownerReferences=pod0.metadata.ownerReferences,
+                    )
+                )
                 client.apply(
-                    obj=resource,
+                    obj=patch,
+                    name=resource.metadata.name,
+                    namespace=resource.metadata.namespace,
                     force=True,
                 )
             except ApiError:
@@ -1808,7 +1819,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         return {
             "override": "replace",
             "summary": "postgresql metrics exporter",
-            "command": "/start-exporter.sh",
+            "command": "/usr/bin/prometheus-postgres-exporter",
             "startup": (
                 "enabled"
                 if self.get_secret("app", MONITORING_PASSWORD_KEY) is not None
@@ -1818,11 +1829,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             "user": WORKLOAD_OS_USER,
             "group": WORKLOAD_OS_GROUP,
             "environment": {
-                "DATA_SOURCE_NAME": (
-                    f"user={MONITORING_USER} "
-                    f"password={self.get_secret('app', MONITORING_PASSWORD_KEY)} "
-                    "host=/var/run/postgresql port=5432 database=postgres"
-                ),
+                "DATA_SOURCE_URI": ":5432/postgres?host=/var/run/postgresql",
+                "DATA_SOURCE_USER": MONITORING_USER,
+                "DATA_SOURCE_PASS": self.get_secret("app", MONITORING_PASSWORD_KEY),
             },
         }
 
@@ -2023,11 +2032,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         current_layer = container.get_plan()
 
         metrics_service = current_layer.services[self.metrics_service]
-        data_source_name = metrics_service.environment.get("DATA_SOURCE_NAME", "")
+        data_source_pass = metrics_service.environment.get("DATA_SOURCE_PASS", "")
 
-        if metrics_service and not data_source_name.startswith(
-            f"user={MONITORING_USER} password={self.get_secret('app', MONITORING_PASSWORD_KEY)} "
-        ):
+        if metrics_service and data_source_pass != self.get_secret("app", MONITORING_PASSWORD_KEY):
             container.add_layer(
                 self.metrics_service,
                 Layer(

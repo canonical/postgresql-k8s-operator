@@ -14,7 +14,6 @@ on:
       - 'LICENSE'
       - '**.md'
       - .github/renovate.json5
-      - 'docs/**'
   # Triggered on schedule by .github/workflows/scheduled_ci_*.yaml on default branch
   workflow_dispatch:
   # Triggered on push by .github/workflows/release.yaml
@@ -36,7 +35,7 @@ on:
 jobs:
   lint-workflows:
     name: Lint .github/workflows/
-    uses: canonical/data-platform-workflows/.github/workflows/lint_workflows.yaml@v49.0.3
+    uses: canonical/data-platform-workflows/.github/workflows/lint_workflows.yaml@v50.1.0
     permissions:
       contents: read
 
@@ -46,7 +45,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Install tox & poetry
@@ -63,7 +62,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Install tox & poetry
@@ -80,7 +79,7 @@ jobs:
     timeout-minutes: 5
     steps:
       - name: Checkout repo
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Install prometheus snap
@@ -93,9 +92,8 @@ jobs:
 
   build:
     name: Build charm
-    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v49.0.3
+    uses: canonical/data-platform-workflows/.github/workflows/build_charm.yaml@v50.1.0
     permissions:
-      actions: read  # Needed for GitHub API call to get workflow version
       contents: read
 
   integration-test:

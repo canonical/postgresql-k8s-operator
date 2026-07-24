@@ -10,13 +10,16 @@ import psycopg2
 import pytest
 from charms.postgresql_k8s.v0.postgresql import PostgreSQLUpdateUserPasswordError
 from lightkube import ApiError
+from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Endpoints, Pod, Service
 from ops import JujuVersion
 from ops.model import (
     ActiveStatus,
     BlockedStatus,
+    ErrorStatus,
     MaintenanceStatus,
     RelationDataTypeError,
+    UnknownStatus,
     WaitingStatus,
 )
 from ops.pebble import ChangeError, ServiceStatus
@@ -672,6 +675,22 @@ def test_enable_disable_extensions(harness):
         assert isinstance(harness.charm.unit.status, ActiveStatus)
 
 
+@pytest.mark.parametrize("unsettable_status", [ErrorStatus(), UnknownStatus()])
+def test_enable_disable_extensions_does_not_restore_unsettable_status(harness, unsettable_status):
+    # The status getter can return statuses the setter rejects (e.g. an "error" status left
+    # over from a previously failed hook). Restoring them verbatim raises InvalidStatusError
+    # and deadlocks the unit, so they must be skipped.
+    with (
+        patch("charm.PostgreSQL.enable_disable_extensions"),
+        patch.object(
+            type(harness.charm.unit), "status", new_callable=PropertyMock
+        ) as _unit_status,
+    ):
+        harness.charm._handle_enable_disable_extensions(unsettable_status, {}, None)
+
+        assert call(unsettable_status) not in _unit_status.mock_calls
+
+
 def test_on_peer_relation_departed(harness):
     with (
         patch(
@@ -976,17 +995,15 @@ def test_postgresql_layer(harness):
                 METRICS_SERVICE: {
                     "override": "replace",
                     "summary": "postgresql metrics exporter",
-                    "command": "/start-exporter.sh",
+                    "command": "/usr/bin/prometheus-postgres-exporter",
                     "startup": "enabled",
                     "after": [POSTGRESQL_SERVICE],
                     "user": "postgres",
                     "group": "postgres",
                     "environment": {
-                        "DATA_SOURCE_NAME": (
-                            f"user=monitoring "
-                            f"password={harness.charm.get_secret('app', 'monitoring-password')} "
-                            "host=/var/run/postgresql port=5432 database=postgres"
-                        ),
+                        "DATA_SOURCE_URI": ":5432/postgres?host=/var/run/postgresql",
+                        "DATA_SOURCE_USER": "monitoring",
+                        "DATA_SOURCE_PASS": harness.charm.get_secret("app", "monitoring-password"),
                     },
                 },
                 PGBACKREST_METRICS_SERVICE: {
@@ -1049,6 +1066,12 @@ def test_on_stop(harness):
                 )
                 assert _client.return_value.list.call_count == 4
                 assert _client.return_value.apply.call_count == 2
+                # Verify apply() got a minimal ObjectMeta patch (not the whole resource).
+                for call_args in _client.return_value.apply.call_args_list:
+                    patched = call_args.kwargs["obj"]
+                    assert isinstance(patched.metadata, ObjectMeta)
+                    assert patched.metadata.ownerReferences == "fakeOwnerReferences"
+                    assert patched.metadata.resourceVersion is None
                 assert harness.get_relation_data(rel_id, harness.charm.unit) == relation_data
                 _client.reset_mock()
 
