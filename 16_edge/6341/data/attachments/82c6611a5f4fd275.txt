@@ -1,0 +1,32 @@
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m pytest_operator.plugin:plugin.py:806 Connecting to existing model concierge-microk8s:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHSession received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHTunneler received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SecretsRevoker received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SSHServer received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-0
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] active: Primary
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:58 waiting for postgresql
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:64 creating db
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:69 get pvc for postgresql-k8s/0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.126:16443/api/v1/namespaces/testing/persistentvolumeclaims "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1088 got pvc for archive storage: postgresql-k8s-archive-74d55bad-postgresql-k8s-0
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1088 got pvc for data storage: postgresql-k8s-data-74d55bad-postgresql-k8s-0
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1088 got pvc for logs storage: postgresql-k8s-logs-74d55bad-postgresql-k8s-0
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1088 got pvc for temp storage: postgresql-k8s-temp-74d55bad-postgresql-k8s-0
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:74 get pv for postgresql-k8s/0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.126:16443/api/v1/persistentvolumes "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1103 got pv for temp storage: pvc-3dcca7aa-c2ac-42b4-9e2a-b8da24294cf0
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1103 got pv for data storage: pvc-6a0ee5f4-cb94-4645-8baf-ad7f0ab8cb63
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1103 got pv for logs storage: pvc-7d8e2ff9-decb-4ecd-a7e4-0271ddea2b32
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1103 got pv for archive storage: pvc-a3815732-bdc2-4f24-8145-1d971ecf1955
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:79 get storage id
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:85 scale to 0 with force
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:89 werifing is storage exists
