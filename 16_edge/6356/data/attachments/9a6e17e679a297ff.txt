@@ -1,0 +1,38 @@
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:22 Clearing continuous writes
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-test-app/0 clear-continuous-writes --wait 120s
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:25 Starting continuous writes
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-test-app/0 start-continuous-writes
+[32mINFO    [0m root:test_upgrade.py:76 Ensure continuous writes are incrementing
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/0 get-primary --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju show-secret --model testing secret:a2qt17uqmc3k30sak0ag --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju show-secret --model testing secret:a2qt17uqmc3k30sak0ag --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju show-secret --model testing secret:a2qt17uqmc3k30sak0ag --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju show-secret --model testing secret:a2qt17uqmc3k30sak0ag --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/0 get-primary --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:265 Refresh the charm
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju refresh --model testing postgresql-k8s --path /root/snap/juju/common/tmpzahy2qvm/_temp.charm --resource postgresql-image=ghcr.io/canonical/charmed-postgresql@sha256:15f2f1490b8541a9bb129f3bdc9a6d4c061263455491d8d19c962de6502ee426
+[32mINFO    [0m root:high_availability_helpers_new.py:273 Wait for refresh to block as paused or incompatible
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/2] status changed: blocked (`juju refresh` was run with missing/incorrect OCI resource. Rollback with instructions in docs or see `juju debug-log`) -> error (hook failed: "refresh-v-three-relation-changed")
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1875 [postgresql-k8s/2] status: error (hook failed: "refresh-v-three-relation-changed")
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/2] status changed: blocked (`juju refresh` was run with missing/incorrect OCI resource. Rollback with instructions in docs or see `juju debug-log`) -> error (hook failed: "refresh-v-three-relation-changed")
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/2] status changed: blocked (`juju refresh` was run with missing/incorrect OCI resource. Rollback with instructions in docs or see `juju debug-log`) -> error (hook failed: "refresh-v-three-relation-changed")
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/2] status changed: blocked (`juju refresh` was run with missing/incorrect OCI resource. Rollback with instructions in docs or see `juju debug-log`) -> error (hook failed: "refresh-v-three-relation-changed")
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/2] status changed: blocked (`juju refresh` was run with missing/incorrect OCI resource. Rollback with instructions in docs or see `juju debug-log`) -> error (hook failed: "refresh-v-three-relation-changed")
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/2] status changed: blocked (`juju refresh` was run with missing/incorrect OCI resource. Rollback with instructions in docs or see `juju debug-log`) -> error (hook failed: "refresh-v-three-relation-changed")
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:36 Clearing continuous writes
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-test-app/0 clear-continuous-writes --wait 120s
