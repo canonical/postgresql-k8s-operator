@@ -9,6 +9,7 @@ from unittest.mock import MagicMock, Mock, PropertyMock, call, patch, sentinel
 import psycopg2
 import pytest
 from lightkube import ApiError
+from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Endpoints, Pod, Service
 from ops import JujuVersion
 from ops.model import (
@@ -82,7 +83,7 @@ def test_on_leader_elected(harness):
         patch("charm.PostgresqlOperatorCharm._patch_pod_labels"),
         patch("charm.PostgresqlOperatorCharm._create_services") as _create_services,
         patch("charm.PostgresqlOperatorCharm.get_secret_from_id", return_value={}),
-        patch("charm.PostgresqlOperatorCharm.get_secret_from_id", return_value={}),
+        patch("charm.TLSManager.generate_internal_peer_ca"),
     ):
         rel_id = harness.model.get_relation(PEER_RELATION).id
         # Check that a new password was generated on leader election and nothing is done
@@ -100,7 +101,10 @@ def test_on_leader_elected(harness):
             [MagicMock(metadata=MagicMock(name="fakeName2", namespace="fakeNamespace"))],
         ]
         harness.set_leader()
-        assert _set_secret.call_count == 7
+        # The internal-CA generation moved into the lib TLSManager (mocked above), so
+        # its two set_secret calls (internal-ca / internal-ca-key) no longer go through
+        # the charm's set_secret — only the 5 system-user passwords do.
+        assert _set_secret.call_count == 5
         _set_secret.assert_any_call("app", "operator-password", "sekr1t")
         _set_secret.assert_any_call("app", "replication-password", "sekr1t")
         _set_secret.assert_any_call("app", "rewind-password", "sekr1t")
@@ -704,7 +708,10 @@ def test_on_upgrade_charm(harness):
             "charm.PostgresqlOperatorCharm._create_services",
             side_effect=[_FakeApiError, None, None],
         ) as _create_services,
-        patch("charm.PostgresqlOperatorCharm.push_tls_files_to_workload"),
+        # _fix_pod now pushes via the lib TLSManager + charm CA-bundle sync
+        # (push_tls_files_to_workload was removed when consuming the lib TLS handler).
+        patch("charm.TLSManager.push_tls_files"),
+        patch("charm.PostgresqlOperatorCharm._sync_tls_trust_store_and_bundle"),
     ):
         # Test with a problem happening when trying to create the k8s resources.
         harness.charm.unit.status = ActiveStatus()
@@ -862,17 +869,15 @@ def test_postgresql_layer(harness):
                 METRICS_SERVICE: {
                     "override": "replace",
                     "summary": "postgresql metrics exporter",
-                    "command": "/start-exporter.sh",
+                    "command": "/usr/bin/prometheus-postgres-exporter",
                     "startup": "enabled",
                     "after": [POSTGRESQL_SERVICE],
                     "user": "postgres",
                     "group": "postgres",
                     "environment": {
-                        "DATA_SOURCE_NAME": (
-                            f"user=monitoring "
-                            f"password={harness.charm.get_secret('app', 'monitoring-password')} "
-                            "host=/var/run/postgresql port=5432 database=postgres"
-                        ),
+                        "DATA_SOURCE_URI": ":5432/postgres?host=/var/run/postgresql",
+                        "DATA_SOURCE_USER": "monitoring",
+                        "DATA_SOURCE_PASS": harness.charm.get_secret("app", "monitoring-password"),
                     },
                 },
                 PGBACKREST_METRICS_SERVICE: {
@@ -945,6 +950,12 @@ def test_on_stop(harness):
                 assert _client.return_value.list.call_count == 4
                 # Verify apply() was called for the 2 resources found (fakeName1 and fakeName2)
                 assert _client.return_value.apply.call_count == 2
+                # Verify apply() got a minimal ObjectMeta patch (not the whole resource).
+                for call_args in _client.return_value.apply.call_args_list:
+                    patched = call_args.kwargs["obj"]
+                    assert isinstance(patched.metadata, ObjectMeta)
+                    assert patched.metadata.ownerReferences == "fakeOwnerReferences"
+                    assert patched.metadata.resourceVersion is None
                 assert harness.get_relation_data(rel_id, harness.charm.unit) == relation_data
                 _client.reset_mock()
 

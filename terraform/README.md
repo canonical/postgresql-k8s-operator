@@ -4,13 +4,13 @@
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.6.6 |
-| <a name="requirement_juju"></a> [juju](#requirement\_juju) | ~> 1.0.0 |
+| <a name="requirement_juju"></a> [juju](#requirement\_juju) | >= 1.0, < 3.0 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_juju"></a> [juju](#provider\_juju) | ~> 1.0.0 |
+| <a name="provider_juju"></a> [juju](#provider\_juju) | >= 1.0, < 3.0 |
 
 ## Modules
 
@@ -48,31 +48,33 @@ No modules.
 
 ## Usage
 
-Users should ensure that Juju model has been created to deploy into:
+Create the Juju model to deploy into, then capture its UUID — the module's
+`juju_model` input is the model **UUID**, not its name:
 ```
 juju add-model welcome
+MODEL_UUID=$(juju show-model welcome --format json | jq -r '.welcome."model-uuid"')
 ```
 
-To deploy Charmed PostgreSQL into the model `welcome`, run:
+To deploy Charmed PostgreSQL into the model, run:
 ```
-terraform apply -var='juju_model_name=welcome' -auto-approve
+terraform apply -var="juju_model=$MODEL_UUID" -auto-approve
 ```
 
 By default, this Terraform module will deploy PostgreSQL with `1` unit only.
 To configure the module to deploy `3` units, run:
 ```
-terraform apply -var='juju_model_name=welcome' -var='units=3' -auto-approve
+terraform apply -var="juju_model=$MODEL_UUID" -var='units=3' -auto-approve
 ```
 
-The juju storage directives config example:
+The storage directives example:
 ```
-terraform apply -var='juju_model_name=welcome' -auto-approve \
-  -var='storage={data="10G", archive="2G,lxd", logs="3G", temp="tmpfs,2G"}'
+terraform apply -var="juju_model=$MODEL_UUID" -auto-approve \
+  -var='storage_directives={data="10G", archive="2G", logs="3G", temp="2G"}'
 ```
 
 The juju constraints example:
 ```
-terraform apply -var='juju_model_name=welcome' -auto-approve \
+terraform apply -var="juju_model=$MODEL_UUID" -auto-approve \
   -var='constraints=arch=amd64 cores=4 mem=4096M virt-type=virtual-machine'
 ```
 

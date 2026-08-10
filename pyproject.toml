@@ -7,19 +7,19 @@ requires-poetry = ">=2.0.0"
 
 [tool.poetry.dependencies]
 python = "^3.12"
-ops = {extras = ["tracing"], version = "^3.7.1"}
-boto3 = "^1.43.36"
+ops = {extras = ["tracing"], version = "^3.8.1"}
+boto3 = "^1.43.62"
 pgconnstr = "^1.0.1"
 requests = "^2.34.2"
 tenacity = "^9.1.4"
 pydantic = "^2.13.4"
 jinja2 = "^3.1.6"
-lightkube = "^0.21.0"
+lightkube = "^0.22.0"
 lightkube-models = "^1.28.1.4"
 psycopg2 = "^2.9.12"
-charmlibs-interfaces-tls-certificates = "^1.8.3"
+charmlibs-interfaces-tls-certificates = "^1.10.0"
 charm-refresh = "^3.1.1.2"
-postgresql-charms-single-kernel = {extras = ["postgresql"], version = "16.3.1"}
+postgresql-charms-single-kernel = {extras = ["postgresql"], version = "16.3.4"}
 
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py
@@ -37,20 +37,20 @@ jsonschema = "*"
 optional = true
 
 [tool.poetry.group.format.dependencies]
-ruff = "^0.15.20"
+ruff = "^0.16.1"
 
 [tool.poetry.group.lint]
 optional = true
 
 [tool.poetry.group.lint.dependencies]
-codespell = "^2.4.2"
-ty = "^0.0.55"
+codespell = "^2.4.3"
+ty = "^0.0.65"
 
 [tool.poetry.group.unit]
 optional = true
 
 [tool.poetry.group.unit.dependencies]
-coverage = {extras = ["toml"], version = "^7.14.3"}
+coverage = {extras = ["toml"], version = "^7.15.3"}
 pytest = "^9.1.1"
 pytest-asyncio = "*"
 
@@ -58,7 +58,7 @@ pytest-asyncio = "*"
 optional = true
 
 [tool.poetry.group.integration.dependencies]
-lightkube = "^0.21.0"
+lightkube = "^0.22.0"
 pytest = "^9.1.1"
 pytest-operator = "^0.43.2"
 allure-pytest-default-results = "^0.1.4"
@@ -68,7 +68,7 @@ psycopg2-binary = "^2.9.12"
 boto3 = "*"
 tenacity = "^9.1.4"
 allure-pytest = "^2.16.0"
-jubilant = "^1.11.0"
+jubilant = "^1.12.0"
 tomli-w = "^1.2.0"
 tomli = "^2.4.1"
 postgresql-charms-single-kernel = "*"

@@ -1,0 +1,14 @@
+summary: terraform/test_terraform_deploy.py
+environment:
+  TEST_MODULE: terraform/test_terraform_deploy.py
+  # tfprov_v1: task-local variant (only this task gains it; others stay juju36). CONCIERGE_JUJU_CHANNEL
+  # is repeated because this variant doesn't inherit the global juju36-scoped value.
+  CONCIERGE_JUJU_CHANNEL/tfprov_v1: 3.6/stable
+  TF_PROVIDER_CONSTRAINT/tfprov_v1: "~> 1.0"
+execute: |
+  # The terraform binary is not part of the concierge substrate; install it for this task only.
+  sudo snap install terraform --classic
+
+  tox run -e integration -- "tests/integration/$TEST_MODULE" --model testing --alluredir="$SPREAD_TASK/allure-results"
+artifacts:
+  - allure-results

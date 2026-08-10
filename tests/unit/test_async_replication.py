@@ -387,3 +387,13 @@ def test_on_secret_changed(harness, relation_name):
             harness.get_relation_data(rel_id, harness.charm.app.name).get("primary-cluster-data")
         )
         assert primary_cluster_data.get("secret-id") != updated_cluster_data.get("secret-id")
+
+
+@pytest.mark.parametrize("relation_name", RELATION_NAMES)
+def test_re_emit_async_relation_changed_event_no_remote_units(harness, relation_name):
+    # Regression test: a bare next() raised an uncaught StopIteration when the
+    # remote app had no units joined yet (reliably hit while re-emitting during
+    # create-replication over TLS). The guard must skip re-emitting instead.
+    with harness.hooks_disabled():
+        harness.add_relation(relation_name, "standby-cluster")
+    harness.charm.async_replication._re_emit_async_relation_changed_event()
