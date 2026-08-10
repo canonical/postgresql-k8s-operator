@@ -19,6 +19,7 @@ import yaml
 from httpx import AsyncClient, BasicAuth, HTTPError
 from jinja2 import Template
 from ops.pebble import Error
+from requests.auth import HTTPBasicAuth
 from tenacity import (
     Future,
     RetryError,
@@ -100,10 +101,10 @@ class Patroni:
         primary_endpoint: str,
         namespace: str,
         storage_path: str,
-        superuser_password: str,
-        replication_password: str,
-        rewind_password: str,
-        patroni_password: str,
+        superuser_password: str | None,
+        replication_password: str | None,
+        rewind_password: str | None,
+        patroni_password: str | None,
     ):
         self._charm = charm
         self._endpoint = endpoint
@@ -125,8 +126,9 @@ class Patroni:
         return f"{self._storage_path}/{TLS_CA_FILE}" if self._charm.is_peer_data_tls_set else True
 
     @cached_property
-    def _patroni_auth(self) -> requests.auth.HTTPBasicAuth:
-        return requests.auth.HTTPBasicAuth("patroni", self._patroni_password)
+    def _patroni_auth(self) -> HTTPBasicAuth | None:
+        if self._patroni_password:
+            return HTTPBasicAuth("patroni", self._patroni_password)
 
     @cached_property
     def _patroni_async_auth(self) -> BasicAuth | None:
@@ -391,6 +393,8 @@ class Patroni:
             for attempt in Retrying(stop=stop_after_delay(60), wait=wait_fixed(3)):
                 with attempt:
                     primary = self.get_primary()
+                    if primary is None:
+                        raise NotReadyError("primary not found")
                     unit_id = primary.split("-")[-1]
                     primary_endpoint = (
                         f"{self._charm.app.name}-{unit_id}.{self._charm.app.name}-endpoints"
@@ -450,8 +454,9 @@ class Patroni:
                     timeout=PATRONI_TIMEOUT,
                     auth=self._patroni_auth,
                 )
+                logger.debug("API get_patroni_health: %s (%s)", r, r.elapsed.total_seconds())
 
-                return r.json()
+        return r.json()
 
     @property
     def member_started(self) -> bool:
@@ -656,7 +661,7 @@ class Patroni:
             restore_stanza=restore_stanza,
             synchronous_node_count=self._synchronous_node_count,
             maximum_lag_on_failover=self._charm.config.durability_maximum_lag_on_failover,
-            version=self.rock_postgresql_version.split(".")[0],
+            version=(self.rock_postgresql_version or "").split(".")[0],
             pg_parameters=parameters,
             primary_cluster_endpoint=self._charm.async_replication.get_primary_cluster_endpoint(),
             extra_replication_endpoints=self._charm.async_replication.get_standby_endpoints(),
