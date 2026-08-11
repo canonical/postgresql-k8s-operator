@@ -219,7 +219,8 @@ def test_on_relation_broken(harness):
         postgresql_mock.delete_user.assert_not_called()
 
 
-def test_on_database_requested_without_database_name(harness, caplog):
+@pytest.mark.parametrize("missing_database", [None, ""])
+def test_on_database_requested_without_database_name(harness, caplog, missing_database):
     """A replayed request whose databag no longer carries a database name is skipped."""
     with (
         patch("charm.PostgresqlOperatorCharm.update_config"),
@@ -237,7 +238,7 @@ def test_on_database_requested_without_database_name(harness, caplog):
         event.requested_entity_secret_content = None
         # The relation is gone on this replay, so the library reads the name back
         # as absent rather than as an empty string.
-        event.database = None
+        event.database = missing_database
         event.extra_user_roles = None
 
         with caplog.at_level(logging.WARNING):
