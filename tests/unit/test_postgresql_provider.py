@@ -1,6 +1,7 @@
 # Copyright 2022 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+import logging
 from unittest.mock import Mock, PropertyMock, patch
 
 import pytest
@@ -216,3 +217,32 @@ def test_on_relation_broken(harness):
             )
         harness.charm.postgresql_client_relation._on_relation_broken(event)
         postgresql_mock.delete_user.assert_not_called()
+
+
+def test_on_database_requested_without_database_name(harness, caplog):
+    """A replayed request whose databag no longer carries a database name is skipped."""
+    with (
+        patch("charm.PostgresqlOperatorCharm.update_config"),
+        patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock,
+        patch(
+            "charm.PatroniManager.primary_endpoint_ready",
+            new_callable=PropertyMock,
+            return_value=True,
+        ),
+        patch("charm.PostgreSQLProvider._are_units_in_sync", return_value=True),
+    ):
+        rel_id = harness.model.get_relation(RELATION_NAME).id
+        event = Mock()
+        event.relation.id = rel_id
+        event.requested_entity_secret_content = None
+        # The relation is gone on this replay, so the library reads the name back
+        # as absent rather than as an empty string.
+        event.database = None
+        event.extra_user_roles = None
+
+        with caplog.at_level(logging.WARNING):
+            harness.charm.postgresql_client_relation._on_database_requested(event)
+
+        assert "Database name is not set in the relation data, skipping." in caplog.text
+        postgresql_mock.create_database.assert_not_called()
+        postgresql_mock.create_user.assert_not_called()
