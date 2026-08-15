@@ -1,0 +1,95 @@
+[32mINFO    [0m integration.test_backups_gcp:test_backups_gcp.py:274 waiting for the database charm to become blocked
+[32mINFO    [0m integration.conftest:conftest.py:58 deleting the previously created backups
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.27   unsupported  00:28:03Z
+
+App                 Version  Status  Scale  Charm           Channel        Rev  Address         Exposed  Message
+new-postgresql-k8s  14.23    active      1  postgresql-k8s                   2  10.152.183.86   no       
+s3-integrator                active      1  s3-integrator   latest/stable  145  10.152.183.168  no       
+
+Unit                   Workload  Agent      Address      Ports  Message
+new-postgresql-k8s/0*  blocked   executing  10.1.87.212         failed to initialize stanza, check your S3 settings: [ProtocolError] HTTP request failed with 403 (Forbidden):
+*** Pa...
+s3-integrator/0*  active  idle  10.1.87.200    
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-gcp-1: 00:14:02 ERROR unit.postgresql-k8s-gcp/1.juju-log s3-parameters:5: Failed to read content from S3 bucket=data-charms-testing, path=postgresql-k8s/d9ea3d8f-983d-11f1-88c2-7ced8d7ebfa0/model-uuid.txt
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/src/backups.py", line 1446, in _read_content_from_s3
+    bucket.download_fileobj(processed_s3_path, buf)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/boto3/s3/inject.py", line 904, in bucket_download_fileobj
+    return self.meta.client.download_fileobj(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/boto3/s3/inject.py", line 862, in download_fileobj
+    return future.result()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/s3transfer/futures.py", line 111, in result
+    return self._coordinator.result()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/s3transfer/futures.py", line 287, in result
+    raise self._exception
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/s3transfer/tasks.py", line 142, in __call__
+    return self._execute_main(kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/s3transfer/tasks.py", line 165, in _execute_main
+    return_value = self._main(**kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/s3transfer/download.py", line 809, in _main
+    response = client.get_object(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/botocore/client.py", line 606, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-gcp-1/charm/venv/lib/python3.10/site-packages/botocore/client.py", line 1094, in _make_api_call
+    raise error_class(parsed_response, operation_name)
+botocore.errorfactory.NoSuchKey: An error occurred (NoSuchKey) when calling the GetObject operation: The specified key does not exist.
+unit-new-postgresql-k8s-0: 00:26:35 ERROR unit.new-postgresql-k8s/0.juju-log s3-parameters:13: Failed to read content from S3 bucket=data-charms-testing, path=postgresql-k8s/f6727b5e-983f-11f1-876f-7ced8d7ebfa0/model-uuid.txt
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/src/backups.py", line 1446, in _read_content_from_s3
+    bucket.download_fileobj(processed_s3_path, buf)
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/boto3/s3/inject.py", line 904, in bucket_download_fileobj
+    return self.meta.client.download_fileobj(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/boto3/s3/inject.py", line 862, in download_fileobj
+    return future.result()
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/s3transfer/futures.py", line 111, in result
+    return self._coordinator.result()
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/s3transfer/futures.py", line 287, in result
+    raise self._exception
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/s3transfer/tasks.py", line 142, in __call__
+    return self._execute_main(kwargs)
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/s3transfer/tasks.py", line 165, in _execute_main
+    return_value = self._main(**kwargs)
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/s3transfer/download.py", line 809, in _main
+    response = client.get_object(
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/botocore/client.py", line 606, in _api_call
+    return self._make_api_call(operation_name, kwargs)
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/botocore/context.py", line 123, in wrapper
+    return func(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-new-postgresql-k8s-0/charm/venv/lib/python3.10/site-packages/botocore/client.py", line 1094, in _make_api_call
+    raise error_class(parsed_response, operation_name)
+botocore.errorfactory.NoSuchKey: An error occurred (NoSuchKey) when calling the GetObject operation: The specified key does not exist.
+unit-new-postgresql-k8s-0: 00:27:15 ERROR unit.new-postgresql-k8s/0.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-new-postgresql-k8s-0: 00:28:00 ERROR unit.new-postgresql-k8s/0.juju-log s3-parameters:13: S3 stanza initialization error: [ProtocolError] HTTP request failed with 403 (Forbidden):
+*** Path/Query ***:
+GET /?delimiter=%2F&list-type=2&prefix=postgresql-k8s%2Fd9ea3d8f-983d-11f1-88c2-7ced8d7ebfa0%2Fbackup%2F
+*** Request Headers ***:
+authorization: <redacted>
+content-length: 0
+host: data-charms-testing.storage.googleapis.com
+x-amz-content-sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+x-amz-date: <redacted>
+*** Response Headers ***:
+alt-svc: h3=":443"; ma=2592000,h3-29=":443"; ma=2592000
+cache-control: private, max-age=0
+content-length: 224
+content-type: application/xml; charset=UTF-8
+date: Sat, 15 Aug 2026 00:28:00 GMT
+expires: Sat, 15 Aug 2026 00:28:00 GMT
+server: UploadServer
+x-guploader-uploadid: AJjja9aJ67t-7CDQONxjKXhuT6lgyF4T1d4FyCGQ5yiS6OYescvlyNrxTOdnsQd5JmIZR8ds
+*** Response Content ***:
+<?xml version='1.0' encoding='UTF-8'?><Error><Code>InvalidSecurity</Code><Message>The provided security credentials are not valid.</Message><Details>Request was not signed or contained a malformed signature</Details></Error>
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
