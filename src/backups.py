@@ -1217,7 +1217,7 @@ Stderr:
                 group=WORKLOAD_OS_GROUP,
             )
 
-        cpu_count, _ = self.charm.get_available_resources()
+        cpu_count, _ = self.charm.state.available_resources
 
         # Open the template pgbackrest.conf file.
         with open("templates/pgbackrest.conf.j2") as file:

@@ -18,8 +18,6 @@ from ops.testing import Harness
 from single_kernel_postgresql.config.literals import (
     PEER_RELATION,
     TLS_CA_BUNDLE_FILE,
-    TLS_CLIENT_RELATION,
-    TLS_PEER_RELATION,
 )
 from single_kernel_postgresql.events.tls import TLS
 from single_kernel_postgresql.managers.tls import TLSManager
@@ -60,72 +58,20 @@ def test_is_tls_enabled_reflects_tls_manager(harness):
         assert harness.charm.is_tls_enabled is True
 
 
-def _observers_for(harness, bound_event):
-    """Return method names observing the given bound event, in registration order."""
-    emitter_path = bound_event.emitter.handle.path
-    event_kind = bound_event.event_kind
-    return [
-        method
-        for (_obs_path, method, e_path, e_kind) in harness.framework._observers
-        if e_path == emitter_path and e_kind == event_kind
-    ]
+def test_reload_bridge_observes_tls_files_pushed(harness):
+    """The reload bridge fires on the lib's tls_files_pushed event, not certificate_available.
 
-
-def test_reload_bridge_wired_after_handler_on_client_certificate(harness):
-    """The reload bridge observes the same certificate_available event as the handler.
-
-    The lib handler's store+push observer must be registered BEFORE the charm's
-    reload bridge so that, when the event fires, certs are stored+pushed first and
-    the reload (update_config) runs afterwards (ops calls observers in order).
+    The lib emits tls_files_pushed only after a successful push, so the sync+reload runs once
+    the files are on disk; a deferred push never emits and never triggers a stale reload. This
+    also removes the ops observer-order dependency the bridge previously relied on.
     """
-    methods = _observers_for(
-        harness, harness.charm.tls.client_certificate.on.certificate_available
-    )
-    assert "_on_certificate_available" in methods, methods
-    assert "_reload_tls_after_push" in methods, methods
-    # Handler (store+push) before bridge (reload).
-    assert methods.index("_on_certificate_available") < methods.index("_reload_tls_after_push")
-
-
-def test_reload_bridge_wired_after_handler_on_peer_certificate(harness):
-    """The reload bridge also observes the peer certificate_available event."""
-    methods = _observers_for(harness, harness.charm.tls.peer_certificate.on.certificate_available)
-    assert "_on_peer_certificate_available" in methods, methods
-    assert "_reload_tls_after_push" in methods, methods
-    assert methods.index("_on_peer_certificate_available") < methods.index(
-        "_reload_tls_after_push"
-    )
-
-
-def test_reload_bridge_calls_update_config(harness):
-    """_reload_tls_after_push syncs CA artifacts and reloads when internal-ca is present."""
-    with harness.hooks_disabled():
-        harness.set_leader(True)
-        harness.charm.set_secret("app", "internal-ca", "ca-content")
-
     with (
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
         patch("charm.PostgresqlOperatorCharm._sync_tls_trust_store_and_bundle") as _sync,
     ):
-        harness.charm._reload_tls_after_push(Mock())
+        harness.charm.tls.tls_files_pushed.emit()
         _sync.assert_called_once_with()
         _update_config.assert_called_once_with()
-
-
-def test_reload_bridge_skips_without_internal_ca(harness):
-    """_reload_tls_after_push is a no-op when internal-ca is absent (defer path).
-
-    The lib TLS handler defers its push when the internal CA isn't present yet
-    (no files written to disk).  The bridge must not sync or reload in that case,
-    or it would render ssl:on against TLS files that don't exist yet.
-    """
-    with (
-        patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
-        patch("charm.PostgresqlOperatorCharm._sync_tls_trust_store_and_bundle") as _sync,
-    ):
-        harness.charm._reload_tls_after_push(Mock())
-        _update_config.assert_not_called()
-        _sync.assert_not_called()
 
 
 def test_sync_tls_trust_store_and_bundle_writes_ca_artifacts(harness, tmp_path):
@@ -180,59 +126,6 @@ def test_sync_tls_trust_store_skips_container_push_when_no_ca(harness):
         container.exec.assert_not_called()
         # The (empty) bundle is still written so the verify file exists.
         _open.assert_called_once()
-
-
-def _relation_broken_observers(harness, relation_name):
-    """Return method names observing relation_broken for the given relation, in order.
-
-    Relation events are dispatched from the charm's ``on`` handle, so e_path is
-    ``<CharmClass>/on`` and e_kind is ``<relation_name_underscored>_relation_broken``.
-    """
-    on_path = f"{harness.charm.handle.path}/on"
-    event_kind = f"{relation_name.replace('-', '_')}_relation_broken"
-    return [
-        method
-        for (_obs_path, method, e_path, e_kind) in harness.framework._observers
-        if e_path == on_path and e_kind == event_kind
-    ]
-
-
-def test_reload_bridge_wired_on_client_relation_broken(harness):
-    """On client-certificate relation_broken the lib handler fires before the charm bridge.
-
-    When the TLS operator detaches, the lib clears + pushes TLS files (dropping the
-    operator CA from state), then the bridge refreshes the /tmp bundle + reloads
-    (update_config).  The lib's observer must come first so cleared state is visible
-    when the bridge runs.
-    """
-    methods = _relation_broken_observers(harness, TLS_CLIENT_RELATION)
-    assert "_on_certificate_available" in methods, (
-        f"lib's _on_certificate_available not observing {TLS_CLIENT_RELATION} relation_broken: {methods}"
-    )
-    assert "_reload_tls_after_push" in methods, (
-        f"charm's _reload_tls_after_push not observing {TLS_CLIENT_RELATION} relation_broken: {methods}"
-    )
-    assert methods.index("_on_certificate_available") < methods.index("_reload_tls_after_push"), (
-        "lib handler must fire before charm bridge"
-    )
-
-
-def test_reload_bridge_wired_on_peer_relation_broken(harness):
-    """On peer-certificate relation_broken the lib handler fires before the charm bridge.
-
-    Same ordering constraint as the client case: the lib clears peer state first,
-    the bridge sees the cleared state when computing the updated bundle.
-    """
-    methods = _relation_broken_observers(harness, TLS_PEER_RELATION)
-    assert "_on_peer_certificate_available" in methods, (
-        f"lib's _on_peer_certificate_available not observing {TLS_PEER_RELATION} relation_broken: {methods}"
-    )
-    assert "_reload_tls_after_push" in methods, (
-        f"charm's _reload_tls_after_push not observing {TLS_PEER_RELATION} relation_broken: {methods}"
-    )
-    assert methods.index("_on_peer_certificate_available") < methods.index(
-        "_reload_tls_after_push"
-    ), "lib handler must fire before charm bridge"
 
 
 def test_pebble_ready_internal_cert_path_calls_update_config(harness):
@@ -321,29 +214,3 @@ def test_reload_bridge_no_defer_on_success(harness):
 
     _update_config.assert_called_once_with()
     event.defer.assert_not_called()
-
-
-def test_reload_bridge_defers_until_tls_files_on_disk(harness):
-    """_reload_tls_after_push defers instead of rendering ssl:on before files exist.
-
-    With TLS enabled (client cert material assigned) but the lib's file push not
-    yet landed in the container (e.g. its Pebble push deferred), reloading would
-    render ssl:on against missing files.  The bridge must defer and retry, and
-    must not sync the trust store against not-yet-pushed material either.
-    """
-    with harness.hooks_disabled():
-        harness.set_leader(True)
-        harness.charm.set_secret("app", "internal-ca", "ca-content")
-
-    event = Mock()
-    with (
-        patch("charm.TLSManager.get_client_tls_files", return_value=("key", "ca", "cert")),
-        patch("charm.TLSManager.client_tls_files_on_disk", return_value=False),
-        patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
-        patch("charm.PostgresqlOperatorCharm._sync_tls_trust_store_and_bundle") as _sync,
-    ):
-        harness.charm._reload_tls_after_push(event)
-
-    event.defer.assert_called_once_with()
-    _update_config.assert_not_called()
-    _sync.assert_not_called()

@@ -1764,7 +1764,10 @@ def test_render_pgbackrest_conf_file(harness, tls_ca_chain_filename):
             new_callable=PropertyMock(return_value=tls_ca_chain_filename),
         ) as _tls_ca_chain_filename,
         patch("charm.PostgreSQLBackups._retrieve_s3_parameters") as _retrieve_s3_parameters,
-        patch("charm.PostgresqlOperatorCharm.get_available_resources", return_value=(4, 1024)),
+        patch(
+            "single_kernel_postgresql.managers.k8s.K8sManager.get_available_resources",
+            return_value=(4, 1024),
+        ),
         patch("ops.model.Container.pebble", new_callable=PropertyMock(return_value=mock_pebble)),
     ):
         # Set up a mock for the `open` method with pgBackRest and logrotate templates.
