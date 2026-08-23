@@ -1,0 +1,2 @@
+[32mINFO    [0m root:test_upgrade.py:34 Deploying PostgreSQL cluster
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju deploy --model testing postgresql-k8s postgresql-k8s --base ubuntu@24.04 --channel 16/beta --config profile=testing --num-units 3 --trust
