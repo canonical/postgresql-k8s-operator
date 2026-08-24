@@ -15,7 +15,6 @@ import sys
 import time
 from datetime import datetime
 from functools import cached_property
-from hashlib import shake_128
 from pathlib import Path
 from typing import Literal, get_args
 from urllib.parse import urlparse
@@ -142,6 +141,7 @@ from single_kernel_postgresql.config.literals import (
 )
 from single_kernel_postgresql.core.config import K8SCharmConfig
 from single_kernel_postgresql.core.state import CharmState
+from single_kernel_postgresql.events.database import DatabaseEventsHandler
 from single_kernel_postgresql.events.tls import TLS
 from single_kernel_postgresql.events.tls_transfer import TLSTransfer
 from single_kernel_postgresql.managers.cluster import ClusterManager
@@ -185,7 +185,6 @@ from relations.async_replication import PostgreSQLAsyncReplication
 #     LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS,
 #     PostgreSQLLogicalReplication,
 # )
-from relations.postgresql_provider import PostgreSQLProvider
 
 logger = logging.getLogger(__name__)
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -246,8 +245,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         # TODO switch to the abstract class base
         # State
         self.state = CharmState(charm=self, substrate=self.substrate)
-        # K8sManager reads this unit's available (cpu, memory) from the node/pod for config sizing.
-        self.state.resource_provider = K8sManager(self.state, self.workload)
+        # Reads this unit's available (cpu, memory) from the node/pod for config sizing.
+        self.k8s_manager = K8sManager(self.state, self.workload)
 
         # Managers
         self.patroni_manager = PatroniManager(state=self.state, workload=self.workload)
@@ -292,7 +291,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         self._actual_pgdata_path = f"{self._storage_path}/16/main"
 
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
-        self.postgresql_client_relation = PostgreSQLProvider(self)
         self.backup = PostgreSQLBackups(self, "s3-parameters")
         self.ldap = PostgreSQLLDAP(self, "ldap")
         # TLS events handler owns the two cert requirers; build it before the TLS
@@ -304,13 +302,18 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             client_certificate=self.tls.client_certificate,
             peer_certificate=self.tls.peer_certificate,
         )
+        self.database = DatabaseEventsHandler(
+            self, self.state, self.patroni_manager, self.tls_manager
+        )
+        self.database_manager = self.database.manager
         self.config_manager = ConfigManager(
             state=self.state,
             workload=self.workload,
             tls_manager=self.tls_manager,
             patroni_manager=self.patroni_manager,
+            database_manager=self.database_manager,
+            resource_provider=self.get_resource_provider,
             request_restart=self.request_restart,
-            refresh_endpoints=self.refresh_endpoints,
             restart_services=self.restart_services,
         )
         # Reload PostgreSQL after the lib TLS handler has actually pushed the cert files.
@@ -734,7 +737,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             return
 
         endpoints_to_remove = self._get_endpoints_to_remove()
-        self.postgresql_client_relation.update_endpoints()
+        self.database_manager.update_endpoints()
         self._remove_from_endpoints(endpoints_to_remove)
 
         # Update the sync-standby endpoint in the async replication data.
@@ -785,7 +788,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         # A cluster can have all members as replicas for some time after
         # a failed switchover, so wait until the primary is elected.
         endpoints_to_remove = self._get_endpoints_to_remove()
-        self.postgresql_client_relation.update_endpoints()
+        self.database_manager.update_endpoints()
         self._remove_from_endpoints(endpoints_to_remove)
 
     def _on_peer_relation_changed(self, event: HookEvent) -> None:  # noqa: C901
@@ -853,7 +856,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             return
 
         try:
-            self.postgresql_client_relation.update_endpoints()
+            self.database_manager.update_endpoints()
         except ModelError as e:
             logger.warning("Cannot update read_only endpoints: %s", str(e))
 
@@ -2592,9 +2595,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         )
         self.on[str(self.restart_manager.name)].acquire_lock.emit()
 
-    def refresh_endpoints(self) -> None:
-        """Bridge for the lib ConfigManager: refresh client-relation endpoints."""
-        self.postgresql_client_relation.update_endpoints()
+    def get_resource_provider(self) -> K8sManager:
+        """Bridge for the lib ConfigManager: this unit's (cpu, memory) introspector."""
+        return self.k8s_manager
 
     def restart_services(self) -> None:
         """Bridge for the lib ConfigManager: restart the metrics and LDAP sync services."""
@@ -2606,7 +2609,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         try:
             return self.config_manager.update_config(
                 self.postgresql,
-                self.generate_user_hash,
                 is_creating_backup=is_creating_backup,
                 relations_user_databases_map=self.relations_user_databases_map,
                 ldap_parameters=self.get_ldap_parameters(),
@@ -2735,23 +2737,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         return user_database_map
 
     def _collect_user_relations(self) -> dict[str, str]:
-        user_db_pairs = {}
-        custom_username_mapping = self.postgresql_client_relation.get_username_mapping()
-        prefix_database_mapping = self.postgresql_client_relation.get_databases_prefix_mapping()
-
-        for relation in self.model.relations[self.postgresql_client_relation.relation_name]:
-            if database := self.postgresql_client_relation.database_provides.fetch_relation_field(
-                relation.id, "database"
-            ):
-                user = custom_username_mapping.get(str(relation.id), f"relation_id_{relation.id}")
-                database = ",".join(prefix_database_mapping.get(str(relation.id), [database]))
-                user_db_pairs[user] = database
-        return user_db_pairs
-
-    @cached_property
-    def generate_user_hash(self) -> str:
-        """Generate expected user and database hash."""
-        return shake_128(str(self._collect_user_relations()).encode()).hexdigest(16)
+        return self.database_manager.collect_user_relations()
 
     def override_patroni_on_failure_condition(
         self, new_condition: str, repeat_cause: str | None

@@ -1376,14 +1376,6 @@ def test_request_restart(harness):
         _restart.assert_called_once()
 
 
-def test_refresh_endpoints(harness):
-    """The refresh_endpoints bridge refreshes the client-relation endpoints."""
-    with patch("charm.PostgreSQLProvider.update_endpoints") as _update_endpoints:
-        harness.charm.refresh_endpoints()
-
-        _update_endpoints.assert_called_once_with()
-
-
 def test_restart_services(harness):
     """The restart_services bridge restarts both the metrics and LDAP sync pebble services."""
     with (
@@ -1426,7 +1418,6 @@ def test_update_config_delegates_to_config_manager(harness):
         assert result is True
         _update_config.assert_called_once_with(
             postgresql_mock,
-            harness.charm.generate_user_hash,
             is_creating_backup=True,
             relations_user_databases_map={"operator": "all"},
             ldap_parameters={"ldap": "params"},
