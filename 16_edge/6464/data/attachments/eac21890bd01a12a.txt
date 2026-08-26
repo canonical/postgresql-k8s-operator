@@ -1,0 +1,69 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-1
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/0 [allocating] waiting: installing agent
+  second-postgresql-k8s/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/0 [allocating] waiting: agent initialising
+  second-postgresql-k8s/1 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/0 [executing] maintenance: Executing restart operation
+  second-postgresql-k8s/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+  second-postgresql-k8s/1 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+  second-postgresql-k8s/1 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+  second-postgresql-k8s/1 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/0 [executing] active: Primary (degraded)
+  second-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/1 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/0 [idle] active: Primary
+  second-postgresql-k8s/1 [idle] active: 
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.32:16443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.32:16443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:243 Initial writes {'testing.postgresql-k8s-0': 4, 'testing.postgresql-k8s-1': 4}
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.32:16443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.32:16443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:249 Retry writes {'testing.postgresql-k8s-0': 6, 'testing.postgresql-k8s-1': 6}
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.32:16443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.32:16443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.32:16443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.27   unsupported  01:45:49Z
+
+App                    Version  Status  Scale  Charm                Channel      Rev  Address         Exposed  Message
+postgresql-k8s         16.14    active      3  postgresql-k8s                      0  10.152.183.25   no       
+postgresql-test-app             active      1  postgresql-test-app  latest/edge  568  10.152.183.241  no       received database credentials of the first database
+second-postgresql-k8s  16.14    active      2  postgresql-k8s                      1  10.152.183.137  no       
+
+Unit                      Workload  Agent  Address      Ports  Message
+postgresql-k8s/0*         active    idle   10.1.138.24         
+postgresql-k8s/1          active    idle   10.1.138.22         
+postgresql-k8s/2          active    idle   10.1.138.23         Primary
+postgresql-test-app/0*    active    idle   10.1.138.21         received database credentials of the first database
+second-postgresql-k8s/0*  active    idle   10.1.138.32         Primary
+second-postgresql-k8s/1   active    idle   10.1.138.37         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-test-app-0: 01:31:18 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
