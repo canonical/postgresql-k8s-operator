@@ -1,0 +1,107 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/self-signed-certificates-586
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/glauth-k8s-67
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/postgresql-k8s-925
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-postgresql-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-self-signed-certificates/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-postgresql-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-k8s/0 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-self-signed-certificates/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-postgresql-k8s/0 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-k8s/0 [executing] maintenance: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-k8s/0 [idle] blocked: Backend integration (`pg-database` or `ldap-client`) missing
+[32mINFO    [0m integration.test_ldap:test_ldap.py:70 Adding relations to GLAuth
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-k8s/0 [idle] blocked: Backend integration (`pg-database` or `ldap-client`) missing
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-self-signed-certificates/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-k8s/0 [executing] waiting: Waiting for database creation
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-k8s/0 [executing] active: 
+[32mINFO    [0m integration.test_ldap:test_ldap.py:84 Adding relation to PostgreSQL
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.27   unsupported  01:18:00Z
+
+App                              Version  Status  Scale  Charm                     Channel      Rev  Address         Exposed  Message
+glauth-k8s                                active      1  glauth-k8s                latest/edge   67  10.152.183.135  no       
+glauth-postgresql-k8s            14.23    active      1  postgresql-k8s            14/stable    925  10.152.183.189  no       
+glauth-self-signed-certificates           active      1  self-signed-certificates  1/stable     586  10.152.183.214  no       
+postgresql-k8s                   14.24    active      1  postgresql-k8s                           0  10.152.183.211  no       
+
+Unit                                Workload  Agent  Address      Ports  Message
+glauth-k8s/0*                       active    idle   10.1.247.17         
+glauth-postgresql-k8s/0*            active    idle   10.1.247.15         Primary
+glauth-self-signed-certificates/0*  active    idle   10.1.247.11         
+postgresql-k8s/0*                   active    idle   10.1.247.10         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-glauth-k8s-0: 01:14:46 ERROR unit.glauth-k8s/0.juju-log Error fetching ConfigMap: configmaps "glauth-k8s" not found
+unit-glauth-k8s-0: 01:15:15 ERROR unit.glauth-k8s/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/src/charm.py", line 433, in <module>
+    main(GLAuthCharm)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 360, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 522, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 506, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 439, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 483, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 336, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 916, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1036, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/src/charm.py", line 349, in _on_pebble_ready
+    self.__on_pebble_ready(event)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/src/utils.py", line 132, in wrapper
+    return func(charm, *args, **kwargs)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/src/charm.py", line 354, in __on_pebble_ready
+    self._certs_integration.update_certificates()
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/src/integrations.py", line 272, in update_certificates
+    self._remove_certificates()
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/src/integrations.py", line 319, in _remove_certificates
+    self._container.remove_path(file)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/ops/model.py", line 3192, in remove_path
+    self._pebble.remove_path(path, recursive=recursive)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 3036, in remove_path
+    resp = self._request('POST', '/v1/files', None, body)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2307, in _request
+    response = self._request_raw(method, path, query, headers, data)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/ops/pebble.py", line 2361, in _request_raw
+    raise ConnectionError(
+ops.pebble.ConnectionError: Could not connect to Pebble: socket not found at '/charm/containers/glauth/pebble.socket' (container restarted?)
+unit-glauth-k8s-0: 01:15:15 ERROR juju.worker.uniter pebble poll failed for container "glauth": failed to send pebble-ready event: terminated
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
