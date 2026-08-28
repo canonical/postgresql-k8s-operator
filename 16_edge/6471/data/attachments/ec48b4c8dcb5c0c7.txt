@@ -1,0 +1,26 @@
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.141:16443/api/v1/namespaces/testing/services/postgresql-k8s-endpoints "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.test_headless_service:test_headless_service.py:65 Deleting headless service postgresql-k8s-endpoints
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: DELETE https://10.1.0.141:16443/api/v1/namespaces/testing/services/postgresql-k8s-endpoints "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.141:16443/api/v1/namespaces/testing/services/postgresql-k8s-endpoints "HTTP/1.1 404 Not Found"
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju model-config --model testing update-status-hook-interval=1m
+[32mINFO    [0m jubilant.wait:_juju.py:1875 [postgresql-k8s] status: active ()
+[32mINFO    [0m jubilant.wait:_juju.py:1875 [postgresql-k8s/0] status: active (Primary)
+[32mINFO    [0m jubilant.wait:_juju.py:1875 [postgresql-k8s/1] status: active ()
+[32mINFO    [0m jubilant.wait:_juju.py:1875 [postgresql-k8s/2] status: active ()
+[31m[1mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: active () -> error (hook failed: "database-peers-relation-changed")
+[31m[1mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/2] status changed: active () -> error (hook failed: "database-peers-relation-changed")
+[32mINFO    [0m integration.test_headless_service:test_headless_service.py:77 Unit(s) entered error state as expected
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju model-config --model testing --reset update-status-hook-interval
+[32mINFO    [0m integration.test_headless_service:test_headless_service.py:82 Recreating headless service postgresql-k8s-endpoints
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH https://10.1.0.141:16443/api/v1/namespaces/testing/services/postgresql-k8s-endpoints?force=true&fieldManager=integration-test "HTTP/1.1 201 Created"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.141:16443/api/v1/namespaces/testing/services/postgresql-k8s-endpoints "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.test_headless_service:test_headless_service.py:106 Headless service recreated
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m integration.test_headless_service:test_headless_service.py:111 Resolving postgresql-k8s/1
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju resolve --model testing --no-retry postgresql-k8s/1
+[32mINFO    [0m integration.test_headless_service:test_headless_service.py:111 Resolving postgresql-k8s/2
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju resolve --model testing --no-retry postgresql-k8s/2
+[32mINFO    [0m jubilant.wait:_juju.py:1875 [postgresql-k8s] status: active ()
+[32mINFO    [0m jubilant.wait:_juju.py:1875 [postgresql-k8s/0] status: active (Primary)
+[32mINFO    [0m jubilant.wait:_juju.py:1875 [postgresql-k8s/1] status: active ()
+[32mINFO    [0m jubilant.wait:_juju.py:1875 [postgresql-k8s/2] status: active ()
