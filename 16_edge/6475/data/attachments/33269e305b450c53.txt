@@ -1,0 +1,52 @@
+[32mINFO    [0m root:test_username_prefix.py:22 Deploying database charm
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju deploy --model testing /root/snap/juju/common/tmp8bbo5r7g/_temp.charm postgresql-k8s --config profile=testing --resource postgresql-image=ghcr.io/canonical/charmed-postgresql@sha256:76cbb2e7abc1287f327351673f741680aa53c93ec34ae1e1fbbf7bc1a3d86e3f --trust
+[32mINFO    [0m root:test_username_prefix.py:34 Deploying data integrator charm
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju deploy --model testing data-integrator di1 --channel latest/edge --config database-name=postgre1
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju deploy --model testing data-integrator di2 --channel latest/edge --config database-name=postgre2
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju add-secret --model testing creds-secret --file /root/snap/juju/common/tmp4uwc7lmq
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju deploy --model testing data-integrator di3 --channel latest/edge --config requested-entities-secret=secret:23lbm4771d532ii00kag
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju grant-secret --model testing secret:23lbm4771d532ii00kag di3
+[32mINFO    [0m root:test_username_prefix.py:58 Relating data integrator
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju integrate --model testing postgresql-k8s:database di1
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju integrate --model testing postgresql-k8s:database di2
+[32mINFO    [0m root:test_username_prefix.py:62 Waiting for the applications to settle
+[32mINFO    [0m jubilant.wait:_juju.py:1875 [di1] status: waiting (installing agent)
+[32mINFO    [0m jubilant.wait:_juju.py:1875 [di1/0] status: waiting (installing agent)
+[32mINFO    [0m jubilant.wait:_juju.py:1875 [di2] status: waiting (installing agent)
+[32mINFO    [0m jubilant.wait:_juju.py:1875 [di2/0] status: waiting (installing agent)
+[32mINFO    [0m jubilant.wait:_juju.py:1875 [di3] status: waiting (installing agent)
+[32mINFO    [0m jubilant.wait:_juju.py:1875 [di3/0] status: waiting (installing agent)
+[32mINFO    [0m jubilant.wait:_juju.py:1875 [postgresql-k8s] status: waiting (installing agent)
+[32mINFO    [0m jubilant.wait:_juju.py:1875 [postgresql-k8s/0] status: waiting (installing agent)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [di1] status changed: waiting (installing agent) -> waiting (agent initialising)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [di1/0] status changed: waiting (installing agent) -> waiting (agent initialising)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [di1] status changed: waiting (agent initialising) -> maintenance (installing charm software)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [di1/0] status changed: waiting (agent initialising) -> maintenance (installing charm software)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [di1] status changed: maintenance (installing charm software) -> blocked (Please relate the data-integrator with the desired product)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [di1/0] status changed: maintenance (installing charm software) -> blocked (Please relate the data-integrator with the desired product)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [postgresql-k8s] status changed: waiting (installing agent) -> waiting (agent initialising)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/0] status changed: waiting (installing agent) -> waiting (agent initialising)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [di3] status changed: waiting (installing agent) -> maintenance (installing charm software)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [di3/0] status changed: waiting (installing agent) -> maintenance (installing charm software)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [postgresql-k8s] status changed: waiting (agent initialising) -> maintenance (installing charm software)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/0] status changed: waiting (agent initialising) -> maintenance (installing charm software)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [di2] status changed: waiting (installing agent) -> waiting (agent initialising)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [di2/0] status changed: waiting (installing agent) -> waiting (agent initialising)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [di2] status changed: waiting (agent initialising) -> maintenance (installing charm software)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [di2/0] status changed: waiting (agent initialising) -> maintenance (installing charm software)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [postgresql-k8s] status changed: maintenance (installing charm software) -> waiting (installing agent)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [di3] status changed: maintenance (installing charm software) -> blocked (Please specify either topic, index, database name, keyspace name, or prefix)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [di3/0] status changed: maintenance (installing charm software) -> blocked (Please specify either topic, index, database name, keyspace name, or prefix)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [di2] status changed: maintenance (installing charm software) -> blocked (Please relate the data-integrator with the desired product)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [di2/0] status changed: maintenance (installing charm software) -> blocked (Please relate the data-integrator with the desired product)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [postgresql-k8s] status changed: waiting (installing agent) -> active ()
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/0] status changed: maintenance (installing charm software) -> waiting (awaiting for cluster to start)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [postgresql-k8s] status changed: active () -> maintenance (Beginning rolling restart)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/0] status changed: waiting (awaiting for cluster to start) -> active ()
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [postgresql-k8s] status changed: maintenance (Beginning rolling restart) -> active ()
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/0] status changed: active () -> waiting (awaiting for primary endpoint to be ready)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/0] status changed: waiting (awaiting for primary endpoint to be ready) -> active (Primary)
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [di1] status changed: blocked (Please relate the data-integrator with the desired product) -> active ()
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [di1/0] status changed: blocked (Please relate the data-integrator with the desired product) -> active ()
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [di2] status changed: blocked (Please relate the data-integrator with the desired product) -> active ()
+[32mINFO    [0m jubilant.wait:_juju.py:1880 [di2/0] status changed: blocked (Please relate the data-integrator with the desired product) -> active ()
