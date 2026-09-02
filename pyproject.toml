@@ -19,7 +19,7 @@ lightkube-models = "^1.28.1.4"
 psycopg2 = "^2.9.12"
 charmlibs-interfaces-tls-certificates = "^1.10.1"
 charm-refresh = "^3.1.1.2"
-postgresql-charms-single-kernel = {extras = ["postgresql", "k8s"], version = "16.3.7"}
+postgresql-charms-single-kernel = {extras = ["postgresql", "k8s"], url = "https://github.com/canonical/postgresql-single-kernel-library/archive/aa5f0057d99aa6dc699e695973bb2bb65af2b484.tar.gz"}
 
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py
