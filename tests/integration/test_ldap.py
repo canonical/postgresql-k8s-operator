@@ -3,10 +3,15 @@
 # See LICENSE file for licensing details.
 
 import asyncio
+import base64
+import hashlib
 import logging
+from pathlib import Path
 
+import psycopg2
 import pytest
 from pytest_operator.plugin import OpsTest
+from tenacity import AsyncRetrying, stop_after_attempt, wait_fixed
 
 from . import markers
 from .helpers import (
@@ -22,6 +27,10 @@ logger = logging.getLogger(__name__)
 GLAUTH_PSQL_APP_NAME = "postgresql-k8s"
 GLAUTH_CERT_APP_NAME = "self-signed-certificates"
 GLAUTH_APP_NAME = "glauth-k8s"
+GLAUTH_UTILS_APP_NAME = "glauth-utils"
+LDAP_GROUP = "superheros"
+LDAP_USER = "jdoe"
+LDAP_USER_PASSWORD = "ldap-sync-test"
 
 
 @pytest.mark.abort_on_fail
@@ -99,3 +108,79 @@ async def test_glauth_integration(ops_test: OpsTest):
 
         # Validate the 'operator' user can still access the instance
         await execute_query_on_unit(address, password, "SELECT VERSION();")
+
+        # --- LDAP user end-to-end flow ---
+        # Map the LDAP group to a PostgreSQL group (the ldap-sync sidecar creates
+        # the mapped users and grants them identity_access so they match the hba
+        # 'ldap' line), pre-create the mapped role the group grants into, and
+        # create the user in glauth through the glauth-utils charm.
+        logger.info("Configuring the LDAP group mapping and creating the PostgreSQL group")
+        await ops_test.model.set_config({"ldap-map": f"{LDAP_GROUP}={LDAP_GROUP}"})
+        await execute_query_on_unit(address, password, f'CREATE ROLE "{LDAP_GROUP}" NOLOGIN')
+
+        logger.info("Deploying the glauth-utils charm and creating the LDAP user")
+        await ops_test.model.deploy(
+            GLAUTH_UTILS_APP_NAME,
+            channel="edge",
+            trust=True,
+        )
+        await ops_test.model.integrate(GLAUTH_UTILS_APP_NAME, GLAUTH_APP_NAME)
+        await ops_test.model.wait_for_idle(
+            apps=[GLAUTH_UTILS_APP_NAME], status="active", timeout=10 * 60
+        )
+
+        # glauth-utils' apply-ldif action reads the file from its own container.
+        password_hash = (
+            "{SHA256}"
+            + base64.b64encode(hashlib.sha256(LDAP_USER_PASSWORD.encode()).digest()).decode()
+        )
+        ldif = (
+            f"dn: ou={LDAP_GROUP},dc=glauth,dc=com\n"
+            "objectClass: posixGroup\n"
+            f"ou: {LDAP_GROUP}\n"
+            "gidNumber: 5502\n"
+            f"\ndn: cn={LDAP_USER},ou={LDAP_GROUP},dc=glauth,dc=com\n"
+            "changetype: add\n"
+            "objectClass: posixAccount\n"
+            "uidNumber: 5002\n"
+            "gidNumber: 5502\n"
+            f"cn: {LDAP_USER}\n"
+            "sn: doe\n"
+            f"uid: {LDAP_USER}\n"
+            f"userPassword: {password_hash}\n"
+        )
+        ldif_path = Path("/var/tmp/ldap-test.ldif")
+        ldif_path.write_text(ldif)
+        await ops_test.juju(
+            "scp", str(ldif_path), f"{GLAUTH_UTILS_APP_NAME}/0:/var/tmp/ldap-test.ldif"
+        )
+        action = (
+            await ops_test.model
+            .applications[GLAUTH_UTILS_APP_NAME]
+            .units[0]
+            .run_action("apply-ldif", path="/var/tmp/ldap-test.ldif")
+        )
+        await action.wait()
+        assert action.results["return-code"] == 0
+
+        # The ldap-sync sidecar runs every 30s; poll until the role materialises,
+        # then authenticate AS the LDAP user through the hba 'ldap' line.
+        logger.info("Waiting for the LDAP user to sync into PostgreSQL and authenticating")
+        async for attempt in AsyncRetrying(
+            stop=stop_after_attempt(12), wait=wait_fixed(30), reraise=True
+        ):
+            with attempt:
+                await _execute_query_as(address, LDAP_USER, LDAP_USER_PASSWORD, "SELECT 1;")
+
+
+def _execute_query_as(address: str, user: str, password: str, query: str) -> list:
+    """Execute a query connecting as the given user (not the charm operator)."""
+    with (
+        psycopg2.connect(
+            f"dbname='postgres' user='{user}' host='{address}'"
+            f"password='{password}' connect_timeout=10"
+        ) as connection,
+        connection.cursor() as cursor,
+    ):
+        cursor.execute(query)
+        return list(cursor.fetchall())
