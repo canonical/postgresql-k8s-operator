@@ -1,0 +1,15 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.28   unsupported  00:10:51Z
+
+App             Version  Status  Scale  Charm           Channel  Rev  Address         Exposed  Message
+postgresql-k8s           error       1  postgresql-k8s             0  10.152.183.186  no       unknown container reason "ImagePullBackOff": Back-off pulling image "ghcr.io/canonical/charmed-postgresql@sha256:dcbe...
+
+Unit               Workload  Agent  Address     Ports  Message
+postgresql-k8s/0*  error     idle   10.1.138.9         unknown container reason "ImagePullBackOff": Back-off pulling image "ghcr.io/canonical/charmed-postgresql@sha256:dcbe...
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
