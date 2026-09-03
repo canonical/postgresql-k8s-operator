@@ -116,7 +116,10 @@ async def test_glauth_integration(ops_test: OpsTest):
         # create the user in glauth through the glauth-utils charm.
         logger.info("Configuring the LDAP group mapping and creating the PostgreSQL group")
         await ops_test.model.set_config({"ldap-map": f"{LDAP_GROUP}={LDAP_GROUP}"})
-        await execute_query_on_unit(address, password, f'CREATE ROLE "{LDAP_GROUP}" NOLOGIN')
+        # DDL returns no rows; append a SELECT so the helper's fetchall succeeds.
+        await execute_query_on_unit(
+            address, password, f'CREATE ROLE "{LDAP_GROUP}" NOLOGIN; SELECT 1;'
+        )
 
         logger.info("Deploying the glauth-utils charm and creating the LDAP user")
         await ops_test.model.deploy(
