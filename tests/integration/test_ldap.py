@@ -168,6 +168,13 @@ async def test_glauth_integration(ops_test: OpsTest):
 
         # The ldap-sync sidecar runs every 30s; poll until the role materialises,
         # then authenticate AS the LDAP user through the hba 'ldap' line.
+        # Diagnostic for the CI artifacts: is the sidecar service up, and did the
+        # role land? pebble logs are not captured elsewhere.
+        await ops_test.juju("exec", "--unit", f"{DATABASE_APP_NAME}/0", "--", "pebble", "services")
+        roles = await execute_query_on_unit(
+            address, password, "SELECT rolname FROM pg_roles WHERE rolname LIKE '%doe%'"
+        )
+        logger.info("synced roles so far: %s", roles)
         logger.info("Waiting for the LDAP user to sync into PostgreSQL and authenticating")
         async for attempt in AsyncRetrying(
             stop=stop_after_attempt(12), wait=wait_fixed(30), reraise=True
