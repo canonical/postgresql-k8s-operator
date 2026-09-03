@@ -170,7 +170,10 @@ async def test_glauth_integration(ops_test: OpsTest):
         # then authenticate AS the LDAP user through the hba 'ldap' line.
         # Diagnostic for the CI artifacts: is the sidecar service up, and did the
         # role land? pebble logs are not captured elsewhere.
-        await ops_test.juju("exec", "--unit", f"{DATABASE_APP_NAME}/0", "--", "pebble", "services")
+        services = await ops_test.juju(
+            "exec", "--unit", f"{DATABASE_APP_NAME}/0", "--", "pebble", "services"
+        )
+        logger.info("ldap-sync pebble services:\n%s", services)
         roles = await execute_query_on_unit(
             address, password, "SELECT rolname FROM pg_roles WHERE rolname LIKE '%doe%'"
         )
