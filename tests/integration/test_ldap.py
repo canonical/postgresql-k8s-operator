@@ -115,8 +115,15 @@ async def test_glauth_integration(ops_test: OpsTest):
         # 'ldap' line), pre-create the mapped role the group grants into, and
         # create the user in glauth through the glauth-utils charm.
         logger.info("Creating the mapped PostgreSQL group and setting the LDAP group mapping")
+        # The charm creates identity_access (NOLOGIN) but does not grant it
+        # CONNECT on the postgres database yet; LDAP users can only pass the
+        # hba 'ldap' line into a database if the group has CONNECT. Pending the
+        # charm-side grant, do it here so the auth poll can complete.
         await execute_query_on_unit(
-            address, password, f'CREATE ROLE "{LDAP_GROUP}" NOLOGIN; SELECT 1;'
+            address,
+            password,
+            f'CREATE ROLE "{LDAP_GROUP}" NOLOGIN; '
+            'GRANT CONNECT ON DATABASE postgres TO "identity_access"; SELECT 1;',
         )
         await ops_test.model.applications[DATABASE_APP_NAME].set_config({
             "ldap-map": f"{LDAP_GROUP}={LDAP_GROUP}"
