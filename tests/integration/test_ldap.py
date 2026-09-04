@@ -151,9 +151,12 @@ async def test_glauth_integration(ops_test: OpsTest):
             f"uid: {LDAP_USER}\n"
             f"userPassword: {password_hash}\n"
         )
-        # A unique file name avoids colliding with a stale root-owned copy left
-        # by a previous run (juju scp cannot overwrite it as the charm user).
-        ldif_path = Path(f"/var/tmp/ldap-test-{uuid.uuid4().hex[:8]}.ldif")
+        # The juju snap cannot read /tmp or /var/tmp (private namespace), and
+        # a transfer sourced from there lands as an empty file on the unit.
+        # $HOME is visible to the snap; the unique name avoids colliding with
+        # a stale root-owned copy left by a previous run (juju scp cannot
+        # overwrite it as the charm user).
+        ldif_path = Path.home() / f"ldap-test-{uuid.uuid4().hex[:8]}.ldif"
         ldif_path.write_text(ldif)
         unit_ldif_path = f"/var/tmp/{ldif_path.name}"
         await ops_test.juju("scp", str(ldif_path), f"{GLAUTH_UTILS_APP_NAME}/0:{unit_ldif_path}")
