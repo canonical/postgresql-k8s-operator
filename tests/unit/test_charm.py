@@ -626,7 +626,7 @@ def test_on_pgdata_storage_detaching(harness):
 def test_on_update_status_after_restore_operation(harness):
     with (
         patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
-        patch("charm.PostgreSQLBackups.can_use_s3_repository") as _can_use_s3_repository,
+        patch("charm.BackupManager.can_use_s3_repository") as _can_use_s3_repository,
         patch(
             "single_kernel_postgresql.utils.postgresql.PostgreSQL.get_current_timeline"
         ) as _get_current_timeline,
@@ -1196,9 +1196,9 @@ def test_on_peer_relation_changed(harness):
     with (
         patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
         patch(
-            "backups.PostgreSQLBackups.start_stop_pgbackrest_service"
+            "charm.BackupManager.start_stop_pgbackrest_service"
         ) as _start_stop_pgbackrest_service,
-        patch("backups.PostgreSQLBackups.coordinate_stanza_fields") as _coordinate_stanza_fields,
+        patch("charm.BackupManager.coordinate_stanza_fields") as _coordinate_stanza_fields,
         patch("charm.PostgresqlOperatorCharm.is_primary") as _is_primary,
         patch("charm.PatroniManager.member_started", new_callable=PropertyMock) as _member_started,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
