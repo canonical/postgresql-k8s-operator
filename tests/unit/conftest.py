@@ -31,7 +31,6 @@ def mock_refresh():
 
     with (
         patch("charm_refresh.Kubernetes", Mock(return_value=refresh_mock)),
-        patch("charm.PostgreSQLRefresh", Mock(return_value=None)),
         patch("charm_refresh._main._RefreshVersions", Mock(return_value=versions_mock)),
     ):
         yield
