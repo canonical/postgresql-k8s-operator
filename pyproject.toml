@@ -19,7 +19,12 @@ lightkube-models = "^1.28.1.4"
 psycopg2 = "^2.9.12"
 charmlibs-interfaces-tls-certificates = "^1.10.1"
 charm-refresh = "^3.1.1.2"
-postgresql-charms-single-kernel = {extras = ["postgresql", "k8s"], version = "16.3.7"}
+# Pinned to the commit carrying the logical-replication migration PRs
+# (canonical/postgresql-single-kernel-library#266..#270) until they are released.
+postgresql-charms-single-kernel = { git = "https://github.com/canonical/postgresql-single-kernel-library", rev = "f76c14a7aad7ba92c3c5ec6d5950094f69e3176c", extras = [
+    "postgresql",
+    "k8s",
+] }
 
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py
