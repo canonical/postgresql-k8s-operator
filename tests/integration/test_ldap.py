@@ -6,6 +6,7 @@ import asyncio
 import base64
 import hashlib
 import logging
+import uuid
 from pathlib import Path
 
 import psycopg2
@@ -154,16 +155,17 @@ async def test_glauth_integration(ops_test: OpsTest):
             f"uid: {LDAP_USER}\n"
             f"userPassword: {password_hash}\n"
         )
-        ldif_path = Path("/var/tmp/ldap-test.ldif")
+        # A unique file name avoids colliding with a stale root-owned copy left
+        # by a previous run (juju scp cannot overwrite it as the charm user).
+        ldif_path = Path(f"/var/tmp/ldap-test-{uuid.uuid4().hex[:8]}.ldif")
         ldif_path.write_text(ldif)
-        await ops_test.juju(
-            "scp", str(ldif_path), f"{GLAUTH_UTILS_APP_NAME}/0:/var/tmp/ldap-test.ldif"
-        )
+        unit_ldif_path = f"/var/tmp/{ldif_path.name}"
+        await ops_test.juju("scp", str(ldif_path), f"{GLAUTH_UTILS_APP_NAME}/0:{unit_ldif_path}")
         action = (
             await ops_test.model
             .applications[GLAUTH_UTILS_APP_NAME]
             .units[0]
-            .run_action("apply-ldif", path="/var/tmp/ldap-test.ldif")
+            .run_action("apply-ldif", path=unit_ldif_path)
         )
         await action.wait()
         assert action.results["return-code"] == 0
