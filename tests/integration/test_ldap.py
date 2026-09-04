@@ -3,7 +3,6 @@
 # See LICENSE file for licensing details.
 
 import asyncio
-import base64
 import hashlib
 import logging
 import uuid
@@ -115,14 +114,13 @@ async def test_glauth_integration(ops_test: OpsTest):
         # the mapped users and grants them identity_access so they match the hba
         # 'ldap' line), pre-create the mapped role the group grants into, and
         # create the user in glauth through the glauth-utils charm.
-        logger.info("Configuring the LDAP group mapping and creating the PostgreSQL group")
-        await ops_test.model.applications[DATABASE_APP_NAME].set_config({
-            "ldap-map": f"{LDAP_GROUP}={LDAP_GROUP}"
-        })
-        # DDL returns no rows; append a SELECT so the helper's fetchall succeeds.
+        logger.info("Creating the mapped PostgreSQL group and setting the LDAP group mapping")
         await execute_query_on_unit(
             address, password, f'CREATE ROLE "{LDAP_GROUP}" NOLOGIN; SELECT 1;'
         )
+        await ops_test.model.applications[DATABASE_APP_NAME].set_config({
+            "ldap-map": f"{LDAP_GROUP}={LDAP_GROUP}"
+        })
 
         logger.info("Deploying the glauth-utils charm and creating the LDAP user")
         await ops_test.model.deploy(
