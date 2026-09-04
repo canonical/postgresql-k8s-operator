@@ -1,0 +1,58 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.28   unsupported  00:10:18Z
+
+App             Version  Status       Scale  Charm           Channel  Rev  Address        Exposed  Message
+postgresql-k8s  14.24    maintenance      3  postgresql-k8s             0  10.152.183.87  no       Beginning rolling restart
+
+Unit               Workload  Agent      Address     Ports  Message
+postgresql-k8s/0   unknown   executing  10.1.90.76         
+postgresql-k8s/1   unknown   executing  10.1.90.75         
+postgresql-k8s/2*  error     idle       10.1.90.77         hook failed: "storage-attached"
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-2: 00:10:17 ERROR unit.postgresql-k8s/2.juju-log Failed to create user: connection to server at "postgresql-k8s-primary.testing.svc.cluster.local" (10.152.183.26), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-k8s-2: 00:10:18 ERROR unit.postgresql-k8s/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 294, in create_user
+    valid_privileges, valid_roles = self.list_valid_privileges_and_roles()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 777, in list_valid_privileges_and_roles
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 184, in _connect_to_database
+    connection = psycopg2.connect(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.testing.svc.cluster.local" (10.152.183.26), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/charm.py", line 2871, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 360, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 522, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 506, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 436, in _emit
+    self.framework.reemit()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 924, in reemit
+    self._reemit()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1034, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/charm.py", line 1017, in _on_postgresql_pebble_ready
+    if self.unit.is_leader() and not self._initialize_cluster(event):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/charm.py", line 1103, in _initialize_cluster
+    self.postgresql.create_user(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/lib/charms/postgresql_k8s/v0/postgresql.py", line 341, in create_user
+    raise PostgreSQLCreateUserError() from e
+charms.postgresql_k8s.v0.postgresql.PostgreSQLCreateUserError: None
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
