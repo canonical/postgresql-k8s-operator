@@ -334,6 +334,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             patroni_manager=self.patroni_manager,
             update_config=self.update_config,
             resource_provider=self.k8s_manager,
+            set_unit_status=self.set_unit_status,
         )
         self.restore_manager = RestoreManager(
             state=self.state,
