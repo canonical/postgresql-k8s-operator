@@ -11,7 +11,7 @@ import pytest
 from lightkube import ApiError
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Endpoints, Pod, Service
-from ops import JujuVersion
+from ops import JujuVersion, ModelError
 from ops.model import (
     ActiveStatus,
     BlockedStatus,
@@ -358,6 +358,9 @@ def test_on_update_status(harness):
             new_callable=PropertyMock,
             return_value=False,
         ),
+        patch(
+            "single_kernel_postgresql.events.async_replication.PostgreSQLAsyncReplication.clear_stale_promotion"
+        ) as _clear_stale_promotion,
         patch("charm.PatroniManager.get_running_cluster_members", return_value=["test"]),
     ):
         # Early exit on can connect.
@@ -426,8 +429,11 @@ def test_on_update_status(harness):
         assert harness.model.unit.status != ActiveStatus("Primary")
 
         # Test again and check primary message being set (current unit is the primary).
+        _clear_stale_promotion.reset_mock()
         harness.charm.on.update_status.emit()
         assert harness.model.unit.status == ActiveStatus("Primary")
+        # A stale promoted-cluster-counter from a dead-DC teardown is reconciled here too.
+        _clear_stale_promotion.assert_called_once_with()
 
 
 def test_on_update_status_no_connection(harness):
@@ -1844,3 +1850,53 @@ def test_on_secret_remove(harness):
         event.secret.label = None
         harness.charm._on_secret_remove(event)
         assert not event.remove_revision.called
+
+
+def test_update_config_clears_stale_standby_when_primary(harness):
+    """Test update_config clears a stale DCS standby_cluster when this cluster is the primary.
+
+    A force-promote bumps the promoted-cluster-counter but, while the dead-DC relation still
+    lingers, does not call promote_standby_cluster() — so the reconciler must clear the stale
+    standby_cluster itself on the next update-config, or the cluster stays a read-only standby
+    leader (DPE-10203).
+    """
+    with (
+        patch.object(PostgresqlOperatorCharm, "postgresql", Mock()),
+        patch.object(harness.charm, "patroni_manager") as _patroni_manager,
+        patch("charm.ConfigManager.update_config") as _config_manager,
+        patch(
+            "charm.PostgreSQLAsyncReplication.get_primary_cluster_endpoint"
+        ) as _get_primary_cluster_endpoint,
+    ):
+        # This cluster is the primary -> no primary endpoint.
+        _get_primary_cluster_endpoint.return_value = None
+        _config_manager.return_value = True
+        _patroni_manager.member_started = True
+
+        assert harness.charm.update_config() is True
+
+        base_patch = _patroni_manager.bulk_update_parameters_controller_by_patroni.call_args[0][1]
+
+        # standby_cluster must be explicitly cleared (patched to None) so the DCS converges;
+        # merely omitting it would leave the stale standby from before the promotion in place.
+        assert base_patch["standby_cluster"] is None
+
+
+def test_planned_units_returns_app_value_normally(harness):
+    charm = harness.charm
+    with patch.object(charm.app, "planned_units", return_value=5):
+        assert charm._planned_units == 5
+
+
+def test_planned_units_survives_goal_state_failure(harness):
+    # DPE-10203 Issue B: after a cross-model SAAS is force-removed, the goal-state hook
+    # command fails ("saas application ... not found"), so app.planned_units() raises
+    # ModelError. _planned_units must fall back to the current unit count instead of
+    # crashing every hook that reads it.
+    charm = harness.charm
+    with patch.object(
+        charm.app,
+        "planned_units",
+        side_effect=ModelError('ERROR saas application "db1" not found'),
+    ):
+        assert charm._planned_units == len(charm._hosts)
