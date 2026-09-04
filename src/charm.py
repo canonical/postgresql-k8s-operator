@@ -19,11 +19,6 @@ from pathlib import Path
 from typing import Literal, get_args
 from urllib.parse import urlparse
 
-from authorisation_rules_observer import (
-    AuthorisationRulesChangeCharmEvents,
-    AuthorisationRulesObserver,
-)
-
 # First platform-specific import, will fail on wrong architecture
 try:
     import psycopg2
@@ -110,6 +105,7 @@ from single_kernel_postgresql.config.literals import (
     DATABASE,
     DATABASE_DEFAULT_NAME,
     DATABASE_PORT,
+    JUJU_EXECUTABLE,
     METRICS_PORT,
     MONITORING_PASSWORD_KEY,
     MONITORING_USER,
@@ -154,6 +150,10 @@ from single_kernel_postgresql.managers.database import DatabaseManager
 from single_kernel_postgresql.managers.k8s import K8sManager
 from single_kernel_postgresql.managers.patroni import PatroniManager
 from single_kernel_postgresql.managers.tls import TLSManager
+from single_kernel_postgresql.observers.authorisation_rules import (
+    AuthorisationRulesChangeCharmEvents,
+    AuthorisationRulesObserver,
+)
 from single_kernel_postgresql.utils import new_password
 from single_kernel_postgresql.utils.postgresql import (
     ACCESS_GROUP_IDENTITY,
@@ -266,7 +266,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         self._context = {"namespace": self._namespace, "app_name": self._name}
         self.cluster_name = f"patroni-{self._name}"
 
-        self._observer = AuthorisationRulesObserver(self, "/usr/bin/juju-exec")
+        self._observer = AuthorisationRulesObserver(self, self.state, JUJU_EXECUTABLE)
         self.framework.observe(self.on.databases_change, self._on_databases_change)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
