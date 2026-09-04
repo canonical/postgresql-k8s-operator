@@ -28,8 +28,6 @@ from authorisation_rules_observer import (
 try:
     import psycopg2
     import psycopg2.errors
-
-    from refresh import PostgreSQLRefresh
 except ModuleNotFoundError:
     from ops.main import main
     from single_kernel_postgresql.utils.arch import (
@@ -153,6 +151,7 @@ from single_kernel_postgresql.managers.config import ConfigManager
 from single_kernel_postgresql.managers.database import DatabaseManager
 from single_kernel_postgresql.managers.k8s import K8sManager
 from single_kernel_postgresql.managers.patroni import PatroniManager
+from single_kernel_postgresql.managers.refresh import RefreshManager
 from single_kernel_postgresql.managers.tls import TLSManager
 from single_kernel_postgresql.utils import new_password
 from single_kernel_postgresql.utils.postgresql import (
@@ -170,7 +169,7 @@ from single_kernel_postgresql.utils.postgresql import (
     PostgreSQLUpdateUserPasswordError,
 )
 from single_kernel_postgresql.workload.k8s import K8sWorkload
-from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
+from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
 
 from backups import CANNOT_RESTORE_PITR, S3_BLOCK_MESSAGES, PostgreSQLBackups
 from constants import (
@@ -286,9 +285,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         self.framework.observe(self.on.promote_to_primary_action, self._on_promote_to_primary)
         self.framework.observe(self.on.get_primary_action, self._on_get_primary)
         self.framework.observe(self.on.update_status, self._on_update_status)
-        # Do not use collect status events elsewhere—otherwise ops will prioritize statuses incorrectly
-        # https://canonical-charm-refresh.readthedocs-hosted.com/latest/add-to-charm/status/#implementation
-        self.framework.observe(self.on.collect_unit_status, self._reconcile_refresh_status)
         self.framework.observe(self.on.secret_remove, self._on_secret_remove)
 
         self._certs_path = "/usr/local/share/ca-certificates"
@@ -345,26 +341,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             except ModelError:
                 logger.exception("failed to open port")
 
-        self.can_set_app_status = True
-        try:
-            self.refresh = charm_refresh.Kubernetes(
-                PostgreSQLRefresh(
-                    workload_name="PostgreSQL",
-                    charm_name="postgresql-k8s",
-                    oci_resource_name="postgresql-image",
-                    _charm=self,
-                )
-            )
-        except charm_refresh.KubernetesJujuAppNotTrusted:
-            self.refresh = None
-            self.can_set_app_status = False
-        except charm_refresh.PeerRelationNotReady:
-            self.refresh = None
-        except charm_refresh.UnitTearingDown:
-            self.unit.status = MaintenanceStatus("Tearing down")
-            sys.exit()
-        self._reconcile_refresh_status()
-
+        self.refresh_manager = RefreshManager(
+            state=self.state,
+            workload=self.workload,
+            charm=self,
+            set_default_status=self._set_active_status,
+        )
+        # Do not use collect status events elsewhere—otherwise ops will prioritize
+        # statuses incorrectly
+        # https://canonical-charm-refresh.readthedocs-hosted.com/latest/add-to-charm/status/#implementation
+        self.framework.observe(self.on.collect_unit_status, self._on_collect_unit_status)
         # Support for disabling the operator.
         disable_file = Path(f"{os.environ.get('CHARM_DIR')}/disable")
         if disable_file.exists():
@@ -375,16 +361,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             self.set_unit_status(BlockedStatus("Disabled"))
             sys.exit(0)
 
-        if (
-            self.refresh is not None
-            and self.refresh.workload_allowed_to_start
-            and not self.refresh.next_unit_allowed_to_refresh
-        ):
-            if self.refresh.in_progress:
-                self.reconcile()
-            else:
-                self.refresh.next_unit_allowed_to_refresh = True
-
+        self.refresh_manager.on_init()
         self._observer.start_authorisation_rules_observer()
         self.grafana_dashboards = GrafanaDashboardProvider(self)
         self.metrics_endpoint = MetricsEndpointProvider(
@@ -422,103 +399,64 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         """
         return Substrates.K8S
 
-    def reconcile(self):
-        """Reconcile the unit state on refresh."""
-        self.set_unit_status(MaintenanceStatus("starting services"))
-        self._ensure_pgdata_dirs_and_symlinks(self.workload.container)
+    @property
+    def refresh(self) -> charm_refresh.Kubernetes | None:
+        """The charm_refresh object owned by the refresh manager."""
+        return self.refresh_manager.refresh
+
+    @property
+    def can_set_app_status(self) -> bool:
+        """Whether the application status may be set (False when the app lacks trust).
+
+        False while the refresh manager is still initialising: its constructor
+        reconciles the refresh status before the charm can store the manager.
+        """
+        refresh_manager = getattr(self, "refresh_manager", None)
+        return refresh_manager.can_set_app_status if refresh_manager is not None else False
+
+    def _on_collect_unit_status(self, _=None) -> None:
+        """Reconcile the refresh status on collect-unit-status.
+
+        ops only allows ops.Object methods as observers, so this thin wrapper
+        delegates to the refresh manager.
+        """
+        self.refresh_manager.reconcile_refresh_status()
+
+    def set_default_unit_status(self) -> None:
+        """Set the unit status that applies when no refresh status is active."""
+        self._set_active_status()
+
+    def set_app_status(self) -> None:
+        """Set the application status from the async-replication state."""
+        self.async_replication.set_app_status()
+
+    def get_async_primary_cluster_endpoint(self) -> str | None:
+        """Endpoint of the primary cluster of the async replication partner, if any."""
+        return self.async_replication.get_primary_cluster_endpoint()
+
+    def has_async_replication_relation(self) -> bool:
+        """Whether this unit is related to an async replication partner."""
+        return self.async_replication._relation is not None
+
+    def update_relation_endpoints(self) -> None:
+        """Refresh the client and async relation endpoints after a switchover.
+
+        Never called on Kubernetes; kept for the refresh manager's charm contract.
+        """
+
+    def update_pebble_layers(self) -> None:
+        """Reconcile the workload's Pebble layers."""
         self._update_pebble_layers(replan=True)
 
-        if not self.patroni_manager.member_started:
-            logger.debug("Early exit reconcile: Patroni has not started yet")
-            return
-
-        if self.unit.is_leader() and not self.patroni_manager.primary_endpoint_ready:
-            logger.debug(
-                "Early exit reconcile: current unit is leader but primary endpoint is not ready yet"
-            )
-            return
-
-        self.set_unit_status(WaitingStatus("waiting for database initialisation"))
-        try:
-            for attempt in Retrying(stop=stop_after_attempt(6), wait=wait_fixed(10)):
-                with attempt:
-                    if not (
-                        self.unit.name.replace("/", "-") in self.patroni_manager.cluster_members
-                        and self.patroni_manager.is_replication_healthy
-                    ):
-                        logger.error(
-                            "Instance not yet back in the cluster or not healthy."
-                            f" Retry {attempt.retry_state.attempt_number}/6"
-                        )
-                        raise Exception
-        except RetryError:
-            logger.debug("Upgraded unit is not part of the cluster or not healthy")
-            self.set_unit_status(
-                BlockedStatus("upgrade failed. Check logs for rollback instruction")
-            )
-        else:
-            if self.refresh is not None:
-                self.refresh.next_unit_allowed_to_refresh = True
-                self.set_unit_status(ActiveStatus())
-
-    def _reconcile_refresh_status(self, _=None):
-        if self.unit.is_leader():
-            self.async_replication.set_app_status()
-
-        # Workaround for other unit statuses being set in a stateful way (i.e. unable to recompute
-        # status on every event)
-        path = pathlib.Path(".last_refresh_unit_status.json")
-        try:
-            last_refresh_unit_status = json.loads(path.read_text())
-        except FileNotFoundError:
-            last_refresh_unit_status = None
-        new_refresh_unit_status = None
-        if self.refresh is not None and self.refresh.unit_status_higher_priority:
-            self.unit.status = self.refresh.unit_status_higher_priority
-            new_refresh_unit_status = self.refresh.unit_status_higher_priority.message
-        elif self.unit.status.message == last_refresh_unit_status:
-            if self.refresh is not None and (
-                refresh_status := self.refresh.unit_status_lower_priority(
-                    workload_is_running=self.workload.is_patroni_running()
-                )
-            ):
-                self.unit.status = refresh_status
-                new_refresh_unit_status = refresh_status.message
-            else:
-                # Clear refresh status from unit status
-                self._set_active_status()
-        elif (
-            isinstance(self.unit.status, ActiveStatus)
-            and self.refresh is not None
-            and (
-                refresh_status := self.refresh.unit_status_lower_priority(
-                    workload_is_running=self._is_workload_running
-                )
-            )
-        ):
-            self.unit.status = refresh_status
-            new_refresh_unit_status = refresh_status.message
-        path.write_text(json.dumps(new_refresh_unit_status))
+    def ensure_pgdata_dirs_and_symlinks(self) -> None:
+        """Create the storage directories and symlinks for the PostgreSQL data paths."""
+        self._ensure_pgdata_dirs_and_symlinks(self.workload.container)
 
     def set_unit_status(
         self, status: StatusBase, /, *, refresh: charm_refresh.Kubernetes | None = None
     ):
         """Set unit status without overriding higher priority refresh status."""
-        if refresh is None:
-            refresh = getattr(self, "refresh", None)
-        if refresh is not None and refresh.unit_status_higher_priority:
-            return
-        if (
-            isinstance(status, ActiveStatus)
-            and refresh is not None
-            and (refresh_status := refresh.unit_status_lower_priority())
-        ):
-            self.unit.status = refresh_status
-            pathlib.Path(".last_refresh_unit_status.json").write_text(
-                json.dumps(refresh_status.message)
-            )
-            return
-        self.unit.status = status
+        self.refresh_manager.set_unit_status(status, refresh=refresh)
 
     def _on_databases_change(self, _):
         """Handle databases change event."""
