@@ -136,10 +136,8 @@ async def test_glauth_integration(ops_test: OpsTest):
         )
 
         # glauth-utils' apply-ldif action reads the file from its own container.
-        password_hash = (
-            "{SHA256}"
-            + base64.b64encode(hashlib.sha256(LDAP_USER_PASSWORD.encode()).digest()).decode()
-        )
+        # GLAuth compares sha256(plaintext) HEX digests, not base64.
+        password_hash = "{SHA256}" + hashlib.sha256(LDAP_USER_PASSWORD.encode()).hexdigest()
         ldif = (
             f"dn: ou={LDAP_GROUP},dc=glauth,dc=com\n"
             "objectClass: posixGroup\n"
