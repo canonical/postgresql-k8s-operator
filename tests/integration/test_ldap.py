@@ -196,14 +196,16 @@ async def test_glauth_integration(ops_test: OpsTest):
                 await _execute_query_as(address, LDAP_USER, LDAP_USER_PASSWORD, "SELECT 1;")
 
 
-def _execute_query_as(address: str, user: str, password: str, query: str) -> list:
+async def _execute_query_as(address: str, user: str, password: str, query: str) -> list:
     """Execute a query connecting as the given user (not the charm operator)."""
-    with (
-        psycopg2.connect(
-            f"dbname='postgres' user='{user}' host='{address}'"
-            f"password='{password}' connect_timeout=10"
-        ) as connection,
-        connection.cursor() as cursor,
-    ):
-        cursor.execute(query)
-        return list(cursor.fetchall())
+    connection = await asyncio.to_thread(
+        psycopg2.connect,
+        f"dbname='postgres' user='{user}' host='{address}'"
+        f"password='{password}' connect_timeout=10",
+    )
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+            return list(cursor.fetchall())
+    finally:
+        connection.close()
