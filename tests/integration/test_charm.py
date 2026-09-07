@@ -151,7 +151,7 @@ async def test_settings_are_correct(ops_test: OpsTest, unit_id: int):
     assert settings["fsync"] == "on"
     assert settings["full_page_writes"] == "on"
     assert settings["lc_messages"] == "en_US.UTF8"
-    assert settings["listen_addresses"] == "0.0.0.0"
+    assert settings["listen_addresses"] == "*"
     assert settings["log_autovacuum_min_duration"] == "60000"
     assert settings["log_checkpoints"] == "on"
     assert settings["log_destination"] == "stderr"
