@@ -1,0 +1,15 @@
+summary: test_ipv6_deployment.py — dual-stack cluster
+environment:
+  TEST_MODULE: test_ipv6_deployment.py
+  PG_IP_FAMILY: dual
+  PG_IPV6_SUBNET: fd42:1928:642::/64
+execute: |
+  # KNOWN LIMITATION (2026-09): the k8s snap 1.35.x bootstrap config schema is
+  # single-CIDR (`UserFacingClusterConfig.PodCIDR/ServiceCIDR` are strings), so
+  # this task cannot bootstrap a dual-stack cluster on this snap version. Run it
+  # on a cluster that provides both families; the test module asserts the pod
+  # addresses and the rendered pg_hba IPv6 rules.
+  echo "SKIPPED: dual-stack bootstrap is not supported by k8s snap 1.35.x (single-CIDR schema)"
+  exit 0
+artifacts:
+  - allure-results

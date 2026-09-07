@@ -1,0 +1,10 @@
+summary: test_ipv6_deployment.py — IPv4-only cluster (regression guard)
+environment:
+  TEST_MODULE: test_ipv6_deployment.py
+  PG_IP_FAMILY: ipv4
+execute: |
+  # The concierge-bootstrapped cluster is single-stack IPv4 by default: the
+  # charm must converge exactly as it did before the IPv6 library changes.
+  tox run -e integration -- "tests/integration/$TEST_MODULE" --model testing --alluredir="$SPREAD_TASK/allure-results"
+artifacts:
+  - allure-results

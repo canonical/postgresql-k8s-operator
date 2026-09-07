@@ -1,0 +1,15 @@
+summary: test_ipv6_deployment.py — IPv6-only cluster
+environment:
+  TEST_MODULE: test_ipv6_deployment.py
+  PG_IP_FAMILY: ipv6
+  PG_IPV6_SUBNET: fd42:1928:642::/64
+execute: |
+  # KNOWN LIMITATIONS (2026-09): (1) the k8s snap 1.35.x bootstrap config schema
+  # is single-CIDR, so this task cannot bootstrap an IPv6-only cluster on this
+  # snap version; (2) independently, the charm binds the Patroni REST API to
+  # 0.0.0.0, so an IPv6-only pod network cannot serve it yet. Both must be
+  # resolved before this scenario can run; the test module is ready for it.
+  echo "SKIPPED: IPv6-only cluster bootstrap is not supported by k8s snap 1.35.x, and the Patroni REST API binds 0.0.0.0"
+  exit 0
+artifacts:
+  - allure-results
