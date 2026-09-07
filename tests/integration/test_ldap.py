@@ -8,7 +8,6 @@ import logging
 import uuid
 from pathlib import Path
 
-import psycopg2
 import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import AsyncRetrying, stop_after_attempt, wait_fixed
@@ -17,6 +16,7 @@ from . import markers
 from .helpers import (
     DATABASE_APP_NAME,
     build_and_deploy,
+    execute_query_as_user,
     execute_query_on_unit,
     get_password,
     get_unit_address,
@@ -193,19 +193,4 @@ async def test_glauth_integration(ops_test: OpsTest):
             stop=stop_after_attempt(12), wait=wait_fixed(30), reraise=True
         ):
             with attempt:
-                await _execute_query_as(address, LDAP_USER, LDAP_USER_PASSWORD, "SELECT 1;")
-
-
-async def _execute_query_as(address: str, user: str, password: str, query: str) -> list:
-    """Execute a query connecting as the given user (not the charm operator)."""
-    connection = await asyncio.to_thread(
-        psycopg2.connect,
-        f"dbname='postgres' user='{user}' host='{address}'"
-        f"password='{password}' connect_timeout=10",
-    )
-    try:
-        with connection.cursor() as cursor:
-            cursor.execute(query)
-            return list(cursor.fetchall())
-    finally:
-        connection.close()
+                await execute_query_as_user(address, LDAP_USER, LDAP_USER_PASSWORD, "SELECT 1;")
