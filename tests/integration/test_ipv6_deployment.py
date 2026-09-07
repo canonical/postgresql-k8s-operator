@@ -55,9 +55,7 @@ async def test_pg_hba_renders_ipv6_rules(ops_test: OpsTest):
     from an IPv6 address to authenticate; without them the bootstrap loop
     documented in #1928 reproduces on any deployment with IPv6 addresses.
     """
-    count = await run_command_on_unit(
-        ops_test, f"{APP_NAME}/0", f"grep -c '::/0' {PG_HBA_PATH}"
-    )
+    count = await run_command_on_unit(ops_test, f"{APP_NAME}/0", f"grep -c '::/0' {PG_HBA_PATH}")
     assert int(count) >= 1, "no IPv6 pg_hba rules rendered in the workload"
 
 
