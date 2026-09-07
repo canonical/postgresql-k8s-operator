@@ -22,14 +22,16 @@ IPv6 connections, which the charm does not do yet.
 import os
 
 import pytest
-
 from pytest_operator.plugin import OpsTest
+
 from .helpers import (
     ACTUAL_PGDATA_PATH,
-    DATABASE_APP_NAME as APP_NAME,
     build_and_deploy,
     get_unit_address,
     run_command_on_unit,
+)
+from .helpers import (
+    DATABASE_APP_NAME as APP_NAME,
 )
 
 IP_FAMILY = os.environ.get("PG_IP_FAMILY", "ipv4")
