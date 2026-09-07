@@ -1910,7 +1910,7 @@ optional = false
 python-versions = ">=3.8,<4.0"
 groups = ["main", "integration"]
 files = [
-    {file = "76faaa9168f7431b170e52865daab5631880d76f.tar.gz", hash = "sha256:c47a7e85326208aa61bc1aa3c4cb4aea9384a4846ff10f6dd4326235ece10661"},
+    {file = "40c6d4b2f0a092f258cb052105cba4105b61a372.tar.gz", hash = "sha256:72e2edaf80fd70a749e13a3047ccc3ade8112c56796513bdd9fcef2aac06048d"},
 ]
 
 [package.dependencies]
@@ -1937,7 +1937,7 @@ vm = ["charmlibs-snap (>=1.0.1) ; python_version >= \"3.12\"", "charmlibs-system
 
 [package.source]
 type = "url"
-url = "https://github.com/canonical/postgresql-single-kernel-library/archive/76faaa9168f7431b170e52865daab5631880d76f.tar.gz"
+url = "https://github.com/canonical/postgresql-single-kernel-library/archive/40c6d4b2f0a092f258cb052105cba4105b61a372.tar.gz"
 
 [[package]]
 name = "prompt-toolkit"
@@ -3296,4 +3296,4 @@ h11 = ">=0.16.0,<1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "84af53f616684c64be139dcb84123fe56e34924faffc3a902d291126983dfaae"
+content-hash = "cf8f7585a63e8682e39189ea48f152f2c506eb4db619fc95545320596af2599b"
