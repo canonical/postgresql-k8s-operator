@@ -1393,7 +1393,7 @@ def test_restart_services(harness):
 
 
 def test_update_config_delegates_to_config_manager(harness):
-    """update_config delegates to the lib ConfigManager with the charm-sourced parameters."""
+    """update_config delegates to the lib ConfigManager, which sources LDAP parameters itself."""
     with (
         patch("charm.ConfigManager.update_config") as _update_config,
         patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock,
@@ -1401,7 +1401,6 @@ def test_update_config_delegates_to_config_manager(harness):
             "charm.PostgresqlOperatorCharm.relations_user_databases_map",
             new_callable=PropertyMock,
         ) as _relations_user_databases_map,
-        patch("charm.PostgresqlOperatorCharm.get_ldap_parameters") as _get_ldap_parameters,
         patch(
             "charm.PostgreSQLAsyncReplication.get_primary_cluster_endpoint"
         ) as _get_primary_cluster_endpoint,
@@ -1409,7 +1408,6 @@ def test_update_config_delegates_to_config_manager(harness):
     ):
         _update_config.return_value = True
         _relations_user_databases_map.return_value = {"operator": "all"}
-        _get_ldap_parameters.return_value = {"ldap": "params"}
         _get_primary_cluster_endpoint.return_value = "primary-endpoint"
         _get_standby_endpoints.return_value = ["standby-endpoint"]
 
@@ -1420,7 +1418,6 @@ def test_update_config_delegates_to_config_manager(harness):
             postgresql_mock,
             is_creating_backup=True,
             relations_user_databases_map={"operator": "all"},
-            ldap_parameters={"ldap": "params"},
             async_primary_cluster_endpoint="primary-endpoint",
             async_standby_endpoints=["standby-endpoint"],
         )
@@ -1431,7 +1428,6 @@ def test_update_config_catches_deployed_without_trust(harness):
     with (
         patch("charm.ConfigManager.update_config", side_effect=DeployedWithoutTrustError),
         patch.object(PostgresqlOperatorCharm, "postgresql", Mock()),
-        patch("charm.PostgresqlOperatorCharm.get_ldap_parameters"),
         patch("charm.PostgreSQLAsyncReplication.get_primary_cluster_endpoint"),
         patch("charm.PostgreSQLAsyncReplication.get_standby_endpoints"),
     ):
@@ -1792,9 +1788,9 @@ def test_on_promote_to_primary(harness):
 
 def test_get_ldap_parameters(harness):
     with (
-        patch("charm.PostgreSQLLDAP.get_relation_data") as _get_relation_data,
+        patch("single_kernel_postgresql.events.ldap.LDAP.get_relation_data") as _get_relation_data,
         patch(
-            target="charm.PostgresqlOperatorCharm.is_cluster_initialised",
+            target="single_kernel_postgresql.core.peer_relation.PostgreSQLApplication.is_cluster_initialised",
             new_callable=PropertyMock,
             return_value=True,
         ) as _cluster_initialised,
@@ -1806,7 +1802,7 @@ def test_get_ldap_parameters(harness):
                 {"ldap_enabled": "False"},
             )
 
-        harness.charm.get_ldap_parameters()
+        harness.charm.ldap.get_ldap_parameters()
         _get_relation_data.assert_not_called()
         _get_relation_data.reset_mock()
 
@@ -1817,7 +1813,7 @@ def test_get_ldap_parameters(harness):
                 {"ldap_enabled": "True"},
             )
 
-        harness.charm.get_ldap_parameters()
+        harness.charm.ldap.get_ldap_parameters()
         _get_relation_data.assert_called_once()
         _get_relation_data.reset_mock()
 
