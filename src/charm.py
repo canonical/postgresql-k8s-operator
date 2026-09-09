@@ -1647,6 +1647,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         if access_groups != set(ACCESS_GROUPS):
             self.postgresql.create_access_groups()
             self.postgresql.grant_internal_access_group_memberships()
+        # LDAP-authenticated users are members of the identity access group (matched
+        # cluster-wide by the hba 'ldap' line), but the default database revokes
+        # CONNECT from PUBLIC. Grant the group CONNECT so synchronised users can
+        # actually reach the cluster; per-database access stays with mapped groups.
+        self.postgresql.grant_database_privileges_to_user(
+            ACCESS_GROUP_IDENTITY, DATABASE_DEFAULT_NAME, ["CONNECT"]
+        )
 
     @property
     def is_blocked(self) -> bool:
