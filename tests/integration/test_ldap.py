@@ -14,6 +14,7 @@ from tenacity import AsyncRetrying, stop_after_attempt, wait_fixed
 
 from . import markers
 from .helpers import (
+    DATA_INTEGRATOR_APP_NAME,
     DATABASE_APP_NAME,
     build_and_deploy,
     execute_query_as_user,
@@ -42,10 +43,10 @@ async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
 
 @pytest.mark.abort_on_fail
 @markers.juju3
-async def test_glauth_integration(ops_test: OpsTest):
+async def test_glauth_integration(ops_test: OpsTest, charm):
     glauth_psql_app_name = f"glauth-{GLAUTH_PSQL_APP_NAME}"
     glauth_cert_app_name = f"glauth-{GLAUTH_CERT_APP_NAME}"
-
+    ldap_database_name = "ldap_test"
     # Deploy GLAuth charm
     await asyncio.gather(
         ops_test.model.deploy(
@@ -115,20 +116,39 @@ async def test_glauth_integration(ops_test: OpsTest):
         # 'ldap' line), pre-create the mapped role the group grants into, and
         # create the user in glauth through the glauth-utils charm.
         logger.info("Creating the mapped PostgreSQL group and setting the LDAP group mapping")
-        # The charm grants no database privileges to LDAP users: authorization
-        # belongs to the mapped groups (ldap-map). Simulate the operator's
-        # post-mapping grant — CONNECT on the default database for the mapped
-        # group — so the auth poll can run end to end. identity_access stays a
-        # pure authentication marker (least privilege).
+        # Authorization per the DA148 spec: the charm grants no database
+        # privileges to LDAP users (identity_access is a pure authentication
+        # marker); it belongs to the mapped groups, managed through the regular
+        # relation flow. Deploy data-integrator, relate it (creating the
+        # relation database and user), and grant CONNECT on that database to
+        # the mapped group — the operator's post-mapping authorization step.
+        logger.info("Deploying data-integrator and relating it to the database")
+        await ops_test.model.deploy(
+            DATA_INTEGRATOR_APP_NAME,
+            config={"database-name": ldap_database_name},
+        )
+        await ops_test.model.add_relation(DATA_INTEGRATOR_APP_NAME, DATABASE_APP_NAME)
+        await ops_test.model.wait_for_idle(
+            apps=[DATA_INTEGRATOR_APP_NAME, DATABASE_APP_NAME], status="active"
+        )
+        data_integrator_unit = ops_test.model.applications[DATA_INTEGRATOR_APP_NAME].units[0]
+        action = await data_integrator_unit.run_action(action_name="get-credentials")
+        result = await action.wait()
+        relation_user = result.results["postgresql"]["username"]
+        relation_password = result.results["postgresql"]["password"]
+        # The regular scram relation flow must keep working alongside LDAP.
+        await execute_query_as_user(
+            address,
+            relation_user,
+            relation_password,
+            "SELECT 1;",
+            database=ldap_database_name,
+        )
         await execute_query_on_unit(
             address,
             password,
-            f'CREATE ROLE "{LDAP_GROUP}" NOLOGIN; '
-            f'GRANT CONNECT ON DATABASE postgres TO "{LDAP_GROUP}"; SELECT 1;',
+            f'GRANT CONNECT ON DATABASE "{ldap_database_name}" TO "{LDAP_GROUP}"; SELECT 1;',
         )
-        await ops_test.model.applications[DATABASE_APP_NAME].set_config({
-            "ldap-map": f"{LDAP_GROUP}={LDAP_GROUP}"
-        })
 
         logger.info("Deploying the glauth-utils charm and creating the LDAP user")
         await ops_test.model.deploy(
@@ -194,4 +214,10 @@ async def test_glauth_integration(ops_test: OpsTest):
             stop=stop_after_attempt(12), wait=wait_fixed(30), reraise=True
         ):
             with attempt:
-                await execute_query_as_user(address, LDAP_USER, LDAP_USER_PASSWORD, "SELECT 1;")
+                await execute_query_as_user(
+                    address,
+                    LDAP_USER,
+                    LDAP_USER_PASSWORD,
+                    "SELECT 1;",
+                    database=ldap_database_name,
+                )
