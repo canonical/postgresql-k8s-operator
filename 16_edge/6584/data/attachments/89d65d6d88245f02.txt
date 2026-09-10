@@ -1,0 +1,133 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:806 Connecting to existing model concierge-microk8s:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SecretsRevoker received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-0
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/data-integrator-418
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [idle] blocked: Please relate the data-integrator with the desired product
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  data-integrator/0 [idle] blocked: Please relate the data-integrator with the desired product
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m httpx:_client.py:1740 HTTP Request: GET https://10.1.0.122:16443/api/v1/namespaces/testing/services/postgresql-k8s-primary "HTTP/1.1 200 OK"
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [idle] active: 
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  data-integrator/0 [idle] blocked: Please relate the data-integrator with the desired product
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m integration.new_relations.test_relations_coherence:test_relations_coherence.py:92 connecting to the following database: data_integrator
+[32mINFO    [0m httpx:_client.py:1740 HTTP Request: GET https://10.1.0.122:16443/api/v1/namespaces/testing/services/postgresql-k8s-primary "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.new_relations.test_relations_coherence:test_relations_coherence.py:92 connecting to the following database: postgres
+[32mINFO    [0m httpx:_client.py:1740 HTTP Request: GET https://10.1.0.122:16443/api/v1/namespaces/testing/services/postgresql-k8s-primary "HTTP/1.1 200 OK"
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.28   unsupported  01:36:38Z
+
+App              Version  Status  Scale  Charm            Channel        Rev  Address         Exposed  Message
+data-integrator           active      1  data-integrator  latest/stable  418  10.152.183.207  no       
+postgresql-k8s   16.14    active      1  postgresql-k8s                    0  10.152.183.53   no       
+
+Unit                Workload  Agent  Address      Ports  Message
+data-integrator/0*  active    idle   10.1.58.141         
+postgresql-k8s/0*   active    idle   10.1.58.140         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-0: 01:31:42 ERROR unit.postgresql-k8s/0.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/charm.py", line 2921, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/ops/__init__.py", line 360, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 522, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 506, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 439, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 483, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 336, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 914, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1034, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/charm.py", line 1449, in _on_postgresql_pebble_ready
+    self._fix_pod()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/charm.py", line 1917, in _fix_pod
+    self.tls_manager.push_tls_files()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/managers/tls.py", line 240, in push_tls_files
+    self._write_tls_file(ca, tls / f"peer_{TLS_CA_FILE}")
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/managers/tls.py", line 216, in _write_tls_file
+    self.workload.write_text(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/workload/base.py", line 113, in write_text
+    path.write_text(content, mode=mode, user=user, group=group)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/charmlibs/pathops/_container_path.py", line 659, in write_text
+    return self.write_bytes(encoded_data, mode=mode, user=user, group=group)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/charmlibs/pathops/_container_path.py", line 603, in write_bytes
+    self._container.push(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2833, in push
+    self._pebble.push(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2855, in push
+    response = self._request_raw('POST', '/v1/files', None, headers, data)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2346, in _request_raw
+    response = self.opener.open(request, timeout=self.timeout)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 515, in open
+    response = self._open(req, data)
+               ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 532, in _open
+    result = self._call_chain(self.handle_open, protocol, protocol +
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 492, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 399, in http_open
+    return self.do_open(
+           ^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 1348, in do_open
+    r = h.getresponse()
+        ^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/http/client.py", line 1457, in getresponse
+    response.begin()
+  File "/usr/lib/python3.12/http/client.py", line 336, in begin
+    version, status, reason = self._read_status()
+                              ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/http/client.py", line 297, in _read_status
+    line = str(self.fp.readline(_MAXLINE + 1), "iso-8859-1")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/socket.py", line 707, in readinto
+    return self._sock.recv_into(b)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+TimeoutError: timed out
+unit-postgresql-k8s-0: 01:31:42 ERROR juju.worker.uniter.operation hook "postgresql-pebble-ready" (via hook dispatching script: dispatch) failed: exit status 1
+unit-postgresql-k8s-0: 01:31:42 ERROR juju.worker.uniter pebble poll failed for container "postgresql": failed to send pebble-ready event: hook failed
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
