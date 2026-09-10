@@ -11,3 +11,6 @@ requirements-last-build.txt
 
 # PyCharm project folder.
 .idea/
+
+# uv lockfile stubs created by tooling during test/lint runs
+uv.lock
