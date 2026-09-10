@@ -59,8 +59,10 @@ from charms.postgresql_k8s.v0.postgresql_tls import PostgreSQLTLS
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
 from charms.rolling_ops.v0.rollingops import RollingOpsManager, RunWithLock
 from lightkube import ApiError, Client
+from lightkube.models.authorization_v1 import ResourceAttributes, SelfSubjectAccessReviewSpec
 from lightkube.models.core_v1 import ServicePort, ServiceSpec
 from lightkube.models.meta_v1 import ObjectMeta
+from lightkube.resources.authorization_v1 import SelfSubjectAccessReview
 from lightkube.resources.core_v1 import Endpoints, Node, Pod, Service
 from ops import JujuVersion, main
 from ops.charm import (
@@ -152,6 +154,10 @@ logging.getLogger("asyncio").setLevel(logging.WARNING)
 EXTENSIONS_DEPENDENCY_MESSAGE = "Unsatisfied plugin dependencies. Please check the logs"
 EXTENSION_OBJECT_MESSAGE = "Cannot disable plugins: Existing objects depend on it. See logs"
 INSUFFICIENT_SIZE_WARNING = "<10% free space on pgdata volume."
+
+# k8s resources that are cluster-scoped: their SelfSubjectAccessReview must not
+# carry a namespace, or RoleBindings in the model namespace could grant them.
+CLUSTER_SCOPED_RESOURCES = frozenset({"nodes"})
 
 ORIGINAL_PATRONI_ON_FAILURE_CONDITION = "restart"
 
@@ -933,7 +939,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 logger.info("Fixed missing leader annotation")
         except ApiError as e:
             if e.status.code == 403:
-                self.on_deployed_without_trust()
+                # A 403 here is not necessarily a proof of missing trust: during
+                # pod recreation the API server can briefly reject requests even
+                # when the application is trusted. Only block the unit when the
+                # API server confirms the permissions are actually missing.
+                if self._is_deployed_without_trust(("get", "endpoints"), ("patch", "endpoints")):
+                    self.on_deployed_without_trust()
+                else:
+                    logger.warning("Transient 403 on endpoints; permissions verified")
                 return False
             # Ignore the error only when the resource doesn't exist.
             if e.status.code != 404:
@@ -1238,7 +1251,16 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 logger.info(f"deleted {kind.__name__}/{self.cluster_name}{suffix}")
             except ApiError as e:
                 if e.status.code == 403:
-                    self.on_deployed_without_trust()
+                    # Only block when the API server confirms the permissions
+                    # are actually missing; see _is_deployed_without_trust.
+                    if self._is_deployed_without_trust(
+                        ("delete", "services"), ("delete", "endpoints")
+                    ):
+                        self.on_deployed_without_trust()
+                    else:
+                        logger.warning(
+                            "Transient 403 deleting cluster resources; permissions verified"
+                        )
                     return
                 # Ignore the error only when the resource doesn't exist.
                 if e.status.code != 404:
@@ -2341,7 +2363,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             available_cpu_cores, available_memory = self.get_available_resources()
         except ApiError as e:
             if e.status.code == 403:
-                self.on_deployed_without_trust()
+                # Only block when the API server confirms the permissions are
+                # actually missing; see _is_deployed_without_trust.
+                if self._is_deployed_without_trust(("get", "pods"), ("get", "nodes")):
+                    self.on_deployed_without_trust()
+                else:
+                    logger.warning("Transient 403 reading pod resources; permissions verified")
                 return False
             raise e
 
@@ -2581,6 +2608,49 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                 allocable_memory = constrained_memory
 
         return cpu_cores, allocable_memory
+
+    def _is_deployed_without_trust(self, *permissions: tuple[str, str]) -> bool:
+        """Verify with the API server whether the charm's permissions are actually missing.
+
+        A bare 403 on a charm k8s call is not a proof that the application was
+        deployed without `--trust`: during pod recreation the API server can
+        briefly reject requests even when the application is trusted. Ask the
+        API server itself through a SelfSubjectAccessReview (the same check the
+        juju trust flag relies on) and only report "deployed without trust"
+        when it definitively denies the permission.
+
+        Args:
+            permissions: (verb, resource) tuples to review, e.g. ("get", "pods").
+
+        Returns:
+            True only when the API server definitively denies one of the
+            permissions; an inconclusive review (API error or missing status)
+            returns False so the next event retries instead of blocking.
+        """
+        client = Client()
+        for verb, resource in permissions:
+            try:
+                review = client.create(
+                    SelfSubjectAccessReview(
+                        spec=SelfSubjectAccessReviewSpec(
+                            resourceAttributes=ResourceAttributes(
+                                namespace=None
+                                if resource in CLUSTER_SCOPED_RESOURCES
+                                else self._namespace,
+                                verb=verb,
+                                resource=resource,
+                            )
+                        )
+                    )
+                )
+            except ApiError:
+                # No evidence about the permissions: let the next event retry.
+                logger.warning(f"SelfSubjectAccessReview for '{verb} {resource}' failed")
+                return False
+            status = review.status
+            if status is not None and not status.allowed:
+                return True
+        return False
 
     def on_deployed_without_trust(self) -> None:
         """Blocks the application and returns a specific error message for deployments made without --trust."""
