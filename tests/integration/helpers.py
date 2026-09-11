@@ -62,7 +62,7 @@ try:
     check_call(["kubectl", "version", "--client=true"])
     KUBECTL = "kubectl"
 except FileNotFoundError:
-    KUBECTL = "microk8s kubectl"
+    KUBECTL = "sudo k8s kubectl"
 
 logger = logging.getLogger(__name__)
 
@@ -775,14 +775,13 @@ async def scale_application(
     await model.applications[application_name].scale(scale)
     if scale == 0:
         await model.block_until(
-            lambda: len(model.applications[application_name].units) == scale,
-            timeout=1000,
+            lambda: len(model.applications[application_name].units) == scale, timeout=1200
         )
     else:
         await model.wait_for_idle(
             apps=[application_name],
             status="active",
-            timeout=1000,
+            timeout=1200,
             wait_for_exact_units=scale,
         )
 

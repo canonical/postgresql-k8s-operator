@@ -1082,8 +1082,9 @@ def get_pvcs(ops_test: OpsTest, unit_name: str):
     pvcs = {}
     client = Client(namespace=ops_test.model.name)
     pvc_list = client.list(PersistentVolumeClaim, namespace=ops_test.model.name)
+    unit_label = unit_name.replace("/", "-")
     for pvc in pvc_list:
-        if unit_name.replace("/", "-") in pvc.metadata.name:
+        if unit_label in pvc.metadata.name:
             pvc_storage_name = pvc.metadata.name.replace(unit_name.split("/")[0], "").split("-")[1]
             logger.info(f"got pvc for {pvc_storage_name} storage: {pvc.metadata.name}")
             pvcs[pvc_storage_name] = pvc
@@ -1095,8 +1096,9 @@ def get_pvs(ops_test: OpsTest, unit_name: str):
     pvs = {}
     client = Client(namespace=ops_test.model.name)
     pv_list = client.list(PersistentVolume, namespace=ops_test.model.name)
+    unit_label = unit_name.replace("/", "-")
     for pv in pv_list:
-        if unit_name.replace("/", "-") in str(pv.spec.hostPath.path):
+        if pv.spec.claimRef.name.endswith(unit_label):
             pvc_storage_name = pv.spec.claimRef.name.replace(unit_name.split("/")[0], "").split(
                 "-"
             )[1]
