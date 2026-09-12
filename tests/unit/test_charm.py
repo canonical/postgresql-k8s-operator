@@ -53,11 +53,14 @@ def harness():
     harness = Harness(PostgresqlOperatorCharm)
     harness.handle_exec("postgresql", ["locale", "-a"], result="C")
 
-    harness.add_relation(PEER_RELATION, "postgresql-k8s")
-    harness.begin()
-    harness.add_relation("restart", harness.charm.app.name)
-    yield harness
-    harness.cleanup()
+    # The lib resource reads build a lightkube client; mock the sync client the
+    # way the retired charm-side backup suite leaked it for the whole module.
+    with patch("lightkube.core.client.GenericSyncClient"):
+        harness.add_relation(PEER_RELATION, "postgresql-k8s")
+        harness.begin()
+        harness.add_relation("restart", harness.charm.app.name)
+        yield harness
+        harness.cleanup()
 
 
 def test_set_ports():
