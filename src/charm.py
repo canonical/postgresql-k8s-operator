@@ -218,30 +218,6 @@ Scopes = Literal["app", "unit"]
 PASSWORD_USERS = [*SYSTEM_USERS, "patroni"]
 
 
-class PostgreSQLS3Client(S3Client):
-    """S3 client that verifies against the relation-provided CA chain per call.
-
-    The library client pins the CA chain file at construction time; the charm
-    instead must re-derive it from the current S3 relation data on every
-    session creation, so non-TLS S3 relations keep ``verify=None`` (a static
-    path would fail every request with SSLError when no chain is configured).
-    """
-
-    def __init__(self, workload: K8sWorkload):
-        """Initialize the client with the workload providing the CA chain location."""
-        super().__init__()
-        self.workload = workload
-
-    def _get_s3_session_resource(self, s3_parameters: dict):
-        """Recompute the CA chain file from the relation data before creating the session."""
-        self._tls_ca_chain_filename = (
-            self.workload.backup_config.tls_ca_chain_path
-            if s3_parameters.get("tls-ca-chain") is not None
-            else None
-        )
-        return super()._get_s3_session_resource(s3_parameters)
-
-
 class CannotConnectError(Exception):
     """Cannot run smoke check on connected Database."""
 
@@ -326,7 +302,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         self._actual_pgdata_path = f"{self._storage_path}/16/main"
 
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
-        self.s3_client = PostgreSQLS3Client(self.workload)
+        self.s3_client = S3Client(self.workload)
         self.backup = BackupManager(
             state=self.state,
             workload=self.workload,
