@@ -1,0 +1,78 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] waiting: Awaiting restart operation
+  postgresql-k8s/1 [executing] active: Primary
+  postgresql-k8s/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [executing] maintenance: Executing restart operation
+  postgresql-k8s/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.28   unsupported  00:16:15Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Address         Exposed  Message
+mattermost                         active      2  mattermost-k8s            latest/stable   18  10.152.183.41   no       
+postgresql-k8s            14.24    active      3  postgresql-k8s                             0  10.152.183.95   no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable       586  10.152.183.105  no       
+
+Unit                         Workload  Agent  Address      Ports  Message
+mattermost/0                 active    idle   10.1.58.146         
+mattermost/1*                active    idle   10.1.58.147         
+postgresql-k8s/0             active    idle   10.1.58.140         
+postgresql-k8s/1             active    idle   10.1.58.142         Primary
+postgresql-k8s/2*            active    idle   10.1.58.141         
+self-signed-certificates/0*  active    idle   10.1.58.145         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-0: 00:09:39 ERROR unit.postgresql-k8s/0.juju-log Failed to list PostgreSQL database users: connection to server at "postgresql-k8s-0.postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.58.140), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-mattermost-1: 00:14:07 ERROR unit.mattermost/1.juju-log db:4: Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "./src/charm.py", line 495, in <module>
+    main(
+  File "/var/lib/juju/agents/unit-mattermost-1/charm/venv/ops/main.py", line 409, in main
+    _emit_charm_event(charm, dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-mattermost-1/charm/venv/ops/main.py", line 143, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-mattermost-1/charm/venv/ops/framework.py", line 278, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mattermost-1/charm/venv/ops/framework.py", line 722, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mattermost-1/charm/venv/ops/framework.py", line 767, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-mattermost-1/charm/venv/pgsql/opslib/pgsql/client.py", line 408, in _on_changed
+    self.on.master_changed.emit(**kwargs)
+  File "/var/lib/juju/agents/unit-mattermost-1/charm/venv/ops/framework.py", line 278, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mattermost-1/charm/venv/ops/framework.py", line 722, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mattermost-1/charm/venv/ops/framework.py", line 767, in _reemit
+    custom_handler(event)
+  File "./src/charm.py", line 210, in _on_master_changed
+    self.on.db_master_available.emit()
+  File "/var/lib/juju/agents/unit-mattermost-1/charm/venv/ops/framework.py", line 278, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-mattermost-1/charm/venv/ops/framework.py", line 722, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-mattermost-1/charm/venv/ops/framework.py", line 767, in _reemit
+    custom_handler(event)
+  File "./src/charm.py", line 179, in _on_config_changed
+    container.start("mattermost")
+  File "/var/lib/juju/agents/unit-mattermost-1/charm/venv/ops/model.py", line 1046, in start
+    self._pebble.start_services(service_names)
+  File "/var/lib/juju/agents/unit-mattermost-1/charm/venv/ops/pebble.py", line 810, in start_services
+    return self._services_action('start', services, timeout, delay)
+  File "/var/lib/juju/agents/unit-mattermost-1/charm/venv/ops/pebble.py", line 839, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "mattermost" (service start attempt: exited quickly with code 1, will restart)
+unit-mattermost-1: 00:14:07 ERROR juju.worker.uniter.operation hook "db-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
