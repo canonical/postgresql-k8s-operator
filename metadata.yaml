@@ -41,7 +41,7 @@ resources:
   postgresql-image:
     type: oci-image
     description: OCI image for PostgreSQL
-    upstream-source: ghcr.io/canonical/charmed-postgresql@sha256:856a221b97bdfafed974b483a911794ec254d4e4cd5b5eb323b676aebc72785a  # renovate: oci-image tag: 16.15-24.04_edge
+    upstream-source: ghcr.io/marceloneppel/charmed-postgresql:16.15-24.04_go125  # test-only: rock packing charmed-postgresql/16/edge/pg-exporters-go125 (go1.25.14 exporters); push from charmed-postgresql-rock CI artifact before integration runs
 
 peers:
   database-peers:
