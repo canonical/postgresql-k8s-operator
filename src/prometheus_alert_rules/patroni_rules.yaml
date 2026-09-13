@@ -44,7 +44,7 @@ groups:
     # 2.4.1
     - alert: PatroniHasNoLeader
       expr: '(max by (juju_model,juju_application,juju_model_uuid,scope) (patroni_master) < 1) and (max by (juju_model,juju_application,juju_model_uuid,scope) (patroni_standby_leader) < 1)'
-      for: 0m
+      for: 5m
       labels:
         severity: critical
       annotations:
