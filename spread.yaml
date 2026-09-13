@@ -60,7 +60,7 @@ backends:
       # For example, with microk8s, using `concierge restore` takes twice as long as this (e.g. 6
       # min instead of 3 min between every spread job)
       juju destroy-model --force --no-wait --destroy-storage --no-prompt testing
-      juju kill-controller --no-prompt concierge-microk8s
+      juju kill-controller --no-prompt concierge-k8s
     restore: |
       rm -rf "$SPREAD_PATH"
 
@@ -82,9 +82,6 @@ backends:
       sudo passwd -d runner
 
       ADDRESS localhost
-
-      sudo mkdir -p /var/snap/microk8s/common/default-storage
-      sudo mount --bind /mnt /var/snap/microk8s/common/default-storage
     # HACK: spread does not pass environment variables set on runner
     # Manually pass specific environment variables
     environment:
@@ -136,4 +133,19 @@ prepare-each: |
   # Unable to set constraint on all models because of Juju bug:
   # https://bugs.launchpad.net/juju/+bug/2065050
   juju set-model-constraints arch="$(dpkg --print-architecture)"
-# Only restore on lxd backend—no need to restore on CI
+
+  # k8s status --wait-ready returns as soon as 1 node is ready
+  # (see https://github.com/canonical/k8s-snap/issues/1789)
+  # but Cilium, CoreDNS, and storage may still be initialising
+  for res in deployment/cilium-operator deployment/coredns deployment/metrics-server daemonset/cilium daemonset/ck-storage-rawfile-csi-node statefulset/ck-storage-rawfile-csi-controller; do
+      if k8s kubectl -n kube-system get "$res" >/dev/null 2>&1; then
+          k8s kubectl -n kube-system rollout status "$res" --timeout=5m
+      else
+          echo "Skipping rollout status for missing $res"
+      fi
+  done
+
+  # Validate k8s DNS / API access
+  sudo k8s kubectl get nodes
+  sudo k8s kubectl get svc -A
+  sudo k8s kubectl get pods -A
