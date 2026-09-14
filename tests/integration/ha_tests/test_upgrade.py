@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 import asyncio
+import json
 import logging
 import shutil
 from pathlib import Path
@@ -18,10 +19,14 @@ from ..helpers import (
     DATABASE_APP_NAME,
     METADATA,
     count_switchovers,
+    execute_query_on_unit,
     get_leader_unit,
+    get_password,
     get_primary,
+    get_unit_address,
     get_unit_by_index,
 )
+from ..new_relations.helpers import get_application_relation_data
 from .helpers import (
     are_writes_increasing,
     check_writes,
@@ -132,6 +137,23 @@ async def test_upgrade_from_edge(ops_test: OpsTest, charm, continuous_writes) ->
         await ops_test.model.wait_for_idle(
             apps=[DATABASE_APP_NAME], status="active", idle_period=30, timeout=TIMEOUT
         )
+
+    dependencies = await get_application_relation_data(
+        ops_test, DATABASE_APP_NAME, "upgrade", "dependencies"
+    )
+    assert dependencies is not None, "Upgrade relation dependencies data is missing"
+    expected_version = json.loads(dependencies)["rock"]["version"]
+    current_primary_name = await get_primary(ops_test, DATABASE_APP_NAME)
+    database_version = (
+        await execute_query_on_unit(
+            await get_unit_address(ops_test, current_primary_name),
+            await get_password(ops_test, database_app_name=DATABASE_APP_NAME),
+            "SELECT version();",
+        )
+    )[0].split(" ")[1]
+    assert expected_version == database_version, (
+        f"PostgreSQL version mismatch: expected {expected_version}, got {database_version}"
+    )
 
     # Check whether writes are increasing.
     logger.info("checking whether writes are increasing")
