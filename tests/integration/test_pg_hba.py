@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
+import json
 import logging
 import re
 from time import sleep
@@ -125,6 +126,10 @@ async def test_pg_hba(ops_test: OpsTest, charm):
                     # Get the version of the database and compare with the information that
                     # was retrieved directly from the database.
                     assert credentials["postgresql"]["version"] == data
+
+                    with open("src/dependency.json") as f:
+                        versions = json.load(f)
+                    assert versions["snap"]["version"] == data
                 connection.close()
 
                 logger.info(
