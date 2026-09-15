@@ -3,10 +3,12 @@
 # See LICENSE file for licensing details.
 import logging
 import re
+from pathlib import Path
 from time import sleep
 
 import psycopg2
 import pytest
+import tomli
 from pytest_operator.plugin import OpsTest
 
 from .helpers import (
@@ -126,6 +128,10 @@ async def test_pg_hba(ops_test: OpsTest, charm):
                     # Get the version of the database and compare with the information that
                     # was retrieved directly from the database.
                     assert credentials["postgresql"]["version"] == data
+
+                    with Path("refresh_versions.toml").open("rb") as file:
+                        versions = tomli.load(file)
+                    assert versions["workload"] == data
                 connection.close()
 
                 logger.info(
