@@ -40,3 +40,4 @@ jobs:
 
       - name: Constraint-composition tests
         run: tox run -e terraform
+    cache-mode: none
