@@ -22,6 +22,7 @@ jobs:
       track: '16'
     permissions:
       contents: write  # Needed to create git tag
+    cache-mode: none
 
   ci-tests:
     name: Tests
@@ -35,6 +36,7 @@ jobs:
       GCP_SECRET_KEY: ${{ secrets.GCP_SECRET_KEY }}
     permissions:
       contents: write  # Needed for Allure Report
+    cache-mode: none
 
   release:
     name: Release charm
@@ -49,3 +51,4 @@ jobs:
       charmhub-token: ${{ secrets.CHARMHUB_TOKEN_EDGE }}
     permissions:
       contents: write  # Needed to create git tags
+    cache-mode: none
