@@ -129,7 +129,7 @@ async def test_pg_hba(ops_test: OpsTest, charm):
 
                     with open("src/dependency.json") as f:
                         versions = json.load(f)
-                    assert versions["snap"]["version"] == data
+                    assert versions["rock"]["version"] == data
                 connection.close()
 
                 logger.info(
