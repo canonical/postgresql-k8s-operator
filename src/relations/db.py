@@ -130,14 +130,6 @@ class DbProvides(Object):
     def _check_exist_current_relation(self) -> bool:
         return any(r in ALL_LEGACY_RELATIONS for r in self.charm.client_relations)
 
-    def _check_multiple_endpoints(self) -> bool:
-        """Checks if there are relations with other endpoints."""
-        is_exist = self._check_exist_current_relation()
-        for relation in self.charm.client_relations:
-            if relation.name not in ALL_LEGACY_RELATIONS and is_exist:
-                return True
-        return False
-
     def _get_extensions(self, relation: Relation) -> tuple[list, set]:
         """Returns the list of required and disabled extensions."""
         requested_extensions = relation.data.get(relation.app, {}).get("extensions", "").split(",")
