@@ -161,10 +161,150 @@ def test_on_leader_elected(harness):
         harness.set_leader()
         assert isinstance(harness.charm.unit.status, ActiveStatus)
 
-        # No trust when annotating
+        # No trust when annotating: the API server denies the permissions.
         _client.return_value.get.side_effect = ApiError(response=response)
+        _client.return_value.create.return_value.status.allowed = False
         harness.set_leader(False)
         harness.set_leader()
+
+        assert isinstance(harness.charm.unit.status, BlockedStatus)
+        assert (
+            harness.charm.unit.status.message
+            == "Insufficient permissions, try: `juju trust postgresql-k8s --scope=cluster`"
+        )
+
+
+def test_leader_elected_transient_403_does_not_block(harness):
+    with (
+        patch("charm.PostgresqlOperatorCharm._add_members"),
+        patch("charm.Client") as _client,
+        patch("charm.new_password", return_value="sekr1t"),
+        patch("charm.PostgresqlOperatorCharm.get_secret", return_value="test") as _get_secret,
+        patch("charm.PostgresqlOperatorCharm.set_secret"),
+        patch("charm.Patroni.reload_patroni_configuration"),
+        patch("charm.PostgresqlOperatorCharm._patch_pod_labels"),
+        patch("charm.PostgresqlOperatorCharm._create_services"),
+        patch("charm.PostgreSQLUpgrade.idle", new_callable=PropertyMock) as _idle,
+    ):
+        _idle.return_value = True
+        response = Mock()
+        response.json.return_value = {"code": 403}
+        _client.return_value.get.side_effect = ApiError(response=response)
+        # The API server confirms the charm holds the needed permissions: a
+        # transient 403 (e.g. during pod recreation) must not block the unit.
+        _client.return_value.create.return_value.status.allowed = True
+
+        harness.set_leader(False)
+        harness.set_leader()
+
+        assert not isinstance(harness.charm.unit.status, BlockedStatus)
+        _client.return_value.create.assert_called()
+
+
+def test_leader_elected_genuine_no_trust_blocks(harness):
+    with (
+        patch("charm.PostgresqlOperatorCharm._add_members"),
+        patch("charm.Client") as _client,
+        patch("charm.new_password", return_value="sekr1t"),
+        patch("charm.PostgresqlOperatorCharm.get_secret", return_value="test") as _get_secret,
+        patch("charm.PostgresqlOperatorCharm.set_secret"),
+        patch("charm.Patroni.reload_patroni_configuration"),
+        patch("charm.PostgresqlOperatorCharm._patch_pod_labels"),
+        patch("charm.PostgresqlOperatorCharm._create_services"),
+        patch("charm.PostgreSQLUpgrade.idle", new_callable=PropertyMock) as _idle,
+    ):
+        _idle.return_value = True
+        response = Mock()
+        response.json.return_value = {"code": 403}
+        _client.return_value.get.side_effect = ApiError(response=response)
+        # The API server denies the permissions: the unit must block with the
+        # "Insufficient permissions" message, as deployed without `--trust`.
+        _client.return_value.create.return_value.status.allowed = False
+
+        harness.set_leader(False)
+        harness.set_leader()
+
+        assert isinstance(harness.charm.unit.status, BlockedStatus)
+        assert (
+            harness.charm.unit.status.message
+            == "Insufficient permissions, try: `juju trust postgresql-k8s --scope=cluster`"
+        )
+
+
+def test_update_config_transient_403_does_not_block(harness):
+    with (
+        patch("charm.PostgresqlOperatorCharm.get_available_resources") as _resources,
+        patch("charm.Client") as _client,
+    ):
+        response = Mock()
+        response.json.return_value = {"code": 403}
+        _resources.side_effect = ApiError(response=response)
+        # The API server confirms the charm holds the needed permissions: a
+        # transient 403 (e.g. during pod recreation) must not block the unit.
+        _client.return_value.create.return_value.status.allowed = True
+
+        assert harness.charm.update_config() is False
+
+        assert not isinstance(harness.charm.unit.status, BlockedStatus)
+        _client.return_value.create.assert_called()
+
+
+def test_leader_elected_ssr_error_does_not_block(harness):
+    with (
+        patch("charm.PostgresqlOperatorCharm._add_members"),
+        patch("charm.Client") as _client,
+        patch("charm.new_password", return_value="sekr1t"),
+        patch("charm.PostgresqlOperatorCharm.get_secret", return_value="test") as _get_secret,
+        patch("charm.PostgresqlOperatorCharm.set_secret"),
+        patch("charm.Patroni.reload_patroni_configuration"),
+        patch("charm.PostgresqlOperatorCharm._patch_pod_labels"),
+        patch("charm.PostgresqlOperatorCharm._create_services"),
+        patch("charm.PostgreSQLUpgrade.idle", new_callable=PropertyMock) as _idle,
+    ):
+        _idle.return_value = True
+        response = Mock()
+        response.json.return_value = {"code": 403}
+        _client.return_value.get.side_effect = ApiError(response=response)
+        # An inconclusive SelfSubjectAccessReview (e.g. transient API error) is
+        # no evidence about the permissions: the unit must not block.
+        _client.return_value.create.side_effect = ApiError(response=response)
+
+        harness.set_leader(False)
+        harness.set_leader()
+
+        assert not isinstance(harness.charm.unit.status, BlockedStatus)
+
+
+def test_cleanup_old_cluster_resources_transient_403_does_not_block(harness):
+    with (
+        patch("charm.Client") as _client,
+    ):
+        response = Mock()
+        response.json.return_value = {"code": 403}
+        _client.return_value.delete.side_effect = ApiError(response=response)
+        # The API server confirms the charm holds the needed permissions: a
+        # transient 403 (e.g. during pod recreation) must not block the unit.
+        _client.return_value.create.return_value.status.allowed = True
+
+        harness.charm._cleanup_old_cluster_resources()
+
+        assert not isinstance(harness.charm.unit.status, BlockedStatus)
+        _client.return_value.create.assert_called()
+
+
+def test_update_config_genuine_no_trust_blocks(harness):
+    with (
+        patch("charm.PostgresqlOperatorCharm.get_available_resources") as _resources,
+        patch("charm.Client") as _client,
+    ):
+        response = Mock()
+        response.json.return_value = {"code": 403}
+        _resources.side_effect = ApiError(response=response)
+        # The API server denies the permissions: the unit must block with the
+        # "Insufficient permissions" message, as deployed without `--trust`.
+        _client.return_value.create.return_value.status.allowed = False
+
+        assert harness.charm.update_config() is False
 
         assert isinstance(harness.charm.unit.status, BlockedStatus)
         assert (
