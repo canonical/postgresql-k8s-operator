@@ -42,6 +42,12 @@ class TLSTransfer(Object):
         if relation is None:
             logger.error("Relationship not established anymore.")
             return
+        if relation.app is None:
+            logger.debug(
+                "Cannot push TLS certificates: remote application of relation %s is gone.",
+                relation.id,
+            )
+            return
 
         secret_name = f"ca-{relation.app.name}"
         self.charm.set_secret(SCOPE, secret_name, event.ca)
@@ -61,6 +67,12 @@ class TLSTransfer(Object):
         relation = self.charm.model.get_relation(TLS_TRANSFER_RELATION, event.relation_id)
         if relation is None:
             logger.error("Relationship not established anymore.")
+            return
+        if relation.app is None:
+            logger.debug(
+                "Cannot clean CA certificates: remote application of relation %s is gone.",
+                relation.id,
+            )
             return
 
         secret_name = f"ca-{relation.app.name}"
