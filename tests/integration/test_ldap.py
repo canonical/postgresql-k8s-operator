@@ -3,15 +3,21 @@
 # See LICENSE file for licensing details.
 
 import asyncio
+import hashlib
 import logging
+import uuid
+from pathlib import Path
 
 import pytest
 from pytest_operator.plugin import OpsTest
+from tenacity import AsyncRetrying, stop_after_attempt, wait_fixed
 
 from . import markers
 from .helpers import (
+    DATA_INTEGRATOR_APP_NAME,
     DATABASE_APP_NAME,
     build_and_deploy,
+    execute_query_as_user,
     execute_query_on_unit,
     get_password,
     get_unit_address,
@@ -22,6 +28,10 @@ logger = logging.getLogger(__name__)
 GLAUTH_PSQL_APP_NAME = "postgresql-k8s"
 GLAUTH_CERT_APP_NAME = "self-signed-certificates"
 GLAUTH_APP_NAME = "glauth-k8s"
+GLAUTH_UTILS_APP_NAME = "glauth-utils"
+LDAP_GROUP = "superheros"
+LDAP_USER = "jdoe"
+LDAP_USER_PASSWORD = "ldap-sync-test"
 
 
 @pytest.mark.abort_on_fail
@@ -33,10 +43,10 @@ async def test_build_and_deploy(ops_test: OpsTest, charm) -> None:
 
 @pytest.mark.abort_on_fail
 @markers.juju3
-async def test_glauth_integration(ops_test: OpsTest):
+async def test_glauth_integration(ops_test: OpsTest, charm):
     glauth_psql_app_name = f"glauth-{GLAUTH_PSQL_APP_NAME}"
     glauth_cert_app_name = f"glauth-{GLAUTH_CERT_APP_NAME}"
-
+    ldap_database_name = "ldap_test"
     # Deploy GLAuth charm
     await asyncio.gather(
         ops_test.model.deploy(
@@ -99,3 +109,115 @@ async def test_glauth_integration(ops_test: OpsTest):
 
         # Validate the 'operator' user can still access the instance
         await execute_query_on_unit(address, password, "SELECT VERSION();")
+
+        # --- LDAP user end-to-end flow ---
+        # Map the LDAP group to a PostgreSQL group (the ldap-sync sidecar creates
+        # the mapped users and grants them identity_access so they match the hba
+        # 'ldap' line), pre-create the mapped role the group grants into, and
+        # create the user in glauth through the glauth-utils charm.
+        logger.info("Creating the mapped PostgreSQL group and setting the LDAP group mapping")
+        # Authorization per the DA148 spec: the charm grants no database
+        # privileges to LDAP users (identity_access is a pure authentication
+        # marker); it belongs to the mapped groups, managed through the regular
+        # relation flow. Deploy data-integrator, relate it (creating the
+        # relation database and user), and grant CONNECT on that database to
+        # the mapped group — the operator's post-mapping authorization step.
+        logger.info("Deploying data-integrator and relating it to the database")
+        await ops_test.model.deploy(
+            DATA_INTEGRATOR_APP_NAME,
+            config={"database-name": ldap_database_name},
+        )
+        await ops_test.model.add_relation(DATA_INTEGRATOR_APP_NAME, DATABASE_APP_NAME)
+        await ops_test.model.wait_for_idle(
+            apps=[DATA_INTEGRATOR_APP_NAME, DATABASE_APP_NAME], status="active"
+        )
+        data_integrator_unit = ops_test.model.applications[DATA_INTEGRATOR_APP_NAME].units[0]
+        action = await data_integrator_unit.run_action(action_name="get-credentials")
+        result = await action.wait()
+        relation_user = result.results["postgresql"]["username"]
+        relation_password = result.results["postgresql"]["password"]
+        # The regular scram relation flow must keep working alongside LDAP.
+        await execute_query_as_user(
+            address,
+            relation_user,
+            relation_password,
+            "SELECT 1;",
+            database=ldap_database_name,
+        )
+        await execute_query_on_unit(
+            address,
+            password,
+            f'GRANT CONNECT ON DATABASE "{ldap_database_name}" TO "{LDAP_GROUP}"; SELECT 1;',
+        )
+
+        logger.info("Deploying the glauth-utils charm and creating the LDAP user")
+        await ops_test.model.deploy(
+            GLAUTH_UTILS_APP_NAME,
+            channel="edge",
+            trust=True,
+        )
+        await ops_test.model.integrate(GLAUTH_UTILS_APP_NAME, GLAUTH_APP_NAME)
+        await ops_test.model.wait_for_idle(
+            apps=[GLAUTH_UTILS_APP_NAME], status="active", timeout=10 * 60
+        )
+
+        # glauth-utils' apply-ldif action reads the file from its own container.
+        # GLAuth compares sha256(plaintext) HEX digests, not base64.
+        password_hash = "{SHA256}" + hashlib.sha256(LDAP_USER_PASSWORD.encode()).hexdigest()
+        ldif = (
+            f"dn: ou={LDAP_GROUP},dc=glauth,dc=com\n"
+            "objectClass: posixGroup\n"
+            f"ou: {LDAP_GROUP}\n"
+            "gidNumber: 5502\n"
+            f"\ndn: cn={LDAP_USER},ou={LDAP_GROUP},dc=glauth,dc=com\n"
+            "changetype: add\n"
+            "objectClass: posixAccount\n"
+            "uidNumber: 5002\n"
+            "gidNumber: 5502\n"
+            f"cn: {LDAP_USER}\n"
+            "sn: doe\n"
+            f"uid: {LDAP_USER}\n"
+            f"userPassword: {password_hash}\n"
+        )
+        # The juju snap cannot read /tmp or /var/tmp (private namespace), and
+        # a transfer sourced from there lands as an empty file on the unit.
+        # $HOME is visible to the snap; the unique name avoids colliding with
+        # a stale root-owned copy left by a previous run (juju scp cannot
+        # overwrite it as the charm user).
+        ldif_path = Path.home() / f"ldap-test-{uuid.uuid4().hex[:8]}.ldif"
+        ldif_path.write_text(ldif)
+        unit_ldif_path = f"/var/tmp/{ldif_path.name}"
+        await ops_test.juju("scp", str(ldif_path), f"{GLAUTH_UTILS_APP_NAME}/0:{unit_ldif_path}")
+        action = (
+            await ops_test.model
+            .applications[GLAUTH_UTILS_APP_NAME]
+            .units[0]
+            .run_action("apply-ldif", path=unit_ldif_path)
+        )
+        await action.wait()
+        assert action.results["return-code"] == 0
+
+        # The ldap-sync sidecar runs every 30s; poll until the role materialises,
+        # then authenticate AS the LDAP user through the hba 'ldap' line.
+        # Diagnostic for the CI artifacts: is the sidecar service up, and did the
+        # role land? pebble logs are not captured elsewhere.
+        services = await ops_test.juju(
+            "exec", "--unit", f"{DATABASE_APP_NAME}/0", "--", "pebble", "services"
+        )
+        logger.info("ldap-sync pebble services:\n%s", services)
+        roles = await execute_query_on_unit(
+            address, password, "SELECT rolname FROM pg_roles WHERE rolname LIKE '%doe%'"
+        )
+        logger.info("synced roles so far: %s", roles)
+        logger.info("Waiting for the LDAP user to sync into PostgreSQL and authenticating")
+        async for attempt in AsyncRetrying(
+            stop=stop_after_attempt(12), wait=wait_fixed(30), reraise=True
+        ):
+            with attempt:
+                await execute_query_as_user(
+                    address,
+                    LDAP_USER,
+                    LDAP_USER_PASSWORD,
+                    "SELECT 1;",
+                    database=ldap_database_name,
+                )

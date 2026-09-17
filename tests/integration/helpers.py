@@ -395,6 +395,38 @@ async def execute_query_on_unit(
     return output
 
 
+async def execute_query_as_user(
+    unit_address: str,
+    user: str,
+    password: str,
+    query: str,
+    database: str = DATABASE_DEFAULT_NAME,
+) -> list:
+    """Execute a query connecting as the given user (not the charm operator).
+
+    Args:
+        unit_address: The public IP address of the unit to execute the query on.
+        user: The PostgreSQL user to connect as.
+        password: The password for the connecting user.
+        query: Query to execute.
+        database: Optional database to connect to (defaults to postgres database).
+
+    Returns:
+        The result of the query.
+    """
+    connection = await asyncio.to_thread(
+        psycopg2.connect,
+        f"dbname='{database}' user='{user}' host='{unit_address}'"
+        f"password='{password}' connect_timeout=10",
+    )
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute(query)
+            return list(cursor.fetchall())
+    finally:
+        connection.close()
+
+
 def get_cluster_members(endpoint: str) -> list[str]:
     """List of current Patroni cluster members.
 
