@@ -59,7 +59,7 @@ class TLSTransfer(Object):
     def _on_certificate_removed(self, event: CertificateRemovedEvent) -> None:
         """Disable TLS when TLS certificate is removed."""
         relation = self.charm.model.get_relation(TLS_TRANSFER_RELATION, event.relation_id)
-        if relation is None:
+        if relation is None or relation.app is None:
             logger.error("Relationship not established anymore.")
             return
 
