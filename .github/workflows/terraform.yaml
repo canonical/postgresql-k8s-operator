@@ -21,8 +21,6 @@ jobs:
     name: Static checks + constraint compositions
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions:
-      contents: read
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -40,4 +38,6 @@ jobs:
 
       - name: Constraint-composition tests
         run: tox run -e terraform
+    permissions:
+      contents: read
     cache-mode: none
