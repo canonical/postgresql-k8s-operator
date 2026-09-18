@@ -31,8 +31,9 @@ No modules.
 | <a name="input_channel"></a> [channel](#input\_channel) | Charm channel to use when deploying | `string` | `"16/stable"` | no |
 | <a name="input_config"></a> [config](#input\_config) | Application configuration. Details at https://charmhub.io/postgresql-k8s/configurations | `map(string)` | `{}` | no |
 | <a name="input_constraints"></a> [constraints](#input\_constraints) | Juju constraints to apply for this application. | `string` | `"arch=amd64"` | no |
-| <a name="input_juju_model"></a> [juju\_model](#input\_juju\_model) | Juju model uuid | `string` | n/a | yes |
-| <a name="input_resources"></a> [resources](#input\_resources) | Resources to use with the application | `map(string)` | `{}` | no |
+| <a name="input_juju_model"></a> [juju\_model](#input\_juju\_model) | Deprecated: UUID of the Juju model. Use the model UUID input instead | `string` | `null` | no |
+| <a name="input_model_uuid"></a> [model\_uuid](#input\_model\_uuid) | Juju model UUID | `string` | `null` | no |
+| <a name="input_resources"></a> [resources](#input\_resources) | Resources to use with the application | `string` | `{}` | no |
 | <a name="input_revision"></a> [revision](#input\_revision) | Revision number to deploy charm | `number` | `null` | no |
 | <a name="input_storage_directives"></a> [storage\_directives](#input\_storage\_directives) | Storage directives to apply for this application | `map(string)` | `{}` | no |
 | <a name="input_units"></a> [units](#input\_units) | Number of units to deploy | `number` | `1` | no |
@@ -41,6 +42,7 @@ No modules.
 
 | Name | Description |
 |------|-------------|
+| <a name="output_application"></a> [application](#output\_application) | n/a |
 | <a name="output_application_name"></a> [application\_name](#output\_application\_name) | n/a |
 | <a name="output_provides"></a> [provides](#output\_provides) | n/a |
 | <a name="output_requires"></a> [requires](#output\_requires) | n/a |
@@ -49,32 +51,35 @@ No modules.
 ## Usage
 
 Create the Juju model to deploy into, then capture its UUID — the module's
-`juju_model` input is the model **UUID**, not its name:
+`model_uuid` input is the model **UUID**, not its name:
 ```
 juju add-model welcome
 MODEL_UUID=$(juju show-model welcome --format json | jq -r '.welcome."model-uuid"')
 ```
 
+The legacy `juju_model` input is still accepted for backwards compatibility; it
+is ignored when `model_uuid` is set, and will be removed in a future release.
+
 To deploy Charmed PostgreSQL into the model, run:
 ```
-terraform apply -var="juju_model=$MODEL_UUID" -auto-approve
+terraform apply -var="model_uuid=$MODEL_UUID" -auto-approve
 ```
 
 By default, this Terraform module will deploy PostgreSQL with `1` unit only.
 To configure the module to deploy `3` units, run:
 ```
-terraform apply -var="juju_model=$MODEL_UUID" -var='units=3' -auto-approve
+terraform apply -var="model_uuid=$MODEL_UUID" -var='units=3' -auto-approve
 ```
 
 The storage directives example:
 ```
-terraform apply -var="juju_model=$MODEL_UUID" -auto-approve \
+terraform apply -var="model_uuid=$MODEL_UUID" -auto-approve \
   -var='storage_directives={data="10G", archive="2G", logs="3G", temp="2G"}'
 ```
 
 The juju constraints example:
 ```
-terraform apply -var="juju_model=$MODEL_UUID" -auto-approve \
+terraform apply -var="model_uuid=$MODEL_UUID" -auto-approve \
   -var='constraints=arch=amd64 cores=4 mem=4096M virt-type=virtual-machine'
 ```
 
