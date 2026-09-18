@@ -2,6 +2,7 @@
 [![CharmHub Badge](https://charmhub.io/postgresql-k8s/badge.svg?channel=14%2Fstable)](https://charmhub.io/postgresql-k8s?channel=14%2Fstable)
 [![Release](https://github.com/canonical/postgresql-k8s-operator/actions/workflows/release.yaml/badge.svg?branch=main)](https://github.com/canonical/postgresql-k8s-operator/actions/workflows/release.yaml?query=branch%3Amain)
 [![Tests](https://github.com/canonical/postgresql-k8s-operator/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/canonical/postgresql-k8s-operator/actions/workflows/ci.yaml?query=branch%3Amain)
+[![Scan](https://github.com/canonical/postgresql-k8s-operator/actions/workflows/tiobe_scan_14.yaml/badge.svg?branch=main)](https://github.com/canonical/postgresql-k8s-operator/actions/workflows/tiobe_scan_14.yaml)
 
 This repository contains a charmed operator for deploying [PostgreSQL](https://www.postgresql.org/about/) on Kubernetes via the [Juju orchestration engine](https://juju.is/).
 
