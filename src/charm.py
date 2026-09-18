@@ -311,7 +311,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             update_config=self.update_config,
             resource_provider=self.k8s_manager,
             set_unit_status=self.set_unit_status,
-            refresh_primary_status=self._set_primary_status_message,
+            refresh_primary_status=self._set_active_status,
         )
         self.restore_manager = RestoreManager(
             state=self.state,
