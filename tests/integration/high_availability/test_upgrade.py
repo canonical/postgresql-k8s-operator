@@ -11,12 +11,16 @@ import tomli
 import tomli_w
 from jubilant import Juju
 
-from ..helpers import METADATA
+from ..helpers import METADATA, execute_queries_on_unit
 from .high_availability_helpers_new import (
+    SERVER_CONFIG_USERNAME,
     check_db_units_writes_increment,
     count_switchovers,
     get_app_leader,
     get_app_units,
+    get_db_primary_unit,
+    get_unit_ip,
+    get_user_password,
     run_upgrade,
     wait_for_apps_status,
 )
@@ -79,6 +83,21 @@ def test_upgrade_from_edge(juju: Juju, charm: str, continuous_writes) -> None:
     initial_number_of_switchovers = count_switchovers(juju, DB_APP_NAME)
 
     run_upgrade(juju, DB_APP_NAME, charm)
+
+    with Path("refresh_versions.toml").open("rb") as file:
+        refresh_versions = tomli.load(file)
+    expected_version = refresh_versions["workload"]
+    current_primary = get_db_primary_unit(juju, DB_APP_NAME)
+    database_version = execute_queries_on_unit(
+        get_unit_ip(juju, DB_APP_NAME, current_primary),
+        SERVER_CONFIG_USERNAME,
+        get_user_password(juju, DB_APP_NAME, SERVER_CONFIG_USERNAME),
+        ["SELECT version();"],
+        "postgresql_test_app_database",
+    )[0].split(" ")[1]
+    assert expected_version == database_version, (
+        f"PostgreSQL version mismatch: expected {expected_version}, got {database_version}"
+    )
 
     logging.info("Ensure continuous writes are incrementing")
     check_db_units_writes_increment(juju, DB_APP_NAME)
