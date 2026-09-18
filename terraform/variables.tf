@@ -1,6 +1,13 @@
-variable "juju_model" {
-  description = "Juju model uuid"
+variable "model_uuid" {
+  description = "UUID of the Juju model to deploy to"
   type        = string
+  default     = null
+}
+
+variable "juju_model" {
+  description = "Deprecated: UUID of the Juju model. Use the model UUID input instead"
+  type        = string
+  default     = null
 }
 
 variable "app_name" {
