@@ -93,6 +93,9 @@ from ops.pebble import (
     ServiceInfo,
     ServiceStatus,
 )
+from ops.pebble import (
+    ConnectionError as PebbleConnectionError,
+)
 from ops_tracing import Tracing
 from requests import ConnectionError as RequestsConnectionError
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
@@ -687,6 +690,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             logger.debug("Defer on_config_changed: Cannot connect to database")
             event.defer()
             return
+        except (ChangeError, PebbleConnectionError) as e:
+            # The workload container or its services are (transiently) unavailable,
+            # e.g. while the pod is restarting after a controller migration. Log at
+            # warning level so a permanently broken service stays observable while
+            # the event keeps being deferred and retried.
+            logger.warning("Deferring on_config_changed: workload not ready yet: %r", e)
+            event.defer()
+            return
         except ValueError as e:
             self.unit.status = BlockedStatus("Configuration Error. Please check the logs")
             logger.error("Invalid configuration: %s", str(e))
@@ -702,7 +713,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
 
         # Enable and/or disable the extensions.
-        self.enable_disable_extensions()
+        try:
+            self.enable_disable_extensions()
+        except PostgreSQLEnableDisableExtensionError:
+            logger.warning("Deferring on_config_changed: cannot connect to the database")
+            event.defer()
+            return
 
         self._unblock_extensions()
 
@@ -768,6 +784,18 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.unit.status = BlockedStatus(EXTENSION_OBJECT_MESSAGE)
             return
         except PostgreSQLEnableDisableExtensionError as e:
+            if isinstance(e.__cause__, psycopg2.OperationalError | psycopg2.InterfaceError):
+                # The database is (transiently) unreachable, e.g. while the workload is
+                # restarting after a controller migration. Raise the error to let the
+                # caller defer the event and retry, instead of failing the hook or
+                # silently skipping the extension change. Restore the original status
+                # first so the update-status retry gate keeps matching it.
+                logger.warning(
+                    "cannot connect to the database to update extensions: %s", str(e.__cause__)
+                )
+                if not isinstance(original_status, UnknownStatus | ErrorStatus):
+                    self.unit.status = original_status
+                raise
             logger.exception("failed to change plugins: %s", str(e))
         if original_status.message == EXTENSION_OBJECT_MESSAGE:
             self._set_active_status()
@@ -1003,9 +1031,30 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             )
             event.defer()
             return
+        except (ChangeError, PebbleConnectionError, psycopg2.OperationalError) as e:
+            # The database or the workload services are (transiently) unavailable,
+            # e.g. while the pod is restarting after a controller migration.
+            logger.debug("Deferring on_postgresql_pebble_ready: workload not ready yet: %r", e)
+            event.defer()
+            return
 
+        self._update_workload(event)
+
+    def _update_workload(self, event: WorkloadEvent) -> None:
+        """Update the workload services and configuration after the container is ready.
+
+        Defers the event when the database or the workload services are (transiently)
+        unavailable, e.g. while the pod is restarting after a controller migration.
+        """
         # Start the database service.
-        self._update_pebble_layers()
+        try:
+            self._update_pebble_layers()
+        except (ChangeError, PebbleConnectionError) as e:
+            logger.debug(
+                "Deferring on_postgresql_pebble_ready: cannot update pebble layers: %r", e
+            )
+            event.defer()
+            return
 
         # Ensure the member is up and running before marking the cluster as initialised.
         if not self._patroni.member_started:
@@ -1018,11 +1067,21 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             return
 
         # Update the archive command and replication configurations.
-        self.update_config()
+        try:
+            self.update_config()
+        except (ChangeError, PebbleConnectionError, psycopg2.OperationalError) as e:
+            logger.debug("Deferring on_postgresql_pebble_ready: workload not ready yet: %r", e)
+            event.defer()
+            return
 
         # Enable/disable PostgreSQL extensions if they were set before the cluster
         # was fully initialised.
-        self.enable_disable_extensions()
+        try:
+            self.enable_disable_extensions()
+        except PostgreSQLEnableDisableExtensionError:
+            logger.debug("Deferring on_postgresql_pebble_ready: Cannot connect to database")
+            event.defer()
+            return
 
         # Enable pgbackrest service
         self.backup.start_stop_pgbackrest_service()
@@ -1545,7 +1604,11 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         ) or self._has_non_restore_waiting_status:
             # If charm was failing to disable plugin, try again and continue (user may have removed the objects)
             if self.unit.status.message == EXTENSION_OBJECT_MESSAGE:
-                self.enable_disable_extensions()
+                try:
+                    self.enable_disable_extensions()
+                except PostgreSQLEnableDisableExtensionError:
+                    logger.warning("cannot connect to the database to update extensions")
+                    return False
                 return True
 
             logger.debug("on_update_status early exit: Unit is in Blocked/Waiting status")

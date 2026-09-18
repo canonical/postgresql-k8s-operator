@@ -8,7 +8,10 @@ from unittest.mock import MagicMock, Mock, PropertyMock, call, patch, sentinel
 
 import psycopg2
 import pytest
-from charms.postgresql_k8s.v0.postgresql import PostgreSQLUpdateUserPasswordError
+from charms.postgresql_k8s.v0.postgresql import (
+    PostgreSQLEnableDisableExtensionError,
+    PostgreSQLUpdateUserPasswordError,
+)
 from lightkube import ApiError
 from lightkube.models.meta_v1 import ObjectMeta
 from lightkube.resources.core_v1 import Endpoints, Pod, Service
@@ -23,6 +26,7 @@ from ops.model import (
     WaitingStatus,
 )
 from ops.pebble import ChangeError, ServiceStatus
+from ops.pebble import ConnectionError as PebbleConnectionError
 from ops.testing import Harness
 from requests import ConnectionError as RequestsConnectionError
 from tenacity import RetryError, wait_fixed
@@ -345,6 +349,208 @@ def test_on_config_changed(harness):
         harness.charm._on_config_changed(mock_event)
         assert isinstance(harness.charm.unit.status, ActiveStatus)
         _enable_disable_extensions.assert_called_once_with()
+
+
+def test_on_config_changed_defers_on_transient_extension_error(harness):
+    # DPE-9735: a transient database outage while updating extensions must defer
+    # config-changed instead of failing the hook or silently skipping the change.
+    with (
+        patch(
+            "charm.PostgresqlOperatorCharm.is_cluster_initialised",
+            new_callable=PropertyMock,
+            return_value=True,
+        ),
+        patch("charm.PostgreSQLUpgrade.idle", return_value=True, new_callable=PropertyMock),
+        patch("charm.PostgresqlOperatorCharm._validate_config_options"),
+        patch("charm.PostgresqlOperatorCharm.update_config"),
+        patch("charm.Patroni.get_primary", return_value="postgresql-k8s-0"),
+        patch("charm.PostgreSQL.enable_disable_extensions") as _enable_disable_extensions,
+    ):
+        with harness.hooks_disabled():
+            harness.set_leader()
+
+        # Simulate the charm library wrapping a transient connection error, as seen
+        # after a controller migration: Patroni is reachable, but connecting to the
+        # primary service fails with "Operation not permitted".
+        def _raise_wrapped_error(*_args, **_kwargs):
+            try:
+                raise psycopg2.OperationalError(
+                    'connection to server at "postgresql-k8s-primary" failed:'
+                    " Operation not permitted"
+                )
+            except psycopg2.OperationalError as cause:
+                raise PostgreSQLEnableDisableExtensionError() from cause
+
+        _enable_disable_extensions.side_effect = _raise_wrapped_error
+
+        mock_event = Mock()
+        harness.charm._on_config_changed(mock_event)
+
+        # The event is deferred so the extension change is retried, and the hook
+        # does not fail.
+        mock_event.defer.assert_called_once_with()
+        assert not isinstance(harness.charm.unit.status, ErrorStatus)
+
+        # A permanent extension failure (cause is not a connection error) keeps the
+        # existing swallow-and-log behaviour instead of deferring forever.
+        def _raise_permanent_error(*_args, **_kwargs):
+            try:
+                raise psycopg2.ProgrammingError("could not open extension control file")
+            except psycopg2.ProgrammingError as cause:
+                raise PostgreSQLEnableDisableExtensionError() from cause
+
+        _enable_disable_extensions.side_effect = _raise_permanent_error
+        mock_event = Mock()
+        harness.charm._on_config_changed(mock_event)
+        mock_event.defer.assert_not_called()
+        assert not isinstance(harness.charm.unit.status, ErrorStatus)
+
+        # A client-side connection invalidation is transient as well.
+        def _raise_interface_error(*_args, **_kwargs):
+            try:
+                raise psycopg2.InterfaceError("connection already closed")
+            except psycopg2.InterfaceError as cause:
+                raise PostgreSQLEnableDisableExtensionError() from cause
+
+        _enable_disable_extensions.side_effect = _raise_interface_error
+        mock_event = Mock()
+        harness.charm._on_config_changed(mock_event)
+        mock_event.defer.assert_called_once_with()
+        assert not isinstance(harness.charm.unit.status, ErrorStatus)
+
+
+def test_on_config_changed_defers_on_transient_pebble_error(harness):
+    # DPE-9735: a transient workload/pebble failure while updating config must defer
+    # config-changed instead of failing the hook.
+    with (
+        patch(
+            "charm.PostgresqlOperatorCharm.is_cluster_initialised",
+            new_callable=PropertyMock,
+            return_value=True,
+        ),
+        patch("charm.PostgreSQLUpgrade.idle", return_value=True, new_callable=PropertyMock),
+        patch("charm.PostgresqlOperatorCharm._validate_config_options"),
+        patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
+        patch("charm.Patroni.get_primary", return_value="postgresql-k8s-0"),
+        patch("charm.PostgreSQL.enable_disable_extensions"),
+    ):
+        with harness.hooks_disabled():
+            harness.set_leader()
+
+        _update_config.side_effect = ChangeError("fake error", Mock())
+        mock_event = Mock()
+        harness.charm._on_config_changed(mock_event)
+        mock_event.defer.assert_called_once_with()
+        assert not isinstance(harness.charm.unit.status, ErrorStatus)
+
+        mock_event.reset_mock()
+        _update_config.side_effect = PebbleConnectionError("cannot connect to pebble")
+        harness.charm._on_config_changed(mock_event)
+        mock_event.defer.assert_called_once_with()
+        assert not isinstance(harness.charm.unit.status, ErrorStatus)
+
+
+def test_on_postgresql_pebble_ready_defers_on_transient_workload_error(harness):
+    # DPE-9735: transient workload/pebble failures while handling postgresql-pebble-ready
+    # (e.g. after a controller migration) must defer the event instead of failing the
+    # hook. The deferred event re-emits within other hooks, so raising here would fail
+    # unrelated hooks such as config-changed.
+    mock_event = Mock()
+    with (
+        patch("charm.PostgresqlOperatorCharm.push_tls_files_to_workload") as _push_tls_files,
+        patch("charm.PostgresqlOperatorCharm._create_pgdata"),
+        patch(
+            "charm.Patroni.rock_postgresql_version", new_callable=PropertyMock
+        ) as _rock_postgresql_version,
+        patch(
+            "charm.PostgresqlOperatorCharm.is_cluster_initialised",
+            new_callable=PropertyMock,
+            return_value=True,
+        ),
+        patch("charm.PostgresqlOperatorCharm._update_pebble_layers") as _update_pebble_layers,
+        patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
+        patch(
+            "charm.PostgresqlOperatorCharm.enable_disable_extensions"
+        ) as _enable_disable_extensions,
+        patch("charm.PostgresqlOperatorCharm._set_active_status"),
+    ):
+
+        def _raise_wrapped_extension_error(*_args, **_kwargs):
+            try:
+                raise psycopg2.OperationalError("connection refused")
+            except psycopg2.OperationalError as cause:
+                raise PostgreSQLEnableDisableExtensionError() from cause
+
+        _rock_postgresql_version.return_value = "14.7"
+        with harness.hooks_disabled():
+            harness.set_leader()
+        mock_event.workload.can_connect.return_value = True
+
+        # Transient pebble error while pushing TLS files (update_config runs inside it).
+        _push_tls_files.side_effect = ChangeError("fake error", Mock())
+        harness.charm._on_postgresql_pebble_ready(mock_event)
+        mock_event.defer.assert_called_once()
+        mock_event.reset_mock()
+
+        # Transient pebble error while updating the pebble layers.
+        _push_tls_files.side_effect = None
+        _update_pebble_layers.side_effect = ChangeError("fake error", Mock())
+        harness.charm._on_postgresql_pebble_ready(mock_event)
+        mock_event.defer.assert_called_once()
+        mock_event.reset_mock()
+
+        # Transient pebble error while pushing TLS files (ConnectionError arm).
+        _update_pebble_layers.side_effect = None
+        _push_tls_files.side_effect = PebbleConnectionError("cannot connect to pebble")
+        harness.charm._on_postgresql_pebble_ready(mock_event)
+        mock_event.defer.assert_called_once()
+        mock_event.reset_mock()
+
+        # Transient pebble error while updating the pebble layers.
+        _push_tls_files.side_effect = None
+        _update_pebble_layers.side_effect = PebbleConnectionError("cannot connect to pebble")
+        harness.charm._on_postgresql_pebble_ready(mock_event)
+        mock_event.defer.assert_called_once()
+        mock_event.reset_mock()
+
+        # Transient database/pebble error while updating the config.
+        _update_pebble_layers.side_effect = None
+        _update_config.side_effect = psycopg2.OperationalError
+        harness.charm._on_postgresql_pebble_ready(mock_event)
+        mock_event.defer.assert_called_once()
+        mock_event.reset_mock()
+
+        # Transient database error while updating extensions.
+        _update_config.side_effect = None
+        _enable_disable_extensions.side_effect = _raise_wrapped_extension_error
+        harness.charm._on_postgresql_pebble_ready(mock_event)
+        mock_event.defer.assert_called_once()
+
+
+def test_on_update_status_extension_retry_survives_transient_db_error(harness):
+    # DPE-9735: a transient database failure during the update-status extension retry
+    # must restore the blocked status, so the periodic retry keeps running instead of
+    # being silently abandoned.
+    with (
+        patch("charm.PostgreSQLUpgrade.idle", return_value=True, new_callable=PropertyMock),
+        patch("charm.Patroni.get_primary", return_value="postgresql-k8s-0"),
+        patch("charm.PostgreSQL.enable_disable_extensions") as _lib_enable_disable_extensions,
+    ):
+
+        def _raise_wrapped_error(*_args, **_kwargs):
+            try:
+                raise psycopg2.OperationalError("connection refused")
+            except psycopg2.OperationalError as cause:
+                raise PostgreSQLEnableDisableExtensionError() from cause
+
+        _lib_enable_disable_extensions.side_effect = _raise_wrapped_error
+
+        harness.set_can_connect(POSTGRESQL_CONTAINER, True)
+        harness.model.unit.status = BlockedStatus(EXTENSION_OBJECT_MESSAGE)
+        container = harness.model.unit.get_container(POSTGRESQL_CONTAINER)
+        assert not harness.charm._on_update_status_early_exit_checks(container)
+        # The blocked status is restored, so the periodic retry keeps matching the gate.
+        assert harness.model.unit.status == BlockedStatus(EXTENSION_OBJECT_MESSAGE)
 
 
 def test_on_get_password(harness):
