@@ -21,7 +21,7 @@ import pytest
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
-from integration.helpers import build_and_deploy, get_leader_unit
+from integration.helpers import build_and_deploy
 from integration.new_relations.helpers import build_connection_string
 
 APP_NAME_A = "postgresql-sc1"
