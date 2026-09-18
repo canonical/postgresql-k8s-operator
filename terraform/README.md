@@ -42,6 +42,7 @@ No modules.
 
 | Name | Description |
 |------|-------------|
+| <a name="output_application"></a> [application](#output\_application) | n/a |
 | <a name="output_application_name"></a> [application\_name](#output\_application\_name) | n/a |
 | <a name="output_provides"></a> [provides](#output\_provides) | n/a |
 | <a name="output_requires"></a> [requires](#output\_requires) | n/a |
