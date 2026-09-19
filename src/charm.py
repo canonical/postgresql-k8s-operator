@@ -315,6 +315,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         self.database = DatabaseEventsHandler(
             self, self.state, self.database_manager, self.patroni_manager, self.tls_manager
         )
+        self.logical_replication = PostgreSQLLogicalReplication(self, self.state)
         self.config_manager = ConfigManager(
             state=self.state,
             workload=self.workload,
@@ -335,7 +336,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         self.framework.observe(self.tls.tls_files_pushed, self._reload_tls_after_push)
         self.tls_transfer = TLSTransfer(self, PEER_RELATION)
         self.async_replication = PostgreSQLAsyncReplication(self)
-        self.logical_replication = PostgreSQLLogicalReplication(self, self.state)
         self.restart_manager = RollingOpsManager(
             charm=self, relation="restart", callback=self._restart
         )
