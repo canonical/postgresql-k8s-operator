@@ -1541,7 +1541,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             ):
                 self.set_unit_status(
                     BlockedStatus(
-                        self.app_peer_data.get("logical-replication-validation-status-message")
+                        self.app_peer_data.get(
+                            "logical-replication-validation-status-message"
+                        )
+                        or self.logical_replication.remote_publisher_error_message()
                         or LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS
                     )
                 )
