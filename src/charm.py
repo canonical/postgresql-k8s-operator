@@ -9,10 +9,8 @@ import json
 import logging
 import os
 import pathlib
-import re
 import shutil
 import sys
-import time
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
@@ -113,6 +111,7 @@ from single_kernel_postgresql.config.literals import (
     METRICS_PORT,
     MONITORING_PASSWORD_KEY,
     MONITORING_USER,
+    ORIGINAL_PATRONI_ON_FAILURE_CONDITION,
     PATRONI_PASSWORD_KEY,
     PEER_RELATION,
     PGBACKREST_METRICS_PORT,
@@ -142,6 +141,7 @@ from single_kernel_postgresql.config.literals import (
 )
 from single_kernel_postgresql.core.config import K8SCharmConfig
 from single_kernel_postgresql.core.state import CharmState
+from single_kernel_postgresql.events.backup import BackupEventsHandler
 from single_kernel_postgresql.events.database import DatabaseEventsHandler
 from single_kernel_postgresql.events.ldap import LDAP
 from single_kernel_postgresql.events.tls import TLS
@@ -149,13 +149,21 @@ from single_kernel_postgresql.events.tls_transfer import TLSTransfer
 from single_kernel_postgresql.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProvides,
 )
+from single_kernel_postgresql.managers.backup import BackupManager
 from single_kernel_postgresql.managers.cluster import ClusterManager
 from single_kernel_postgresql.managers.config import ConfigManager
 from single_kernel_postgresql.managers.database import DatabaseManager
 from single_kernel_postgresql.managers.k8s import K8sManager
 from single_kernel_postgresql.managers.patroni import PatroniManager
+from single_kernel_postgresql.managers.restore import RestoreManager
+from single_kernel_postgresql.managers.s3_client import S3Client
 from single_kernel_postgresql.managers.tls import TLSManager
 from single_kernel_postgresql.utils import new_password
+from single_kernel_postgresql.utils.backup import (
+    CANNOT_RESTORE_PITR,
+    S3_BLOCK_MESSAGES,
+    parse_backup_id,
+)
 from single_kernel_postgresql.utils.postgresql import (
     ACCESS_GROUP_IDENTITY,
     ACCESS_GROUPS,
@@ -173,7 +181,6 @@ from single_kernel_postgresql.utils.postgresql import (
 from single_kernel_postgresql.workload.k8s import K8sWorkload
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
-from backups import CANNOT_RESTORE_PITR, S3_BLOCK_MESSAGES, PostgreSQLBackups
 from constants import (
     PATRONI_LOGS_PATH,
     PATRONI_LOGS_SYMLINK_PATH,
@@ -202,7 +209,6 @@ EXTENSIONS_DEPENDENCY_MESSAGE = "Unsatisfied plugin dependencies. Please check t
 EXTENSION_OBJECT_MESSAGE = "Cannot disable plugins: Existing objects depend on it. See logs"
 INSUFFICIENT_SIZE_WARNING = "<10% free space on pgdata volume."
 
-ORIGINAL_PATRONI_ON_FAILURE_CONDITION = "restart"
 
 # http{x,core} clutter the logs with debug messages
 logging.getLogger("httpcore").setLevel(logging.ERROR)
@@ -296,8 +302,33 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         self._actual_pgdata_path = f"{self._storage_path}/16/main"
 
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
-        self.backup = PostgreSQLBackups(self, "s3-parameters")
+        self.s3_client = S3Client(self.workload)
+        self.backup = BackupManager(
+            state=self.state,
+            workload=self.workload,
+            s3_client=self.s3_client,
+            patroni_manager=self.patroni_manager,
+            update_config=self.update_config,
+            resource_provider=self.k8s_manager,
+            set_unit_status=self.set_unit_status,
+            refresh_primary_status=self._set_active_status,
+        )
+        self.restore_manager = RestoreManager(
+            state=self.state,
+            workload=self.workload,
+            patroni_manager=self.patroni_manager,
+            update_config=self.update_config,
+            backup_manager=self.backup,
+            update_pebble_layers=self.k8s_manager.update_pebble_layers,
+        )
         self.ldap = LDAP(self, self.state)
+        self.backup_events = BackupEventsHandler(
+            self,  # ty: ignore[invalid-argument-type]
+            self.state,
+            self.backup,
+            self.restore_manager,
+        )
+        # TLS events handler owns the two cert requirers; build it before the TLS
         # TLS events handler owns the two cert requirers; build it before the TLS
         # manager so the manager can constructor-inject them for its live-fetch getters.
         self.tls = TLS(self, self.state)
@@ -896,7 +927,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             "s3-initialization-start" in self.app_peer_data
             and "s3-initialization-done" not in self.unit_peer_data
             and self.is_primary
-            and not self.backup._on_s3_credential_changed_primary(event)
+            and not self.backup.initialise_s3_repository()
         ):
             return
 
@@ -1601,6 +1632,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
 
         try:
             self._setup_users()
+        except psycopg2.OperationalError as e:
+            # The workload may still be coming up after a pod replacement; retry
+            # the whole bootstrap on the next hook instead of blocking the unit.
+            logger.warning(f"Defer on_start: cannot connect to PostgreSQL yet: {e}")
+            self.set_unit_status(WaitingStatus("awaiting for cluster to start"))
+            event.defer()
+            return False
         except PostgreSQLCreatePredefinedRolesError:
             message = "Failed to create pre-defined roles"
             logger.exception(message)
@@ -2137,12 +2175,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
 
     def _was_restore_successful(self, container: Container, service: ServiceInfo) -> bool:
         """Checks if restore operation succeeded and S3 is properly configured."""
-        if self.is_cluster_restoring_to_time and all(self.is_pitr_failed(container)):
+        if self.is_cluster_restoring_to_time and all(self.restore_manager.is_pitr_failed()):
             logger.error(
                 "Restore failed: database service failed to reach point-in-time-recovery target. "
                 "You can launch another restore with different parameters"
             )
-            self.log_pitr_last_transaction_time()
+            self.restore_manager.log_pitr_last_transaction_time()
             self.set_unit_status(BlockedStatus(CANNOT_RESTORE_PITR))
             return False
 
@@ -2181,13 +2219,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             "restore-timeline": "",
         })
         self.update_config()
-        self.restore_patroni_on_failure_condition()
+        self.restore_manager.restore_patroni_restart_condition()
 
         logger.info(
             "Restored"
             f"{f' to {restore_to_time}' if restore_to_time else ''}"
             f"{f' from timeline {restore_timeline}' if restore_timeline and not restoring_backup else ''}"
-            f"{f' from backup {self.backup._parse_backup_id(restoring_backup)[0]}' if restoring_backup else ''}"
+            f"{f' from backup {parse_backup_id(restoring_backup)[0]}' if restoring_backup else ''}"
             f". Currently tracking the newly created timeline {current_timeline}."
         )
 
@@ -2664,8 +2702,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
                 "storage-default-table-access-method config option has an invalid value"
             )
 
-    def _update_pebble_layers(self, replan: bool = True) -> None:
-        """Update the pebble layers to keep the health check URL up-to-date."""
+    def _update_pebble_layers(self, replan: bool = True) -> bool | None:
+        """Update the pebble layers to keep the health check URL up-to-date.
+
+        Returns ``False`` when the replan failed and the restart was deferred
+        to the next hook; callers that only need the layers reconciled can
+        ignore the return value.
+        """
         # Get the current layer.
         current_layer = self.workload.container.get_plan()
 
@@ -2678,8 +2721,19 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             self.workload.container.add_layer(self.postgresql_service, new_layer, combine=True)
             logging.info("Added updated layer 'postgresql' to Pebble plan")
             if replan:
-                self.workload.container.replan()
-                logging.info("Restarted postgresql service")
+                try:
+                    self.workload.container.replan()
+                    logging.info("Restarted postgresql service")
+                except ChangeError as e:
+                    # A stale pgBackRest exporter from before a restore can still
+                    # hold its port ("bind: address already in use"), failing the
+                    # replan mid-hook. Let the hook finish; the next hook retries
+                    # the replan instead of crashing the unit into error state.
+                    logging.warning(
+                        "Failed to replan pebble services: %s - deferring the restart to the next hook",
+                        e,
+                    )
+                    return False
         if current_layer.checks != new_layer.checks:
             # Changes were made, add the new layer.
             self.workload.container.add_layer(self.postgresql_service, new_layer, combine=True)
@@ -2806,101 +2860,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             f"{' with repeat cause ' + repeat_cause if repeat_cause is not None else ''}"
         )
         return True
-
-    def restore_patroni_on_failure_condition(self) -> None:
-        """Restore Patroni pebble service original on-failure condition.
-
-        Will do nothing if not overridden. Executes only on current unit.
-        """
-        if "patroni-on-failure-condition-override" in self.unit_peer_data:
-            self.unit_peer_data.update({
-                "patroni-on-failure-condition-override": "",
-                "overridden-patroni-on-failure-condition-repeat-cause": "",
-            })
-            self._update_pebble_layers(False)
-            logger.debug(
-                f"restored Patroni on-failure condition to {ORIGINAL_PATRONI_ON_FAILURE_CONDITION}"
-            )
-        else:
-            logger.warning("not restoring patroni on-failure condition as it's not overridden")
-
-    def is_pitr_failed(self, container: Container) -> tuple[bool, bool]:
-        """Check if Patroni service failed to bootstrap cluster during point-in-time-recovery.
-
-        Typically, this means that database service failed to reach point-in-time-recovery target or has been
-        supplied with bad PITR parameter. Also, remembers last state and can provide info is it new event, or
-        it belongs to previous action. Executes only on current unit.
-
-        Returns:
-            tuple[bool, bool]:
-                - Is patroni service failed to bootstrap cluster.
-                - Is it new fail, that wasn't observed previously.
-        """
-        patroni_exceptions = []
-        count = 0
-        while len(patroni_exceptions) == 0 and count < 10:
-            if count > 0:
-                time.sleep(3)
-            try:
-                log_exec = container.pebble.exec(
-                    ["pebble", "logs", "postgresql", "-n", "all"], combine_stderr=True
-                )
-                patroni_logs = log_exec.wait_output()[0]
-                patroni_exceptions = re.findall(
-                    r"^([0-9-:TZ.]+) \[postgresql] patroni\.exceptions\.PatroniFatalException: Failed to bootstrap cluster$",
-                    patroni_logs,
-                    re.MULTILINE,
-                )
-            except ExecError:  # For Juju 2.
-                log_exec = container.pebble.exec(["cat", f"{PATRONI_LOGS_PATH}/patroni.log"])
-                patroni_logs = log_exec.wait_output()[0]
-                patroni_exceptions = re.findall(
-                    r"^([0-9- :]+) UTC \[[0-9]+\]: INFO: removing initialize key after failed attempt to bootstrap the cluster",
-                    patroni_logs,
-                    re.MULTILINE,
-                )
-                if len(patroni_exceptions) != 0:
-                    break
-                # If no match, look at older logs
-                log_exec = container.pebble.exec([
-                    "find",
-                    f"{PATRONI_LOGS_PATH}/",
-                    "-name",
-                    "'patroni.log.*'",
-                    "-exec",
-                    "cat",
-                    "{}",
-                    "+",
-                ])
-                patroni_logs = log_exec.wait_output()[0]
-                patroni_exceptions = re.findall(
-                    r"^([0-9- :]+) UTC \[[0-9]+\]: INFO: removing initialize key after failed attempt to bootstrap the cluster",
-                    patroni_logs,
-                    re.MULTILINE,
-                )
-            count += 1
-
-        if len(patroni_exceptions) > 0:
-            logger.debug("Failures to bootstrap cluster detected on Patroni service logs")
-            old_pitr_fail_id = self.unit_peer_data.get("last_pitr_fail_id", None)
-            self.unit_peer_data["last_pitr_fail_id"] = patroni_exceptions[-1]
-            return True, patroni_exceptions[-1] != old_pitr_fail_id
-
-        logger.debug("No failures detected on Patroni service logs")
-        return False, False
-
-    def log_pitr_last_transaction_time(self) -> None:
-        """Log to user last completed transaction time acquired from postgresql logs."""
-        postgresql_logs = self.patroni_manager.last_postgresql_logs()
-        log_time = re.findall(
-            r"last completed transaction was at log time (.*)$",
-            postgresql_logs,
-            re.MULTILINE,
-        )
-        if len(log_time) > 0:
-            logger.info(f"Last completed transaction was at {log_time[-1]}")
-        else:
-            logger.error("Can't tell last completed transaction time")
 
     def get_plugins(self) -> list[str]:
         """Return a list of installed plugins."""
