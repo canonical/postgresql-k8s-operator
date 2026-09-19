@@ -32,6 +32,8 @@ from ops.pebble import ChangeError, ExecError, ServiceStatus
 from single_kernel_postgresql.config.literals import (
     BACKUP_TYPE_OVERRIDES,
     BACKUP_USER,
+    LOGICAL_REPLICATION_OFFER_RELATION,
+    LOGICAL_REPLICATION_RELATION,
     PGBACKREST_LOGROTATE_FILE,
     REPLICATION_CONSUMER_RELATION,
     REPLICATION_OFFER_RELATION,
@@ -50,11 +52,6 @@ from constants import (
     PGBACKREST_LOGS_PATH,
     TEMP_STORAGE_PATH,
 )
-
-# from relations.logical_replication import (
-#     LOGICAL_REPLICATION_OFFER_RELATION,
-#     LOGICAL_REPLICATION_RELATION,
-# )
 
 if TYPE_CHECKING:
     from charm import PostgresqlOperatorCharm
@@ -1180,16 +1177,16 @@ Stderr:
             event.fail(error_message)
             return False
 
-        # logger.info("Checking that cluster does not have an active logical replication relation")
-        # if self.model.get_relation(LOGICAL_REPLICATION_RELATION) or len(
-        #     self.model.relations.get(LOGICAL_REPLICATION_OFFER_RELATION, ())
-        # ):
-        #     error_message = (
-        #         "Unit cannot restore backup with an active logical replication connection"
-        #     )
-        #     logger.error(f"Restore failed: {error_message}")
-        #     event.fail(error_message)
-        #     return False
+        logger.info("Checking that cluster does not have an active logical replication relation")
+        if self.model.get_relation(LOGICAL_REPLICATION_RELATION) or len(
+            self.model.relations.get(LOGICAL_REPLICATION_OFFER_RELATION, ())
+        ):
+            error_message = (
+                "Unit cannot restore backup with an active logical replication connection"
+            )
+            logger.error(f"Restore failed: {error_message}")
+            event.fail(error_message)
+            return False
 
         logger.info("Checking that this unit was already elected the leader unit")
         if not self.charm.unit.is_leader():
