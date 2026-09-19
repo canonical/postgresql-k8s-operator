@@ -21,7 +21,7 @@ charmlibs-interfaces-tls-certificates = "^1.10.1"
 charm-refresh = "^3.1.1.2"
 # Pinned to the commit carrying the logical-replication migration PRs
 # (canonical/postgresql-single-kernel-library#266..#270) until they are released.
-postgresql-charms-single-kernel = { url = "https://github.com/canonical/postgresql-single-kernel-library/archive/06f735f2f9d19b51bd6c441c055bc065444f380b.tar.gz", extras = [
+postgresql-charms-single-kernel = { url = "https://github.com/canonical/postgresql-single-kernel-library/archive/a8dca68ed06a2ebe69aa31ec9bd165ea08617a2a.tar.gz", extras = [
     "postgresql",
     "k8s",
 ] }
