@@ -1632,6 +1632,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
 
         try:
             self._setup_users()
+        except psycopg2.OperationalError as e:
+            # The workload may still be coming up after a pod replacement; retry
+            # the whole bootstrap on the next hook instead of blocking the unit.
+            logger.warning(f"Defer on_start: cannot connect to PostgreSQL yet: {e}")
+            self.set_unit_status(WaitingStatus("awaiting for cluster to start"))
+            event.defer()
+            return False
         except PostgreSQLCreatePredefinedRolesError:
             message = "Failed to create pre-defined roles"
             logger.exception(message)
