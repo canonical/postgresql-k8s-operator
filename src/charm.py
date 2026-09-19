@@ -2695,8 +2695,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
                 "storage-default-table-access-method config option has an invalid value"
             )
 
-    def _update_pebble_layers(self, replan: bool = True) -> None:
-        """Update the pebble layers to keep the health check URL up-to-date."""
+    def _update_pebble_layers(self, replan: bool = True) -> bool | None:
+        """Update the pebble layers to keep the health check URL up-to-date.
+
+        Returns ``False`` when the replan failed and the restart was deferred
+        to the next hook; callers that only need the layers reconciled can
+        ignore the return value.
+        """
         # Get the current layer.
         current_layer = self.workload.container.get_plan()
 
@@ -2709,8 +2714,19 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             self.workload.container.add_layer(self.postgresql_service, new_layer, combine=True)
             logging.info("Added updated layer 'postgresql' to Pebble plan")
             if replan:
-                self.workload.container.replan()
-                logging.info("Restarted postgresql service")
+                try:
+                    self.workload.container.replan()
+                    logging.info("Restarted postgresql service")
+                except ChangeError as e:
+                    # A stale pgBackRest exporter from before a restore can still
+                    # hold its port ("bind: address already in use"), failing the
+                    # replan mid-hook. Let the hook finish; the next hook retries
+                    # the replan instead of crashing the unit into error state.
+                    logging.warning(
+                        "Failed to replan pebble services: %s - deferring the restart to the next hook",
+                        e,
+                    )
+                    return False
         if current_layer.checks != new_layer.checks:
             # Changes were made, add the new layer.
             self.workload.container.add_layer(self.postgresql_service, new_layer, combine=True)
