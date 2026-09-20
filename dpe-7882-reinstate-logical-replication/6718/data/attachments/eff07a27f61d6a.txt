@@ -1,0 +1,33 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-1
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.28   unsupported  17:03:22Z
+
+App                          Version  Status  Scale  Charm           Channel  Rev  Address         Exposed  Message
+test-storage-postgresql-k8s  16.15    active      1  postgresql-k8s             1  10.152.183.210  no       
+
+Unit                            Workload  Agent  Address      Ports  Message
+test-storage-postgresql-k8s/0*  active    idle   10.1.58.167         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-2: 16:47:54 ERROR unit.postgresql-k8s/2.juju-log database-peers:0: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "postgresql-k8s-2.postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.58.149), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-k8s-2: 16:52:43 ERROR unit.postgresql-k8s/2.juju-log single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "postgresql-k8s-2.postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.58.152), port 5432 failed: FATAL:  the database system is starting up
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
