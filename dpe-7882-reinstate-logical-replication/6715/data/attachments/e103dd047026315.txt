@@ -1,0 +1,52 @@
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:259 stopping database from postgresql-k8s/1
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:263 removing data from postgresql-k8s/1
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:275 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.248:16443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.248:16443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:243 Initial writes {'testing.postgresql-k8s-0': 42, 'testing.postgresql-k8s-2': 42}
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.248:16443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://10.1.0.248:16443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:249 Retry writes {'testing.postgresql-k8s-0': 44, 'testing.postgresql-k8s-2': 44}
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:281 checking whether a new primary was elected
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:289 enabling WAL rotation on postgresql-k8s/1
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:289 enabling WAL rotation on postgresql-k8s/1
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:293 rotating WAL segments on postgresql-k8s/2
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:316 Checking the database service on postgresql-k8s/1
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.28   unsupported  09:20:11Z
+
+App                  Version  Status  Scale  Charm                Channel      Rev  Address         Exposed  Message
+postgresql-k8s       16.15    active      3  postgresql-k8s                      0  10.152.183.211  no       
+postgresql-test-app           active      1  postgresql-test-app  latest/edge  590  10.152.183.173  no       received database credentials of the first database
+
+Unit                    Workload  Agent  Address      Ports  Message
+postgresql-k8s/0*       active    idle   10.1.58.141         
+postgresql-k8s/1        waiting   idle   10.1.58.154         awaiting for member to start
+postgresql-k8s/2        active    idle   10.1.58.152         Primary (degraded)
+postgresql-test-app/0*  active    idle   10.1.58.145         received database credentials of the first database
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-test-app-0: 08:35:55 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-postgresql-k8s-2: 09:02:01 ERROR unit.postgresql-k8s/2.juju-log __main__:Failed to restart patroni
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/src/charm.py", line 2123, in _on_update_status
+    self.workload.container.restart(self.postgresql_service)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2627, in restart
+    self._pebble.restart_services(service_names)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2527, in restart_services
+    return self._services_action('restart', services, timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-2/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2554, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "postgresql" (cannot start service while killing)
+----- Logs from task 0 -----
+2026-09-20T09:02:01Z INFO Service "postgresql" already stopping.
+----- Logs from task 1 -----
+2026-09-20T09:02:01Z ERROR cannot start service while killing
+-----
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
