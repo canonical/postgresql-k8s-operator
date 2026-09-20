@@ -1,0 +1,37 @@
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing-other --format json
+[32mINFO    [0m root:test_async_replication.py:241 Promoting standby cluster to primary
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing-other --format json db2/0 promote-to-primary --params /root/snap/juju/common/tmpc5pzuqi5
+[32mINFO    [0m root:test_async_replication.py:463 Reintegrating db2 and test-app2
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju remove-relation --model testing-other db2 test-app2:database
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [db2/2] status changed: active () -> error (hook failed: "database-peers-relation-changed")
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju integrate --model testing-other db2:database test-app2:database
+[32mINFO    [0m root:test_async_replication.py:481 Clearing continuous writes
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing-other --format json test-app2/0 clear-continuous-writes --wait 120s
+[32mINFO    [0m root:test_async_replication.py:489 Starting continuous writes
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing-other --format json test-app2/0 start-continuous-writes
+[32mINFO    [0m root:test_async_replication.py:433 Stopping continuous writes
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing-other --format json test-app2/0 stop-continuous-writes
+[32mINFO    [0m root:test_async_replication.py:441 Querying max value on all db1 units
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju show-secret --model testing secret:5b8i6e2n296cs37upspg --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju show-secret --model testing secret:5b8i6e2n296cs37upspg --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju show-secret --model testing secret:5b8i6e2n296cs37upspg --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:test_async_replication.py:450 Querying max value on all db2 units
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju secrets --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju show-secret --model testing-other secret:ne3lck7ijsss7o4edj0g --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju secrets --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju show-secret --model testing-other secret:ne3lck7ijsss7o4edj0g --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju secrets --model testing-other --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju show-secret --model testing-other secret:ne3lck7ijsss7o4edj0g --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing-other --format json
