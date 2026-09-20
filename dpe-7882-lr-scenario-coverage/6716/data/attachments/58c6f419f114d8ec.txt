@@ -1,0 +1,43 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator3/0 [idle] active: 
+  data-integrator/0 [idle] active: 
+  postgresql3/0 [executing] active: Primary
+  postgresql/0 [executing] active: Primary
+  postgresql/1 [executing] active: 
+  postgresql/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql3/0 [idle] active: Primary
+  postgresql/0 [idle] active: Primary
+  postgresql/1 [idle] active: 
+  postgresql/2 [idle] active: 
+[32mINFO    [0m httpx:_client.py:1740 HTTP Request: GET https://10.1.0.219:16443/api/v1/namespaces/testing/services/postgresql3-primary "HTTP/1.1 200 OK"
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.28   unsupported  08:56:57Z
+
+App               Version  Status  Scale  Charm            Channel        Rev  Address         Exposed  Message
+data-integrator            active      1  data-integrator  latest/stable  418  10.152.183.87   no       
+data-integrator3           active      1  data-integrator  latest/stable  418  10.152.183.25   no       
+postgresql        16.15    active      3  postgresql-k8s                    0  10.152.183.134  no       
+postgresql3       16.15    active      1  postgresql-k8s                    1  10.152.183.236  no       
+
+Unit                 Workload  Agent  Address      Ports  Message
+data-integrator3/0*  active    idle   10.1.58.136         
+data-integrator/0*   active    idle   10.1.58.137         
+postgresql3/0*       active    idle   10.1.58.146         Primary
+postgresql/0*        active    idle   10.1.58.167         Primary
+postgresql/1         active    idle   10.1.58.172         
+postgresql/2         active    idle   10.1.58.173         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-0: 08:48:12 ERROR unit.postgresql/0.juju-log logical-replication-offer:15: single_kernel_postgresql.events.logical_replication:Cannot create new publication for logical-replication-offer #15: table public.test_table in database testdb doesn't exist
+unit-postgresql2-0: 08:48:18 ERROR unit.postgresql2/0.juju-log logical-replication:15: single_kernel_postgresql.events.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql3-0: 08:48:34 ERROR unit.postgresql3/0.juju-log single_kernel_postgresql.events.logical_replication:Logical replication validation: database bad_database doesn't exist
+unit-postgresql2-0: 08:48:52 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.events.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql2-0: 08:49:00 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.events.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql2-0: 08:53:10 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.events.logical_replication:Logical replication validation: table public.test_table in database testdb isn't empty
+unit-postgresql2-0: 08:55:12 ERROR juju.worker.dependency "uniter" manifold worker returned unexpected error: relation scope id "39437a47-dab9-4c6b-8b45-8a2d22260c6d:r#15#postgresql": settings 39437a47-dab9-4c6b-8b45-8a2d22260c6d:r#15#postgresql not found (not found)
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
