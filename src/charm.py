@@ -12,8 +12,6 @@ import pathlib
 import shutil
 import sys
 import time
-import httpcore
-import httpx
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
