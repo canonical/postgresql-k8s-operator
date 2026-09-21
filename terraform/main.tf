@@ -12,7 +12,8 @@ resource "juju_application" "k8s_postgresql" {
 
   storage_directives = var.storage_directives
 
-  units       = var.units
+  machines    = var.machines
+  units       = var.machines == null ? var.units : null
   constraints = var.constraints
   config      = var.config
   resources   = var.resources

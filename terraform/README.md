@@ -24,6 +24,7 @@ This module offers the following configurable units:
 | `channel`            | string      | Channel that charm is deployed from      | 14/stable        |          |
 | `config`             | map(string) | Application configuration                | {}               |          |
 | `constraints`        | string      | Juju constraints to apply                | ""               |          |
+| `machines`           | set(string) | Target Juju machines to deploy on        | null             |          |
 | `model_uuid`         | string      | UUID of the model to deploy the charm to |                  |    Y     |
 | `revision`           | number      | Revision number of charm to deploy       | null             |          |
 | `storage_directives` | map(string) | Storage directives                       | { pgdata = 10G } |          |
@@ -50,6 +51,13 @@ the following command:
 ```shell
 terraform apply -var="model_uuid=<MODEL_UUID>" -auto-approve
 ```
+
+To deploy multiple units to a fixed set of pre-created Juju machines (e.g. for HA), run:
+```shell
+terraform apply -var="model_uuid=<MODEL_UUID>" -var='machines=["19","20","21"]' -auto-approve
+```
+The number of machines in the set determines the number of units deployed.
+Note: the module variables `units` and `machines` are self-exclusive.
 
 For more configuration options, refer to the [CharmHub documentation](https://charmhub.io/postgresql-k8s/configurations).
 
