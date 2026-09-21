@@ -372,16 +372,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
                     _charm=self,
                 )
             )
-        except (httpcore.ReadTimeout, httpx.ReadTimeout):
-            time.sleep(10)
-            self.refresh = charm_refresh.Kubernetes(
-                PostgreSQLRefresh(
-                    workload_name="PostgreSQL",
-                    charm_name="postgresql-k8s",
-                    oci_resource_name="postgresql-image",
-                    _charm=self,
-                )
-            )
         except charm_refresh.KubernetesJujuAppNotTrusted:
             self.refresh = None
             self.can_set_app_status = False
