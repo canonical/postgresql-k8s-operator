@@ -13,6 +13,8 @@ import re
 import shutil
 import sys
 import time
+import httpcore
+import httpx
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
@@ -348,6 +350,19 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
 
         self.can_set_app_status = True
         try:
+            self.refresh = charm_refresh.Kubernetes(
+                PostgreSQLRefresh(
+                    workload_name="PostgreSQL",
+                    charm_name="postgresql-k8s",
+                    oci_resource_name="postgresql-image",
+                    _charm=self,
+                )
+            )
+        except (httpcore.ReadTimeout, httpx.ReadTimeout):
+            # The snapd revision probe in charm_refresh uses httpx's default 5s
+            # timeout with no retry; a transient snapd stall must not crash the
+            # charm at boot. Retry once after a short pause.
+            time.sleep(10)
             self.refresh = charm_refresh.Kubernetes(
                 PostgreSQLRefresh(
                     workload_name="PostgreSQL",
