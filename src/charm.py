@@ -13,13 +13,14 @@ import re
 import shutil
 import sys
 import time
-import httpcore
-import httpx
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
 from typing import Literal, get_args
 from urllib.parse import urlparse
+
+import httpcore
+import httpx
 
 from authorisation_rules_observer import (
     AuthorisationRulesChangeCharmEvents,
