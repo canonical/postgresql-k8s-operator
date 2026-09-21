@@ -2079,6 +2079,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             self._has_blocked_status
             and self.unit.status not in S3_BLOCK_MESSAGES
             and self.unit.status.message != LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS
+            and self.unit.status.message
+            != self.app_peer_data.get("logical-replication-validation-status-message")
         ) or self._has_non_restore_waiting_status:
             # If charm was failing to disable plugin, try again and continue (user may have removed the objects)
             if self.unit.status.message == EXTENSION_OBJECT_MESSAGE:
