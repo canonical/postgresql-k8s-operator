@@ -1,0 +1,125 @@
+[32mINFO    [0m httpx:_client.py:1740 HTTP Request: GET https://10.1.0.180:16443/api/v1/namespaces/testing/services/postgresql-primary "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1740 HTTP Request: GET https://10.1.0.180:16443/api/v1/namespaces/testing/services/postgresql3-primary "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1740 HTTP Request: GET https://10.1.0.180:16443/api/v1/namespaces/testing/services/postgresql-primary "HTTP/1.1 200 OK"
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator2/0 [idle] active: 
+  data-integrator/0 [idle] active: 
+  data-integrator3/0 [idle] active: 
+  postgresql3/0 [executing] blocked: Logical replication setup is invalid. Check logs
+  postgresql2/0 [idle] blocked: Logical replication setup is invalid. Check logs
+  postgresql2/1 [idle] active: 
+  postgresql2/2 [idle] active: 
+  postgresql/0 [executing] active: Primary
+  postgresql/1 [executing] active: 
+  postgresql/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql3/0 [executing] active: 
+  postgresql2/0 [idle] blocked: Logical replication setup is invalid. Check logs
+  postgresql/0 [idle] active: Primary
+  postgresql/1 [executing] active: 
+  postgresql/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql3/0 [executing] active: 
+  postgresql2/0 [idle] blocked: Logical replication setup is invalid. Check logs
+  postgresql/0 [idle] active: Primary
+  postgresql/1 [idle] active: 
+  postgresql/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql3/0 [executing] active: 
+  postgresql2/0 [executing] blocked: Logical replication setup is invalid. Check logs
+  postgresql2/1 [executing] active: 
+  postgresql2/2 [executing] active: 
+  postgresql/1 [idle] active: 
+  postgresql/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.28   unsupported  08:32:28Z
+
+App               Version  Status  Scale  Charm            Channel        Rev  Address         Exposed  Message
+data-integrator            active      1  data-integrator  latest/stable  418  10.152.183.61   no       
+data-integrator2           active      1  data-integrator  latest/stable  418  10.152.183.249  no       
+data-integrator3           active      1  data-integrator  latest/stable  418  10.152.183.93   no       
+postgresql        16.15    active      3  postgresql-k8s                    2  10.152.183.26   no       
+postgresql2       16.15    active      3  postgresql-k8s                    1  10.152.183.223  no       
+postgresql3       16.15    active      1  postgresql-k8s                    0  10.152.183.178  no       
+
+Unit                 Workload  Agent      Address      Ports  Message
+data-integrator2/0*  active    idle       10.1.58.136         
+data-integrator3/0*  active    idle       10.1.58.142         
+data-integrator/0*   active    idle       10.1.58.137         
+postgresql2/0*       active    executing  10.1.58.152         
+postgresql2/1        active    executing  10.1.58.157         
+postgresql2/2        active    idle       10.1.58.162         
+postgresql3/0*       active    executing  10.1.58.146         Primary
+postgresql/0*        active    idle       10.1.58.166         Primary
+postgresql/1         active    idle       10.1.58.173         
+postgresql/2         error     idle       10.1.58.172         hook failed: "database-peers-relation-changed"
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-0: 08:30:26 ERROR unit.postgresql/0.juju-log logical-replication-offer:15: single_kernel_postgresql.events.logical_replication:Cannot create new publication for logical-replication-offer #15: table public.test_table in database testdb doesn't exist
+unit-postgresql2-0: 08:30:32 ERROR unit.postgresql2/0.juju-log logical-replication:15: single_kernel_postgresql.events.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql3-0: 08:30:49 ERROR unit.postgresql3/0.juju-log single_kernel_postgresql.events.logical_replication:Logical replication validation: database bad_database doesn't exist
+unit-postgresql2-0: 08:31:08 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.events.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql2-0: 08:31:22 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.events.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql2-0: 08:31:29 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.events.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql2-0: 08:31:36 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.events.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql2-0: 08:31:49 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.events.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql2-0: 08:32:01 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.events.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql2-0: 08:32:10 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.events.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql-2: 08:32:25 ERROR unit.postgresql/2.juju-log database-peers:11: single_kernel_postgresql.utils.postgresql:Failed to list accessible databases for user relation_id_13: connection to server at "postgresql-2.postgresql-endpoints.testing.svc.cluster.local" (10.1.58.172), port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+unit-postgresql-2: 08:32:25 ERROR unit.postgresql/2.juju-log database-peers:11: root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-2/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 598, in list_accessible_databases_for_user
+    self._connect_to_database(database_host=host) as connection,
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-2/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 186, in _connect_to_database
+    connection = psycopg2.connect(
+                 ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-2/charm/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "postgresql-2.postgresql-endpoints.testing.svc.cluster.local" (10.1.58.172), port 5432 failed: server closed the connection unexpectedly
+	This probably means the server terminated abnormally
+	before or while processing the request.
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-2/charm/src/charm.py", line 2944, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-postgresql-2/charm/venv/lib/python3.12/site-packages/ops/__init__.py", line 360, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 522, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-postgresql-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 506, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-postgresql-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 439, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-postgresql-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 483, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-postgresql-2/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 336, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-postgresql-2/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 914, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-postgresql-2/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1034, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-postgresql-2/charm/src/charm.py", line 860, in _on_peer_relation_changed
+    self.update_config()
+  File "/var/lib/juju/agents/unit-postgresql-2/charm/src/charm.py", line 2653, in update_config
+    relations_user_databases_map=self.relations_user_databases_map,
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-2/charm/src/charm.py", line 2768, in relations_user_databases_map
+    self.postgresql.list_accessible_databases_for_user(
+  File "/var/lib/juju/agents/unit-postgresql-2/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 617, in list_accessible_databases_for_user
+    raise PostgreSQLListAccessibleDatabasesForUserError() from e
+single_kernel_postgresql.utils.postgresql.PostgreSQLListAccessibleDatabasesForUserError
+unit-postgresql-2: 08:32:27 ERROR juju.worker.uniter.operation hook "database-peers-relation-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
