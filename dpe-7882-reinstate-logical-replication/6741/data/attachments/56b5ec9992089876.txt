@@ -1,0 +1,297 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:806 Connecting to existing model concierge-microk8s:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SecretsRevoker received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/data-integrator-418
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/data-integrator-418
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/data-integrator-418
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-2
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-0
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-1
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [allocating] waiting: installing agent
+  postgresql/1 [allocating] waiting: installing agent
+  postgresql/2 [allocating] waiting: installing agent
+  postgresql2/0 [allocating] waiting: installing agent
+  postgresql2/1 [allocating] waiting: installing agent
+  postgresql2/2 [allocating] waiting: installing agent
+  postgresql3/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [allocating] waiting: installing agent
+  postgresql/1 [allocating] waiting: installing agent
+  postgresql/2 [allocating] waiting: installing agent
+  postgresql2/0 [allocating] waiting: installing agent
+  postgresql2/1 [allocating] waiting: installing agent
+  postgresql2/2 [allocating] waiting: installing agent
+  postgresql3/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [allocating] waiting: installing agent
+  postgresql/1 [allocating] waiting: installing agent
+  postgresql/2 [allocating] waiting: installing agent
+  postgresql2/0 [executing] maintenance: installing charm software
+  postgresql2/1 [allocating] waiting: agent initialising
+  postgresql2/2 [allocating] waiting: agent initialising
+  postgresql3/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [executing] maintenance: installing charm software
+  postgresql/1 [allocating] waiting: agent initialising
+  postgresql/2 [executing] maintenance: installing charm software
+  postgresql2/0 [executing] waiting: awaiting for cluster to start
+  postgresql2/1 [executing] maintenance: installing charm software
+  postgresql2/2 [executing] maintenance: installing charm software
+  postgresql3/0 [idle] waiting: agent initialising
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [executing] maintenance: installing charm software
+  postgresql/1 [executing] maintenance: installing charm software
+  postgresql/2 [executing] maintenance: installing charm software
+  postgresql2/0 [executing] waiting: awaiting for primary endpoint to be ready
+  postgresql2/1 [executing] maintenance: installing charm software
+  postgresql2/2 [executing] maintenance: installing charm software
+  postgresql3/0 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [executing] active: 
+  postgresql/1 [executing] maintenance: installing charm software
+  postgresql/2 [executing] maintenance: installing charm software
+  postgresql2/0 [executing] waiting: awaiting for primary endpoint to be ready
+  postgresql2/1 [executing] unknown: 
+  postgresql2/2 [executing] unknown: 
+  postgresql3/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [executing] waiting: awaiting for primary endpoint to be ready
+  postgresql/1 [executing] unknown: 
+  postgresql/2 [executing] unknown: 
+  postgresql2/0 [executing] waiting: awaiting for primary endpoint to be ready
+  postgresql2/1 [executing] unknown: 
+  postgresql2/2 [executing] unknown: 
+  postgresql3/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [executing] waiting: awaiting for primary endpoint to be ready
+  postgresql/1 [executing] unknown: 
+  postgresql/2 [executing] unknown: 
+  postgresql2/0 [executing] waiting: awaiting for primary endpoint to be ready
+  postgresql2/1 [executing] unknown: 
+  postgresql2/2 [executing] unknown: 
+  postgresql3/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [executing] waiting: awaiting for primary endpoint to be ready
+  postgresql/1 [executing] unknown: 
+  postgresql/2 [executing] unknown: 
+  postgresql2/0 [idle] active: 
+  postgresql2/1 [idle] unknown: 
+  postgresql2/2 [idle] unknown: 
+  postgresql3/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [idle] waiting: awaiting for primary endpoint to be ready
+  postgresql/1 [idle] unknown: 
+  postgresql/2 [idle] unknown: 
+  postgresql2/0 [executing] active: Primary (degraded)
+  postgresql2/1 [executing] unknown: 
+  postgresql2/2 [executing] unknown: 
+  postgresql3/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [executing] active: Primary (degraded)
+  postgresql/1 [executing] unknown: 
+  postgresql/2 [executing] unknown: 
+  postgresql2/0 [executing] active: Primary (degraded)
+  postgresql2/1 [executing] unknown: 
+  postgresql2/2 [executing] unknown: 
+  postgresql3/0 [executing] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [executing] active: Primary (degraded)
+  postgresql/1 [idle] waiting: awaiting for member to start
+  postgresql/2 [idle] unknown: 
+  postgresql2/0 [executing] active: Primary (degraded)
+  postgresql2/1 [executing] waiting: awaiting for member to start
+  postgresql2/2 [executing] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [idle] active: Primary (degraded)
+  postgresql/1 [idle] waiting: awaiting for member to start
+  postgresql/2 [idle] unknown: 
+  postgresql2/1 [executing] active: 
+  postgresql2/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [idle] active: Primary (degraded)
+  postgresql/1 [idle] waiting: awaiting for member to start
+  postgresql/2 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/1 [idle] waiting: awaiting for member to start
+  postgresql/2 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/1 [idle] waiting: awaiting for member to start
+  postgresql/2 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/1 [idle] waiting: awaiting for member to start
+  postgresql/2 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/1 [idle] waiting: awaiting for member to start
+  postgresql/2 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/1 [idle] waiting: awaiting for member to start
+  postgresql/2 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/1 [idle] waiting: awaiting for member to start
+  postgresql/2 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/1 [idle] waiting: awaiting for member to start
+  postgresql/2 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/1 [idle] waiting: awaiting for member to start
+  postgresql/2 [idle] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [executing] active: Primary (degraded)
+  postgresql/1 [idle] active: 
+  postgresql/2 [executing] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [executing] active: Primary
+  postgresql/1 [idle] active: 
+  postgresql/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [executing] blocked: Please relate the data-integrator with the desired product
+  data-integrator2/0 [executing] blocked: Please relate the data-integrator with the desired product
+  data-integrator3/0 [executing] blocked: Please relate the data-integrator with the desired product
+  postgresql/0 [executing] active: Primary
+  postgresql/1 [executing] active: 
+  postgresql/2 [executing] active: 
+  postgresql3/0 [executing] active: Primary
+  postgresql2/0 [executing] active: Primary
+  postgresql2/1 [executing] active: 
+  postgresql2/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [idle] blocked: Please relate the data-integrator with the desired product
+  data-integrator2/0 [idle] blocked: Please relate the data-integrator with the desired product
+  data-integrator3/0 [executing] active: 
+  postgresql/0 [executing] active: Primary
+  postgresql/1 [executing] active: 
+  postgresql/2 [executing] active: 
+  postgresql3/0 [executing] active: Primary
+  postgresql2/0 [executing] active: Primary
+  postgresql2/1 [executing] active: 
+  postgresql2/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [idle] blocked: Please relate the data-integrator with the desired product
+  data-integrator2/0 [idle] blocked: Please relate the data-integrator with the desired product
+  postgresql/0 [idle] active: Primary
+  postgresql/1 [idle] active: 
+  postgresql/2 [idle] active: 
+  postgresql3/0 [idle] active: Primary
+  postgresql2/0 [executing] active: Primary
+  postgresql2/1 [executing] active: 
+  postgresql2/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [idle] blocked: Please relate the data-integrator with the desired product
+  data-integrator2/0 [idle] blocked: Please relate the data-integrator with the desired product
+  postgresql/0 [executing] active: Primary
+  postgresql/1 [executing] active: 
+  postgresql/2 [executing] active: 
+  postgresql2/0 [executing] active: Primary
+  postgresql2/1 [executing] active: 
+  postgresql2/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [idle] blocked: Please relate the data-integrator with the desired product
+  data-integrator2/0 [idle] blocked: Please relate the data-integrator with the desired product
+  postgresql/0 [executing] active: Primary
+  postgresql/1 [executing] active: 
+  postgresql/2 [executing] active: 
+  postgresql2/0 [executing] active: Primary
+  postgresql2/1 [executing] active: 
+  postgresql2/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [idle] blocked: Please relate the data-integrator with the desired product
+  data-integrator2/0 [idle] blocked: Please relate the data-integrator with the desired product
+  postgresql/0 [executing] active: Primary
+  postgresql/1 [executing] active: 
+  postgresql/2 [executing] active: 
+  postgresql2/0 [executing] active: Primary
+  postgresql2/1 [executing] active: 
+  postgresql2/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [idle] blocked: Please relate the data-integrator with the desired product
+  data-integrator2/0 [idle] blocked: Please relate the data-integrator with the desired product
+  postgresql/0 [executing] active: Primary
+  postgresql/1 [executing] active: 
+  postgresql/2 [executing] active: 
+  postgresql2/0 [executing] active: Primary
+  postgresql2/1 [executing] active: 
+  postgresql2/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [idle] blocked: Please relate the data-integrator with the desired product
+  data-integrator2/0 [idle] blocked: Please relate the data-integrator with the desired product
+  postgresql/0 [executing] active: Primary
+  postgresql/1 [idle] active: 
+  postgresql/2 [idle] active: 
+  postgresql2/0 [executing] active: Primary
+  postgresql2/1 [idle] active: 
+  postgresql2/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [idle] active: 
+  data-integrator2/0 [executing] active: 
+  postgresql/0 [executing] active: Primary
+  postgresql/1 [executing] active: 
+  postgresql/2 [executing] active: 
+  postgresql2/0 [executing] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [executing] active: Primary
+  postgresql/1 [executing] active: 
+  postgresql/2 [executing] active: 
+  postgresql2/0 [executing] active: Primary
+  postgresql2/1 [executing] active: 
+  postgresql2/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [executing] active: Primary
+  postgresql/1 [executing] active: 
+  postgresql/2 [executing] active: 
+  postgresql2/0 [executing] active: Primary
+  postgresql2/1 [executing] active: 
+  postgresql2/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [executing] active: Primary
+  postgresql/1 [executing] active: 
+  postgresql/2 [executing] active: 
+  postgresql2/0 [executing] active: Primary
+  postgresql2/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [idle] active: Primary
+  postgresql/1 [idle] active: 
+  postgresql/2 [idle] active: 
+  postgresql2/0 [executing] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql2/0 [executing] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql2/0 [executing] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql2/0 [executing] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql2/0 [executing] active: Primary
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.28   unsupported  12:34:40Z
+
+App               Version  Status  Scale  Charm            Channel        Rev  Address         Exposed  Message
+data-integrator            active      1  data-integrator  latest/stable  418  10.152.183.59   no       
+data-integrator2           active      1  data-integrator  latest/stable  418  10.152.183.209  no       
+data-integrator3           active      1  data-integrator  latest/stable  418  10.152.183.53   no       
+postgresql        16.15    active      3  postgresql-k8s                    2  10.152.183.72   no       
+postgresql2       16.15    active      3  postgresql-k8s                    0  10.152.183.68   no       
+postgresql3       16.15    active      1  postgresql-k8s                    1  10.152.183.77   no       
+
+Unit                 Workload  Agent      Address      Ports  Message
+data-integrator2/0*  active    idle       10.1.58.138         
+data-integrator3/0*  active    idle       10.1.58.137         
+data-integrator/0*   active    idle       10.1.58.136         
+postgresql2/0*       active    executing  10.1.58.146         Primary
+postgresql2/1        active    idle       10.1.58.154         
+postgresql2/2        active    idle       10.1.58.157         
+postgresql3/0*       active    idle       10.1.58.173         Primary
+postgresql/0*        active    idle       10.1.58.161         Primary
+postgresql/1         active    idle       10.1.58.172         
+postgresql/2         active    idle       10.1.58.170         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql2-2: 12:19:53 ERROR unit.postgresql2/2.juju-log database-peers:6: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "postgresql2-2.postgresql2-endpoints.testing.svc.cluster.local" (10.1.58.157), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-2: 12:25:22 ERROR unit.postgresql/2.juju-log database-peers:4: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "postgresql-2.postgresql-endpoints.testing.svc.cluster.local" (10.1.58.170), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
