@@ -1,0 +1,114 @@
+[32mINFO    [0m httpx:_client.py:1740 HTTP Request: GET https://10.1.1.149:16443/api/v1/namespaces/testing/services/postgresql2-primary "HTTP/1.1 200 OK"
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [idle] active: 
+  data-integrator2/0 [idle] active: 
+  data-integrator3/0 [idle] active: 
+  postgresql3/0 [executing] active: 
+  postgresql2/0 [executing] active: Primary
+  postgresql2/1 [executing] active: 
+  postgresql2/2 [executing] active: 
+  postgresql/0 [executing] active: Primary
+  postgresql/1 [executing] active: 
+  postgresql/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql3/0 [idle] blocked: table public.test_table2 isn't empty
+  postgresql2/0 [executing] active: 
+  postgresql2/1 [idle] active: 
+  postgresql2/2 [idle] active: 
+  postgresql/1 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql3/0 [idle] blocked: table public.test_table2 isn't empty
+  postgresql2/0 [idle] active: Primary
+  postgresql2/1 [executing] active: 
+  postgresql2/2 [executing] active: 
+  postgresql/0 [idle] active: Primary
+  postgresql/1 [executing] active: 
+  postgresql/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql3/0 [idle] blocked: table public.test_table2 isn't empty
+  postgresql2/0 [idle] active: Primary
+  postgresql2/1 [idle] active: 
+  postgresql2/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql3/0 [idle] blocked: table public.test_table2 isn't empty
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql3/0 [idle] blocked: table public.test_table2 isn't empty
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql3/0 [idle] blocked: table public.test_table2 isn't empty
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql3/0 [idle] blocked: table public.test_table2 isn't empty
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql3/0 [idle] blocked: table public.test_table2 isn't empty
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql3/0 [idle] blocked: table public.test_table2 isn't empty
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql3/0 [idle] blocked: table public.test_table2 isn't empty
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql3/0 [idle] blocked: table public.test_table2 isn't empty
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql3/0 [idle] blocked: table public.test_table2 isn't empty
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql3/0 [idle] blocked: table public.test_table2 isn't empty
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql3/0 [idle] blocked: table public.test_table2 isn't empty
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql3/0 [idle] blocked: table public.test_table2 isn't empty
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql3/0 [idle] blocked: table public.test_table2 isn't empty
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.28   unsupported  14:50:47Z
+
+App               Version  Status  Scale  Charm            Channel        Rev  Address         Exposed  Message
+data-integrator            active      1  data-integrator  latest/stable  418  10.152.183.202  no       
+data-integrator2           active      1  data-integrator  latest/stable  418  10.152.183.22   no       
+data-integrator3           active      1  data-integrator  latest/stable  418  10.152.183.78   no       
+postgresql        16.15    active      3  postgresql-k8s                    1  10.152.183.194  no       
+postgresql2       16.15    active      3  postgresql-k8s                    0  10.152.183.138  no       
+postgresql3       16.15    active      1  postgresql-k8s                    2  10.152.183.166  no       
+
+Unit                 Workload  Agent  Address      Ports  Message
+data-integrator2/0*  active    idle   10.1.58.138         
+data-integrator3/0*  active    idle   10.1.58.151         
+data-integrator/0*   active    idle   10.1.58.137         
+postgresql2/0*       active    idle   10.1.58.171         Primary
+postgresql2/1        active    idle   10.1.58.179         
+postgresql2/2        active    idle   10.1.58.178         
+postgresql3/0*       blocked   idle   10.1.58.146         table public.test_table2 isn't empty
+postgresql/0*        active    idle   10.1.58.156         Primary
+postgresql/1         active    idle   10.1.58.163         
+postgresql/2         active    idle   10.1.58.166         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql2-1: 14:31:34 ERROR unit.postgresql2/1.juju-log single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "postgresql2-1.postgresql2-endpoints.testing.svc.cluster.local" (10.1.58.179), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql2-2: 14:32:09 ERROR unit.postgresql2/2.juju-log database-peers:7: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "postgresql2-2.postgresql2-endpoints.testing.svc.cluster.local" (10.1.58.178), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-0: 14:38:49 ERROR unit.postgresql/0.juju-log logical-replication-offer:15: single_kernel_postgresql.events.logical_replication:Cannot create new publication for logical-replication-offer #15: table public.test_table in database testdb doesn't exist
+unit-postgresql2-0: 14:38:57 ERROR unit.postgresql2/0.juju-log logical-replication:15: single_kernel_postgresql.events.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql3-0: 14:39:15 ERROR unit.postgresql3/0.juju-log single_kernel_postgresql.events.logical_replication:Logical replication validation: database bad_database doesn't exist
+unit-postgresql2-0: 14:39:34 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.events.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql2-0: 14:39:47 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.events.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql2-0: 14:39:58 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.events.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql2-0: 14:40:05 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.events.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql2-0: 14:40:17 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.events.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql-1: 14:40:18 ERROR unit.postgresql/1.juju-log database-peers:9: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "postgresql-1.postgresql-endpoints.testing.svc.cluster.local" (10.1.58.163), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-2: 14:40:19 ERROR unit.postgresql/2.juju-log database-peers:9: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "postgresql-2.postgresql-endpoints.testing.svc.cluster.local" (10.1.58.166), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql2-0: 14:40:26 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.events.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql-2: 14:40:48 ERROR unit.postgresql/2.juju-log database-peers:9: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "postgresql-2.postgresql-endpoints.testing.svc.cluster.local" (10.1.58.166), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-1: 14:40:49 ERROR unit.postgresql/1.juju-log database-peers:9: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "postgresql-1.postgresql-endpoints.testing.svc.cluster.local" (10.1.58.163), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql3-0: 14:42:41 ERROR unit.postgresql3/0.juju-log logical-replication:16: single_kernel_postgresql.events.logical_replication:Logical replication validation: table public.test_table2 in database testdb isn't empty
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
