@@ -1,0 +1,42 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-a/0 [executing] blocked: Circular replication detected
+  postgresql-c/0 [idle] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-a/0 [executing] active: Primary
+  postgresql-c/0 [idle] active: Primary
+[32mINFO    [0m httpx:_client.py:1740 HTTP Request: GET https://10.1.0.168:16443/api/v1/namespaces/testing/services/postgresql-c-primary "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1740 HTTP Request: GET https://10.1.0.168:16443/api/v1/namespaces/testing/services/postgresql-a-primary "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1740 HTTP Request: GET https://10.1.0.168:16443/api/v1/namespaces/testing/services/postgresql-a-primary "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1740 HTTP Request: GET https://10.1.0.168:16443/api/v1/namespaces/testing/services/postgresql-c-primary "HTTP/1.1 200 OK"
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller          Cloud/Region        Version  SLA          Timestamp
+testing  concierge-microk8s  microk8s/localhost  3.6.28   unsupported  18:29:04Z
+
+App                Version  Status  Scale  Charm            Channel        Rev  Address         Exposed  Message
+data-integrator-a           active      1  data-integrator  latest/stable  418  10.152.183.78   no       
+data-integrator-b           active      1  data-integrator  latest/stable  418  10.152.183.116  no       
+data-integrator-c           active      1  data-integrator  latest/stable  418  10.152.183.32   no       
+postgresql-a       16.15    active      1  postgresql-k8s                    1  10.152.183.180  no       
+postgresql-b       16.15    active      1  postgresql-k8s                    2  10.152.183.225  no       
+postgresql-c       16.15    active      1  postgresql-k8s                    0  10.152.183.156  no       
+
+Unit                  Workload  Agent  Address      Ports  Message
+data-integrator-a/0*  active    idle   10.1.58.137         
+data-integrator-b/0*  active    idle   10.1.58.145         
+data-integrator-c/0*  active    idle   10.1.58.136         
+postgresql-a/0*       active    idle   10.1.58.146         Primary
+postgresql-b/0*       active    idle   10.1.58.157         Primary
+postgresql-c/0*       active    idle   10.1.58.155         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-a-0: 18:22:03 ERROR unit.postgresql-a/0.juju-log single_kernel_postgresql.events.logical_replication:Logical replication validation: circular replication detected for table public.users in database testdb
+unit-postgresql-b-0: 18:22:06 ERROR unit.postgresql-b/0.juju-log logical-replication-offer:16: single_kernel_postgresql.events.logical_replication:Cannot create/update publication for logical-replication-offer #16: circular replication detected for tables public.users in database testdb
+unit-postgresql-b-0: 18:22:14 ERROR unit.postgresql-b/0.juju-log single_kernel_postgresql.events.logical_replication:Cannot create/update publication for logical-replication-offer #16: circular replication detected for tables public.users in database testdb
+unit-postgresql-c-0: 18:28:07 ERROR unit.postgresql-c/0.juju-log logical-replication-offer:19: single_kernel_postgresql.events.logical_replication:Cannot create/update publication for logical-replication-offer #19: circular replication detected for tables public.users in database testdb
+unit-postgresql-a-0: 18:28:10 ERROR unit.postgresql-a/0.juju-log logical-replication:19: single_kernel_postgresql.events.logical_replication:Logical replication validation: Publisher rejected subscription: circular replication detected for tables public.users in database testdb
+unit-postgresql-c-0: 18:28:22 ERROR unit.postgresql-c/0.juju-log single_kernel_postgresql.events.logical_replication:Cannot create/update publication for logical-replication-offer #19: circular replication detected for tables public.users in database testdb
+unit-postgresql-a-0: 18:28:33 ERROR unit.postgresql-a/0.juju-log logical-replication:19: single_kernel_postgresql.events.logical_replication:Logical replication validation: table public.orders in database testdb isn't empty
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
