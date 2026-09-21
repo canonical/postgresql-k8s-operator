@@ -2,6 +2,10 @@ output "app_name" {
   value = juju_application.k8s_postgresql.name
 }
 
+output "application" {
+  value = juju_application.k8s_postgresql
+}
+
 output "provides" {
   value = {
     database          = "database",
