@@ -32,6 +32,7 @@ No modules.
 | <a name="input_config"></a> [config](#input\_config) | Application configuration. Details at https://charmhub.io/postgresql-k8s/configurations | `map(string)` | `{}` | no |
 | <a name="input_constraints"></a> [constraints](#input\_constraints) | Juju constraints to apply for this application. | `string` | `"arch=amd64"` | no |
 | <a name="input_juju_model"></a> [juju\_model](#input\_juju\_model) | Juju model uuid | `string` | n/a | yes |
+| <a name="input_machines"></a> [machines](#input\_machines) | Target Juju machines to deploy on | `set(string)` | `null` | no |
 | <a name="input_resources"></a> [resources](#input\_resources) | Resources to use with the application | `map(string)` | `{}` | no |
 | <a name="input_revision"></a> [revision](#input\_revision) | Revision number to deploy charm | `number` | `null` | no |
 | <a name="input_storage_directives"></a> [storage\_directives](#input\_storage\_directives) | Storage directives to apply for this application | `map(string)` | `{}` | no |
@@ -77,4 +78,11 @@ The juju constraints example:
 terraform apply -var="juju_model=$MODEL_UUID" -auto-approve \
   -var='constraints=arch=amd64 cores=4 mem=4096M virt-type=virtual-machine'
 ```
+
+To deploy multiple units to a fixed set of pre-created Juju machines (e.g. for HA), run:
+```
+terraform apply -var="juju_model=$MODEL_UUID" -var='machines=["19","20","21"]' -auto-approve
+```
+The number of machines in the set determines the number of units deployed.
+Note: the module variables `units` and `machines` are self-exclusive.
 
