@@ -24,9 +24,12 @@ website:
 maintainers:
   - Canonical Data Platform <data-platform@lists.launchpad.net>
 
+charm-user: non-root
 containers:
   postgresql:
     resource: postgresql-image
+    uid: 584788
+    gid: 584788
     mounts:
       - storage: archive
         location: /var/lib/pg/archive
