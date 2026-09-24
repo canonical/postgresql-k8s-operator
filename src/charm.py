@@ -149,6 +149,7 @@ from single_kernel_postgresql.events.tls_transfer import TLSTransfer
 from single_kernel_postgresql.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProvides,
 )
+from single_kernel_postgresql.lib.charms.data_platform_libs.v0.s3 import S3Requirer
 from single_kernel_postgresql.managers.cluster import ClusterManager
 from single_kernel_postgresql.managers.config import ConfigManager
 from single_kernel_postgresql.managers.database import DatabaseManager
@@ -249,7 +250,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
 
         # TODO switch to the abstract class base
         # State
-        self.state = CharmState(charm=self, substrate=self.substrate)
+        self.s3_requirer = S3Requirer(self, "s3-parameters")
+        self.state = CharmState(
+            charm=self,
+            substrate=self.substrate,
+            s3_requirer=self.s3_requirer,
+        )
         # Reads this unit's available (cpu, memory) from the node/pod for config sizing.
         self.k8s_manager = K8sManager(self.state, self.workload)
 
@@ -296,7 +302,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         self._actual_pgdata_path = f"{self._storage_path}/16/main"
 
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
-        self.backup = PostgreSQLBackups(self, "s3-parameters")
+        self.backup = PostgreSQLBackups(self, "s3-parameters", s3_requirer=self.s3_requirer)
         self.ldap = LDAP(self, self.state)
         # TLS events handler owns the two cert requirers; build it before the TLS
         # manager so the manager can constructor-inject them for its live-fetch getters.

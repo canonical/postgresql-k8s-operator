@@ -19,7 +19,6 @@ from botocore.client import Config
 from botocore.exceptions import ClientError
 from botocore.loaders import create_loader
 from botocore.regions import EndpointResolver
-from charms.data_platform_libs.v0.s3 import CredentialsChangedEvent, S3Requirer
 from jinja2 import Template
 from lightkube import ApiError, Client
 from lightkube.resources.core_v1 import Endpoints
@@ -41,6 +40,10 @@ from single_kernel_postgresql.config.literals import (
 )
 from single_kernel_postgresql.config.literals import (
     K8S_WORKLOAD_OS_USER as WORKLOAD_OS_USER,
+)
+from single_kernel_postgresql.lib.charms.data_platform_libs.v0.s3 import (
+    CredentialsChangedEvent,
+    S3Requirer,
 )
 from tenacity import RetryError, Retrying, stop_after_attempt, wait_fixed
 
@@ -78,7 +81,12 @@ S3_BLOCK_MESSAGES = [
 class PostgreSQLBackups(Object):
     """In this class, we manage PostgreSQL backups."""
 
-    def __init__(self, charm: "PostgresqlOperatorCharm", relation_name: str):
+    def __init__(
+        self,
+        charm: "PostgresqlOperatorCharm",
+        relation_name: str,
+        s3_requirer: S3Requirer,
+    ):
         """Manager of PostgreSQL backups."""
         super().__init__(charm, "backup")
         self.charm = charm
@@ -86,7 +94,7 @@ class PostgreSQLBackups(Object):
         self.container = self.charm.unit.get_container("postgresql")
 
         # s3 relation handles the config options for s3 backups
-        self.s3_client = S3Requirer(self.charm, self.relation_name)
+        self.s3_client = s3_requirer
         self.framework.observe(
             self.s3_client.on.credentials_changed, self._on_s3_credential_changed
         )
