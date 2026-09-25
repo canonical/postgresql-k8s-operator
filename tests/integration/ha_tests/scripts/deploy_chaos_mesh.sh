@@ -18,7 +18,7 @@ deploy_chaos_mesh() {
         sudo k8s helm install chaos-mesh chaos-mesh/chaos-mesh \
           --namespace="${chaos_mesh_ns}" \
           --set chaosDaemon.runtime=containerd \
-          --set chaosDaemon.socketPath=/var/snap/microk8s/common/run/containerd.sock \
+          --set chaosDaemon.socketPath=/run/containerd/containerd.sock \
           --set dashboard.create=false \
           --version "${chaos_mesh_version}" \
           --set clusterScoped=false \
