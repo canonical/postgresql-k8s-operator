@@ -78,6 +78,10 @@ async def test_scaling_to_zero(ops_test: OpsTest, continuous_writes) -> None:
     logger.info("scaling database to zero units")
     await scale_application(ops_test, app, 0)
 
+    # Scale the database to one unit.
+    logger.info("scaling database to one unit")
+    await scale_application(ops_test, app, 1)
+
     # Scale the database to three units.
     logger.info("scaling database to three units")
     await scale_application(ops_test, app, 3)
