@@ -122,6 +122,7 @@ from single_kernel_postgresql.config.literals import (
     REPLICATION_USER,
     REWIND_PASSWORD_KEY,
     REWIND_USER,
+    S3_RELATION_NAME,
     SECRET_DELETED_LABEL,
     SECRET_INTERNAL_LABEL,
     SECRET_KEY_OVERRIDES,
@@ -149,6 +150,7 @@ from single_kernel_postgresql.events.tls_transfer import TLSTransfer
 from single_kernel_postgresql.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProvides,
 )
+from single_kernel_postgresql.lib.charms.data_platform_libs.v0.s3 import S3Requirer
 from single_kernel_postgresql.managers.backup import BackupManager
 from single_kernel_postgresql.managers.cluster import ClusterManager
 from single_kernel_postgresql.managers.config import ConfigManager
@@ -156,7 +158,6 @@ from single_kernel_postgresql.managers.database import DatabaseManager
 from single_kernel_postgresql.managers.k8s import K8sManager
 from single_kernel_postgresql.managers.patroni import PatroniManager
 from single_kernel_postgresql.managers.restore import RestoreManager
-from single_kernel_postgresql.managers.s3_client import S3Client
 from single_kernel_postgresql.managers.tls import TLSManager
 from single_kernel_postgresql.utils import new_password
 from single_kernel_postgresql.utils.backup import (
@@ -178,6 +179,7 @@ from single_kernel_postgresql.utils.postgresql import (
     PostgreSQLListUsersError,
     PostgreSQLUpdateUserPasswordError,
 )
+from single_kernel_postgresql.utils.s3 import S3Client
 from single_kernel_postgresql.workload.k8s import K8sWorkload
 from tenacity import RetryError, Retrying, stop_after_attempt, stop_after_delay, wait_fixed
 
@@ -255,7 +257,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
 
         # TODO switch to the abstract class base
         # State
-        self.state = CharmState(charm=self, substrate=self.substrate)
+        self.s3_requirer = S3Requirer(self, S3_RELATION_NAME)
+        self.state = CharmState(
+            charm=self,
+            substrate=self.substrate,
+            s3_requirer=self.s3_requirer,
+        )
         # Reads this unit's available (cpu, memory) from the node/pod for config sizing.
         self.k8s_manager = K8sManager(self.state, self.workload)
 
@@ -319,7 +326,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             patroni_manager=self.patroni_manager,
             update_config=self.update_config,
             backup_manager=self.backup,
-            update_pebble_layers=self.k8s_manager.update_pebble_layers,
         )
         self.ldap = LDAP(self, self.state)
         self.backup_events = BackupEventsHandler(
@@ -328,7 +334,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             self.backup,
             self.restore_manager,
         )
-        # TLS events handler owns the two cert requirers; build it before the TLS
         # TLS events handler owns the two cert requirers; build it before the TLS
         # manager so the manager can constructor-inject them for its live-fetch getters.
         self.tls = TLS(self, self.state)
