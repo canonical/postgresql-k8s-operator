@@ -488,7 +488,7 @@ def test_execute_command(harness):
 
 def test_format_backup_list(harness):
     with patch(
-        "charms.data_platform_libs.v0.s3.S3Requirer.get_s3_connection_info"
+        "single_kernel_postgresql.lib.charms.data_platform_libs.v0.s3.S3Requirer.get_s3_connection_info"
     ) as _get_s3_connection_info:
         # Test when there are no backups.
         _get_s3_connection_info.return_value = {
@@ -558,7 +558,7 @@ backup-id            | action              | status   | reference-backup-id  | L
 def test_generate_backup_list_output(harness):
     with (
         patch(
-            "charms.data_platform_libs.v0.s3.S3Requirer.get_s3_connection_info"
+            "single_kernel_postgresql.lib.charms.data_platform_libs.v0.s3.S3Requirer.get_s3_connection_info"
         ) as _get_s3_connection_info,
         patch("charm.PostgreSQLBackups._execute_command") as _execute_command,
     ):
@@ -1889,7 +1889,7 @@ def test_retrieve_s3_parameters(
     harness,
 ):
     with patch(
-        "charms.data_platform_libs.v0.s3.S3Requirer.get_s3_connection_info"
+        "single_kernel_postgresql.lib.charms.data_platform_libs.v0.s3.S3Requirer.get_s3_connection_info"
     ) as _get_s3_connection_info:
         # Test when there are missing S3 parameters.
         _get_s3_connection_info.return_value = {}

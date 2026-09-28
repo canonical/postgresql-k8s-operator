@@ -113,6 +113,7 @@ from single_kernel_postgresql.config.literals import (
     DATABASE,
     DATABASE_DEFAULT_NAME,
     DATABASE_PORT,
+    LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS,
     METRICS_PORT,
     MONITORING_PASSWORD_KEY,
     MONITORING_USER,
@@ -126,6 +127,7 @@ from single_kernel_postgresql.config.literals import (
     REPLICATION_USER,
     REWIND_PASSWORD_KEY,
     REWIND_USER,
+    S3_RELATION_NAME,
     SECRET_DELETED_LABEL,
     SECRET_INTERNAL_LABEL,
     SECRET_KEY_OVERRIDES,
@@ -147,19 +149,18 @@ from single_kernel_postgresql.core.config import K8SCharmConfig
 from single_kernel_postgresql.core.state import CharmState
 from single_kernel_postgresql.events.database import DatabaseEventsHandler
 from single_kernel_postgresql.events.ldap import LDAP
-from single_kernel_postgresql.events.logical_replication import (
-    LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS,
-    PostgreSQLLogicalReplication,
-)
+from single_kernel_postgresql.events.logical_replication import PostgreSQLLogicalReplication
 from single_kernel_postgresql.events.tls import TLS
 from single_kernel_postgresql.events.tls_transfer import TLSTransfer
 from single_kernel_postgresql.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProvides,
 )
+from single_kernel_postgresql.lib.charms.data_platform_libs.v0.s3 import S3Requirer
 from single_kernel_postgresql.managers.cluster import ClusterManager
 from single_kernel_postgresql.managers.config import ConfigManager
 from single_kernel_postgresql.managers.database import DatabaseManager
 from single_kernel_postgresql.managers.k8s import K8sManager
+from single_kernel_postgresql.managers.logical_replication import LogicalReplicationManager
 from single_kernel_postgresql.managers.patroni import PatroniManager
 from single_kernel_postgresql.managers.tls import TLSManager
 from single_kernel_postgresql.utils import new_password
@@ -251,7 +252,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
 
         # TODO switch to the abstract class base
         # State
-        self.state = CharmState(charm=self, substrate=self.substrate)
+        # The S3 requirer is constructed once and shared with the backups module;
+        # ops permits only one S3Requirer object per charm per relation.
+        self.s3_requirer = S3Requirer(self, S3_RELATION_NAME)
+        self.state = CharmState(charm=self, substrate=self.substrate, s3_requirer=self.s3_requirer)
         # Reads this unit's available (cpu, memory) from the node/pod for config sizing.
         self.k8s_manager = K8sManager(self.state, self.workload)
 
@@ -298,7 +302,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         self._actual_pgdata_path = f"{self._storage_path}/16/main"
 
         self.framework.observe(self.on.upgrade_charm, self._on_upgrade_charm)
-        self.backup = PostgreSQLBackups(self, "s3-parameters")
+        self.backup = PostgreSQLBackups(self, "s3-parameters", self.s3_requirer)
         self.ldap = LDAP(self, self.state)
         # TLS events handler owns the two cert requirers; build it before the TLS
         # manager so the manager can constructor-inject them for its live-fetch getters.
@@ -318,7 +322,19 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         self.database = DatabaseEventsHandler(
             self, self.state, self.database_manager, self.patroni_manager, self.tls_manager
         )
-        self.logical_replication = PostgreSQLLogicalReplication(self, self.state)
+        self.logical_replication_manager = LogicalReplicationManager(
+            state=self.state,
+            workload=self.workload,
+            # Per-call bridges: the client and the primary lookup are freshly
+            # constructed per access (Patroni primary lookup + app secret).
+            postgresql=lambda: self.postgresql,
+            primary_endpoint=lambda: self.primary_endpoint,
+            update_config=self.update_config,
+            set_unit_status=self.set_unit_status,
+        )
+        self.logical_replication = PostgreSQLLogicalReplication(
+            self, self.state, self.logical_replication_manager
+        )
         self.config_manager = ConfigManager(
             state=self.state,
             workload=self.workload,
@@ -1559,7 +1575,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
                 self.set_unit_status(
                     BlockedStatus(
                         self.app_peer_data.get("logical-replication-validation-status-message")
-                        or self.logical_replication.remote_publisher_error_message()
+                        or self.logical_replication_manager.remote_publisher_error_message()
                         or LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS
                     )
                 )
