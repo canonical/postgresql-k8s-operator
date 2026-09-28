@@ -14,7 +14,7 @@ import sys
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
-from typing import Literal, get_args
+from typing import TYPE_CHECKING, Literal, cast, get_args
 from urllib.parse import urlparse
 
 from authorisation_rules_observer import (
@@ -181,6 +181,9 @@ from single_kernel_postgresql.utils.postgresql import (
 from single_kernel_postgresql.utils.s3 import S3Client
 from single_kernel_postgresql.workload.k8s import K8sWorkload
 from tenacity import RetryError, Retrying, stop_after_delay, wait_fixed
+
+if TYPE_CHECKING:
+    from single_kernel_postgresql.charms.abstract_charm import AbstractPostgreSQLCharm
 
 from constants import (
     PATRONI_LOGS_PATH,
@@ -381,7 +384,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         self.refresh_manager = RefreshManager(
             state=self.state,
             workload=self.workload,
-            charm=self,
+            # The k8s charm implements the abstract charm's dispatch surface
+            # duck-typed; the lib managers type it as AbstractPostgreSQLCharm.
+            charm=cast("AbstractPostgreSQLCharm", self),
             set_default_status=self._set_active_status,
         )
         # Do not use collect status events elsewhere—otherwise ops will prioritize
@@ -439,7 +444,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
     @property
     def refresh(self) -> charm_refresh.Kubernetes | None:
         """The charm_refresh object owned by the refresh manager."""
-        return self.refresh_manager.refresh
+        # The manager is substrate-generic; on Kubernetes it can only hold a
+        # charm_refresh.Kubernetes (or None).
+        return cast("charm_refresh.Kubernetes | None", self.refresh_manager.refresh)
 
     @property
     def can_set_app_status(self) -> bool:
@@ -466,6 +473,9 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
     def set_app_status(self) -> None:
         """Set the application status from the async-replication state."""
         self.async_replication.set_app_status()
+
+    def post_refresh_side_effects(self) -> None:
+        """Run the post-snap-refresh side effects owned by not-yet-migrated modules."""
 
     def get_async_primary_cluster_endpoint(self) -> str | None:
         """Endpoint of the primary cluster of the async replication partner, if any."""
@@ -2611,7 +2621,12 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         self._restart_metrics_service()
         self._restart_ldap_sync_service()
 
-    def update_config(self, is_creating_backup: bool = False) -> bool:
+    def update_config(
+        self,
+        is_creating_backup: bool = False,
+        *,
+        refresh: "charm_refresh.Machines | charm_refresh.Kubernetes | None" = None,
+    ) -> bool:
         """Updates Patroni config file based on the existence of the TLS files."""
         try:
             return self.config_manager.update_config(
