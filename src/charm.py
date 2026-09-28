@@ -376,6 +376,15 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             workload=self.workload,
             patroni_manager=self.patroni_manager,
             update_config=self.update_config,
+            set_unit_status=self.set_unit_status,
+            set_primary_status_message=self.set_primary_status_message,
+            set_app_status=lambda: self.async_replication.set_app_status(),
+            create_pgdata=self.create_pgdata,
+            fix_leader_annotation=self.fix_leader_annotation,
+            re_emit_relation_changed=lambda: (
+                self.async_replication._re_emit_async_relation_changed_event()
+            ),
+            k8s_manager=self.k8s_manager,
         )
         self.async_replication = PostgreSQLAsyncReplication(
             self,
@@ -1642,10 +1651,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
                 or self.is_standby_leader
             ):
                 danger_state = ""
-                if (
-                    len(self.patroni_manager.get_running_cluster_members())
-                    < self._planned_units
-                ):
+                if len(self.patroni_manager.get_running_cluster_members()) < self._planned_units:
                     danger_state = " (degraded)"
                 self.set_unit_status(
                     ActiveStatus(
