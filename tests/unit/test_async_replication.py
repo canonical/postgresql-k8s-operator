@@ -311,7 +311,9 @@ def test_promote_to_primary(harness, relation_name):
         ),
         patch("charm.PatroniManager.get_primary"),
         patch("charm.PatroniManager.get_standby_leader", return_value=None),
+        patch("single_kernel_postgresql.managers.async_replication.datetime") as _datetime,
     ):
+        _datetime.now.return_value = _now
         with harness.hooks_disabled():
             harness.add_relation(
                 PEER_RELATION, harness.charm.app.name, unit_data={"unit-address": "10.1.1.10"}
