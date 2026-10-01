@@ -2,6 +2,7 @@
 # See LICENSE file for licensing details.
 
 import json
+from datetime import UTC, datetime
 from unittest.mock import PropertyMock, patch
 
 import pytest
@@ -286,7 +287,9 @@ def test_create_replication(harness, relation_name):
 @pytest.mark.parametrize("relation_name", [REPLICATION_CONSUMER_RELATION])
 def test_promote_to_primary(harness, relation_name):
     """Test promote-to-primary action."""
+    _now = datetime.now(UTC)
     with (
+        patch("charm.datetime") as _datetime,
         patch(
             "charm.PostgresqlOperatorCharm.is_cluster_initialised",
             new_callable=PropertyMock,
@@ -317,12 +320,9 @@ def test_promote_to_primary(harness, relation_name):
 
         harness.run_action("promote-to-primary", {"scope": "cluster"})
 
-        assert (
-            harness.get_relation_data(rel_id, harness.charm.app.name).get(
-                "promoted-cluster-counter"
-            )
-            == "2"
-        )
+        assert harness.get_relation_data(rel_id, harness.charm.app.name).get(
+            "promoted-cluster-counter"
+        ) == str(int(_now.timestamp()))
 
 
 @pytest.mark.parametrize("relation_name", RELATION_NAMES)
