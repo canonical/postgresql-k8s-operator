@@ -1090,15 +1090,24 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         if not self.is_cluster_initialised:
             return
 
+        host_endpoints = {self._get_hostname_from_unit(member) for member in self._hosts}
+
         try:
             # Compare set of Patroni cluster members and Juju hosts
             # to avoid the unnecessary reconfiguration.
-            if self.patroni_manager.cluster_members == self._hosts:
+            if (
+                self.patroni_manager.cluster_members == self._hosts
+                and set(self._endpoints) == host_endpoints
+            ):
                 return
 
             logger.info("Reconfiguring cluster")
             self.set_unit_status(MaintenanceStatus("reconfiguring cluster"))
-            for member in self._hosts - self.patroni_manager.cluster_members:
+            missing_endpoints = host_endpoints - set(self._endpoints)
+            members_to_add = (self._hosts - self.patroni_manager.cluster_members) | {
+                endpoint.split(".")[0] for endpoint in missing_endpoints
+            }
+            for member in members_to_add:
                 logger.debug("Adding %s to cluster", member)
                 self.add_cluster_member(member)
             self.patroni_manager.update_synchronous_node_count()

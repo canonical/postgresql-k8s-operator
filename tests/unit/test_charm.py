@@ -495,6 +495,60 @@ def test_add_cluster_member(harness):
             pass
 
 
+def test_add_members(harness):
+    with (
+        patch("charm.PostgresqlOperatorCharm.add_cluster_member") as _add_cluster_member,
+        patch(
+            "charm.PatroniManager.cluster_members", new_callable=PropertyMock
+        ) as _cluster_members,
+        patch("charm.PatroniManager.update_synchronous_node_count"),
+    ):
+        rel_id = harness.model.get_relation(PEER_RELATION).id
+        with harness.hooks_disabled():
+            harness.set_leader()
+            harness.add_relation_unit(rel_id, "postgresql-k8s/1")
+            harness.add_relation_unit(rel_id, "postgresql-k8s/2")
+            harness.update_relation_data(
+                rel_id,
+                harness.charm.app.name,
+                {
+                    "cluster_initialised": "True",
+                    "endpoints": json.dumps([
+                        "postgresql-k8s-0.postgresql-k8s-endpoints",
+                        "postgresql-k8s-1.postgresql-k8s-endpoints",
+                        "postgresql-k8s-2.postgresql-k8s-endpoints",
+                    ]),
+                },
+            )
+        hosts = {"postgresql-k8s-0", "postgresql-k8s-1", "postgresql-k8s-2"}
+
+        # Nothing to do when Patroni members and endpoints match the Juju hosts.
+        _cluster_members.return_value = hosts
+        harness.charm._add_members(Mock())
+        _add_cluster_member.assert_not_called()
+
+        # Members missing from Patroni are added.
+        _cluster_members.return_value = {"postgresql-k8s-0", "postgresql-k8s-1"}
+        harness.charm._add_members(Mock())
+        _add_cluster_member.assert_called_once_with("postgresql-k8s-2")
+
+        # After a scale from 0, Patroni already reports all members, but the endpoints
+        # only contain the leader, so the other members must be added back.
+        _add_cluster_member.reset_mock()
+        _cluster_members.return_value = hosts
+        with harness.hooks_disabled():
+            harness.update_relation_data(
+                rel_id,
+                harness.charm.app.name,
+                {"endpoints": json.dumps(["postgresql-k8s-0.postgresql-k8s-endpoints"])},
+            )
+        harness.charm._add_members(Mock())
+        assert _add_cluster_member.call_count == 2
+        _add_cluster_member.assert_has_calls(
+            [call("postgresql-k8s-1"), call("postgresql-k8s-2")], any_order=True
+        )
+
+
 def test_enable_disable_extensions(harness):
     with (
         patch("charm.K8SCharmConfig.plugin_keys") as _plugin_keys,
