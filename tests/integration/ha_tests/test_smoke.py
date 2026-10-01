@@ -198,7 +198,7 @@ async def test_app_resources_conflicts(ops_test: OpsTest, charm):
         for _, dup_primary_pvc in dup_primary_pvcs.items():
             logger.info(f"delete pvc {dup_primary_pvc.metadata.name}")
             delete_pvc(ops_test, dup_primary_pvc)
-            
+
         client = Client(namespace=ops_test.model.name)
         for _, dup_primary_pvc in dup_primary_pvcs.items():
             logger.info(f"waiting for pvc {dup_primary_pvc.metadata.name} to be deleted")
