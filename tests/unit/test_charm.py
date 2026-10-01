@@ -53,11 +53,14 @@ def harness():
     harness = Harness(PostgresqlOperatorCharm)
     harness.handle_exec("postgresql", ["locale", "-a"], result="C")
 
-    harness.add_relation(PEER_RELATION, "postgresql-k8s")
-    harness.begin()
-    harness.add_relation("restart", harness.charm.app.name)
-    yield harness
-    harness.cleanup()
+    # The lib resource reads build a lightkube client; mock the sync client the
+    # way the retired charm-side backup suite leaked it for the whole module.
+    with patch("lightkube.core.client.GenericSyncClient"):
+        harness.add_relation(PEER_RELATION, "postgresql-k8s")
+        harness.begin()
+        harness.add_relation("restart", harness.charm.app.name)
+        yield harness
+        harness.cleanup()
 
 
 def test_set_ports():
@@ -492,6 +495,60 @@ def test_add_cluster_member(harness):
             pass
 
 
+def test_add_members(harness):
+    with (
+        patch("charm.PostgresqlOperatorCharm.add_cluster_member") as _add_cluster_member,
+        patch(
+            "charm.PatroniManager.cluster_members", new_callable=PropertyMock
+        ) as _cluster_members,
+        patch("charm.PatroniManager.update_synchronous_node_count"),
+    ):
+        rel_id = harness.model.get_relation(PEER_RELATION).id
+        with harness.hooks_disabled():
+            harness.set_leader()
+            harness.add_relation_unit(rel_id, "postgresql-k8s/1")
+            harness.add_relation_unit(rel_id, "postgresql-k8s/2")
+            harness.update_relation_data(
+                rel_id,
+                harness.charm.app.name,
+                {
+                    "cluster_initialised": "True",
+                    "endpoints": json.dumps([
+                        "postgresql-k8s-0.postgresql-k8s-endpoints",
+                        "postgresql-k8s-1.postgresql-k8s-endpoints",
+                        "postgresql-k8s-2.postgresql-k8s-endpoints",
+                    ]),
+                },
+            )
+        hosts = {"postgresql-k8s-0", "postgresql-k8s-1", "postgresql-k8s-2"}
+
+        # Nothing to do when Patroni members and endpoints match the Juju hosts.
+        _cluster_members.return_value = hosts
+        harness.charm._add_members(Mock())
+        _add_cluster_member.assert_not_called()
+
+        # Members missing from Patroni are added.
+        _cluster_members.return_value = {"postgresql-k8s-0", "postgresql-k8s-1"}
+        harness.charm._add_members(Mock())
+        _add_cluster_member.assert_called_once_with("postgresql-k8s-2")
+
+        # After a scale from 0, Patroni already reports all members, but the endpoints
+        # only contain the leader, so the other members must be added back.
+        _add_cluster_member.reset_mock()
+        _cluster_members.return_value = hosts
+        with harness.hooks_disabled():
+            harness.update_relation_data(
+                rel_id,
+                harness.charm.app.name,
+                {"endpoints": json.dumps(["postgresql-k8s-0.postgresql-k8s-endpoints"])},
+            )
+        harness.charm._add_members(Mock())
+        assert _add_cluster_member.call_count == 2
+        _add_cluster_member.assert_has_calls(
+            [call("postgresql-k8s-1"), call("postgresql-k8s-2")], any_order=True
+        )
+
+
 def test_enable_disable_extensions(harness):
     with (
         patch("charm.K8SCharmConfig.plugin_keys") as _plugin_keys,
@@ -626,7 +683,7 @@ def test_on_pgdata_storage_detaching(harness):
 def test_on_update_status_after_restore_operation(harness):
     with (
         patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
-        patch("charm.PostgreSQLBackups.can_use_s3_repository") as _can_use_s3_repository,
+        patch("charm.BackupManager.can_use_s3_repository") as _can_use_s3_repository,
         patch(
             "single_kernel_postgresql.utils.postgresql.PostgreSQL.get_current_timeline"
         ) as _get_current_timeline,
@@ -1196,9 +1253,9 @@ def test_on_peer_relation_changed(harness):
     with (
         patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
         patch(
-            "backups.PostgreSQLBackups.start_stop_pgbackrest_service"
+            "charm.BackupManager.start_stop_pgbackrest_service"
         ) as _start_stop_pgbackrest_service,
-        patch("backups.PostgreSQLBackups.coordinate_stanza_fields") as _coordinate_stanza_fields,
+        patch("charm.BackupManager.coordinate_stanza_fields") as _coordinate_stanza_fields,
         patch("charm.PostgresqlOperatorCharm.is_primary") as _is_primary,
         patch("charm.PatroniManager.member_started", new_callable=PropertyMock) as _member_started,
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
@@ -1393,7 +1450,7 @@ def test_restart_services(harness):
 
 
 def test_update_config_delegates_to_config_manager(harness):
-    """update_config delegates to the lib ConfigManager with the charm-sourced parameters."""
+    """update_config delegates to the lib ConfigManager, which sources LDAP parameters itself."""
     with (
         patch("charm.ConfigManager.update_config") as _update_config,
         patch.object(PostgresqlOperatorCharm, "postgresql", Mock()) as postgresql_mock,
@@ -1401,7 +1458,6 @@ def test_update_config_delegates_to_config_manager(harness):
             "charm.PostgresqlOperatorCharm.relations_user_databases_map",
             new_callable=PropertyMock,
         ) as _relations_user_databases_map,
-        patch("charm.PostgresqlOperatorCharm.get_ldap_parameters") as _get_ldap_parameters,
         patch(
             "charm.PostgreSQLAsyncReplication.get_primary_cluster_endpoint"
         ) as _get_primary_cluster_endpoint,
@@ -1409,7 +1465,6 @@ def test_update_config_delegates_to_config_manager(harness):
     ):
         _update_config.return_value = True
         _relations_user_databases_map.return_value = {"operator": "all"}
-        _get_ldap_parameters.return_value = {"ldap": "params"}
         _get_primary_cluster_endpoint.return_value = "primary-endpoint"
         _get_standby_endpoints.return_value = ["standby-endpoint"]
 
@@ -1420,7 +1475,6 @@ def test_update_config_delegates_to_config_manager(harness):
             postgresql_mock,
             is_creating_backup=True,
             relations_user_databases_map={"operator": "all"},
-            ldap_parameters={"ldap": "params"},
             async_primary_cluster_endpoint="primary-endpoint",
             async_standby_endpoints=["standby-endpoint"],
         )
@@ -1431,7 +1485,6 @@ def test_update_config_catches_deployed_without_trust(harness):
     with (
         patch("charm.ConfigManager.update_config", side_effect=DeployedWithoutTrustError),
         patch.object(PostgresqlOperatorCharm, "postgresql", Mock()),
-        patch("charm.PostgresqlOperatorCharm.get_ldap_parameters"),
         patch("charm.PostgreSQLAsyncReplication.get_primary_cluster_endpoint"),
         patch("charm.PostgreSQLAsyncReplication.get_standby_endpoints"),
     ):
@@ -1792,9 +1845,9 @@ def test_on_promote_to_primary(harness):
 
 def test_get_ldap_parameters(harness):
     with (
-        patch("charm.PostgreSQLLDAP.get_relation_data") as _get_relation_data,
+        patch("single_kernel_postgresql.events.ldap.LDAP.get_relation_data") as _get_relation_data,
         patch(
-            target="charm.PostgresqlOperatorCharm.is_cluster_initialised",
+            target="single_kernel_postgresql.core.peer_relation.PostgreSQLApplication.is_cluster_initialised",
             new_callable=PropertyMock,
             return_value=True,
         ) as _cluster_initialised,
@@ -1806,7 +1859,7 @@ def test_get_ldap_parameters(harness):
                 {"ldap_enabled": "False"},
             )
 
-        harness.charm.get_ldap_parameters()
+        harness.charm.ldap.get_ldap_parameters()
         _get_relation_data.assert_not_called()
         _get_relation_data.reset_mock()
 
@@ -1817,7 +1870,7 @@ def test_get_ldap_parameters(harness):
                 {"ldap_enabled": "True"},
             )
 
-        harness.charm.get_ldap_parameters()
+        harness.charm.ldap.get_ldap_parameters()
         _get_relation_data.assert_called_once()
         _get_relation_data.reset_mock()
 

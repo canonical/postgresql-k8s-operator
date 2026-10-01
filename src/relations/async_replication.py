@@ -17,7 +17,7 @@ if the unit is from the standby cluster (the one that was not promoted).
 import itertools
 import json
 import logging
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING
 
 from lightkube import ApiError, Client
@@ -461,8 +461,7 @@ class PostgreSQLAsyncReplication(Object):
             return False
 
         # Increment the current cluster counter in this application side based on the highest counter value.
-        promoted_cluster_counter = int(self._get_highest_promoted_cluster_counter_value())
-        promoted_cluster_counter += 1
+        promoted_cluster_counter = int(datetime.now(UTC).timestamp())
         logger.debug("Promoted cluster counter: %s", promoted_cluster_counter)
 
         self._update_primary_cluster_data(promoted_cluster_counter, system_identifier)
