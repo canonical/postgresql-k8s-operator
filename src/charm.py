@@ -11,11 +11,15 @@ import os
 import pathlib
 import shutil
 import sys
+import time
 from datetime import datetime
 from functools import cached_property
 from pathlib import Path
 from typing import Literal, get_args
 from urllib.parse import urlparse
+
+import httpcore
+import httpx
 
 from authorisation_rules_observer import (
     AuthorisationRulesChangeCharmEvents,
@@ -108,6 +112,7 @@ from single_kernel_postgresql.config.literals import (
     DATABASE,
     DATABASE_DEFAULT_NAME,
     DATABASE_PORT,
+    LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS,
     METRICS_PORT,
     MONITORING_PASSWORD_KEY,
     MONITORING_USER,
@@ -145,6 +150,7 @@ from single_kernel_postgresql.core.state import CharmState
 from single_kernel_postgresql.events.backup import BackupEventsHandler
 from single_kernel_postgresql.events.database import DatabaseEventsHandler
 from single_kernel_postgresql.events.ldap import LDAP
+from single_kernel_postgresql.events.logical_replication import PostgreSQLLogicalReplication
 from single_kernel_postgresql.events.tls import TLS
 from single_kernel_postgresql.events.tls_transfer import TLSTransfer
 from single_kernel_postgresql.lib.charms.data_platform_libs.v0.data_interfaces import (
@@ -156,6 +162,7 @@ from single_kernel_postgresql.managers.cluster import ClusterManager
 from single_kernel_postgresql.managers.config import ConfigManager
 from single_kernel_postgresql.managers.database import DatabaseManager
 from single_kernel_postgresql.managers.k8s import K8sManager
+from single_kernel_postgresql.managers.logical_replication import LogicalReplicationManager
 from single_kernel_postgresql.managers.patroni import PatroniManager
 from single_kernel_postgresql.managers.restore import RestoreManager
 from single_kernel_postgresql.managers.tls import TLSManager
@@ -194,11 +201,6 @@ from constants import (
     TEMP_STORAGE_PATH,
 )
 from relations.async_replication import PostgreSQLAsyncReplication
-
-# from relations.logical_replication import (
-#     LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS,
-#     PostgreSQLLogicalReplication,
-# )
 
 logger = logging.getLogger(__name__)
 logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -352,6 +354,19 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         self.database = DatabaseEventsHandler(
             self, self.state, self.database_manager, self.patroni_manager, self.tls_manager
         )
+        self.logical_replication_manager = LogicalReplicationManager(
+            state=self.state,
+            workload=self.workload,
+            # Per-call bridges: the client and the primary lookup are freshly
+            # constructed per access (Patroni primary lookup + app secret).
+            postgresql=lambda: self.postgresql,
+            primary_endpoint=lambda: self.primary_endpoint,
+            update_config=self.update_config,
+            set_unit_status=self.set_unit_status,
+        )
+        self.logical_replication = PostgreSQLLogicalReplication(
+            self, self.state, self.logical_replication_manager
+        )
         self.config_manager = ConfigManager(
             state=self.state,
             workload=self.workload,
@@ -362,6 +377,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             resource_provider=self.get_resource_provider,
             request_restart=self.request_restart,
             restart_services=self.restart_services,
+            logical_replication_slots=self.logical_replication.replication_slots,
         )
         # Reload PostgreSQL after the lib TLS handler has actually pushed the cert files.
         # tls_files_pushed fires only on a completed push (the handler routes both
@@ -371,7 +387,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         self.framework.observe(self.tls.tls_files_pushed, self._reload_tls_after_push)
         self.tls_transfer = TLSTransfer(self, PEER_RELATION)
         self.async_replication = PostgreSQLAsyncReplication(self)
-        # self.logical_replication = PostgreSQLLogicalReplication(self)
         self.restart_manager = RollingOpsManager(
             charm=self, relation="restart", callback=self._restart
         )
@@ -384,6 +399,19 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
 
         self.can_set_app_status = True
         try:
+            self.refresh = charm_refresh.Kubernetes(
+                PostgreSQLRefresh(
+                    workload_name="PostgreSQL",
+                    charm_name="postgresql-k8s",
+                    oci_resource_name="postgresql-image",
+                    _charm=self,
+                )
+            )
+        except (httpcore.ReadTimeout, httpx.ReadTimeout):
+            # The snapd revision probe in charm_refresh uses httpx's default 5s
+            # timeout with no retry; a transient snapd stall must not crash the
+            # charm at boot. Retry once after a short pause.
+            time.sleep(10)
             self.refresh = charm_refresh.Kubernetes(
                 PostgreSQLRefresh(
                     workload_name="PostgreSQL",
@@ -991,8 +1019,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         # Update the sync-standby endpoint in the async replication data.
         self.async_replication.update_async_replication_data()
 
-        # if not self.logical_replication.apply_changed_config(event):
-        #     return
+        if not self.logical_replication.apply_changed_config(event):
+            return
 
         if not self.unit.is_leader():
             return
@@ -1581,12 +1609,18 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
                     BlockedStatus(self.app_peer_data["s3-initialization-block-message"])
                 )
                 return
-            # if self.unit.is_leader() and (
-            #     self.app_peer_data.get("logical-replication-validation") == "error"
-            #     or self.logical_replication.has_remote_publisher_errors()
-            # ):
-            #     self.set_unit_status(BlockedStatus(LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS))
-            #     return
+            if self.unit.is_leader() and (
+                self.app_peer_data.get("logical-replication-validation") == "error"
+                or self.logical_replication.has_remote_publisher_errors()
+            ):
+                self.set_unit_status(
+                    BlockedStatus(
+                        self.app_peer_data.get("logical-replication-validation-status-message")
+                        or self.logical_replication_manager.remote_publisher_error_message()
+                        or LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS
+                    )
+                )
+                return
             if (
                 self.patroni_manager.get_primary(unit_name_pattern=True) == self.unit.name
                 or self.is_standby_leader
@@ -2106,8 +2140,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         self._check_pgdata_storage_size()
 
         if (
-            self._has_blocked_status and self.unit.status not in S3_BLOCK_MESSAGES
-            # and self.unit.status.message != LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS
+            self._has_blocked_status
+            and self.unit.status not in S3_BLOCK_MESSAGES
+            and self.unit.status.message != LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS
+            and self.unit.status.message
+            != self.app_peer_data.get("logical-replication-validation-status-message")
+            and self.unit.status.message
+            != self.app_peer_data.get("logical-replication-last-block-message")
         ) or self._has_non_restore_waiting_status:
             # If charm was failing to disable plugin, try again and continue (user may have removed the objects)
             if self.unit.status.message == EXTENSION_OBJECT_MESSAGE:
@@ -2183,7 +2222,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
 
         self.backup.coordinate_stanza_fields()
 
-        # self.logical_replication.retry_validations()
+        self.logical_replication.retry_validations()
 
         self._set_active_status()
 
