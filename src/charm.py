@@ -445,7 +445,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
                 with attempt:
                     if not (
                         self.unit.name.replace("/", "-") in self.patroni_manager.cluster_members
-                        and self.patroni_manager.is_replication_healthy
+                        and self.patroni_manager.is_replication_healthy()
                     ):
                         logger.error(
                             "Instance not yet back in the cluster or not healthy."
