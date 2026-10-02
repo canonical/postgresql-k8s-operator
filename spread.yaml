@@ -57,8 +57,8 @@ backends:
       git restore pyproject.toml poetry.lock
 
       # Use instead of `concierge restore` to save time between tests
-      # For example, with microk8s, using `concierge restore` takes twice as long as this (e.g. 6
-      # min instead of 3 min between every spread job)
+      # (`concierge restore` reinstalls the K8s cluster, which can double the time between every
+      # spread job)
       juju destroy-model --force --no-wait --destroy-storage --no-prompt testing
       juju kill-controller --no-prompt concierge-k8s
     restore: |
@@ -83,8 +83,10 @@ backends:
 
       ADDRESS localhost
 
-      sudo mkdir -p /var/snap/microk8s/common/default-storage
-      sudo mount --bind /mnt /var/snap/microk8s/common/default-storage
+      # Store PVs on /mnt, which has more free space than the root disk on GitHub runners
+      # (path checked against Canonical K8s local-storage config in prepare-each)
+      sudo mkdir -p /var/snap/k8s/common/rawfile-storage
+      sudo mount --bind /mnt /var/snap/k8s/common/rawfile-storage
     # HACK: spread does not pass environment variables set on runner
     # Manually pass specific environment variables
     environment:
@@ -143,6 +145,12 @@ prepare-each: |
           echo "Skipping rollout status for missing $res"
       fi
   done
+
+  # github-ci backend bind-mounts /mnt to this path; fail loudly if Canonical K8s stores PVs elsewhere
+  if [ "$(k8s get local-storage.local-path)" != "/var/snap/k8s/common/rawfile-storage" ]; then
+      echo "Unexpected local-storage path, update /mnt bind mount in spread.yaml"
+      exit 1
+  fi
 
   # Unable to set constraint on all models because of Juju bug:
   # https://bugs.launchpad.net/juju/+bug/2065050
