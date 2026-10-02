@@ -55,9 +55,6 @@ juju add-model dev
 # Enable DEBUG logging
 juju model-config logging-config="<root>=INFO;unit=DEBUG"
 
-# enable Role-Based Access Control on microk8s
-microk8s enable rbac
-
 # Deploy the charm
 juju deploy ./postgresql-k8s_ubuntu@24.04-amd64.charm --trust \
     --resource postgresql-image=$(yq -r '.["resources"]["postgresql-image"]["upstream-source"]' metadata.yaml)

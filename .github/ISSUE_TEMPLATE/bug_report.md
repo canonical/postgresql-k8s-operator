@@ -32,8 +32,8 @@ Juju agent:
 <!-- App revision from `juju status` or (advanced) commit hash -->
 Charm revision: 
 
-<!-- Run `microk8s version` -->
-microk8s: 
+<!-- Kubernetes distribution and version (e.g. `k8s version` or `microk8s version`) -->
+Kubernetes: 
 
 ## Log output
 <!-- Please enable debug logging by running `juju model-config logging-config="<root>=INFO;unit=DEBUG"` (if possible) -->
