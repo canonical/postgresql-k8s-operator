@@ -6,6 +6,9 @@ import logging
 import os
 
 import pytest
+from lightkube.core.client import Client
+from lightkube.core.exceptions import ApiError
+from lightkube.resources.core_v1 import PersistentVolumeClaim
 from pytest_operator.plugin import OpsTest
 from tenacity import Retrying, stop_after_delay, wait_fixed
 
@@ -195,6 +198,19 @@ async def test_app_resources_conflicts(ops_test: OpsTest, charm):
         for _, dup_primary_pvc in dup_primary_pvcs.items():
             logger.info(f"delete pvc {dup_primary_pvc.metadata.name}")
             delete_pvc(ops_test, dup_primary_pvc)
+
+        client = Client(namespace=ops_test.model.name)
+        for _, dup_primary_pvc in dup_primary_pvcs.items():
+            logger.info(f"waiting for pvc {dup_primary_pvc.metadata.name} to be deleted")
+            for attempt in Retrying(stop=stop_after_delay(120), wait=wait_fixed(3), reraise=True):
+                with attempt:
+                    try:
+                        client.get(PersistentVolumeClaim, name=dup_primary_pvc.metadata.name)
+                    except ApiError as e:
+                        if e.status.code == 404:
+                            break
+                        raise
+                    raise Exception(f"pvc {dup_primary_pvc.metadata.name} still exists")
 
         for _, primary_pv in primary_pvs.items():
             logger.info(f"remove claimref from pv {primary_pv.metadata.name}")
