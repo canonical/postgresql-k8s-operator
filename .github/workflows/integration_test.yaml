@@ -182,11 +182,7 @@ jobs:
         run: snap list
       - name: Select model
         timeout-minutes: 1
-        # `!contains(matrix.job.spread_job, 'juju29')` workaround for juju 2 error:
-        # "ERROR cannot acquire lock file to read controller concierge-microk8s: unable to open
-        # /tmp/juju-store-lock-3635383939333230: permission denied"
-        # Unable to workaround error with `sudo rm /tmp/juju-*`
-        if: ${{ !contains(matrix.job.spread_job, 'juju29') && (success() || (failure() && steps.spread.outcome == 'failure')) }}
+        if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
         id: juju-switch
         run: |
           # sudo needed since spread runs scripts as root
@@ -195,19 +191,19 @@ jobs:
           mkdir ~/logs/
       - name: juju status
         timeout-minutes: 1
-        if: ${{ !contains(matrix.job.spread_job, 'juju29') && (success() || (failure() && steps.spread.outcome == 'failure')) }}
+        if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
         run: sudo juju status --color --relations | tee ~/logs/juju-status.txt
       - name: juju debug-log
         timeout-minutes: 3
-        if: ${{ !contains(matrix.job.spread_job, 'juju29') && (success() || (failure() && steps.spread.outcome == 'failure')) }}
+        if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
         run: sudo juju debug-log --color --replay --no-tail | tee ~/logs/juju-debug-log.txt
       - name: jhack tail
         timeout-minutes: 3
-        if: ${{ !contains(matrix.job.spread_job, 'juju29') && (success() || (failure() && steps.spread.outcome == 'failure')) }}
+        if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
         run: sudo jhack tail --printer raw --replay --no-watch | tee ~/logs/jhack-tail.txt
       - name: Upload logs
         timeout-minutes: 5
-        if: ${{ !contains(matrix.job.spread_job, 'juju29') && (success() || (failure() && steps.spread.outcome == 'failure')) }}
+        if: ${{ success() || (failure() && steps.spread.outcome == 'failure') }}
         uses: actions/upload-artifact@v7
         with:
           name: logs-integration-test-${{ matrix.job.name_in_artifact }}

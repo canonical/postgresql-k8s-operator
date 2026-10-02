@@ -1098,7 +1098,7 @@ def get_pvs(ops_test: OpsTest, unit_name: str):
     pv_list = client.list(PersistentVolume, namespace=ops_test.model.name)
     unit_label = unit_name.replace("/", "-")
     for pv in pv_list:
-        if pv.spec.claimRef.name.endswith(unit_label):
+        if pv.spec.claimRef and pv.spec.claimRef.name.endswith(unit_label):
             pvc_storage_name = pv.spec.claimRef.name.replace(unit_name.split("/")[0], "").split(
                 "-"
             )[1]
