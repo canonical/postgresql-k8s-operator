@@ -1078,8 +1078,9 @@ def get_pvc(ops_test: OpsTest, unit_name: str):
     """Get PersistentVolumeClaim for unit."""
     client = Client(namespace=ops_test.model.name)
     pvc_list = client.list(PersistentVolumeClaim, namespace=ops_test.model.name)
+    unit_label = unit_name.replace("/", "-")
     for pvc in pvc_list:
-        if unit_name.replace("/", "-") in pvc.metadata.name:
+        if unit_label in pvc.metadata.name:
             return pvc
     return None
 
@@ -1088,8 +1089,9 @@ def get_pv(ops_test: OpsTest, unit_name: str):
     """Get PersistentVolume for unit."""
     client = Client(namespace=ops_test.model.name)
     pv_list = client.list(PersistentVolume, namespace=ops_test.model.name)
+    unit_label = unit_name.replace("/", "-")
     for pv in pv_list:
-        if unit_name.replace("/", "-") in str(pv.spec.hostPath.path):
+        if pv.spec.claimRef.name.endswith(unit_label):
             return pv
     return None
 
