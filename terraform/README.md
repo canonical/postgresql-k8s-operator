@@ -36,6 +36,7 @@ After applying, the module exports the following outputs:
 | Name              | Description                  |
 |-------------------|------------------------------|
 | `app_name`        | Application name             |
+| `application`     | The deployed application object |
 | `provides`        | Map of `provides` endpoints  |
 | `requires`        | Map of `requires` endpoints  |
 
