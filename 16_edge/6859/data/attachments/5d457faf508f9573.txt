@@ -1,0 +1,316 @@
+[32mINFO    [0m integration.conftest:conftest.py:275 Setting up TLS certificates
+[32mINFO    [0m integration.conftest:conftest.py:340 Setting up microceph
+[32mINFO    [0m integration.conftest:conftest.py:369 Set up microceph
+[32mINFO    [0m pytest_operator.plugin:plugin.py:806 Connecting to existing model concierge-k8s:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SecretsRevoker received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/s3-integrator-145
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-0
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [allocating] waiting: installing agent
+  postgresql-k8s-ceph/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [executing] maintenance: installing charm software
+  postgresql-k8s-ceph/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [executing] unknown: 
+  postgresql-k8s-ceph/1 [executing] active: Primary (degraded)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] waiting: awaiting for member to start
+  postgresql-k8s-ceph/1 [idle] active: Primary (degraded)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] active: 
+  postgresql-k8s-ceph/1 [executing] active: Primary
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:61 configuring S3 integrator for ceph
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [executing] active: 
+  postgresql-k8s-ceph/1 [executing] active: Primary
+  s3-integrator/0 [executing] blocked: Missing parameters: ['access-key', 'secret-key']
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] active: 
+  postgresql-k8s-ceph/1 [idle] maintenance: initialising stanza
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:107 creating a table in the database
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  postgresql-k8s-ceph/0 [idle] active: 
+  postgresql-k8s-ceph/1 [idle] active: Primary
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:118 creating a backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  postgresql-k8s-ceph/0 [idle] active: 
+  postgresql-k8s-ceph/1 [executing] active: Primary
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:127 listing the available backups
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  postgresql-k8s-ceph/0 [idle] active: 
+  postgresql-k8s-ceph/1 [idle] active: Primary
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:136 creating a second table in the database
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:143 creating a backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  postgresql-k8s-ceph/0 [idle] active: 
+  postgresql-k8s-ceph/1 [idle] active: Primary
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:154 listing the available backups
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  postgresql-k8s-ceph/0 [idle] active: 
+  postgresql-k8s-ceph/1 [idle] active: Primary
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:163 creating a second table in the database
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph (waiting for exactly 1 units, current : 2)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph (waiting for exactly 1 units, current : 2)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] active: Primary
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:179 restoring the backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  postgresql-k8s-ceph/0 [executing] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] active: Primary
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:192 checking that the backup was correctly restored
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:224 restoring the backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  postgresql-k8s-ceph/0 [executing] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] maintenance: restoring backup
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] active: Primary
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:237 checking that the backup was correctly restored
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  01:43:58Z
+
+App                  Version  Status  Scale  Charm           Channel        Rev  Address        Exposed  Message
+postgresql-k8s-ceph  16.15    active      1  postgresql-k8s                   0  10.152.183.36  no       
+s3-integrator                 active      1  s3-integrator   latest/stable  145  10.152.183.35  no       
+
+Unit                    Workload  Agent  Address     Ports  Message
+postgresql-k8s-ceph/0*  active    idle   10.1.0.70          Primary
+s3-integrator/0*        active    idle   10.1.0.214         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-ceph-1: 01:35:36 ERROR unit.postgresql-k8s-ceph/1.juju-log __main__:failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-1/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 469, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-1/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 186, in _connect_to_database
+    connection = psycopg2.connect(
+                 ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-1/charm/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "postgresql-k8s-ceph-primary.testing.svc.cluster.local" (10.152.183.46), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-1/charm/src/charm.py", line 1046, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-1/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 498, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+single_kernel_postgresql.compat.postgresql.PostgreSQLEnableDisableExtensionError
+unit-postgresql-k8s-ceph-0: 01:42:25 ERROR unit.postgresql-k8s-ceph/0.juju-log single_kernel_postgresql.managers.restore:Post-restore pebble replan failed again; deferring reconciliation to the next hook
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/managers/restore.py", line 661, in _update_pebble_layers_after_restore
+    self._update_pebble_layers()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/managers/restore.py", line 616, in _update_pebble_layers
+    self.workload.update_pebble_layers(PebbleLayerSpec.from_state(self.state), replan=replan)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/workload/k8s.py", line 113, in update_pebble_layers
+    self.reconcile_pebble_layer(new_layer, replan)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/workload/k8s.py", line 103, in reconcile_pebble_layer
+    self.container.replan()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2608, in replan
+    self._pebble.replan_services()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2452, in replan_services
+    return self._services_action('replan', [], timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2554, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pgbackrest_metrics_server" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 2 -----
+2026-10-03T01:42:24Z INFO Service "metrics_server" already started.
+----- Logs from task 3 -----
+2026-10-03T01:42:24Z INFO Most recent service output:
+    ts=2026-10-03T01:42:24.125Z caller=pgbackrest_exporter.go:93 level=info msg="Starting exporter" name=pgbackrest_exporter version=unknown
+    ts=2026-10-03T01:42:24.125Z caller=pgbackrest_exporter.go:145 level=info mgs="Use exporter parameters" endpoint=/metrics config.file=
+    ts=2026-10-03T01:42:24.126Z caller=backrest_exporter.go:50 level=error msg="Run web endpoint failed" err="listen tcp :9854: bind: address already in use"
+2026-10-03T01:42:24Z ERROR service start attempt: exited quickly with code 1, will restart
+----- Logs from task 4 -----
+2026-10-03T01:42:24Z INFO Service "pgbackrest_metrics_service" already started.
+-----
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/managers/restore.py", line 668, in _update_pebble_layers_after_restore
+    self._update_pebble_layers()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/managers/restore.py", line 616, in _update_pebble_layers
+    self.workload.update_pebble_layers(PebbleLayerSpec.from_state(self.state), replan=replan)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/workload/k8s.py", line 113, in update_pebble_layers
+    self.reconcile_pebble_layer(new_layer, replan)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/workload/k8s.py", line 103, in reconcile_pebble_layer
+    self.container.replan()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2608, in replan
+    self._pebble.replan_services()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2452, in replan_services
+    return self._services_action('replan', [], timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2554, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pgbackrest_metrics_server" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-10-03T01:42:25Z INFO Service "postgresql" already started.
+----- Logs from task 1 -----
+2026-10-03T01:42:25Z INFO Service "metrics_server" already started.
+----- Logs from task 2 -----
+2026-10-03T01:42:25Z INFO Most recent service output:
+    ts=2026-10-03T01:42:24.125Z caller=pgbackrest_exporter.go:93 level=info msg="Starting exporter" name=pgbackrest_exporter version=unknown
+    ts=2026-10-03T01:42:24.125Z caller=pgbackrest_exporter.go:145 level=info mgs="Use exporter parameters" endpoint=/metrics config.file=
+    ts=2026-10-03T01:42:24.126Z caller=backrest_exporter.go:50 level=error msg="Run web endpoint failed" err="listen tcp :9854: bind: address already in use"
+    ts=2026-10-03T01:42:24.664Z caller=pgbackrest_exporter.go:93 level=info msg="Starting exporter" name=pgbackrest_exporter version=unknown
+    ts=2026-10-03T01:42:24.664Z caller=pgbackrest_exporter.go:145 level=info mgs="Use exporter parameters" endpoint=/metrics config.file=
+    ts=2026-10-03T01:42:24.664Z caller=backrest_exporter.go:50 level=error msg="Run web endpoint failed" err="listen tcp :9854: bind: address already in use"
+    ts=2026-10-03T01:42:25.197Z caller=pgbackrest_exporter.go:93 level=info msg="Starting exporter" name=pgbackrest_exporter version=unknown
+    ts=2026-10-03T01:42:25.197Z caller=pgbackrest_exporter.go:145 level=info mgs="Use exporter parameters" endpoint=/metrics config.file=
+    ts=2026-10-03T01:42:25.198Z caller=backrest_exporter.go:50 level=error msg="Run web endpoint failed" err="listen tcp :9854: bind: address already in use"
+2026-10-03T01:42:25Z ERROR service start attempt: exited quickly with code 1, will restart
+----- Logs from task 3 -----
+2026-10-03T01:42:25Z INFO Service "pgbackrest_metrics_service" already started.
+-----
+unit-postgresql-k8s-ceph-0: 01:43:25 ERROR unit.postgresql-k8s-ceph/0.juju-log __main__:Failed to set up users after restore
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/src/charm.py", line 2214, in _was_restore_successful
+    self._setup_users()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/src/charm.py", line 1682, in _setup_users
+    self.postgresql.create_predefined_instance_roles()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 228, in create_predefined_instance_roles
+    for database in self._get_existing_databases():
+                    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 681, in _get_existing_databases
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 186, in _connect_to_database
+    connection = psycopg2.connect(
+                 ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "postgresql-k8s-ceph-primary.testing.svc.cluster.local" (10.152.183.46), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-k8s-ceph-0: 01:43:38 ERROR unit.postgresql-k8s-ceph/0.juju-log single_kernel_postgresql.managers.restore:Post-restore pebble replan failed again; deferring reconciliation to the next hook
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/managers/restore.py", line 661, in _update_pebble_layers_after_restore
+    self._update_pebble_layers()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/managers/restore.py", line 616, in _update_pebble_layers
+    self.workload.update_pebble_layers(PebbleLayerSpec.from_state(self.state), replan=replan)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/workload/k8s.py", line 113, in update_pebble_layers
+    self.reconcile_pebble_layer(new_layer, replan)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/workload/k8s.py", line 103, in reconcile_pebble_layer
+    self.container.replan()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2608, in replan
+    self._pebble.replan_services()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2452, in replan_services
+    return self._services_action('replan', [], timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2554, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pgbackrest_metrics_server" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 2 -----
+2026-10-03T01:43:37Z INFO Service "metrics_server" already started.
+----- Logs from task 3 -----
+2026-10-03T01:43:37Z INFO Most recent service output:
+    (...)
+    ts=2026-10-03T01:42:27.780Z caller=pgbackrest_exporter.go:145 level=info mgs="Use exporter parameters" endpoint=/metrics config.file=
+    ts=2026-10-03T01:42:27.781Z caller=backrest_exporter.go:50 level=error msg="Run web endpoint failed" err="listen tcp :9854: bind: address already in use"
+    ts=2026-10-03T01:42:30.987Z caller=pgbackrest_exporter.go:93 level=info msg="Starting exporter" name=pgbackrest_exporter version=unknown
+    ts=2026-10-03T01:42:30.987Z caller=pgbackrest_exporter.go:145 level=info mgs="Use exporter parameters" endpoint=/metrics config.file=
+    ts=2026-10-03T01:42:30.987Z caller=backrest_exporter.go:50 level=error msg="Run web endpoint failed" err="listen tcp :9854: bind: address already in use"
+    ts=2026-10-03T01:42:36.306Z caller=pgbackrest_exporter.go:93 level=info msg="Starting exporter" name=pgbackrest_exporter version=unknown
+    ts=2026-10-03T01:42:36.306Z caller=pgbackrest_exporter.go:145 level=info mgs="Use exporter parameters" endpoint=/metrics config.file=
+    ts=2026-10-03T01:42:36.306Z caller=backrest_exporter.go:50 level=error msg="Run web endpoint failed" err="listen tcp :9854: bind: address already in use"
+    ts=2026-10-03T01:42:47.951Z caller=pgbackrest_exporter.go:93 level=info msg="Starting exporter" name=pgbackrest_exporter version=unknown
+    ts=2026-10-03T01:42:47.951Z caller=pgbackrest_exporter.go:145 level=info mgs="Use exporter parameters" endpoint=/metrics config.file=
+    ts=2026-10-03T01:42:47.951Z caller=backrest_exporter.go:50 level=error msg="Run web endpoint failed" err="listen tcp :9854: bind: address already in use"
+    ts=2026-10-03T01:43:08.460Z caller=pgbackrest_exporter.go:93 level=info msg="Starting exporter" name=pgbackrest_exporter version=unknown
+    ts=2026-10-03T01:43:08.460Z caller=pgbackrest_exporter.go:145 level=info mgs="Use exporter parameters" endpoint=/metrics config.file=
+    ts=2026-10-03T01:43:08.460Z caller=backrest_exporter.go:50 level=error msg="Run web endpoint failed" err="listen tcp :9854: bind: address already in use"
+    ts=2026-10-03T01:43:18.110Z caller=pgbackrest_exporter.go:93 level=info msg="Starting exporter" name=pgbackrest_exporter version=unknown
+    ts=2026-10-03T01:43:18.110Z caller=pgbackrest_exporter.go:145 level=info mgs="Use exporter parameters" endpoint=/metrics config.file=
+    ts=2026-10-03T01:43:18.111Z caller=backrest_exporter.go:50 level=error msg="Run web endpoint failed" err="listen tcp :9854: bind: address already in use"
+    ts=2026-10-03T01:43:37.679Z caller=pgbackrest_exporter.go:93 level=info msg="Starting exporter" name=pgbackrest_exporter version=unknown
+    ts=2026-10-03T01:43:37.679Z caller=pgbackrest_exporter.go:145 level=info mgs="Use exporter parameters" endpoint=/metrics config.file=
+    ts=2026-10-03T01:43:37.680Z caller=backrest_exporter.go:50 level=error msg="Run web endpoint failed" err="listen tcp :9854: bind: address already in use"
+2026-10-03T01:43:37Z ERROR service start attempt: exited quickly with code 1, will restart
+----- Logs from task 4 -----
+2026-10-03T01:43:37Z INFO Service "pgbackrest_metrics_service" already started.
+-----
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/managers/restore.py", line 668, in _update_pebble_layers_after_restore
+    self._update_pebble_layers()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/managers/restore.py", line 616, in _update_pebble_layers
+    self.workload.update_pebble_layers(PebbleLayerSpec.from_state(self.state), replan=replan)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/workload/k8s.py", line 113, in update_pebble_layers
+    self.reconcile_pebble_layer(new_layer, replan)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/workload/k8s.py", line 103, in reconcile_pebble_layer
+    self.container.replan()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2608, in replan
+    self._pebble.replan_services()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2452, in replan_services
+    return self._services_action('replan', [], timeout, delay)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-ceph-0/charm/venv/lib/python3.12/site-packages/ops/pebble.py", line 2554, in _services_action
+    raise ChangeError(change.err, change)
+ops.pebble.ChangeError: cannot perform the following tasks:
+- Start service "pgbackrest_metrics_server" (service start attempt: exited quickly with code 1, will restart)
+----- Logs from task 0 -----
+2026-10-03T01:43:38Z INFO Service "postgresql" already started.
+----- Logs from task 1 -----
+2026-10-03T01:43:38Z INFO Service "metrics_server" already started.
+----- Logs from task 2 -----
+2026-10-03T01:43:38Z INFO Most recent service output:
+    (...)
+    ts=2026-10-03T01:42:47.951Z caller=pgbackrest_exporter.go:145 level=info mgs="Use exporter parameters" endpoint=/metrics config.file=
+    ts=2026-10-03T01:42:47.951Z caller=backrest_exporter.go:50 level=error msg="Run web endpoint failed" err="listen tcp :9854: bind: address already in use"
+    ts=2026-10-03T01:43:08.460Z caller=pgbackrest_exporter.go:93 level=info msg="Starting exporter" name=pgbackrest_exporter version=unknown
+    ts=2026-10-03T01:43:08.460Z caller=pgbackrest_exporter.go:145 level=info mgs="Use exporter parameters" endpoint=/metrics config.file=
+    ts=2026-10-03T01:43:08.460Z caller=backrest_exporter.go:50 level=error msg="Run web endpoint failed" err="listen tcp :9854: bind: address already in use"
+    ts=2026-10-03T01:43:18.110Z caller=pgbackrest_exporter.go:93 level=info msg="Starting exporter" name=pgbackrest_exporter version=unknown
+    ts=2026-10-03T01:43:18.110Z caller=pgbackrest_exporter.go:145 level=info mgs="Use exporter parameters" endpoint=/metrics config.file=
+    ts=2026-10-03T01:43:18.111Z caller=backrest_exporter.go:50 level=error msg="Run web endpoint failed" err="listen tcp :9854: bind: address already in use"
+    ts=2026-10-03T01:43:37.679Z caller=pgbackrest_exporter.go:93 level=info msg="Starting exporter" name=pgbackrest_exporter version=unknown
+    ts=2026-10-03T01:43:37.679Z caller=pgbackrest_exporter.go:145 level=info mgs="Use exporter parameters" endpoint=/metrics config.file=
+    ts=2026-10-03T01:43:37.680Z caller=backrest_exporter.go:50 level=error msg="Run web endpoint failed" err="listen tcp :9854: bind: address already in use"
+    ts=2026-10-03T01:43:38.235Z caller=pgbackrest_exporter.go:93 level=info msg="Starting exporter" name=pgbackrest_exporter version=unknown
+    ts=2026-10-03T01:43:38.235Z caller=pgbackrest_exporter.go:145 level=info mgs="Use exporter parameters" endpoint=/metrics config.file=
+    ts=2026-10-03T01:43:38.235Z caller=backrest_exporter.go:50 level=error msg="Run web endpoint failed" err="listen tcp :9854: bind: address already in use"
+    ts=2026-10-03T01:43:38.742Z caller=pgbackrest_exporter.go:93 level=info msg="Starting exporter" name=pgbackrest_exporter version=unknown
+    ts=2026-10-03T01:43:38.743Z caller=pgbackrest_exporter.go:145 level=info mgs="Use exporter parameters" endpoint=/metrics config.file=
+    ts=2026-10-03T01:43:38.743Z caller=backrest_exporter.go:50 level=error msg="Run web endpoint failed" err="listen tcp :9854: bind: address already in use"
+    ts=2026-10-03T01:43:38.761Z caller=pgbackrest_exporter.go:93 level=info msg="Starting exporter" name=pgbackrest_exporter version=unknown
+    ts=2026-10-03T01:43:38.761Z caller=pgbackrest_exporter.go:145 level=info mgs="Use exporter parameters" endpoint=/metrics config.file=
+    ts=2026-10-03T01:43:38.761Z caller=backrest_exporter.go:50 level=error msg="Run web endpoint failed" err="listen tcp :9854: bind: address already in use"
+2026-10-03T01:43:38Z ERROR service start attempt: exited quickly with code 1, will restart
+----- Logs from task 3 -----
+2026-10-03T01:43:38Z INFO Service "pgbackrest_metrics_service" already started.
+-----
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
