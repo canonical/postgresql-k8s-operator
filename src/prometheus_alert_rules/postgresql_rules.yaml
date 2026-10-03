@@ -9,7 +9,7 @@ groups:
     # 2.2.1
     - alert: PostgresqlDown
       expr: 'pg_up == 0'
-      for: 0m
+      for: 5m
       labels:
         severity: critical
       annotations:
@@ -34,7 +34,7 @@ groups:
     # 2.2.3
     - alert: PostgresqlExporterError
       expr: 'pg_exporter_last_scrape_error > 0'
-      for: 0m
+      for: 5m
       labels:
         severity: critical
       annotations:
