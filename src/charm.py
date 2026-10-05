@@ -147,7 +147,7 @@ from single_kernel_postgresql.events.database import DatabaseEventsHandler
 from single_kernel_postgresql.events.ldap import LDAP
 from single_kernel_postgresql.events.tls import TLS
 from single_kernel_postgresql.events.tls_transfer import TLSTransfer
-from single_kernel_postgresql.events.watcher import PostgreSQLWatcherEventsHandler
+from single_kernel_postgresql.events.watcher import WatcherEventsHandler
 from single_kernel_postgresql.lib.charms.data_platform_libs.v0.data_interfaces import (
     DatabaseProvides,
 )
@@ -353,7 +353,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         self.database = DatabaseEventsHandler(
             self, self.state, self.database_manager, self.patroni_manager, self.tls_manager
         )
-        self.watcher_handler = PostgreSQLWatcherEventsHandler(self, self.state, self.workload)
+        self.watcher_handler = WatcherEventsHandler(self, self.workload, self.state)
         self.config_manager = ConfigManager(
             state=self.state,
             workload=self.workload,
@@ -483,7 +483,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
                 with attempt:
                     if not (
                         self.unit.name.replace("/", "-") in self.patroni_manager.cluster_members
-                        and self.patroni_manager.is_replication_healthy
+                        and self.patroni_manager.is_replication_healthy()
                     ):
                         logger.error(
                             "Instance not yet back in the cluster or not healthy."
