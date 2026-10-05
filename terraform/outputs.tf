@@ -4,16 +4,23 @@ output "app_name" {
 
 output "provides" {
   value = {
-    database          = "database",
-    metrics_endpoint  = "metrics-endpoint",
+    database          = "database"
+    db                = "db"
+    db_admin          = "db-admin"
+    metrics_endpoint  = "metrics-endpoint"
     grafana_dashboard = "grafana-dashboard"
+    replication_offer = "replication-offer"
   }
 }
 
 output "requires" {
   value = {
-    logging       = "logging"
-    certificates  = "certificates"
-    s3_parameters = "s3-parameters"
+    replication     = "replication"
+    certificates    = "certificates"
+    receive_ca_cert = "receive-ca-cert"
+    s3_parameters   = "s3-parameters"
+    ldap            = "ldap"
+    logging         = "logging"
+    tracing         = "tracing"
   }
 }
