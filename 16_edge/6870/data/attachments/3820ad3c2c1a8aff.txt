@@ -1,0 +1,124 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database (waiting for exactly 3 units, current : 1)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: 
+  database/1 [idle] maintenance: installing charm software
+  database/2 [idle] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: 
+  database/1 [executing] maintenance: installing charm software
+  database/2 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] active: 
+  database/1 [executing] maintenance: installing charm software
+  database/2 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [idle] active: 
+  database/1 [executing] unknown: 
+  database/2 [executing] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] active: 
+  database/1 [executing] unknown: 
+  database/2 [executing] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] active: 
+  database/1 [executing] unknown: 
+  database/2 [executing] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] active: 
+  database/1 [executing] unknown: 
+  database/2 [executing] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] maintenance: reconfiguring cluster
+  database/1 [executing] unknown: 
+  database/2 [executing] unknown: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] maintenance: reconfiguring cluster
+  database/1 [executing] unknown: 
+  database/2 [executing] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] active: 
+  database/1 [executing] unknown: 
+  database/2 [executing] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] maintenance: reconfiguring cluster
+  database/1 [executing] unknown: 
+  database/2 [executing] waiting: awaiting for member to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  database/0 [executing] maintenance: reconfiguring cluster
+  database/1 [executing] unknown: 
+  database/2 [executing] waiting: awaiting for member to start
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  02:02:14Z
+
+App                  Version  Status  Scale  Charm                Channel      Rev  Address         Exposed  Message
+another-application           active      1  postgresql-test-app  latest/edge  603  10.152.183.146  no       received database credentials of the first database
+another-database     16.15    active      3  postgresql-k8s                      0  10.152.183.220  no       
+database             16.15    active      3  postgresql-k8s                      1  10.152.183.68   no       
+postgresql-test-app           active      2  postgresql-test-app  latest/edge  603  10.152.183.181  no       received database credentials of the second database
+
+Unit                    Workload  Agent      Address     Ports  Message
+another-application/0*  active    idle       10.1.0.126         received database credentials of the first database
+another-database/0*     active    idle       10.1.0.13          Primary
+another-database/1      active    idle       10.1.0.93          
+another-database/2      active    idle       10.1.0.11          
+database/0*             active    executing  10.1.0.160         
+database/1              unknown   executing  10.1.0.106         
+database/2              error     idle       10.1.0.89          hook failed: "update-status"
+postgresql-test-app/0*  active    idle       10.1.0.120         received database credentials of the second database
+postgresql-test-app/1   active    idle       10.1.0.52          received database credentials of the second database
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-test-app-0: 01:36:52 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-postgresql-test-app-1: 01:36:52 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-another-database-2: 01:42:32 ERROR unit.another-database/2.juju-log single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database access groups: connection to server at "another-database-2.another-database-endpoints.testing.svc.cluster.local" (10.1.0.11), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-another-application-0: 01:46:46 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-database-2: 02:02:12 ERROR unit.database/2.juju-log root:Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-database-2/charm/src/charm.py", line 2894, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lib/python3.12/site-packages/ops/__init__.py", line 360, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 522, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 506, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 439, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lib/python3.12/site-packages/ops/_main.py", line 483, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 336, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 914, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lib/python3.12/site-packages/ops/framework.py", line 1034, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-database-2/charm/src/charm.py", line 2146, in _on_update_status
+    if not self._on_update_status_early_exit_checks(self.workload.container):
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-database-2/charm/src/charm.py", line 2118, in _on_update_status_early_exit_checks
+    self.fix_leader_annotation()
+  File "/var/lib/juju/agents/unit-database-2/charm/src/charm.py", line 1250, in fix_leader_annotation
+    self.app_peer_data.pop("cluster_initialised", None)
+  File "<frozen _collections_abc>", line 951, in pop
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2161, in __delitem__
+    self.__setitem__(key, '')
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2107, in __setitem__
+    self.update({key: value})
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2152, in update
+    self._validate_write(changes)  # always check permissions
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2066, in _validate_write
+    self._validate_write_access()
+  File "/var/lib/juju/agents/unit-database-2/charm/venv/lib/python3.12/site-packages/ops/model.py", line 2094, in _validate_write_access
+    raise RelationDataAccessError(
+ops.model.RelationDataAccessError: database/2 is not leader and cannot write application data.
+unit-database-2: 02:02:13 ERROR juju.worker.uniter.operation hook "update-status" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
