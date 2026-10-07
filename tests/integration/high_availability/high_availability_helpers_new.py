@@ -309,3 +309,58 @@ def run_upgrade(juju: Juju, app_name: str, charm: str) -> None:
 
     logging.info("Wait for upgrade to complete")
     juju.wait(ready=wait_for_apps_status(jubilant.all_active, app_name), timeout=20 * MINUTE_SECS)
+
+
+def get_async_secret_labels(juju: Juju, app: str) -> set[str]:
+    """Return the async-replication secret labels owned by *app*'s leader unit."""
+    leader = get_app_leader(juju, app)
+    labels: set[str] = set()
+    for secret_id in juju.cli("exec", "--unit", leader, "--", "secret-ids").split():
+        info = juju.cli("exec", "--unit", leader, "--", "secret-info-get", secret_id)
+        for line in info.splitlines():
+            stripped = line.strip()
+            if stripped.startswith("label:"):
+                label = stripped.split(":", 1)[1].strip()
+                if "async-replication" in label:
+                    labels.add(label)
+    return labels
+
+
+def consumer_alias_exists(juju: Juju, app: str, label: str) -> bool:
+    """Whether *app*'s leader holds a consumer-side alias for *label*.
+
+    A consumed-secret alias is not listed by ``secret-ids`` (which returns only
+    owned secrets), so ``get_async_secret_labels`` can't see it. Probe it directly:
+    ``secret-get --label`` returns content when the alias exists and errors with
+    ``consumer label "<label>" not found`` when it was never registered.
+    """
+    leader = get_app_leader(juju, app)
+    try:
+        juju.cli("exec", "--unit", leader, "--", "secret-get", f"--label={label}")
+        return True
+    except jubilant.CLIError as error:
+        haystack = f"{error} {getattr(error, 'stderr', '')} {getattr(error, 'stdout', '')}".lower()
+        if "not found" in haystack:
+            return False
+        raise
+
+
+def get_published_secret_id(juju: Juju, unit_name: str) -> str | None:
+    """Return the secret id the offer side publishes in primary-cluster-data."""
+    data = json.loads(juju.cli("show-unit", unit_name, "--format", "json"))
+    unit = next(iter(data.values()))
+    for relation in unit.get("relation-info", []):
+        if relation.get("endpoint") == "replication":
+            return json.loads(
+                relation.get("application-data", {}).get("primary-cluster-data", "{}")
+            ).get("secret-id")
+    return None
+
+
+def start_continuous_writes(model: Juju, test_app: str) -> None:
+    """Start continuous writes through the test application (retry through transient errors)."""
+    for attempt in Retrying(stop=stop_after_attempt(10), reraise=True):
+        with attempt:
+            model.run(
+                unit=get_app_leader(model, test_app), action="start-continuous-writes"
+            ).raise_on_failure()
