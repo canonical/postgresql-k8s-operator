@@ -1,0 +1,59 @@
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:22 Clearing continuous writes
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-test-app/0 clear-continuous-writes --wait 120s
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:25 Starting continuous writes
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-test-app/0 start-continuous-writes
+[32mINFO    [0m root:test_upgrade.py:80 Ensure continuous writes are incrementing
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/0 get-primary --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju show-secret --model testing secret:uoh1s2qquu8tgc3fnr40 --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju show-secret --model testing secret:uoh1s2qquu8tgc3fnr40 --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju show-secret --model testing secret:uoh1s2qquu8tgc3fnr40 --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju show-secret --model testing secret:uoh1s2qquu8tgc3fnr40 --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/0 get-primary --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:265 Refresh the charm
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju refresh --model testing postgresql-k8s --path /root/snap/juju/common/tmpgb93p02i/_temp.charm --resource postgresql-image=ghcr.io/canonical/charmed-postgresql@sha256:856a221b97bdfafed974b483a911794ec254d4e4cd5b5eb323b676aebc72785a
+[32mINFO    [0m root:high_availability_helpers_new.py:273 Wait for refresh to block as paused or incompatible
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:295 Upgrade started without incompatibility
+[32mINFO    [0m root:high_availability_helpers_new.py:303 Run resume-refresh action
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/0 resume-refresh --wait 300s
+[32mINFO    [0m root:high_availability_helpers_new.py:310 Wait for upgrade to complete
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: maintenance () -> error (hook failed: "upgrade-charm")
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: maintenance () -> error (hook failed: "upgrade-charm")
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: maintenance () -> error (hook failed: "upgrade-charm")
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: maintenance () -> error (hook failed: "upgrade-charm")
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: maintenance () -> error (hook failed: "upgrade-charm")
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: maintenance () -> error (hook failed: "upgrade-charm")
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: maintenance () -> error (hook failed: "upgrade-charm")
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: unknown (agent lost, see 'juju show-status-log postgresql-k8s/1') -> error (crash loop backoff: back-off 40s restarting failed container=charm pod=postgresql-k8s-1_testing(632e98f5-e898-49d0-80b4-1724ce375f8e))
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: maintenance () -> error (crash loop backoff: back-off 40s restarting failed container=postgresql pod=postgresql-k8s-1_testing(632e98f5-e898-49d0-80b4-1724ce375f8e))
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: error (crash loop backoff: back-off 40s restarting failed container=postgresql pod=postgresql-k8s-1_testing(632e98f5-e898-49d0-80b4-1724ce375f8e)) -> error (hook failed: "upgrade-charm")
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: maintenance () -> error (hook failed: "upgrade-charm")
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: error (hook failed: "upgrade-charm") -> error (crash loop backoff: back-off 1m20s restarting failed container=charm pod=postgresql-k8s-1_testing(632e98f5-e898-49d0-80b4-1724ce375f8e))
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: error (crash loop backoff: back-off 1m20s restarting failed container=charm pod=postgresql-k8s-1_testing(632e98f5-e898-49d0-80b4-1724ce375f8e)) -> error (hook failed: "upgrade-charm")
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: maintenance () -> error (hook failed: "upgrade-charm")
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: unknown (agent lost, see 'juju show-status-log postgresql-k8s/1') -> error (crash loop backoff: back-off 2m40s restarting failed container=charm pod=postgresql-k8s-1_testing(632e98f5-e898-49d0-80b4-1724ce375f8e))
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: maintenance () -> error (hook failed: "upgrade-charm")
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: maintenance () -> error (hook failed: "upgrade-charm")
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: error (hook failed: "upgrade-charm") -> error (crash loop backoff: back-off 5m0s restarting failed container=postgresql pod=postgresql-k8s-1_testing(632e98f5-e898-49d0-80b4-1724ce375f8e))
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: error (crash loop backoff: back-off 5m0s restarting failed container=postgresql pod=postgresql-k8s-1_testing(632e98f5-e898-49d0-80b4-1724ce375f8e)) -> error (crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-1_testing(632e98f5-e898-49d0-80b4-1724ce375f8e))
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: error (crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-1_testing(632e98f5-e898-49d0-80b4-1724ce375f8e)) -> error (hook failed: "upgrade-charm")
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: maintenance () -> error (hook failed: "upgrade-charm")
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: maintenance () -> error (hook failed: "upgrade-charm")
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: maintenance () -> error (hook failed: "upgrade-charm")
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/1] status changed: error (hook failed: "upgrade-charm") -> error (crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-1_testing(632e98f5-e898-49d0-80b4-1724ce375f8e))
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:36 Clearing continuous writes
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-test-app/0 clear-continuous-writes --wait 120s
