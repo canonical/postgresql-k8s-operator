@@ -1,0 +1,16 @@
+apiVersion: chaos-mesh.org/v1alpha1
+kind: NetworkChaos
+metadata:
+  name: dcs-partition
+  namespace: $namespace
+spec:
+  action: partition
+  mode: all
+  selector:
+    namespaces:
+      - $namespace
+    labelSelectors:
+      app.kubernetes.io/name: $app
+  direction: to
+  externalTargets: $targets
+  duration: "60m"

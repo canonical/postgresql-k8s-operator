@@ -22,9 +22,11 @@ from kubernetes.client.api import core_v1_api
 from kubernetes.stream import stream
 from lightkube.core.client import Client, GlobalResource
 from lightkube.resources.core_v1 import (
+    Endpoints,
     PersistentVolume,
     PersistentVolumeClaim,
     Pod,
+    Service,
 )
 from pytest_operator.plugin import OpsTest
 from tenacity import (
@@ -675,6 +677,56 @@ def isolate_instance_from_cluster(ops_test: OpsTest, unit_name: str) -> None:
         subprocess.check_output(
             " ".join([*KUBECTL.split(), "apply", "-f", temp_file.name]), shell=True, env=env
         )
+
+
+def get_k8s_api_addresses() -> list[str]:
+    """Return IP addresses Patroni uses to reach the K8s API."""
+    client = Client()
+    ips = []
+    endpoints = client.get(Endpoints, name="kubernetes", namespace="default")
+    service = client.get(Service, name="kubernetes", namespace="default")
+
+    for subset in endpoints.subsets or []:
+        for address in subset.addresses or []:
+            ips.append(address.ip)
+
+    ips.append(service.spec.clusterIP)
+
+    assert ips, "no K8s API addresses found"
+    return ips
+
+
+def cut_dcs_access(ops_test: OpsTest, app: str) -> None:
+    """Apply a NetworkChaos file to use chaos-mesh to simulate a DCS cut."""
+    with tempfile.NamedTemporaryFile() as temp_file:
+        with open("tests/integration/ha_tests/manifests/chaos_dcs_partition.yml") as manifest_file:
+            template = string.Template(manifest_file.read())
+            chaos_network_loss = template.substitute(
+                namespace=ops_test.model.info.name,
+                app=app,
+                # A JSON list is also a valid YAML (flow style) list.
+                targets=json.dumps(get_k8s_api_addresses()),
+            )
+
+            temp_file.write(str.encode(chaos_network_loss))
+            temp_file.flush()
+
+        env = os.environ
+        env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
+        subprocess.check_output(
+            " ".join([*KUBECTL.split(), "apply", "-f", temp_file.name]), shell=True, env=env
+        )
+
+
+def restore_dcs_access(ops_test: OpsTest) -> None:
+    """Delete the NetworkChaos that blocks access to the K8s API."""
+    env = os.environ
+    env["KUBECONFIG"] = os.path.expanduser("~/.kube/config")
+    subprocess.check_output(
+        f"{KUBECTL} -n {ops_test.model.info.name} delete --ignore-not-found=true networkchaos dcs-partition",
+        shell=True,
+        env=env,
+    )
 
 
 async def modify_pebble_restart_delay(
