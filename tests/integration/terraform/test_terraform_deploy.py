@@ -8,6 +8,9 @@ Applies the module into the pre-created ``testing`` model and waits for
 active/idle. With ``TF_PROVIDER_CONSTRAINT`` set (e.g. ``~> 1.0``) it deploys
 from a consumer root pinning that juju provider constraint, so the module is
 exercised under the v1 line as well as its default (v2).
+
+CI runs this module twice: once against the charm from Charmhub, and once
+(``TERRAFORM_CHARM_SOURCE=local``) also refreshing to the locally packed charm.
 """
 
 import json
@@ -20,6 +23,7 @@ import jubilant
 import pytest
 
 from .. import architecture
+from ..helpers import METADATA
 
 _JUJU_PROVIDER = "registry.terraform.io/juju/juju"
 
@@ -33,6 +37,9 @@ TF_BINARY = os.getenv("TF_BINARY") or "terraform"
 # When set (e.g. "~> 1.0"), deploy from a consumer root that pins the juju provider to that
 # constraint instead of applying the module directly; unset applies the module as-is (v2.x).
 PROVIDER_CONSTRAINT = os.getenv("TF_PROVIDER_CONSTRAINT")
+# `charmhub`: test the module against the charm it deploys from Charmhub.
+# `local`: additionally refresh the deployed application to the locally packed charm.
+CHARM_SOURCE = os.getenv("TERRAFORM_CHARM_SOURCE") or "charmhub"
 # Storage directives for the postgresql-k8s charm: archive, data, logs, temp.
 STORAGE_DIRECTIVES = '{"data"="2G","archive"="1G","logs"="1G","temp"="512M"}'
 # A string-typed postgresql-k8s config option (profile) — drives the `config` variable.
@@ -141,3 +148,40 @@ def test_terraform_apply_deploys_postgresql(juju: jubilant.Juju, tmp_path: Path)
         deploy_dir, TF_TIMEOUT, "output", "-raw", "application_name", capture=True
     )
     assert output.stdout.strip() == APP, f"application_name output: {output.stdout!r}"
+
+
+@pytest.mark.skipif(CHARM_SOURCE != "local", reason="TERRAFORM_CHARM_SOURCE != local")
+def test_refresh_to_local_charm(juju: jubilant.Juju, charm: str) -> None:
+    """The application deployed by the module must refresh to the locally packed charm."""
+    # The juju provider cannot deploy a local charm, so refresh the terraform-deployed
+    # application (from Charmhub) to the charm packed from this branch.
+    unit = next(iter(juju.status().apps[APP].units))
+    juju.run(unit, "pre-refresh-check")
+    juju.refresh(
+        APP,
+        path=charm,
+        resources={
+            "postgresql-image": METADATA["resources"]["postgresql-image"]["upstream-source"]
+        },
+    )
+
+    def refreshed(status: jubilant.Status) -> bool:
+        # Check the charm origin so the wait cannot succeed before the refresh has started.
+        return (
+            status.apps[APP].charm.startswith("local:")
+            and jubilant.all_active(status, APP)
+            and jubilant.all_agents_idle(status, APP)
+        )
+
+    def incompatible(status: jubilant.Status) -> bool:
+        message = status.apps[APP].units[unit].workload_status.message
+        return "Refresh incompatible" in message and jubilant.all_agents_idle(status, APP)
+
+    # The Charmhub revision may not list the packed charm as a compatible refresh target; the
+    # single unit then blocks until the refresh is forced.
+    juju.wait(lambda status: refreshed(status) or incompatible(status), timeout=TIMEOUT)
+    if incompatible(juju.status()):
+        juju.run(unit, "force-refresh-start", params={"check-compatibility": False})
+
+    # A single unit needs no `resume-refresh`: it is the first (and last) unit to refresh.
+    juju.wait(refreshed, error=lambda status: jubilant.any_error(status, APP), timeout=TIMEOUT)

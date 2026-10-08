@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
 # Copyright 2023 Canonical Ltd.
 # See LICENSE file for licensing details.
+import asyncio
 import logging
+from contextlib import closing
 
 import psycopg2 as psycopg2
 import pytest as pytest
 from pytest_operator.plugin import OpsTest
+from tenacity import AsyncRetrying, stop_after_delay, wait_fixed
 
 from .helpers import (
     DATABASE_APP_NAME,
@@ -91,6 +94,7 @@ TIMESCALEDB_EXTENSION_STATEMENT = "CREATE TABLE test_timescaledb (time TIMESTAMP
 PG_STAT_STATEMENTS_STATEMENT = (
     "SELECT query, calls, total_exec_time, rows FROM pg_stat_statements LIMIT 5;"
 )
+PG_CRON_EXTENSION_STATEMENT = "SELECT * FROM cron.job;"
 
 
 @pytest.mark.abort_on_fail
@@ -159,6 +163,7 @@ async def test_plugins(ops_test: OpsTest, charm) -> None:
         "plugin-vector-enable": VECTOR_EXTENSION_STATEMENT,
         "plugin-timescaledb-enable": TIMESCALEDB_EXTENSION_STATEMENT,
         "plugin-pg-stat-statements-enable": PG_STAT_STATEMENTS_STATEMENT,
+        "plugin-pg-cron-enable": PG_CRON_EXTENSION_STATEMENT,
     }
 
     def enable_disable_config(enabled: False):
@@ -258,3 +263,41 @@ async def test_plugin_objects(ops_test: OpsTest) -> None:
     logger.info("Waiting for status to resolve again")
     async with ops_test.fast_forward(fast_interval="60s"):
         await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active")
+
+
+async def test_pg_cron(ops_test: OpsTest) -> None:
+    """Check that pg_cron runs a job and stops it when disabled."""
+    await ops_test.model.applications[DATABASE_APP_NAME].set_config({
+        "plugin-pg-cron-enable": "True"
+    })
+    await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active")
+    primary = await get_primary(ops_test)
+    password = await get_password(ops_test)
+    address = await get_unit_address(ops_test, primary)
+
+    with closing(db_connect(host=address, password=password)) as connection:
+        connection.autocommit = True
+        with connection.cursor() as cursor:
+            cursor.execute("CREATE TABLE public.pg_cron_test (run_at timestamptz DEFAULT now())")
+            cursor.execute(
+                "SELECT cron.schedule('pg-cron-test', '2 seconds', 'INSERT INTO public.pg_cron_test DEFAULT VALUES')"
+            )
+            async for attempt in AsyncRetrying(
+                stop=stop_after_delay(60), wait=wait_fixed(2), reraise=True
+            ):
+                with attempt:
+                    cursor.execute("SELECT count(*) FROM public.pg_cron_test")
+                    assert cursor.fetchone()[0] >= 2
+
+            await ops_test.model.applications[DATABASE_APP_NAME].set_config({
+                "plugin-pg-cron-enable": "False"
+            })
+            await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active")
+            cursor.execute("SELECT 1 FROM pg_extension WHERE extname = 'pg_cron'")
+            assert cursor.fetchone() is None
+            cursor.execute("SELECT count(*) FROM public.pg_cron_test")
+            previous = cursor.fetchone()[0]
+            await asyncio.sleep(6)
+            cursor.execute("SELECT count(*) FROM public.pg_cron_test")
+            assert cursor.fetchone()[0] == previous
+            cursor.execute("DROP TABLE public.pg_cron_test")
