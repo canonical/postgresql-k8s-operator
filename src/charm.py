@@ -11,16 +11,10 @@ import os
 import pathlib
 import shutil
 import sys
-from datetime import datetime
 from functools import cached_property
 from pathlib import Path
 from typing import Literal, get_args
 from urllib.parse import urlparse
-
-from authorisation_rules_observer import (
-    AuthorisationRulesChangeCharmEvents,
-    AuthorisationRulesObserver,
-)
 
 # First platform-specific import, will fail on wrong architecture
 try:
@@ -145,6 +139,10 @@ from single_kernel_postgresql.core.state import CharmState
 from single_kernel_postgresql.events.backup import BackupEventsHandler
 from single_kernel_postgresql.events.database import DatabaseEventsHandler
 from single_kernel_postgresql.events.ldap import LDAP
+from single_kernel_postgresql.events.observer import (
+    ClusterTopologyChangeCharmEvents,
+    ObserverEventsHandler,
+)
 from single_kernel_postgresql.events.tls import TLS
 from single_kernel_postgresql.events.tls_transfer import TLSTransfer
 from single_kernel_postgresql.events.watcher import WatcherEventsHandler
@@ -157,6 +155,7 @@ from single_kernel_postgresql.managers.cluster import ClusterManager
 from single_kernel_postgresql.managers.config import ConfigManager
 from single_kernel_postgresql.managers.database import DatabaseManager
 from single_kernel_postgresql.managers.k8s import K8sManager
+from single_kernel_postgresql.managers.observer import ObserverManager
 from single_kernel_postgresql.managers.patroni import PatroniManager
 from single_kernel_postgresql.managers.restore import RestoreManager
 from single_kernel_postgresql.managers.tls import TLSManager
@@ -229,7 +228,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
     """Charmed Operator for the PostgreSQL database."""
 
     config_type = K8SCharmConfig
-    on: "CharmEvents" = AuthorisationRulesChangeCharmEvents()
+    on: "CharmEvents" = ClusterTopologyChangeCharmEvents()
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -270,6 +269,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         # Managers
         self.patroni_manager = PatroniManager(state=self.state, workload=self.workload)
         self.cluster_manager = ClusterManager(state=self.state, workload=self.workload)
+        self.observer_manager = ObserverManager(state=self.state, workload=self.workload)
 
         self.postgresql_service = "postgresql"
         self.rotate_logs_service = "rotate-logs"
@@ -280,8 +280,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         self._context = {"namespace": self._namespace, "app_name": self._name}
         self.cluster_name = f"patroni-{self._name}"
 
-        self._observer = AuthorisationRulesObserver(self, "/usr/bin/juju-exec")
-        self.framework.observe(self.on.databases_change, self._on_databases_change)
         self.framework.observe(self.on.config_changed, self._on_config_changed)
         self.framework.observe(self.on.leader_elected, self._on_leader_elected)
         self.framework.observe(
@@ -364,6 +362,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             resource_provider=self.get_resource_provider,
             request_restart=self.request_restart,
             restart_services=self.restart_services,
+        )
+        self.observer_handler = ObserverEventsHandler(
+            self,
+            workload=self.workload,
+            state=self.state,
+            async_replication_manager=None,
+            database_manager=self.database_manager,
+            watcher_handler=self.watcher_handler,
         )
         # Reload PostgreSQL after the lib TLS handler has actually pushed the cert files.
         # tls_files_pushed fires only on a completed push (the handler routes both
@@ -558,14 +564,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             )
             return
         self.unit.status = status
-
-    def _on_databases_change(self, _):
-        """Handle databases change event."""
-        self.update_config()
-        logger.debug("databases changed")
-        timestamp = datetime.now()
-        self.unit_peer_data.update({"pg_hba_needs_update_timestamp": str(timestamp)})
-        logger.debug(f"authorisation rules changed at {timestamp}")
 
     def _generate_metrics_jobs(self, enable_tls: bool) -> list[dict]:
         """Generate spec for Prometheus scraping."""
