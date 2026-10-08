@@ -95,6 +95,7 @@ backends:
       AWS_SECRET_KEY: '$(HOST: echo $AWS_SECRET_KEY)'
       GCP_ACCESS_KEY: '$(HOST: echo $GCP_ACCESS_KEY)'
       GCP_SECRET_KEY: '$(HOST: echo $GCP_SECRET_KEY)'
+      TERRAFORM_CHARM_SOURCE: '$(HOST: echo $TERRAFORM_CHARM_SOURCE)'
     systems:
       - ubuntu-24.04:
           username: runner
