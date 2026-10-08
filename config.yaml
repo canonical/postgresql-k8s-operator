@@ -596,6 +596,10 @@ options:
     default: false
     type: boolean
     description: Enable orafce extension
+  plugin-pg-cron-enable:
+    default: false
+    type: boolean
+    description: Enable pg_cron in the postgres database
   plugin-pg-freespacemap-enable:
     default: false
     type: boolean

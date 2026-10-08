@@ -549,6 +549,20 @@ def test_add_members(harness):
         )
 
 
+def test_pg_cron_config(harness):
+    assert harness.charm.config.plugin_pg_cron_enable is False
+    with (
+        harness.hooks_disabled(),
+        patch("charm.PatroniManager.get_primary", return_value="primary"),
+        patch("charm.PostgreSQL.enable_disable_extensions") as enable_disable_extensions,
+    ):
+        for enabled in (True, False):
+            harness.update_config({"plugin-pg-cron-enable": enabled})
+            harness.charm.enable_disable_extensions()
+            assert enable_disable_extensions.call_args.args[0]["pg_cron"] is enabled
+            assert ("pg_cron" in harness.charm.get_plugins()) is enabled
+
+
 def test_enable_disable_extensions(harness):
     with (
         patch("charm.K8SCharmConfig.plugin_keys") as _plugin_keys,
