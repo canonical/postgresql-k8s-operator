@@ -1904,13 +1904,13 @@ files = [
 
 [[package]]
 name = "postgresql-charms-single-kernel"
-version = "16.3.13"
+version = "16.3.16"
 description = "Shared and reusable code for PostgreSQL-related charms"
 optional = false
 python-versions = ">=3.8,<4.0"
 groups = ["main", "integration"]
 files = [
-    {file = "3ebfd849f68fcdb584f85c96ca63bfdcacd2b1de.tar.gz", hash = "sha256:e1d3cc4d2a1d8414ff9631896b4be987915078605352304fc468a53ecf6f08d9"},
+    {file = "1530b9aad005533698465fbfdf2d87b6e4d89640.tar.gz", hash = "sha256:14ea598cf361c6b0c393751d118bdee651ca9c195e1c8fd90c9f8e1418cf2357"},
 ]
 
 [package.dependencies]
@@ -1936,11 +1936,11 @@ tomli = {version = "*", optional = true, markers = "python_version >= \"3.12\" a
 db-driver = ["psycopg2 (>=2.9.10)"]
 k8s = ["lightkube (>=0.21.0) ; python_version >= \"3.12\"", "lightkube-models (>=1.28.1.4) ; python_version >= \"3.12\""]
 postgresql = ["boto3 (>=1.43.85) ; python_version >= \"3.12\"", "botocore (>=1.43.85) ; python_version >= \"3.12\"", "charm-refresh ; python_version >= \"3.12\"", "charmlibs-interfaces-tls-certificates (>=1.8.3) ; python_version >= \"3.12\"", "charmlibs-pathops (>=1.0.1) ; python_version >= \"3.12\"", "charmlibs-rollingops (>=1.1.1) ; python_version >= \"3.12\"", "data-platform-helpers (>=0.1.7) ; python_version >= \"3.12\"", "httpx ; python_version >= \"3.12\"", "jinja2 (>=3.1.6) ; python_version >= \"3.12\"", "pydantic (>=2.0) ; python_version >= \"3.12\"", "requests ; python_version >= \"3.12\"", "tomli ; python_version >= \"3.12\""]
-vm = ["charmlibs-snap (>=1.0.1) ; python_version >= \"3.12\"", "charmlibs-systemd (>=1.0.0.post0) ; python_version >= \"3.12\"", "psutil (>=7.2.2) ; python_version >= \"3.12\"", "pysyncobj (>=0.3.15) ; python_version >= \"3.12\""]
+vm = ["charmlibs-snap (>=1.0.1,<2) ; python_version >= \"3.12\"", "charmlibs-systemd (>=1.0.0.post0) ; python_version >= \"3.12\"", "psutil (>=7.2.2) ; python_version >= \"3.12\"", "pysyncobj (>=0.3.15) ; python_version >= \"3.12\""]
 
 [package.source]
 type = "url"
-url = "https://github.com/canonical/postgresql-single-kernel-library/archive/3ebfd849f68fcdb584f85c96ca63bfdcacd2b1de.tar.gz"
+url = "https://github.com/canonical/postgresql-single-kernel-library/archive/1530b9aad005533698465fbfdf2d87b6e4d89640.tar.gz"
 
 [[package]]
 name = "prompt-toolkit"
@@ -3299,4 +3299,4 @@ h11 = ">=0.16.0,<1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "9717d4c8bf0ac9f66cf3ce81b65155ce3421db5da1d9042ec9aad5c099065e87"
+content-hash = "f4e40c97dde06c81bed701a7af59db4aa7c0c59239e8abeb232018ea7fa493df"
