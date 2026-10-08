@@ -453,6 +453,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             else:
                 self.refresh.next_unit_allowed_to_refresh = True
 
+        self.observer_manager.start_observer()
         self.grafana_dashboards = GrafanaDashboardProvider(self)
         self.metrics_endpoint = MetricsEndpointProvider(
             self,
