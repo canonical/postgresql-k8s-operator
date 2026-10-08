@@ -136,6 +136,7 @@ from single_kernel_postgresql.config.literals import (
 )
 from single_kernel_postgresql.core.config import K8SCharmConfig
 from single_kernel_postgresql.core.state import CharmState
+from single_kernel_postgresql.events.async_replication import PostgreSQLAsyncReplication
 from single_kernel_postgresql.events.backup import BackupEventsHandler
 from single_kernel_postgresql.events.database import DatabaseEventsHandler
 from single_kernel_postgresql.events.ldap import LDAP
@@ -150,6 +151,7 @@ from single_kernel_postgresql.lib.charms.data_platform_libs.v0.data_interfaces i
     DatabaseProvides,
 )
 from single_kernel_postgresql.lib.charms.data_platform_libs.v0.s3 import S3Requirer
+from single_kernel_postgresql.managers.async_replication import AsyncReplicationManager
 from single_kernel_postgresql.managers.backup import BackupManager
 from single_kernel_postgresql.managers.cluster import ClusterManager
 from single_kernel_postgresql.managers.config import ConfigManager
@@ -193,7 +195,6 @@ from constants import (
     POSTGRESQL_LOGS_SYMLINK_PATH,
     TEMP_STORAGE_PATH,
 )
-from relations.async_replication import PostgreSQLAsyncReplication
 
 # from relations.logical_replication import (
 #     LOGICAL_REPLICATION_VALIDATION_ERROR_STATUS,
@@ -364,10 +365,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             restart_services=self.restart_services,
         )
         self.observer_handler = ObserverEventsHandler(
-            self,
+            self,  # type: ignore
             workload=self.workload,
             state=self.state,
-            async_replication_manager=None,
+            async_replication_manager=self.async_replication_manager,
             database_manager=self.database_manager,
             watcher_handler=self.watcher_handler,
         )
@@ -378,7 +379,29 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         # never triggers a reload against files that were never written.
         self.framework.observe(self.tls.tls_files_pushed, self._reload_tls_after_push)
         self.tls_transfer = TLSTransfer(self, PEER_RELATION)
-        self.async_replication = PostgreSQLAsyncReplication(self)
+        self.async_replication_manager = AsyncReplicationManager(
+            state=self.state,
+            workload=self.workload,
+            patroni_manager=self.patroni_manager,
+            update_config=self.update_config,
+            set_unit_status=self.set_unit_status,
+            set_primary_status_message=self.set_primary_status_message,
+            set_app_status=lambda: self.async_replication.set_app_status(),
+            create_pgdata=self.create_pgdata,
+            fix_leader_annotation=self.fix_leader_annotation,
+            re_emit_relation_changed=lambda: (
+                self.async_replication._re_emit_async_relation_changed_event()
+            ),
+            k8s_manager=self.k8s_manager,
+        )
+        self.async_replication = PostgreSQLAsyncReplication(
+            self,
+            self.state,
+            self.async_replication_manager,
+            self.patroni_manager,
+            self.workload,
+            k8s_manager=self.k8s_manager,
+        )
         # self.logical_replication = PostgreSQLLogicalReplication(self)
         self.restart_manager = RollingOpsManager(
             charm=self, relation="restart", callback=self._restart
@@ -430,7 +453,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             else:
                 self.refresh.next_unit_allowed_to_refresh = True
 
-        self._observer.start_authorisation_rules_observer()
         self.grafana_dashboards = GrafanaDashboardProvider(self)
         self.metrics_endpoint = MetricsEndpointProvider(
             self,
@@ -564,6 +586,28 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             )
             return
         self.unit.status = status
+
+    def set_app_status(self, status: StatusBase) -> None:
+        """Bridge for the lib async-replication handler: set the application status.
+
+        Keeps the gates the old relations/async_replication module relied on: skip when
+        the app status cannot be set yet, and never override a higher-priority
+        refresh status.
+        """
+        if not self.can_set_app_status:
+            return
+        if self.refresh is not None and self.refresh.app_status_higher_priority:
+            self.app.status = self.refresh.app_status_higher_priority
+            return
+        self.app.status = status
+
+    def set_primary_status_message(self) -> None:
+        """Bridge for the lib async-replication handler: recompute the unit status."""
+        self._set_active_status()
+
+    def create_pgdata(self) -> None:
+        """Bridge for the lib async-replication handler: recreate the pgdata folder."""
+        self._create_pgdata(self.workload.container)
 
     def _generate_metrics_jobs(self, enable_tls: bool) -> list[dict]:
         """Generate spec for Prometheus scraping."""
@@ -1156,6 +1200,20 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
                 hosts.append(self._unit_name_to_pod_name(unit.name))
         return set(hosts)
 
+    @property
+    def _planned_units(self) -> int:
+        """Number of planned units, resilient to a transient goal-state failure.
+
+        ops implements ``Application.planned_units()`` via ``goal-state``, which fails
+        ("saas application ... not found") while a cross-model SAAS force-removed during a
+        dead-DC teardown still lingers in goal-state. Fall back to the count of currently known
+        units so the hook reconciles instead of crashing every hook that reads it (DPE-10203).
+        """
+        try:
+            return self.app.planned_units()
+        except ModelError:
+            return len(self._hosts)
+
     def _get_hostname_from_unit(self, member: str) -> str:
         """Create a DNS name for a PostgreSQL/Patroni cluster member.
 
@@ -1592,10 +1650,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
                 or self.is_standby_leader
             ):
                 danger_state = ""
-                if (
-                    len(self.patroni_manager.get_running_cluster_members())
-                    < self.app.planned_units()
-                ):
+                if len(self.patroni_manager.get_running_cluster_members()) < self._planned_units:
                     danger_state = " (degraded)"
                 self.set_unit_status(
                     ActiveStatus(
@@ -2181,6 +2236,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         # Update the sync-standby endpoint in the async replication data.
         self.async_replication.update_async_replication_data()
 
+        # Clear a promoted-cluster-counter orphaned by a dead-DC teardown whose relation-broken
+        # never fired (Juju CMR limitation); otherwise a newly-formed async relation re-counts it
+        # and create-replication wrongly reports "There is already a replication set up.".
+        self.async_replication.clear_stale_promotion()
         self.backup.coordinate_stanza_fields()
 
         # self.logical_replication.retry_validations()
@@ -2675,17 +2734,28 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
 
     def update_config(self, is_creating_backup: bool = False) -> bool:
         """Updates Patroni config file based on the existence of the TLS files."""
+        primary_cluster_endpoint = self.async_replication.get_primary_cluster_endpoint()
         try:
-            return self.config_manager.update_config(
+            result = self.config_manager.update_config(
                 self.postgresql,
                 is_creating_backup=is_creating_backup,
                 relations_user_databases_map=self.relations_user_databases_map,
-                async_primary_cluster_endpoint=self.async_replication.get_primary_cluster_endpoint(),
+                async_primary_cluster_endpoint=primary_cluster_endpoint,
                 async_standby_endpoints=self.async_replication.get_standby_endpoints(),
             )
         except DeployedWithoutTrustError:
             self.on_deployed_without_trust()
             return False
+        # The lib's apply_api_config only SETS the DCS standby_cluster (when another
+        # cluster is primary) and never CLEARS it. A force-promote bumps the
+        # promoted-cluster-counter but — while the dead-DC relation still lingers — does
+        # not call promote_standby_cluster(), so without this the reconciler never clears
+        # the stale standby and the cluster stays a read-only standby leader (DPE-10203).
+        if result and self.patroni_manager.member_started and primary_cluster_endpoint is None:
+            self.patroni_manager.bulk_update_parameters_controller_by_patroni(
+                {}, {"standby_cluster": None}
+            )
+        return result
 
     def _validate_config_options(self) -> None:
         """Validates specific config options that need access to the database or to the TLS status."""
