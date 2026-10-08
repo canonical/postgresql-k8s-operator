@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Literal, cast, get_args
 from urllib.parse import urlparse
 
 
+
 # First platform-specific import, will fail on wrong architecture
 try:
     import psycopg2
