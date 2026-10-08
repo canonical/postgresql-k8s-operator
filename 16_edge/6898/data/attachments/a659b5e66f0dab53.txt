@@ -1,0 +1,175 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-1
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:174 waiting for idle
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] active: Primary
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:184 get pvc for postgresql-k8s2/0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/persistentvolumeclaims "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1089 got pvc for archive storage: postgresql-k8s2-archive-cd35b7bd-postgresql-k8s2-0
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1089 got pvc for data storage: postgresql-k8s2-data-cd35b7bd-postgresql-k8s2-0
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1089 got pvc for logs storage: postgresql-k8s2-logs-cd35b7bd-postgresql-k8s2-0
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1089 got pvc for temp storage: postgresql-k8s2-temp-cd35b7bd-postgresql-k8s2-0
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:189 scale to 0
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:193 load and change pv-name config for pvc postgresql-k8s2-archive-cd35b7bd-postgresql-k8s2-0
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:193 load and change pv-name config for pvc postgresql-k8s2-data-cd35b7bd-postgresql-k8s2-0
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:193 load and change pv-name config for pvc postgresql-k8s2-logs-cd35b7bd-postgresql-k8s2-0
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:193 load and change pv-name config for pvc postgresql-k8s2-temp-cd35b7bd-postgresql-k8s2-0
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:199 delete pvc postgresql-k8s2-archive-cd35b7bd-postgresql-k8s2-0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: DELETE https://127.0.0.1:6443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s2-archive-cd35b7bd-postgresql-k8s2-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:199 delete pvc postgresql-k8s2-data-cd35b7bd-postgresql-k8s2-0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: DELETE https://127.0.0.1:6443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s2-data-cd35b7bd-postgresql-k8s2-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:199 delete pvc postgresql-k8s2-logs-cd35b7bd-postgresql-k8s2-0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: DELETE https://127.0.0.1:6443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s2-logs-cd35b7bd-postgresql-k8s2-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:199 delete pvc postgresql-k8s2-temp-cd35b7bd-postgresql-k8s2-0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: DELETE https://127.0.0.1:6443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s2-temp-cd35b7bd-postgresql-k8s2-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:204 waiting for pvc postgresql-k8s2-archive-cd35b7bd-postgresql-k8s2-0 to be deleted
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s2-archive-cd35b7bd-postgresql-k8s2-0 "HTTP/1.1 404 Not Found"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:204 waiting for pvc postgresql-k8s2-data-cd35b7bd-postgresql-k8s2-0 to be deleted
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s2-data-cd35b7bd-postgresql-k8s2-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s2-data-cd35b7bd-postgresql-k8s2-0 "HTTP/1.1 404 Not Found"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:204 waiting for pvc postgresql-k8s2-logs-cd35b7bd-postgresql-k8s2-0 to be deleted
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s2-logs-cd35b7bd-postgresql-k8s2-0 "HTTP/1.1 404 Not Found"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:204 waiting for pvc postgresql-k8s2-temp-cd35b7bd-postgresql-k8s2-0 to be deleted
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s2-temp-cd35b7bd-postgresql-k8s2-0 "HTTP/1.1 404 Not Found"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:216 remove claimref from pv pvc-1951eff4-f0f6-4a11-9ad3-e05ad103a202
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH https://127.0.0.1:6443/api/v1/persistentvolumes/pvc-1951eff4-f0f6-4a11-9ad3-e05ad103a202 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:216 remove claimref from pv pvc-dde93886-1650-407f-9ad6-f99fc6cf4796
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH https://127.0.0.1:6443/api/v1/persistentvolumes/pvc-dde93886-1650-407f-9ad6-f99fc6cf4796 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:216 remove claimref from pv pvc-e38405db-3541-4f1f-8318-e3c27cf461c6
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH https://127.0.0.1:6443/api/v1/persistentvolumes/pvc-e38405db-3541-4f1f-8318-e3c27cf461c6 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:216 remove claimref from pv pvc-e53f642f-28a6-49d7-be44-465196395370
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH https://127.0.0.1:6443/api/v1/persistentvolumes/pvc-e53f642f-28a6-49d7-be44-465196395370 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:220 apply pvc postgresql-k8s2-archive-cd35b7bd-postgresql-k8s2-0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH https://127.0.0.1:6443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s2-archive-cd35b7bd-postgresql-k8s2-0?fieldManager=lightkube "HTTP/1.1 201 Created"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:220 apply pvc postgresql-k8s2-data-cd35b7bd-postgresql-k8s2-0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH https://127.0.0.1:6443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s2-data-cd35b7bd-postgresql-k8s2-0?fieldManager=lightkube "HTTP/1.1 201 Created"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:220 apply pvc postgresql-k8s2-logs-cd35b7bd-postgresql-k8s2-0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH https://127.0.0.1:6443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s2-logs-cd35b7bd-postgresql-k8s2-0?fieldManager=lightkube "HTTP/1.1 201 Created"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:220 apply pvc postgresql-k8s2-temp-cd35b7bd-postgresql-k8s2-0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: PATCH https://127.0.0.1:6443/api/v1/namespaces/testing/persistentvolumeclaims/postgresql-k8s2-temp-cd35b7bd-postgresql-k8s2-0?fieldManager=lightkube "HTTP/1.1 201 Created"
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:223 scale to 1
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:226 waiting for duplicate application to be blocked
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2 (not enough units yet - 0/1)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s2/0 [executing] waiting: awaiting for cluster to start
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:232 Application is not in blocked state. Checking logs...
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:235 checking operator password auth
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  01:51:12Z
+
+App              Version  Status  Scale  Charm           Channel  Rev  Address         Exposed  Message
+postgresql-k8s2  16.15    active      1  postgresql-k8s             1  10.152.183.163  no       
+
+Unit                Workload  Agent      Address     Ports  Message
+postgresql-k8s2/0*  waiting   executing  10.1.0.104         awaiting for primary endpoint to be ready
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-0: 01:36:39 ERROR unit.postgresql-k8s/0.juju-log __main__:failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 469, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 186, in _connect_to_database
+    connection = psycopg2.connect(
+                 ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.testing.svc.cluster.local" (10.152.183.61), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/charm.py", line 1046, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 498, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+single_kernel_postgresql.compat.postgresql.PostgreSQLEnableDisableExtensionError
+unit-postgresql-k8s-0: 01:36:49 ERROR unit.postgresql-k8s/0.juju-log __main__:failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 469, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 186, in _connect_to_database
+    connection = psycopg2.connect(
+                 ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.testing.svc.cluster.local" (10.152.183.61), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/charm.py", line 1046, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 498, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+single_kernel_postgresql.compat.postgresql.PostgreSQLEnableDisableExtensionError
+controller-0: 01:40:54 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql-k8s": building app "postgresql-k8s" config: getting OCI image resources: unable to fetch OCI image resources for postgresql-k8s: application "postgresql-k8s" dying or dead
+unit-postgresql-k8s2-0: 01:41:57 ERROR unit.postgresql-k8s2/0.juju-log __main__:failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 469, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 186, in _connect_to_database
+    connection = psycopg2.connect(
+                 ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "postgresql-k8s2-primary.testing.svc.cluster.local" (10.152.183.173), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/src/charm.py", line 1046, in _handle_enable_disable_extensions
+    self.postgresql.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-postgresql-k8s2-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 498, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+single_kernel_postgresql.compat.postgresql.PostgreSQLEnableDisableExtensionError
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
