@@ -364,14 +364,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             request_restart=self.request_restart,
             restart_services=self.restart_services,
         )
-        self.observer_handler = ObserverEventsHandler(
-            self,  # type: ignore
-            workload=self.workload,
-            state=self.state,
-            async_replication_manager=self.async_replication_manager,
-            database_manager=self.database_manager,
-            watcher_handler=self.watcher_handler,
-        )
         # Reload PostgreSQL after the lib TLS handler has actually pushed the cert files.
         # tls_files_pushed fires only on a completed push (the handler routes both
         # certificate_available and relation_broken through it); we then refresh the K8s
@@ -405,6 +397,14 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         # self.logical_replication = PostgreSQLLogicalReplication(self)
         self.restart_manager = RollingOpsManager(
             charm=self, relation="restart", callback=self._restart
+        )
+        self.observer_handler = ObserverEventsHandler(
+            self,  # type: ignore
+            workload=self.workload,
+            state=self.state,
+            async_replication_manager=self.async_replication_manager,
+            database_manager=self.database_manager,
+            watcher_handler=self.watcher_handler,
         )
 
         if self.model.juju_version.supports_open_port_on_k8s:
