@@ -1,0 +1,19 @@
+[32mINFO    [0m integration.test_plugins:test_plugins.py:224 Creating an index object which depends on the pg_trgm config
+[32mINFO    [0m integration.test_plugins:test_plugins.py:233 Disabling the plugin on charm config, waiting for blocked status
+[32mINFO    [0m integration.test_plugins:test_plugins.py:242 Enabling the plugin back on charm config, status should resolve
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] blocked: Cannot disable plugins: Existing objects depend on it. See logs
+  postgresql-k8s/1 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [idle] active: 
+[32mINFO    [0m integration.test_plugins:test_plugins.py:248 Re-disabling plugin, waiting for blocked status to come back
+[32mINFO    [0m integration.test_plugins:test_plugins.py:257 Delete the object which depends on the plugin
+[32mINFO    [0m integration.test_plugins:test_plugins.py:263 Waiting for status to resolve again
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] blocked: Cannot disable plugins: Existing objects depend on it. See logs
+  postgresql-k8s/1 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] blocked: Cannot disable plugins: Existing objects depend on it. See logs
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
