@@ -163,7 +163,9 @@ def test_fail_and_rollback(juju: Juju, charm: str, continuous_writes) -> None:
     juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
 
     logging.info("Run resume-refresh action")
-    juju.run(unit=get_app_leader(juju, DB_APP_NAME), action="resume-refresh", wait=30 * MINUTE_SECS)
+    juju.run(
+        unit=get_app_leader(juju, DB_APP_NAME), action="resume-refresh", wait=30 * MINUTE_SECS
+    )
 
     logging.info("Wait for upgrade to complete")
     juju.wait(
