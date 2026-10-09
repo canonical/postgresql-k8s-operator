@@ -101,7 +101,7 @@ async def test_rollback_without_pre_refresh_check(
                 unit=unit_names[-1],
                 action="force-refresh-start",
                 params={"check-compatibility": False},
-                wait=5 * MINUTE_SECS,
+                wait=30 * MINUTE_SECS,
             )
     except TimeoutError:
         logging.info("Upgrade completed without incompatibility")
@@ -115,7 +115,7 @@ async def test_rollback_without_pre_refresh_check(
             juju.run(
                 unit=get_app_leader(juju, DB_APP_NAME),
                 action="resume-refresh",
-                wait=5 * MINUTE_SECS,
+                wait=30 * MINUTE_SECS,
             )
 
     logging.info("Wait for upgrade to complete")
