@@ -15,7 +15,6 @@ from single_kernel_postgresql.config.literals import (
 )
 
 from charm import PostgresqlOperatorCharm
-from relations.async_replication import SECRET_LABEL
 
 RELATION_NAMES = ["replication-offer", "replication"]
 
@@ -49,13 +48,14 @@ def standby():
 @pytest.mark.parametrize("is_leader", [True, False])
 def test_on_async_relation_broken(harness, is_leader, relation_name):
     with (
+        patch.object(harness.charm.async_replication_manager, "update_config"),
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
         patch(
-            "relations.async_replication.PostgreSQLAsyncReplication.set_app_status"
+            "single_kernel_postgresql.events.async_replication.PostgreSQLAsyncReplication.set_app_status"
         ) as _set_app_status,
         patch("charm.PatroniManager.get_standby_leader") as _get_standby_leader,
         patch(
-            "relations.async_replication.PostgreSQLAsyncReplication._on_async_relation_departed"
+            "single_kernel_postgresql.events.async_replication.PostgreSQLAsyncReplication._on_async_relation_departed"
         ) as _on_async_relation_departed,
     ):
         # Test before the peer relation is available.
@@ -135,11 +135,11 @@ def test_on_async_relation_broken(harness, is_leader, relation_name):
 def test_on_async_relation_created(harness, relation_name):
     with (
         patch(
-            "relations.async_replication.PostgreSQLAsyncReplication._get_highest_promoted_cluster_counter_value",
+            "single_kernel_postgresql.managers.async_replication.AsyncReplicationManager.get_highest_promoted_cluster_counter_value",
             side_effect=["0", "1"],
         ) as _get_highest_promoted_cluster_counter_value,
         patch(
-            "relations.async_replication.PostgreSQLAsyncReplication._get_unit_ip",
+            "single_kernel_postgresql.managers.async_replication.AsyncReplicationManager._get_unit_ip",
             return_value="1.1.1.1",
         ) as _get_unit_ip,
     ):
@@ -187,7 +187,7 @@ def test_on_async_relation_departed(harness, relation_name):
 @pytest.mark.parametrize("wait_for_standby", [True, False])
 def test_on_async_relation_changed(harness, wait_for_standby):
     with patch(
-        "relations.async_replication.PostgreSQLAsyncReplication._get_unit_ip",
+        "single_kernel_postgresql.managers.async_replication.AsyncReplicationManager._get_unit_ip",
         return_value="1.1.1.1",
     ) as _get_unit_ip:
         harness.add_relation(
@@ -211,18 +211,19 @@ def test_on_async_relation_changed(harness, wait_for_standby):
             "charm.PatroniManager.member_started", new_callable=PropertyMock
         ) as _patroni_member_started,
         patch("charm.PostgresqlOperatorCharm._create_pgdata") as _create_pgdata,
+        patch.object(harness.charm.async_replication_manager, "update_config"),
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
         patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
         patch(
-            "relations.async_replication.PostgreSQLAsyncReplication.get_system_identifier",
+            "charm.K8sWorkload.get_system_identifier",
             return_value=("12345", None),
         ),
         patch(
-            "relations.async_replication.PostgreSQLAsyncReplication._wait_for_standby_leader",
+            "single_kernel_postgresql.managers.async_replication.AsyncReplicationManager._wait_for_standby_leader",
             return_value=wait_for_standby,
         ),
         patch(
-            "relations.async_replication.PostgreSQLAsyncReplication._get_unit_ip",
+            "single_kernel_postgresql.managers.async_replication.AsyncReplicationManager._get_unit_ip",
             return_value="1.1.1.1",
         ) as _get_unit_ip,
     ):
@@ -247,25 +248,26 @@ def test_create_replication(harness, relation_name):
     """Test create-replication action."""
     with (
         patch(
-            "charm.PostgresqlOperatorCharm.is_cluster_initialised",
+            "single_kernel_postgresql.core.peer_relation.PostgreSQLApplication.is_cluster_initialised",
             new_callable=PropertyMock,
             return_value=False,
         ) as _is_cluster_initialised,
         patch(
-            "relations.async_replication.PostgreSQLAsyncReplication._get_unit_ip",
+            "single_kernel_postgresql.managers.async_replication.AsyncReplicationManager._get_unit_ip",
             return_value="10.1.1.10",
         ),
         patch(
-            "relations.async_replication.PostgreSQLAsyncReplication.get_system_identifier",
+            "charm.K8sWorkload.get_system_identifier",
             return_value=("12345", None),
         ),
         patch(
-            "relations.async_replication.PostgreSQLAsyncReplication._primary_cluster_endpoint",
+            "single_kernel_postgresql.managers.async_replication.AsyncReplicationManager.primary_cluster_endpoint",
             new_callable=PropertyMock,
             return_value="10.1.1.10",
         ),
         patch("charm.PatroniManager.get_standby_leader", return_value=None),
-        patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
+        patch.object(harness.charm.async_replication_manager, "update_config") as _update_config,
+        patch("charm.PostgresqlOperatorCharm.update_config"),
         patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
     ):
         harness.charm.model.app.add_secret(
@@ -291,24 +293,27 @@ def test_promote_to_primary(harness, relation_name):
     with (
         patch("charm.datetime") as _datetime,
         patch(
-            "charm.PostgresqlOperatorCharm.is_cluster_initialised",
+            "single_kernel_postgresql.core.peer_relation.PostgreSQLApplication.is_cluster_initialised",
             new_callable=PropertyMock,
             return_value=True,
         ),
         patch(
-            "relations.async_replication.PostgreSQLAsyncReplication.get_system_identifier",
+            "charm.K8sWorkload.get_system_identifier",
             return_value=("12345", None),
         ),
+        patch.object(harness.charm.async_replication_manager, "update_config"),
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
         patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
         patch(
-            "relations.async_replication.PostgreSQLAsyncReplication._primary_cluster_endpoint",
+            "single_kernel_postgresql.managers.async_replication.AsyncReplicationManager.primary_cluster_endpoint",
             new_callable=PropertyMock,
             return_value="10.1.1.10",
         ),
         patch("charm.PatroniManager.get_primary"),
         patch("charm.PatroniManager.get_standby_leader", return_value=None),
+        patch("single_kernel_postgresql.managers.async_replication.datetime") as _datetime,
     ):
+        _datetime.now.return_value = _now
         with harness.hooks_disabled():
             harness.add_relation(
                 PEER_RELATION, harness.charm.app.name, unit_data={"unit-address": "10.1.1.10"}
@@ -328,7 +333,7 @@ def test_promote_to_primary(harness, relation_name):
 @pytest.mark.parametrize("relation_name", RELATION_NAMES)
 def test_on_secret_changed(harness, relation_name):
     with patch(
-        "relations.async_replication.PostgreSQLAsyncReplication._get_unit_ip",
+        "single_kernel_postgresql.managers.async_replication.AsyncReplicationManager._get_unit_ip",
         return_value="1.1.1.1",
     ) as _get_unit_ip:
         secret_id = harness.add_model_secret("primary", {"operator-password": "old"})
@@ -337,16 +342,20 @@ def test_on_secret_changed(harness, relation_name):
             relation_name, harness.charm.app.name, unit_data={"unit-address": "10.1.1.10"}
         )
 
-    secret_label = (
-        f"{PEER_RELATION}.{harness.charm.app.name}.app"
-        if relation_name == REPLICATION_OFFER_RELATION
-        else SECRET_LABEL
-    )
+    # The shared secret is referenced by id in the relation data (DPE-10203): the consumer
+    # branch matches secret-changed events against the published id, so the consumer-side
+    # test publishes the real secret id in primary-cluster-data, while the offer-side test
+    # leaves it empty to prove a fresh secret id gets published.
     harness.grant_secret(secret_id, harness.charm.app.name)
-    harness.charm.model.get_secret(id=secret_id, label=secret_label)
+    if relation_name == REPLICATION_OFFER_RELATION:
+        harness.charm.model.get_secret(
+            id=secret_id, label=f"{PEER_RELATION}.{harness.charm.app.name}.app"
+        )
+    else:
+        harness.charm.model.get_secret(id=secret_id)
     primary_cluster_data = {
         "endpoint": "10.1.1.10",
-        "secret-id": "",
+        "secret-id": secret_id if relation_name == REPLICATION_CONSUMER_RELATION else "",
         "name": "default",
     }
 
@@ -372,7 +381,7 @@ def test_on_secret_changed(harness, relation_name):
         ) as _charm_on_peer_relation_changed,
         patch("charm.PostgresqlOperatorCharm._on_secret_changed", return_value=None),
         patch(
-            "relations.async_replication.PostgreSQLAsyncReplication._primary_cluster_endpoint",
+            "single_kernel_postgresql.managers.async_replication.AsyncReplicationManager.primary_cluster_endpoint",
             new_callable=PropertyMock,
             return_value="10.1.1.10",
         ),
