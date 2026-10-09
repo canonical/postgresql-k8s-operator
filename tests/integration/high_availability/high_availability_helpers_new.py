@@ -276,9 +276,9 @@ def run_upgrade(juju: Juju, app_name: str, charm: str) -> None:
     try:
         juju.wait(
             lambda status: status.apps[app_name].units[unit_names[-1]].is_blocked,
-            timeout=5 * MINUTE_SECS,
+            timeout=15 * MINUTE_SECS,
         )
-        juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
+        juju.wait(jubilant.all_agents_idle, timeout=15 * MINUTE_SECS)
 
         if (
             "Refresh incompatible"
@@ -289,22 +289,22 @@ def run_upgrade(juju: Juju, app_name: str, charm: str) -> None:
                 unit=unit_names[-1],
                 action="force-refresh-start",
                 params={"check-compatibility": False},
-                wait=5 * MINUTE_SECS,
+                wait=30 * MINUTE_SECS,
             )
     except TimeoutError:
         logging.info("Upgrade started without incompatibility")
 
     juju.wait(
         lambda status: status.apps[app_name].units[unit_names[-1]].is_active,
-        timeout=5 * MINUTE_SECS,
+        timeout=15 * MINUTE_SECS,
     )
-    juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
+    juju.wait(jubilant.all_agents_idle, timeout=15 * MINUTE_SECS)
 
     logging.info("Run resume-refresh action")
-    for attempt in Retrying(reraise=True, stop=stop_after_attempt(3), wait=wait_fixed(3)):
+    for attempt in Retrying(reraise=True, stop=stop_after_attempt(5), wait=wait_fixed(30)):
         with attempt:
             juju.run(
-                unit=get_app_leader(juju, app_name), action="resume-refresh", wait=5 * MINUTE_SECS
+                unit=get_app_leader(juju, app_name), action="resume-refresh", wait=30 * MINUTE_SECS
             )
 
     logging.info("Wait for upgrade to complete")

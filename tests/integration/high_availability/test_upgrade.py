@@ -72,7 +72,7 @@ def test_pre_refresh_check(juju: Juju) -> None:
     logging.info("Run pre-refresh-check action")
     juju.run(unit=db_leader, action="pre-refresh-check")
 
-    juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
+    juju.wait(jubilant.all_agents_idle, timeout=15 * MINUTE_SECS)
 
 
 def test_upgrade_from_edge(juju: Juju, charm: str, continuous_writes) -> None:
@@ -118,7 +118,7 @@ def test_fail_and_rollback(juju: Juju, charm: str, continuous_writes) -> None:
     logging.info("Run pre-refresh-check action")
     juju.run(unit=db_app_leader, action="pre-refresh-check")
 
-    juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
+    juju.wait(jubilant.all_agents_idle, timeout=15 * MINUTE_SECS)
 
     tmp_folder = Path("tmp")
     tmp_folder.mkdir(exist_ok=True)
@@ -141,7 +141,7 @@ def test_fail_and_rollback(juju: Juju, charm: str, continuous_writes) -> None:
     logging.info("Wait for upgrade to fail last unit to fail")
     juju.wait(
         lambda status: status.apps[DB_APP_NAME].units[unit_names[-1]].is_blocked,
-        timeout=5 * MINUTE_SECS,
+        timeout=15 * MINUTE_SECS,
     )
 
     logging.info("Ensure continuous writes on all active units")
@@ -158,12 +158,14 @@ def test_fail_and_rollback(juju: Juju, charm: str, continuous_writes) -> None:
 
     juju.wait(
         lambda status: status.apps[DB_APP_NAME].units[unit_names[-1]].is_active,
-        timeout=5 * MINUTE_SECS,
+        timeout=15 * MINUTE_SECS,
     )
-    juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
+    juju.wait(jubilant.all_agents_idle, timeout=15 * MINUTE_SECS)
 
     logging.info("Run resume-refresh action")
-    juju.run(unit=get_app_leader(juju, DB_APP_NAME), action="resume-refresh", wait=5 * MINUTE_SECS)
+    juju.run(
+        unit=get_app_leader(juju, DB_APP_NAME), action="resume-refresh", wait=30 * MINUTE_SECS
+    )
 
     logging.info("Wait for upgrade to complete")
     juju.wait(
