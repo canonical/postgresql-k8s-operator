@@ -1,0 +1,35 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  02:10:29Z
+
+App             Version  Status  Scale  Charm           Channel  Rev  Address         Exposed  Message
+postgresql-k8s  16.15    active      2  postgresql-k8s             0  10.152.183.169  no       
+
+Unit               Workload  Agent  Address     Ports  Message
+postgresql-k8s/0   active    idle   10.1.0.127         
+postgresql-k8s/1*  active    idle   10.1.0.16          Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-1: 02:07:30 ERROR unit.postgresql-k8s/1.juju-log __main__:Failed to disable plugin: cannot drop extension pg_trgm because other objects depend on it
+DETAIL:  index example_idx depends on operator class gin_trgm_ops for access method gin
+HINT:  Use DROP ... CASCADE to drop the dependent objects too.
+
+Was the plugin enabled manually? If so, update charm config with `juju config postgresql-k8s plugin-<plugin_name>-enable=True`
+unit-postgresql-k8s-1: 02:08:18 ERROR unit.postgresql-k8s/1.juju-log __main__:Failed to disable plugin: cannot drop extension pg_trgm because other objects depend on it
+DETAIL:  index example_idx depends on operator class gin_trgm_ops for access method gin
+HINT:  Use DROP ... CASCADE to drop the dependent objects too.
+
+Was the plugin enabled manually? If so, update charm config with `juju config postgresql-k8s plugin-<plugin_name>-enable=True`
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
