@@ -599,7 +599,7 @@ options:
   plugin-pg-cron-enable:
     default: false
     type: boolean
-    description: Enable pg_cron extension
+    description: Enable pg_cron in the postgres database
   plugin-pg-freespacemap-enable:
     default: false
     type: boolean
