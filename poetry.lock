@@ -1910,7 +1910,11 @@ optional = false
 python-versions = ">=3.8,<4.0"
 groups = ["main", "integration"]
 files = [
+<<<<<<< HEAD
     {file = "b81f21ce179048c6e3d96a071f09bee006620223.tar.gz", hash = "sha256:93a15b394a82337d8efd9e66c41ab3b94c8a4f201b34a900a8d9b3b8da2fdbfb"},
+=======
+    {file = "469de4798478bcd167621239c6ccbaec371ac4fb.zip", hash = "sha256:3160f4d38fad7d305592fab4e44565d5326c20fc21808acdadc9889625c3ff3c"},
+>>>>>>> origin/dpe-10068-observer-manager
 ]
 
 [package.dependencies]
@@ -1920,7 +1924,10 @@ charm-refresh = {version = "*", optional = true, markers = "python_version >= \"
 charmlibs-interfaces-tls-certificates = {version = ">=1.8.3", optional = true, markers = "python_version >= \"3.12\" and extra == \"postgresql\""}
 charmlibs-pathops = {version = ">=1.0.1", optional = true, markers = "python_version >= \"3.12\" and extra == \"postgresql\""}
 charmlibs-rollingops = {version = ">=1.1.1", optional = true, markers = "python_version >= \"3.12\" and extra == \"postgresql\""}
+<<<<<<< HEAD
 cryptography = ">=42.0.0"
+=======
+>>>>>>> origin/dpe-10068-observer-manager
 data-platform-helpers = {version = ">=0.1.7", optional = true, markers = "python_version >= \"3.12\" and extra == \"postgresql\""}
 httpx = {version = "*", optional = true, markers = "python_version >= \"3.12\" and extra == \"postgresql\""}
 jinja2 = {version = ">=3.1.6", optional = true, markers = "python_version >= \"3.12\" and extra == \"postgresql\""}
@@ -1936,11 +1943,19 @@ tomli = {version = "*", optional = true, markers = "python_version >= \"3.12\" a
 db-driver = ["psycopg2 (>=2.9.10)"]
 k8s = ["lightkube (>=0.21.0) ; python_version >= \"3.12\"", "lightkube-models (>=1.28.1.4) ; python_version >= \"3.12\""]
 postgresql = ["boto3 (>=1.43.85) ; python_version >= \"3.12\"", "botocore (>=1.43.85) ; python_version >= \"3.12\"", "charm-refresh ; python_version >= \"3.12\"", "charmlibs-interfaces-tls-certificates (>=1.8.3) ; python_version >= \"3.12\"", "charmlibs-pathops (>=1.0.1) ; python_version >= \"3.12\"", "charmlibs-rollingops (>=1.1.1) ; python_version >= \"3.12\"", "data-platform-helpers (>=0.1.7) ; python_version >= \"3.12\"", "httpx ; python_version >= \"3.12\"", "jinja2 (>=3.1.6) ; python_version >= \"3.12\"", "pydantic (>=2.0) ; python_version >= \"3.12\"", "requests ; python_version >= \"3.12\"", "tomli ; python_version >= \"3.12\""]
+<<<<<<< HEAD
 vm = ["charmlibs-snap (>=1.0.1,<2) ; python_version >= \"3.12\"", "charmlibs-systemd (>=1.0.0.post0) ; python_version >= \"3.12\"", "psutil (>=7.2.2) ; python_version >= \"3.12\"", "pysyncobj (>=0.3.15) ; python_version >= \"3.12\""]
 
 [package.source]
 type = "url"
 url = "https://github.com/canonical/postgresql-single-kernel-library/archive/b81f21ce179048c6e3d96a071f09bee006620223.tar.gz"
+=======
+vm = ["charmlibs-snap (>=1.0.1) ; python_version >= \"3.12\"", "charmlibs-systemd (>=1.0.0.post0) ; python_version >= \"3.12\"", "psutil (>=7.2.2) ; python_version >= \"3.12\"", "pysyncobj (>=0.3.15) ; python_version >= \"3.12\""]
+
+[package.source]
+type = "url"
+url = "https://github.com/canonical/postgresql-single-kernel-library/archive/469de4798478bcd167621239c6ccbaec371ac4fb.zip"
+>>>>>>> origin/dpe-10068-observer-manager
 
 [[package]]
 name = "prompt-toolkit"
@@ -3299,4 +3314,8 @@ h11 = ">=0.16.0,<1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
+<<<<<<< HEAD
 content-hash = "a86c2d05040de0fd47d3ebcf7687c8da2eccfd378a5435c3a9815fb628ea3e36"
+=======
+content-hash = "c72aa0011461b7d79ee8bd2d3fb3dd8c9c7df445ec4bdad87420319b0a5d2585"
+>>>>>>> origin/dpe-10068-observer-manager
