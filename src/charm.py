@@ -404,6 +404,8 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             state=self.state,
             async_replication_manager=self.async_replication_manager,
             database_manager=self.database_manager,
+            patroni_manager=self.patroni_manager,
+            tls_manager=self.tls_manager,
             watcher_handler=self.watcher_handler,
         )
 
