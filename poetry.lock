@@ -1980,13 +1980,13 @@ files = [
 
 [[package]]
 name = "postgresql-charms-single-kernel"
-version = "16.3.13"
+version = "16.3.15"
 description = "Shared and reusable code for PostgreSQL-related charms"
 optional = false
 python-versions = ">=3.8,<4.0"
 groups = ["main", "integration"]
 files = [
-    {file = "ddb69bcd197c04d680ec4762bdc2d2773dd4885d.zip", hash = "sha256:6571f5457c9646deb8e8b9fc90225f0e6f7a2183939824e6d0e39abb836e8bd3"},
+    {file = "db07de983b4e7f33c218c8bdf00051099ee8ad4f.zip", hash = "sha256:f296b3d76a2caeee200a4a0064feb304b5b4bc3738fca4d2714c5d32b89bb5a9"},
 ]
 
 [package.dependencies]
@@ -1996,6 +1996,7 @@ charm-refresh = {version = "*", optional = true, markers = "python_version >= \"
 charmlibs-interfaces-tls-certificates = {version = ">=1.8.3", optional = true, markers = "python_version >= \"3.12\" and extra == \"postgresql\""}
 charmlibs-pathops = {version = ">=1.0.1", optional = true, markers = "python_version >= \"3.12\" and extra == \"postgresql\""}
 charmlibs-rollingops = {version = ">=1.1.1", optional = true, markers = "python_version >= \"3.12\" and extra == \"postgresql\""}
+cryptography = ">=42.0.0"
 data-platform-helpers = {version = ">=0.1.7", optional = true, markers = "python_version >= \"3.12\" and extra == \"postgresql\""}
 httpx = {version = "*", optional = true, markers = "python_version >= \"3.12\" and extra == \"postgresql\""}
 jinja2 = {version = ">=3.1.6", optional = true, markers = "python_version >= \"3.12\" and extra == \"postgresql\""}
@@ -2015,7 +2016,7 @@ vm = ["charmlibs-snap (>=1.0.1) ; python_version >= \"3.12\"", "charmlibs-system
 
 [package.source]
 type = "url"
-url = "https://github.com/canonical/postgresql-single-kernel-library/archive/ddb69bcd197c04d680ec4762bdc2d2773dd4885d.zip"
+url = "https://github.com/canonical/postgresql-single-kernel-library/archive/db07de983b4e7f33c218c8bdf00051099ee8ad4f.zip"
 
 [[package]]
 name = "prompt-toolkit"
@@ -3413,4 +3414,4 @@ h11 = ">=0.16.0,<1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "22c2ac37638c3bf69c50b3ef9cfb1f841824e03c718f455fb83266a6cad47616"
+content-hash = "f0a41438d85a1358322e99a226578f106855a7b1a5c9b91d76a096c6ac599744"
