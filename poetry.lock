@@ -526,6 +526,21 @@ shortuuid = ">=1.0.13"
 tenacity = "*"
 
 [[package]]
+name = "charmlibs-snap"
+version = "1.0.1.post0"
+description = "The charmlibs.snap package."
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "charmlibs_snap-1.0.1.post0-py3-none-any.whl", hash = "sha256:655041096952c63e92c8d25a6183149f0594d4888be4be62a9635cb96897aa01"},
+    {file = "charmlibs_snap-1.0.1.post0.tar.gz", hash = "sha256:1e8da752ee405aa981665da8c4772016236baf80d2d902b02ec8c1c640fb2844"},
+]
+
+[package.dependencies]
+opentelemetry-api = "*"
+
+[[package]]
 name = "charset-normalizer"
 version = "3.5.1"
 description = "The Real First Universal Charset Detector. Open, modern and actively maintained alternative to Chardet."
@@ -3334,4 +3349,4 @@ h11 = ">=0.16.0,<1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "27ceabbaa41988b2c8bd9acf8a1c307482ac0667afb4845f59ffe2fdd5d7c3ad"
+content-hash = "1907b92c7f9fbc3db2b9725461ac58b87ee59df2b49082f22949eb8a6d3e7734"
