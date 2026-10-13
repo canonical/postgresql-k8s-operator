@@ -372,6 +372,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
             resource_provider=self.get_resource_provider,
             request_restart=self.request_restart,
             restart_services=self.restart_services,
+            set_unit_status=self.set_unit_status,
             logical_replication_slots=self.logical_replication.replication_slots,
         )
         # Reload PostgreSQL after the lib TLS handler has actually pushed the cert files.
