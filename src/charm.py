@@ -561,28 +561,6 @@ class PostgresqlOperatorCharm(TypedCharmBase[K8SCharmConfig]):
         """Bridge for the lib async-replication handler: recreate the pgdata folder."""
         self._create_pgdata(self.workload.container)
 
-    def set_app_status(self, status: StatusBase) -> None:
-        """Bridge for the lib async-replication handler: set the application status.
-
-        Keeps the gates the old relations/async_replication module relied on: skip when
-        the app status cannot be set yet, and never override a higher-priority
-        refresh status.
-        """
-        if not self.can_set_app_status:
-            return
-        if self.refresh is not None and self.refresh.app_status_higher_priority:
-            self.app.status = self.refresh.app_status_higher_priority
-            return
-        self.app.status = status
-
-    def set_primary_status_message(self) -> None:
-        """Bridge for the lib async-replication handler: recompute the unit status."""
-        self._set_active_status()
-
-    def create_pgdata(self) -> None:
-        """Bridge for the lib async-replication handler: recreate the pgdata folder."""
-        self._create_pgdata(self.workload.container)
-
     def _generate_metrics_jobs(self, enable_tls: bool) -> list[dict]:
         """Generate spec for Prometheus scraping."""
         return [
