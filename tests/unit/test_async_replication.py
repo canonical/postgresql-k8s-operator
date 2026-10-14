@@ -291,7 +291,6 @@ def test_promote_to_primary(harness, relation_name):
     """Test promote-to-primary action."""
     _now = datetime.now(UTC)
     with (
-        patch("charm.datetime") as _datetime,
         patch(
             "single_kernel_postgresql.core.peer_relation.PostgreSQLApplication.is_cluster_initialised",
             new_callable=PropertyMock,
