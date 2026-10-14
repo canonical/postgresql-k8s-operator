@@ -20,7 +20,6 @@ except ModuleNotFoundError:
         main(WrongArchitectureWarningCharm, use_juju_for_storage=True)
     raise
 
-import ops.log
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v1.loki_push_api import LogProxyConsumer
 from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
@@ -46,16 +45,6 @@ class PostgresqlOperatorCharm(PostgreSQLK8sCharm):
                 str(self.restart_manager.name)
             ].acquire_lock.emit(),
         )
-
-        # Show logger name (module name) in logs.
-        root_logger = logging.getLogger()
-        for handler in root_logger.handlers:
-            if isinstance(handler, ops.log.JujuLogHandler):
-                handler.setFormatter(logging.Formatter("{name}:{message}", style="{"))
-
-        # The rolling-ops manager is a charm lib; it stays charm-side. It resolves
-        # its callback BY NAME on the charm (getattr(charm, callback.__name__)), so
-        # the charm must carry a named method delegating to the lib events handler.
         self.restart_manager = RollingOpsManager(
             charm=self,
             relation="restart",
@@ -77,10 +66,6 @@ class PostgresqlOperatorCharm(PostgreSQLK8sCharm):
         self.tracing = Tracing(self, tracing_relation_name=TRACING_RELATION_NAME)
 
         self.tls_transfer = TLSTransfer(self, PEER_RELATION)
-
-    def _restart(self, event) -> None:
-        """Delegate to the lib events handler (rolling-ops resolves the callback by name)."""
-        self.postgresql_events_handler._restart(event)
 
 
 if __name__ == "__main__":
