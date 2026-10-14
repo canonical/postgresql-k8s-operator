@@ -1,0 +1,149 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/glauth-k8s-67
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/self-signed-certificates-586
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/postgresql-k8s-960
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-self-signed-certificates/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-postgresql-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-k8s/0 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-self-signed-certificates/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  glauth-postgresql-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  20:04:16Z
+
+App                              Version  Status       Scale  Charm                     Channel      Rev  Address         Exposed  Message
+glauth-k8s                                error            1  glauth-k8s                latest/edge   67  10.152.183.68   no       hook failed: "config-changed"
+glauth-postgresql-k8s                     maintenance      1  postgresql-k8s            14/stable    960  10.152.183.85   no       installing charm software
+glauth-self-signed-certificates           active           1  self-signed-certificates  1/stable     586  10.152.183.91   no       
+postgresql-k8s                   16.15    active           1  postgresql-k8s                           0  10.152.183.138  no       
+
+Unit                                Workload     Agent      Address     Ports  Message
+glauth-k8s/0*                       error        idle       10.1.0.1           hook failed: "config-changed"
+glauth-postgresql-k8s/0*            maintenance  executing  10.1.0.198         (start) installing charm software
+glauth-self-signed-certificates/0*  active       idle       10.1.0.253         
+postgresql-k8s/0*                   active       idle       10.1.0.193         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-0: 20:02:53 ERROR unit.postgresql-k8s/0.juju-log single_kernel_postgresql.managers.config:failed to change plugins: 
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 470, in enable_disable_extensions
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 187, in _connect_to_database
+    connection = psycopg2.connect(
+                 ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.testing.svc.cluster.local" (10.152.183.71), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/managers/config.py", line 869, in reconcile_extensions
+    postgresql_client.enable_disable_extensions(extensions, database)
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 500, in enable_disable_extensions
+    raise PostgreSQLEnableDisableExtensionError() from e
+single_kernel_postgresql.compat.postgresql.PostgreSQLEnableDisableExtensionError
+unit-glauth-k8s-0: 20:03:54 ERROR unit.glauth-k8s/0.juju-log Error fetching ConfigMap: configmaps "glauth-k8s" not found
+unit-glauth-k8s-0: 20:04:15 ERROR unit.glauth-k8s/0.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 250, in handle_request
+    resp = self._pool.handle_request(req)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection_pool.py", line 256, in handle_request
+    raise exc from None
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection_pool.py", line 236, in handle_request
+    response = connection.handle_request(
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 101, in handle_request
+    raise exc
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 78, in handle_request
+    stream = self._connect(request)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 124, in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/httpcore/_backends/sync.py", line 207, in connect_tcp
+    with map_exceptions(exc_map):
+  File "/usr/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectTimeout: timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/src/charm.py", line 433, in <module>
+    main(GLAuthCharm)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 360, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 522, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 506, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 439, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 483, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 336, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 916, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1036, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/lib/charms/observability_libs/v0/kubernetes_compute_resources_patch.py", line 609, in _on_config_changed
+    self._patch()
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/lib/charms/observability_libs/v0/kubernetes_compute_resources_patch.py", line 640, in _patch
+    for attempt in tenacity.Retrying(
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/tenacity/__init__.py", line 438, in __iter__
+    do = self.iter(retry_state=retry_state)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/tenacity/__init__.py", line 371, in iter
+    result = action(retry_state)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/tenacity/__init__.py", line 393, in <lambda>
+    self._add_action_func(lambda rs: rs.outcome.result())
+  File "/usr/lib/python3.10/concurrent/futures/_base.py", line 451, in result
+    return self.__get_result()
+  File "/usr/lib/python3.10/concurrent/futures/_base.py", line 403, in __get_result
+    raise self._exception
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/lib/charms/observability_libs/v0/kubernetes_compute_resources_patch.py", line 651, in _patch
+    self.patcher.apply(resource_reqs)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/lib/charms/observability_libs/v0/kubernetes_compute_resources_patch.py", line 544, in apply
+    if not dry_run and self.is_patched(resource_reqs):
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/lib/charms/observability_libs/v0/kubernetes_compute_resources_patch.py", line 397, in is_patched
+    return equals_canonically(self.get_templated(), resource_reqs)  # pyright: ignore
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/lib/charms/observability_libs/v0/kubernetes_compute_resources_patch.py", line 401, in get_templated
+    statefulset = self.client.get(
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 239, in get
+    return self._client.request("get", res=res, name=name, namespace=namespace)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 346, in request
+    resp = self.send(req)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 309, in send
+    return self._client.send(req, stream=stream)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 249, in handle_request
+    with map_httpcore_exceptions():
+  File "/usr/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/var/lib/juju/agents/unit-glauth-k8s-0/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectTimeout: timed out
+unit-glauth-k8s-0: 20:04:15 ERROR juju.worker.uniter.operation hook "config-changed" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
