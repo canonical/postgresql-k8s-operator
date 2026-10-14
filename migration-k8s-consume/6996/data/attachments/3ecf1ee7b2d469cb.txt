@@ -1,0 +1,33 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-1
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  21:59:41Z
+
+App                          Version  Status  Scale  Charm           Channel  Rev  Address        Exposed  Message
+test-storage-postgresql-k8s  16.15    active      1  postgresql-k8s             1  10.152.183.77  no       
+
+Unit                            Workload  Agent  Address     Ports  Message
+test-storage-postgresql-k8s/0*  active    idle   10.1.0.185         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+controller-0: 21:46:02 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql-k8s": updating filesystem information for postgresql-k8s: cannot set info for filesystem attachment 11:postgresql-k8s/2: state changing too quickly; try again soon
+controller-0: 21:46:42 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql-k8s": finding filesystem info for postgresql-k8s-temp-a041bf30: unable to get persistent volume claim: k8s: persistentvolumeclaims "postgresql-k8s-temp-a041bf30-postgresql-k8s-2" not found
+unit-postgresql-k8s-3: 21:49:32 ERROR unit.postgresql-k8s/3.juju-log status-peers:2: single_kernel_postgresql.utils.postgresql:Failed to list PostgreSQL database users: connection to server at "postgresql-k8s-3.postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.0.58), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
