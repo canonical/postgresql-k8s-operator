@@ -526,6 +526,21 @@ shortuuid = ">=1.0.13"
 tenacity = "*"
 
 [[package]]
+name = "charmlibs-snap"
+version = "1.0.1.post0"
+description = "The charmlibs.snap package."
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "charmlibs_snap-1.0.1.post0-py3-none-any.whl", hash = "sha256:655041096952c63e92c8d25a6183149f0594d4888be4be62a9635cb96897aa01"},
+    {file = "charmlibs_snap-1.0.1.post0.tar.gz", hash = "sha256:1e8da752ee405aa981665da8c4772016236baf80d2d902b02ec8c1c640fb2844"},
+]
+
+[package.dependencies]
+opentelemetry-api = "*"
+
+[[package]]
 name = "charset-normalizer"
 version = "3.5.1"
 description = "The Real First Universal Charset Detector. Open, modern and actively maintained alternative to Chardet."
@@ -1910,7 +1925,7 @@ optional = false
 python-versions = ">=3.8,<4.0"
 groups = ["main", "integration"]
 files = [
-    {file = "09d5fb1a.tar.gz", hash = "sha256:81783a1436899b95c4f34cbdbf8da78916f2ee3aa95fa2b8dc50cf8e35487eb1"},
+    {file = "fe95365f.tar.gz", hash = "sha256:1cff9e06b1989c40c328e3c7c2e289006aed4579b5158940d06fa28b6e04cc94"},
 ]
 
 [package.dependencies]
@@ -1940,7 +1955,7 @@ vm = ["charmlibs-snap (>=1.0.1,<2) ; python_version >= \"3.12\"", "charmlibs-sys
 
 [package.source]
 type = "url"
-url = "https://github.com/canonical/postgresql-single-kernel-library/archive/09d5fb1a.tar.gz"
+url = "https://github.com/canonical/postgresql-single-kernel-library/archive/fe95365f.tar.gz"
 
 [[package]]
 name = "prompt-toolkit"
@@ -1981,8 +1996,7 @@ version = "7.2.2"
 description = "Cross-platform lib for process and system monitoring."
 optional = false
 python-versions = ">=3.6"
-groups = ["integration"]
-markers = "sys_platform != \"emscripten\" and sys_platform != \"cygwin\""
+groups = ["main", "integration"]
 files = [
     {file = "psutil-7.2.2-cp313-cp313t-macosx_10_13_x86_64.whl", hash = "sha256:2edccc433cbfa046b980b0df0171cd25bcaeb3a68fe9022db0979e7aa74a826b"},
     {file = "psutil-7.2.2-cp313-cp313t-macosx_11_0_arm64.whl", hash = "sha256:e78c8603dcd9a04c7364f1a3e670cea95d51ee865e4efb3556a3a63adef958ea"},
@@ -2006,6 +2020,7 @@ files = [
     {file = "psutil-7.2.2-cp37-abi3-win_arm64.whl", hash = "sha256:8c233660f575a5a89e6d4cb65d9f938126312bca76d8fe087b947b3a1aaac9ee"},
     {file = "psutil-7.2.2.tar.gz", hash = "sha256:0746f5f8d406af344fd547f1c8daa5f5c33dbc293bb8d6a16d80b4bb88f59372"},
 ]
+markers = {integration = "sys_platform != \"emscripten\" and sys_platform != \"cygwin\""}
 
 [package.extras]
 dev = ["abi3audit", "black", "check-manifest", "colorama ; os_name == \"nt\"", "coverage", "packaging", "psleak", "pylint", "pyperf", "pypinfo", "pyreadline3 ; os_name == \"nt\"", "pytest", "pytest-cov", "pytest-instafail", "pytest-xdist", "pywin32 ; os_name == \"nt\" and implementation_name != \"pypy\"", "requests", "rstcheck", "ruff", "setuptools", "sphinx", "sphinx_rtd_theme", "toml-sort", "twine", "validate-pyproject[all]", "virtualenv", "vulture", "wheel", "wheel ; os_name == \"nt\" and implementation_name != \"pypy\"", "wmi ; os_name == \"nt\" and implementation_name != \"pypy\""]
@@ -3334,4 +3349,4 @@ h11 = ">=0.16.0,<1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "9cf13a8ef218baa35c45bd555eb072b5b53e9768425e19b2581f804fddab1e19"
+content-hash = "aca2714f4d1abedd67e7d14c523858f82ca6b422db170a7b06fa0f01405bd3ab"
