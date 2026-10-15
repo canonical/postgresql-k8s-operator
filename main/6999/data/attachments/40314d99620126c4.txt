@@ -1,0 +1,38 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] maintenance: Executing restart operation
+  postgresql-k8s/1 [idle] waiting: Awaiting restart operation
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: Primary
+  postgresql-k8s/2 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  00:17:58Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Address         Exposed  Message
+mattermost                         active      2  mattermost-k8s            latest/stable   18  10.152.183.187  no       
+postgresql-k8s            14.24    active      3  postgresql-k8s                             0  10.152.183.210  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable       586  10.152.183.53   no       
+
+Unit                         Workload  Agent  Address     Ports  Message
+mattermost/0                 active    idle   10.1.0.223         
+mattermost/1*                active    idle   10.1.0.5           
+postgresql-k8s/0             active    idle   10.1.0.200         
+postgresql-k8s/1             active    idle   10.1.0.164         Primary
+postgresql-k8s/2*            active    idle   10.1.0.18          
+self-signed-certificates/0*  active    idle   10.1.0.3           
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...

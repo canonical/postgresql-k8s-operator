@@ -1,0 +1,46 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-1
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/0 [allocating] waiting: installing agent
+  second-postgresql-k8s/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/0 [idle] unknown: 
+  second-postgresql-k8s/1 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/0 [idle] waiting: awaiting for cluster to start
+  second-postgresql-k8s/1 [idle] maintenance: reconfiguring cluster
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  second-postgresql-k8s/0 [idle] active: 
+  second-postgresql-k8s/1 [executing] active: Primary
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:244 Initial writes {'testing.postgresql-k8s-0': 5, 'testing.postgresql-k8s-2': 5}
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:250 Retry writes {'testing.postgresql-k8s-0': 9, 'testing.postgresql-k8s-2': 10}
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  00:15:48Z
+
+App                    Version  Status  Scale  Charm                Channel      Rev  Address         Exposed  Message
+postgresql-k8s         14.24    active      3  postgresql-k8s                      0  10.152.183.103  no       
+postgresql-test-app             active      1  postgresql-test-app  latest/edge  616  10.152.183.235  no       received database credentials of the first database
+second-postgresql-k8s  14.24    active      2  postgresql-k8s                      1  10.152.183.126  no       
+
+Unit                      Workload  Agent  Address     Ports  Message
+postgresql-k8s/0*         active    idle   10.1.0.178         
+postgresql-k8s/1          active    idle   10.1.0.189         Primary
+postgresql-k8s/2          active    idle   10.1.0.87          
+postgresql-test-app/0*    active    idle   10.1.0.53          received database credentials of the first database
+second-postgresql-k8s/0   active    idle   10.1.0.200         
+second-postgresql-k8s/1*  active    idle   10.1.0.102         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-test-app-0: 00:07:48 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-postgresql-k8s-0: 00:12:08 ERROR unit.postgresql-k8s/0.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
