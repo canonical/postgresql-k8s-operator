@@ -214,6 +214,37 @@ async def test_plugins(ops_test: OpsTest, charm) -> None:
     connection.close()
 
 
+async def test_orafce(ops_test: OpsTest) -> None:
+    """Check the orafce lifecycle through the canonical option."""
+    application = ops_test.model.applications[DATABASE_APP_NAME]
+    original_config = (await application.get_config())["plugin-orafce-enable"]
+    password = await get_password(ops_test)
+    try:
+        for enabled in (True, False, True):
+            await application.set_config({"plugin-orafce-enable": str(enabled)})
+            await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active")
+            primary = await get_primary(ops_test)
+            address = await get_unit_address(ops_test, primary)
+            with closing(db_connect(host=address, password=password)) as connection:
+                connection.autocommit = True
+                with connection.cursor() as cursor:
+                    cursor.execute(
+                        "SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'orafce')"
+                    )
+                    assert cursor.fetchone()[0] is enabled
+                    if enabled:
+                        cursor.execute(
+                            "SELECT oracle.add_months(DATE '2005-05-31', 1)::date = DATE '2005-06-30'"
+                        )
+                        assert cursor.fetchone()[0] is True
+    finally:
+        if original_config["source"] == "default":
+            await application.reset_config(["plugin-orafce-enable"])
+        else:
+            await application.set_config({"plugin-orafce-enable": str(original_config["value"])})
+        await ops_test.model.wait_for_idle(apps=[DATABASE_APP_NAME], status="active")
+
+
 @pytest.mark.abort_on_fail
 async def test_plugin_objects(ops_test: OpsTest) -> None:
     """Checks if charm gets blocked when trying to disable a plugin in use."""
