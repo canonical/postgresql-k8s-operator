@@ -124,9 +124,7 @@ async def test_resolve_errors(ops_test: OpsTest):
     async with ops_test.fast_forward():
         # Idle windows under fast_forward are 3-9s (10s update-status cadence),
         # so juju's default 15s idle requirement is unsatisfiable here.
-        await ops_test.model.wait_for_idle(
-            status="active", timeout=1800, idle_period=2
-        )
+        await ops_test.model.wait_for_idle(status="active", timeout=1800, idle_period=2)
 
 
 @pytest.mark.abort_on_fail
