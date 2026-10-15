@@ -1,0 +1,28 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  04:13:22Z
+
+App             Version  Status  Scale  Charm           Channel  Rev  Address        Exposed  Message
+postgresql-k8s  16.15    active      1  postgresql-k8s             0  10.152.183.31  no       
+
+Unit               Workload  Agent  Address     Ports  Message
+postgresql-k8s/0*  active    idle   10.1.0.184         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-0: 04:11:40 ERROR unit.postgresql-k8s/0.juju-log single_kernel_postgresql.charms.k8s_charm:Invalid configuration: 2 validation errors for CharmConfig
+synchronous_node_count.literal['all','majority']
+  Input should be 'all' or 'majority' [type=literal_error, input_value='0', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.14/v/literal_error
+synchronous_node_count.constrained-int
+  Input should be greater than 0 [type=greater_than, input_value='0', input_type=str]
+    For further information visit https://errors.pydantic.dev/2.14/v/greater_than
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
