@@ -1,0 +1,252 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:806 Connecting to existing model concierge-k8s:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SecretsRevoker received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/s3-integrator-145
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/self-signed-certificates-586
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-0
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [allocating] waiting: installing agent
+  postgresql-k8s-aws/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [allocating] waiting: installing agent
+  postgresql-k8s-aws/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [executing] waiting: awaiting passwords generation
+  postgresql-k8s-aws/1 [executing] waiting: Waiting for cluster membership
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [executing] active: 
+  postgresql-k8s-aws/1 [executing] waiting: Waiting for cluster membership
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [executing] active: 
+  postgresql-k8s-aws/1 [executing] waiting: Waiting for cluster membership
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [executing] active: 
+  postgresql-k8s-aws/1 [executing] waiting: Waiting for cluster membership
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [executing] active: 
+  postgresql-k8s-aws/1 [executing] waiting: Waiting for cluster membership
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [executing] active: 
+  postgresql-k8s-aws/1 [idle] waiting: Waiting for cluster membership
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [idle] waiting: Waiting for cluster membership
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [idle] waiting: awaiting for cluster to start
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [executing] active: 
+  postgresql-k8s-aws/1 [executing] active: 
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:61 configuring S3 integrator for aws
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [executing] active: 
+  postgresql-k8s-aws/1 [idle] active: 
+  s3-integrator/0 [executing] blocked: Missing parameters: ['access-key', 'secret-key']
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [executing] active: 
+  postgresql-k8s-aws/1 [executing] active: 
+  s3-integrator/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: 
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:303 1: creating table
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:306 1: creating backup b1
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [executing] active: 
+  postgresql-k8s-aws/1 [idle] active: 
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:577 listing the available backups
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  s3-integrator/0 [idle] active: 
+  self-signed-certificates/0 [idle] active: 
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [idle] active: 
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:315 1: creating test data td1
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:318 1: get timestamp ts1
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:328 1: creating test data td2
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:331 1: switching wal
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:334 1: scaling down to do restore
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws (waiting for exactly 1 units, current : 2)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws (waiting for exactly 1 units, current : 2)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws (waiting for exactly 1 units, current : 2)
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:339 1: restoring the backup b1 with bad restore-to-time parameter
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:348 1: restoring the backup b1 with unreachable restore-to-time parameter
+[32mINFO    [0m integration.backup_helpers:backup_helpers.py:353 1: waiting for the database charm to become blocked after restore
+[32mINFO    [0m integration.conftest:conftest.py:60 deleting the previously created backups
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  16:25:56Z
+
+App                       Version  Status  Scale  Charm                     Channel        Rev  Address         Exposed  Message
+postgresql-k8s-aws        16.15    active      1  postgresql-k8s                             0  10.152.183.47   no       
+s3-integrator                      active      1  s3-integrator             latest/stable  145  10.152.183.252  no       
+self-signed-certificates           active      1  self-signed-certificates  1/stable       586  10.152.183.163  no       
+
+Unit                         Workload     Agent  Address     Ports  Message
+postgresql-k8s-aws/0*        maintenance  idle   10.1.0.185         restoring backup
+s3-integrator/0*             active       idle   10.1.0.188         
+self-signed-certificates/0*  active       idle   10.1.0.47          
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-aws-0: 16:13:23 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:13:23 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:13:35 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:13:35 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:13:45 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:13:45 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:13:56 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:13:56 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:14:07 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:14:07 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:14:19 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:14:19 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:14:30 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:14:30 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:14:41 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:14:41 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:14:49 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:14:49 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:14:57 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:14:57 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:15:08 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:15:08 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:15:18 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:15:18 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:15:29 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:15:29 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:15:39 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:15:39 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:15:48 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:15:48 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:15:58 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:15:58 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:16:07 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:16:07 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:16:19 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:16:19 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:16:27 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:16:27 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:16:35 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:16:35 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:16:47 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:16:47 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:16:55 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:16:55 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:17:05 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:17:05 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:17:13 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:17:13 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:17:22 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:17:22 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:17:32 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:17:32 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:17:42 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:17:43 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:17:52 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:17:52 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:18:00 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:18:01 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:18:09 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:18:09 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:18:19 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:18:19 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:18:27 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:18:27 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:18:36 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:18:36 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:18:45 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:18:45 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:18:53 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:18:53 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:19:02 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:19:02 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:19:11 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:19:11 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:19:21 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:19:21 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:19:32 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:19:32 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:19:42 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:19:42 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:19:53 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:19:53 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:20:03 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:20:03 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:20:13 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:20:13 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:20:23 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:20:23 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:20:31 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:20:31 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:20:43 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:20:43 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:20:54 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:20:54 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:21:05 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:21:05 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:21:15 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:21:15 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:21:27 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:21:27 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:21:38 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:21:38 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:21:48 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:21:48 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:21:59 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:21:59 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:22:08 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:22:08 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:22:20 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:22:20 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:22:30 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:22:30 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:22:39 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:22:39 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:22:51 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:22:51 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:23:01 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:23:01 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:23:11 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:23:12 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:23:20 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:23:20 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:23:28 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:23:28 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:23:37 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:23:38 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:23:47 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:23:48 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:23:57 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:23:57 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:24:09 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:24:09 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:24:21 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:24:21 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:24:32 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:24:32 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:24:42 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:24:42 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:24:52 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:24:52 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:25:01 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:25:01 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:25:11 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:25:12 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:25:23 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:25:23 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:25:35 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:25:35 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:25:44 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:25:44 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+unit-postgresql-k8s-aws-0: 16:25:54 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:Restore failed: database service failed to start
+unit-postgresql-k8s-aws-0: 16:25:54 ERROR unit.postgresql-k8s-aws/0.juju-log single_kernel_postgresql.events.postgresql:pgdata folder not found in /var/lib/pg/data/16/main
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
