@@ -126,17 +126,15 @@ async def test_no_data_replicated_between_clusters(
     password = await get_password(ops_test, database_app_name=new_cluster_app)
     for unit in ops_test.model.applications[new_cluster_app].units:
         address = await get_unit_address(ops_test, unit.name)
-        try:
-            with (
-                db_connect(host=address, password=password) as connection,
-                connection.cursor() as cursor,
-            ):
-                cursor.execute(
-                    "SELECT EXISTS (SELECT FROM information_schema.tables"
-                    " WHERE table_schema = 'public' AND table_name = 'continuous_writes');"
-                )
-                assert not cursor.fetchone()[0], (
-                    "table 'continuous_writes' was replicated to the second cluster"
-                )
-        finally:
+        with (
+            db_connect(host=address, password=password) as connection,
+            connection.cursor() as cursor,
+        ):
+            cursor.execute(
+                "SELECT EXISTS (SELECT FROM information_schema.tables"
+                " WHERE table_schema = 'public' AND table_name = 'continuous_writes');"
+            )
+            assert not cursor.fetchone()[0], (
+                "table 'continuous_writes' was replicated to the second cluster"
+            )
             connection.close()

@@ -62,17 +62,20 @@ async def test_deploy(ops_test: OpsTest, charm):
         # There can be error spikes during PostgreSQL deployment, that are not related to Logical Replication
         raise_on_error=False,
     )
-    async with ops_test.fast_forward():
-        await gather(
-            ops_test.model.integrate(DATABASE_APP_NAME, DATA_INTEGRATOR_APP_NAME),
-            ops_test.model.integrate(SECOND_DATABASE_APP_NAME, SECOND_DATA_INTEGRATOR_APP_NAME),
-            ops_test.model.integrate(THIRD_DATABASE_APP_NAME, THIRD_DATA_INTEGRATOR_APP_NAME),
-            ops_test.model.integrate(
-                f"{DATABASE_APP_NAME}:logical-replication-offer",
-                f"{SECOND_DATABASE_APP_NAME}:logical-replication",
-            ),
-        )
-        await ops_test.model.wait_for_idle(status="active", timeout=500)
+    # No fast_forward: at the 10s update-status cadence every hook runs the
+    # charm_refresh app-databag flip-flop + DPH status recompute, keeping units
+    # ~100% "executing" under load, so wait_for_idle never sees an idle window.
+    # The integration is relation-event driven and needs no cadence.
+    await gather(
+        ops_test.model.integrate(DATABASE_APP_NAME, DATA_INTEGRATOR_APP_NAME),
+        ops_test.model.integrate(SECOND_DATABASE_APP_NAME, SECOND_DATA_INTEGRATOR_APP_NAME),
+        ops_test.model.integrate(THIRD_DATABASE_APP_NAME, THIRD_DATA_INTEGRATOR_APP_NAME),
+        ops_test.model.integrate(
+            f"{DATABASE_APP_NAME}:logical-replication-offer",
+            f"{SECOND_DATABASE_APP_NAME}:logical-replication",
+        ),
+    )
+    await ops_test.model.wait_for_idle(status="active", timeout=900)
 
 
 @pytest.mark.abort_on_fail
@@ -119,7 +122,9 @@ async def test_resolve_errors(ops_test: OpsTest):
     )
 
     async with ops_test.fast_forward():
-        await ops_test.model.wait_for_idle(status="active")
+        # Idle windows under fast_forward are 3-9s (10s update-status cadence),
+        # so juju's default 15s idle requirement is unsatisfiable here.
+        await ops_test.model.wait_for_idle(status="active", timeout=1800, idle_period=2)
 
 
 @pytest.mark.abort_on_fail
