@@ -5,18 +5,18 @@ output "application_name" {
 
 output "provides" {
   value = {
-    logical_replication_offer = "logical-replication-offer"
     database                  = "database"
     metrics_endpoint          = "metrics-endpoint"
     grafana_dashboard         = "grafana-dashboard"
     replication_offer         = "replication-offer"
+    logical_replication_offer = "logical-replication-offer"
   }
 }
 
 output "requires" {
   value = {
-    logical_replication = "logical-replication"
     replication         = "replication"
+    logical_replication = "logical-replication"
     peer_certificates   = "peer-certificates"
     client_certificates = "client-certificates"
     receive_ca_cert     = "receive-ca-cert"
