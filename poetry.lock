@@ -436,15 +436,13 @@ charm-api = ">=0.1.1"
 
 [[package]]
 name = "charm-refresh"
-version = "3.1.1.8"
+version = "0.0.0"
 description = "In-place rolling refreshes (upgrades) of stateful charmed applications"
 optional = false
 python-versions = ">=3.8"
 groups = ["main"]
-files = [
-    {file = "charm_refresh-3.1.1.8-py3-none-any.whl", hash = "sha256:fbe5bc7d1072315f92fa1eb37c002224f2bb9c0415ecb95651f88a0585c332f4"},
-    {file = "charm_refresh-3.1.1.8.tar.gz", hash = "sha256:af67a10abae66c000607546fdd7715ca089bb6b2dd6d5bf8cd1eb36f63771ef2"},
-]
+files = []
+develop = false
 
 [package.dependencies]
 charm-api = ">=0.1.1"
@@ -455,6 +453,12 @@ ops = ">=2.9.0"
 packaging = ">=24.1"
 pyyaml = ">=6.0.2"
 tomli = ">=2.0.1"
+
+[package.source]
+type = "git"
+url = "https://github.com/canonical/charm-refresh"
+reference = "fix-pause-after-scale-up"
+resolved_reference = "c6b932ce69616067fe1f37ee2720375c02004270"
 
 [[package]]
 name = "charm-refresh-build-version"
@@ -3446,4 +3450,4 @@ h11 = ">=0.16.0,<1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "2811f5a52bbdceec2807c12f512326e6a9964cffa96cc48dde1467116fccc6f5"
+content-hash = "90b23882668721acc3edc991e18d00e3f30cdf9e03b26662e85dfd8926c1259f"
