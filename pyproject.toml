@@ -21,7 +21,7 @@ charmlibs-snap = "^1.0.1"
 charmlibs-interfaces-tls-certificates = "^1.12.0"
 charm-refresh = "^3.1.1.2"
 psutil = "^7.2.2"
-postgresql-charms-single-kernel = {extras = ["postgresql", "k8s"], url = "https://github.com/canonical/postgresql-single-kernel-library/archive/c05d34f0.tar.gz"}
+postgresql-charms-single-kernel = {extras = ["postgresql", "k8s"], url = "https://github.com/canonical/postgresql-single-kernel-library/archive/c0b34209.tar.gz"}
 
 [tool.poetry.group.charm-libs.dependencies]
 # data_platform_libs/v0/data_interfaces.py
