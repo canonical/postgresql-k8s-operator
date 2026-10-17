@@ -1,6 +1,7 @@
 # Copyright 2025 Canonical Ltd.
 # See LICENSE file for licensing details.
 
+from pathlib import Path
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
@@ -13,7 +14,11 @@ from charm import PostgresqlOperatorCharm
 
 @pytest.fixture(autouse=True)
 def harness():
-    harness = Harness(PostgresqlOperatorCharm)
+    harness = Harness(
+        PostgresqlOperatorCharm,
+        meta=Path("metadata.yaml").read_text(),
+        actions=Path("actions.yaml").read_text(),
+    )
 
     # Set up the initial relation and hooks.
     peer_relation_id = harness.add_relation(PEER_RELATION, "postgresql-k8s")

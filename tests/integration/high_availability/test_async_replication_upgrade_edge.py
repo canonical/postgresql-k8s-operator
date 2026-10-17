@@ -253,5 +253,7 @@ def run_pre_refresh_checks(juju: Juju, app_name: str) -> None:
 
     logging.info("Run pre-upgrade-check action")
     retry_if_cli_error(
-        lambda: juju.run(unit=app_leader, action="pre-refresh-check").raise_on_failure()
+        lambda: juju.run(
+            unit=app_leader, action="pre-refresh-check", wait=5 * MINUTE_SECS
+        ).raise_on_failure()
     )

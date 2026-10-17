@@ -70,7 +70,7 @@ def test_pre_refresh_check(juju: Juju) -> None:
     db_leader = get_app_leader(juju, DB_APP_NAME)
 
     logging.info("Run pre-refresh-check action")
-    juju.run(unit=db_leader, action="pre-refresh-check")
+    juju.run(unit=db_leader, action="pre-refresh-check", wait=5 * MINUTE_SECS)
 
     juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
 
@@ -116,7 +116,7 @@ def test_fail_and_rollback(juju: Juju, charm: str, continuous_writes) -> None:
     unit_names = sorted(units.keys())
 
     logging.info("Run pre-refresh-check action")
-    juju.run(unit=db_app_leader, action="pre-refresh-check")
+    juju.run(unit=db_app_leader, action="pre-refresh-check", wait=5 * MINUTE_SECS)
 
     juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
 

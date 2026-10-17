@@ -12,12 +12,20 @@ import requests
 from jubilant import Juju
 from jubilant.statustypes import Status, UnitStatus
 from single_kernel_postgresql.config.literals import PEER_RELATION
-from tenacity import Retrying, stop_after_attempt, stop_after_delay, wait_fixed
+from tenacity import Retrying, stop_after_delay, wait_fixed
 
 from ..helpers import METADATA, execute_queries_on_unit
 
 MINUTE_SECS = 60
 SERVER_CONFIG_USERNAME = "operator"
+
+# The resume-refresh action is a one-shot charm_refresh state-machine probe: it fails while
+# the charm-side pause has not opened the allow-gate yet ("Unit N is unhealthy. Refresh will
+# not resume.") and once the pod-level StatefulSet roll has already completed ("No refresh
+# in progress"). Both states are timing windows minutes wide under runner load, so the helper
+# keeps retrying within a real budget instead of a 3x3s window.
+RESUME_REFRESH_RETRY_BUDGET_SECS = 5 * MINUTE_SECS
+RESUME_REFRESH_RETRY_WAIT_SECS = 10
 
 JujuModelStatusFn = Callable[[Status], bool]
 JujuAppsStatusFn = Callable[[Status, str], bool]
@@ -260,8 +268,67 @@ def count_switchovers(juju: Juju, app_name: str) -> int:
     return len(switchover_history_info.json())
 
 
+def refresh_completed(juju: Juju, app_name: str, previous_revision: int) -> bool:
+    """Whether the refresh actually rolled the app since ``previous_revision``.
+
+    Evidence is required beyond merely seeing every unit active: the app charm revision must
+    have advanced past ``previous_revision``, and every unit must report the same non-empty
+    workload version. A roll where the last unit's charm hooks are still pending must not
+    count as completed.
+    """
+    app_status = juju.status().apps[app_name]
+    workload_versions = {unit.workload_status.version for unit in app_status.units.values()}
+    if not workload_versions or "" in workload_versions or len(workload_versions) != 1:
+        return False
+    if any(unit.workload_status.current != "active" for unit in app_status.units.values()):
+        return False
+    return app_status.charm_rev != previous_revision
+
+
+def resume_refresh(juju: Juju, app_name: str, previous_revision: int) -> None:
+    """Run resume-refresh on the app leader, retrying within a generous budget.
+
+    The ``resume-refresh`` action is a one-shot charm_refresh state-machine probe. It fails
+    with "Unit N is unhealthy. Refresh will not resume." while the pause allow-gate has not
+    opened yet, and with "No refresh in progress" once the pod-level roll has already
+    completed. Both are timing windows minutes wide under runner load, so retry within
+    ``RESUME_REFRESH_RETRY_BUDGET_SECS`` instead of a 3x3s window.
+
+    "No refresh in progress" is treated as benign termination only after verifying that the
+    refresh actually happened (``refresh_completed``); otherwise the failure is real
+    (nothing rolled) or the roll is still mid-flight, and retrying keeps looking for a
+    resumable refresh window.
+    """
+    for attempt in Retrying(
+        reraise=True,
+        stop=stop_after_delay(RESUME_REFRESH_RETRY_BUDGET_SECS),
+        wait=wait_fixed(RESUME_REFRESH_RETRY_WAIT_SECS),
+    ):
+        with attempt:
+            try:
+                juju.run(
+                    unit=get_app_leader(juju, app_name),
+                    action="resume-refresh",
+                    wait=5 * MINUTE_SECS,
+                )
+            except jubilant.TaskError as task_error:
+                if "No refresh in progress" not in str(task_error):
+                    # e.g. "Unit N is unhealthy. Refresh will not resume.": the refresh may
+                    # still proceed on its own, so keep retrying within the budget.
+                    raise
+                if refresh_completed(juju, app_name, previous_revision):
+                    logging.info("Refresh completed while resume-refresh was retried")
+                    break
+                logging.info(
+                    "resume-refresh reported 'No refresh in progress' but the refresh is not "
+                    f"verified complete; retrying within {RESUME_REFRESH_RETRY_BUDGET_SECS}s"
+                )
+                raise
+
+
 def run_upgrade(juju: Juju, app_name: str, charm: str) -> None:
     """Update a cluster."""
+    previous_revision = juju.status().apps[app_name].charm_rev
     logging.info("Refresh the charm")
     juju.refresh(
         app=app_name,
@@ -301,11 +368,7 @@ def run_upgrade(juju: Juju, app_name: str, charm: str) -> None:
     juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
 
     logging.info("Run resume-refresh action")
-    for attempt in Retrying(reraise=True, stop=stop_after_attempt(3), wait=wait_fixed(3)):
-        with attempt:
-            juju.run(
-                unit=get_app_leader(juju, app_name), action="resume-refresh", wait=5 * MINUTE_SECS
-            )
+    resume_refresh(juju, app_name, previous_revision)
 
     logging.info("Wait for upgrade to complete")
     juju.wait(ready=wait_for_apps_status(jubilant.all_active, app_name), timeout=20 * MINUTE_SECS)
