@@ -1,0 +1,54 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:806 Connecting to existing model concierge-k8s:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SecretsRevoker received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/postgresql-test-app-615
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-0
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] maintenance: installing charm software
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  01:50:08Z
+
+App                  Version  Status   Scale  Charm                Channel      Rev  Address         Exposed  Message
+postgresql-k8s       16.15    active       1  postgresql-k8s                      0  10.152.183.104  no       
+postgresql-test-app           blocked      1  postgresql-test-app  latest/edge  615  10.152.183.111  no       No database integration available
+
+Unit                    Workload  Agent      Address     Ports  Message
+postgresql-k8s/0*       blocked   executing  10.1.0.76          Failed to create postgres user
+postgresql-test-app/0*  blocked   idle       10.1.0.217         No database integration available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-test-app-0: 01:49:15 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-postgresql-k8s-0: 01:50:07 ERROR unit.postgresql-k8s/0.juju-log single_kernel_postgresql.compat.postgresql:Failed to create user: connection to server at "postgresql-k8s-primary.testing.svc.cluster.local" (10.152.183.240), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-k8s-0: 01:50:07 ERROR unit.postgresql-k8s/0.juju-log __main__:Failed to create postgres user
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 266, in create_user
+    with self._connect_to_database() as connection, connection.cursor() as cursor:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 187, in _connect_to_database
+    connection = psycopg2.connect(
+                 ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.testing.svc.cluster.local" (10.152.183.240), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/charm.py", line 1673, in _initialize_cluster
+    self._setup_users()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/src/charm.py", line 1715, in _setup_users
+    self.postgresql.create_user(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 305, in create_user
+    raise PostgreSQLCreateUserError() from e
+single_kernel_postgresql.compat.postgresql.PostgreSQLCreateUserError: None
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
