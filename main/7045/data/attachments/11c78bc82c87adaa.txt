@@ -1,0 +1,23 @@
+[32mINFO    [0m integration.ha_tests.test_async_replication:test_async_replication.py:82 Destroying second model
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  00:11:22Z
+
+App                  Version  Status   Scale  Charm                Channel      Rev  Address         Exposed  Message
+postgresql-k8s       14.24    active       3  postgresql-k8s                      0  10.152.183.139  no       
+postgresql-test-app           blocked      1  postgresql-test-app  latest/edge  616  10.152.183.106  no       No database integration available
+
+Unit                    Workload  Agent  Address     Ports  Message
+postgresql-k8s/0        error     idle   10.1.0.1           hook failed: "stop"
+postgresql-k8s/1*       active    idle   10.1.0.204         Primary (degraded)
+postgresql-k8s/2        waiting   idle   10.1.0.62          awaiting for cluster to start
+postgresql-test-app/0*  blocked   idle   10.1.0.148         No database integration available
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-test-app-0: 00:08:13 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-postgresql-k8s-0: 00:09:03 ERROR juju.worker.uniter pebble poll failed for container "postgresql": failed to send pebble-ready event: terminated
+unit-postgresql-k8s-0: 00:09:57 ERROR juju.worker.uniter pebble poll failed for container "postgresql": failed to send pebble-ready event: terminated
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
