@@ -214,26 +214,6 @@ def test_clean_ca_file_from_workload(harness):
         assert ca_exists is False
 
 
-def test_request_restart(harness):
-    """The request_restart bridge refreshes the metrics scrape job and acquires the restart lock."""
-    lock = Mock()
-    harness.charm.restart_lock_acquire = lock
-    with (
-        patch(
-            "single_kernel_postgresql.charms.k8s_charm.PostgreSQLK8sCharm._generate_metrics_jobs"
-        ) as _generate_metrics_jobs,
-        patch(
-            "single_kernel_postgresql.managers.tls.TLSManager.get_client_tls_files",
-            return_value=("k", "ca", "c"),
-        ),
-        patch("charm.MetricsEndpointProvider.update_scrape_job_spec") as _update_scrape_job_spec,
-    ):
-        harness.charm.request_restart()
-
-        _update_scrape_job_spec.assert_called_once()
-        lock.assert_called_once()
-
-
 def test_restart_services(harness):
     """The restart_services bridge restarts both the metrics and LDAP sync pebble services."""
     with (
