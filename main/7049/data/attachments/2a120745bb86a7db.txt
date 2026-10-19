@@ -1,0 +1,38 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  00:11:43Z
+
+App                  Version  Status   Scale  Charm                Channel      Rev  Address         Exposed  Message
+another-application           waiting    0/1  postgresql-test-app  latest/edge  616                  no       installing agent
+another-database     14.24    active       3  postgresql-k8s                      1  10.152.183.153  no       
+database             14.24    active       3  postgresql-k8s                      0  10.152.183.188  no       
+postgresql-test-app           error      1/2  postgresql-test-app  latest/edge  616  10.152.183.184  no       crash loop backoff: back-off 1m20s restarting failed container=charm pod=postgresql-test-app-1_testing(71653ffe-00c3-...
+
+Unit                    Workload  Agent       Address     Ports  Message
+another-application/0   waiting   allocating                     installing agent
+another-database/0*     active    executing   10.1.0.45          Primary
+another-database/1      active    executing   10.1.0.52          
+another-database/2      active    executing   10.1.0.17          
+database/0              active    executing   10.1.0.111         
+database/1*             active    executing   10.1.0.254         Primary
+database/2              active    executing   10.1.0.84          
+postgresql-test-app/0   active    executing   10.1.0.175         received database credentials of the first database
+postgresql-test-app/1*  error     lost        10.1.0.1           crash loop backoff: back-off 1m20s restarting failed container=charm pod=postgresql-test-app-1_testing(71653ffe-00c3-...
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-test-app-1: 00:06:56 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-postgresql-test-app-0: 00:06:56 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-postgresql-test-app-1: 00:07:30 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-postgresql-test-app-1: 00:08:03 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-postgresql-test-app-1: 00:09:02 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-postgresql-test-app-1: 00:09:35 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-another-database-1: 00:09:50 ERROR unit.another-database/1.juju-log database-peers:3: Failed to list PostgreSQL database users: connection to server at "another-database-1.another-database-endpoints.testing.svc.cluster.local" (10.1.0.52), port 5432 failed: FATAL:  the database system is starting up
+
+unit-another-database-2: 00:10:05 ERROR unit.another-database/2.juju-log database-peers:3: Failed to list PostgreSQL database users: connection to server at "another-database-2.another-database-endpoints.testing.svc.cluster.local" (10.1.0.17), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-test-app-1: 00:10:52 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
