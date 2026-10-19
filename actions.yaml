@@ -99,3 +99,10 @@ resume-refresh:
   additionalProperties: false
 resume-upgrade:
   description: Resume a rolling upgrade after asserting successful upgrade of a new revision.
+status-detail:
+  description: Gets statuses of the charm
+  params:
+    recompute:
+      type: boolean
+      default: false
+      description: a boolean indicating whether a unit should recompute all statuses.
