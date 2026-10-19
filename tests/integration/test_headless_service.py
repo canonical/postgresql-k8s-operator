@@ -105,11 +105,21 @@ def test_headless_service_error_and_recovery(juju: jubilant.Juju) -> None:
     assert svc.spec.clusterIP == "None"
     logger.info("Headless service recreated")
 
-    # Resolve all units in error state.
+    # Resolve all units in error state. A unit may self-recover between the
+    # status snapshot and the resolve call (the recreated service unblocks the
+    # queued hook, which then succeeds) — juju's `resolve --no-retry` fails
+    # with "not in an error state" for such units, which is the desired
+    # outcome for that unit, not a test failure (round-6 a1+a2: the race hit
+    # a different unit each attempt).
     for unit_name, unit_status in juju.status().apps[DATABASE_APP_NAME].units.items():
         if unit_status.workload_status.current == "error":
             logger.info("Resolving %s", unit_name)
-            juju.cli("resolve", "--no-retry", unit_name)
+            try:
+                juju.cli("resolve", "--no-retry", unit_name)
+            except jubilant.CLIError as cli_error:
+                if "is not in an error state" not in str(cli_error):
+                    raise
+                logger.info("%s already self-recovered before the resolve", unit_name)
 
     # Wait for units to settle back to active/idle.
     juju.wait(database_active_idle, timeout=TIMEOUT)

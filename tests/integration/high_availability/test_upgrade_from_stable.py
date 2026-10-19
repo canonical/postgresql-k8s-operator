@@ -59,7 +59,7 @@ def test_pre_refresh_check(juju: Juju) -> None:
     db_leader = get_app_leader(juju, DB_APP_NAME)
 
     logging.info("Run pre-refresh-check action")
-    juju.run(unit=db_leader, action="pre-refresh-check")
+    juju.run(unit=db_leader, action="pre-refresh-check", wait=5 * MINUTE_SECS)
 
     juju.wait(jubilant.all_agents_idle, timeout=5 * MINUTE_SECS)
 
