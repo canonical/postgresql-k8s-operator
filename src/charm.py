@@ -20,18 +20,6 @@ except ModuleNotFoundError:
         main(WrongArchitectureWarningCharm, use_juju_for_storage=True)
     raise
 
-from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
-from charms.loki_k8s.v1.loki_push_api import LogProxyConsumer
-from charms.prometheus_k8s.v0.prometheus_scrape import MetricsEndpointProvider
-from charms.rolling_ops.v0.rollingops import RollingOpsManager
-from ops_tracing import Tracing
-from single_kernel_postgresql.config.literals import (
-    K8S_POSTGRES_LOG_FILES,
-    PEER_RELATION,
-    TRACING_RELATION_NAME,
-)
-from single_kernel_postgresql.events.tls_transfer import TLSTransfer
-
 logger = logging.getLogger(__name__)
 
 
@@ -39,33 +27,7 @@ class PostgresqlOperatorCharm(PostgreSQLK8sCharm):
     """Charmed Operator for the PostgreSQL database."""
 
     def __init__(self, *args):
-        super().__init__(
-            *args,
-            restart_lock_acquire=lambda: self.on[
-                str(self.restart_manager.name)
-            ].acquire_lock.emit(),
-        )
-        self.restart_manager = RollingOpsManager(
-            charm=self,
-            relation="restart",
-            callback=self._restart,
-        )
-
-        # COS requirers (charm libs stay charm-side) — injected into the lib charm.
-        self.grafana_dashboards = GrafanaDashboardProvider(self)
-        self.metrics_endpoint = MetricsEndpointProvider(
-            self,
-            refresh_event=[self.on.start],
-            jobs=self._generate_metrics_jobs(self.is_tls_enabled),
-        )
-        self.loki_push = LogProxyConsumer(
-            self,
-            logs_scheme={"postgresql": {"log-files": K8S_POSTGRES_LOG_FILES}},
-            relation_name="logging",
-        )
-        self.tracing = Tracing(self, tracing_relation_name=TRACING_RELATION_NAME)
-
-        self.tls_transfer = TLSTransfer(self, PEER_RELATION)
+        super().__init__(*args)
 
 
 if __name__ == "__main__":
