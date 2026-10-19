@@ -25,6 +25,8 @@ def test_on_module_not_found_error(monkeypatch):
         monkeypatch.delitem(sys.modules, "psycopg2", raising=False)
         monkeypatch.delitem(sys.modules, "charm", raising=False)
         monkeypatch.delitem(sys.modules, "charm_refresh", raising=False)
+        # Evict the cached lib charm module so the mocked import chain re-runs.
+        monkeypatch.delitem(sys.modules, "single_kernel_postgresql.charms.k8s_charm", raising=False)
         monkeypatch.setattr(builtins, "__import__", psycopg2_not_found)
         with pytest.raises(ModuleNotFoundError):
             import charm
