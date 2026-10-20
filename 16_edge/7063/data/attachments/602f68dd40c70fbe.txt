@@ -1,0 +1,44 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator3/0 [idle] active: 
+  data-integrator/0 [idle] active: 
+  postgresql3/0 [executing] active: Primary
+  postgresql/0 [executing] active: 
+  postgresql/1 [executing] active: Primary
+  postgresql/2 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql/0 [idle] active: 
+  postgresql/1 [idle] active: Primary
+  postgresql/2 [idle] active: 
+[32mINFO    [0m httpx:_client.py:1740 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/services/postgresql3-primary "HTTP/1.1 200 OK"
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  02:24:28Z
+
+App               Version  Status  Scale  Charm            Channel        Rev  Address         Exposed  Message
+data-integrator            active      1  data-integrator  latest/stable  418  10.152.183.237  no       
+data-integrator3           active      1  data-integrator  latest/stable  418  10.152.183.186  no       
+postgresql        16.15    active      3  postgresql-k8s                    1  10.152.183.45   no       
+postgresql3       16.15    active      1  postgresql-k8s                    0  10.152.183.19   no       
+
+Unit                 Workload  Agent  Address     Ports  Message
+data-integrator3/0*  active    idle   10.1.0.111         
+data-integrator/0*   active    idle   10.1.0.245         
+postgresql3/0*       active    idle   10.1.0.19          Primary
+postgresql/0         active    idle   10.1.0.240         
+postgresql/1*        active    idle   10.1.0.191         Primary
+postgresql/2         active    idle   10.1.0.132         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-1: 02:14:21 ERROR unit.postgresql/1.juju-log logical-replication-offer:16: single_kernel_postgresql.managers.logical_replication:Cannot create new publication for logical-replication-offer #16: table public.test_table in database testdb doesn't exist
+unit-postgresql2-1: 02:14:30 ERROR unit.postgresql2/1.juju-log logical-replication:16: single_kernel_postgresql.managers.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql3-0: 02:14:43 ERROR unit.postgresql3/0.juju-log single_kernel_postgresql.managers.logical_replication:Logical replication validation: database bad_database doesn't exist
+unit-postgresql3-0: 02:15:03 ERROR unit.postgresql3/0.juju-log single_kernel_postgresql.managers.logical_replication:Logical replication validation: table public.test_table2 in database testdb doesn't exist
+unit-postgresql2-1: 02:15:21 ERROR unit.postgresql2/1.juju-log single_kernel_postgresql.managers.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql2-1: 02:15:29 ERROR unit.postgresql2/1.juju-log single_kernel_postgresql.managers.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql3-0: 02:17:46 ERROR unit.postgresql3/0.juju-log logical-replication:19: single_kernel_postgresql.managers.logical_replication:Logical replication validation: table public.test_table2 in database testdb isn't empty
+unit-postgresql2-1: 02:20:09 ERROR unit.postgresql2/1.juju-log single_kernel_postgresql.managers.logical_replication:Logical replication validation: table public.test_table in database testdb isn't empty
+unit-postgresql2-1: 02:20:37 ERROR unit.postgresql2/1.juju-log logical-replication:16: single_kernel_postgresql.managers.logical_replication:Logical replication validation: table public.test_table2 in database testdb isn't empty
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
