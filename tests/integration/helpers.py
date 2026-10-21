@@ -783,6 +783,7 @@ async def scale_application(
             status="active",
             timeout=1200,
             wait_for_exact_units=scale,
+            idle_period=2,
         )
 
 

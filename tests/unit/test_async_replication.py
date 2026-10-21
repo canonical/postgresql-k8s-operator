@@ -3,6 +3,7 @@
 
 import json
 from datetime import UTC, datetime
+from pathlib import Path
 from unittest.mock import PropertyMock, patch
 
 import pytest
@@ -21,7 +22,19 @@ RELATION_NAMES = ["replication-offer", "replication"]
 
 @pytest.fixture(autouse=True)
 def harness():
-    harness = Harness(PostgresqlOperatorCharm)
+    harness = Harness(
+        PostgresqlOperatorCharm,
+        meta=Path("metadata.yaml").read_text(),
+        actions=Path("actions.yaml").read_text(),
+    )
+    for storage in ("archive", "data", "logs", "temp"):
+        harness.add_storage(storage, count=1, attach=True)
+    # The lib's pgdata layout fixup stats the /var/log symlink parents.
+    root = harness.get_filesystem_root("postgresql")
+    import pathlib as _p
+
+    for d in ("var/log/postgresql", "var/log/patroni", "var/log/pgbackrest"):
+        (_p.Path(root) / d).mkdir(parents=True, exist_ok=True)
 
     # Set up the initial relation and hooks.
     harness.set_leader(True)
@@ -33,7 +46,11 @@ def harness():
 
 @pytest.fixture(autouse=True)
 def standby():
-    harness = Harness(PostgresqlOperatorCharm)
+    harness = Harness(
+        PostgresqlOperatorCharm,
+        meta=Path("metadata.yaml").read_text(),
+        actions=Path("actions.yaml").read_text(),
+    )
     harness.set_model_name("standby")
 
     # Set up the initial relation and hooks.
@@ -53,7 +70,9 @@ def test_on_async_relation_broken(harness, is_leader, relation_name):
         patch(
             "single_kernel_postgresql.events.async_replication.PostgreSQLAsyncReplication.set_app_status"
         ) as _set_app_status,
-        patch("charm.PatroniManager.get_standby_leader") as _get_standby_leader,
+        patch(
+            "single_kernel_postgresql.managers.patroni.PatroniManager.get_standby_leader"
+        ) as _get_standby_leader,
         patch(
             "single_kernel_postgresql.events.async_replication.PostgreSQLAsyncReplication._on_async_relation_departed"
         ) as _on_async_relation_departed,
@@ -208,14 +227,17 @@ def test_on_async_relation_changed(harness, wait_for_standby):
         patch("lightkube.Client.__init__", return_value=None),
         patch("lightkube.Client.delete") as _lightkube_delete,
         patch(
-            "charm.PatroniManager.member_started", new_callable=PropertyMock
+            "single_kernel_postgresql.managers.patroni.PatroniManager.member_started",
+            new_callable=PropertyMock,
         ) as _patroni_member_started,
-        patch("charm.PostgresqlOperatorCharm._create_pgdata") as _create_pgdata,
+        patch("single_kernel_postgresql.workload.k8s.K8sWorkload.init_storage") as _create_pgdata,
         patch.object(harness.charm.async_replication_manager, "update_config"),
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
-        patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
         patch(
-            "charm.K8sWorkload.get_system_identifier",
+            "single_kernel_postgresql.events.postgresql.PostgreSQLEventsHandler._set_active_status"
+        ) as _set_active_status,
+        patch(
+            "single_kernel_postgresql.workload.k8s.K8sWorkload.get_system_identifier",
             return_value=("12345", None),
         ),
         patch(
@@ -257,7 +279,7 @@ def test_create_replication(harness, relation_name):
             return_value="10.1.1.10",
         ),
         patch(
-            "charm.K8sWorkload.get_system_identifier",
+            "single_kernel_postgresql.workload.k8s.K8sWorkload.get_system_identifier",
             return_value=("12345", None),
         ),
         patch(
@@ -265,10 +287,15 @@ def test_create_replication(harness, relation_name):
             new_callable=PropertyMock,
             return_value="10.1.1.10",
         ),
-        patch("charm.PatroniManager.get_standby_leader", return_value=None),
+        patch(
+            "single_kernel_postgresql.managers.patroni.PatroniManager.get_standby_leader",
+            return_value=None,
+        ),
         patch.object(harness.charm.async_replication_manager, "update_config") as _update_config,
         patch("charm.PostgresqlOperatorCharm.update_config"),
-        patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
+        patch(
+            "single_kernel_postgresql.events.postgresql.PostgreSQLEventsHandler._set_active_status"
+        ) as _set_active_status,
     ):
         harness.charm.model.app.add_secret(
             {"password": "password"}, label="database-peers.postgresql-k8s.app"
@@ -297,19 +324,24 @@ def test_promote_to_primary(harness, relation_name):
             return_value=True,
         ),
         patch(
-            "charm.K8sWorkload.get_system_identifier",
+            "single_kernel_postgresql.workload.k8s.K8sWorkload.get_system_identifier",
             return_value=("12345", None),
         ),
         patch.object(harness.charm.async_replication_manager, "update_config"),
         patch("charm.PostgresqlOperatorCharm.update_config") as _update_config,
-        patch("charm.PostgresqlOperatorCharm._set_active_status") as _set_active_status,
+        patch(
+            "single_kernel_postgresql.events.postgresql.PostgreSQLEventsHandler._set_active_status"
+        ) as _set_active_status,
         patch(
             "single_kernel_postgresql.managers.async_replication.AsyncReplicationManager.primary_cluster_endpoint",
             new_callable=PropertyMock,
             return_value="10.1.1.10",
         ),
-        patch("charm.PatroniManager.get_primary"),
-        patch("charm.PatroniManager.get_standby_leader", return_value=None),
+        patch("single_kernel_postgresql.managers.patroni.PatroniManager.get_primary"),
+        patch(
+            "single_kernel_postgresql.managers.patroni.PatroniManager.get_standby_leader",
+            return_value=None,
+        ),
         patch("single_kernel_postgresql.managers.async_replication.datetime") as _datetime,
     ):
         _datetime.now.return_value = _now
@@ -376,9 +408,13 @@ def test_on_secret_changed(harness, relation_name):
 
     with (
         patch(
-            "charm.PostgresqlOperatorCharm._on_peer_relation_changed", return_value=None
+            "single_kernel_postgresql.events.postgresql.PostgreSQLEventsHandler._on_peer_relation_changed",
+            return_value=None,
         ) as _charm_on_peer_relation_changed,
-        patch("charm.PostgresqlOperatorCharm._on_secret_changed", return_value=None),
+        patch(
+            "single_kernel_postgresql.events.postgresql.PostgreSQLEventsHandler._on_secret_changed",
+            return_value=None,
+        ),
         patch(
             "single_kernel_postgresql.managers.async_replication.AsyncReplicationManager.primary_cluster_endpoint",
             new_callable=PropertyMock,
@@ -389,7 +425,7 @@ def test_on_secret_changed(harness, relation_name):
 
     _charm_on_peer_relation_changed.assert_called_once()
     if relation_name == REPLICATION_CONSUMER_RELATION:
-        assert harness.charm.get_secret(APP_SCOPE, "operator-password") == "new"
+        assert harness.charm.state.get_secret(APP_SCOPE, "operator-password") == "new"
     else:
         updated_cluster_data = json.loads(
             harness.get_relation_data(rel_id, harness.charm.app.name).get("primary-cluster-data")
