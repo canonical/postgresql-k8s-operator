@@ -11,7 +11,7 @@ class _FakeResponse:
 
     def json(self):
         return {
-            "apiVersion": 1,
+            "apiVersion": "v1",
             "code": self.status_code,
             "message": "broken",
             "reason": "",

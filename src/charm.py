@@ -1518,7 +1518,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
                     )
                 )
                 client.apply(
-                    obj=patch,  # type: ignore
+                    obj=patch,
                     name=resource.metadata.name,
                     namespace=resource.metadata.namespace,
                     force=True,
