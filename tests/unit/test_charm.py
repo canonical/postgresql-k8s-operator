@@ -8,6 +8,7 @@ from unittest.mock import MagicMock, Mock, PropertyMock, call, patch, sentinel
 
 import psycopg2
 import pytest
+from charms.data_platform_libs.v1.upgrade import UpgradeState
 from charms.postgresql_k8s.v0.postgresql import PostgreSQLUpdateUserPasswordError
 from lightkube import ApiError
 from lightkube.models.meta_v1 import ObjectMeta
@@ -820,7 +821,7 @@ def test_on_update_status_after_restore_operation(harness):
 def test_on_upgrade_charm(harness):
     with (
         patch(
-            "charms.data_platform_libs.v0.upgrade.DataUpgrade._upgrade_supported_check"
+            "charms.data_platform_libs.v1.upgrade.DataUpgrade._upgrade_supported_check"
         ) as _upgrade_supported_check,
         patch(
             "charm.PostgresqlOperatorCharm._patch_pod_labels",
@@ -2287,7 +2288,9 @@ def test_reset_upgrade_statuses(harness):
             "charm.PostgreSQLUpgrade.idle", new_callable=PropertyMock, return_value=True
         ) as _idle,
         patch(
-            "charm.PostgreSQLUpgrade.state", new_callable=PropertyMock, return_value="idle"
+            "charm.PostgreSQLUpgrade.state",
+            new_callable=PropertyMock,
+            return_value=UpgradeState.IDLE,
         ) as _state,
         patch("charm.PostgreSQLUpgrade.set_unit_failed") as _set_unit_failed,
         patch("charm.PostgreSQLUpgrade.set_unit_completed") as _set_unit_completed,
@@ -2305,28 +2308,28 @@ def test_reset_upgrade_statuses(harness):
         _idle.return_value = False
 
         # Recovery
-        _state.return_value = "recovery"
+        _state.return_value = UpgradeState.RECOVERY
 
         harness.charm._reset_upgrade_statuses()
 
         assert harness.charm.unit.status == BlockedStatus("ready to rollback application")
 
         # Upgrading
-        _state.return_value = "upgrading"
+        _state.return_value = UpgradeState.UPGRADING
 
         harness.charm._reset_upgrade_statuses()
 
         assert harness.charm.unit.status == MaintenanceStatus("upgrading unit")
 
         # Completed
-        _state.return_value = "completed"
+        _state.return_value = UpgradeState.COMPLETED
 
         harness.charm._reset_upgrade_statuses()
 
         _set_unit_completed.assert_called_once_with()
 
         # Failed
-        _state.return_value = "failed"
+        _state.return_value = UpgradeState.FAILED
 
         harness.charm._reset_upgrade_statuses()
 
@@ -2338,7 +2341,7 @@ def test_reset_upgrade_statuses(harness):
         mock_unit_2 = Mock()
         mock_unit_2.name = "test/0"
         _app_units.return_value = [mock_unit_2, mock_unit_1]
-        _state.return_value = "completed"
+        _state.return_value = UpgradeState.COMPLETED
 
         harness.charm._reset_upgrade_statuses()
 
