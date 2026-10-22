@@ -7,11 +7,12 @@ import json
 import logging
 from typing import TYPE_CHECKING
 
-from charms.data_platform_libs.v0.upgrade import (
+from charms.data_platform_libs.v1.upgrade import (
     ClusterNotReadyError,
     DataUpgrade,
     DependencyModel,
     KubernetesClientError,
+    UpgradeState,
 )
 from charms.postgresql_k8s.v0.postgresql import ACCESS_GROUPS
 from lightkube.core.client import Client
@@ -110,7 +111,7 @@ class PostgreSQLUpgrade(DataUpgrade):
             event.defer()
             return
 
-        if self.state not in ["upgrading", "recovery"]:
+        if self.state not in [UpgradeState.UPGRADING, UpgradeState.RECOVERY]:
             return
 
         # Don't mark the upgrade of this unit as completed until Patroni reports the
@@ -169,7 +170,7 @@ class PostgreSQLUpgrade(DataUpgrade):
             logger.debug("Wait all units join the upgrade relation")
             return
 
-        if self.state:
+        if self.state is not None:
             # Do nothing - if state set, upgrade is supported
             return
 
