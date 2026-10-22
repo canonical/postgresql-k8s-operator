@@ -43,6 +43,7 @@ except ModuleNotFoundError:
 
 from charms.data_platform_libs.v0.data_interfaces import DataPeerData, DataPeerUnitData
 from charms.data_platform_libs.v0.data_models import TypedCharmBase
+from charms.data_platform_libs.v1.upgrade import UpgradeState
 from charms.grafana_k8s.v0.grafana_dashboard import GrafanaDashboardProvider
 from charms.loki_k8s.v1.loki_push_api import LogProxyConsumer
 from charms.postgresql_k8s.v0.postgresql import (
@@ -65,6 +66,7 @@ from lightkube.resources.core_v1 import Endpoints, Node, Pod, Service
 from ops import JujuVersion, main
 from ops.charm import (
     ActionEvent,
+    CharmEvents,
     HookEvent,
     LeaderElectedEvent,
     RelationDepartedEvent,
@@ -171,7 +173,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     """Charmed Operator for the PostgreSQL database."""
 
     config_type = CharmConfig
-    on = AuthorisationRulesChangeCharmEvents()
+    on: CharmEvents = AuthorisationRulesChangeCharmEvents()
 
     def __init__(self, *args):
         super().__init__(*args)
@@ -1986,13 +1988,13 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         """Reset upgrade statuses if upgrade is not idle to preserve them during rolling restart."""
         if not self.upgrade.idle:
             match self.upgrade.state:
-                case "recovery":
+                case UpgradeState.RECOVERY:
                     self.unit.status = BlockedStatus("ready to rollback application")
-                case "failed":
+                case UpgradeState.FAILED:
                     self.upgrade.set_unit_failed()
-                case "upgrading":
+                case UpgradeState.UPGRADING:
                     self.unit.status = MaintenanceStatus("upgrading unit")
-                case "completed":
+                case UpgradeState.COMPLETED:
                     if len(self.upgrade.app_units) > 1 and int(
                         self.unit.name.split("/")[1]
                     ) == max(int(unit.name.split("/")[1]) for unit in self.upgrade.app_units):
@@ -2480,7 +2482,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.metrics_endpoint.update_scrape_job_spec(
                 self._generate_metrics_jobs(self.is_tls_enabled)
             )
-            self.on[self.restart_manager.name].acquire_lock.emit()
+            self.on[str(self.restart_manager.name)].acquire_lock.emit()
 
     def _update_pebble_layers(self, replan: bool = True) -> None:
         """Update the pebble layers to keep the health check URL up-to-date."""
@@ -2674,7 +2676,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
     @cached_property
     def generate_config_hash(self) -> str:
         """Generate current configuration hash."""
-        return shake_128(str(self.config.dict()).encode()).hexdigest(16)
+        return shake_128(str(self.config.model_dump()).encode()).hexdigest(16)
 
     def override_patroni_on_failure_condition(
         self, new_condition: str, repeat_cause: str | None
