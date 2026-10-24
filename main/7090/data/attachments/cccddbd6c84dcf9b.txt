@@ -1,0 +1,524 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  00:12:19Z
+
+App                  Version  Status   Scale  Charm                Channel      Rev  Address         Exposed  Message
+another-application           waiting    0/1  postgresql-test-app  latest/edge  616                  no       installing agent
+another-database     14.24    error        3  postgresql-k8s                      1  10.152.183.171  no       hook failed: "leader-elected"
+database             14.24    active       3  postgresql-k8s                      0  10.152.183.185  no       
+postgresql-test-app           active       2  postgresql-test-app  latest/edge  616  10.152.183.41   no       received database credentials of the first database
+
+Unit                    Workload  Agent       Address     Ports  Message
+another-application/0   waiting   allocating                     installing agent
+another-database/0      unknown   executing   10.1.0.155         
+another-database/1      unknown   executing   10.1.0.206         
+another-database/2*     error     idle        10.1.0.1           hook failed: "leader-elected"
+database/0              active    executing   10.1.0.130         
+database/1              active    executing   10.1.0.232         
+database/2*             active    idle        10.1.0.99          Primary
+postgresql-test-app/0*  active    executing   10.1.0.141         received database credentials of the first database
+postgresql-test-app/1   active    executing   10.1.0.117         received database credentials of the first database
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-test-app-0: 00:07:54 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-postgresql-test-app-1: 00:07:54 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-another-database-2: 00:08:49 ERROR unit.another-database/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 250, in handle_request
+    resp = self._pool.handle_request(req)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection_pool.py", line 256, in handle_request
+    raise exc from None
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection_pool.py", line 236, in handle_request
+    response = connection.handle_request(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 101, in handle_request
+    raise exc
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 78, in handle_request
+    stream = self._connect(request)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 124, in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_backends/sync.py", line 207, in connect_tcp
+    with map_exceptions(exc_map):
+  File "/usr/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectTimeout: timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-another-database-2/charm/src/charm.py", line 2871, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 360, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 522, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 506, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 439, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 483, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 336, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 914, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1034, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/src/charm.py", line 895, in _on_leader_elected
+    self._cleanup_old_cluster_resources()
+  File "/var/lib/juju/agents/unit-another-database-2/charm/src/charm.py", line 1233, in _cleanup_old_cluster_resources
+    client.delete(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 147, in delete
+    return self._client.request(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 346, in request
+    resp = self.send(req)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 309, in send
+    return self._client.send(req, stream=stream)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 249, in handle_request
+    with map_httpcore_exceptions():
+  File "/usr/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectTimeout: timed out
+unit-another-database-2: 00:08:50 ERROR juju.worker.uniter.operation hook "leader-elected" (via hook dispatching script: dispatch) failed: exit status 1
+unit-another-database-2: 00:09:12 ERROR unit.another-database/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 250, in handle_request
+    resp = self._pool.handle_request(req)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection_pool.py", line 256, in handle_request
+    raise exc from None
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection_pool.py", line 236, in handle_request
+    response = connection.handle_request(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 101, in handle_request
+    raise exc
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 78, in handle_request
+    stream = self._connect(request)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 124, in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_backends/sync.py", line 207, in connect_tcp
+    with map_exceptions(exc_map):
+  File "/usr/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectTimeout: timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-another-database-2/charm/src/charm.py", line 2871, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 360, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 522, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 506, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 439, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 483, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 336, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 914, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1034, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/src/charm.py", line 895, in _on_leader_elected
+    self._cleanup_old_cluster_resources()
+  File "/var/lib/juju/agents/unit-another-database-2/charm/src/charm.py", line 1233, in _cleanup_old_cluster_resources
+    client.delete(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 147, in delete
+    return self._client.request(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 346, in request
+    resp = self.send(req)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 309, in send
+    return self._client.send(req, stream=stream)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 249, in handle_request
+    with map_httpcore_exceptions():
+  File "/usr/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectTimeout: timed out
+unit-another-database-2: 00:09:13 ERROR juju.worker.uniter.operation hook "leader-elected" (via hook dispatching script: dispatch) failed: exit status 1
+unit-another-database-2: 00:09:30 ERROR unit.another-database/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 250, in handle_request
+    resp = self._pool.handle_request(req)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection_pool.py", line 256, in handle_request
+    raise exc from None
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection_pool.py", line 236, in handle_request
+    response = connection.handle_request(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 101, in handle_request
+    raise exc
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 78, in handle_request
+    stream = self._connect(request)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 124, in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_backends/sync.py", line 207, in connect_tcp
+    with map_exceptions(exc_map):
+  File "/usr/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectTimeout: timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-another-database-2/charm/src/charm.py", line 2871, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 360, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 522, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 506, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 439, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 483, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 336, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 914, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1034, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/src/charm.py", line 895, in _on_leader_elected
+    self._cleanup_old_cluster_resources()
+  File "/var/lib/juju/agents/unit-another-database-2/charm/src/charm.py", line 1233, in _cleanup_old_cluster_resources
+    client.delete(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 147, in delete
+    return self._client.request(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 346, in request
+    resp = self.send(req)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 309, in send
+    return self._client.send(req, stream=stream)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 249, in handle_request
+    with map_httpcore_exceptions():
+  File "/usr/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectTimeout: timed out
+unit-another-database-2: 00:09:43 ERROR unit.another-database/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 250, in handle_request
+    resp = self._pool.handle_request(req)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection_pool.py", line 256, in handle_request
+    raise exc from None
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection_pool.py", line 236, in handle_request
+    response = connection.handle_request(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 101, in handle_request
+    raise exc
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 78, in handle_request
+    stream = self._connect(request)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 124, in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_backends/sync.py", line 207, in connect_tcp
+    with map_exceptions(exc_map):
+  File "/usr/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectTimeout: timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-another-database-2/charm/src/charm.py", line 2871, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 360, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 522, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 506, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 439, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 483, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 336, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 914, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1034, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/src/charm.py", line 895, in _on_leader_elected
+    self._cleanup_old_cluster_resources()
+  File "/var/lib/juju/agents/unit-another-database-2/charm/src/charm.py", line 1233, in _cleanup_old_cluster_resources
+    client.delete(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 147, in delete
+    return self._client.request(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 346, in request
+    resp = self.send(req)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 309, in send
+    return self._client.send(req, stream=stream)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 249, in handle_request
+    with map_httpcore_exceptions():
+  File "/usr/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectTimeout: timed out
+unit-another-database-2: 00:09:44 ERROR juju.worker.uniter.operation hook "leader-elected" (via hook dispatching script: dispatch) failed: exit status 1
+unit-another-database-2: 00:10:48 ERROR unit.another-database/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 250, in handle_request
+    resp = self._pool.handle_request(req)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection_pool.py", line 256, in handle_request
+    raise exc from None
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection_pool.py", line 236, in handle_request
+    response = connection.handle_request(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 101, in handle_request
+    raise exc
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 78, in handle_request
+    stream = self._connect(request)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 124, in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_backends/sync.py", line 207, in connect_tcp
+    with map_exceptions(exc_map):
+  File "/usr/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectTimeout: timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-another-database-2/charm/src/charm.py", line 2871, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 360, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 522, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 506, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 439, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 483, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 336, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 914, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1034, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/src/charm.py", line 895, in _on_leader_elected
+    self._cleanup_old_cluster_resources()
+  File "/var/lib/juju/agents/unit-another-database-2/charm/src/charm.py", line 1233, in _cleanup_old_cluster_resources
+    client.delete(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 147, in delete
+    return self._client.request(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 346, in request
+    resp = self.send(req)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 309, in send
+    return self._client.send(req, stream=stream)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 249, in handle_request
+    with map_httpcore_exceptions():
+  File "/usr/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectTimeout: timed out
+unit-another-database-2: 00:10:48 ERROR juju.worker.uniter.operation hook "leader-elected" (via hook dispatching script: dispatch) failed: exit status 1
+unit-another-database-2: 00:11:06 ERROR unit.another-database/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 250, in handle_request
+    resp = self._pool.handle_request(req)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection_pool.py", line 256, in handle_request
+    raise exc from None
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection_pool.py", line 236, in handle_request
+    response = connection.handle_request(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 101, in handle_request
+    raise exc
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 78, in handle_request
+    stream = self._connect(request)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 124, in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_backends/sync.py", line 207, in connect_tcp
+    with map_exceptions(exc_map):
+  File "/usr/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectTimeout: timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-another-database-2/charm/src/charm.py", line 2871, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 360, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 522, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 506, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 439, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 483, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 336, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 914, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1034, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/src/charm.py", line 895, in _on_leader_elected
+    self._cleanup_old_cluster_resources()
+  File "/var/lib/juju/agents/unit-another-database-2/charm/src/charm.py", line 1233, in _cleanup_old_cluster_resources
+    client.delete(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 147, in delete
+    return self._client.request(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 346, in request
+    resp = self.send(req)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 309, in send
+    return self._client.send(req, stream=stream)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 249, in handle_request
+    with map_httpcore_exceptions():
+  File "/usr/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectTimeout: timed out
+unit-another-database-2: 00:11:06 ERROR juju.worker.uniter.operation hook "leader-elected" (via hook dispatching script: dispatch) failed: exit status 1
+unit-another-database-2: 00:12:09 ERROR unit.another-database/2.juju-log Uncaught exception while in charm code:
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 101, in map_httpcore_exceptions
+    yield
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 250, in handle_request
+    resp = self._pool.handle_request(req)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection_pool.py", line 256, in handle_request
+    raise exc from None
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection_pool.py", line 236, in handle_request
+    response = connection.handle_request(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 101, in handle_request
+    raise exc
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 78, in handle_request
+    stream = self._connect(request)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_sync/connection.py", line 124, in _connect
+    stream = self._network_backend.connect_tcp(**kwargs)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_backends/sync.py", line 207, in connect_tcp
+    with map_exceptions(exc_map):
+  File "/usr/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpcore/_exceptions.py", line 14, in map_exceptions
+    raise to_exc(exc) from exc
+httpcore.ConnectTimeout: timed out
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-another-database-2/charm/src/charm.py", line 2871, in <module>
+    main(PostgresqlOperatorCharm, use_juju_for_storage=True)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/__init__.py", line 360, in __call__
+    return _main.main(charm_class=charm_class, use_juju_for_storage=use_juju_for_storage)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 522, in main
+    manager.run()
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 506, in run
+    self._emit()
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 439, in _emit
+    self._emit_charm_event(self.dispatcher.event_name)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/_main.py", line 483, in _emit_charm_event
+    event_to_emit.emit(*args, **kwargs)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 336, in emit
+    framework._emit(event)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 914, in _emit
+    self._reemit(event_path)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/ops/framework.py", line 1034, in _reemit
+    custom_handler(event)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/src/charm.py", line 895, in _on_leader_elected
+    self._cleanup_old_cluster_resources()
+  File "/var/lib/juju/agents/unit-another-database-2/charm/src/charm.py", line 1233, in _cleanup_old_cluster_resources
+    client.delete(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/lightkube/core/client.py", line 147, in delete
+    return self._client.request(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 346, in request
+    resp = self.send(req)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/lightkube/core/generic_client.py", line 309, in send
+    return self._client.send(req, stream=stream)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 914, in send
+    response = self._send_handling_auth(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 942, in _send_handling_auth
+    response = self._send_handling_redirects(
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 979, in _send_handling_redirects
+    response = self._send_single_request(request)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_client.py", line 1014, in _send_single_request
+    response = transport.handle_request(request)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 249, in handle_request
+    with map_httpcore_exceptions():
+  File "/usr/lib/python3.10/contextlib.py", line 153, in __exit__
+    self.gen.throw(typ, value, traceback)
+  File "/var/lib/juju/agents/unit-another-database-2/charm/venv/lib/python3.10/site-packages/httpx/_transports/default.py", line 118, in map_httpcore_exceptions
+    raise mapped_exc(message) from exc
+httpx.ConnectTimeout: timed out
+unit-another-database-2: 00:12:09 ERROR juju.worker.uniter.operation hook "leader-elected" (via hook dispatching script: dispatch) failed: exit status 1
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
