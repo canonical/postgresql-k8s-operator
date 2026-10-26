@@ -1942,13 +1942,13 @@ files = [
 
 [[package]]
 name = "postgresql-charms-single-kernel"
-version = "16.3.20"
+version = "16.3.21"
 description = "Shared and reusable code for PostgreSQL-related charms"
 optional = false
 python-versions = ">=3.8,<4.0"
 groups = ["main", "integration"]
 files = [
-    {file = "e4afe80a.tar.gz", hash = "sha256:1b1f3f4776eec318f8d125e6f47061f7ea5820dd739eb67d7e952a0af78cd2f2"},
+    {file = "c4e872209440841bc6b91101f6a403f466bee701.tar.gz", hash = "sha256:7a1fafb088a2bdd5d2e6193a4fcaa7f22adf4c5c1645b47141b3592ad2cb8b11"},
 ]
 
 [package.dependencies]
@@ -1982,7 +1982,7 @@ vm = ["charmlibs-snap (>=1.0.1,<2) ; python_version >= \"3.12\"", "charmlibs-sys
 
 [package.source]
 type = "url"
-url = "https://github.com/canonical/postgresql-single-kernel-library/archive/e4afe80a.tar.gz"
+url = "https://github.com/canonical/postgresql-single-kernel-library/archive/c4e872209440841bc6b91101f6a403f466bee701.tar.gz"
 
 [[package]]
 name = "prompt-toolkit"
@@ -3403,4 +3403,4 @@ h11 = ">=0.16.0,<1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "23037d9f9add2773f0febed86e97c45e202ca2e2bc26e37b613b79e8d0960a21"
+content-hash = "ca34c1a92853ad01e4db21093a6e0655bd0f601a9c1f20a6e5103e6b6ef2a5aa"
