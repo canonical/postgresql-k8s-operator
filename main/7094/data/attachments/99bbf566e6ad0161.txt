@@ -1,0 +1,16 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  00:07:24Z
+
+App             Version  Status       Scale  Charm           Channel  Rev  Address        Exposed  Message
+postgresql-k8s  14.24    maintenance      2  postgresql-k8s             0  10.152.183.83  no       Beginning rolling restart
+
+Unit               Workload  Agent      Address     Ports  Message
+postgresql-k8s/0*  error     idle       10.1.0.138         hook failed: "storage-attached"
+postgresql-k8s/1   unknown   executing  10.1.0.52          
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
