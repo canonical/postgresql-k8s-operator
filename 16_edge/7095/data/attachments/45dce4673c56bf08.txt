@@ -1,0 +1,34 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  untrusted-postgresql-k8s/0 [executing] maintenance: installing charm software
+  untrusted-postgresql-k8s/1 [executing] maintenance: installing charm software
+  untrusted-postgresql-k8s/2 [executing] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  01:37:15Z
+
+App                       Version  Status  Scale  Charm           Channel  Rev  Address         Exposed  Message
+untrusted-postgresql-k8s  16.15    error       3  postgresql-k8s             0  10.152.183.186  no       applying resource "": resource name may not be empty
+
+Unit                         Workload  Agent      Address     Ports  Message
+untrusted-postgresql-k8s/0   waiting   executing  10.1.0.38          Waiting for cluster membership
+untrusted-postgresql-k8s/1   waiting   executing  10.1.0.120         Waiting for cluster membership
+untrusted-postgresql-k8s/2*  active    executing  10.1.0.35          
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-untrusted-postgresql-k8s-2: 01:37:06 ERROR unit.untrusted-postgresql-k8s/2.juju-log single_kernel_postgresql.charms.k8s_charm:
+            Access to k8s cluster resources is not authorized. This happens when RBAC is enabled and the deployed application was not trusted by the juju admin.
+            To fix this issue, run `juju trust untrusted-postgresql-k8s --scope=cluster` (or remove & re-deploy untrusted-postgresql-k8s with `--trust`)
+            
+unit-untrusted-postgresql-k8s-2: 01:37:06 ERROR unit.untrusted-postgresql-k8s/2.juju-log single_kernel_postgresql.charms.k8s_charm:
+            Access to k8s cluster resources is not authorized. This happens when RBAC is enabled and the deployed application was not trusted by the juju admin.
+            To fix this issue, run `juju trust untrusted-postgresql-k8s --scope=cluster` (or remove & re-deploy untrusted-postgresql-k8s with `--trust`)
+            
+unit-untrusted-postgresql-k8s-2: 01:37:09 ERROR unit.untrusted-postgresql-k8s/2.juju-log single_kernel_postgresql.charms.k8s_charm:
+            Access to k8s cluster resources is not authorized. This happens when RBAC is enabled and the deployed application was not trusted by the juju admin.
+            To fix this issue, run `juju trust untrusted-postgresql-k8s --scope=cluster` (or remove & re-deploy untrusted-postgresql-k8s with `--trust`)
+            
+controller-0: 01:37:14 ERROR juju.worker.caasapplicationprovisioner.runner exited "untrusted-postgresql-k8s": ensuring application "untrusted-postgresql-k8s": applying resource "": resource name may not be empty
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
