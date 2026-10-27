@@ -1,0 +1,29 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  00:26:18Z
+
+App                  Version  Status  Scale  Charm                Channel      Rev  Address         Exposed  Message
+another-application           active      1  postgresql-test-app  latest/edge  616  10.152.183.92   no       received database credentials of the first database
+another-database     14.24    active      3  postgresql-k8s                      0  10.152.183.116  no       
+database             14.24    active    2/3  postgresql-k8s                      1  10.152.183.119  no       
+postgresql-test-app           active      2  postgresql-test-app  latest/edge  616  10.152.183.107  no       received database credentials of the second database
+
+Unit                    Workload  Agent      Address     Ports  Message
+another-application/0*  active    idle       10.1.0.192         received database credentials of the first database
+another-database/0*     active    idle       10.1.0.165         Primary
+another-database/1      active    idle       10.1.0.70          
+another-database/2      active    idle       10.1.0.86          
+database/0*             active    executing  10.1.0.101         Primary (degraded)
+database/1              error     lost       10.1.0.1           crash loop backoff: back-off 40s restarting failed container=charm pod=database-1_testing(18bc3702-dacf-47b6-9dbd-ee0...
+database/2              active    executing  10.1.0.237         
+postgresql-test-app/0   active    executing  10.1.0.95          received database credentials of the second database
+postgresql-test-app/1*  active    executing  10.1.0.174         received database credentials of the second database
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-test-app-1: 00:07:53 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-postgresql-test-app-0: 00:07:53 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-another-application-0: 00:13:04 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
