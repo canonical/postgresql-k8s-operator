@@ -1,0 +1,28 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:806 Connecting to existing model concierge-k8s:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SecretsRevoker received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-0
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] waiting: awaiting for primary endpoint to be ready
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:61 waiting for postgresql
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:67 creating db
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:72 get pvc for postgresql-k8s/0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/persistentvolumeclaims "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1089 got pvc for archive storage: postgresql-k8s-archive-611fdb18-postgresql-k8s-0
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1089 got pvc for data storage: postgresql-k8s-data-611fdb18-postgresql-k8s-0
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1089 got pvc for logs storage: postgresql-k8s-logs-611fdb18-postgresql-k8s-0
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1089 got pvc for temp storage: postgresql-k8s-temp-611fdb18-postgresql-k8s-0
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:77 get pv for postgresql-k8s/0
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/persistentvolumes "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1105 got pv for archive storage: pvc-0cd6a944-ff54-4eca-87fc-d5c38417a185
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1105 got pv for temp storage: pvc-54d60cc7-80af-44a6-bc66-f9da0b64ed5d
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1105 got pv for data storage: pvc-62bd9741-e649-49dc-a57b-56d347275c0c
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:1105 got pv for logs storage: pvc-eb432f65-9ab4-42c9-a314-eb0ae342b5d0
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:82 get storage id
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:88 scale to 0 with force
+[32mINFO    [0m integration.ha_tests.test_smoke:test_smoke.py:92 werifing is storage exists

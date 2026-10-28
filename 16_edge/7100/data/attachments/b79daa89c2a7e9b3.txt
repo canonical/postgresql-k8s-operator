@@ -1,0 +1,100 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:806 Connecting to existing model concierge-k8s:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SecretsRevoker received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/s3-integrator-145
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/noble/self-signed-certificates-710
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-0
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[33mWARNING [0m juju.model:__init__.py:1683 relate is deprecated and will be removed. Use integrate instead.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [allocating] waiting: installing agent
+  postgresql-k8s-aws/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [allocating] waiting: agent initialising
+  postgresql-k8s-aws/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [executing] active: 
+  postgresql-k8s-aws/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [executing] waiting: awaiting for primary endpoint to be ready
+  postgresql-k8s-aws/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: 
+  postgresql-k8s-aws/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/0 [idle] active: Primary (degraded)
+  postgresql-k8s-aws/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [idle] error: crash loop backoff: back-off 40s restarting failed container=charm pod=postgresql-k8s-aws-1_testing(25f5b281-bead-4a98-ae14-94f53a8f257c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [idle] error: crash loop backoff: back-off 40s restarting failed container=charm pod=postgresql-k8s-aws-1_testing(25f5b281-bead-4a98-ae14-94f53a8f257c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [idle] error: crash loop backoff: back-off 1m20s restarting failed container=charm pod=postgresql-k8s-aws-1_testing(25f5b281-bead-4a98-ae14-94f53a8f257c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [idle] error: crash loop backoff: back-off 1m20s restarting failed container=charm pod=postgresql-k8s-aws-1_testing(25f5b281-bead-4a98-ae14-94f53a8f257c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [idle] error: crash loop backoff: back-off 2m40s restarting failed container=charm pod=postgresql-k8s-aws-1_testing(25f5b281-bead-4a98-ae14-94f53a8f257c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [idle] error: crash loop backoff: back-off 2m40s restarting failed container=charm pod=postgresql-k8s-aws-1_testing(25f5b281-bead-4a98-ae14-94f53a8f257c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [idle] error: crash loop backoff: back-off 2m40s restarting failed container=charm pod=postgresql-k8s-aws-1_testing(25f5b281-bead-4a98-ae14-94f53a8f257c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [idle] error: crash loop backoff: back-off 2m40s restarting failed container=charm pod=postgresql-k8s-aws-1_testing(25f5b281-bead-4a98-ae14-94f53a8f257c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [idle] error: crash loop backoff: back-off 2m40s restarting failed container=charm pod=postgresql-k8s-aws-1_testing(25f5b281-bead-4a98-ae14-94f53a8f257c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [idle] error: crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-aws-1_testing(25f5b281-bead-4a98-ae14-94f53a8f257c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [idle] error: crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-aws-1_testing(25f5b281-bead-4a98-ae14-94f53a8f257c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [idle] error: crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-aws-1_testing(25f5b281-bead-4a98-ae14-94f53a8f257c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [idle] error: crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-aws-1_testing(25f5b281-bead-4a98-ae14-94f53a8f257c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [idle] error: crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-aws-1_testing(25f5b281-bead-4a98-ae14-94f53a8f257c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [idle] error: crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-aws-1_testing(25f5b281-bead-4a98-ae14-94f53a8f257c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [idle] error: crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-aws-1_testing(25f5b281-bead-4a98-ae14-94f53a8f257c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [idle] error: crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-aws-1_testing(25f5b281-bead-4a98-ae14-94f53a8f257c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [idle] error: crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-aws-1_testing(25f5b281-bead-4a98-ae14-94f53a8f257c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [idle] error: crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-aws-1_testing(25f5b281-bead-4a98-ae14-94f53a8f257c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-aws/1 [idle] error: crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-aws-1_testing(25f5b281-bead-4a98-ae14-94f53a8f257c)
+[32mINFO    [0m integration.conftest:conftest.py:60 deleting the previously created backups
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  01:44:26Z
+
+App                       Version  Status   Scale  Charm                     Channel        Rev  Address         Exposed  Message
+postgresql-k8s-aws        16.15    active     1/2  postgresql-k8s                             0  10.152.183.138  no       
+s3-integrator                      blocked      1  s3-integrator             latest/stable  145  10.152.183.117  no       Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates           active       1  self-signed-certificates  1/stable       710  10.152.183.84   no       
+
+Unit                         Workload  Agent  Address     Ports  Message
+postgresql-k8s-aws/0*        active    idle   10.1.0.127         Primary (degraded)
+postgresql-k8s-aws/1         error     lost   10.1.0.1           crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-aws-1_testing(25f5b281-bead-4a...
+s3-integrator/0*             blocked   idle   10.1.0.192         Missing parameters: ['access-key', 'secret-key']
+self-signed-certificates/0*  active    idle   10.1.0.194         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
