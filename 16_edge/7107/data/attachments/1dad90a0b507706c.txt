@@ -1,0 +1,44 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  01:31:59Z
+
+App             Version  Status  Scale  Charm           Channel  Rev  Address         Exposed  Message
+postgresql-k8s  16.15    active      1  postgresql-k8s             0  10.152.183.204  no       
+
+Unit               Workload  Agent  Address     Ports  Message
+postgresql-k8s/0*  active    idle   10.1.0.236         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-0: 01:30:34 ERROR unit.postgresql-k8s/0.juju-log single_kernel_postgresql.utils.postgresql:Failed to create predefined instance roles: connection to server at "postgresql-k8s-primary.testing.svc.cluster.local" (10.152.183.208), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-k8s-0: 01:30:34 ERROR unit.postgresql-k8s/0.juju-log single_kernel_postgresql.events.postgresql:Failed to create pre-defined roles
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 298, in create_predefined_instance_roles
+    self._connect_to_database(
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/compat/postgresql.py", line 187, in _connect_to_database
+    connection = psycopg2.connect(
+                 ^^^^^^^^^^^^^^^^^
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/psycopg2/__init__.py", line 122, in connect
+    conn = _connect(dsn, connection_factory=connection_factory, **kwasync)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+psycopg2.OperationalError: connection to server at "postgresql-k8s-primary.testing.svc.cluster.local" (10.152.183.208), port 5432 failed: Operation not permitted
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/events/postgresql.py", line 1966, in _setup_bootstrap_users
+    self.cluster_manager.setup_instance_users_k8s(self.postgresql())
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/managers/cluster.py", line 259, in setup_instance_users_k8s
+    postgresql_client.create_predefined_instance_roles()
+  File "/var/lib/juju/agents/unit-postgresql-k8s-0/charm/venv/lib/python3.12/site-packages/single_kernel_postgresql/utils/postgresql.py", line 315, in create_predefined_instance_roles
+    raise PostgreSQLCreatePredefinedRolesError() from e
+single_kernel_postgresql.utils.postgresql.PostgreSQLCreatePredefinedRolesError
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
