@@ -1,0 +1,63 @@
+[32mINFO    [0m integration.ha_tests.test_failsafe:test_failsafe.py:153 starting continuous writes to the database
+[32mINFO    [0m integration.ha_tests.test_failsafe:test_failsafe.py:161 cutting the access to the K8s API
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/default/endpoints/kubernetes "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/default/services/kubernetes "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.test_failsafe:test_failsafe.py:164 cutting network for postgresql-k8s/1
+[32mINFO    [0m integration.ha_tests.test_failsafe:test_failsafe.py:167 waiting for postgresql-k8s/0 to be demoted
+[32mINFO    [0m integration.ha_tests.test_failsafe:test_failsafe.py:177 checking that postgresql-k8s/0 was demoted because of the DCS failure
+[32mINFO    [0m integration.ha_tests.test_failsafe:test_failsafe.py:187 restoring network for postgresql-k8s/1
+[32mINFO    [0m integration.ha_tests.test_failsafe:test_failsafe.py:189 restoring the access to the K8s API
+[32mINFO    [0m integration.ha_tests.test_failsafe:test_failsafe.py:192 waiting for the cluster to settle
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] maintenance: 
+  postgresql-k8s/2 [idle] active: Primary (degraded)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: Primary
+[32mINFO    [0m integration.ha_tests.test_failsafe:test_failsafe.py:198 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:244 Initial writes {'testing.postgresql-k8s-0': 103, 'testing.postgresql-k8s-1': 103, 'testing.postgresql-k8s-2': 103}
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:250 Retry writes {'testing.postgresql-k8s-0': 107, 'testing.postgresql-k8s-1': 107, 'testing.postgresql-k8s-2': 107}
+[32mINFO    [0m integration.ha_tests.test_failsafe:test_failsafe.py:200 checking whether no writes were lost
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  00:17:27Z
+
+App                  Version  Status  Scale  Charm                Channel      Rev  Address         Exposed  Message
+postgresql-k8s       14.24    active      3  postgresql-k8s                      0  10.152.183.124  no       
+postgresql-test-app           active      1  postgresql-test-app  latest/edge  616  10.152.183.107  no       received database credentials of the first database
+
+Unit                    Workload  Agent  Address     Ports  Message
+postgresql-k8s/0*       active    idle   10.1.0.131         
+postgresql-k8s/1        active    idle   10.1.0.126         
+postgresql-k8s/2        active    idle   10.1.0.94          Primary
+postgresql-test-app/0*  active    idle   10.1.0.95          received database credentials of the first database
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-test-app-0: 00:07:06 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+unit-postgresql-k8s-1: 00:09:11 ERROR unit.postgresql-k8s/1.juju-log restart:0: Failed to list PostgreSQL database users: connection to server at "postgresql-k8s-1.postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.0.126), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-k8s-2: 00:09:31 ERROR unit.postgresql-k8s/2.juju-log database-peers:2: Failed to list PostgreSQL database users: connection to server at "postgresql-k8s-2.postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.0.94), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-k8s-0: 00:11:34 ERROR juju.worker.uniter.operation hook "secret-remove" (via hook dispatching script: dispatch) failed: cannot delete secret "15tndfu61h16f80cknr0" revision 1 from backend: Get "https://10.152.183.1:443/api/v1/namespaces/testing/secrets/15tndfu61h16f80cknr0-1": dial tcp 10.152.183.1:443: i/o timeout: Get "https://10.152.183.1:443/api/v1/namespaces/testing/secrets/15tndfu61h16f80cknr0-1": dial tcp 10.152.183.1:443: i/o timeout
+unit-postgresql-k8s-0: 00:12:11 ERROR juju.worker.uniter.operation hook "secret-remove" (via hook dispatching script: dispatch) failed: cannot delete secret "15tndfu61h16f80cknr0" revision 1 from backend: Get "https://10.152.183.1:443/api/v1/namespaces/testing/secrets/15tndfu61h16f80cknr0-1": dial tcp 10.152.183.1:443: i/o timeout: Get "https://10.152.183.1:443/api/v1/namespaces/testing/secrets/15tndfu61h16f80cknr0-1": dial tcp 10.152.183.1:443: i/o timeout
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
