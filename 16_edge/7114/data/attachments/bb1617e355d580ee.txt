@@ -1,0 +1,48 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active:
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  01:39:05Z
+
+App             Version  Status  Scale  Charm           Channel  Rev  Address         Exposed  Message
+postgresql-k8s  16.15    active      2  postgresql-k8s             0  10.152.183.242  no       
+
+Unit               Workload  Agent  Address     Ports  Message
+postgresql-k8s/0*  active    idle   10.1.0.115         
+postgresql-k8s/1   active    idle   10.1.0.154         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+model-46fae0cd-e358-46c7-8730-6bc1bf362cc1: 01:29:55 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-46fae0cd-e358-46c7-8730-6bc1bf362cc1: 01:30:28 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-46fae0cd-e358-46c7-8730-6bc1bf362cc1: 01:31:03 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-46fae0cd-e358-46c7-8730-6bc1bf362cc1: 01:31:37 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-46fae0cd-e358-46c7-8730-6bc1bf362cc1: 01:32:14 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-46fae0cd-e358-46c7-8730-6bc1bf362cc1: 01:32:51 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-46fae0cd-e358-46c7-8730-6bc1bf362cc1: 01:33:30 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-46fae0cd-e358-46c7-8730-6bc1bf362cc1: 01:34:10 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-46fae0cd-e358-46c7-8730-6bc1bf362cc1: 01:34:52 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-46fae0cd-e358-46c7-8730-6bc1bf362cc1: 01:35:38 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-46fae0cd-e358-46c7-8730-6bc1bf362cc1: 01:36:27 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+unit-postgresql-k8s-0: 01:36:40 ERROR unit.postgresql-k8s/0.juju-log single_kernel_postgresql.managers.config:Failed to disable plugin: cannot drop extension pg_trgm because other objects depend on it
+DETAIL:  index example_idx depends on operator class gin_trgm_ops for access method gin
+HINT:  Use DROP ... CASCADE to drop the dependent objects too.
+
+Was the plugin enabled manually? If so, update charm config with `juju config postgresql plugin-<plugin_name>-enable=True`
+model-46fae0cd-e358-46c7-8730-6bc1bf362cc1: 01:37:18 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+unit-postgresql-k8s-0: 01:37:34 ERROR unit.postgresql-k8s/0.juju-log single_kernel_postgresql.managers.config:Failed to disable plugin: cannot drop extension pg_trgm because other objects depend on it
+DETAIL:  index example_idx depends on operator class gin_trgm_ops for access method gin
+HINT:  Use DROP ... CASCADE to drop the dependent objects too.
+
+Was the plugin enabled manually? If so, update charm config with `juju config postgresql plugin-<plugin_name>-enable=True`
+model-46fae0cd-e358-46c7-8730-6bc1bf362cc1: 01:38:14 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
