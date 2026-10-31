@@ -1,0 +1,287 @@
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:22 Clearing continuous writes
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-test-app/0 clear-continuous-writes --wait 120s
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:25 Starting continuous writes
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-test-app/0 start-continuous-writes
+[32mINFO    [0m root:test_upgrade_from_stable.py:69 Ensure continuous writes are incrementing
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 get-primary --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju show-secret --model testing secret:0rltr5mocsv33up7dcn0 --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju show-secret --model testing secret:0rltr5mocsv33up7dcn0 --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju show-secret --model testing secret:0rltr5mocsv33up7dcn0 --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju show-secret --model testing secret:0rltr5mocsv33up7dcn0 --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 get-primary --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:332 Refresh the charm
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju refresh --model testing postgresql-k8s --path /root/snap/juju/common/tmpym9wc_rw/_temp.charm --resource postgresql-image=ghcr.io/canonical/charmed-postgresql@sha256:83ebc9cfe2e4468da268ebef589cb32cf824228a897d09b4c16246ea97b7ef3d
+[32mINFO    [0m root:high_availability_helpers_new.py:340 Wait for refresh to block as paused or incompatible
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:370 Run resume-refresh action
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/1 resume-refresh --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:high_availability_helpers_new.py:322 resume-refresh reported 'No refresh in progress' but the refresh is not verified complete; retrying within 900s
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:36 Clearing continuous writes
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-test-app/0 clear-continuous-writes --wait 120s

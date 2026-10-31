@@ -1,0 +1,46 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [idle] active: 
+  postgresql-k8s/2 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s (waiting for exactly 2 units, current : 3)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s (waiting for exactly 2 units, current : 3)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s (waiting for exactly 4 units, current : 2)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [executing] active: 
+  postgresql-k8s/1 [executing] active: Primary (degraded)
+  postgresql-k8s/2 [executing] maintenance: installing charm software
+  postgresql-k8s/3 [executing] waiting: Waiting for cluster membership
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: 
+  postgresql-k8s/1 [executing] active: Primary (degraded)
+  postgresql-k8s/2 [executing] maintenance: installing charm software
+  postgresql-k8s/3 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/2 [executing] maintenance: installing charm software
+  postgresql-k8s/3 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/2 [executing] maintenance: installing charm software
+  postgresql-k8s/3 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/2 [executing] maintenance: installing charm software
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  01:43:40Z
+
+App             Version  Status  Scale  Charm           Channel  Rev  Address        Exposed  Message
+postgresql-k8s  16.15    active    3/4  postgresql-k8s             0  10.152.183.69  no       
+
+Unit               Workload  Agent  Address     Ports  Message
+postgresql-k8s/0*  active    idle   10.1.0.29          
+postgresql-k8s/1   active    idle   10.1.0.155         Primary (degraded)
+postgresql-k8s/2   error     lost   10.1.0.1           crash loop backoff: back-off 40s restarting failed container=charm pod=postgresql-k8s-2_testing(13395565-e8db-4669-92...
+postgresql-k8s/3   active    idle   10.1.0.133         
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
