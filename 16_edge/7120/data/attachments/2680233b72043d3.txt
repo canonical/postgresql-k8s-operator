@@ -1,0 +1,107 @@
+[32mINFO    [0m integration.conftest:conftest.py:275 Setting up TLS certificates
+[32mINFO    [0m integration.conftest:conftest.py:340 Setting up microceph
+[32mINFO    [0m integration.conftest:conftest.py:369 Set up microceph
+[32mINFO    [0m pytest_operator.plugin:plugin.py:806 Connecting to existing model concierge-k8s:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SecretsRevoker received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying ch:amd64/jammy/s3-integrator-145
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-0
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [allocating] waiting: installing agent
+  postgresql-k8s-ceph/1 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [executing] maintenance: installing charm software
+  postgresql-k8s-ceph/1 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [executing] maintenance: installing charm software
+  postgresql-k8s-ceph/1 [executing] waiting: Waiting for cluster membership
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [executing] maintenance: installing charm software
+  postgresql-k8s-ceph/1 [idle] waiting: Waiting for cluster membership
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [executing] maintenance: installing charm software
+  postgresql-k8s-ceph/1 [idle] waiting: Waiting for cluster membership
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [executing] maintenance: installing charm software
+  postgresql-k8s-ceph/1 [idle] waiting: Waiting for cluster membership
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [executing] maintenance: installing charm software
+  postgresql-k8s-ceph/1 [idle] waiting: Waiting for cluster membership
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] error: crash loop backoff: back-off 40s restarting failed container=charm pod=postgresql-k8s-ceph-0_testing(baaf2285-a0a4-4650-9aa0-ad1cce67bd4c)
+  postgresql-k8s-ceph/1 [idle] waiting: Waiting for cluster membership
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [executing] maintenance: installing charm software
+  postgresql-k8s-ceph/1 [idle] waiting: Waiting for cluster membership
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] error: crash loop backoff: back-off 1m20s restarting failed container=charm pod=postgresql-k8s-ceph-0_testing(baaf2285-a0a4-4650-9aa0-ad1cce67bd4c)
+  postgresql-k8s-ceph/1 [idle] waiting: Waiting for cluster membership
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] error: crash loop backoff: back-off 1m20s restarting failed container=charm pod=postgresql-k8s-ceph-0_testing(baaf2285-a0a4-4650-9aa0-ad1cce67bd4c)
+  postgresql-k8s-ceph/1 [idle] waiting: Waiting for cluster membership
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] error: crash loop backoff: back-off 1m20s restarting failed container=charm pod=postgresql-k8s-ceph-0_testing(baaf2285-a0a4-4650-9aa0-ad1cce67bd4c)
+  postgresql-k8s-ceph/1 [executing] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [executing] maintenance: installing charm software
+  postgresql-k8s-ceph/1 [idle] active: 
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] error: crash loop backoff: back-off 2m40s restarting failed container=charm pod=postgresql-k8s-ceph-0_testing(baaf2285-a0a4-4650-9aa0-ad1cce67bd4c)
+  postgresql-k8s-ceph/1 [idle] active: Primary (degraded)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] error: crash loop backoff: back-off 2m40s restarting failed container=charm pod=postgresql-k8s-ceph-0_testing(baaf2285-a0a4-4650-9aa0-ad1cce67bd4c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] error: crash loop backoff: back-off 2m40s restarting failed container=charm pod=postgresql-k8s-ceph-0_testing(baaf2285-a0a4-4650-9aa0-ad1cce67bd4c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] error: crash loop backoff: back-off 2m40s restarting failed container=charm pod=postgresql-k8s-ceph-0_testing(baaf2285-a0a4-4650-9aa0-ad1cce67bd4c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] error: crash loop backoff: back-off 2m40s restarting failed container=charm pod=postgresql-k8s-ceph-0_testing(baaf2285-a0a4-4650-9aa0-ad1cce67bd4c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] error: crash loop backoff: back-off 2m40s restarting failed container=charm pod=postgresql-k8s-ceph-0_testing(baaf2285-a0a4-4650-9aa0-ad1cce67bd4c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] error: crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-ceph-0_testing(baaf2285-a0a4-4650-9aa0-ad1cce67bd4c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] error: crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-ceph-0_testing(baaf2285-a0a4-4650-9aa0-ad1cce67bd4c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] error: crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-ceph-0_testing(baaf2285-a0a4-4650-9aa0-ad1cce67bd4c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] error: crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-ceph-0_testing(baaf2285-a0a4-4650-9aa0-ad1cce67bd4c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] error: crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-ceph-0_testing(baaf2285-a0a4-4650-9aa0-ad1cce67bd4c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] error: crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-ceph-0_testing(baaf2285-a0a4-4650-9aa0-ad1cce67bd4c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] error: crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-ceph-0_testing(baaf2285-a0a4-4650-9aa0-ad1cce67bd4c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] error: crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-ceph-0_testing(baaf2285-a0a4-4650-9aa0-ad1cce67bd4c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] error: crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-ceph-0_testing(baaf2285-a0a4-4650-9aa0-ad1cce67bd4c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] error: crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-ceph-0_testing(baaf2285-a0a4-4650-9aa0-ad1cce67bd4c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [executing] maintenance: installing charm software
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] error: crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-ceph-0_testing(baaf2285-a0a4-4650-9aa0-ad1cce67bd4c)
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s-ceph/0 [idle] error: crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-ceph-0_testing(baaf2285-a0a4-4650-9aa0-ad1cce67bd4c)
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  01:34:38Z
+
+App                  Version  Status   Scale  Charm           Channel        Rev  Address         Exposed  Message
+postgresql-k8s-ceph  16.15    active     1/2  postgresql-k8s                   0  10.152.183.253  no       
+s3-integrator                 blocked      1  s3-integrator   latest/stable  145  10.152.183.202  no       Missing parameters: ['access-key', 'secret-key']
+
+Unit                    Workload  Agent  Address     Ports  Message
+postgresql-k8s-ceph/0   error     lost   10.1.0.1           crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-ceph-0_testing(baaf2285-a0a4-4...
+postgresql-k8s-ceph/1*  active    idle   10.1.0.182         Primary (degraded)
+s3-integrator/0*        blocked   idle   10.1.0.231         Missing parameters: ['access-key', 'secret-key']
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
