@@ -1,0 +1,60 @@
+[32mINFO    [0m pytest_operator.plugin:plugin.py:806 Connecting to existing model concierge-k8s:testing on unspecified cloud
+[33mWARNING [0m juju.client.connection:connection.py:858 unexpected facade SecretsRevoker received from the controller
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-0
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [allocating] waiting: installing agent
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] maintenance: Executing restart operation
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] blocked: <10% free space on pgdata volume.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] blocked: <10% free space on pgdata volume.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] blocked: <10% free space on pgdata volume.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] blocked: <10% free space on pgdata volume.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] blocked: <10% free space on pgdata volume.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] blocked: <10% free space on pgdata volume.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] blocked: <10% free space on pgdata volume.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] blocked: <10% free space on pgdata volume.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] blocked: <10% free space on pgdata volume.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] blocked: <10% free space on pgdata volume.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] blocked: <10% free space on pgdata volume.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] blocked: <10% free space on pgdata volume.
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  postgresql-k8s/0 [idle] active: Primary
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  00:13:21Z
+
+App             Version  Status  Scale  Charm           Channel  Rev  Address         Exposed  Message
+postgresql-k8s  14.24    active      1  postgresql-k8s             0  10.152.183.167  no       
+
+Unit               Workload  Agent  Address    Ports  Message
+postgresql-k8s/0*  active    idle   10.1.0.29         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+model-28244100-bb01-43a1-88b6-1830de9f4943: 00:05:38 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-28244100-bb01-43a1-88b6-1830de9f4943: 00:06:12 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-28244100-bb01-43a1-88b6-1830de9f4943: 00:06:46 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-28244100-bb01-43a1-88b6-1830de9f4943: 00:07:22 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-28244100-bb01-43a1-88b6-1830de9f4943: 00:07:59 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-28244100-bb01-43a1-88b6-1830de9f4943: 00:08:36 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-28244100-bb01-43a1-88b6-1830de9f4943: 00:09:15 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-28244100-bb01-43a1-88b6-1830de9f4943: 00:09:56 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-28244100-bb01-43a1-88b6-1830de9f4943: 00:10:40 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-28244100-bb01-43a1-88b6-1830de9f4943: 00:11:27 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-28244100-bb01-43a1-88b6-1830de9f4943: 00:12:16 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-28244100-bb01-43a1-88b6-1830de9f4943: 00:13:07 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
