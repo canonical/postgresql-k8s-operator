@@ -1942,14 +1942,14 @@ files = [
 
 [[package]]
 name = "postgresql-charms-single-kernel"
-version = "16.3.23"
+version = "16.3.24"
 description = "Shared and reusable code for PostgreSQL-related charms"
 optional = false
 python-versions = "<4.0,>=3.8"
 groups = ["main", "integration"]
 files = [
-    {file = "postgresql_charms_single_kernel-16.3.23-py3-none-any.whl", hash = "sha256:317a8d923340a06c88b6c2965e7d147f01b40ab7179f38c8b4eae4282e995e4a"},
-    {file = "postgresql_charms_single_kernel-16.3.23.tar.gz", hash = "sha256:d652e7f9816e3ef660446177ce7bffe32971590ed68bd8b74e7e0f8a4e5e2c34"},
+    {file = "postgresql_charms_single_kernel-16.3.24-py3-none-any.whl", hash = "sha256:9d96a0adfc4079b1c79e05feab2b4e0015a2a504f32fabf7a4e727b0ab70cb2d"},
+    {file = "postgresql_charms_single_kernel-16.3.24.tar.gz", hash = "sha256:36ee72d098800a4ddcfcecb723047cf7bc9ef38f45d29e778720fb5ccaec36a7"},
 ]
 
 [package.dependencies]
@@ -3400,4 +3400,4 @@ h11 = ">=0.16.0,<1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "bf294a8cbe9c1466f35d2609aa2593a908a2833cdc26ef3e286ca50919c49cab"
+content-hash = "449143c0f5c9af0879efce1be59ab0ff7366774d63ab235ac70a94cc0a2077dd"
