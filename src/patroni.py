@@ -35,6 +35,7 @@ from tenacity import (
 from constants import (
     API_REQUEST_TIMEOUT,
     PATRONI_CLUSTER_STATUS_ENDPOINT,
+    PATRONI_LOG,
     POSTGRESQL_LOGS_PATH,
     POSTGRESQL_LOGS_PATTERN,
     REWIND_USER,
@@ -703,6 +704,40 @@ class Patroni:
         except Error:
             error_message = "Failed to read last postgresql log file"
             logger.exception(error_message)
+            return ""
+
+    def cluster_system_id_mismatch(self, unit_name: str) -> bool:
+        """Check if the Patroni service is down.
+
+        If there is the error storage belongs to third-party cluster in its logs.
+
+        Returns:
+            True if an error occurred due to the fact that the storage belongs to someone else's cluster.
+        """
+        last_log_file = self._last_patroni_log_file()
+        unit_name = unit_name.replace("/", "-")
+        return (
+            f" CRITICAL: system ID mismatch, node {unit_name} belongs to a different cluster:"
+            in last_log_file
+        )
+
+    def _last_patroni_log_file(self) -> str:
+        """Get last log file content of Patroni service.
+
+        If there is no available log files, empty line will be returned.
+
+        Returns:
+            Content of last log file of Patroni service.
+        """
+        container = self._charm.unit.get_container("postgresql")
+        if not container.can_connect():
+            logger.debug("Cannot get last Patroni log from Rock. Container inaccessible")
+            return ""
+        try:
+            with container.pull(PATRONI_LOG, encoding="utf-8") as last_log_file:
+                return last_log_file.read()
+        except Error:
+            logger.info("Failed to read last patroni log file")
             return ""
 
     @retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=2, max=10))

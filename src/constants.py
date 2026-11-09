@@ -23,9 +23,10 @@ PGBACKREST_METRICS_PORT = "9854"
 POSTGRESQL_DATA_PATH = "/var/lib/postgresql/data/pgdata"
 POSTGRESQL_LOGS_PATH = "/var/log/postgresql"
 POSTGRESQL_LOGS_PATTERN = "postgresql*.log"
+PATRONI_LOG = "/var/log/postgresql/patroni.log"
 POSTGRES_LOG_FILES = [
     "/var/log/pgbackrest/*",
-    "/var/log/postgresql/patroni.log",
+    PATRONI_LOG,
     "/var/log/postgresql/postgresql*.log",
 ]
 # List of system usernames needed for correct work of the charm/workload.

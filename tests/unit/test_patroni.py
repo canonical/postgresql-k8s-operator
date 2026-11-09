@@ -458,6 +458,33 @@ def test_last_postgresql_logs(harness, patroni):
     assert patroni.last_postgresql_logs() == ""
 
 
+def test_cluster_system_id_mismatch(harness, patroni):
+    # Inaccessible container means no Patroni log to inspect.
+    harness.set_can_connect("postgresql", False)
+    assert patroni.cluster_system_id_mismatch("postgresql-k8s/0") is False
+
+    harness.set_can_connect("postgresql", True)
+    # Missing patroni.log means no mismatch evidence.
+    assert patroni.cluster_system_id_mismatch("postgresql-k8s/0") is False
+
+    root = harness.get_filesystem_root("postgresql")
+    log_path = root / "var" / "log" / "postgresql" / "patroni.log"
+    log_path.parent.mkdir(parents=True, exist_ok=True)
+    with log_path.open("w") as fd:
+        fd.write("some other log line")
+
+    assert patroni.cluster_system_id_mismatch("postgresql-k8s/0") is False
+
+    with log_path.open("w") as fd:
+        fd.write(
+            "2024-06-13 CRITICAL: system ID mismatch, node postgresql-k8s-0"
+            " belongs to a different cluster: foo"
+        )
+
+    assert patroni.cluster_system_id_mismatch("postgresql-k8s/0") is True
+    assert patroni.cluster_system_id_mismatch("postgresql-k8s/1") is False
+
+
 def test_update_synchronous_node_count(harness, patroni):
     with (
         patch("patroni.stop_after_delay", return_value=stop_after_delay(0)) as _wait_fixed,
