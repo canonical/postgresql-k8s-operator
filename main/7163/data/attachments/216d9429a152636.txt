@@ -1,0 +1,41 @@
+[32mINFO    [0m juju.model:__init__.py:2301 Deploying local:postgresql-k8s-2
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [allocating] waiting: agent initialising
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  test-storage-postgresql-k8s/0 [executing] active: Primary
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  00:22:46Z
+
+App                          Version  Status  Scale  Charm           Channel  Rev  Address        Exposed  Message
+postgresql-k8s               14.24    active      3  postgresql-k8s             1  10.152.183.22  no       
+test-storage-postgresql-k8s  14.24    active      1  postgresql-k8s             2  10.152.183.18  no       
+
+Unit                            Workload  Agent  Address     Ports  Message
+postgresql-k8s/0*               active    idle   10.1.0.243         Primary
+postgresql-k8s/1                active    idle   10.1.0.250         
+postgresql-k8s/2                active    idle   10.1.0.129         
+test-storage-postgresql-k8s/0*  active    idle   10.1.0.196         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-k8s-0: 00:09:18 ERROR unit.postgresql-k8s/0.juju-log database-peers:0: Failed to list PostgreSQL database users: connection to server at "postgresql-k8s-0.postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.0.48), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-k8s-2: 00:11:53 ERROR unit.postgresql-k8s/2.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-postgresql-k8s-2: 00:14:22 ERROR unit.postgresql-k8s/2.juju-log Failed to list PostgreSQL database users: connection to server at "postgresql-k8s-2.postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.0.184), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-k8s-1: 00:17:26 ERROR unit.postgresql-k8s/1.juju-log Cluster upgrade failed, ensure pre-upgrade checks are ran first.
+unit-postgresql-k8s-1: 00:17:48 ERROR unit.postgresql-k8s/1.juju-log Failed to list PostgreSQL database users: connection to server at "postgresql-k8s-1.postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.0.26), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-k8s-1: 00:20:46 ERROR unit.postgresql-k8s/1.juju-log database-peers:5: Failed to list PostgreSQL database users: connection to server at "postgresql-k8s-1.postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.0.250), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+unit-postgresql-k8s-2: 00:21:06 ERROR unit.postgresql-k8s/2.juju-log database-peers:5: Failed to list PostgreSQL database users: connection to server at "postgresql-k8s-2.postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.0.129), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
