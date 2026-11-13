@@ -1,0 +1,46 @@
+[32mINFO    [0m juju.model:__init__.py:3254 Waiting for model:
+  data-integrator/0 [idle] active: 
+  data-integrator3/0 [idle] active: 
+  postgresql3/0 [executing] active: Primary
+  postgresql/0 [executing] active: 
+  postgresql/1 [executing] active: 
+  postgresql/2 [executing] active: Primary
+[32mINFO    [0m httpx:_client.py:1740 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/services/postgresql3-primary "HTTP/1.1 200 OK"
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  01:42:17Z
+
+App               Version  Status  Scale  Charm            Channel        Rev  Address         Exposed  Message
+data-integrator            active      1  data-integrator  latest/stable  418  10.152.183.225  no       
+data-integrator3           active      1  data-integrator  latest/stable  418  10.152.183.91   no       
+postgresql        16.15    active      3  postgresql-k8s                    0  10.152.183.65   no       
+postgresql3       16.15    active      1  postgresql-k8s                    2  10.152.183.219  no       
+
+Unit                 Workload  Agent      Address     Ports  Message
+data-integrator3/0*  active    idle       10.1.0.16          
+data-integrator/0*   active    idle       10.1.0.53          
+postgresql3/0*       active    idle       10.1.0.112         Primary
+postgresql/0         active    idle       10.1.0.220         
+postgresql/1         active    idle       10.1.0.227         
+postgresql/2*        active    executing  10.1.0.180         Primary
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+unit-postgresql-2: 01:28:52 ERROR unit.postgresql/2.juju-log logical-replication-offer:15: single_kernel_postgresql.managers.logical_replication:Cannot create new publication for logical-replication-offer #15: table public.test_table in database testdb doesn't exist
+unit-postgresql2-0: 01:28:58 ERROR unit.postgresql2/0.juju-log logical-replication:15: single_kernel_postgresql.managers.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql-2: 01:29:03 ERROR unit.postgresql/2.juju-log single_kernel_postgresql.managers.logical_replication:Cannot create new publication for logical-replication-offer #15: table public.test_table in database testdb doesn't exist
+unit-postgresql3-0: 01:29:18 ERROR unit.postgresql3/0.juju-log single_kernel_postgresql.managers.logical_replication:Logical replication validation: database bad_database doesn't exist
+unit-postgresql2-0: 01:29:41 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.managers.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql2-0: 01:30:18 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.managers.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql2-0: 01:30:29 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.managers.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql2-0: 01:30:39 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.managers.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql2-0: 01:30:54 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.managers.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql2-0: 01:31:03 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.managers.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql2-0: 01:31:12 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.managers.logical_replication:Logical replication validation: Publisher errors: table public.test_table in database testdb doesn't exist
+unit-postgresql3-0: 01:33:59 ERROR unit.postgresql3/0.juju-log logical-replication:19: single_kernel_postgresql.managers.logical_replication:Logical replication validation: table public.test_table2 in database testdb isn't empty
+unit-postgresql2-0: 01:36:05 ERROR unit.postgresql2/0.juju-log single_kernel_postgresql.managers.logical_replication:Logical replication validation: table public.test_table in database testdb isn't empty
+unit-postgresql2-0: 01:36:45 ERROR unit.postgresql2/0.juju-log logical-replication:15: single_kernel_postgresql.managers.logical_replication:Logical replication validation: table public.test_table2 in database testdb isn't empty
+controller-0: 01:40:12 ERROR juju.worker.caasapplicationprovisioner.runner exited "postgresql2": building app "postgresql2" config: getting OCI image resources: unable to fetch OCI image resources for postgresql2: application "postgresql2" dying or dead
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
