@@ -151,6 +151,9 @@ logging.getLogger("asyncio").setLevel(logging.WARNING)
 
 EXTENSIONS_DEPENDENCY_MESSAGE = "Unsatisfied plugin dependencies. Please check the logs"
 EXTENSION_OBJECT_MESSAGE = "Cannot disable plugins: Existing objects depend on it. See logs"
+THIRD_PARTY_STORAGE_MESSAGE = (
+    "Failed to start postgresql. The storage belongs to a third-party cluster"
+)
 INSUFFICIENT_SIZE_WARNING = "<10% free space on pgdata volume."
 
 ORIGINAL_PATRONI_ON_FAILURE_CONDITION = "restart"
@@ -1010,7 +1013,10 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
         # Ensure the member is up and running before marking the cluster as initialised.
         if not self._patroni.member_started:
             logger.debug("Deferring on_postgresql_pebble_ready: Waiting for cluster to start")
-            self.unit.status = WaitingStatus("awaiting for cluster to start")
+            if self._patroni.cluster_system_id_mismatch(unit_name=self.unit.name):
+                self.unit.status = BlockedStatus(THIRD_PARTY_STORAGE_MESSAGE)
+            else:
+                self.unit.status = WaitingStatus("awaiting for cluster to start")
             event.defer()
             return
 
