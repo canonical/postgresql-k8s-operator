@@ -50,7 +50,12 @@ async def test_database_deploy_clientapps(ops_test: OpsTest, charm):
                 num_units=3,
                 base=CHARM_BASE,
                 trust=True,
-                config={"profile": "testing"},
+                config={
+                    "profile": "testing",
+                    "plugin-hstore-enable": "true",
+                    "plugin-pg-trgm-enable": "true",
+                    "plugin-vector-enable": "true",
+                },
             ),
         )
         await ops_test.model.wait_for_idle(
