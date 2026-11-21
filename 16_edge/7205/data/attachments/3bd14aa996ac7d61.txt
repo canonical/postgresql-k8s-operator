@@ -1,0 +1,16 @@
+[32mINFO    [0m root:test_async_replication_upgrade_edge.py:45 Creating model: testing-other
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju add-model --no-switch testing-other
+[32mINFO    [0m root:test_async_replication_upgrade_edge.py:89 Deploying postgresql clusters
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju deploy --model testing postgresql-k8s db1 --base ubuntu@24.04 --channel 16/edge --config profile=testing --constraints arch=amd64 --num-units 3 --trust
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju deploy --model testing-other postgresql-k8s db2 --base ubuntu@24.04 --channel 16/edge --config profile=testing --constraints arch=amd64 --num-units 3 --trust
+[32mINFO    [0m root:test_async_replication_upgrade_edge.py:113 Deploying the test application
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju deploy --model testing postgresql-test-app postgresql-test-app --base ubuntu@24.04 --channel latest/edge --constraints arch=amd64
+[32mINFO    [0m root:test_async_replication_upgrade_edge.py:124 Relating the test application
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju integrate --model testing db1:database postgresql-test-app:database
+[32mINFO    [0m root:test_async_replication_upgrade_edge.py:127 Waiting for the applications to settle
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1875 [db2/0] status: error (crash loop backoff: back-off 2m40s restarting failed container=charm pod=db2-0_testing-other(cc72b0bc-468f-4a0f-a4d4-8bf1850f13ca))
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [db2/0] status changed: unknown (agent lost, see 'juju show-status-log db2/0') -> error (crash loop backoff: back-off 5m0s restarting failed container=charm pod=db2-0_testing-other(cc72b0bc-468f-4a0f-a4d4-8bf1850f13ca))
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [db2/0] status changed: unknown (agent lost, see 'juju show-status-log db2/0') -> error (crash loop backoff: back-off 5m0s restarting failed container=charm pod=db2-0_testing-other(cc72b0bc-468f-4a0f-a4d4-8bf1850f13ca))
+[1m[31mERROR   [0m jubilant.wait:_juju.py:1880 [db2/0] status changed: unknown (agent lost, see 'juju show-status-log db2/0') -> error (crash loop backoff: back-off 5m0s restarting failed container=charm pod=db2-0_testing-other(cc72b0bc-468f-4a0f-a4d4-8bf1850f13ca))
+[32mINFO    [0m root:test_async_replication_upgrade_edge.py:52 Destroying model: testing-other
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju destroy-model testing-other --no-prompt --destroy-storage --force
