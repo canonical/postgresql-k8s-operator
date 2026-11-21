@@ -1,0 +1,80 @@
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:335 checking whether the connectivity to the database is working
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:341 confirming that the primary is not isolated from the cluster
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:345 Cutting network for postgresql-k8s/0
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:349 checking whether the connectivity to the database is not working
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:354 checking whether writes are increasing
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:244 Initial writes {'testing.postgresql-k8s-1': 309, 'testing.postgresql-k8s-2': 309}
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m integration.ha_tests.helpers:helpers.py:250 Retry writes {'testing.postgresql-k8s-1': 313, 'testing.postgresql-k8s-2': 313}
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:357 checking whether a new primary was elected
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:366 confirming that the former primary is isolated from the cluster
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:370 Restoring network for postgresql-k8s/0
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:374 waiting for the database service to restart on postgresql-k8s/0
+[32mINFO    [0m integration.ha_tests.test_self_healing_1:test_self_healing_1.py:378 checking whether the connectivity to the database is working
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-0 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-1 "HTTP/1.1 200 OK"
+[32mINFO    [0m httpx:_client.py:1025 HTTP Request: GET https://127.0.0.1:6443/api/v1/namespaces/testing/pods/postgresql-k8s-2 "HTTP/1.1 200 OK"
+[32mINFO    [0m pytest_operator.plugin:plugin.py:951 Model status:
+
+Model    Controller     Cloud/Region  Version  SLA          Timestamp
+testing  concierge-k8s  k8s           3.6.29   unsupported  01:03:50Z
+
+App                  Version  Status  Scale  Charm                Channel      Rev  Address         Exposed  Message
+postgresql-k8s       14.24    active      3  postgresql-k8s                      0  10.152.183.181  no       
+postgresql-test-app           active      1  postgresql-test-app  latest/edge  627  10.152.183.156  no       received database credentials of the first database
+
+Unit                    Workload  Agent  Address     Ports  Message
+postgresql-k8s/0        active    idle   10.1.0.254         
+postgresql-k8s/1        active    idle   10.1.0.76          
+postgresql-k8s/2*       active    idle   10.1.0.97          Primary
+postgresql-test-app/0*  active    idle   10.1.0.216         received database credentials of the first database
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:957 Juju error logs:
+
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:26:18 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:26:51 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+unit-postgresql-test-app-0: 00:27:06 ERROR juju.worker.proxyupdater error writing apt proxy config file: open /etc/apt/apt.conf.d/95-juju-proxy-settings: permission denied
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:27:26 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:28:01 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:28:37 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:29:15 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:29:55 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:30:35 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:31:17 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:32:02 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:32:49 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:33:41 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:34:37 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:35:38 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:36:46 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:38:07 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:39:27 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:41:02 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:42:56 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:44:56 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:47:18 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:49:52 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:52:12 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:54:50 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:57:26 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+model-63a9709f-07de-403a-83d4-304449cb4f57: 00:59:56 ERROR juju.worker.dependency "caas-broker-tracker" manifold worker returned unexpected error: cannot create caas broker: unable to determine model label version for namespace "testing": Get "https://10.152.183.1:443/api/v1/namespaces/testing": dial tcp 10.152.183.1:443: i/o timeout
+unit-postgresql-k8s-0: 01:01:24 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [63a970] "unit-postgresql-k8s-0" cannot open api: cannot resolve "controller-service.controller-concierge-k8s.svc.cluster.local": lookup controller-service.controller-concierge-k8s.svc.cluster.local: operation was canceled
+unit-postgresql-k8s-0: 01:01:31 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [63a970] "unit-postgresql-k8s-0" cannot open api: cannot resolve "controller-service.controller-concierge-k8s.svc.cluster.local": lookup controller-service.controller-concierge-k8s.svc.cluster.local: operation was canceled
+unit-postgresql-k8s-0: 01:01:39 ERROR juju.worker.dependency "api-caller" manifold worker returned unexpected error: [63a970] "unit-postgresql-k8s-0" cannot open api: cannot resolve "controller-service.controller-concierge-k8s.svc.cluster.local": lookup controller-service.controller-concierge-k8s.svc.cluster.local: operation was canceled
+unit-postgresql-k8s-0: 01:02:17 ERROR unit.postgresql-k8s/0.juju-log Failed to list PostgreSQL database users: connection to server at "postgresql-k8s-0.postgresql-k8s-endpoints.testing.svc.cluster.local" (10.1.0.254), port 5432 failed: Connection refused
+	Is the server running on that host and accepting TCP/IP connections?
+
+
+[32mINFO    [0m pytest_operator.plugin:plugin.py:1039 Forgetting model main...
