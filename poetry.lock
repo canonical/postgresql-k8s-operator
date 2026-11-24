@@ -1748,7 +1748,7 @@ version = "1.45.2"
 description = "OpenTelemetry Python API"
 optional = false
 python-versions = ">=3.10"
-groups = ["main", "charm-libs", "integration"]
+groups = ["main", "charm-libs"]
 files = [
     {file = "opentelemetry_api-1.45.2-py3-none-any.whl", hash = "sha256:2cbd737377e710ee740d261c94e93fa0f08e6d037c18f17513cc0a2d94479a34"},
     {file = "opentelemetry_api-1.45.2.tar.gz", hash = "sha256:d7b0008e21e5fd61cbe7a7f34ca3b6905a78ab677d9bc395e299359c75cda6b4"},
@@ -1799,7 +1799,7 @@ version = "3.9.0"
 description = "The Python library behind great charms"
 optional = false
 python-versions = ">=3.10"
-groups = ["main", "charm-libs", "integration"]
+groups = ["main", "charm-libs"]
 files = [
     {file = "ops-3.9.0-py3-none-any.whl", hash = "sha256:2dc7a77edae408886ccd348be590df0e03589dfe5e3e115e238d5746850eed0c"},
     {file = "ops-3.9.0.tar.gz", hash = "sha256:f8fd7fa05359e9fc057663b1a652602f5803db0b37e1bbfe9b63971c54e4b3b3"},
@@ -1933,14 +1933,14 @@ files = [
 
 [[package]]
 name = "postgresql-charms-single-kernel"
-version = "16.3.24"
+version = "16.3.26"
 description = "Shared and reusable code for PostgreSQL-related charms"
 optional = false
 python-versions = "<4.0,>=3.8"
 groups = ["main", "integration"]
 files = [
-    {file = "postgresql_charms_single_kernel-16.3.24-py3-none-any.whl", hash = "sha256:9d96a0adfc4079b1c79e05feab2b4e0015a2a504f32fabf7a4e727b0ab70cb2d"},
-    {file = "postgresql_charms_single_kernel-16.3.24.tar.gz", hash = "sha256:36ee72d098800a4ddcfcecb723047cf7bc9ef38f45d29e778720fb5ccaec36a7"},
+    {file = "postgresql_charms_single_kernel-16.3.26-py3-none-any.whl", hash = "sha256:b5056904b83d7944d52a573865efe4d06dd570498e6b95832b41e16b9be5e5ad"},
+    {file = "postgresql_charms_single_kernel-16.3.26.tar.gz", hash = "sha256:41e0c6d8dd12d06e0adf792e2f6b8ebaa0097ec8d02c80461bdc8b8615e60718"},
 ]
 
 [package.dependencies]
@@ -1950,17 +1950,14 @@ charm-refresh = {version = "*", optional = true, markers = "python_full_version 
 charmlibs-interfaces-tls-certificates = {version = ">=1.8.3", optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"postgresql\""}
 charmlibs-pathops = {version = ">=1.0.1", optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"postgresql\""}
 cosl = {version = ">=0.0.53", optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"k8s\""}
-cryptography = ">=42.0.0"
+cryptography = {version = ">=42.0.0", optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"postgresql\""}
 data-platform-helpers = {version = ">=0.1.7", optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"postgresql\""}
 httpx = {version = "*", optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"postgresql\""}
 jinja2 = {version = ">=3.1.6", optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"postgresql\""}
 jsonschema = {version = ">=4.0.0", optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"postgresql\""}
 lightkube = {version = ">=0.21.0", optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"k8s\""}
 lightkube-models = {version = ">=1.28.1.4", optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"k8s\""}
-ops = [
-    {version = ">=2.0.0"},
-    {version = ">=2.0.0", extras = ["tracing"], optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"postgresql\""},
-]
+ops = {version = ">=2.0.0", extras = ["tracing"], optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"postgresql\""}
 pydantic = {version = ">=2.0", optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"postgresql\""}
 requests = {version = "*", optional = true, markers = "python_full_version >= \"3.12.0\" and extra == \"postgresql\""}
 tenacity = ">=9.0.0"
@@ -1969,8 +1966,8 @@ tomli = {version = "*", optional = true, markers = "python_full_version >= \"3.1
 [package.extras]
 db-driver = ["psycopg2 (>=2.9.10)"]
 k8s = ["cosl (>=0.0.53) ; python_full_version >= \"3.12.0\"", "lightkube (>=0.21.0) ; python_full_version >= \"3.12.0\"", "lightkube-models (>=1.28.1.4) ; python_full_version >= \"3.12.0\""]
-postgresql = ["boto3 (>=1.43.85) ; python_full_version >= \"3.12.0\"", "botocore (>=1.43.85) ; python_full_version >= \"3.12.0\"", "charm-refresh ; python_full_version >= \"3.12.0\"", "charmlibs-interfaces-tls-certificates (>=1.8.3) ; python_full_version >= \"3.12.0\"", "charmlibs-pathops (>=1.0.1) ; python_full_version >= \"3.12.0\"", "data-platform-helpers (>=0.1.7) ; python_full_version >= \"3.12.0\"", "httpx ; python_full_version >= \"3.12.0\"", "jinja2 (>=3.1.6) ; python_full_version >= \"3.12.0\"", "jsonschema (>=4.0.0) ; python_full_version >= \"3.12.0\"", "ops[tracing] (>=2.0.0) ; python_full_version >= \"3.12.0\"", "pydantic (>=2.0) ; python_full_version >= \"3.12.0\"", "requests ; python_full_version >= \"3.12.0\"", "tomli ; python_full_version >= \"3.12.0\""]
-vm = ["charmlibs-snap (>=1.0.1,<2) ; python_full_version >= \"3.12.0\"", "charmlibs-systemd (>=1.0.0.post0) ; python_full_version >= \"3.12.0\"", "cosl (>=0.0.53) ; python_full_version >= \"3.12.0\"", "psutil (>=7.2.2) ; python_full_version >= \"3.12.0\"", "pysyncobj (>=0.3.15) ; python_full_version >= \"3.12.0\""]
+postgresql = ["boto3 (>=1.43.85) ; python_full_version >= \"3.12.0\"", "botocore (>=1.43.85) ; python_full_version >= \"3.12.0\"", "charm-refresh ; python_full_version >= \"3.12.0\"", "charmlibs-interfaces-tls-certificates (>=1.8.3) ; python_full_version >= \"3.12.0\"", "charmlibs-pathops (>=1.0.1) ; python_full_version >= \"3.12.0\"", "cryptography (>=42.0.0) ; python_full_version >= \"3.12.0\"", "data-platform-helpers (>=0.1.7) ; python_full_version >= \"3.12.0\"", "httpx ; python_full_version >= \"3.12.0\"", "jinja2 (>=3.1.6) ; python_full_version >= \"3.12.0\"", "jsonschema (>=4.0.0) ; python_full_version >= \"3.12.0\"", "ops[tracing] (>=2.0.0) ; python_full_version >= \"3.12.0\"", "pydantic (>=2.0) ; python_full_version >= \"3.12.0\"", "requests ; python_full_version >= \"3.12.0\"", "tomli ; python_full_version >= \"3.12.0\""]
+vm = ["charmlibs-snap (>=2.0.0,<3) ; python_full_version >= \"3.12.0\"", "charmlibs-systemd (>=1.0.0.post0) ; python_full_version >= \"3.12.0\"", "cosl (>=0.0.53) ; python_full_version >= \"3.12.0\"", "psutil (>=7.2.2) ; python_full_version >= \"3.12.0\"", "pysyncobj (>=0.3.15) ; python_full_version >= \"3.12.0\""]
 
 [[package]]
 name = "prompt-toolkit"
@@ -3400,4 +3397,4 @@ h11 = ">=0.16.0,<1"
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.12"
-content-hash = "f2b311be470f4e6e69d91673597a0cc196ffeed6d2e3ac854bb569c8f38ad78b"
+content-hash = "5acc60e8a73b4254442704e194a5f7d0437330c8130e171abe3149edcc1dbb44"
