@@ -2480,7 +2480,7 @@ class PostgresqlOperatorCharm(TypedCharmBase[CharmConfig]):
             self.metrics_endpoint.update_scrape_job_spec(
                 self._generate_metrics_jobs(self.is_tls_enabled)
             )
-            self.on[self.restart_manager.name].acquire_lock.emit()
+            self.on[str(self.restart_manager.name)].acquire_lock.emit()
 
     def _update_pebble_layers(self, replan: bool = True) -> None:
         """Update the pebble layers to keep the health check URL up-to-date."""
