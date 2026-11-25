@@ -67,7 +67,11 @@ async def test_discourse(ops_test: OpsTest):
     async with ops_test.fast_forward():
         # Enable the plugins/extensions required by Discourse.
         logger.info("Enabling the plugins/extensions required by Discourse")
-        config = {"plugin_hstore_enable": "True", "plugin_pg_trgm_enable": "True"}
+        config = {
+            "plugin_hstore_enable": "True",
+            "plugin_pg_trgm_enable": "True",
+            "plugin_vector_enable": "True",
+        }
         await ops_test.model.applications[DATABASE_APP_NAME].set_config(config)
         await gather(
             ops_test.model.wait_for_idle(apps=[DISCOURSE_APP_NAME], status="waiting"),
