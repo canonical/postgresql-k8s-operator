@@ -56,6 +56,10 @@ async def test_database_deploy_clientapps(ops_test: OpsTest, charm):
 
 @markers.amd64_only  # discourse-k8s charm not available for arm64
 async def test_discourse(ops_test: OpsTest):
+    pytest.skip(
+        "Discourse v2026.7+ requires PostgreSQL 15+: "
+        "https://github.com/canonical/discourse-k8s-operator/issues/547"
+    )
     # Deploy Discourse and Redis.
     await gather(
         ops_test.model.deploy(DISCOURSE_APP_NAME, application_name=DISCOURSE_APP_NAME),
@@ -67,11 +71,7 @@ async def test_discourse(ops_test: OpsTest):
     async with ops_test.fast_forward():
         # Enable the plugins/extensions required by Discourse.
         logger.info("Enabling the plugins/extensions required by Discourse")
-        config = {
-            "plugin_hstore_enable": "True",
-            "plugin_pg_trgm_enable": "True",
-            "plugin_vector_enable": "True",
-        }
+        config = {"plugin_hstore_enable": "True", "plugin_pg_trgm_enable": "True"}
         await ops_test.model.applications[DATABASE_APP_NAME].set_config(config)
         await gather(
             ops_test.model.wait_for_idle(apps=[DISCOURSE_APP_NAME], status="waiting"),
