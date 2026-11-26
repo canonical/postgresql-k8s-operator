@@ -1,0 +1,38 @@
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:22 Clearing continuous writes
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-test-app/0 clear-continuous-writes --wait 120s
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:25 Starting continuous writes
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-test-app/0 start-continuous-writes
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:test_upgrade.py:118 Run pre-refresh-check action
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/0 pre-refresh-check --wait 300s
+[32mINFO    [0m root:test_upgrade.py:129 Inject dependency fault
+[32mINFO    [0m root:test_upgrade.py:132 Refresh the charm
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju refresh --model testing postgresql-k8s --path /root/snap/juju/common/tmp84gcl0r2/_temp.charm --resource postgresql-image=ghcr.io/canonical/charmed-postgresql@sha256:83ebc9cfe2e4468da268ebef589cb32cf824228a897d09b4c16246ea97b7ef3d
+[32mINFO    [0m root:test_upgrade.py:141 Wait for upgrade to fail last unit to fail
+[32mINFO    [0m root:test_upgrade.py:147 Ensure continuous writes on all active units
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/0 get-primary --wait 300s
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju show-secret --model testing secret:86btm9np4akbc5c9m6g0 --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju show-secret --model testing secret:86btm9np4akbc5c9m6g0 --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju secrets --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju show-secret --model testing secret:86btm9np4akbc5c9m6g0 --format json --reveal
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m root:test_upgrade.py:150 Re-refresh the charm
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju refresh --model testing postgresql-k8s --path /root/snap/juju/common/tmp1kul6sz_/_temp.charm --resource postgresql-image=ghcr.io/canonical/charmed-postgresql@sha256:83ebc9cfe2e4468da268ebef589cb32cf824228a897d09b4c16246ea97b7ef3d
+[32mINFO    [0m root:test_upgrade.py:165 Run resume-refresh action
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju status --model testing --format json
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-k8s/0 resume-refresh --wait 300s
+[32mINFO    [0m root:test_upgrade.py:168 Wait for upgrade to complete
+[31m[1mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/0] status changed: unknown (agent lost, see 'juju show-status-log postgresql-k8s/0') -> error (crash loop backoff: back-off 40s restarting failed container=charm pod=postgresql-k8s-0_testing(20e29e55-d6f5-4c65-9a12-34c941d03c9d))
+[31m[1mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/0] status changed: unknown (agent lost, see 'juju show-status-log postgresql-k8s/0') -> error (crash loop backoff: back-off 1m20s restarting failed container=charm pod=postgresql-k8s-0_testing(20e29e55-d6f5-4c65-9a12-34c941d03c9d))
+[31m[1mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/0] status changed: unknown (agent lost, see 'juju show-status-log postgresql-k8s/0') -> error (crash loop backoff: back-off 2m40s restarting failed container=charm pod=postgresql-k8s-0_testing(20e29e55-d6f5-4c65-9a12-34c941d03c9d))
+[31m[1mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/0] status changed: unknown (agent lost, see 'juju show-status-log postgresql-k8s/0') -> error (crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-0_testing(20e29e55-d6f5-4c65-9a12-34c941d03c9d))
+[31m[1mERROR   [0m jubilant.wait:_juju.py:1880 [postgresql-k8s/0] status changed: unknown (agent lost, see 'juju show-status-log postgresql-k8s/0') -> error (crash loop backoff: back-off 5m0s restarting failed container=charm pod=postgresql-k8s-0_testing(20e29e55-d6f5-4c65-9a12-34c941d03c9d))
+[32mINFO    [0m integration.high_availability.conftest:conftest.py:36 Clearing continuous writes
+[32mINFO    [0m jubilant:_juju.py:551 cli: juju run --model testing --format json postgresql-test-app/0 clear-continuous-writes --wait 120s
