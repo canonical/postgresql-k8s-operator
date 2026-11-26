@@ -20,6 +20,7 @@ from ..helpers import (
     get_unit_address,
     run_command_on_unit,
 )
+from ..juju_ import juju_major_version
 from .helpers import (
     are_all_db_processes_down,
     are_writes_increasing,
@@ -94,6 +95,9 @@ async def test_interruption_db_process(
     primary_start_timeout,
     restart_policy,
 ) -> None:
+    if juju_major_version < 3 and signal == "SIGKILL" and process == PATRONI_PROCESS:
+        pytest.skip("Pebble in Juju 2.9 never restarts a SIGKILLed Patroni")
+
     # Locate primary unit.
     app = await app_name(ops_test)
     primary_name = await get_primary(ops_test, app)

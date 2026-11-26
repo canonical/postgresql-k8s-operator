@@ -27,7 +27,8 @@ poetry-core = "*"
 # data_platform_libs/v0/upgrade.py requires pydantic ^1.10
 pydantic = "^1.10"
 # loki_k8s/v1/loki_push_api.py and prometheus_k8s/v0/prometheus_scrape.py
-cosl = ">=0.0.50"
+# cosl >=1.11.0 requires pydantic 2
+cosl = ">=0.0.50,<1.11.0"
 # tls_certificates_interface/v2/tls_certificates.py
 cryptography = "*"
 # certificate_transfer_interface/v0/certificate_transfer.py
@@ -51,7 +52,7 @@ ty = "^0.0.84"
 optional = true
 
 [tool.poetry.group.unit.dependencies]
-coverage = {extras = ["toml"], version = "^7.16.2"}
+coverage = {version = "^7.17.3", extras = ["toml"], markers = "python_version >= '3.11'"}
 pytest = "^9.1.1"
 
 [tool.poetry.group.integration]
